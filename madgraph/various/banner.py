@@ -292,7 +292,62 @@ class Banner(dict):
                 if pid not in pid2label.keys(): 
                     block.remove((pid,))
 
+    def get_lha_strategy(self):
+        """get the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        data = self["init"].split('\n')[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        return int(float(data[-2]))
+        
+    def set_lha_strategy(self, value):
+        """set the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not (-4 <= int(value) <= 4):
+            raise Exception, "wrong value for lha_strategy", value
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        all_lines = self["init"].split('\n')
+        data = all_lines[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        data[-2] = '%s' % value
+        all_lines[0] = ' '.join(data)
+        self['init'] = '\n'.join(all_lines)
 
+    def modify_init_cross(self, cross):
+        """modify the init information with the associate cross-section"""
+
+        assert isinstance(cross, dict)
+#        assert "all" in cross
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        new_data = []
+        new_data.append(all_lines[0])
+        for i in range(1, len(all_lines)):
+            line = all_lines[i]
+            split = line.split()
+            if len(split) == 4:
+                xsec, xerr, xmax, pid = split 
+            else:
+                new_data += all_lines[i:]
+                break
+            if int(pid) not in cross:
+                raise Exception
+            pid = int(pid)
+            ratio = cross[pid]/float(xsec)
+            line = "   %+13.7e %+13.7e %+13.7e %i" % \
+                (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
+            new_data.append(line)
+        self['init'] = '\n'.join(new_data)
+                
     ############################################################################
     #  WRITE BANNER
     ############################################################################
@@ -374,6 +429,8 @@ class Banner(dict):
                 tag = 'madspin'
             elif 'FO_analyse_card' in card_name:
                 tag = 'foanalyse'
+            elif 'reweight_card' in card_name:
+                tag='reweight_card'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -1878,9 +1935,17 @@ class RunCardNLO(RunCard):
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
     
-        # check that we use lhapdf if reweighting is ON
-        if self['reweight_pdf'] and self['pdlabel'] != "lhapdf":
-            raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
+
+        # PDF reweighting check
+        if self['reweight_pdf']:
+            # check that we use lhapdf if reweighting is ON
+            if self['pdlabel'] != "lhapdf":
+                raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
+            
+            # check that the number of pdf set is coherent for the reweigting:    
+            if (self['pdf_set_max'] - self['pdf_set_min'] + 1) % 2:
+                raise InvalidRunCard, "The number of PDF error sets must be even" 
+        
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

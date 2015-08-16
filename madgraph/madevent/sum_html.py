@@ -287,6 +287,7 @@ class OneResult(object):
                         if m:
                             return float(m.group(1))*10**(float(m.group(2)))
                         return 
+
                 data = [secure_float(d) for d in line.split()]
                 self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, \

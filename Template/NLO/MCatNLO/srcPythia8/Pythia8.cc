@@ -30,8 +30,8 @@ int main() {
   Pythia pythia;
 
   int cwgtinfo_nn;
-  char cwgtinfo_weights_info[250][15];
-  double cwgt_ww[250];
+  char cwgtinfo_weights_info[350][15];
+  double cwgt_ww[350];
 
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 

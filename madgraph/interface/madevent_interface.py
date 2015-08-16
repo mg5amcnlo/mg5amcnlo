@@ -362,7 +362,9 @@ class HelpToCmd(object):
         logger.info("   Those steps are performed if the related program are installed")
         logger.info("   and if the related card are present in the Cards directory.")
         self.run_options_help([('-f', 'Use default for all questions.'),
-                               ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.')])
+                               ('--laststep=', 'argument might be parton/pythia/pgs/delphes and indicate the last level to be run.'),
+                               ('-M', 'in order to add MadSpin'),
+                               ('-R', 'in order to add the reweighting module')])
 
     def help_initMadLoop(self):
         logger.info("syntax: initMadLoop [options]",'$MG:color:GREEN')
@@ -774,10 +776,11 @@ class CheckValidForCmd(object):
                 raise self.InvalidCmd('''delphes not install. Please install this package first. 
                 To do so type: \'install Delphes\' in the mg5 interface''')
             del args[-1]
+
                                 
-        if len(args) > 1:
-            self.help_generate_events()
-            raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
+        #if len(args) > 1:
+        #    self.help_generate_events()
+        #    raise self.InvalidCmd('Too many argument for generate_events command: %s' % cmd)
                     
         return run
 
@@ -1962,7 +1965,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
-        self.ask_run_configuration(mode)
+        self.ask_run_configuration(mode, args)
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -3062,54 +3065,6 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('End Parton', level='parton', makehtml=False)
         devnull.close()
     
-    ############################################################################
-    def do_reweight(self, line):
-        """ Allow to reweight the events generated with a new choices of model
-            parameter.
-        """
-        
-        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
-            return
-        
-        # Check that MG5 directory is present .
-        if MADEVENT and not self.options['mg5_path']:
-            raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
-            You can install it and set its path in ./Cards/me5_configuration.txt'''
-        elif MADEVENT:
-            sys.path.append(self.options['mg5_path'])
-        try:
-            import madgraph.interface.reweight_interface as reweight_interface
-        except ImportError:
-            raise self.ConfigurationError, '''Can\'t load Reweight module.
-            The variable mg5_path might not be correctly configured.'''
-        
-        self.to_store.append('event')
-        if not '-from_cards' in line:
-            self.keep_cards(['reweight_card.dat'])
-            self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
-
-        # forbid this function to create an empty item in results.
-        if self.results.current['cross'] == 0 and self.run_name:
-            self.results.delete_run(self.run_name, self.run_tag)
-
-        # load the name of the event file
-        args = self.split_arg(line) 
-        self.check_decay_events(args) 
-        # args now alway content the path to the valid files
-        reweight_cmd = reweight_interface.ReweightInterface(args[0])
-        reweight_cmd. mother = self
-        self.update_status('Running Reweight', level='madspin')
-        
-        
-        path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
-        reweight_cmd.me_dir = self.me_dir
-        reweight_cmd.import_command_file(path)
-        
-        # re-define current run
-        try:
-            self.results.def_current(self.run_name, self.run_tag)
-        except Exception:
-            pass
         
     ############################################################################ 
     def do_create_gridpack(self, line):
@@ -4236,7 +4191,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
 
     ############################################################################
-    def ask_run_configuration(self, mode=None):
+    def ask_run_configuration(self, mode=None, args=[]):
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0']
@@ -4248,7 +4203,7 @@ Beware that this can be dangerous for local multicore runs.""")
                        'pgs': 'Run PGS as detector simulator:',
                        'delphes':'Run Delphes as detector simulator:',
                        'madspin':'Decay particles with the MadSpin module:',
-                       'reweight':'Add weight to events based on coupling parameters:',
+                       'reweight':'Add weights to the events based on changing model parameters:',
                        }
         force_switch = {('pythia', 'OFF'): {'pgs': 'OFF', 'delphes': 'OFF'},
                        ('pgs', 'ON'): {'pythia':'ON'},
@@ -4283,16 +4238,25 @@ Beware that this can be dangerous for local multicore runs.""")
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
-            if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
-                switch['reweight'] = 'ON'
-            else:
-                switch['reweight'] = 'OFF'
+            if misc.has_f2py() or self.options['f2py_compiler']:
+                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                    switch['reweight'] = 'ON'
+                else:
+                    switch['reweight'] = 'OFF'
+            else: 
+                switch['reweight'] = 'Numpy python package not available.'
                  
-
+        if '-R' in args or '--reweight' in args:
+            if switch['reweight'] == 'OFF':
+                switch['reweight'] = 'ON'
+            elif switch['reweight'] != 'ON':
+                logger.critical("Can not run reweight: %s", switch['reweight'])
+        if '-M' in args or '--madspin' in args:
+            switch['madspin'] = 'ON'
 
         options = list(available_mode) + ['auto', 'done']
         for id, key in enumerate(switch_order):
-            if switch[key] != void:
+            if switch[key] not in [void, 'Numpy python package not available.']:
                 options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
                 options.append(key)
         options.append('parton')    
@@ -4304,7 +4268,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " %i %-50s %10s=%s\n"
+                    switch_format = " %i %-61s %10s=%s\n"
                     question = "The following switches determine which programs are run:\n"
                     for id, key in enumerate(switch_order):
                         question += switch_format % (id+1, description[key], key, switch[key])

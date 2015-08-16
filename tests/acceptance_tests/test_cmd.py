@@ -167,6 +167,7 @@ class TestCmdShell1(unittest.TestCase):
                     'OLP': 'MadLoop',
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
+                    'f2py_compiler':None,
                     'cluster_retry_wait': 300,
                     'syscalc_path':'./SysCalc',
                     'hepmc_path': './hepmc',
@@ -637,7 +638,7 @@ class TestCmdShell2(unittest.TestCase,
                                                'lib', 'libmodel.a')))
         # Check that check_sa.f compiles
         subprocess.call(['make', 'check'],
-                        stdout=devnull, stderr=devnull, 
+#                        stdout=devnull, stderr=devnull, 
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
                                          'P0_gg_hgg'))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -1099,6 +1100,13 @@ C
     def test_madevent_subproc_group_symmetry(self):
         """Check that symmetry.f gives right output"""
 
+        def analyse(fsock):
+            data = []
+            for line in fsock:
+                if line.strip():
+                    data.append([int(i) for i in line.split()])
+            return data
+
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
 
@@ -1114,12 +1122,7 @@ C
                                                     'SubProcesses',
                                                     'P0_qq_gogo_go_qqn1_go_qqn1')))
         
-        # Check the contents of the symfact.dat file
-        self.assertEqual(open(os.path.join(self.out_dir,
-                                           'SubProcesses',
-                                           'P0_qq_gogo_go_qqn1_go_qqn1',
-                                           'symfact_orig.dat')).read().split('\n'),
-                         """ 1   1
+        target=""" 1   1
  2  -1
  3  -1
  4  -1
@@ -1131,7 +1134,13 @@ C
 10  -9
 11  -9
 12  -9
-""".split('\n'))
+"""
+        
+        self.assertEqual(analyse(target.split('\n')), 
+                         analyse(open(os.path.join(self.out_dir,
+                                           'SubProcesses',
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',
+                                           'symfact_orig.dat'))))
 
         # Compile the Source directory
         status = subprocess.call(['make'],
@@ -1153,7 +1162,8 @@ C
         self.assertEqual(proc.returncode, 0)
 
 
-        target =                          """   1   1
+
+        target ="""   1   1
    2  -1
    3  -1
    4  -1
@@ -1166,16 +1176,13 @@ C
   11  -9
   12  -9
 """
-        data = [[int(i) for i in line.split()] for line in target.split('\n')]
-        result = []
-        ii=0
-        for line in open(os.path.join(self.out_dir,
+            
+        # Check the new contents of the symfact.dat file
+        self.assertEqual(analyse(open(os.path.join(self.out_dir,
                                            'SubProcesses',
-                                           'P0_qq_gogo_go_qqn1_go_qqn1',           
-                                           'symfact.dat')):
-            info = [int(i) for i in line.split()]
-            self.assertEqual(info, data[ii])
-            ii+=1
+                                           'P0_qq_gogo_go_qqn1_go_qqn1',
+                                           'symfact.dat'))), 
+                         analyse(target.split('\n')))
 
     def test_madevent_subproc_group_decay_chain(self):
         """Test decay chain output using the SubProcess group functionality"""

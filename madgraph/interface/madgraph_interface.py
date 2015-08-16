@@ -1057,7 +1057,8 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if mode != self._done_export[1]:
+                
+                if not self._done_export[1].startswith(mode):
                     print mode, self._done_export[1]
                     raise self.InvalidCmd, \
                           '%s not valid directory for launch' % self._done_export[0]
@@ -1354,14 +1355,14 @@ This will take effect only in a NEW terminal
             raise self.InvalidCmd('No default path for this file')
 
 
-    def check_output(self, args):
+    def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:
-            self._export_format = 'madevent'
+            self._export_format = default
 
         if not self._curr_model:
             text = 'No model found. Please import a model first and then retry.'
@@ -1383,10 +1384,6 @@ This will take effect only in a NEW terminal
         if not self._curr_amps:
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
-
-
-
-
 
         if args and args[0][0] != '-':
             # This is a path
@@ -1415,6 +1412,7 @@ This will take effect only in a NEW terminal
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
+                    
             else:
                 if self.options['pythia8_path']:
                     self._export_dir = self.options['pythia8_path']
@@ -1548,7 +1546,7 @@ This will take effect only in a NEW terminal
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
-        elif self._export_format == 'standalone':
+        elif self._export_format.startswith('standalone'):
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
@@ -1673,11 +1671,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """ not authorize on web"""
         raise self.WebRestriction('\"open\" command not authorize online')
 
-    def check_output(self, args):
+    def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
         # first pass to the default
-        CheckValidForCmd.check_output(self, args)
+        CheckValidForCmd.check_output(self, args, default=default)
         args[:] = ['.', '-f']
 
         self._export_dir = os.path.realpath(os.getcwd())
@@ -2489,6 +2487,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'f2py_compiler':None,
                        'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
@@ -5758,6 +5757,14 @@ This implies that with decay chains:
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        elif args[0] == 'f2py_compiler':
+            if args[1] != 'None':
+                if log:
+                    logger.info('set f2py compiler to %s' % args[1])
+                self.options['f2py_compiler'] = args[1]
+            else:
+                self.options['f2py_compiler'] = None
+            
         elif args[0] == 'loop_optimized_output':
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
@@ -6317,6 +6324,11 @@ This implies that with decay chains:
     def finalize(self, nojpeg, online = False, flaglist=[]):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
+
+        compiler_dict = {'fortran': self.options['fortran_compiler'],
+                             'cpp': self.options['cpp_compiler'],
+                             'f2py': self.options['f2py_compiler']}
+
         
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO', 'madweight',
@@ -6379,8 +6391,7 @@ This implies that with decay chains:
                         ('%s/Cards/amcatnlo_configuration.txt file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-            compiler_dict = {'fortran': self.options['fortran_compiler'],
-                             'cpp': self.options['cpp_compiler']}
+
 
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
@@ -6388,7 +6399,7 @@ This implies that with decay chains:
                                            not nojpeg,
                                            online,
                                            compiler_dict,
-              output_dependencies = self.options['output_dependencies'],
+                                           output_dependencies = self.options['output_dependencies'],
                                            MG5DIR = MG5DIR)
             
             # Create configuration file [path to executable] for amcatnlo
@@ -6416,7 +6427,7 @@ This implies that with decay chains:
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           compiler_dict)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -6906,6 +6917,10 @@ _launch_parser.add_option("-i", "--interactive", default=False, action='store_tr
                                 help="Use Interactive Console [if available]")
 _launch_parser.add_option("-s", "--laststep", default='',
                                 help="last program run in MadEvent run. [auto|parton|pythia|pgs|delphes]")
+_launch_parser.add_option("-R", "--reweight", default=False, action='store_true',
+                            help="Run the reweight module (reweighting by different model parameter")
+_launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
+                            help="Run the madspin package")
 
 #===============================================================================
 # Interface for customize question.

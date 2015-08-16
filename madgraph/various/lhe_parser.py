@@ -284,6 +284,7 @@ class EventFile(object):
             def weight(event):
                 return event.wgt
             get_wgt  = weight
+            unwgt_name = "central weight"
         elif isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt(event):
@@ -1321,21 +1322,9 @@ class Event(list):
                       'comments': self.comment,
                       'reweight': reweight_str}
         return re.sub('[\n]+', '\n', out)
-    
-    
-    def get_ht_scale(self, prefactor=1):
-        
-        scale = 0 
-        for particle in self:
-            if particle.status != 1:
-                continue 
-            scale += particle.mass**2 + particle.momentum.pt**2
-    
-        return prefactor * scale
-    
-    def get_momenta_str(self, get_order, allow_reversed=True):
-        """return the momenta str in the order asked for"""
-        
+
+    def get_momenta(self, get_order, allow_reversed=True):
+        """return the momenta vector in the order asked for"""
         
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
@@ -1372,10 +1361,31 @@ class Event(list):
                 order[0][ind] = 0
             else: #intermediate
                 continue
-            format = '%.12f'
-            format_line = ' '.join([format]*4) + ' \n'
-            out[position] = format_line % (part.E, part.px, part.py, part.pz)
+
+            out[position] = (part.E, part.px, part.py, part.pz)
             
+        return out
+
+    
+    
+    def get_ht_scale(self, prefactor=1):
+        
+        scale = 0 
+        for particle in self:
+            if particle.status != 1:
+                continue 
+            scale += particle.mass**2 + particle.momentum.pt**2
+    
+        return prefactor * scale
+    
+    def get_momenta_str(self, get_order, allow_reversed=True):
+        """return the momenta str in the order asked for"""
+        
+        out = self.get_momenta(get_order, allow_reversed)
+        #format
+        format = '%.12f'
+        format_line = ' '.join([format]*4) + ' \n'
+        out = [format_line % one for one in out]
         out = ''.join(out).replace('e','d')
         return out    
 
