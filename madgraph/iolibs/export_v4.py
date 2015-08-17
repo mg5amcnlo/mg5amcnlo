@@ -312,6 +312,7 @@ class ProcessExporterFortran(object):
         """ modify the pdf opendata file, to allow direct access to cluster node
         repository if configure"""
         
+        misc.sprint(self.opt)
         if not self.opt["cluster_local_path"]:
             changer = {"pdf_systemwide": ""}
         else: 
@@ -1880,6 +1881,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
+
+        if 'mode' in self.opt and self.opt['mode'] == "reweight":
+            #add the module to hande the NLO weight
+            files.copytree(pjoin(MG5DIR, 'Template', 'RWGTNLO'),
+                          pjoin(self.dir_path, 'Source'))
+            files.copytree(pjoin(MG5DIR, 'Template', 'NLO', 'Source', 'PDF'),
+                           pjoin(self.dir_path, 'Source', 'PDF'))
+            self.write_pdf_opendata()
+
 
 
     def compiler_choice(self, compiler):
@@ -6199,7 +6209,8 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'output_dependencies':cmd.options['output_dependencies'],
       'SubProc_prefix':'P',
       'compute_color_flows':cmd.options['loop_color_flows'],
-      'mode': 'reweight' if cmd._export_format == "standalone_rw" else ''
+      'mode': 'reweight' if cmd._export_format == "standalone_rw" else '',
+      'cluster_local_path': cmd.options['cluster_local_path']
       }
 
     if output_type.startswith('madloop'):
