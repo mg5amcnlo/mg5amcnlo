@@ -58,7 +58,7 @@
  %(scale)s  = scale            ! fixed ren scale
  %(dsqrt_q2fact1)s  = dsqrt_q2fact1    ! fixed fact scale for pdf1
  %(dsqrt_q2fact2)s  = dsqrt_q2fact2    ! fixed fact scale for pdf2
- %(dynamical_scale_choice)s = dynamical_scale_choice ! Select one of the preselect dynamical choice
+ %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
  %(scalefact)s  = scalefact        ! scale factor for event-by-event scales
 #*********************************************************************
 # Time of flight information. (-1 means not run)
@@ -91,9 +91,9 @@
 #**********************************
   %(bwcutoff)s  = bwcutoff      ! (M+/-bwcutoff*Gamma)
 #**********************************************************
-# Apply pt/E/eta/dr/mij cuts on decay products or not
+# Apply pt/E/eta/dr/mij/kt_durham cuts on decay products or not
 # (note that etmiss/ptll/ptheavy/ht/sorted cuts always apply)
-#**********************************************************
+#*************************************************************
    %(cut_decays)s  = cut_decays    ! Cut decay products 
 #*************************************************************
 # Number of helicities to sum per event (0 = all helicities)

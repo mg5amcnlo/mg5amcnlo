@@ -283,7 +283,8 @@ c lepton of opposite charge. (Only add half of it, i.e. 'the part
 c contributing from this lepton'). Remove possible overcounting with the
 c lepton pT
                   do j=nincoming+1,nexternal
-                     if (is_a_lm(j) .and. idup(i,1).eq.-idup(j,1)) then
+                     if (is_a_lm(j) .and. idup(i,1).eq.-idup(j,1) .and.
+     $                    (mll_sf.ne.0d0 .or. mll.ne.0d0) ) then
                         if (j_fks.gt.nincoming)
      &                       taumin(iFKS) = taumin(iFKS)-ptl-emass(i) +
      &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
@@ -294,7 +295,7 @@ c lepton pT
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
      $                       ,ptl+emass(i))
                         exit
-                     elseif (is_a_lm(j)) then
+                     elseif (is_a_lm(j) .and. mll.ne.0d0) then
                         if (j_fks.gt.nincoming)
      &                       taumin(iFKS)= taumin(iFKS)-ptl-emass(i) +
      &                                     max(mll/2d0,ptl+emass(i))
@@ -320,7 +321,8 @@ c lepton of opposite charge. (Only add half of it, i.e. 'the part
 c contributing from this lepton'). Remove possible overcounting with the
 c lepton pT
                   do j=nincoming+1,nexternal
-                     if (is_a_lp(j) .and. idup(i,1).eq.-idup(j,1)) then
+                     if (is_a_lp(j) .and. idup(i,1).eq.-idup(j,1) .and.
+     $                    (mll_sf.ne.0d0 .or. mll.ne.0d0) ) then
                         if (j_fks.gt.nincoming)
      &                       taumin(iFKS) = taumin(iFKS)-ptl-emass(i) +
      &                              max(mll/2d0,mll_sf/2d0,ptl+emass(i))
@@ -331,7 +333,7 @@ c lepton pT
                         xm(i)=xm(i)-ptl-emass(i)+max(mll/2d0,mll_sf/2d0
      $                       ,ptl+emass(i))
                         exit
-                     elseif (is_a_lp(j)) then
+                     elseif (is_a_lp(j) .and. mll.ne.0d0) then
                         if (j_fks.gt.nincoming)
      &                       taumin(iFKS) = taumin(iFKS)-ptl-emass(i) +
      &                                      max(mll/2d0,ptl+emass(i))

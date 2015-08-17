@@ -167,6 +167,7 @@ class TestCmdShell1(unittest.TestCase):
                     'OLP': 'MadLoop',
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
+                    'f2py_compiler':None,
                     'cluster_retry_wait': 300,
                     'syscalc_path':'./SysCalc',
                     'hepmc_path': './hepmc',

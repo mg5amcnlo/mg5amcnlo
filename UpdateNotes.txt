@@ -1,6 +1,18 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.2   
+2.3.2(xx/xx/xx)   
+        OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)
+            New Capabilities: 
+             - allow to reweight by loop-induced processes
+             - allow to change model 
+             - allow to change process definition
+             - allow to unweight the sample to have an idea of the statistical power.
+             - allow to perform some crude reweighting on NLO sample (reweighting by LO matrix element). NLO
+               accuracy is not preserved (in general) for such computation.
+            New dependencies:
+	     - require the f2py module (part of numpy)
+	OM: change the kt-durham cut (at LO) such that particle comming from decay are not impacted if cut_decays
+            is on False.
         VH: Fixed the check in helas wavefunction appearance order in an helas diagrams. It failed in cases
 	    where additional wf were created during the fix of fermion flow in presence of majorana fermions.         
 	RF: Fixed a bug in the aMCFast/ApplGrid interfaced introduced in the previous version.
@@ -8,7 +20,18 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Fix a bug in the add_time_of_flight function (not called by default) where the displaced vertex information
             was written in second and not in mm as it should. Note that this function can now be run on the flight
 	    by adding the following line in the run_card: "  1e-2 = time_of_flight #threshold for the displaced vertex" 
-2.3.0  
+	RF: Small fix that leads to an improvement in the phase-space generation for NLO processes
+        OM: Fix a crash introduce in 2.3.0 when running sequentially in the same directory (thanks Gauthier)
+        OM: Improve aloha in the case of some expression reduces to pure float.
+        OM: In MadSpin, allow to specify cut for the 1>N decay in spinmode=none.
+	RF: Fixed a bug that gave bogus results for NLO runs when using an internal PDF which is not
+            NNPDF (like for the old cteq_6m, etc).
+	RF: Fixed a bug in the PDF combination in the HwU histograms: there was no consistent use if Hessian
+            and Gaussian approaches for MSTW/CTEQ and NNPDF, respectively.
+        OM: Fixed a small bug in EWdim6 which was removing a coupling in AZHH interaction.
+        OM: improve customize_model function to avoid problem with unity coupling.
+
+2.3.1  
      OM+VH: Automation of event generation for loop-induced processes.
 		OM: Automatic change of the p/j definition to include the b particle if the model has a massless b.
 	RF: Reduce the collision energy for the soft and collinear tests: for 100TeV collider many were failing

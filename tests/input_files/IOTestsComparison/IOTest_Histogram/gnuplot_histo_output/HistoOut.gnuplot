@@ -226,7 +226,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [5.2830e-02:4.9724e+04]
+set yrange [6.4357e-02:4.9724e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -271,7 +271,7 @@ plot \
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-8.3479e-01:9.2115e-01]
+set yrange [-8.3219e-01:9.2131e-01]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -311,7 +311,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [7.2996e-01:7.8707e+02]
+set yrange [7.2996e-01:7.2184e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -329,7 +329,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-4.4782e-01:3.3281e-01]
+set yrange [-4.4561e-01:3.2176e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -368,7 +368,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [5.2830e-02:4.9724e+04]
+set yrange [6.4357e-02:4.9724e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -391,7 +391,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-3.3957e-01:3.0377e-01]
+set yrange [-3.3763e-01:2.9408e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -413,7 +413,7 @@ plot \
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-3.2102e-01:1.7413e+00]
+set yrange [-3.1770e-01:1.7407e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -453,7 +453,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'single diagram output'
 
 set format y '10^{%%T}'
-set yrange [6.1863e-01:4.6880e+02]
+set yrange [6.1863e-01:4.3364e+02]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -471,7 +471,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-5.8784e-01:4.1534e-01]
+set yrange [-5.7446e-01:3.4844e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -510,7 +510,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [1.7801e+01:9.7475e+03]
+set yrange [2.3054e+01:9.7409e+03]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -533,7 +533,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-4.1641e-01:3.7151e-01]
+set yrange [-2.2089e-01:1.9773e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -652,7 +652,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [5.6798e+03:1.2959e+05]
+set yrange [5.6798e+03:1.2504e+05]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -675,7 +675,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.6603e-01:1.3890e-01]
+set yrange [-1.5678e-01:9.2656e-02]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -794,7 +794,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [9.5952e-03:2.4162e+04]
+set yrange [1.0896e-02:2.3105e+04]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -817,7 +817,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-4.2181e-01:3.3480e-01]
+set yrange [-2.6889e-01:1.9686e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -839,7 +839,7 @@ plot \
 #-- rendering subhistograms '(2)/NLO ratio'
 unset label
 unset format
-set yrange [-3.4140e-01:2.8528e+00]
+set yrange [-4.7376e-01:3.2679e+00]
 set origin 0.0000e+00, 2.0000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -897,7 +897,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-4.1428e-01:4.2102e-01]
+set yrange [-3.2968e-01:3.6794e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -1078,7 +1078,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'NLO and LO results'
 
 set format y '10^{%%T}'
-set yrange [1.0414e+01:8.8162e+03]
+set yrange [2.5977e+01:8.4886e+03]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -1101,7 +1101,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-9.5760e-01:9.4743e-01]
+set yrange [-1.8557e-01:1.4433e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2

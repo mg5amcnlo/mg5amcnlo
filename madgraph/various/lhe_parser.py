@@ -2,6 +2,7 @@ from __future__ import division
 import collections
 import random
 import re
+import numbers
 import math
 import time
 import os
@@ -96,8 +97,8 @@ class Particle(object):
         return " %8d %2d %4d %4d %4d %4d %+13.10e %+13.10e %+13.10e %14.10e %14.10e %10.4e %10.4e" \
             % (self.pid, 
                self.status,
-               self.mother1.event_id+1 if self.mother1 else 0,
-               self.mother2.event_id+1 if self.mother2 else 0,
+               (self.mother1 if isinstance(self.mother1, numbers.Number) else self.mother1.event_id+1) if self.mother1 else 0,
+               (self.mother2 if isinstance(self.mother2, numbers.Number) else self.mother2.event_id+1) if self.mother2 else 0,
                self.color1,
                self.color2,
                self.px,
@@ -755,6 +756,7 @@ class Event(list):
         if text:
             self.parse(text)
 
+
             
     def parse(self, text):
         """Take the input file and create the structured information"""
@@ -787,12 +789,17 @@ class Event(list):
             else:
                 self.tag += '%s\n' % line
 
+        self.assign_mother()
+        
+    def assign_mother(self):
         # assign the mother:
         for i,particle in enumerate(self):
-            if self.warning_order:
-                if i < particle.mother1 or i < particle.mother2:
+            if i < particle.mother1 or i < particle.mother2:
+                if self.warning_order:
                     logger.warning("Order of particle in the event did not agree with parent/child order. This might be problematic for some code.")
                     Event.warning_order = False
+                self.reorder_mother_child()
+                return self.assign_mother()
                                    
             if particle.mother1:
                 try:
@@ -807,6 +814,48 @@ class Event(list):
                     logger.warning("WRONG MOTHER INFO %s", self)
                     particle.mother2 = 0
 
+   
+    def reorder_mother_child(self):
+        """check and correct the mother/child position.
+           only correct one order by call (but this is a recursive call)"""
+    
+        tomove, position = None, None
+        for i,particle in enumerate(self):
+            if i < particle.mother1:
+                # move i after particle.mother1
+                tomove, position = i, particle.mother1-1
+                break
+            if i < particle.mother2:
+                tomove, position = i, particle.mother2-1
+        
+        # nothing to change -> we are done      
+        if not tomove:
+            return
+   
+        # move the particles:
+        particle = self.pop(tomove)
+        self.insert(int(position), particle)
+        
+        #change the mother id/ event_id in the event.
+        for i, particle in enumerate(self):
+            particle.event_id = i
+            #misc.sprint( i, particle.event_id)
+            m1, m2 = particle.mother1, particle.mother2
+            if m1 == tomove +1:
+                particle.mother1 = position+1
+            elif tomove < m1 <= position +1:
+                particle.mother1 -= 1
+            if m2 == tomove +1:
+                particle.mother2 = position+1
+            elif tomove < m2 <= position +1:
+                particle.mother2 -= 1  
+        # re-call the function for the next potential change   
+        return self.reorder_mother_child()
+         
+        
+        
+        
+        
    
     def parse_reweight(self):
         """Parse the re-weight information in order to return a dictionary
@@ -911,7 +960,17 @@ class Event(list):
                     if mother_id == 0:
                         setattr(new_particle, tag, this_particle)
                     else:
-                        setattr(new_particle, tag, self[nb_part + mother_id -1]) 
+                        try:
+                            setattr(new_particle, tag, self[nb_part + mother_id -1])
+                        except Exception, error:
+                            print error
+                            misc.sprint( self)
+                            misc.sprint(nb_part + mother_id -1)
+                            misc.sprint(tag)
+                            misc.sprint(position, decay_event)
+                            misc.sprint(particle)
+                            misc.sprint(len(self), nb_part + mother_id -1)
+                            raise
                 elif tag == "mother2" and isinstance(particle.mother1, Particle):
                     new_particle.mother2 = this_particle
                 else:

@@ -3532,9 +3532,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # create the run_card
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
 
-        misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
-                        stdout = devnull)
-        
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
             if os.path.exists(pjoin(self.dir_path,'madevent.tar.gz')):
@@ -3542,7 +3539,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             misc.call([os.path.join(self.dir_path, 'bin', 'internal', 'make_madevent_tar')],
                         stdout = devnull, cwd=self.dir_path)
 
-
+        misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_cardhtml-pl')],
+                        stdout = devnull, cwd=self.dir_path)
 
 
 
@@ -5025,7 +5023,7 @@ class UFO_model_to_mg4(object):
     
     def pass_parameter_to_case_insensitive(self):
         """modify the parameter if some of them are identical up to the case"""
-        
+    
         lower_dict={}
         duplicate = set()
         keys = self.model['parameters'].keys()
@@ -5049,11 +5047,24 @@ class UFO_model_to_mg4(object):
         to_change = []
         change={}
         for value in duplicate:
-            for i, var in enumerate(lower_dict[value][1:]):
+            for i, var in enumerate(lower_dict[value]):
                 to_change.append(var.name)
-                change[var.name] = '%s__%s' %( var.name.lower(), i+2)
-                var.name = '%s__%s' %( var.name.lower(), i+2)
-        
+                new_name = '%s%s' % (var.name.lower(), 
+                                                  ('__%d'%(i+1) if i>0 else ''))
+                change[var.name] = new_name
+                var.name = new_name
+    
+        # Apply the modification to the map_CTcoup_CTparam of the model
+        # if it has one (giving for each coupling the CT parameters whcih
+        # are necessary and which should be exported to the model.
+        if hasattr(self.model,'map_CTcoup_CTparam'):
+            for coup, ctparams in self.model.map_CTcoup_CTparam:
+                for i, ctparam in enumerate(ctparams):
+                    try:
+                        self.model.map_CTcoup_CTparam[coup][i] = change[ctparam]
+                    except KeyError:
+                        pass
+
         replace = lambda match_pattern: change[match_pattern.groups()[0]]
         rep_pattern = re.compile(re_expr % '|'.join(to_change))
         
@@ -5122,11 +5133,14 @@ class UFO_model_to_mg4(object):
         """modify the couplings to fit with MG4 convention and creates all the 
         different files"""
         
-        self.pass_parameter_to_case_insensitive()
+        self.pass_parameter_to_case_insensitive() 
         self.refactorize(wanted_couplings)
 
         # write the files
         if full:
+            if wanted_couplings:
+                # extract the wanted ct parameters
+                self.extract_needed_CTparam(wanted_couplings=wanted_couplings)
             self.write_all()
             
 
@@ -5201,7 +5215,8 @@ class UFO_model_to_mg4(object):
         file = open(os.path.join(MG5DIR,\
                               'models/template_files/fortran/rw_para.f')).read()
 
-        includes=["include \'coupl.inc\'","include \'input.inc\'"]
+        includes=["include \'coupl.inc\'","include \'input.inc\'",
+                                              "include \'model_functions.inc\'"]
         if self.opt['mp']:
             includes.extend(["include \'mp_coupl.inc\'","include \'mp_input.inc\'"])
         # In standalone and madloop we do no use the compiled param card but
@@ -5409,6 +5424,11 @@ class UFO_model_to_mg4(object):
                             if param.type == 'real'and 
                                is_valid(param.name)]
 
+        # check the parameter is a CT parameter or not
+        # if yes, just use the needed ones        
+        real_parameters = [param for param in real_parameters \
+                                           if self.check_needed_param(param)]
+
         fsock.writelines('double precision '+','.join(real_parameters)+'\n')
         fsock.writelines('common/params_R/ '+','.join(real_parameters)+'\n\n')
         if self.opt['mp']:
@@ -5421,6 +5441,11 @@ class UFO_model_to_mg4(object):
                             self.params_indep if param.type == 'complex' and
                             is_valid(param.name)]
 
+        # check the parameter is a CT parameter or not
+        # if yes, just use the needed ones        
+        complex_parameters = [param for param in complex_parameters \
+                             if self.check_needed_param(param)]
+
         if complex_parameters:
             fsock.writelines('double complex '+','.join(complex_parameters)+'\n')
             fsock.writelines('common/params_C/ '+','.join(complex_parameters)+'\n\n')
@@ -5428,8 +5453,69 @@ class UFO_model_to_mg4(object):
                 mp_fsock.writelines(self.mp_complex_format+' '+','.join([\
                             self.mp_prefix+p for p in complex_parameters])+'\n')
                 mp_fsock.writelines('common/MP_params_C/ '+','.join([\
-                          self.mp_prefix+p for p in complex_parameters])+'\n\n')                
+                          self.mp_prefix+p for p in complex_parameters])+'\n\n')
+
+    def check_needed_param(self, param):
+        """ Returns whether the parameter in argument is needed for this 
+        specific computation or not."""
     
+        # If this is a leading order model or if there was no CT parameter
+        # employed in this NLO model, one can directly return that the 
+        # parameter is needed since only CTParameters are filtered.
+        if not hasattr(self, 'allCTparameters') or \
+               self.allCTparameters is None or self.usedCTparameters is None or \
+               len(self.allCTparameters)==0:
+            return True
+         
+        # We must allow the conjugate shorthand for the complex parameter as
+        # well so we check wether either the parameter name or its name with
+        # 'conjg__' substituted with '' is present in the list.
+        # This is acceptable even if some parameter had an original name 
+        # including 'conjg__' in it, because at worst we export a parameter 
+        # was not needed.
+        param = param.lower()
+        cjg_param = param.replace('conjg__','',1)
+                
+        # First make sure it is a CTparameter
+        if param not in self.allCTparameters and \
+           cjg_param not in self.allCTparameters:
+            return True
+        
+        # Now check if it is in the list of CTparameters actually used
+        return (param in self.usedCTparameters or \
+                                             cjg_param in self.usedCTparameters)
+                
+    def extract_needed_CTparam(self,wanted_couplings=[]):
+        """ Extract what are the needed CT parameters given the wanted_couplings"""
+        
+        if not hasattr(self.model,'map_CTcoup_CTparam') or not wanted_couplings:
+            # Setting these lists to none wil disable the filtering in 
+            # check_needed_param
+            self.allCTparameters  = None
+            self.usedCTparameters = None
+            return
+        
+        # All CTparameters appearin in all CT couplings        
+        allCTparameters=self.model.map_CTcoup_CTparam.values()
+        # Define in this class the list of all CT parameters
+        self.allCTparameters=list(\
+                            set(itertools.chain.from_iterable(allCTparameters)))
+
+        # All used CT couplings
+        w_coupls = [coupl.lower() for coupl in wanted_couplings]
+        allUsedCTCouplings = [coupl for coupl in 
+              self.model.map_CTcoup_CTparam.keys() if coupl.lower() in w_coupls]
+        
+        # Now define the list of all CT parameters that are actually used
+        self.usedCTparameters=list(\
+          set(itertools.chain.from_iterable([
+            self.model.map_CTcoup_CTparam[coupl] for coupl in allUsedCTCouplings
+                                                                            ])))       
+        
+        # Now at last, make these list case insensitive
+        self.allCTparameters = [ct.lower() for ct in self.allCTparameters]
+        self.usedCTparameters = [ct.lower() for ct in self.usedCTparameters]
+        
     def create_intparam_def(self, dp=True, mp=False):
         """ create intparam_definition.inc setting the internal parameters.
         Output the double precision and/or the multiple precision parameters
@@ -5447,8 +5533,13 @@ class UFO_model_to_mg4(object):
             fsock.writelines("G = 2 * DSQRT(AS*PI) ! for the first init\n")
         if mp:
             fsock.writelines("MP__G = 2 * SQRT(MP__AS*MP__PI) ! for the first init\n")
+            
         for param in self.params_indep:
             if param.name == 'ZERO':
+                continue
+            # check whether the parameter is a CT parameter
+            # if yes,just used the needed ones
+            if not self.check_needed_param(param.name):
                 continue
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,
@@ -5465,6 +5556,10 @@ class UFO_model_to_mg4(object):
         if mp:
             fsock.writelines("MP__aS = MP__G**2/4/MP__PI\n")
         for param in self.params_dep:
+            # check whether the parameter is a CT parameter
+            # if yes,just used the needed ones
+            if not self.check_needed_param(param.name):
+                continue
             if dp:
                 fsock.writelines("%s = %s\n" % (param.name,
                                             self.p_to_f.parse(param.expr)))
@@ -5545,7 +5640,8 @@ class UFO_model_to_mg4(object):
                             double precision PI, ZERO
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)
-                            parameter  (ZERO=0d0)""")
+                            parameter  (ZERO=0d0)
+                            include \'model_functions.inc\'""")
         if self.opt['mp']:
             fsock.writelines("""%s MP__PI, MP__ZERO
                                 parameter (MP__PI=3.1415926535897932384626433832795e0_16)
@@ -5583,7 +5679,8 @@ class UFO_model_to_mg4(object):
                             double precision PI, ZERO
                             logical READLHA
                             parameter  (PI=3.141592653589793d0)            
-                            parameter  (ZERO=0d0)""")
+                            parameter  (ZERO=0d0)
+                            include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'
                             READLHA = .false.""")
@@ -5606,7 +5703,8 @@ class UFO_model_to_mg4(object):
                             implicit none
                             double precision PI
                             parameter  (PI=3.141592653589793d0)
-                            double precision mu_r2, as2""")
+                            double precision mu_r2, as2
+                            include \'model_functions.inc\'""")
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'""")
         fsock.writelines("""
@@ -5622,7 +5720,8 @@ class UFO_model_to_mg4(object):
             fsock.writelines("""subroutine mp_update_as_param()
     
                                 implicit none
-                                logical READLHA""")
+                                logical READLHA
+                                include \'model_functions.inc\'""")
             fsock.writelines("""%s MP__PI, MP__ZERO
                                     parameter (MP__PI=3.1415926535897932384626433832795e0_16)
                                     parameter (MP__ZERO=0e0_16)
@@ -5658,7 +5757,8 @@ class UFO_model_to_mg4(object):
                                                      nb_file), format='fortran')
         fsock.writelines("""subroutine %scoup%s()
           
-          implicit none"""%('mp_' if mp and not dp else '',nb_file))
+          implicit none
+          include \'model_functions.inc\'"""%('mp_' if mp and not dp else '',nb_file))
         if dp:
             fsock.writelines("""
               double precision PI, ZERO
@@ -5673,8 +5773,7 @@ class UFO_model_to_mg4(object):
                                 include \'mp_input.inc\'
                                 include \'mp_coupl.inc\'
                         """%self.mp_real_format) 
-        fsock.writelines("""
-          include 'model_functions.inc'""")
+
         for coupling in data:
             if dp:            
                 fsock.writelines('%s = %s' % (coupling.name,
@@ -5738,7 +5837,35 @@ class UFO_model_to_mg4(object):
              reglog=log(arg)
           endif
           end
-          
+
+          double complex function reglogp(arg)
+          implicit none
+          double complex arg
+          if(arg.eq.(0.0d0,0.0d0))then
+             reglogp=(0.0d0,0.0d0)
+          else
+             if(dble(arg).lt.0.0d0.and.dimag(arg).lt.0.0d0)then
+                reglogp=log(arg) + 2.0d0*3.1415926535897932d0*(0.0d0,1.0d0)
+             else
+                reglogp=log(arg)
+             endif
+          endif
+          end
+
+          double complex function reglogm(arg)
+          implicit none
+          double complex arg
+          if(arg.eq.(0.0d0,0.0d0))then
+             reglogm=(0.0d0,0.0d0)
+          else
+             if(dble(arg).lt.0.0d0.and.dimag(arg).gt.0.0d0)then
+                reglogm=log(arg) - 2.0d0*3.1415926535897932d0*(0.0d0,1.0d0)
+             else
+                reglogm=log(arg)
+             endif
+          endif
+          end
+
           double complex function arg(comnum)
           implicit none
           double complex comnum
@@ -5783,6 +5910,34 @@ class UFO_model_to_mg4(object):
                  mp_reglog=log(arg)
               endif
               end
+
+              %(complex_mp_format)s function mp_reglogp(arg)
+              implicit none
+              %(complex_mp_format)s arg
+              if(arg.eq.(0.0e0_16,0.0e0_16))then
+                 mp_reglogp=(0.0e0_16,0.0e0_16)
+              else
+                 if(real(arg,kind=16).lt.0.0e0_16.and.imagpart(arg).lt.0.0e0_16)then
+                    mp_reglogp=log(arg) + 2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16)
+                 else
+                    mp_reglogp=log(arg)
+                 endif
+              endif
+              end
+ 
+              %(complex_mp_format)s function mp_reglogm(arg)
+              implicit none
+              %(complex_mp_format)s arg
+              if(arg.eq.(0.0e0_16,0.0e0_16))then
+                 mp_reglogm=(0.0e0_16,0.0e0_16)
+              else
+                 if(real(arg,kind=16).lt.0.0e0_16.and.imagpart(arg).gt.0.0e0_16)then
+                    mp_reglogm=log(arg) - 2.0e0_16*3.14169258478796109557151794433593750e0_16*(0.0e0_16,1.0e0_16)
+                 else
+                    mp_reglogm=log(arg)
+                 endif 
+              endif
+              end
               
               %(complex_mp_format)s function mp_arg(comnum)
               implicit none
@@ -5794,7 +5949,8 @@ class UFO_model_to_mg4(object):
               else
                  mp_arg=log(comnum/abs(comnum))/imm
               endif
-              end"""%{'complex_mp_format':self.mp_complex_format})            
+              end"""%{'complex_mp_format':self.mp_complex_format})
+
 
         #check for the file functions.f
         model_path = self.model.get('modelpath')
@@ -5810,8 +5966,9 @@ class UFO_model_to_mg4(object):
             fsock.write_comment_line(' START UFO DEFINE FUNCTIONS ')
             for fct in ufo_fct:
                 # already handle by default
-                if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                    "theta_function", "cond", "reglog", "arg"]:
+                if fct.name not in ["complexconjugate", "re", "im", "sec", 
+                  "csc", "asec", "acsc", "theta_function", "cond", 
+                  "condif", "reglogp", "reglogm", "reglog", "arg"]:
                     ufo_fct_template = """
           double complex function %(name)s(%(args)s)
           implicit none
@@ -5831,8 +5988,9 @@ class UFO_model_to_mg4(object):
                 fsock.write_comment_line(' START UFO DEFINE FUNCTIONS FOR MP')
                 for fct in ufo_fct:
                     # already handle by default
-                    if fct.name not in ["complexconjugate", "re", "im", "sec", "csc", "asec", "acsc",
-                                        "theta_function", "cond", "reglog", "arg"]:
+                    if fct.name not in ["complexconjugate", "re", "im", "sec",
+                      "csc", "asec", "acsc", "theta_function", "cond", 
+                      "condif", "reglogp", "reglogm", "reglog", "arg"]:
                         ufo_fct_template = """
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
@@ -5892,12 +6050,13 @@ class UFO_model_to_mg4(object):
                             write(*,*)  ' ---------------------------------'
                             write(*,*)  ' '""")        
         lines = [format(data.name) for data in self.params_indep 
-                                                         if data.name != 'ZERO']
+                  if data.name != 'ZERO' and self.check_needed_param(data.name)]
         fsock.writelines('\n'.join(lines))
         fsock.writelines("""write(*,*)  ' Internal Params evaluated point by point'
                             write(*,*)  ' ----------------------------------------'
                             write(*,*)  ' '""")         
-        lines = [format(data.name) for data in self.params_dep]
+        lines = [format(data.name) for data in self.params_dep \
+                 if self.check_needed_param(data.name)]
         
         fsock.writelines('\n'.join(lines))                
         

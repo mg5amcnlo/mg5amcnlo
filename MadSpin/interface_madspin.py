@@ -81,7 +81,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'max_running_process':100,
                         'onlyhelicity': False,
                         'spinmode': "madspin",
-                        'use_old_dir': False #should be use only for faster debugging
+                        'use_old_dir': False, #should be use only for faster debugging
+                        'run_card': None # define cut for spinmode==none.
                         }
         
 
@@ -307,13 +308,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 name, value = args[0].split('=')
                 args[0]= name
                 args.append(value)
+            elif len(args) == 1 and args[0] in ['onlyhelicity']:
+                args.append('True')
             else:
                 raise self.InvalidCmd('set command requires at least two argument.')
         
         if args[1].strip() == '=':
             args.pop(1)
         
-        valid = ['max_weight','seed','curr_dir', 'spinmode']
+        valid = ['max_weight','seed','curr_dir', 'spinmode', 'run_card']
         if args[0] not in self.options and args[0] not in valid:
             raise self.InvalidCmd('Unknown options %s' % args[0])        
     
@@ -337,8 +340,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         elif args[0] == "spinmode":
             if args[1].lower() not in ["full", "bridge", "none"]:
-                raise self.InvalidCmd("spinmode can only take one of those 3 value: full/bridge/none") 
-        
+                raise self.InvalidCmd("spinmode can only take one of those 3 value: full/bridge/none")
+             
+        elif args[0] == "run_card":
+            if self.options['spinmode'] == "madspin":
+                raise self.InvalidCmd("edition of the run_card is not allowed within normal mode")
+            if "=" in args:
+                args.remove("=")
+            if len(args)==2 and "=" in args[1]:
+                data = args.pop(1)
+                arg, value = data.split("=")
+                args.append(arg)
+                args.append(value)
         
     def do_set(self, line):
         """ add one of the options """
@@ -358,6 +371,17 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.options[args[0]] = float(args[1])
         elif args[0] in ['onlyhelicity', 'use_old_dir']:
             self.options[args[0]] = banner.ConfigFile.format_variable(args[1], bool, args[0])
+        elif args[0] in ['run_card']:
+            if args[1] == 'default':
+                self.options['run_card'] = None
+            elif os.path.isfile(args[1]):
+                self.options['run_card'] = banner.RunCard(args[1])
+            elif  len(args) >2:
+                if not self.options['run_card']:
+                    self.options['run_card'] =  banner.RunCardLO()
+                    self.options['run_card'].remove_all_cut()
+                self.options['run_card'][args[1]] = args[2]
+                
         else:
             self.options[args[0]] = int(args[1])
     
@@ -660,7 +684,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                                 decay_dir), options=options)
                 me5_cmd.options["automatic_html_opening"] = False
-                run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                if self.options["run_card"]:
+                    run_card = self.options["run_card"]
+                else:
+                    run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
                 run_card["nevents"] = int(1.2*nb_event)
                 run_card["iseed"] = self.seed
                 run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))

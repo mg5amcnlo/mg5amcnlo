@@ -960,7 +960,7 @@ c determined which contributions are identical.
          write (*,*) 'Folding not implemented'
          stop 1
       elseif(ifl.eq.2) then
-         call fill_mint_function_NLOPS(f)
+         call fill_mint_function_NLOPS(f,n1body_wgt)
       endif
       return
       end

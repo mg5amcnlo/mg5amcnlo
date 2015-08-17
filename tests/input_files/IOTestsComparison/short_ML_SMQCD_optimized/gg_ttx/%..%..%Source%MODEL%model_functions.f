@@ -33,6 +33,34 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       ENDIF
       END
 
+      DOUBLE COMPLEX FUNCTION REGLOGP(ARG)
+      IMPLICIT NONE
+      DOUBLE COMPLEX ARG
+      IF(ARG.EQ.(0.0D0,0.0D0))THEN
+        REGLOGP=(0.0D0,0.0D0)
+      ELSE
+        IF(DBLE(ARG).LT.0.0D0.AND.DIMAG(ARG).LT.0.0D0)THEN
+          REGLOGP=LOG(ARG) + 2.0D0*3.1415926535897932D0*(0.0D0,1.0D0)
+        ELSE
+          REGLOGP=LOG(ARG)
+        ENDIF
+      ENDIF
+      END
+
+      DOUBLE COMPLEX FUNCTION REGLOGM(ARG)
+      IMPLICIT NONE
+      DOUBLE COMPLEX ARG
+      IF(ARG.EQ.(0.0D0,0.0D0))THEN
+        REGLOGM=(0.0D0,0.0D0)
+      ELSE
+        IF(DBLE(ARG).LT.0.0D0.AND.DIMAG(ARG).GT.0.0D0)THEN
+          REGLOGM=LOG(ARG) - 2.0D0*3.1415926535897932D0*(0.0D0,1.0D0)
+        ELSE
+          REGLOGM=LOG(ARG)
+        ENDIF
+      ENDIF
+      END
+
       DOUBLE COMPLEX FUNCTION ARG(COMNUM)
       IMPLICIT NONE
       DOUBLE COMPLEX COMNUM
@@ -74,6 +102,38 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         MP_REGLOG=(0.0E0_16,0.0E0_16)
       ELSE
         MP_REGLOG=LOG(ARG)
+      ENDIF
+      END
+
+      COMPLEX*32 FUNCTION MP_REGLOGP(ARG)
+      IMPLICIT NONE
+      COMPLEX*32 ARG
+      IF(ARG.EQ.(0.0E0_16,0.0E0_16))THEN
+        MP_REGLOGP=(0.0E0_16,0.0E0_16)
+      ELSE
+        IF(REAL(ARG,KIND=16).LT.0.0E0_16.AND.IMAGPART(ARG).LT.0.0E0_16
+     $   )THEN
+          MP_REGLOGP=LOG(ARG) + 2.0E0_16*3.1416925847879610955715179443
+     $     3593750E0_16*(0.0E0_16,1.0E0_16)
+        ELSE
+          MP_REGLOGP=LOG(ARG)
+        ENDIF
+      ENDIF
+      END
+
+      COMPLEX*32 FUNCTION MP_REGLOGM(ARG)
+      IMPLICIT NONE
+      COMPLEX*32 ARG
+      IF(ARG.EQ.(0.0E0_16,0.0E0_16))THEN
+        MP_REGLOGM=(0.0E0_16,0.0E0_16)
+      ELSE
+        IF(REAL(ARG,KIND=16).LT.0.0E0_16.AND.IMAGPART(ARG).GT.0.0E0_16
+     $   )THEN
+          MP_REGLOGM=LOG(ARG) - 2.0E0_16*3.1416925847879610955715179443
+     $     3593750E0_16*(0.0E0_16,1.0E0_16)
+        ELSE
+          MP_REGLOGM=LOG(ARG)
+        ENDIF
       ENDIF
       END
 
