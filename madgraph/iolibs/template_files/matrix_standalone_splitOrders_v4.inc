@@ -249,3 +249,45 @@ C ----------
 	  ENDDO
 
       END
+
+      SUBROUTINE %(proc_prefix)sGET_ME(P, ALPHAS, NHEL ,ANS)
+      IMPLICIT NONE   
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER NHEL
+      DOUBLE PRECISION ALPHAS 
+      real*8 pi     
+CF2PY INTENT(OUT) :: ANS  
+CF2PY INTENT(IN) :: NHEL   
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
+CF2PY INTENT(IN) :: ALPHAS
+C     ROUTINE FOR F2PY to read the benchmark point.    
+C     the include file with the values of the parameters and masses 
+      include "coupl.inc"
+      
+      pi = 3.141592653589793d0
+      G = 2* DSQRT(ALPHAS*pi)
+      call UPDATE_AS_PARAM()
+      if (NHEL.ne.0) then
+        CALL SMATRIXHEL(P, NHEL, ANS)
+      else
+        CALL SMATRIX(P, ANS)
+      endif
+      return 
+      end
+
+      SUBROUTINE %(proc_prefix)sINITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.    
+      IMPLICIT NONE   
+      CHARACTER*180 PATH
+CF2PY INTENT(IN) :: PATH 
+      call setpara(PATH)  !first call to setup the paramaters    
+      return 
+      end      
