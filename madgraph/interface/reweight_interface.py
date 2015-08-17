@@ -417,8 +417,11 @@ class ReweightInterface(extended_cmd.Cmd):
             new_param =  check_param_card.ParamCard(s_new.splitlines())
             card_diff = old_param.create_diff(new_param)
             if card_diff == '' and not self.second_process:
-                logger.warning(' REWEIGHTING: original card and new card are identical. Bypass this run')
-                return
+                if not __debug__:
+                    logger.warning(' REWEIGHTING: original card and new card are identical. Bypass this run')
+                    return
+                else:
+                    logger.warning(' REWEIGHTING: original card and new card are identical. Run it due to debug mode')
                 #raise self.InvalidCmd, 'original card and new card are identical'
             try:
                 if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
@@ -693,7 +696,6 @@ class ReweightInterface(extended_cmd.Cmd):
 
 
 
-            return 0
                 
             
 
