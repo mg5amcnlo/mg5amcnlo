@@ -4244,19 +4244,19 @@ Beware that this can be dangerous for local multicore runs.""")
                 else:
                     switch['reweight'] = 'OFF'
             else: 
-                switch['reweight'] = 'Numpy python package not available.'
+                switch['reweight'] = 'Not available (requires NumPy)'
                  
         if '-R' in args or '--reweight' in args:
             if switch['reweight'] == 'OFF':
                 switch['reweight'] = 'ON'
             elif switch['reweight'] != 'ON':
-                logger.critical("Can not run reweight: %s", switch['reweight'])
+                logger.critical("Cannot run reweight: %s", switch['reweight'])
         if '-M' in args or '--madspin' in args:
             switch['madspin'] = 'ON'
 
         options = list(available_mode) + ['auto', 'done']
         for id, key in enumerate(switch_order):
-            if switch[key] not in [void, 'Numpy python package not available.']:
+            if switch[key] not in [void, 'Not available (requires NumPy)']:
                 options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
                 options.append(key)
         options.append('parton')    

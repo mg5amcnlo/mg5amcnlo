@@ -4096,19 +4096,19 @@ Integrated cross-section
                 else:
                     switch['reweight'] = 'OFF'
             else:
-                switch['reweight'] = 'Numpy python package not available.'
+                switch['reweight'] = 'Not available (requires NumPy)'
 
         
         if 'do_reweight' in options and options['do_reweight']:
             if switch['reweight'] == "OFF":
                 switch['reweight'] = "ON"
             elif switch['reweight'] != "ON":
-                logger.critical("Can not run REWEIGTH module: %s" % switch['reweight'])
+                logger.critical("Cannot run REWEIGHT: %s" % switch['reweight'])
         if 'do_madspin' in options and  options['do_madspin']:
             if switch['madspin'] == "OFF":
                 switch['madspin'] = 'ON'
             elif switch['madspin'] != "ON":
-                logger.critical("Can not run MadSpin module: %s" % switch['reweight'])
+                logger.critical("Cannot run MadSpin module: %s" % switch['reweight'])
                     
                     
         answers = list(available_mode) + ['auto', 'done']
