@@ -11,7 +11,7 @@ ifeq ($(origin FC),default)
    FC=gfortran
 endif
 ifeq ($(origin F2PY), undefined)
-   F2PY=f2py
+   F2PY=
 endif
 
 

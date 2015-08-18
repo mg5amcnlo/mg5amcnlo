@@ -276,9 +276,9 @@ C     the include file with the values of the parameters and masses
       G = 2* DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL SMATRIXHEL(P, NHEL, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
       else
-        CALL SMATRIX(P, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, ANS)
       endif
       return 
       end
