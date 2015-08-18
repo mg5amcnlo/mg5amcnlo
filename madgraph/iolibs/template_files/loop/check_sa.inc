@@ -28,7 +28,7 @@ C
 C the include file with the values of the parameters and masses      
       INCLUDE "coupl.inc"
 C particle masses
-      REAL*8 PMASS(NEXTERNAL)      
+      REAL*8 PMASS(NEXTERNAL)
 C integer    n_max_cg
       INCLUDE "ngraphs.inc"
 	  include "nsqso_born.inc"
@@ -284,9 +284,9 @@ C
         write (*,*) "1eps   / (born*ao2pi) = ", MATELEM(2,0)/MATELEM(0,0)/AO2PI
         write (*,*) "2eps   / (born*ao2pi) = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI
 	  ELSE
-        write (*,*) "finite / ao2pi      = ", MATELEM(1,0)/MATELEM(0,0)/AO2PI
-        write (*,*) "1eps   / ao2pi      = ", MATELEM(2,0)/MATELEM(0,0)/AO2PI
-        write (*,*) "2eps   / ao2pi      = ", MATELEM(3,0)/MATELEM(0,0)/AO2PI	    
+        write (*,*) "finite / ao2pi      = ", MATELEM(1,0)/AO2PI
+        write (*,*) "1eps   / ao2pi      = ", MATELEM(2,0)/AO2PI
+        write (*,*) "2eps   / ao2pi      = ", MATELEM(3,0)/AO2PI	    
 	  ENDIF
       write (*,*) "---------------------------------"
 
@@ -458,9 +458,9 @@ C INITIALIZATION STEP: FACTORIALS FOR THE PHASE SPACE WEIGHT
       TWOPI=8.*DATAN(1.D0)
       PO2LOG=LOG(TWOPI/4.)
       Z(2)=PO2LOG
-      DO 101 K=3,(NEXTERNAL-NINCOMING-1)
+      DO 101 K=3,(NEXTERNAL-NINCOMING)
   101 Z(K)=Z(K-1)+PO2LOG-2.*LOG(DFLOAT(K-2))
-      DO 102 K=3,(NEXTERNAL-NINCOMING-1)
+      DO 102 K=3,(NEXTERNAL-NINCOMING)
   102 Z(K)=(Z(K)-LOG(DFLOAT(K-1)))
 C
 C CHECK ON THE NUMBER OF PARTICLES

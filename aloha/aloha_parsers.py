@@ -20,6 +20,7 @@ Lex + Yacc framework"""
 from __future__ import division
 
 import logging
+import numbers
 import os
 import re
 import sys
@@ -251,7 +252,7 @@ class ALOHAExpressionParser(UFOExpressionParser):
                       | IM group
                       | SQRT group
                       | CONJ group'''
-
+      
         new = aloha_lib.KERNEL.add_function_expression(p[1], eval(p[2])) 
         p[0] = str(new)
 
@@ -266,8 +267,8 @@ class ALOHAExpressionParser(UFOExpressionParser):
         
         if re_groups:
             p1 = re_groups.group("name")
-            
         new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]))
+        
         p[0] = str(new)
     
     def p_expression_function2(self, p):
@@ -308,9 +309,13 @@ class ALOHAExpressionParser(UFOExpressionParser):
                       | expression '/' expression'''
         if p[2] != '/' or p[3].isdigit() or p[3].endswith('.'):
             p[0] = p[1] + p[2] + p[3]
-        else:
-            new = aloha_lib.KERNEL.add_function_expression('/', eval(p[3]))
-            p[0] = p[1] + ' * ' + str(new)
+        else:  
+            denom = eval(p[3])
+            if isinstance(denom, numbers.Number):
+                p[0] = p[1] + '*' + str(1/denom)
+            else:
+                new = aloha_lib.KERNEL.add_function_expression('/', denom)
+                p[0] = p[1] + ' * ' + str(new)
         
     def p_expression_function3(self, p):
         "expression : FUNCTION '(' expression ',' expression ',' expression ')'"

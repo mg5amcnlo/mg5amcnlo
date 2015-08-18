@@ -1,0 +1,51 @@
+#*************************************************************************
+#                       Reweight Module                                  *
+#*************************************************************************
+#
+# Reweighting by Leading Order (tree-level / loop-induced) matrix
+# elements
+#
+# Caution: this is not (in general) NLO accurate, even when starting
+#          with NLO accurate events.
+#
+# Note: 
+#   1) the value of alpha_s will be used from the event so the value in
+#      the param_card is not taken into account.
+#   2) It is (in general) dangerous/wrong to change parameters by a large
+#      amount, if this changes the shape of the matrix elements a lot.
+#      (For example, changing a particle's mass by much more than its
+#      width leads to very inaccurate result). In such a case, separate 
+#      event generation runs are needed.
+#
+#
+# Example of (standard) code for the computation of two weights:
+#
+# launch                    ! tag to start the computat'n of the first weight
+#  set BLOCKNAME ID VALUE   ! rule to modify the current param_card
+#  set BLOCKNAME ID VALUE   ! rule to modify the current param_card
+# launch                    ! start to compute a second weight
+#  /home/Cards/param_card_2.dat ! you can also enter a path to a valid card
+#
+#
+# Possible options: 
+#   You can enter one of the following lines to customize the reweighting 
+#   procedure. These need to be given before the 'launch' command.
+#
+# change model NAME : use another model for the matrix-elements to reweight 
+#        with. In this case you need to provide the path to a correct 
+#        param_card for the new model; you cannot modify the original one 
+#        with the 'set' command.
+# change process DEF [-add]: change the process by which you reweight. 
+#        The initial and final state particles of the new process should 
+#        be exactly identical to the ones in the original process.
+# change helicity False: perform the reweighting by helicity summed 
+#        matrix-elements even if the events have been written with a 
+#        single helicity state.
+#        
+#*************************************************************************
+# ENTER YOUR COMMANDS BELOW. 
+#*************************************************************************
+
+launch
+#  SPECIFY A PATH OR USE THE SET COMMAND LIKE THIS:
+# set sminputs 1 130 # modify 1/alpha_EW

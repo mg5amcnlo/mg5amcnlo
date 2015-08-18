@@ -192,7 +192,7 @@ class FortranWriter(FileWriter):
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$)))", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py)", re.IGNORECASE)
 
     def write_line(self, line):
         """Write a fortran line, with correct indent and line splits"""
@@ -298,6 +298,10 @@ class FortranWriter(FileWriter):
         
         # write_comment_line must have a single line as argument
         assert(isinstance(line, str) and line.find('\n') == -1)
+
+        if line.startswith('F2PY'):
+            return ["C%s\n" % line.strip()]
+        
 
         res_lines = []
 
@@ -542,7 +546,7 @@ class CPPWriter(FileWriter):
             # Write } or };  and then recursively write the rest
             breakline_index = 1
             if len(myline) > 1:
-                if myline[1] == ";":
+                if myline[1] in [";", ","]:
                     breakline_index = 2
                 elif myline[1:].lstrip()[:2] == "//":
                     if myline.endswith('\n'):
@@ -552,7 +556,10 @@ class CPPWriter(FileWriter):
             res_lines.append("\n".join(self.split_line(\
                                        myline[:breakline_index],
                                        self.split_characters)) + "\n")
-            myline = myline[breakline_index + 1:].lstrip()
+            if len(myline) > breakline_index and myline[breakline_index] =='\n':
+                breakline_index +=1
+            myline = myline[breakline_index:].lstrip()
+            
             if myline:
                 # If anything is left of myline, write it recursively
                 res_lines.extend(self.write_line(myline))

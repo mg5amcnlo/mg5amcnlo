@@ -29,6 +29,8 @@
 #! If None: try to find g77 or gfortran on the system
 #!
 # fortran_compiler = None
+# f2py_compiler = None 
+
 
 #! Prefered C++ Compiler
 #! If None: try to find g++ or clang on the system

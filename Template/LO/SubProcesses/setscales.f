@@ -71,40 +71,27 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
       elseif(dynamical_scale_choice.eq.4) then
 c         \sqrt(s), partonic energy
           rscale=dsqrt(max(0d0,2d0*dot(P(0,1),P(0,2))))
+      elseif(dynamical_scale_choice.eq.5) then
+c         \decaying particle mass, for decays
+          rscale=dsqrt(max(0d0,dot(P(0,1),P(0,1))))
       elseif(dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-cc      USER DEFINE SCALE: ENTER YOUR CODE HERE                                  cc
-cc      to use this code you need to set                                         cc
-cc                 dymamical_scale_choice to 0 in the run_card                   cc
+cc      USER-DEFINED SCALE: ENTER YOUR CODE HERE                                 cc
+cc      to use this code you must set                                            cc
+cc                 dynamical_scale_choice = 0                                    cc
+cc      in the run_card (run_card.dat)                                           cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-         write(*,*) "scale not define by the user"
+         write(*,*) "User-defined scale not set"
          stop 21
-c
-c-some examples of dynamical scales
-c
-
-c      if(first) then
-c         write(*,*) 'Using event- by event renormalization/factorization scale:'
-c         write(*,*) 'scalefact^2*(Max of squared masses of final-state particles + '
-c         write(*,*) '             sum of pT^2 for jets and massless particles)'
-c      endif
-c      do i=3,nexternal
-c         rscale=max(rscale,pmass(i)**2)
-c      enddo
-c      do i=3,nexternal
-c         if(iabs(idup(i,1,1)).le.5.or.idup(i,1,1).eq.21.or.pmass(i).eq.0d0)then
-c            rscale=rscale+pt(p(0,i))**2
-c         endif
-c      enddo
-
-c      rscale=sqrt(rscale)
-
-
+         rscale = 0
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-cc      USER DEFINE SCALE: END of USER CODE                                      cc
+cc      USER-DEFINED SCALE: END OF USER CODE                                     cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      else
+        write(*,*)'Unknown option in scale_global_reference',dynamical_scale_choice
+        stop
       endif
-
+      rscale = scalefact*rscale
       return
       end
 

@@ -23,6 +23,7 @@ C---Les Houches Event Common Block
       PARAMETER (IUNIT=61)
       CHARACTER*80 STRING
       CHARACTER*140 BUFF
+      character*20 cidwgt
       character*12 dummy12
       character*2 dummy2
       CHARACTER*9 CH1
@@ -34,9 +35,14 @@ c evwgt_lh is meant to be passed to stdhep
       COMMON/CEVWGT_LH/EVWGT_LH
       include 'reweight0.inc'
       integer iww,max_weight
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      integer maxRWGT
+      parameter (maxRWGT=100)
+      double precision wgtxsecRWGT(maxRWGT)
+      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
       double precision ww(max_weight)
       common/cww/ww
+      integer numRWGTS
+      common/cnrwgts/numRWGTS
 C
       COMMON/PYPARS/MSTP(200),PARP(200),MSTI(200),PARI(200)
       DOUBLE PRECISION EVWEIGHT
@@ -164,6 +170,11 @@ c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
              iww=iww+1
              ww(iww)=wgtxsecPDF(i)
           enddo
+          do i=1,numRWGTS
+             call read_rwgt_line_RWGT(iunit,cidwgt,wgtxsecRWGT(i))
+             iww=iww+1
+             ww(iww)=wgtxsecRWGT(i)
+          enddo
           if (numscales.eq.0) then
              wgtxsecmu(1,1)=wgtref
           endif
@@ -235,10 +246,13 @@ c Hard event file (to be entered in Herwig driver)
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
       double precision xmuR,xmuF
-      integer iPDF,i
+      integer iPDF,i,numRWGTS
+      common/cnrwgts/numRWGTS
+      character*20 sRWGT
 C
       numscales=0
       numPDFpairs=0
+      numRWGTS=0
       nwgt=1
       weights_info(nwgt)="central value  "
 C--SET UP INPUT FILES
@@ -281,6 +295,20 @@ c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
             ENDDO
             nwgt=nwgt+numPDFpairs
             numPDFpairs=numPDFpairs/2
+         ELSEIF( INDEX(STRING,"<weightgroup type='mg_reweighting'").ne.0
+     $           .and.STRING(1:1).ne.'#') then
+            DO WHILE (.TRUE.)
+               READ(61,'(a)') STRING
+               if (INDEX(STRING,"<weight id").ne.0 .and.
+     $              STRING(1:1).ne.'#')then
+                  numRWGTS=numRWGTS+1
+                  read(string(index(string,"weight id")+11:index(string,"'>")-1),*)sRWGT
+                  write(weights_info(numscales**2+2*numPDFpairs+numRWGTS+1),113)sRWGT
+               endif
+               if (INDEX(STRING,"</weightgroup>").ne.0 .and.
+     $              STRING(1:1).ne.'#') exit
+            ENDDO
+            nwgt=nwgt+numRWGTS
          ELSEIF ( INDEX(STRING,'</header>').ne.0 .and.
      &        STRING(1:1).ne.'#' ) then
             EXIT
@@ -301,6 +329,7 @@ C--Read up to </init> in the event file
       enddo
  111  format(a4,f3.1,x,a4,f3.1)
  112  format(a4,i8,a3)
+ 113  format(a15)
       return
  998  write(*,*)'FATAL ERROR #2 IN UPINIT'
       stop
@@ -514,5 +543,28 @@ c independent (char(62)=">", char(61)="=", char(39)="'")
       id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
       read (buff(id_start:100),'(i4)') id
       read (buff(wgt_start:100),*) wgt
+      return
+      end
+
+
+      subroutine read_rwgt_line_RWGT(unit,cid,wgt)
+c read a line in the <rwgt> tag. The syntax should be
+c  <wgt id='1001'> 0.1234567e+01 </wgt>
+c The id should be exactly 4 digits long.
+      implicit none
+      integer unit,wgt_start,id_start,id_end
+      double precision wgt
+      character*100 buff
+      character*20 cid
+      read (unit,'(a)') buff
+c Use char() to make sure that the non-standard characters are compiler
+c independent (char(62)=">", char(61)="=", char(39)="'")
+      wgt_start=index(buff,CHAR(39)//CHAR(62))+2
+      id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
+      id_end=wgt_start-3
+
+      read (buff(id_start:id_end),*) cid
+      read (buff(wgt_start:100),*) wgt
+
       return
       end

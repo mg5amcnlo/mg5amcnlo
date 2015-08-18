@@ -1173,6 +1173,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                                 pjoin(self.me_dir, 'Events', self.run_name))
                 files.rm(pjoin(self.me_dir, 'Events', self.run_name))
                 self.results.delete_run(self.run_name)
+        else:
+            self.run_name = '' # will be set later
 
         if options['multicore']:
             self.cluster_mode = 2
@@ -1207,6 +1209,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if not mode in ['LO', 'NLO']:
             assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
+            self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
         
@@ -1849,7 +1852,7 @@ Integrated cross-section
                           '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
                         self.cross_sect_dict
 
-                if int(self.run_card['nevents'])>=10000 and self.run_card['reweight_scale']:
+                if self.run_card['nevents']>=10000 and self.run_card['reweight_scale']:
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
@@ -2354,7 +2357,7 @@ Integrated cross-section
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if (self.run_card['reweight_scale'] or self.run_card['reweight_PDF']):
+        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF'] :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
 
         self.update_status('Collecting events', level='parton', update_results=True)
@@ -4036,7 +4039,7 @@ Integrated cross-section
         
         
         void = 'NOT INSTALLED'
-        switch_order = ['order', 'fixed_order', 'shower','madspin']
+        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight']
         switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
                   'madspin': void}
         if not switch:
@@ -4048,16 +4051,19 @@ Integrated cross-section
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,
                                 'shower': default_switch,
-                                'madspin': default_switch}
+                                'madspin': default_switch,
+                                'reweight': default_switch}
         
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
-                       'madspin': 'Decay particles with the MadSpin module:' }
+                       'madspin': 'Decay particles with the MadSpin module:',
+                       'reweight': 'Add weights to the events based on changing model parameters:'}
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
-                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF'}
+                       ('reweight', 'ON'): {'fixed_order':'OFF'},
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF'}
                        }
         special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
 
@@ -4083,11 +4089,32 @@ Integrated cross-section
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
-            
+            if misc.has_f2py() or self.options['f2py_compiler']:
+                available_mode.append('5')
+                if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
+                    switch['reweight'] = 'ON'
+                else:
+                    switch['reweight'] = 'OFF'
+            else:
+                switch['reweight'] = 'Numpy python package not available.'
+
+        
+        if 'do_reweight' in options and options['do_reweight']:
+            if switch['reweight'] == "OFF":
+                switch['reweight'] = "ON"
+            elif switch['reweight'] != "ON":
+                logger.critical("Can not run REWEIGTH module: %s" % switch['reweight'])
+        if 'do_madspin' in options and  options['do_madspin']:
+            if switch['madspin'] == "OFF":
+                switch['madspin'] = 'ON'
+            elif switch['madspin'] != "ON":
+                logger.critical("Can not run MadSpin module: %s" % switch['reweight'])
+                    
+                    
         answers = list(available_mode) + ['auto', 'done']
         alias = {}
         for id, key in enumerate(switch_order):
-            if switch[key] != void:
+            if switch[key] != void and switch[key] in allowed_switch_value[key]:
                 answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
                 #allow lower case for on/off
                 alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
@@ -4095,7 +4122,7 @@ Integrated cross-section
         answers += special_values
         
         def create_question(switch):
-            switch_format = " %i %-60s %12s=%s\n"
+            switch_format = " %i %-61s %12s=%s\n"
             question = "The following switches determine which operations are executed:\n"
             for id, key in enumerate(switch_order):
                 question += switch_format % (id+1, description[key], key, switch[key])
@@ -4119,36 +4146,32 @@ Integrated cross-section
                 return 
             elif answer in special_values:
                 logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                #assign_switch('reweight', 'OFF')
+                #assign_switch('madspin', 'OFF')
                 if answer == 'LO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'ON'
                     assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'NLO':
                     switch['order'] = 'NLO'
                     switch['fixed_order'] = 'ON'
                     assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'aMC@NLO':
                     switch['order'] = 'NLO'
                     switch['fixed_order'] = 'OFF'
                     assign_switch('shower', 'ON')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'aMC@LO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'OFF'
                     assign_switch('shower', 'ON')
-                    assign_switch('madspin', 'OFF')
                 elif answer == 'noshower':
                     switch['order'] = 'NLO'
                     switch['fixed_order'] = 'OFF'
-                    assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')                                                    
+                    assign_switch('shower', 'OFF')                                                  
                 elif answer == 'noshowerLO':
                     switch['order'] = 'LO'
                     switch['fixed_order'] = 'OFF'
                     assign_switch('shower', 'OFF')
-                    assign_switch('madspin', 'OFF')
                 if mode:
                     return
             return switch
@@ -4196,7 +4219,7 @@ Integrated cross-section
         if mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")            
-            
+
         
         # specify the cards which are needed for this run.
         cards = ['param_card.dat', 'run_card.dat']
@@ -4205,8 +4228,11 @@ Please, shower the Les Houches events before using them for physics analyses."""
             options['parton'] = True
             ignore = ['shower_card.dat', 'madspin_card.dat']
             cards.append('FO_analyse_card.dat')
-        elif switch['madspin'] == 'ON':
-            cards.append('madspin_card.dat')
+        else:
+            if switch['madspin'] == 'ON':
+                cards.append('madspin_card.dat')
+            if switch['reweight'] == 'ON':
+                cards.append('reweight_card.dat')
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
         if mode == 'onlyshower':
@@ -4321,6 +4347,11 @@ _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
                             help="Provide a name to the run")
 _launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
+_launch_parser.add_option("-R", "--reweight", default=False, dest='do_reweight', action='store_true',
+                            help="Run the reweight module (reweighting by different model parameter")
+_launch_parser.add_option("-M", "--madspin", default=False, dest='do_madspin', action='store_true',
+                            help="Run the madspin package")
+
 
 
 _generate_events_usage = "generate_events [MODE] [options]\n" + \

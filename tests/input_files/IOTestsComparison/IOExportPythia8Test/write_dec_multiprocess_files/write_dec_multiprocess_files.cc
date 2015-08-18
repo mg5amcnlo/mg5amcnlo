@@ -446,7 +446,7 @@ id5 = flavors[choice][2];
 setId(id1,id2,id3,id4,id5);
 // Pick color flow
 int ncolor[10] = {1,1,1,1,1,1,1,1,1,1};
-if(id1 == 21&&id2 == 1&&id3 == 1&&id4 == -1&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 1&&id4 == -1&&id5 == 3){
+if((id1 == 21&&id2 == 1&&id3 == 1&&id4 == -1&&id5 == 1)||(id1 == 21&&id2 == 3&&id3 == 1&&id4 == -1&&id5 == 3)){
 vector<double> probs;
                   double sum = jamp2[0][0];
                   for(int i=0;i<ncolor[0];i++)
@@ -455,7 +455,7 @@ vector<double> probs;
 static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == 1&&id3 == 2&&id4 == -2&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 2&&id4 == -2&&id5 == 3){
+else if((id1 == 21&&id2 == 1&&id3 == 2&&id4 == -2&&id5 == 1)||(id1 == 21&&id2 == 3&&id3 == 2&&id4 == -2&&id5 == 3)){
 vector<double> probs;
                   double sum = jamp2[1][0];
                   for(int i=0;i<ncolor[1];i++)
@@ -464,7 +464,7 @@ vector<double> probs;
 static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == 1&&id3 == 3&&id4 == -3&&id5 == 1||id1 == 21&&id2 == 3&&id3 == 3&&id4 == -3&&id5 == 3){
+else if((id1 == 21&&id2 == 1&&id3 == 3&&id4 == -3&&id5 == 1)||(id1 == 21&&id2 == 3&&id3 == 3&&id4 == -3&&id5 == 3)){
 vector<double> probs;
                   double sum = jamp2[2][0];
                   for(int i=0;i<ncolor[2];i++)
@@ -473,7 +473,7 @@ vector<double> probs;
 static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == 2&&id3 == 1&&id4 == -1&&id5 == 2||id1 == 21&&id2 == 2&&id3 == 3&&id4 == -3&&id5 == 2){
+else if((id1 == 21&&id2 == 2&&id3 == 1&&id4 == -1&&id5 == 2)||(id1 == 21&&id2 == 2&&id3 == 3&&id4 == -3&&id5 == 2)){
 vector<double> probs;
                   double sum = jamp2[3][0];
                   for(int i=0;i<ncolor[3];i++)
@@ -482,7 +482,7 @@ vector<double> probs;
 static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == 2&&id3 == 2&&id4 == -2&&id5 == 2){
+else if((id1 == 21&&id2 == 2&&id3 == 2&&id4 == -2&&id5 == 2)){
 vector<double> probs;
                   double sum = jamp2[4][0];
                   for(int i=0;i<ncolor[4];i++)
@@ -491,7 +491,7 @@ vector<double> probs;
 static int colors[1][10] = {{2,3,3,0,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == -1&&id3 == 1&&id4 == -1&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 1&&id4 == -1&&id5 == -3){
+else if((id1 == 21&&id2 == -1&&id3 == 1&&id4 == -1&&id5 == -1)||(id1 == 21&&id2 == -3&&id3 == 1&&id4 == -1&&id5 == -3)){
 vector<double> probs;
                   double sum = jamp2[5][0];
                   for(int i=0;i<ncolor[5];i++)
@@ -500,7 +500,7 @@ vector<double> probs;
 static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == -1&&id3 == 2&&id4 == -2&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 2&&id4 == -2&&id5 == -3){
+else if((id1 == 21&&id2 == -1&&id3 == 2&&id4 == -2&&id5 == -1)||(id1 == 21&&id2 == -3&&id3 == 2&&id4 == -2&&id5 == -3)){
 vector<double> probs;
                   double sum = jamp2[6][0];
                   for(int i=0;i<ncolor[6];i++)
@@ -509,7 +509,7 @@ vector<double> probs;
 static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == -1&&id3 == 3&&id4 == -3&&id5 == -1||id1 == 21&&id2 == -3&&id3 == 3&&id4 == -3&&id5 == -3){
+else if((id1 == 21&&id2 == -1&&id3 == 3&&id4 == -3&&id5 == -1)||(id1 == 21&&id2 == -3&&id3 == 3&&id4 == -3&&id5 == -3)){
 vector<double> probs;
                   double sum = jamp2[7][0];
                   for(int i=0;i<ncolor[7];i++)
@@ -518,7 +518,7 @@ vector<double> probs;
 static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == -2&&id3 == 1&&id4 == -1&&id5 == -2||id1 == 21&&id2 == -2&&id3 == 3&&id4 == -3&&id5 == -2){
+else if((id1 == 21&&id2 == -2&&id3 == 1&&id4 == -1&&id5 == -2)||(id1 == 21&&id2 == -2&&id3 == 3&&id4 == -3&&id5 == -2)){
 vector<double> probs;
                   double sum = jamp2[8][0];
                   for(int i=0;i<ncolor[8];i++)
@@ -527,7 +527,7 @@ vector<double> probs;
 static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 21&&id2 == -2&&id3 == 2&&id4 == -2&&id5 == -2){
+else if((id1 == 21&&id2 == -2&&id3 == 2&&id4 == -2&&id5 == -2)){
 vector<double> probs;
                   double sum = jamp2[9][0];
                   for(int i=0;i<ncolor[9];i++)
@@ -536,7 +536,7 @@ vector<double> probs;
 static int colors[1][10] = {{1,3,0,1,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 3){
+else if((id1 == 1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 1)||(id1 == 3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 3)){
 vector<double> probs;
                   double sum = jamp2[0][0];
                   for(int i=0;i<ncolor[0];i++)
@@ -545,7 +545,7 @@ vector<double> probs;
 static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 3){
+else if((id1 == 1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 1)||(id1 == 3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 3)){
 vector<double> probs;
                   double sum = jamp2[1][0];
                   for(int i=0;i<ncolor[1];i++)
@@ -554,7 +554,7 @@ vector<double> probs;
 static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 1||id1 == 3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 3){
+else if((id1 == 1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 1)||(id1 == 3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 3)){
 vector<double> probs;
                   double sum = jamp2[2][0];
                   for(int i=0;i<ncolor[2];i++)
@@ -563,7 +563,7 @@ vector<double> probs;
 static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 2||id1 == 2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 2){
+else if((id1 == 2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == 2)||(id1 == 2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == 2)){
 vector<double> probs;
                   double sum = jamp2[3][0];
                   for(int i=0;i<ncolor[3];i++)
@@ -572,7 +572,7 @@ vector<double> probs;
 static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == 2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 2){
+else if((id1 == 2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == 2)){
 vector<double> probs;
                   double sum = jamp2[4][0];
                   for(int i=0;i<ncolor[4];i++)
@@ -581,7 +581,7 @@ vector<double> probs;
 static int colors[1][10] = {{3,0,2,3,1,0,0,1,2,0}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == -1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -3){
+else if((id1 == -1&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -1)||(id1 == -3&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -3)){
 vector<double> probs;
                   double sum = jamp2[5][0];
                   for(int i=0;i<ncolor[5];i++)
@@ -590,7 +590,7 @@ vector<double> probs;
 static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == -1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -3){
+else if((id1 == -1&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -1)||(id1 == -3&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -3)){
 vector<double> probs;
                   double sum = jamp2[6][0];
                   for(int i=0;i<ncolor[6];i++)
@@ -599,7 +599,7 @@ vector<double> probs;
 static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == -1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -1||id1 == -3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -3){
+else if((id1 == -1&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -1)||(id1 == -3&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -3)){
 vector<double> probs;
                   double sum = jamp2[7][0];
                   for(int i=0;i<ncolor[7];i++)
@@ -608,7 +608,7 @@ vector<double> probs;
 static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == -2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -2||id1 == -2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -2){
+else if((id1 == -2&&id2 == 21&&id3 == 1&&id4 == -1&&id5 == -2)||(id1 == -2&&id2 == 21&&id3 == 3&&id4 == -3&&id5 == -2)){
 vector<double> probs;
                   double sum = jamp2[8][0];
                   for(int i=0;i<ncolor[8];i++)
@@ -617,7 +617,7 @@ vector<double> probs;
 static int colors[1][10] = {{0,1,1,3,2,0,0,2,0,3}};
 setColAcol(colors[ic][0],colors[ic][1],colors[ic][2],colors[ic][3],colors[ic][4],colors[ic][5],colors[ic][6],colors[ic][7],colors[ic][8],colors[ic][9]);
 }
-else if(id1 == -2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -2){
+else if((id1 == -2&&id2 == 21&&id3 == 2&&id4 == -2&&id5 == -2)){
 vector<double> probs;
                   double sum = jamp2[9][0];
                   for(int i=0;i<ncolor[9];i++)

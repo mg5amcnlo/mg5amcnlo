@@ -21,7 +21,8 @@ C integer nexternal and number particles (incoming+outgoing) in the me
       INTEGER NEXTERNAL, NINCOMING
       PARAMETER (NEXTERNAL=%(nexternal)d,NINCOMING=%(nincoming)d)
 C ---  particle masses
-      REAL*8 PMASS(NEXTERNAL)	
+      REAL*8 PMASS(NEXTERNAL)
+      REAL*8 TOTALMASS
 C ---  integer    n_max_cg
       INCLUDE "ngraphs.inc"     !how many diagrams (could be useful to know...)
 
@@ -71,6 +72,11 @@ c     in coupl.inc .
       call setpara('param_card.dat')  !first call to setup the paramaters
       include "pmass.inc"             !set up masses
 
+      TOTALMASS = 0.0d0
+      DO I=1,NEXTERNAL
+        TOTALMASS = TOTALMASS + PMASS(I)
+      ENDDO
+
 c ---  Now use a simple multipurpose PS generator (RAMBO) just to get a 
 c     RANDOM set of four momenta of given masses pmass(i) to be used to evaluate 
 c     the madgraph matrix-element.       
@@ -80,6 +86,9 @@ c
          SQRTS=PMASS(1)
       ELSE
          SQRTS=1000d0              !CMS energy in GEV
+         IF (SQRTS.le.2.0d0*TOTALMASS) THEN
+            SQRTS = 2.0d0*TOTALMASS
+         ENDIF
       ENDIF
 
       call printout()

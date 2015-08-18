@@ -145,7 +145,8 @@ class Computation(dict):
     Argument of function (or denominator) should be scalar.
     We found %s''' % expression
                 new = expr.simplify()
-                new = expr.factorize()
+                if not isinstance(new, numbers.Number):
+                    new = new.factorize()
                 argument.append(new)
             else:
                 argument.append(expression)
@@ -153,7 +154,21 @@ class Computation(dict):
             val = re.findall(r'''\bFCT(\d*)\b''', str(arg))
             for v in val:
                 self.add_tag(('FCT%s' % v,))
-            
+
+        # check if the function is a pure numerical function.
+        if (fct_tag.startswith('cmath.') or fct_tag in self.known_fct) and \
+                    all(isinstance(x, numbers.Number) for x in argument):
+            print "start the hack"
+            import cmath
+            if fct_tag.startswith('cmath.'):
+                module = ''
+            else:
+                module = 'cmath.'
+            try:
+                return str(eval("%s%s(%s)" % (module,fct_tag, ','.join(`x` for x in argument))))
+            except Exception, error:
+                print error
+                print "cmath.%s(%s)" % (fct_tag, ','.join(`x` for x in argument))
         if str(fct_tag)+str(argument) in self.inverted_fct:
             tag = self.inverted_fct[str(fct_tag)+str(argument)]
             v = tag.split('(')[1][:-1]

@@ -79,8 +79,10 @@ $(BINDIR)combine_events: $(COMBINE)
 	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
 	mv combine_events $(BINDIR)
 
+CutTools: $(LIBDIR)libcts.a
 libcuttools: $(LIBDIR)libcts.a
 
+IREGI: $(LIBDIR)libiregi.a
 libiregi: $(LIBDIR)libiregi.a
 
 $(LIBDIR)libcts.a: $(CUTTOOLSDIR)

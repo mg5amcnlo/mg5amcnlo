@@ -34,6 +34,8 @@ import madgraph.iolibs.files as files
 
 import madgraph.various.misc as misc
 import madgraph.various.lhe_parser as lhe_parser
+import madgraph.various.banner as banner_mod
+import madgraph.various.lhe_parser as lhe_parser
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -213,6 +215,41 @@ class TestMECmdShell(unittest.TestCase):
 #    5.626776e-02   2    -13  13 # 0.083965
 # #
 # #      PDG        Width""".split('\n'), data.strip().split('\n'))
+
+    def test_width_nlocomputation(self):
+        """test the param_card created is correct"""
+        
+        cmd = os.getcwd()
+        
+        interface = MGCmd.MasterCmd()
+        interface.exec_cmd("import model loop_qcd_qed_sm", errorhandling=False, 
+                                                        printcmd=False, 
+                                                        precmd=True, postcmd=False)
+        interface.exec_cmd("compute_widths H Z W+ t --nlo --output=%s" % \
+                           pjoin(self.path, "param_card.dat")
+                           , errorhandling=False, 
+                                                        printcmd=False, 
+                                                        precmd=True, postcmd=False)      
+        
+        # test the param_card is correctly written
+        self.assertTrue(os.path.exists('%s/param_card.dat' % self.path))
+        text = open('%s/param_card.dat' % self.path).read()
+        pattern = re.compile(r"decay\s+23\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(2.42823,value, delta=1e-3)
+        pattern = re.compile(r"decay\s+24\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(2.028440,value, delta=1e-3)
+        pattern = re.compile(r"decay\s+25\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(3.514960e-03,value, delta=1e-3)
+        pattern = re.compile(r"decay\s+6\s+([+-.\de]*)", re.I)
+        value = float(pattern.search(text).group(1))
+        self.assertAlmostEqual(1.354080,value, delta=5e-3)        
+        
+
+
+
         
     def test_creating_matched_plot(self):
         """test that the creation of matched plot works and the systematics as well"""
@@ -424,7 +461,7 @@ class TestMEfromfile(unittest.TestCase):
                  generate_events
                  parton
                  set nevents 100
-                 add_time_of_flight --threshold=3e-26
+                 add_time_of_flight --threshold=4e-14
                  pythia
                  """ %self.run_dir
         open(pjoin(self.path, 'mg5_cmd'),'w').write(cmd)
@@ -452,7 +489,7 @@ class TestMEfromfile(unittest.TestCase):
         for event in lhe_parser.EventFile(event):
             for particle in event:
                 if particle.pid in [23,25]:
-                    self.assertTrue(particle.vtim ==0 or particle.vtim > 3e-26)
+                    self.assertTrue(particle.vtim ==0 or particle.vtim > 4e-14)
                     if particle.vtim == 0 :
                         has_zero = True
                     else:
@@ -577,10 +614,31 @@ class TestMEfromfile(unittest.TestCase):
                         stdout=stdout,stderr=stdout)
         
         self.check_parton_output(cross=4.541638, error=0.035)
-        self.check_parton_output('run_02', cross=4.541638, error=0.035)
+        self.check_parton_output('run_02', cross=4.41887317, error=0.035)
         self.check_pythia_output()
         self.assertEqual(cwd, os.getcwd())
         #
+        
+        # Additional test: Check that the banner of the run_02 include correctly
+        # the ptheavy 50 information
+        banner = banner_mod.Banner(pjoin(self.run_dir, 'Events','run_01', 'run_01_fermi_banner.txt'))
+        run_card = banner.charge_card('run_card')
+        self.assertEqual(run_card['ptheavy'], 0)
+        
+        banner = banner_mod.Banner(pjoin(self.run_dir, 'Events','run_02', 'run_02_fermi_banner.txt'))
+        run_card = banner.charge_card('run_card')
+        self.assertEqual(run_card['ptheavy'], 50)
+        
+        events = lhe_parser.EventFile(pjoin(self.run_dir, 'Events','run_02', 'unweighted_events.lhe.gz'))
+        banner =  banner_mod.Banner(events.banner)
+        run_card = banner.charge_card('run_card')
+        self.assertEqual(run_card['ptheavy'], 50)
+        for event in events:
+            event.check()
+        
+        
+        
+        
 
     def load_result(self, run_name):
         

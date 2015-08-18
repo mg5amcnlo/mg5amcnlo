@@ -51,6 +51,7 @@ echo   $offset > moffset.dat;
 for((try=1;try<=16;try+=1)); 
 do
     ../madevent 2>&1 >> $k <input_app.txt | tee -a $k;
+    status_code=${PIPESTATUS[0]};
     if [ -s $k ]
     then
         break
@@ -69,4 +70,10 @@ if [[ $subdir -ne 1 &&  -s results.dat && $MG5DEBUG != true ]]; then
 	 rm -f moffset.dat &> /dev/null
 	 rm -f fail.log &> /dev/null
 fi
+if [[ $status_code -ne 0 ]]; then 
+	 rm results.dat
+	 echo "ERROR DETECTED"
+	 echo "end code not correct $status_code" > results.dat
+fi
+
 cd ../

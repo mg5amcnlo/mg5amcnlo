@@ -143,6 +143,7 @@ def find_symmetry(matrix_element):
                 diag.get_vertex_leg_numbers()]):
             # Only 3-vertices allowed in configs.inc
             continue
+        
         tag = diagram_generation.DiagramTag(base_diagram)
         try:
             ind = diagram_tags.index(tag)

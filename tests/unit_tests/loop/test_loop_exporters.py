@@ -276,7 +276,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                            'perturbation_couplings':pert_orders,
                                            'sqorders_types':sq_orders_type,
                                            'split_orders':split_orders})
-
+                
             myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
             matrix_element=loop_helas_objects.LoopHelasMatrixElement(\
                                                 myloopamp,optimized_output=True)
@@ -289,8 +289,9 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
             # called from the write_matrix_element function in the exporter
             # [but we don't call it here because we only want the file 
             # loop_matrix.f]).
-            self.exporter.general_replace_dict= \
-                self.exporter.generate_general_replace_dict(matrix_element)
+            matrix_element.rep_dict = self.exporter.\
+                                   generate_general_replace_dict(matrix_element)
+            
             # and for the same reason also force the computation of the analytical
             # information in the Helas loop diagrams.
             matrix_element.compute_all_analytic_information(

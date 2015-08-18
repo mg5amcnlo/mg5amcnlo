@@ -272,7 +272,7 @@ class OneResult(object):
         
         i=0
         found_xsec_line = False
-        for line in finput:
+        for line in finput:            
             # Exit as soon as we hit the xml part. Not elegant, but the part
             # below should eventually be xml anyway.
             if '<' in line:
@@ -287,6 +287,7 @@ class OneResult(object):
                         if m:
                             return float(m.group(1))*10**(float(m.group(2)))
                         return 
+
                 data = [secure_float(d) for d in line.split()]
                 self.axsec, self.xerru, self.xerrc, self.nevents, self.nw,\
                          self.maxit, self.nunwgt, self.luminosity, self.wgt, \
@@ -393,13 +394,17 @@ class Combine_results(list, OneResult):
     
     def add_results(self, name, filepath, mfactor=1):
         """read the data in the file"""
-        oneresult = OneResult(name)
-        oneresult.set_mfactor(mfactor)
-        oneresult.read_results(filepath)
-        oneresult.parent_name = self.name
-        self.append(oneresult)
-        return oneresult
-    
+        try:
+            oneresult = OneResult(name)
+            oneresult.set_mfactor(mfactor)
+            oneresult.read_results(filepath)
+            oneresult.parent_name = self.name
+            self.append(oneresult)
+            return oneresult
+        except Exception:
+            logger.critical("Error when reading %s" % filepath)
+            raise
+        
     
     def compute_values(self, update_statistics=False):
         """compute the value associate to this combination"""

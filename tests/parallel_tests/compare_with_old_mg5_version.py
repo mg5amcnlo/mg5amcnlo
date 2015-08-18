@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 257 #2.0.0
+    reference_number = 350 #2.0.0
     nb_test = 0
     
     
@@ -220,7 +220,7 @@ class OLDMG5Comparator(unittest.TestCase):
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
 
-        return # By default no need this
+#        return # By default no need this
         self.create_short_parallel_sqso()
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
@@ -404,6 +404,7 @@ class OLDMG5Comparator(unittest.TestCase):
 
             # Do some cleanup
             my_comp.cleanup()   
+
     
     ############################################################################
     # Short test for the evaluation of the cross-section

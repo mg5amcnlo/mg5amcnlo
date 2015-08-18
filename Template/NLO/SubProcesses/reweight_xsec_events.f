@@ -221,18 +221,18 @@ c Determine the flavor map between the NLO and Born
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
 
+         if(buff(1:1).ne.'#')then
+            write(*,*)'This event file cannot be reweighted [3]',i
+            stop
+         endif
+         read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe
+     $        ,ipartner_lhe,scale1_lhe,scale2_lhe,kwgtinfo,kexternal
+     $        ,jwgtnumpartn,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $        ,wgtpdfmax
+
          if (kwgtinfo.ne.-5) then
          call reweight_fill_extra_inverse()
 
-        if(buff(1:1).ne.'#')then
-          write(*,*)'This event file cannot be reweighted [3]',i
-          stop
-        endif
-        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                    fksfather_lhe,ipartner_lhe,
-     #                    scale1_lhe,scale2_lhe,
-     #                    kwgtinfo,kexternal,jwgtnumpartn,
-     #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
         if(kwgtinfo.lt.1.or.kwgtinfo.gt.5)then
           write(*,*)'This event file cannot be reweighted [4]',i
           write(*,*)kwgtinfo
@@ -429,6 +429,12 @@ c Restore default PDFs
 
         endif
 
+        write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe,jfks_lhe,
+     $       fksfather_lhe,ipartner_lhe, scale1_lhe,scale2_lhe, isave
+     $       ,izero,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $       ,wgtpdfmax
+
+
 c renormalize all the scale & PDF weights to have the same normalization
 c as XWGTUP
         if(do_rwgt_scale)then
@@ -460,12 +466,6 @@ c Keep track of the accumulated results:
         endif
 
 c Write event to disk:
-        write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                     fksfather_lhe,ipartner_lhe,
-     #                     scale1_lhe,scale2_lhe,
-     #                     isave,izero,izero,
-     #          wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-
         call write_lhef_event(ofile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)

@@ -20,9 +20,11 @@
 
 module avh_olo_units
   implicit none
-  integer :: eunit=6
-  integer :: wunit=6
-  integer :: munit=6
+! By default these values are set to 6. However, they can potentially clog
+! the logs so we want to force them off, unless explicitely turned on
+  integer :: eunit=0
+  integer :: wunit=0
+  integer :: munit=0
   integer :: punit=0 ! print all
   protected :: eunit,wunit,munit,punit !]PROTECTED
 contains

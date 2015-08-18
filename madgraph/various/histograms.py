@@ -957,7 +957,6 @@ class HwU(Histogram):
         elif scale_position == -2:
             wgts_to_consider = [ label for label in self.bins.weight_labels if \
                                                       isinstance(label, int) ]            
-        
         if len(wgts_to_consider)==0:
             # No envelope can be constructed, it is not worth adding the weights
             return None
@@ -986,7 +985,7 @@ class HwU(Histogram):
                     pdf_up     = 0.0
                     pdf_down   = 0.0
                     cntrl_val  = bin.wgts['central']
-                    if pdfs[-1] <= 90000:
+                    if wgts_to_consider[0] <= 90000:
                         # use Hessian method (CTEQ & MSTW)
                         if len(pdfs)>2:
                             for i in range(int((len(pdfs)-1)/2)):
@@ -1748,25 +1747,27 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
         
         # Now add the first subhistogram
         plot_lines = ["0.0 ls 999 title ''"]
-        if 'statistical' in uncertainties:
-           plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''"%\
-(HwU_name,block_position))
+        for i, histo in enumerate(self[:n_histograms]):
+            color_index = i%self.number_line_colors_defined+1
+            if 'statistical' in uncertainties:
+               plot_lines.append(
+"'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls %d title ''"%\
+(HwU_name,block_position+i,color_index))
         # Then the scale variations
-        if not mu_var_pos is None:
-            plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 11 title ''"\
-%(HwU_name,block_position,mu_var_pos+3),
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 11 title ''"\
-%(HwU_name,block_position,mu_var_pos+4)
-            ])
-        if not PDF_var_pos is None:
-            plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 21 title ''"\
-%(HwU_name,block_position,PDF_var_pos+3),
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls 21 title ''"\
-%(HwU_name,block_position,PDF_var_pos+4)
-            ])
+            if not mu_var_pos is None:
+                plot_lines.extend([
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,mu_var_pos+3,color_index+10),
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,mu_var_pos+4,color_index+10)
+                ])
+            if not PDF_var_pos is None:
+                plot_lines.extend([
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,PDF_var_pos+3,color_index+20),
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,PDF_var_pos+4,color_index+20)
+                ])
         
         # Add the plot lines
         if not no_uncertainties:
@@ -1857,8 +1858,8 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
 if __name__ == "__main__":
     main_doc = \
     """ For testing and standalone use. Usage:
-        python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <option>
-        Where <option> can be a list of the following: 
+        python histograms.py <.HwU input_file_path_1> <.HwU input_file_path_2> ... --out=<output_file_path.format> <options>
+        Where <options> can be a list of the following: 
            '--help'          See this message.
            '--gnuplot' or '' output the histograms read to gnuplot
            '--HwU'           to output the histograms read to the raw HwU source.
@@ -1871,13 +1872,17 @@ if __name__ == "__main__":
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
            '--simple_ratios' to turn off correlations and error propagation in the ratio.
-           '--sum'           To sum all diagrams together
-           '--average'       To average all diagrams together
+           '--sum'           To sum all identical histograms together
+           '--average'       To average over all identical histograms
            '--rebin=<n>'     Rebin the plots by merging n-consecutive bins together.  
            '--assign_types=<type1>,<type2>,...' to assign a type to all histograms of the first, second, etc... files loaded.
+           '--multiply=<fact1>,<fact2>,...' to multiply all histograms of the first, second, etc... files by the fact1, fact2, etc...
            '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
     """
-    
+
+    possible_options=['--help', '--gnuplot', '--HwU', '--types','--n_ratios','--no_scale','--no_pdf','--no_stat',\
+                      '--no_open','--show_full','--show_short','--simple_ratios','--sum','--average','--rebin',  \
+                      '--assign_types','--multiply','--no_suffix', '--out']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical']
     auto_open = True
@@ -1889,6 +1894,11 @@ if __name__ == "__main__":
     if '--help' in sys.argv or len(sys.argv)==1:
         log('\n\n%s'%main_doc)
         sys.exit(0)
+
+    for arg in sys.argv[1:]:
+        if arg.startswith('--'):
+            if arg.split('=')[0] not in possible_options:
+                log('WARNING: option "%s" not valid. It will be ignored' % arg)
 
     arg_string=' '.join(sys.argv)
 
@@ -1933,22 +1943,25 @@ if __name__ == "__main__":
         uncertainties.remove('statistical')        
 
     n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
-    histo_norm = 1.0
+    histo_norm = [1.0]*n_files
+
+    for arg in sys.argv[1:]:
+        if arg.startswith('--multiply='):
+            histo_norm = [(float(fact) if fact!='' else 1.0) for fact in \
+                                                arg[11:].split(',')]
+
     if '--average' in sys.argv:
-        histo_norm = 1.0/float(n_files)
+        histo_norm = [hist/float(n_files) for hist in histo_norm]
         
     log("=======")
     histo_list = HwUList([])
     for i, arg in enumerate(sys.argv[1:]):
-        n_files += 1
         if arg.startswith('--'):
             break
         log("Loading histograms from '%s'."%arg)
         if OutName=="":
             OutName = os.path.basename(arg).split('.')[0]+'_output'
         new_histo_list = HwUList(arg, accepted_types_order=accepted_types)
-        if n_files==1:
-            continue
         for histo in new_histo_list:
             if no_suffix:
                 continue
@@ -1972,15 +1985,17 @@ if __name__ == "__main__":
                 histo.type += suffix
 
         if i==0 or all(_ not in ['--sum','--average'] for _ in sys.argv):
+            for j,hist in enumerate(new_histo_list):
+                new_histo_list[j]=hist*histo_norm[i]
             histo_list.extend(new_histo_list)
             continue
         
         if any(_ in sys.argv for _ in ['--sum','--average']):
-            for j, hist in enumerate(histo_list):
+            for j, hist in enumerate(new_histo_list):
                  # First make sure the plots have the same weight labels and such
                  hist.test_plot_compability(histo_list[j])
                  # Now let the histogram module do the magic and add them.
-                 histo_list[j] += hist*histo_norm
+                 histo_list[j] += hist*histo_norm[i]
         
     log("A total of %i histograms were found."%len(histo_list))
     log("=======")

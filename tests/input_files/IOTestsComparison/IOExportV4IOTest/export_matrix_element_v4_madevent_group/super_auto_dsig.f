@@ -275,7 +275,7 @@ C                   Need to flip back x values
                     XBK(2)=XDUM
                     CM_RAP=-CM_RAP
                   ENDIF
-                  SELPROC(K,I,J) = DSIG*SELPROC(K,I,J)
+                  SELPROC(K,I,J) = DABS(DSIG*SELPROC(K,I,J))
                   SUMPROB = SUMPROB + SELPROC(K,I,J)
                 ENDIF
               ENDDO

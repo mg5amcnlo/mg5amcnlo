@@ -80,7 +80,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'ms_dir':None,
                         'max_running_process':100,
                         'onlyhelicity': False,
-                        'spinmode': "madspin"}
+                        'spinmode': "madspin",
+                        'use_old_dir': False, #should be use only for faster debugging
+                        'run_card': None # define cut for spinmode==none.
+                        }
         
 
         
@@ -287,8 +290,8 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_decay(self, decaybranch):
         """add a process in the list of decayed particles"""
         
-        if self.model and not self.model['case_sensitive']:
-            decaybranch = decaybranch.lower()
+        #if self.model and not self.model['case_sensitive']:
+        #    decaybranch = decaybranch.lower()
 
         decay_process, init_part = self.decay.reorder_branch(decaybranch)
         if not self.list_branches.has_key(init_part):
@@ -305,13 +308,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 name, value = args[0].split('=')
                 args[0]= name
                 args.append(value)
+            elif len(args) == 1 and args[0] in ['onlyhelicity']:
+                args.append('True')
             else:
                 raise self.InvalidCmd('set command requires at least two argument.')
         
         if args[1].strip() == '=':
             args.pop(1)
         
-        valid = ['max_weight','seed','curr_dir', 'spinmode']
+        valid = ['max_weight','seed','curr_dir', 'spinmode', 'run_card']
         if args[0] not in self.options and args[0] not in valid:
             raise self.InvalidCmd('Unknown options %s' % args[0])        
     
@@ -335,9 +340,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         elif args[0] == "spinmode":
             if args[1].lower() not in ["full", "bridge", "none"]:
-                raise self.InvalidCmd("spinmode can only take one of those 3 value: full/bridge/none") 
-        
-
+                raise self.InvalidCmd("spinmode can only take one of those 3 value: full/bridge/none")
+             
+        elif args[0] == "run_card":
+            if self.options['spinmode'] == "madspin":
+                raise self.InvalidCmd("edition of the run_card is not allowed within normal mode")
+            if "=" in args:
+                args.remove("=")
+            if len(args)==2 and "=" in args[1]:
+                data = args.pop(1)
+                arg, value = data.split("=")
+                args.append(arg)
+                args.append(value)
         
     def do_set(self, line):
         """ add one of the options """
@@ -355,8 +369,19 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.seed = int(args[1])
         elif args[0] == 'BW_cut':
             self.options[args[0]] = float(args[1])
-        elif args[0] == 'onlyhelicity':
-            self.options['onlyhelicity'] = True
+        elif args[0] in ['onlyhelicity', 'use_old_dir']:
+            self.options[args[0]] = banner.ConfigFile.format_variable(args[1], bool, args[0])
+        elif args[0] in ['run_card']:
+            if args[1] == 'default':
+                self.options['run_card'] = None
+            elif os.path.isfile(args[1]):
+                self.options['run_card'] = banner.RunCard(args[1])
+            elif  len(args) >2:
+                if not self.options['run_card']:
+                    self.options['run_card'] =  banner.RunCardLO()
+                    self.options['run_card'].remove_all_cut()
+                self.options['run_card'][args[1]] = args[2]
+                
         else:
             self.options[args[0]] = int(args[1])
     
@@ -428,6 +453,11 @@ class MadSpinInterface(extended_cmd.Cmd):
             raise self.InvalidCmd("Nothing to decay ... Please specify some decay")
         if not self.events_file:
             raise self.InvalidCmd("No events files defined.")
+        
+        # Validity check. Need lhe version 3 if matching is on
+        if self.banner.get("run_card", "lhe_version") < 3 and \
+            self.banner.get("run_card", "ickkw") > 0:
+            raise Exception, "MadSpin requires LHEF version 3 when running with matching/merging"
 
     def help_launch(self):
         """help for the launch command"""
@@ -578,6 +608,10 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         #replace init information
         generate_all.banner['init'] = self.banner['init']
+
+        #replace run card if present in header (to make sure correct random seed is recorded in output file)
+        if 'mgruncard' in self.banner:
+            generate_all.banner['mgruncard'] = self.banner['mgruncard']   
         
         # NOW we have all the information available for RUNNING
         
@@ -590,7 +624,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         generate_all.ending_run()
         self.branching_ratio = generate_all.branching_ratio
-        self.err_branching_ratio = generate_all.err_branching_ratio 
+        try:
+            self.err_branching_ratio = generate_all.err_branching_ratio
+        except Exception:
+            # might not be define in some gridpack mode
+            self.err_branching_ratio = 0 
         evt_path = self.events_file.name
         try:
             self.events_file.close()
@@ -619,7 +657,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                cumul allow to merge all the definition in one run (add process)
                      to generate events according to cross-section
             """
-            
+                        
             part = self.model.get_particle(pdg)
             name = part.get_name()
             out = {}
@@ -646,10 +684,15 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                                 decay_dir), options=options)
                 me5_cmd.options["automatic_html_opening"] = False
-                run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                if self.options["run_card"]:
+                    run_card = self.options["run_card"]
+                else:
+                    run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
                 run_card["nevents"] = int(1.2*nb_event)
                 run_card["iseed"] = self.seed
                 run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                param_card = self.banner['slha']
+                open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
                 self.seed += 1
                 me5_cmd.exec_cmd("generate_events run_01 -f")
                 me5_cmd.exec_cmd("exit")     

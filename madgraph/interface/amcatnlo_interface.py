@@ -421,9 +421,15 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
-        if myprocdef['perturbation_couplings']!=['QCD']:
-                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
-                        % ', '.join(myprocdef['perturbation_couplings']))
+#        if myprocdef['perturbation_couplings']!=['QCD']:
+#            message = ""FKS for reals only available in QCD for now, you asked %s" \
+#                        % ', '.join(myprocdef['perturbation_couplings'])"
+#            logger.info("%s. Checking for loop induced")
+#            new_line = ln
+#                
+#                
+#                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
+#                        % ', '.join(myprocdef['perturbation_couplings']))
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
@@ -452,11 +458,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         except Exception:
             pass
 
-        self.options['group_subprocesses'] = False
+        # For NLO, the group_subprocesses is automatically set to false
+        group_processes = False
         # initialize the writer
         if self._export_format in ['NLO']:
-            self._curr_exporter = export_v4.ExportV4Factory(\
-                                          self, noclean, output_type='amcatnlo')
+            self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
+                      output_type='amcatnlo',group_subprocesses=group_processes)
+
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['NLO']:
@@ -481,7 +489,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self._done_export = False
 
         # Perform export and finalize right away
-        self.export(nojpeg, main_file_name)
+        self.export(nojpeg, main_file_name, group_processes=group_processes)
 
         # Automatically run finalize
         self.finalize(nojpeg)
@@ -498,10 +506,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self._export_dir = None
 
     # Export a matrix element  
-    def export(self, nojpeg = False, main_file_name = ""):
+    def export(self, nojpeg = False, main_file_name = "", group_processes=False):
         """Export a generated amplitude to file"""
 
-        def generate_matrix_elements(self):
+        def generate_matrix_elements(self, group=False):
             """Helper function to generate the matrix elements before
             exporting"""
 
@@ -510,19 +518,12 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             self._curr_amps.sort(lambda a1, a2: a2.get_number_of_diagrams() - \
                                  a1.get_number_of_diagrams())
 
-            # Check if we need to group the SubProcesses or not
-            group = True
-            if self.options['group_subprocesses'] in [False]:
-                group = False
-            elif self.options['group_subprocesses'] == 'Auto' and \
-                                         self._curr_amps[0].get_ninitial() == 1:
-                   group = False 
-
             cpu_time1 = time.time()
             ndiags = 0
             if not self._curr_matrix_elements.get_matrix_elements():
                 if group:
-                    raise MadGraph5Error, "Cannot group subprocesses when exporting to NLO"
+                    raise MadGraph5Error, "Cannot group subprocesses when "+\
+                                                              "exporting to NLO"
                 else:
                     self._curr_matrix_elements = \
                              fks_helas.FKSHelasMultiProcess(\
@@ -558,7 +559,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         # Start of the actual routine
 
-        ndiags, cpu_time = generate_matrix_elements(self)
+        ndiags, cpu_time = generate_matrix_elements(self, group=group_processes)
         calls = 0
 
         path = self._export_dir
@@ -680,3 +681,10 @@ _launch_parser.add_option("-n", "--name", default=False, dest='name',
                             help="Provide a name to the run")
 _launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
+_launch_parser.add_option("-R", "--reweight", default=False, action='store_true',
+                            help="Run the reweight module (reweighting by different model parameter")
+_launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
+                            help="Run the madspin package")
+
+
+

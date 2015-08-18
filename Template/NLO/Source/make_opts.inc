@@ -24,6 +24,10 @@ ifeq ($(origin FC),default)
 #  FC=g77
   FC=gfortran
 endif
+# Set F2PY unless it's defined by an environment variable
+ifeq ($(origin F2PY),undefined)
+  F2PY=f2py
+endif
 
 # Set CXX unless it's defined by an environment variable
 ifeq ($(origin CXX),default)

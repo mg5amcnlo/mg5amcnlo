@@ -114,11 +114,27 @@ class HelpToCmd(object):
         logger.info("   -f options: answer all question by default.")
 
     def help_compute_widths(self):
-        logger.info("syntax: compute_widths Particle [Particles] [--precision=] [--path=Param_card] [--output=PATH]")
+        logger.info("syntax: compute_widths Particle [Particles] [OPTIONS]")
         logger.info("-- Compute the widths for the particles specified.")
         logger.info("   By default, this takes the current param_card and overwrites it.") 
         logger.info("   Precision allows to define when to include three/four/... body decays (LO).")
-        logger.info("   If this number is an integer then all N-body decay will be included.")      
+        logger.info("   If this number is an integer then all N-body decay will be included.")
+        logger.info("  Various options:\n")
+        logger.info("  --body_decay=X: Parameter to control the precision of the computation")
+        logger.info("        if X is an integer, we compute all channels up to X-body decay.")
+        logger.info("        if X <1, then we stop when the estimated error is lower than X.")
+        logger.info("        if X >1 BUT not an integer, then we X = N + M, with M <1 and N an integer")
+        logger.info("              We then either stop at the N-body decay or when the estimated error is lower than M.")
+        logger.info("        default: 4.0025")
+        logger.info("  --min_br=X: All channel which are estimated below this value will not be integrated numerically.")
+        logger.info("        default: precision (decimal part of the body_decay options) divided by four")
+        logger.info("  --precision_channel=X: requested numerical precision for each channel")
+        logger.info("        default: 0.01")
+        logger.info("  --path=X: path for param_card")
+        logger.info("        default: take value from the model")
+        logger.info("  --output=X: path where to write the resulting card. ")
+        logger.info("        default: overwrite input file. If no input file, write it in the model directory")
+        logger.info("  --nlo: Compute NLO width [if the model support it]")      
 
 
     def help_pythia(self):
@@ -256,12 +272,15 @@ class CheckValidForCmd(object):
                     raise self.InvalidCmd , '%s is not a valid param_card.' % arg
                 output['path'] = arg
             elif arg.startswith('--'):
-                name, value = arg.split('=',1)
-                try:
-                    value = float(value)
-                except Exception:
-                    raise self.InvalidCmd, '--%s requires integer or a float' % name
-                output[name[2:]] = float(value)                
+                if "=" in arg:
+                    name, value = arg.split('=',1)
+                    try:
+                        value = float(value)
+                    except Exception:
+                        raise self.InvalidCmd, '--%s requires integer or a float' % name
+                    output[name[2:]] = float(value)
+                elif arg == "--nlo":
+                    output["nlo"] = True
             elif arg in particles_name:
                 # should be a particles
                 output['particles'].add(particles_name[arg])
@@ -735,6 +754,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
+            
 
 
     @staticmethod
@@ -755,11 +775,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madweight_card.dat [MW]
         """
 
-        text = open(path).read(50000)
-        if text == '':
+        fulltext = open(path).read(50000)
+        if fulltext == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -790,12 +810,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'shower_card.dat'
         elif 'fo_analysis_format' in text:
             return 'FO_analyse_card.dat'
-        elif 'decay' in text and 'launch' in text and 'madspin' in text:
-            return 'madspin_card.dat'
-        elif 'launch' in text and 'set' in text:
-            return 'reweight_card.dat'
-        elif 'decay' in text and 'launch' in text:
-            return 'madspin_card.dat'
+        elif 'launch' in text:
+            # need to separate madspin/reweight.
+            # decay/set can be in both...
+            if 'madspin' in text:
+                return 'madspin_card.dat'
+            if 'decay' in text:
+                # need to check if this a line like "decay w+" or "set decay"
+                if re.search("(^|;)\s*decay", fulltext):
+                    return 'madspin_card.dat'
+                else:
+                    return 'reweight_card.dat'
+            else:
+                return 'reweight_card.dat'
         else:
             return 'unknown'
 
@@ -991,6 +1018,54 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Dummy routine, to be overwritten by daughter classes"""
 
         pass
+    ############################################################################
+    def do_reweight(self, line):
+        """ Allow to reweight the events generated with a new choices of model
+            parameter.
+        """
+        
+        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
+            return
+        
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
+            You can install it and set its path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import madgraph.interface.reweight_interface as reweight_interface
+        except ImportError:
+            raise self.ConfigurationError, '''Can\'t load Reweight module.
+            The variable mg5_path might not be correctly configured.'''
+        
+        self.to_store.append('event')
+        if not '-from_cards' in line:
+            self.keep_cards(['reweight_card.dat'])
+            self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
+
+        # forbid this function to create an empty item in results.
+        if self.results.current['cross'] == 0 and self.run_name:
+            self.results.delete_run(self.run_name, self.run_tag)
+
+        # load the name of the event file
+        args = self.split_arg(line) 
+        self.check_decay_events(args) 
+        # args now alway content the path to the valid files
+        reweight_cmd = reweight_interface.ReweightInterface(args[0])
+        reweight_cmd.mother = self
+        self.update_status('Running Reweight', level='madspin')
+        
+        
+        path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        reweight_cmd.me_dir = self.me_dir
+        reweight_cmd.import_command_file(path)
+        
+        # re-define current run
+        try:
+            self.results.def_current(self.run_name, self.run_tag)
+        except Exception:
+            pass
 
     ############################################################################
     def do_pgs(self, line):
@@ -1107,10 +1182,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Require MG5 directory: Compute automatically the widths of a set 
         of particles"""
 
+
+
         args = self.split_arg(line)
         opts = self.check_compute_widths(args)
-        
-        
+
         from madgraph.interface.master_interface import MasterCmd
         cmd = MasterCmd()
         self.define_child_cmd_interface(cmd, interface=False)
@@ -1125,7 +1201,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        
         cmd.exec_cmd(line, model=opts['model'])
         self.child = None
         del cmd
@@ -1295,12 +1370,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_pdf_input_filename(self):
         """return the name of the file which is used by the pdfset"""
 
-        if self.options["cluster_local_path"] and self.options['run_mode'] ==1:
+        if self.options["cluster_local_path"] and \
+               os.path.exists(self.options["cluster_local_path"]) and \
+               self.options['run_mode'] ==1:
             # no need to transfer the pdf.
             return ''
         
         def check_cluster(path):
-            if not self.options["cluster_local_path"] or self.options['run_mode'] !=1:
+            if not self.options["cluster_local_path"] or \
+                        os.path.exists(self.options["cluster_local_path"]) or\
+                        self.options['run_mode'] !=1:
                 return path
             main = self.options["cluster_local_path"]
             if os.path.isfile(path):
@@ -1517,13 +1596,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Check that all the width are define in the param_card.
         If some width are set on 'Auto', call the computation tools."""
         
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg = pattern.findall(text)
-        if pdg:
+        pdg_info = pattern.findall(text)
+        if pdg_info:
             if run:
                 logger.info('Computing the width set on auto in the param_card.dat')
-                self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+                has_nlo = any(nlo.lower()=="@nlo" for _,nlo in pdg_info)
+                pdg = [pdg for pdg,nlo in pdg_info]
+                if not has_nlo:
+                    self.do_compute_widths('%s %s' % (' '.join(pdg), path))
+                else:
+                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path))
             else:
                 logger.info('''Some width are on Auto in the card. 
     Those will be computed as soon as you have finish the edition of the cards.
@@ -1936,7 +2020,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             completion = {}            
             completion['options'] = self.list_completion(text, 
-                            ['--path=', '--output=', '--min_br=0.\$'
+                            ['--path=', '--output=', '--min_br=0.\$', '--nlo',
                              '--precision_channel=0.\$', '--body_decay='])            
         
         return self.deal_multiple_categories(completion)
@@ -2471,8 +2555,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             opts = ['default']
             if 'decay' in args:
                 opts.append('Auto')
-            if args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
+                opts.append('Auto@NLO')
+            elif args[-1] in self.pname2block and self.pname2block[args[-1]][0][0] == 'decay':
                 opts.append('Auto')
+                opts.append('Auto@NLO')
             possibilities['Special Value'] = self.list_completion(text, opts)
 
         if 'block' in allowed.keys():
@@ -2502,6 +2588,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         opts = ['default']
                         if allowed['block'][0] == 'decay':
                             opts.append('Auto')
+                            opts.append('Auto@NLO')
                         possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['Param Card id' ] = self.list_completion(text, ids)
 
@@ -2537,6 +2624,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
+        if '=' in args:
+            args.remove('=')
         args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
@@ -2654,7 +2743,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if len(args) < 3:
                 logger.warning('Invalid set command: %s (not enough arguments)' % line)
                 return
-            
+        elif args[0] in ['madspin_card']:
+            if args[1] == 'default':
+                logging.info('replace madspin_card.dat by the default card')
+                files.cp(pjoin(self.me_dir,'Cards/madspin_card_default.dat'),
+                         pjoin(self.me_dir,'Cards/madspin_card.dat'))
+                return
+            else:
+                logger.warning("""Command set not allowed for modifying the madspin_card. 
+                    Check the command \"decay\" instead.""")
+                return
+
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
             if args[start] not in self.run_set:
@@ -2736,7 +2835,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     text += "You need to match this expression for external program (such pythia)."
                     logger.warning(text)
 
-                if args[-1].lower() in ['default', 'auto']:
+                if args[-1].lower() in ['default', 'auto', 'auto@nlo']:
                     self.setP(args[start], key, args[-1])
                 else:
                     try:
@@ -2899,7 +2998,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def setR(self, name, value):
         logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
-        self.run_card.set(name,value, user=True)
+        self.run_card.set(name, value, user=True)
 
     def setML(self, name, value, default=False):
         
@@ -2919,8 +3018,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
                 value = default[block].param_dict[lhaid].value
 
-            elif value == 'auto':
-                value = 'Auto'
+            elif value in ['auto', 'auto@nlo']:
+                if 'nlo' in value:
+                    value = 'Auto@NLO'
+                else:
+                    value = 'Auto'
                 if block != 'decay':
                     logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
                     return
@@ -2980,7 +3082,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # check if input is a file
         elif hasattr(self, 'do_%s' % args[0]):
             self.do_set(' '.join(args[1:]))
-        elif os.path.exists(line):
+        elif os.path.isfile(line):
             self.copy_file(line)
             self.value = 'repeat'
         elif os.path.exists(pjoin(self.me_dir, line)):
@@ -2995,15 +3097,59 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         return line
 
+    def do_decay(self, line):
+        """edit the madspin_card to define the decay of the associate particle"""
+        signal.alarm(0) # avoid timer if any
+        path = pjoin(self.me_dir,'Cards','madspin_card.dat')
+        
+        if 'madspin_card.dat' not in self.cards or not os.path.exists(path):
+            logger.warning("Command decay not valid. Since MadSpin is not available.")
+            return
+        
+        if ">" not in line:
+            logger.warning("invalid command for decay. Line ignored")
+            return
+        
+        misc.sprint( line, "-add" in line)
+        if "-add" in line:
+            # just to have to add the line to the end of the file
+            particle = line.split('>')[0].strip()
+            text = open(path).read()
+            line = line.replace('--add', '').replace('-add','')
+            logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
+            
+            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            open(path,'w').write(text)       
+        else:
+            # Here we have to remove all the previous definition of the decay
+            #first find the particle
+            particle = line.split('>')[0].strip()
+            logger.info("change madspin_card to define the decay of %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
+            particle = particle.replace('+','\+').replace('-','\-')
+            decay_pattern = re.compile(r"^\s*decay\s+%s\s*>[\s\w+-~]*?$" % particle, re.I+re.M)
+            text= open(path).read()
+            text = decay_pattern.sub('', text)
+            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            open(path,'w').write(text)
+        
+        
+
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
         path = pjoin(self.me_dir,'Cards','param_card.dat')
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto''',re.I)
+        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg = pattern.findall(text)
+        pdg_info = pattern.findall(text)
+        has_nlo = any("@nlo"==nlo.lower() for _, nlo in pdg_info)
+        pdg = [p for p,_ in pdg_info]
+        
+        
         line = '%s %s' % (line, ' '.join(pdg))
         if not '--path' in line:
             line += ' --path=%s' % path
+        if has_nlo:
+            line += ' --nlo'
+
         try:
             return self.mother_interface.do_compute_widths(line)
         except InvalidCmd, error:
@@ -3013,9 +3159,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         signal.alarm(0) # avoid timer if any
         return self.mother_interface.help_compute_widths()
 
+    def help_decay(self):
+        """help for command decay which modifies MadSpin_card"""
+        
+        signal.alarm(0) # avoid timer if any
+        print '--syntax: decay PROC [--add]'
+        print ' '
+        print '  modify the madspin_card to modify the decay of the associate particle.'
+        print '  and define it to PROC.'
+        print '  if --add is present, just add a new decay for the associate particle.'
+        
     def complete_compute_widths(self, *args, **opts):
         signal.alarm(0) # avoid timer if any
         return self.mother_interface.complete_compute_widths(*args,**opts)
+
 
 
     def help_asperge(self):
@@ -3095,7 +3252,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
-            files.cp(path, pjoin(self.mother_interface.me_dir, 'Cards', card_name))
+            files.cp(path, pjoin(self.me_dir, 'Cards', card_name))
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')

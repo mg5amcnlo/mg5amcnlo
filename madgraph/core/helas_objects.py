@@ -104,8 +104,8 @@ class IdentifyMETag(diagram_generation.DiagramTag):
             # to make sure we indeed have different matrix elements,
             # and not just identical diagrams disregarding particle order.
             # However, identical particles should be treated symmetrically.
-            comp_dict = IdentifyMETag.prepare_comp_dict(process,
-                                         sorted_tags[0].get_external_numbers())
+            exts = sorted_tags[0].get_external_numbers()            
+            comp_dict = IdentifyMETag.prepare_comp_dict(process, exts)
             perms = [array.array('H',
                      sum([comp_dict[n] for n in p.get_external_numbers()], []))
                      for p in sorted_tags[1:]]
@@ -1549,7 +1549,7 @@ class HelasWavefunction(base_objects.PhysicsObject):
         output['M'] = self.get('mass')
         output['W'] = self.get('width')
         output['propa'] = self.get('particle').get('propagator')
-        if output['propa'] != '':
+        if output['propa'] not in ['', None]:
             output['propa'] = 'P%s' % output['propa']
         # optimization
         if aloha.complex_mass: 
@@ -1756,8 +1756,8 @@ class HelasWavefunction(base_objects.PhysicsObject):
             else:
                 tags.append('L%d'%self.get_loop_index())
 
-        if self.get('particle').get('propagator') !='':
-                 tags.append('P%s' % str(self.get('particle').get('propagator')))
+        if self.get('particle').get('propagator') not in ['', None]:
+            tags.append('P%s' % str(self.get('particle').get('propagator')))
 
         return (tuple(self.get('lorentz')),tuple(tags),self.find_outgoing_number())
 
@@ -2034,14 +2034,20 @@ class HelasWavefunction(base_objects.PhysicsObject):
         return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self, 
-              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram"""
 
         if not self.get('mothers'):
             return []
 
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+
         vertex_leg_numbers = [len(self.get('mothers')) + 1] if \
-                         self.get('interaction_id') not in veto_inter_id else []
+            (self.get('interaction_id') not in veto_inter_id) or\
+            (self.get('interaction_id')==-2 and len(self.get('mothers'))+1 > 
+                                                             max_n_loop) else []
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                                                  veto_inter_id = veto_inter_id))
@@ -2367,11 +2373,11 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
             return True
     
         def RaiseError():
-            raise self.PhysicsObjectError, \
+            raise self.PhysicsObjectListError, \
       "This wavefunction list does not have a consistent wavefunction ordering."+\
-      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wavefunctions])+\
+      "\n  Wf numbers: %s"%str([wf['number'] for wf in diag_wfs])+\
       "\n  Wf mothers: %s"%str([[mother['number'] for mother in wf['mothers']] \
-                                                  for wf in diag_wavefunctions])
+                                                  for wf in diag_wfs])
     
         # We want to work on a local copy of the wavefunction list attribute
         diag_wfs = copy.copy(self)
@@ -2391,7 +2397,7 @@ class HelasWavefunctionList(base_objects.PhysicsObjectList):
                 # Look at all subsequent wfs in the list placed after wf at 
                 # index i. None of them should have wf as its mother
                 for w in diag_wfs[i+1:]:
-                    if w in wf.get('mothers'):
+                    if w['number'] in [mwf['number'] for mwf in wf.get('mothers')]:
                         # There is an inconsisent order so we must move this
                         # mother w *before* wf which is placed at i.
                         diag_wfs.remove(w)
@@ -2995,14 +3001,20 @@ class HelasAmplitude(base_objects.PhysicsObject):
         return tuple(sorted(indices))
 
     def get_vertex_leg_numbers(self, 
-              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram,
         This function is only used for establishing the multi-channeling, so that
         we exclude from it all the fake vertices and the vertices resulting from
         shrunk loops (id=-2)"""
 
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+
         vertex_leg_numbers = [len(self.get('mothers'))] if \
-                             self['interaction_id'] not in veto_inter_id else []
+                             (self['interaction_id'] not in veto_inter_id) or \
+          (self['interaction_id']==-2 and len(self.get('mothers'))>max_n_loop) \
+                                                                         else []
         for mother in self.get('mothers'):
             vertex_leg_numbers.extend(mother.get_vertex_leg_numbers(
                                                  veto_inter_id = veto_inter_id))
@@ -3166,11 +3178,15 @@ class HelasDiagram(base_objects.PhysicsObject):
         return coupling_orders
 
     def get_vertex_leg_numbers(self, 
-              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling):
+              veto_inter_id=base_objects.Vertex.ID_to_veto_for_multichanneling,
+              max_n_loop=0):
         """Get a list of the number of legs in vertices in this diagram"""
 
+        if max_n_loop == 0:
+            max_n_loop = base_objects.Vertex.max_n_loop_for_multichanneling
+
         return self.get('amplitudes')[0].get_vertex_leg_numbers(
-                                                    veto_inter_id=veto_inter_id)
+                             veto_inter_id=veto_inter_id, max_n_loop=max_n_loop)
 
     def get_regular_amplitudes(self):
         """ For regular HelasDiagrams, it is simply all amplitudes.

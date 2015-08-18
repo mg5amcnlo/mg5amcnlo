@@ -49,6 +49,10 @@ acsc = Function(name = 'acsc',
              arguments = ('z',),
              expression = 'cmath.asin(1./z)')
 
+cot = Function(name = 'cot',
+             arguments = ('z',),
+             expression = '1/cmath.tan(z)')
+
 
 
 

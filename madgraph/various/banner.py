@@ -292,7 +292,62 @@ class Banner(dict):
                 if pid not in pid2label.keys(): 
                     block.remove((pid,))
 
+    def get_lha_strategy(self):
+        """get the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        data = self["init"].split('\n')[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        return int(float(data[-2]))
+        
+    def set_lha_strategy(self, value):
+        """set the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not (-4 <= int(value) <= 4):
+            raise Exception, "wrong value for lha_strategy", value
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        all_lines = self["init"].split('\n')
+        data = all_lines[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        data[-2] = '%s' % value
+        all_lines[0] = ' '.join(data)
+        self['init'] = '\n'.join(all_lines)
 
+    def modify_init_cross(self, cross):
+        """modify the init information with the associate cross-section"""
+
+        assert isinstance(cross, dict)
+#        assert "all" in cross
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        new_data = []
+        new_data.append(all_lines[0])
+        for i in range(1, len(all_lines)):
+            line = all_lines[i]
+            split = line.split()
+            if len(split) == 4:
+                xsec, xerr, xmax, pid = split 
+            else:
+                new_data += all_lines[i:]
+                break
+            if int(pid) not in cross:
+                raise Exception
+            pid = int(pid)
+            ratio = cross[pid]/float(xsec)
+            line = "   %+13.7e %+13.7e %+13.7e %i" % \
+                (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
+            new_data.append(line)
+        self['init'] = '\n'.join(new_data)
+                
     ############################################################################
     #  WRITE BANNER
     ############################################################################
@@ -374,6 +429,8 @@ class Banner(dict):
                 tag = 'madspin'
             elif 'FO_analyse_card' in card_name:
                 tag = 'foanalyse'
+            elif 'reweight_card' in card_name:
+                tag='reweight_card'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -547,13 +604,18 @@ class Banner(dict):
         
     
     @misc.multiple_try()
-    def add_to_file(self, path, seed=None):
+    def add_to_file(self, path, seed=None, out=None):
         """Add the banner to a file and change the associate seed in the banner"""
 
         if seed is not None:
             self.set("run_card", "iseed", seed)
-            
-        ff = self.write("%s.tmp" % path, close_tag=False,
+        
+        if not out:
+            path_out = "%s.tmp" % path
+        else:
+            path_out = out
+        
+        ff = self.write(path_out, close_tag=False,
                         exclude=['MGGenerationInfo', '/header', 'init'])
         ff.write("## END BANNER##\n")
         if self.lhe_version >= 3:
@@ -565,7 +627,10 @@ class Banner(dict):
             [ff.write(line) for line in open(path)]
         ff.write("</LesHouchesEvents>\n")
         ff.close()
-        files.mv("%s.tmp" % path, path)
+        if out:
+            os.remove(path)
+        else:
+            files.mv(path_out, path)
 
 
         
@@ -581,21 +646,29 @@ def recover_banner(results_object, level, run=None, tag=None):
     """
     
     if not run:
-        try:    
-            tag = results_object.current['tag'] 
+        try: 
+            _run = results_object.current['run_name']   
+            _tag = results_object.current['tag'] 
         except Exception:
             return Banner()
+    else:
+        _run = run
     if not tag:
         try:    
-            tag = results_object[run].tags[-1] 
+            _tag = results_object[run].tags[-1] 
         except Exception,error:
-            return Banner()                                        
+            return Banner()      
+    else:
+        _tag = tag
+                                          
     path = results_object.path
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
     if not os.path.exists(banner_path):
-        # security if the banner was remove (or program canceled before created it)
-        return Banner()  
+         if level != "parton" and tag != _tag:
+            return recover_banner(results_object, level, _run, results_object[_run].tags[0])
+         # security if the banner was remove (or program canceled before created it)
+         return Banner()  
     banner = Banner(banner_path)
     
     
@@ -1393,6 +1466,7 @@ class RunCardLO(RunCard):
 
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
+        self.add_param("time_of_flight", -1.0, include=False)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("lpp1", 1, fortran_name="lpp(1)")
@@ -1558,6 +1632,7 @@ class RunCardLO(RunCard):
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
+
  
 
         
@@ -1651,10 +1726,11 @@ class RunCardLO(RunCard):
             # check for beam_id
             beam_id = set()
             for proc in proc_def:
-                for leg in proc[0]['legs']:
-                    if not leg['state']:
-                        beam_id.add(leg['id'])
-            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21]):
+                for oneproc in proc:
+                    for leg in oneproc['legs']:
+                        if not leg['state']:
+                            beam_id.add(leg['id'])
+            if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
                 maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
                 self['maxjetflavor'] = maxjetflavor
                 self['asrwgtflavor'] = maxjetflavor
@@ -1812,6 +1888,7 @@ class RunCardNLO(RunCard):
         self.add_param('maxjetflavor', 4)
         self.add_param('iappl', 0)   
     
+        self.add_param('lhe_version', 3, hidden=True, include=False)
     
     def check_validity(self):
         """check the validity of the various input"""
@@ -1858,9 +1935,17 @@ class RunCardNLO(RunCard):
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
     
-        # check that we use lhapdf if reweighting is ON
-        if self['reweight_pdf'] and self['pdlabel'] != "lhapdf":
-            raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
+
+        # PDF reweighting check
+        if self['reweight_pdf']:
+            # check that we use lhapdf if reweighting is ON
+            if self['pdlabel'] != "lhapdf":
+                raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
+            
+            # check that the number of pdf set is coherent for the reweigting:    
+            if (self['pdf_set_max'] - self['pdf_set_min'] + 1) % 2:
+                raise InvalidRunCard, "The number of PDF error sets must be even" 
+        
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -1891,7 +1976,7 @@ class RunCardNLO(RunCard):
             for leg in proc[0]['legs']:
                 if not leg['state']:
                     beam_id.add(leg['id'])
-        if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21]):
+        if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
             maxjetflavor = max([4]+[abs(i) for i in beam_id if  -7< i < 7])
             self['maxjetflavor'] = maxjetflavor
             pass
