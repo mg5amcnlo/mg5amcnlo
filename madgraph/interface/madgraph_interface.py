@@ -4699,7 +4699,7 @@ This implies that with decay chains:
                     os.environ['LD_LIBRARY_PATH'] += ';%s' % ld_path
                 if self.options['lhapdf'] != 'lhapdf-config':
                     if misc.which('lhapdf-config') != os.path.realpath(self.options['lhapdf']):
-                        os.environ['PATH'] = '%s:%s' % os.environ['PATH']
+                        os.environ['PATH'] = '%s:%s' % (os.path.realpath(self.options['lhapdf']),os.environ['PATH']) 
             else:
                 raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
 

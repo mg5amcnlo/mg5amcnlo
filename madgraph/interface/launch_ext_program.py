@@ -661,7 +661,6 @@ see arXiv:1402.1178.'''
         
         if self.laststep:
             command += ' --laststep=%s' % self.laststep
-        print (664, self.__dict__)
         if self.reweight:
             command += ' -R '
         if self.madspin:

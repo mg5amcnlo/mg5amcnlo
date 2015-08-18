@@ -1601,7 +1601,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             f77_compiler = 'g77'
         elif misc.which('f77'):
             f77_compiler = 'f77'
-        elif default_compiler:
+        elif default_compiler['fortran']:
             logger.warning('No Fortran Compiler detected! Please install one')
             f77_compiler = default_compiler['fortran'] # maybe misc fail so try with it
         else:
@@ -1609,7 +1609,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         logger.info('Use Fortran compiler ' + f77_compiler)
         
         
-        # Check for compiler
+        # Check for compiler. 1. set default.
+        if default_compiler['f2py']:
+            f2py_compiler = default_compiler['f2py']
+        else:
+            f2py_compiler = ''
+        # Try to find the correct one.
         if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
             f2py_compiler = default_compiler
         elif misc.which('f2py'):
@@ -1624,10 +1629,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 f2py_compiler = 'f2py-2.7'
             elif misc.which('f2py2.7'):
                 f2py_compiler = 'f2py2.7'            
-        elif default_compiler:
-            f2py_compiler = default_compiler['f2py'] # maybe misc fail so try with it
-        else:
-            f2py_compiler = ''
         
         to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
         
