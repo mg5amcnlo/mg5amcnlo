@@ -63,7 +63,7 @@ C LOCAL VARIABLES
 C  
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
       REAL*8 T
-      REAL*8 MATRIX
+      REAL*8 %(proc_prefix)sMATRIX
       INTEGER IHEL,IDEN, I
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
@@ -158,13 +158,13 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      MATRIX = 0.D0 
+      %(proc_prefix)sMATRIX = 0.D0 
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
 %(amp2_lines)s
       END
@@ -195,9 +195,9 @@ C     the include file with the values of the parameters and masses
       G = 2* DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL SMATRIXHEL(P, NHEL, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
       else
-        CALL SMATRIX(P, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, ANS)
       endif
       return 
       end
