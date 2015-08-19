@@ -1681,6 +1681,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             
         compiler= compilers['fortran']
         f2py_compiler = compilers['f2py']
+        if not f2py_compiler:
+            f2py_compiler = 'f2py'
     
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')

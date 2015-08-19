@@ -117,7 +117,7 @@ C ----------
 	  ENDDO
       DO IHEL=1,NCOMB
 	     IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
-           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN
               CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1), T)
 	 	      BUFF=0D0
 			  DO I=1,NSQAMPSO			
