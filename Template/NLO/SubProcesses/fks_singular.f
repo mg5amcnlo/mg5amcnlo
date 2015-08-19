@@ -1190,7 +1190,7 @@ c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
          wgt_wo_pdf=(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) + wgt(3,i)
      &        *log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
-     &        *rwgt_muR_dep_fac(sqrt(mu2_r))
+     &        *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
          wgts(iwgt,i)=xlum * wgt_wo_pdf
          do j=1,iproc
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
@@ -1200,9 +1200,9 @@ c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
             virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
-     &           *rwgt_muR_dep_fac(sqrt(mu2_r))
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
             born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
-     &           /(8d0*Pi**2)*rwgt_muR_dep_fac(sqrt(mu2_r))
+     &           /(8d0*Pi**2)*rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
          endif
       enddo
       call cpu_time(tAfter)
@@ -1314,7 +1314,7 @@ c add the weights to the array
      &              /mu2_q)+wgt(3,i)*log(mu2_f(kf)/mu2_q))*g(kr)
      &              **QCDpower(i)
                wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)))
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)))
             enddo
          enddo
       enddo
@@ -1399,7 +1399,7 @@ c special for the itype=7 (i.e, the veto-compensating factor)
      &                 *veto_compensating_factor_new
                endif
                wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r(ks)))
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r(ks)),sqrt(mu2_r(1)))
                wgts(iwgt,i)=wgts(iwgt,i)*veto_multiplier_new(ks,kh)
             enddo
          enddo
@@ -1453,7 +1453,8 @@ c allows for better caching of the PDFs
 c add the weights to the array
             wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &           wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
-            wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
+            wgts(iwgt,i)=wgts(iwgt,i)*
+     &                       rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
          enddo
       enddo
       call InitPDF(izero)
