@@ -2004,9 +2004,9 @@ c on the imode we should or should not include the virtual corrections.
                max_weight=max(max_weight,abs(unwgt(j,i)))
             enddo
          enddo
-c check the consistency of the results up to machine precision (10^-13 here)
+c check the consistency of the results up to machine precision (10^-10 here)
          if (imode.ne.1 .or. only_virt) then
-            if (abs((sigint-sigint1)/max_weight).gt.1d-13) then
+            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
                write (*,*) 'ERROR: inconsistent integrals #0',sigint
      $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
                do i=1, icontr
@@ -2020,7 +2020,7 @@ c check the consistency of the results up to machine precision (10^-13 here)
             endif
          else
             sigint1=sigint1+virt_wgt_mint
-            if (abs((sigint-sigint1)/max_weight).gt.1d-13) then
+            if (abs((sigint-sigint1)/max_weight).gt.1d-10) then
                write (*,*) 'ERROR: inconsistent integrals #1',sigint
      $              ,sigint1,max_weight,abs((sigint-sigint1)/max_weight)
      $              ,virt_wgt_mint
