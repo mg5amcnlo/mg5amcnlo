@@ -378,6 +378,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
         (mandatory for CutTools written in f90) """
+        if isinstance(compiler, str):
+            compiler= {'fortran':compiler, 'f2py':''}
+        
         if not compiler['fortran'] is None and not any([name in compiler['fortran'] for name in \
                                                          ['gfortran','ifort']]):
             logger.info('For loop processes, the compiler must be fortran90'+\

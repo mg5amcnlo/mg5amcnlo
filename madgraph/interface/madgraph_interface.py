@@ -3353,7 +3353,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 2 in MLoptions["MLReductionLib"]:
-                    logger.warning('PJFRY not available on your system; it will be skipped.')                    
+                    logger.info('PJFRY not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):
@@ -3361,7 +3361,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 4 in MLoptions["MLReductionLib"]:
-                    logger.warning('GOLEM not available on your system; it will be skipped.')
+                    logger.info('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
         
         if args[0] in ['timing']:
