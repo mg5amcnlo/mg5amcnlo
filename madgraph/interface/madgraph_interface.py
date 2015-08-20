@@ -2449,7 +2449,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc', 'Golem95']
+                     'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
+                                                                      'QCDLoop']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
@@ -4572,6 +4573,11 @@ This implies that with decay chains:
         else:
             program = "wget"
 
+        if args[0] == 'PJFry' and not os.path.exists(
+               pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
+            logger.info('Installing necessary dependence QCDLoop...')
+            self.do_install('QCDLoop')
+
         # special command for auto-update
         if args[0] == 'update':
             self.install_update(args, wget=program)
@@ -4607,7 +4613,8 @@ This implies that with decay chains:
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc', 'Golem95': 'golem95'}
+                'SysCalc':'SysCalc', 'Golem95': 'golem95',
+                'PJFry':'PJFry','QCDLoop':'QCDLoop'}
         name = name[args[0]]
 
         #check outdated install
@@ -4637,8 +4644,8 @@ This implies that with decay chains:
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
-            created_name = [n for n in os.listdir(MG5DIR) if n.startswith(name)
-                                                  and not n.endswith('gz')]
+            created_name = [n for n in os.listdir(MG5DIR) if n.startswith(
+                                         name.lower()) and not n.endswith('gz')]
             if not created_name:
                 raise MadGraph5Error, 'The file was not loaded correctly. Stop'
             else:
@@ -4689,6 +4696,25 @@ This implies that with decay chains:
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
             cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
 
+        # For PJFry, use autotools.
+        if name == 'PJFry':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),
+            '--enable-golem-mode', '--with-integrals=qcdloop1',
+            'LDFLAGS=-L%s'%str(pjoin(MG5DIR,'QCDLoop','lib')),
+            'FC=%s'%os.environ['FC'],
+            'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
+                                        stdout=subprocess.PIPE).communicate()[0]
+
+        # For QCDLoop, use autotools.
+        if name == 'QCDLoop':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC'],
+            'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
+                                        stdout=subprocess.PIPE).communicate()[0]
+
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
             if self.options['lhapdf']:
@@ -4716,7 +4742,7 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name == 'golem95':
+            if name in ['golem95','QCDLoop','PJFry']:
                 status = misc.call(['make','install'], 
                                                cwd = os.path.join(MG5DIR, name))
             else:
@@ -4729,7 +4755,7 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name == 'golem95':
+            if name in ['golem95','QCDLoop','PJFry']:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
@@ -4821,13 +4847,17 @@ This implies that with decay chains:
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
                            'pythia-pgs':'pythia-pgs_path',
-                           'Golem95': 'golem'}
+                           'Golem95': 'golem',
+                           'PJFry': 'pjfry'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
             if opt=='golem':
-                self.options[opt] = pjoin(MG5DIR,name,'lib') 
+                self.options[opt] = pjoin(MG5DIR,name,'lib')
                 self.exec_cmd('save options')
+            elif opt=='pjfry':
+                self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
+                self.exec_cmd('save options')            
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options')
