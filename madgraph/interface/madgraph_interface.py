@@ -4610,6 +4610,10 @@ This implies that with decay chains:
                 'SysCalc':'SysCalc', 'Golem95': 'golem95'}
         name = name[args[0]]
 
+        #check outdated install
+        if args[0] in ['Delphes2', 'pythia-pgs']:
+            logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
+                           "  You should consider using an up-to-date version of the code.")
 
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))

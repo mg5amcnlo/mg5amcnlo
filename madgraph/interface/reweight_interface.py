@@ -188,11 +188,12 @@ class ReweightInterface(extended_cmd.Cmd):
         if not order:
             #NO NLO tag => nothing to do actually return input
             return proc
-        elif not order.startswith(('virt=','loonly=')):
+        elif not order.startswith(('virt=','loonly=','noborn=')):
             # OK this a standard NLO process
             if '=' in order:
                 # get the type NLO QCD/QED/...
                 order = order.split('=',1)[1]
+                
             # define the list of particles that are needed for the radiation
             pert = fks_common.find_pert_particles_interactions(self.model,
                                            pert_order = order)['soft_particles']
@@ -214,9 +215,13 @@ class ReweightInterface(extended_cmd.Cmd):
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
             else:
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
+        elif order.startswith(('noborn=')):
+            # pass in sqrvirt=
+            return "add process %s " % proc.replace('noborn=', 'sqrvirt=')
+            
         else:
             #just return the input. since this Madloop.
-            return proc                                       
+            return "add process %s " % proc                                       
         return commandline
 
 
@@ -732,12 +737,13 @@ class ReweightInterface(extended_cmd.Cmd):
                 misc.compile(['matrix2py.so'], cwd=Pdir)
                 
                 self.rename_f2py_lib(Pdir, 2*metag)
-                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
-                S = mymod.SubProcesses
-                P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % (2*metag))
                 with misc.chdir(Pdir):
+                    mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
+                    S = mymod.SubProcesses
+                    P = getattr(S, Pname)
+                    mymod = getattr(P, 'matrix%spy' % (2*metag))
                     mymod.initialise('param_card_orig.dat')
+                    
             if hypp_id == 1:
                 #incorrect line
                 metag = dir_to_f2py_free_mod[(Pdir,0)][0]
@@ -813,7 +819,7 @@ class ReweightInterface(extended_cmd.Cmd):
             me_value, code = me_value
             #if code points unstability -> returns 0
             hundred_value = (code % 1000) //100
-            if hundred_value in [1,4]:
+            if hundred_value in [4]:
                 me_value = 0.
             
         return me_value

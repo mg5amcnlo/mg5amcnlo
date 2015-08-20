@@ -1489,7 +1489,7 @@ class RunCardLO(RunCard):
         self.add_param("ickkw", 0)
         self.add_param("highestmult", 1, fortran_name="nhmult")
         self.add_param("ktscheme", 1)
-        self.add_param("alpsfact", 1)
+        self.add_param("alpsfact", 1.0)
         self.add_param("chcluster", False)
         self.add_param("pdfwgt", True)
         self.add_param("asrwgtflavor", 5)
