@@ -650,10 +650,18 @@ class MasterCmdWeb(MGcmd.MadGraphCmdWeb, Switcher, LoopCmd.LoopInterfaceWeb):
     def do_shell(self, *args):
         raise Exception
     
-    def finalize(self, nojpeg):
+    def finalize(self, nojpeg, flaglist=[]):
+        """Finalize web generation"""
+
+        if flaglist != []:
+            raise Exception
+        self.cmd.finalize(self, nojpeg, online = True)
+    
+    def finalize(self, nojpeg, **opts):
         """Finalize web generation""" 
         
-        self.cmd.finalize(self, nojpeg, online = True)
+        opts['online'] = True
+        self.cmd.finalize(self, nojpeg, opts)
 
     # Generate a new amplitude
     def do_generate(self, line):

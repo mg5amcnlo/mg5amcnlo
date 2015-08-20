@@ -499,7 +499,6 @@ V_GGZ = CTVertex(name = 'V_GGZ',
               type = 'R2')
 
 
-
 V_GGZZ = CTVertex(name = 'V_GGZZ',
               particles = [ P.G, P.G, P.Z, P.Z ],
               color = [ 'Tr(1,2)' ],

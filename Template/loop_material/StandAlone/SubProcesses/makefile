@@ -11,6 +11,7 @@ endif
 
 include $(ROOT)/Source/make_opts
 include $(ROOT)/SubProcesses/MadLoop_makefile_definitions
+SHELL = /bin/bash
 
 LIBDIR = $(ROOT)/lib/
 PROG   = check
@@ -80,4 +81,18 @@ $(OLP)_static: $(OLP_PROCESS)
 	mv libMadLoop.$(libext) $(MADLOOP_LIB)
 
 clean:
-	@rm -f *.o
+	@rm -f *.o *.so
+
+../$(OLP):
+	cd ..; make $(OLP); cd -
+	rm -f libMadLoop.dylib
+	ln -s ../libMadLoop.dylib
+
+libMadLoop.dylib: ../$(OLP)
+
+ifeq ($(origin MENUM),undefined)
+  MENUM=2
+endif
+matrix$(MENUM)py.so: ../$(OLP)
+	touch __init__.py
+	$(F2PY) -L. -lMadLoop -m matrix$(MENUM)py -c check_sa.f --fcompiler=$(FC)

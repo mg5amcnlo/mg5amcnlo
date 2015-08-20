@@ -15,6 +15,7 @@
 
 """A set of functions performing routine administrative I/O tasks."""
 
+import contextlib
 import logging
 import os
 import re
@@ -169,6 +170,24 @@ def which(program):
                 return exe_file
     return None
 
+def has_f2py():
+    has_f2py = False
+    if which('f2py'):
+        has_f2py = True
+    elif sys.version_info[1] == 6:
+        if which('f2py-2.6'):
+            has_f2py = True
+        elif which('f2py2.6'):
+            has_f2py = True                 
+    else:
+        if which('f2py-2.7'):
+            has_f2py = True 
+        elif which('f2py2.7'):
+            has_f2py = True  
+    return has_f2py       
+        
+        
+        
 #===============================================================================
 # find a library
 #===============================================================================
@@ -447,6 +466,49 @@ class MuteLogger(object):
             #for i, h in enumerate(my_logger.handlers):
             #    h.setLevel(cls.logger_saved_info[logname][2][i])
 
+nb_open =0
+@contextlib.contextmanager
+def stdchannel_redirected(stdchannel, dest_filename):
+    """                                                                                                                                                                                                     
+    A context manager to temporarily redirect stdout or stderr                                                                                                                                              
+                                                                                                                                                                                                            
+    e.g.:                                                                                                                                                                                                   
+                                                                                                                                                                                                            
+                                                                                                                                                                                                            
+    with stdchannel_redirected(sys.stderr, os.devnull):                                                                                                                                                     
+        if compiler.has_function('clock_gettime', libraries=['rt']):                                                                                                                                        
+            libraries.append('rt')                                                                                                                                                                          
+    """
+
+    try:
+        oldstdchannel = os.dup(stdchannel.fileno())
+        dest_file = open(dest_filename, 'w')
+        os.dup2(dest_file.fileno(), stdchannel.fileno())
+        yield
+    finally:
+        if oldstdchannel is not None:
+            os.dup2(oldstdchannel, stdchannel.fileno())
+            os.close(oldstdchannel)
+        if dest_file is not None:
+            dest_file.close()
+        
+def get_open_fds():
+    '''
+    return the number of open file descriptors for current process
+
+    .. warning: will only work on UNIX-like os-es.
+    '''
+    import subprocess
+    import os
+
+    pid = os.getpid()
+    procs = subprocess.check_output( 
+        [ "lsof", '-w', '-Ff', "-p", str( pid ) ] )
+    nprocs = filter( 
+            lambda s: s and s[ 0 ] == 'f' and s[1: ].isdigit(),
+            procs.split( '\n' ) )
+        
+    return nprocs
 
 def detect_current_compiler(path, compiler_type='fortran'):
     """find the current compiler for the current directory"""
@@ -709,6 +771,10 @@ class TMP_directory(object):
 
     
     def __exit__(self, ctype, value, traceback ):
+        #True only for debugging:
+        if False and isinstance(value, Exception):
+            sprint("Directory %s not cleaned. This directory can be removed manually" % self.path)
+            return False
         try:
             shutil.rmtree(self.path)
         except OSError:
@@ -1031,6 +1097,29 @@ class chdir:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
+################################################################################
+# Timeout FUNCTION
+################################################################################
+
+def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
+    '''This function will spwan a thread and run the given function using the args, kwargs and 
+    return the given default value if the timeout_duration is exceeded 
+    ''' 
+    import threading
+    class InterruptableThread(threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self)
+            self.result = default
+        def run(self):
+            try:
+                self.result = func(*args, **kwargs)
+            except Exception,error:
+                print error
+                self.result = default
+    it = InterruptableThread()
+    it.start()
+    it.join(timeout_duration)
+    return it.result
 
 
 ################################################################################

@@ -5,6 +5,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       SUBROUTINE COUP1()
 
       IMPLICIT NONE
+      INCLUDE 'model_functions.inc'
 
       DOUBLE PRECISION PI, ZERO
       PARAMETER  (PI=3.141592653589793D0)
@@ -17,8 +18,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 
-
-      INCLUDE 'model_functions.inc'
       GC_30 = -6.000000D+00*MDL_COMPLEXI*MDL_LAM*MDL_V
       MP__GC_30 = -6.000000E+00_16*MP__MDL_COMPLEXI*MP__MDL_LAM
      $ *MP__MDL_V

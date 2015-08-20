@@ -8,9 +8,13 @@ FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
-#  FC=gfortran
    FC=gfortran
 endif
+ifeq ($(origin F2PY), undefined)
+   F2PY=f2py
+endif
+
+
 
 # Options: dynamic, lhapdf
 

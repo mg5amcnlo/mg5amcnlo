@@ -366,7 +366,7 @@ C     Setup the file paths
  109  CONTINUE
       CLOSE(1)
       IF(BOOTANDSTOP) THEN
-        WRITE(*,*) 'Stopped by user request.'
+        WRITE(*,*) '##Stopped by user request.'
         STOP
       ENDIF
 
@@ -1073,11 +1073,11 @@ C         SET THE LOOP FILTER
      $     1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
             WRITE(*,*) '##W15 Helicity filter could not be successfull'
      $       //'y double checked.'
-            WRITE(*,*) 'One reason for this is that you have change'
+            WRITE(*,*) '##One reason for this is that you have change'
      $       //'d sensible parameters which affected what are the zer'
      $       //'o helicity configurations.'
-            WRITE(*,*) 'MadLoop will try to reset the Helicity filte'
-     $       //'r with the next PS points it receives.'
+            WRITE(*,*) '##MadLoop will try to reset the Helicit'
+     $       //'y filter with the next PS points it receives.'
             NTRY=0
             OPEN(30,FILE=HELFILTERFN,ERR=349)
  349        CONTINUE
@@ -1185,22 +1185,23 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
             CALL ML5_0_COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)
             WRITE(*,*) '##W03 WARNING An unstable PS point was'
      $       ,       ' detected.'
-            WRITE(*,*) '(DP,QP) accuracies : (',TEMP1,',',ACC,')'
-            WRITE(*,*) 'Best estimate (fin,1eps,2eps) :',(ANS(I),I=1,3)
+            WRITE(*,*) '##(DP,QP) accuracies : (',TEMP1,',',ACC,')'
+            WRITE(*,*) '##Best estimate (fin,1eps,2eps) :',(ANS(I),I=1
+     $       ,3)
             IF(NEPS.LE.10) THEN
-              WRITE(*,*) 'Double precision evaluations :',(DP_RES(1,I)
-     $         ,I=1,N_DP_EVAL)
-              WRITE(*,*) 'Quad   precision evaluations :',(QP_RES(1,I)
-     $         ,I=1,N_QP_EVAL)
-              WRITE(*,*) 'PS point specification :'
-              WRITE(*,*) 'Renormalization scale MU_R=',MU_R
+              WRITE(*,*) '##Double precision evaluations :',(DP_RES(1
+     $         ,I),I=1,N_DP_EVAL)
+              WRITE(*,*) '##Quad   precision evaluations :',(QP_RES(1
+     $         ,I),I=1,N_QP_EVAL)
+              WRITE(*,*) '##PS point specification :'
+              WRITE(*,*) '##Renormalization scale MU_R=',MU_R
               DO I=1,NEXTERNAL
                 WRITE (*,'(i2,1x,4e27.17)') I, P(0,I),P(1,I),P(2,I)
      $           ,P(3,I)
               ENDDO
             ENDIF
             IF(NEPS.EQ.10) THEN
-              WRITE(*,*) 'Further output of the details of thes'
+              WRITE(*,*) '##Further output of the details of thes'
      $         //'e unstable PS points will now be suppressed.'
             ENDIF
           ENDIF
@@ -1356,7 +1357,7 @@ C     The following is used instead
       ENDIF
 
       IF(N_DP_EVALS.GT.20.OR.N_QP_EVALS.GT.20) THEN
-        WRITE(*,*) 'ERROR:: Increase hardcoded maxstabilitylength.'
+        WRITE(*,*) '##ERROR:: Increase hardcoded maxstabilitylength.'
         STOP
       ENDIF
 
@@ -1403,7 +1404,7 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
-      WRITE(*,*) 'WARNING:: Ignored, the possibility of selectin'
+      WRITE(*,*) '##WARNING:: Ignored, the possibility of selectin'
      $ //'g specific squared order contributions is not available i'
      $ //'n the default mode.'
 

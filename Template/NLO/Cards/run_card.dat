@@ -77,7 +77,7 @@
  %(mur_ref_fixed)s   = muR_ref_fixed    ! fixed ren reference scale 
  %(muf1_ref_fixed)s   = muF1_ref_fixed   ! fixed fact reference scale for pdf1
  %(muf2_ref_fixed)s   = muF2_ref_fixed   ! fixed fact reference scale for pdf2
- %(dynamical_scale_choice)s = dynamical_scale_choice ! Select one of the preselect dynamical choice
+ %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
 #***********************************************************************
 # Renormalization and factorization scales (advanced and NLO options)  *
 #***********************************************************************

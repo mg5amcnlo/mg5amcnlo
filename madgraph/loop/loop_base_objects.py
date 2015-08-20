@@ -1438,7 +1438,16 @@ class LoopModel(base_objects.Model):
     """A class to store all the model information with advanced feature
        to compute loop process."""
     
-    
+    def __init__(self,*args,**opts):
+        """Make sure to copy over the attribute map_CTcoup_CTparam if the 
+        first instance used is a LoopModel"""
+
+        if len(args)>0 and isinstance(args[0],LoopModel):
+            if hasattr(args[0],'map_CTcoup_CTparam'):
+                self.map_CTcoup_CTparam = copy.copy(args[0].map_CTcoup_CTparam)
+
+        super(LoopModel,self).__init__(*args,**opts)
+
     def default_setup(self):
        super(LoopModel,self).default_setup()
        self['perturbation_couplings'] = []
@@ -1451,6 +1460,14 @@ class LoopModel(base_objects.Model):
        # representing the counterterm and finally 'laurent_order' is to which
        # laurent order this counterterm contributes.
        self['coupling_orders_counterterms']={}
+       
+       # This attribute is not registered as a key to this object's dictionary
+       # because it is not a new physical attribute to the model.
+       # It is the mapping between couplings (in values of the dict) and the
+       # list of CTparameter names which enter in its expression (in the keys).
+       if not hasattr(self,'map_CTcoup_CTparam'):
+           self.map_CTcoup_CTparam = {}
+       
     
     def filter(self, name, value):
         """Filter for model property values"""

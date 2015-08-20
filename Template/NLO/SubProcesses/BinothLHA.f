@@ -133,29 +133,17 @@ c virtual as flat as possible
             born_wgt_recomputed=0d0
             do ihel=1,hel(0)
                born_wgt_recomputed=born_wgt_recomputed
-     $              +wgt_hel(hel(ihel))*dble(goodhel(ihel))
+     $              +abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
             enddo
-            if (abs(1d0-born_wgt/born_wgt_recomputed).gt.1d-9) then
-               write (*,*) 'Borns not consistent in BinothLHA',born_wgt
-     $              ,born_wgt_recomputed
-               stop
-            endif
-            if (abs(1d0-born_wgt/born_wgt_recomp_direct).gt.1d-9) then
-               write (*,*) 'Borns not consistent in BinothLHA direct'
-     $              ,born_wgt,born_wgt_recomp_direct
-               stop
-            endif
             target=ran2()*born_wgt_recomputed
             ihel=1
-            accum=wgt_hel(hel(ihel))*dble(goodhel(ihel))
+            accum=abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
             do while (accum.lt.target) 
                ihel=ihel+1
-               accum=accum+wgt_hel(hel(ihel))*dble(goodhel(ihel))
+               accum=accum+abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
             enddo
-            volh=wgt_hel(hel(ihel))*dble(goodhel(ihel))
+            volh=abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
      $           /born_wgt_recomputed
-c$$$            call get_MC_integer(2,hel(0),ihel,volh)
-c$$$            fillh=.true.
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
      $           ,tolerance,accuracies,ret_code)

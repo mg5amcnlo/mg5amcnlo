@@ -80,12 +80,101 @@ class UFOParserTest(unittest.TestCase):
             self.assertEqual(self.mp_calc.parse(toParse), sol)
 
 
+    def test_UFOExpressionParserPythonIF(self):
+        """ Tests that the UFO parsers for conditional 'if' statement replacement
+        works properly."""
+        
+        # Make sure the constructor works properly
+        wrong_arguments = ["{'a':1,'b':2",
+                           [('a',1),('b',2)],
+                           "vtcewx",
+                           "{'a'1,'b':2}"]
+        for arg in wrong_arguments:
+            self.assertRaises(parsers.ModelError,
+                                       parsers.UFOExpressionParserPythonIF, arg)
+        
+        right_arguments = [{'a':1,'b':2},
+                          "{'a':1.0,'b':2}",
+                          {'a':1.0j,'b':2},
+                          {'a':1,'b':2+3.0j},
+                          "{'a':1,'b':2+3.0j}",
+                          {'a':1.0,'b':2,'c':'po'}
+                          ]
+        for arg in right_arguments:
+            parsers.UFOExpressionParserPythonIF(arg)  
+        
+        # Use the following parser for tests
+        # With all definitions
+        calc = parsers.UFOExpressionParserPythonIF(
+                                           {'a':0j,'b':1.0,'c':2+1.0j,'abcd':3})
+        tests = [
+          ('True if b==1 else False',('True',1)),
+          ('(rfehfrg+csc(a)) if (a==0 and (abcd+b)*1j==4.0j) else Miaou',('(rfehfrg+csc(a))',1)),
+          ('(arg(b) if abs(a-c)>abs(b*1j) else 2) if True else Miaou',('(arg(b))',2)),
+          ('True if a else False',('False',1)),
+          ('(1 if abcd else 2) if b!=0 else ( ( 5 if c-1j==2 else 0 ) if abcd==3 else 4)',('(1)',4)),
+          ('(1 if a else 2) if b==0 else ( ( 5 if c-1j==2 else 0 ) if abcd==3 else 4)',('((5))',4)),
+          ]
+        for test in tests:
+            self.assertEqual(calc.parse(test[0]),test[1])
+            
+        calc = parsers.UFOExpressionParserPythonIF({'a':0j,'b':1.0})
+        # With only partial definitions
+        tests = [
+          ('True if b==1 else False',('True',1)),
+          ('(rfehfrg+csc(a)) if (a==0 and (abcd+b)*1j==4.0j) else Miaou',
+               ('(rfehfrg+csc(a)) if (a==0 and (abcd+b)*1j==4.0j) else Miaou',0)),
+          ('(arg(b) if abs(a-c)>abs(b*1j) else 2) if True else Miaou',
+             ('(arg(b) if abs(a-c)>abs(b*1j) else 2)',1)),
+          ('True if c else False',('True if c!=0.0 else False',0)),
+          ('(1 if abcd else 2) if b!=0 else ( ( 5 if c-1j==2 else 0 ) if abcd==3 else 4)',
+           ('(1 if abcd!=0.0 else 2)',1)),
+          ('( (5) if abcd==3 else 4)',('((5) if abcd==3 else 4)',0)),
+          ]
+        for test in tests:
+            self.assertEqual(calc.parse(test[0]),test[1])
+
+        # With do defined variables
+        calc = parsers.UFOExpressionParserPythonIF({})
+        tests = [
+          ('True if b==1 else False',('True if b==1 else False',0)),
+          ('(rfehfrg+csc(a)) if (a==0 and (abcd+b)*1j==4.0j) else Miaou',
+               ('(rfehfrg+csc(a)) if (a==0 and (abcd+b)*1j==4.0j) else Miaou',0)),
+          ('(arg(b) if abs(a-c)>abs(b*1j) else 2) if True else Miaou',
+             ('(arg(b) if abs(a-c)>abs(b*1j) else 2)',1)),
+          ('True if c else False',('True if c!=0.0 else False',0)),
+          ('(1 if abcd else 2) if b!=0 else (( 5 if c-1j==2 else 0 ) if abcd==3 else 4)',
+           ('(1 if abcd!=0.0 else 2) if b!=0 else ((5 if c-1j==2 else 0) if abcd==3 else 4)',0)),
+          ('( (5) if abcd==3 else 4)',('((5) if abcd==3 else 4)',0)),
+          ]
+        for test in tests:
+            self.assertEqual(calc.parse(test[0]),test[1])
+
+        # With None as defined variables
+        calc = parsers.UFOExpressionParserPythonIF()
+        tests = [
+          ('True if b==1 else False',('True if b==1 else False',0)),
+          ('(rfehfrg+csc(a)) if (a==0 and (abcd+b)*1j==4.0j) else Miaou',
+               ('(rfehfrg+csc(a)) if (a==0 and (abcd+b)*1j==4.0j) else Miaou',0)),
+          ('(arg(b) if abs(a-c)>abs(b*1j) else 2) if True else Miaou',
+             # I know it is a bit ugly, 'True!=0.0', but hey, if the model builder
+             # is stupid enough to write this then it's not my fault. And besides,
+             # it still work, so mehhh.
+             ('(arg(b) if abs(a-c)>abs(b*1j) else 2) if True!=0.0 else Miaou',0)),
+          ('True if c else False',('True if c!=0.0 else False',0)),
+          ('(1 if abcd else 2) if b!=0 else (( 5 if c-1j==2 else 0 ) if abcd==3 else 4)',
+           ('(1 if abcd!=0.0 else 2) if b!=0 else ((5 if c-1j==2 else 0) if abcd==3 else 4)',0)),
+          ('( (5) if abcd==3 else 4)',('((5) if abcd==3 else 4)',0)),
+          ]
+        for test in tests:
+            self.assertEqual(calc.parse(test[0]),test[1])
+
     def test_parse_fortran_fct(self):
         """Test that we can parse a series of expression including
         1j and .real"""
         
-        tests = [('1j', 'DCOMPLX(0d0, 1.000000d+00)'),
-                 ('3+3j', '3.000000d+00+DCOMPLX(0d0, 3.000000d+00)'),
+        tests = [('1j', 'DCMPLX(0d0, 1.000000d+00)'),
+                 ('3+3j', '3.000000d+00+DCMPLX(0d0, 3.000000d+00)'),
                  ('re1j', 're1j'),
                  ('re(x)', 'dble(x)'),
                  ('x.real', 'dble(x)'),

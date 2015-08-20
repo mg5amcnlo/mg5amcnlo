@@ -111,16 +111,16 @@ class Event:
             # change the wgt associate to the additional weight
             start, stop = self.rwgt.find('<rwgt>'), self.rwgt.find('</rwgt>')
             if start != -1 != stop :
-                pattern = re.compile(r'''<\s*wgt id=\'(?P<id>[^\']+)\'\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
+                pattern = re.compile(r'''<\s*wgt id=[\'\"](?P<id>[^\'\"]+)[\'\"]\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
                 data = pattern.findall(self.rwgt)
+                if len(data)==0:
+                    print self.rwgt
                 try:
                     text = ''.join('   <wgt id=\'%s\'> %+15.7e </wgt>\n' % (pid, float(value) * factor)
                                      for (pid,value) in data) 
                 except ValueError, error:
                     raise Exception, 'Event File has unvalid weight. %s' % error
-                self.rwgt = self.rwgt[:start] + '<rwgt>\n'+ text + self.rwgt[stop:]
-            
-            
+                self.rwgt = self.rwgt[:start] + '<rwgt>\n'+ text + self.rwgt[stop:]          
 
     def string_event_compact(self):
         """ return a string with the momenta of the event written 

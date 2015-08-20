@@ -14,6 +14,7 @@ c************************************************************************
 
       include 'coupl.inc'
       include 'input.inc'
+      include 'model_functions.inc'
       include 'mp_coupl.inc'
       include 'mp_input.inc'
 
