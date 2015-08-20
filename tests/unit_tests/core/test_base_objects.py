@@ -39,14 +39,15 @@ class ParticleTest(unittest.TestCase):
                       'color':3,
                       'mass':'mt',
                       'width':'wt',
-                      'texname':'t',
-                      'antitexname':'\\overline{t}',
+                      #'texname':'t',
+                      #'antitexname':'\\overline{t}',
                       'line':'straight',
                       'charge':2. / 3.,
                       'pdg_code':6,
-                      'propagating':True,
+                      #'propagating':True,
                       'is_part':True,
-                      'ghost':False,
+                      #'ghost':False,
+                      'type': '',
                       'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}},
                       'propagator':'',
                       'self_antipart':False}
@@ -128,9 +129,9 @@ class ParticleTest(unittest.TestCase):
                        {'prop':'charge',
                         'right_list':[1., -1., -2. / 3., 0.],
                         'wrong_list':[1, 'a']},
-                       {'prop':'propagating',
-                        'right_list':[True, False],
-                        'wrong_list':[1, 'a', 'true', None]},
+                       #{'prop':'propagating',
+                       # 'right_list':[True, False],
+                       # 'wrong_list':[1, 'a', 'true', None]},
                        {'prop':'is_part',
                         'right_list':[True, False],
                         'wrong_list':[1, 'a', 'true', None]},
@@ -159,14 +160,15 @@ class ParticleTest(unittest.TestCase):
         goal = goal + "    \'mass\': \'mt\',\n"
         goal = goal + "    \'width\': \'wt\',\n"
         goal = goal + "    \'pdg_code\': 6,\n"
-        goal = goal + "    \'texname\': \'t\',\n"
-        goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
+        #goal = goal + "    \'texname\': \'t\',\n"
+        #goal = goal + "    \'antitexname\': \'\\overline{t}\',\n"
         goal = goal + "    \'line\': \'straight\',\n"
-        goal = goal + "    \'propagating\': True,\n"
+        #goal = goal + "    \'propagating\': True,\n"
         goal = goal + "    \'propagator\': '',\n"
         goal = goal + "    \'is_part\': True,\n"
         goal = goal + "    \'self_antipart\': False,\n"        
-        goal = goal + "    \'ghost\': False,\n"
+        goal = goal + "    \'type\': '',\n"
+        #goal = goal + "    \'ghost\': False,\n"
         goal = goal + "    \'counterterm\': {('QCD', ((1, 2), (3, 4))): {0: 'GC_0', -1: 'GC_1'}}\n}"
 
         self.assertEqual(goal.split('\n'), str(self.mypart).split('\n'))
