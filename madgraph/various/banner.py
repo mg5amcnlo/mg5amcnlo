@@ -1274,7 +1274,12 @@ class RunCard(ConfigFile):
             if len(line) != 2:
                 continue
             value, name = line
-            self.set( name, value, user=True)
+            name = name.lower()
+            if name not in self and ('min' in name or 'max' in name):
+                #looks like an entry added by one user -> add it nicely
+                self.add_param(name, float(value), hidden=True, cut=True)
+            else:
+                self.set( name, value, user=True)
                 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
