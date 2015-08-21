@@ -1406,24 +1406,36 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 self.update_status('Setting up grids', level=None)
                 self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
 
-            npoints = self.run_card['npoints_FO']
-            niters = self.run_card['niters_FO']
-            self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], -1, npoints, niters) 
-            # collect the results and logs
-            self.collect_log_files(folder_names[mode], 0)
-            p = misc.Popen(['./combine_results_FO.sh', str(req_acc), '%s_G*' % mode_dict[mode]], \
+            if req_acc != -1 and req_acc <= 0.003 and not options['only_generation']:
+                # required accuracy is rather smal. It is more
+                # efficient to do an extra step in between with a
+                # required accuracy of 10*req_acc, and only after that
+                # to go to final req_acc. This is particularly true
+                # for the plots, that otherwise might see larger
+                # fluctuations from the first (couple of) iterations.
+                req_accs=[min(req_acc*10,0.01),req_acc]
+            else:
+                req_accs=[req_acc]
+
+            for req_acc in req_accs:
+                npoints = self.run_card['npoints_FO']
+                niters = self.run_card['niters_FO']
+                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], -1, npoints, niters) 
+                # collect the results and logs
+                self.collect_log_files(folder_names[mode], 0)
+                p = misc.Popen(['./combine_results_FO.sh', str(req_acc), '%s_G*' % mode_dict[mode]], \
                                stdout=subprocess.PIPE, \
                                cwd=pjoin(self.me_dir, 'SubProcesses'))
-            output = p.communicate()
+                output = p.communicate()
 
-            self.cross_sect_dict = self.read_results(output, mode)
-            self.print_summary(options, 0, mode)
-            cross, error = sum_html.make_all_html_results(self, ['%s*' % mode_dict[mode]])
-            self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error) 
+                self.cross_sect_dict = self.read_results(output, mode)
+                self.print_summary(options, 0, mode)
+                cross, error = sum_html.make_all_html_results(self, ['%s*' % mode_dict[mode]])
+                self.results.add_detail('cross', cross)
+                self.results.add_detail('error', error) 
 
-            self.update_status('Computing cross-section', level=None)
-            self.run_all(job_dict, [['0', mode_dict[mode], '0', mode_dict[mode]]], 'Computing cross-section')
+                self.update_status('Computing cross-section', level=None)
+                self.run_all(job_dict, [['0', mode_dict[mode], '0', mode_dict[mode]]], 'Computing cross-section')
 
             # collect the results and logs
             self.collect_log_files(folder_names[mode], 1)
