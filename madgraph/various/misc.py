@@ -186,8 +186,41 @@ def has_f2py():
             has_f2py = True  
     return has_f2py       
         
-        
-        
+#===============================================================================
+#  Activate dependencies if possible. Mainly for tests
+#===============================================================================
+
+def activate_dependences(dependency, cmd=None, log = None):
+    """ Checks whether the specfieid MG dependency can be activated if it was
+    not turned off in MG5 options."""
+    
+    def tell(msg):
+        if log == 'stdout':
+            print msg
+        elif callable(log):
+            log(msg)
+
+    if cmd is None:
+        cmd = MGCmd.MasterCmd()
+
+    if dependency=='pjfry':
+        if cmd.options['pjfry'] in ['None',None,'']:
+            tell("Cannot activate MG5_aMC dependency '%s'"%dependency+\
+                        " because it was deactivated by the user in MG5aMC options")
+        elif (cmd.options['pjfry'] == 'auto' and which_lib('libpjfry.a') is None) \
+                 or which_lib(pjoin(cmd.options['pjfry'],'libpjfry.a')) is None:
+            tell("Installing PJFry...")
+            cmd.do_install('PJFry')
+
+    if dependency=='golem':
+        if cmd.options['golem'] in ['None',None,'']:
+            tell("Cannot activate MG5_aMC dependency '%s'"%dependency+\
+                    " because it was deactivated by the user in MG5aMC options")
+        elif (cmd.options['golem'] == 'auto' and which_lib('libgolem.a') is None) \
+                 or which_lib(pjoin(cmd.options['golem'],'libgolem.a')) is None:
+            tell("Installing Golem95...")
+            cmd.do_install('Golem95')
+    
 #===============================================================================
 # find a library
 #===============================================================================

@@ -280,10 +280,15 @@ class TestCmdMatchBox(IOTests.IOTestManager):
     
     def setUp(self):
         """ Initialize the test """
+
         self.interface = MGCmd.MasterCmd()
         # Below the key is the name of the logger and the value is a tuple with
         # first the handlers and second the level.
-        self.logger_saved_info = {}       
+        self.logger_saved_info = {}
+
+        # Make sure Tensor Integral Libraries are available:
+        misc.activate_dependences('pjfry', cmd = self.interface, log='stdout')
+        misc.activate_dependences('golem', cmd = self.interface, log='stdout')
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -317,11 +322,10 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
         def run_cmd(cmd):
             interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
                                precmd=True, postcmd=True)
-
-        # Make sure the potential TIR are set uniformly across users
-        if interface.options['golem'] in [None,'auto']:
-            interface.run_cmd('install Golem95')
-        interface.options['pjfry']=None
+        
+        # Make sure Tensor Integral Libraries are available:
+        misc.activate_dependences('pjfry', cmd = interface, log='stdout')
+        misc.activate_dependences('golem', cmd = interface, log='stdout')
         
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))

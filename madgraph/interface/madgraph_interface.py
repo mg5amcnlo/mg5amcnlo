@@ -4605,8 +4605,8 @@ This implies that with decay chains:
                 path[split[0]] = split[1]
 
         if args[0] == 'PJFry' and not os.path.exists(
-               pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
-            logger.info('Installing necessary dependence QCDLoop...')
+                                 pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
+            logger.info("Installing PJFRY's dependence QCDLoop...")
             self.do_install('QCDLoop', paths=path)
 
 
