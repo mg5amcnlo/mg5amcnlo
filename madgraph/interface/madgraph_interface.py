@@ -4561,7 +4561,7 @@ This implies that with decay chains:
         line = 'all =' + ' '.join(line)
         self.do_define(line)
 
-    def do_install(self, line):
+    def do_install(self, line, paths=None):
         """Install optional package from the MG suite."""
 
         args = self.split_arg(line)
@@ -4573,11 +4573,6 @@ This implies that with decay chains:
         else:
             program = "wget"
 
-        if args[0] == 'PJFry' and not os.path.exists(
-               pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
-            logger.info('Installing necessary dependence QCDLoop...')
-            self.do_install('QCDLoop')
-
         # special command for auto-update
         if args[0] == 'update':
             self.install_update(args, wget=program)
@@ -4585,26 +4580,34 @@ This implies that with decay chains:
 
         # Load file with path of the different program:
         import urllib
-        path = {}
-
-        data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                     'http://madgraph.hep.uiuc.edu/package_info.dat']
-        r = random.randint(0,1)
-        r = [r, (1-r)]
-        for index in r:
-            cluster_path = data_path[index]
-            try:
-                data = urllib.urlopen(cluster_path)
-            except Exception:
-                continue
-            break
+        if paths:
+            path = paths
         else:
-            raise MadGraph5Error, '''Impossible to connect any of us servers.
-            Please check your internet connection or retry later'''
+            path = {}
+    
+            data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
+                         'http://madgraph.hep.uiuc.edu/package_info.dat']
+            r = random.randint(0,1)
+            r = [r, (1-r)]
+            for index in r:
+                cluster_path = data_path[index]
+                try:
+                    data = urllib.urlopen(cluster_path)
+                except Exception:
+                    continue
+                break
+            else:
+                raise MadGraph5Error, '''Impossible to connect any of us servers.
+                Please check your internet connection or retry later'''
+    
+            for line in data:
+                split = line.split()
+                path[split[0]] = split[1]
 
-        for line in data:
-            split = line.split()
-            path[split[0]] = split[1]
+        if args[0] == 'PJFry' and not os.path.exists(
+               pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
+            logger.info('Installing necessary dependence QCDLoop...')
+            self.do_install('QCDLoop', paths=path)
 
 
         if args[0] == 'Delphes':
