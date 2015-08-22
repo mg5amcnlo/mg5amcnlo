@@ -897,6 +897,7 @@ class ConfigFile(dict):
         
         # if input is define read that input
         if isinstance(finput, (file, str)):
+            misc.sprint("start read")
             self.read(finput)
     
 
@@ -1274,7 +1275,7 @@ class RunCard(ConfigFile):
             if len(line) != 2:
                 continue
             value, name = line
-            name = name.lower()
+            name = name.lower().strip()
             if name not in self and ('min' in name or 'max' in name):
                 #looks like an entry added by one user -> add it nicely
                 self.add_param(name, float(value), hidden=True, cut=True)
@@ -1469,9 +1470,11 @@ class RunCardLO(RunCard):
     def default_setup(self):
         """default value for the run_card.dat"""
 
+        misc.sprint("pass in default setup")
+        
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
-        self.add_param("time_of_flight", -1.0, include=False)
+        self.add_param("time_of_flight", -1.0, include=False, hidden=True)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("lpp1", 1, fortran_name="lpp(1)")

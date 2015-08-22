@@ -467,7 +467,7 @@ class EventFile(object):
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000}
+        opt= {"print_step": 2000, "maxevent":float("inf")}
         opt.update(opts)
         
         nb_fct = len(fcts)
@@ -485,6 +485,8 @@ class EventFile(object):
                     logger.info("currently at %s event" % nb_event)
             for i in range(nb_fct):
                 out[i].append(fcts[i](event))
+            if nb_event > opt['maxevent']:
+                break
         if nb_fct == 1:
             return out[0]
         else:
