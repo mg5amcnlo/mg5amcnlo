@@ -286,9 +286,9 @@ class TestCmdMatchBox(IOTests.IOTestManager):
         # first the handlers and second the level.
         self.logger_saved_info = {}
 
-        # Make sure Tensor Integral Libraries are available:
-        misc.activate_dependences('pjfry', cmd = self.interface, log='stdout')
-        misc.activate_dependences('golem', cmd = self.interface, log='stdout')
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
+        misc.activate_dependence('golem', cmd = self.interface, log='stdout')
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -323,9 +323,9 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
             interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
                                precmd=True, postcmd=True)
         
-        # Make sure Tensor Integral Libraries are available:
-        misc.activate_dependences('pjfry', cmd = interface, log='stdout')
-        misc.activate_dependences('golem', cmd = interface, log='stdout')
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
+        misc.activate_dependence('golem', cmd = interface, log='stdout')
         
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))

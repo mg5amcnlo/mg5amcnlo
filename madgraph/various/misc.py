@@ -190,7 +190,22 @@ def has_f2py():
 #  Activate dependencies if possible. Mainly for tests
 #===============================================================================
 
-def activate_dependences(dependency, cmd=None, log = None):
+def deactivate_dependence(dependency, cmd=None, log = None):
+    """ Make sure to turn off some dependency of MG5aMC. """
+    
+    def tell(msg):
+        if log == 'stdout':
+            print msg
+        elif callable(log):
+            log(msg)
+    
+
+    if dependency in ['pjfry','golem']:
+        if cmd.options[dependency] not in ['None',None,'']:
+            tell("Deactivating MG5_aMC dependency '%s'"%dependency)
+            cmd.options[dependency] = 'None'
+
+def activate_dependence(dependency, cmd=None, log = None):
     """ Checks whether the specfieid MG dependency can be activated if it was
     not turned off in MG5 options."""
     
