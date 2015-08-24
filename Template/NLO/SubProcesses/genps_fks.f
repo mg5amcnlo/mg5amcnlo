@@ -640,7 +640,7 @@ c     2 soft-collinear
       double precision p_born_l(0:3,nexternal-1)
       common/pborn_l/p_born_l
       double precision p_born_ev(0:3,nexternal-1)
-      common/pborn_l/p_born_ev
+      common/pborn_ev/p_born_ev
       double precision p_ev(0:3,nexternal)
       common/pev/p_ev
       double precision xi_i_fks_ev,y_ij_fks_ev

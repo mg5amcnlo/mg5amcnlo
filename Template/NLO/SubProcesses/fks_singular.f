@@ -773,6 +773,8 @@ c terms.
       double complex wgt_c(2)
       double precision p_born(0:3,nexternal-1)
       common/pborn/    p_born
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
