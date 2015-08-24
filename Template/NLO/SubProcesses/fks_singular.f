@@ -765,7 +765,7 @@ c terms.
       double precision unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
      &     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
      &     ,jac_ev,pi,prefact_cnt_ssc_c,prefact_coll_c,prefact_deg_slxi
-     &     ,prefact_deg_sxi,zero
+     &     ,prefact_deg_sxi,zero,enhance_real
       parameter (pi=3.1415926535897932385d0, zero=0d0)
       data xnoborn_cnt /0d0/
       integer inoborn_cnt,i
@@ -820,6 +820,8 @@ c terms.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
       double precision pmass(nexternal)
       include 'pmass.inc'
       call cpu_time(tBefore)
@@ -856,11 +858,47 @@ c Compute the multi-channel enhancement factor 'enhance'.
             enhance=0d0
          endif
       endif
+
+      enhance_real=1.d0
+      if (p_born_ev(0,1).gt.0d0) then
+         calculatedBorn=.false.
+         call sborn(p_born_ev,wgt_c)
+         calculatedBorn=.false.
+      elseif(p_born_ev(0,1).lt.0d0)then
+         enhance_real=0d0
+      endif
+c Compute the multi-channel enhancement factor 'enhance_real'.
+      if (enhance_real.eq.0d0)then
+         xnoborn_cnt=xnoborn_cnt+1.d0
+         if(log10(xnoborn_cnt).gt.inoborn_cnt)then
+            write (*,*) 'WARNING: no Born momenta more than 10**',
+     $           inoborn_cnt,'times'
+            inoborn_cnt=inoborn_cnt+1
+         endif
+      else
+         xtot=0d0
+         if (mapconfig(0).eq.0) then
+            write (*,*) 'Fatal error in compute_prefactor_n1body,'/
+     &           /' no Born diagrams ',mapconfig
+     &           ,'. Check bornfromreal.inc'
+            write (*,*) 'Is fks_singular compiled correctly?'
+            stop 1
+         endif
+         do i=1, mapconfig(0)
+            xtot=xtot+amp2(mapconfig(i))
+         enddo
+         if (xtot.ne.0d0) then
+            enhance_real=amp2(mapconfig(iconfig))/xtot
+            enhance_real=enhance_real*diagramsymmetryfactor
+         else
+            enhance_real=0d0
+         endif
+      endif
       call unweight_function(p_born,unwgtfun)
 
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
       prefact=1d0/xi_i_hat_ev/(1-y_ij_fks_ev)
-      f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+      f_r=prefact*jac_ev*enhance_real*unwgtfun*fkssymmetryfactor*vegas_wgt
       f_MC_S=f_r
       f_MC_H=f_r
       if (.not.nocntevents) then

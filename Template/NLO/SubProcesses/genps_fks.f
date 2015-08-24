@@ -639,6 +639,8 @@ c     2 soft-collinear
       common/pborn/p_born
       double precision p_born_l(0:3,nexternal-1)
       common/pborn_l/p_born_l
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_l/p_born_ev
       double precision p_ev(0:3,nexternal)
       common/pev/p_ev
       double precision xi_i_fks_ev,y_ij_fks_ev
@@ -925,6 +927,16 @@ c
             enddo
          enddo
       endif
+
+      if (.not. skip_event_phsp) then
+         do i=1,nexternal-1
+            do j=0,3
+               p_born_ev(j,i)=p_born_l(j,i)
+            enddo
+         enddo
+      endif
+         
+
 c
 c
 c Here we start with the FKS Stuff
