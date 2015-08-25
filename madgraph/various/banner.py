@@ -897,7 +897,6 @@ class ConfigFile(dict):
         
         # if input is define read that input
         if isinstance(finput, (file, str)):
-            misc.sprint("start read")
             self.read(finput)
     
 
