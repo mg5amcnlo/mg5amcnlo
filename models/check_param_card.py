@@ -403,7 +403,7 @@ class ParamCard(dict):
                 logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
                                    (block, lhaid, value))
             value = str(value).lower()
-            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
+            fout.writelines(' %s = %s' % (variable, ('%e' % value).replace('e','d')))
             if need_mp:
                 fout.writelines(' mp__%s = %s_16' % (variable, value))
                 
