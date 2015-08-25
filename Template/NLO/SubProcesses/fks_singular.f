@@ -816,6 +816,11 @@ c terms.
       common /dsymfactor/diagramsymmetryfactor
       logical nocntevents
       common/cnocntevents/nocntevents
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal),granny_is_res
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -862,39 +867,47 @@ c Compute the multi-channel enhancement factor 'enhance'.
       endif
 
       enhance_real=1.d0
-      if (p_born_ev(0,1).gt.0d0) then
-         calculatedBorn=.false.
-         call sborn(p_born_ev,wgt_c)
-         calculatedBorn=.false.
-      elseif(p_born_ev(0,1).lt.0d0)then
-         enhance_real=0d0
-      endif
+      if (granny_is_res) then
+         if (p_born_ev(0,1).gt.0d0) then
+            calculatedBorn=.false.
+            call sborn(p_born_ev,wgt_c)
+            calculatedBorn=.false.
+         elseif(p_born_ev(0,1).lt.0d0)then
+            if (enhance.ne.0d0) then 
+               enhance_real=enhance
+            else
+               enhance_real=0d0
+            endif
+         endif
 c Compute the multi-channel enhancement factor 'enhance_real'.
-      if (enhance_real.eq.0d0)then
-         xnoborn_cnt=xnoborn_cnt+1.d0
-         if(log10(xnoborn_cnt).gt.inoborn_cnt)then
-            write (*,*) 'WARNING: no Born momenta more than 10**',
-     $           inoborn_cnt,'times'
-            inoborn_cnt=inoborn_cnt+1
+         if (enhance_real.eq.0d0)then
+            xnoborn_cnt=xnoborn_cnt+1.d0
+            if(log10(xnoborn_cnt).gt.inoborn_cnt)then
+               write (*,*) 'WARNING: no Born momenta more than 10**',
+     $              inoborn_cnt,'times'
+               inoborn_cnt=inoborn_cnt+1
+            endif
+         else
+            xtot=0d0
+            if (mapconfig(0).eq.0) then
+               write (*,*) 'Fatal error in compute_prefactor_n1body,'/
+     &              /' no Born diagrams ',mapconfig
+     &              ,'. Check bornfromreal.inc'
+               write (*,*) 'Is fks_singular compiled correctly?'
+               stop 1
+            endif
+            do i=1, mapconfig(0)
+               xtot=xtot+amp2(mapconfig(i))
+            enddo
+            if (xtot.ne.0d0) then
+               enhance_real=amp2(mapconfig(iconfig))/xtot
+               enhance_real=enhance_real*diagramsymmetryfactor
+            else
+               enhance_real=0d0
+            endif
          endif
       else
-         xtot=0d0
-         if (mapconfig(0).eq.0) then
-            write (*,*) 'Fatal error in compute_prefactor_n1body,'/
-     &           /' no Born diagrams ',mapconfig
-     &           ,'. Check bornfromreal.inc'
-            write (*,*) 'Is fks_singular compiled correctly?'
-            stop 1
-         endif
-         do i=1, mapconfig(0)
-            xtot=xtot+amp2(mapconfig(i))
-         enddo
-         if (xtot.ne.0d0) then
-            enhance_real=amp2(mapconfig(iconfig))/xtot
-            enhance_real=enhance_real*diagramsymmetryfactor
-         else
-            enhance_real=0d0
-         endif
+         enhance_real=enhance
       endif
       call unweight_function(p_born,unwgtfun)
 
