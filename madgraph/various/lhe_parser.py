@@ -1202,14 +1202,20 @@ class Event(list):
             if particle.status in [-1,1]:
                 if particle.color1:
                     color_index[particle.color1] +=1
+                    if -7 < particle.pdg < 0:
+                        raise Exception, "anti-quark with color tag"
                 if particle.color2:
                     color_index[particle.color2] +=1     
+                    if 7 > particle.pdg > 0:
+                        raise Exception, "quark with anti-color tag"                
+                
                 
         for key,value in color_index.items():
             if value > 2:
                 print self
                 print key, value
                 raise Exception, 'Wrong color_flow'           
+        
         
         #2. check that each parent present have coherent color-structure
         check = []

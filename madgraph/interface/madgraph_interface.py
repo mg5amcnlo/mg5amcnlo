@@ -2686,7 +2686,10 @@ This implies that with decay chains:
                         raise MadGraph5Error("Decay processes cannot include negative"+\
                                                 " coupling orders constraints.")                    
             else:
-                myprocdef = self.extract_process(line)
+                nb_proc = len([l for l in self.history if l.startswith(('generate','add process'))])
+                myprocdef = self.extract_process(line, proc_number=nb_proc)
+
+            
 
             # Check that we have something
             if not myprocdef:
@@ -3235,6 +3238,7 @@ This implies that with decay chains:
         """Check a given process or set of processes"""
 
         args = self.split_arg(line)
+        
         # Check args validity
         param_card = self.check_check(args)
         options= {'events':None} # If the momentum needs to be picked from a event file
@@ -4396,12 +4400,17 @@ This implies that with decay chains:
         for amp in self._curr_amps:
             amplitudes.extend(amp.get_amplitudes())
 
+        decay_tables = param_card['decay'].decay_table
         to_remove = []
         for amp in amplitudes:
             mother = [l.get('id') for l in amp['process'].get('legs') \
                                                         if not l.get('state')]
             if 1 == len(mother):
-                decay_table = param_card['decay'].decay_table[abs(mother[0])]
+                try:
+                    decay_table = decay_tables[abs(mother[0])]
+                except KeyError:
+                    logger.warning("No decay table for %s. decay of this particle with MadSpin should be discarded" % abs(mother[0]))
+                    continue # No BR for this particle -> accept all.
                 # create the tuple associate to the decay mode
                 child = [l.get('id') for l in amp['process'].get('legs') \
                                                               if l.get('state')]

@@ -141,12 +141,14 @@ class ReweightInterface(extended_cmd.Cmd):
         
         #get original cross-section/error
         if 'init' not in self.banner:
-            raise self.InvalidCmd('Event file does not contain init information')
-        for line in self.banner['init'].split('\n'):
-                split = line.split()
-                if len(split) == 4:
-                    cross, error = float(split[0]), float(split[1])
-        self.orig_cross = (cross, error)
+            self.orig_cross = (0,0)
+            #raise self.InvalidCmd('Event file does not contain init information')
+        else:
+            for line in self.banner['init'].split('\n'):
+                    split = line.split()
+                    if len(split) == 4:
+                        cross, error = float(split[0]), float(split[1])
+            self.orig_cross = (cross, error)
         
         
         
@@ -241,8 +243,11 @@ class ReweightInterface(extended_cmd.Cmd):
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
-            event.check() #check 4 momenta/...
-
+            try:
+                event.check() #check 4 momenta/...
+            except Exception, error:
+                print event
+                raise error
             sum_of_weight += event.wgt
             sum_of_abs_weight += abs(event.wgt)
             if event.wgt < 0 :

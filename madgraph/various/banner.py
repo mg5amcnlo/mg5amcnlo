@@ -1468,8 +1468,6 @@ class RunCardLO(RunCard):
     
     def default_setup(self):
         """default value for the run_card.dat"""
-
-        misc.sprint("pass in default setup")
         
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
@@ -1674,7 +1672,7 @@ class RunCardLO(RunCard):
             if self['scalefact'] != 1.0:
                 logger.warning('Since use_syst=T, We change the value of \'scalefact\' to 1')
                 self['scalefact'] = 1.0
-    
+     
         # CKKW Treatment
         if self['ickkw'] > 0:
             if self['use_syst']:
@@ -1684,6 +1682,11 @@ class RunCardLO(RunCard):
                     self['alpsfact'] =1.0
             if self['maxjetflavor'] == 6:
                 raise InvalidRunCard, 'maxjetflavor at 6 is NOT supported for matching!'
+            if self['ickkw'] == 2:
+                # add warning if ckkw selected but the associate parameter are empty
+                self.get_default('highestmult', log_level=20)                   
+                self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
+        if self['xqcut'] > 0:
             if self['drjj'] != 0:
                 logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
                 self['drjj'] = 0
@@ -1694,10 +1697,7 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
-            if self['ickkw'] == 2:
-                # add warning if ckkw selected but the associate parameter are empty
-                self.get_default('highestmult', log_level=20)                   
-                self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
+
 
         # check validity of the pdf set
         possible_set = ['lhapdf','mrs02nl','mrs02nn', 'mrs0119','mrs0117','mrs0121','mrs01_j', 'mrs99_1','mrs99_2','mrs99_3','mrs99_4','mrs99_5','mrs99_6', 'mrs99_7','mrs99_8','mrs99_9','mrs9910','mrs9911','mrs9912', 'mrs98z1','mrs98z2','mrs98z3','mrs98z4','mrs98z5','mrs98ht', 'mrs98l1','mrs98l2','mrs98l3','mrs98l4','mrs98l5', 'cteq3_m','cteq3_l','cteq3_d', 'cteq4_m','cteq4_d','cteq4_l','cteq4a1','cteq4a2', 'cteq4a3','cteq4a4','cteq4a5','cteq4hj','cteq4lq', 'cteq5_m','cteq5_d','cteq5_l','cteq5hj','cteq5hq', 'cteq5f3','cteq5f4','cteq5m1','ctq5hq1','cteq5l1', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo']
