@@ -1308,7 +1308,7 @@ C..
 c..   /path/  is for odeint.for:
       COMMON /path/ kmax,kount,dxsav,x(KMAXX),y(NMAX,KMAXX)
       common /bfunc/ beta0,beta1,beta2,beta3
-      COMMON nrhs
+      COMMON /cbnrhs/nrhs 
       data pi/3.14159265358979323846264338328d0/
       EXTERNAL rhs,rkqs
 
