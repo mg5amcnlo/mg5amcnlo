@@ -307,6 +307,8 @@ class FKSRealProcess(object):
         """Initializes the real process based on born_proc and leglist.
         Stores the fks informations into the list of dictionaries fks_infos
         """      
+        #safety check
+        assert type(splitting_type) == list and not type(splitting_type) == str 
         self.fks_infos = []
         for leg in leglist:
             if leg.get('fks') == 'i':

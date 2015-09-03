@@ -309,9 +309,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':4, 'QED':0},
-                        'born_orders': {'QCD':2, 'QED':0},
-                        'squared_orders': {'QCD':6, 'QED':0},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
+                        'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -366,9 +366,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist_qed[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':4, 'QED':0},
-                        'born_orders': {'QCD':2, 'QED':0},
-                        'squared_orders': {'QCD':6, 'QED':0},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
+                        'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -414,9 +414,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist[1].set('state', False)
         my_process_definition = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':4, 'QED':0},
-                        'born_orders': {'QCD':2, 'QED':0},
-                        'squared_orders': {'QCD':6, 'QED':0},
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
+                        'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -424,9 +424,9 @@ class TestFKSProcess(unittest.TestCase):
             [my_process_definition])
         my_process_definition_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist,
-                        'orders': {'QCD':2, 'QED':2},
-                        'born_orders': {'QCD':2, 'QED':0},
-                        'squared_orders': {'QCD':4, 'QED':2},
+                        'orders': {'QCD':0, 'QED':4},
+                        'born_orders': {'QCD':0, 'QED':2},
+                        'squared_orders': {'QCD':0, 'QED':6},
                         'perturbation_couplings': ['QED'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -448,6 +448,9 @@ class TestFKSProcess(unittest.TestCase):
         my_multi_leglist1[1].set('state', False)
         my_process_definition1 = MG.ProcessDefinition({\
                         'legs': my_multi_leglist1,
+                        'orders': {'QCD':2, 'QED':2},
+                        'born_orders': {'QCD':0, 'QED':2},
+                        'squared_orders': {'QCD':2, 'QED':4},
                         'perturbation_couplings': ['QCD'],
                         'NLO_mode': 'real',
                         'model': self.mymodel})
@@ -456,6 +459,9 @@ class TestFKSProcess(unittest.TestCase):
         my_process_definition1_qed = MG.ProcessDefinition({\
                         'legs': my_multi_leglist1,
                         'perturbation_couplings': ['QED'],
+                        'orders': {'QCD':0, 'QED':4},
+                        'born_orders': {'QCD':0, 'QED':2},
+                        'squared_orders': {'QCD':0, 'QED':6},
                         'NLO_mode': 'real',
                         'model': self.mymodel})
         my_process_definitions1_qed = MG.ProcessDefinitionList(\
@@ -785,22 +791,19 @@ class TestFKSProcess(unittest.TestCase):
         #take the third real of the first leg for this process 2j 21 >2 21 21i
         leglist = fksproc.reals[0][2]['leglist']
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1, 2,\
-                                           [2,21,2,21], 'QCD',\
+                                           [[2,21,2,21]], ['QCD'],\
                                            perturbed_orders = ['QCD'])
-        # 2j 21 > 21 2 22i
+        # 2j 21 > 2 21 22i
         leglist_qed = fksproc_qed.reals[0][0]['leglist']
-        for real in fksproc_qed.reals[0]:
-            print 'LL', [l['id'] for l in real['leglist']]
-            print 'LL1', [l['fks'] for l in real['leglist']]
         realproc_qed = fks_base.FKSRealProcess(fksproc_qed.born_amp['process'],leglist_qed,1,2,\
-                                           [2,21,21,2], 'QED',\
+                                           [[2,21,21,2]], ['QED'],\
                                             perturbed_orders = ['QED'])
         self.assertEqual(realproc.fks_infos, [{'i' : 5,
                                                'j' : 1,
                                                'ij' : 1,
                                                'ij_id' : 2,
-                                               'splitting_type': 'QCD',
-                                               'underlying_born':[2,21,2,21],
+                                               'splitting_type': ['QCD'],
+                                               'underlying_born':[[2,21,2,21]],
                                                'extra_cnt_index': -1,
                                                'need_color_links': True,
                                                'need_charge_links': False}])
@@ -808,8 +811,8 @@ class TestFKSProcess(unittest.TestCase):
                                                   'j':1,
                                                   'ij':1,
                                                   'ij_id':2,
-                                                  'splitting_type': 'QED',
-                                                  'underlying_born':[2,21,21,2],
+                                                  'splitting_type': ['QED'],
+                                                  'underlying_born':[[2,21,21,2]],
                                                   'extra_cnt_index': -1,
                                                   'need_color_links':False,
                                                   'need_charge_links':True}])
@@ -854,12 +857,12 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :21,
+                                         {'id' :2,
                                          'number' :3,
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg( 
-                                         {'id' :2,
+                                         {'id' :21,
                                          'number' :4,
                                          'state' :True,
                                          'fks' : 'n'}),
@@ -891,11 +894,11 @@ class TestFKSProcess(unittest.TestCase):
         self.assertEqual(amp,realproc.amplitude)
         self.assertEqual(array.array('i',[2,21,2,21,21]), realproc.pdgs)
         self.assertEqual([3,8,3,8,8], realproc.colors)
-        self.assertEqual([2./3.,0.,2./3.,0.,0.], realproc.charges)
+        self.assertEqual([0.,0.,0.,0.,0.], realproc.charges) # charges are set to 0 if only QCD is being perturbed
 #        self.assertEqual(amp_qed,realproc_qed.amplitude)
-        self.assertEqual(array.array('i',[2,21,21,2,22]), realproc_qed.pdgs)
-        self.assertEqual([3,8,8,3,1],realproc_qed.colors)
-        self.assertEqual([2./3.,0.,0.,2./3.,0.], realproc_qed.charges)
+        self.assertEqual(array.array('i',[2,21,2,21,22]), realproc_qed.pdgs)
+        self.assertEqual([3,8,3,8,1],realproc_qed.colors)
+        self.assertEqual([2./3.,0.,2./3.,0.,0.], realproc_qed.charges)
  ##       self.assertEqual(realproc.permutation, [1,2,4,5,3])
 
 
@@ -906,29 +909,35 @@ class TestFKSProcess(unittest.TestCase):
         fksproc = fks_base.FKSProcess(self.myproc)
         #u g > g u
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
+
         #take the first real for this process 2j 21 >2 21 21i
-        leglist = fksproc.reals[0][0]['leglist']
-        # 2j 21 > 21 2 22i
+        leglist = fksproc.reals[0][2]['leglist']
+        # safety check (pick the right real)
+        self.assertEqual([l['id'] for l in leglist], [2,21,2,21,21])
+
+        # 2j 21 > 21 2 22i for QED process
         leglist_qed = fksproc_qed.reals[0][0]['leglist']
+        # safety check (pick the right real)
+        self.assertEqual([l['id'] for l in leglist_qed], [2,21,2,21,22])
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist, 1,0,\
-                                           [2,21,2,21], 'QCD',\
+                                           [[2,21,2,21]], ['QCD'],\
                                            perturbed_orders = ['QCD'])
         realproc_qed = fks_base.FKSRealProcess(fksproc_qed.born_amp['process'],leglist_qed,1,0,\
-                                           [2,21,21,2], 'QED',\
+                                           [2,21,21,2], ['QED'],\
                                             perturbed_orders = ['QED'])
         target_full = {1:[], 2:[], 3:[1,2], 4:[1,2,3,5], 5:[1,2,3,4] }
-        target_full_qed = {1:[],2:[],3:[],4:[1],5:[1,4]}
+        target_full_qed = {1:[],2:[],3:[1],4:[],5:[1,3]}
         borns = [[2,21,2,21], [21,21,21,21], [2,-2,21,21]]
-        borns_qed = [[22,21,21,22],[2,21,21,2]]
+        borns_qed = [[22,21,22,21],[2,21,2,21]]
         self.assertEqual(target_full, realproc.find_fks_j_from_i(borns))
         self.assertEqual(target_full_qed,realproc_qed.find_fks_j_from_i(borns_qed))
-        #now the fks_j from_i corresponding onluy to u g > u g born
+        #now the fks_j from_i corresponding only to u g > u g born
         target_born = {1:[], 2:[], 3:[], 4:[1,2,3,5], 5:[1,2,3,4]}
         borns = [[2,21,2,21]]
         self.assertEqual(target_born, realproc.find_fks_j_from_i(borns))
-        #now the fks_j from_i corresponding onluy to u g > g u born
-        target_born_qed = {1:[], 2:[], 3:[], 4:[], 5:[1,4]}
-        borns_qed = [[2,21,21,2]]
+        #now the fks_j from_i corresponding only to u g > u g born
+        target_born_qed = {1:[], 2:[], 3:[], 4:[], 5:[1,3]}
+        borns_qed = [[2,21,2,21]]
         self.assertEqual(target_born_qed, realproc_qed.find_fks_j_from_i(borns_qed))
 
 
@@ -939,7 +948,7 @@ class TestFKSProcess(unittest.TestCase):
         #take the first real for this process 2j 21 > 2 21 21i
         leglist = fksproc.reals[0][0]['leglist']
         realproc = fks_base.FKSRealProcess(fksproc.born_amp['process'], leglist,1,0,
-                                           [2,21,2,21], 'QCD')
+                                           [[2,21,2,21]], ['QCD'], ['QCD'])
         self.assertEqual(realproc.get_leg_i(), leglist[4])
         self.assertEqual(realproc.get_leg_j(), leglist[0])
     
@@ -978,36 +987,108 @@ class TestFKSProcess(unittest.TestCase):
                 if amp.pdgs == array.array('i', [2, 21, 2, 21, 21])]
         self.assertEqual(len(amp_ugugg), 1)
         self.assertEqual(len(amp_ugugg[0].fks_infos), 4)
+        misc.sprint('fix rb links')
         self.assertEqual(amp_ugugg[0].fks_infos,
-                [{'i':5, 'j':1, 'ij':1, 'ij_id':0, 'need_color_links':True,
-                    'rb_links':[{'born_conf': 0, 'real_conf': 11},
-                                {'born_conf': 1, 'real_conf': 10},
-                                {'born_conf': 2, 'real_conf': 9}]},
-                 {'i':5, 'j':2, 'ij':2, 'ij_id':2, 'need_color_links':True,
-                     'rb_links':[{'born_conf': 0, 'real_conf': 14},
-                                 {'born_conf': 1, 'real_conf': 4},
-                                 {'born_conf': 2, 'real_conf': 7}]},
-                 {'i':5, 'j':3, 'ij':3, 'ij_id':0, 'need_color_links':True,
-                     'rb_links':[{'born_conf': 0, 'real_conf': 1},
-                                {'born_conf': 1, 'real_conf': 13},
-                                {'born_conf': 2, 'real_conf': 8}]},
-                 {'i':5, 'j':4, 'ij':4, 'ij_id':4, 'need_color_links':True,
-                     'rb_links':[{'born_conf': 0, 'real_conf': 2},
-                                 {'born_conf': 1, 'real_conf': 5},
-                                 {'born_conf': 2, 'real_conf': 12}]}])
+                [{'i':5, 'j':1, 'ij':1, 'ij_id':2, 'need_color_links':True,
+                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
+                  'extra_cnt_index':-1,
+                  },
+                    #'rb_links':[{'born_conf': 0, 'real_conf': 11},
+                    #            {'born_conf': 1, 'real_conf': 10},
+                    #            {'born_conf': 2, 'real_conf': 9}]},
+                 {'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':True,
+                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
+                  'extra_cnt_index':-1,
+                  },
+                     #'rb_links':[{'born_conf': 0, 'real_conf': 14},
+                     #            {'born_conf': 1, 'real_conf': 4},
+                     #            {'born_conf': 2, 'real_conf': 7}]},
+                 {'i':5, 'j':3, 'ij':3, 'ij_id':2, 'need_color_links':True,
+                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
+                  'extra_cnt_index':-1,
+                  },
+                     #'rb_links':[{'born_conf': 0, 'real_conf': 1},
+                     #           {'born_conf': 1, 'real_conf': 13},
+                     #           {'born_conf': 2, 'real_conf': 8}]},
+                 {'i':5, 'j':4, 'ij':4, 'ij_id':21, 'need_color_links':True,
+                  'need_charge_links':False, 'splitting_type':['QCD'], 'underlying_born':[[2,21,2,21]],
+                  'extra_cnt_index':-1,
+                  }
+                     #'rb_links':[{'born_conf': 0, 'real_conf': 2},
+                     #            {'born_conf': 1, 'real_conf': 5},
+                     #            {'born_conf': 2, 'real_conf': 12}]}
+                     ])
 
         
     def test_find_reals(self):
         """tests if all the real processes are found for a given born"""
         #process is u g > u g
         fksproc = fks_base.FKSProcess(self.myproc)
-        target = []
         # for the QED the born is u g > g u instead of u g > u g
         fksproc_qed = fks_base.FKSProcess(self.myproc_qed)
-        target_qed = []
+
+        target = []
+        # the splittings are the same for the two processes
+        # generate_reals will take care of selecting those which
+        # satisfy the order constraints
         
         #leg 1 can split as u g > u g g or  g g > u u~ g 
+        #and u g > u g a or  a g > u u~ g (will be removed by diagrams/order check))
         target.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :2,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :21,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :21,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel ),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :22,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :21,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                         fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :21,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-2,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'}),
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
                                         {'id' :2,
                                          'number' :1,
@@ -1062,62 +1143,6 @@ class TestFKSProcess(unittest.TestCase):
                                          'fks' : 'n'})
                                         ], self.mymodel)]
                                         )
-        #leg 1 can split as u g > g u a or  a g > g u u~ 
-        target_qed.append( [fks_common.to_fks_legs([
-                                        fks_common.FKSLeg(
-                                        {'id' :2,
-                                         'number' :1,
-                                         'state' :False,
-                                         'fks' : 'j'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :21,
-                                         'number' :2,
-                                         'state' :False,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :21,
-                                         'number' :3,
-                                         'state' :True,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg( 
-                                         {'id' :2,
-                                         'number' :4,
-                                         'state' :True,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :22,
-                                         'number' :5,
-                                         'state' :True,
-                                         'fks' : 'i'})
-                                        ], self.mymodel ),
-                    fks_common.to_fks_legs([
-                                        fks_common.FKSLeg(
-                                        {'id' :22,
-                                         'number' :1,
-                                         'state' :False,
-                                         'fks' : 'j'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :21,
-                                         'number' :2,
-                                         'state' :False,
-                                         'fks' : 'n'}),
-                                         fks_common.FKSLeg(
-                                         {'id' :21,
-                                         'number' :3,
-                                         'state' :True,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :2,
-                                         'number' :4,
-                                         'state' :True,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg( 
-                                         {'id' :-2,
-                                         'number' :5,
-                                         'state' :True,
-                                         'fks' : 'i'})
-                                        ], self.mymodel)]
-                                        )        
         #leg 2 can split as u d > d u g OR u d~ > d~ u g OR
         #                   u u > u u g OR u u~ > u u~ g OR
         #                   u g > u g g 
@@ -1156,7 +1181,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :1,
+                                         {'id' :-1,
                                          'number' :2,
                                          'state' :False,
                                          'fks' : 'j'}),
@@ -1166,7 +1191,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :1,
+                                         {'id' :-1,
                                          'number' :4,
                                          'state' :True,
                                          'fks' : 'i'}),
@@ -1183,7 +1208,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-1,
+                                         {'id' :1,
                                          'number' :2,
                                          'state' :False,
                                          'fks' : 'j'}),
@@ -1193,7 +1218,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-1,
+                                         {'id' :1,
                                          'number' :4,
                                          'state' :True,
                                          'fks' : 'i'}),
@@ -1210,7 +1235,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' :-2,
                                          'number' :2,
                                          'state' :False,
                                          'fks' : 'j'}),
@@ -1220,7 +1245,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :2,
+                                         {'id' :-2,
                                          'number' :4,
                                          'state' :True,
                                          'fks' : 'i'}),
@@ -1237,7 +1262,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :False,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-2,
+                                         {'id' :2,
                                          'number' :2,
                                          'state' :False,
                                          'fks' : 'j'}),
@@ -1247,7 +1272,7 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg(
-                                         {'id' :-2,
+                                         {'id' :2,
                                          'number' :4,
                                          'state' :True,
                                          'fks' : 'i'}),
@@ -1258,9 +1283,35 @@ class TestFKSProcess(unittest.TestCase):
                                          'fks' : 'n'})
                                         ], self.mymodel)
                     ])
-        target_qed.append([])
-        #leg 3 can split as u g > u g g
+        #leg 3 can split as u g > u g g or u g > u g a
         target.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :2,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :21,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :21,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                        fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
                                         {'id' :2,
                                          'number' :1,
@@ -1289,7 +1340,6 @@ class TestFKSProcess(unittest.TestCase):
                                         ], self.mymodel)
                                         ]
                                         )
-        target_qed.append([])
         #leg 4 can split as u g > u g g or u g > u u u~ or u g > u d d~ 
         target.append( [fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
@@ -1372,57 +1422,80 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :True,
                                          'fks' : 'i'})
                                         ], self.mymodel)
-                                        
-                                        ]
-                                        )
-        #leg 3 can split as u g > g u a
-        target_qed.append( [fks_common.to_fks_legs([
-                                        fks_common.FKSLeg(
-                                        {'id' :2,
-                                         'number' :1,
-                                         'state' :False,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :21,
-                                         'number' :2,
-                                         'state' :False,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :21,
-                                         'number' :3,
-                                         'state' :True,
-                                         'fks' : 'n'}),
-                                        fks_common.FKSLeg(
-                                         {'id' :2,
-                                         'number' :4,
-                                         'state' :True,
-                                         'fks' : 'j'}),
-                                        fks_common.FKSLeg( 
-                                         {'id' :22,
-                                         'number' :5,
-                                         'state' :True,
-                                         'fks' : 'i'})
-                                        ], self.mymodel)
                                         ]
                                         )
         self.assertEqual(len(fksproc.reals),len(target))
         self.assertEqual([len(real) for real in fksproc.reals],\
                          [len(real) for real in target])
-        self.assertEqual(len(fksproc_qed.reals),len(target_qed))
-        self.assertEqual([len(real) for real in fksproc_qed.reals],\
-                         [len(real) for real in target_qed])                
+        self.assertEqual(len(fksproc_qed.reals),len(target))
+        self.assertEqual([len(real) for real in fksproc.reals],\
+                         [len(real) for real in target])                
         for i in range(len(fksproc.reals)):
             for j in range(len(fksproc.reals[i])):
-                self.assertEqual(fksproc.reals[i][j], target[i][j])
+                self.assertEqual(fksproc.reals[i][j]['leglist'], target[i][j])
         for i in range(len(fksproc_qed.reals)):
             for j in range(len(fksproc_qed.reals[i])):
-                self.assertEqual(fksproc_qed.reals[i][j], target_qed[i][j]) 
+                self.assertEqual(fksproc_qed.reals[i][j]['leglist'], target[i][j]) 
         
         #process is d d~ > u u~
         fksproc2 = fks_base.FKSProcess(self.myproc2)
         target2 = []
         #leg 1 can split as d d~ > u u~ g or  g d~ > d~ u u~ 
         target2.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :22,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
                                         {'id' :1,
                                          'number' :1,
@@ -1475,11 +1548,65 @@ class TestFKSProcess(unittest.TestCase):
                                          'number' :5,
                                          'state' :True,
                                          'fks' : 'i'})
-                                        ], self.mymodel)]
-                                        )
+                                        ], self.mymodel),
+                                        ])
         
         #leg 2 can split as d d~ > u u~ g or  d g > d u u~ 
         target2.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :22,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' : 1,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
                                         {'id' :1,
                                          'number' :1,
@@ -1528,12 +1655,12 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :True,
                                          'fks' : 'i'}),
                                         fks_common.FKSLeg( 
-                                         {'id' :-2,
+                                         {'id' : -2,
                                          'number' :5,
                                          'state' :True,
                                          'fks' : 'n'})
-                                        ], self.mymodel)]
-                                        )
+                                        ], self.mymodel),
+                                        ])
         
         #leg 3 can split as d d~ > u u~ g  
         target2.append( [fks_common.to_fks_legs([
@@ -1558,14 +1685,69 @@ class TestFKSProcess(unittest.TestCase):
                                          'state' :True,
                                          'fks' : 'n'}),
                                         fks_common.FKSLeg( 
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
                                          {'id' :21,
                                          'number' :5,
                                          'state' :True,
                                          'fks' : 'i'})
-                                        ], self.mymodel)])
+                                        ], self.mymodel)
+                                        ])
 
         #leg 4 can split as d d~ > u u~ g  
         target2.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
                                         {'id' :1,
                                          'number' :1,
@@ -1591,16 +1773,72 @@ class TestFKSProcess(unittest.TestCase):
                                          'number' :5,
                                          'state' :True,
                                          'fks' : 'i'})
-                                        ], self.mymodel)])
+                                        ], self.mymodel),
+                                        ])
 
         for i in range(len(fksproc2.reals)):
-            self.assertEqual(fksproc2.reals[i], target2[i])       
+            for j in range(len(fksproc2.reals[i])):
+                self.assertEqual(fksproc2.reals[i][j]['leglist'], target2[i][j])
     
         #d d~ > a a
         fksproc3 = fks_base.FKSProcess(self.myprocaa)
         target3 = []
         #leg 1 can split as d d~ > g a a or  g d~ > d~ a a 
         target3.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :22,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
                                         {'id' :1,
                                          'number' :1,
@@ -1653,10 +1891,64 @@ class TestFKSProcess(unittest.TestCase):
                                          'number' :5,
                                          'state' :True,
                                          'fks' : 'i'})
-                                        ], self.mymodel)]
-                                        )
+                                        ], self.mymodel),
+                                        ])
         #leg 2 can split as d d~ > g a a  or  d g > d a a 
         target3.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :22,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :22,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 1,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
                                         fks_common.FKSLeg(
                                         {'id' :1,
                                          'number' :1,
@@ -1709,11 +2001,232 @@ class TestFKSProcess(unittest.TestCase):
                                          'number' :5,
                                          'state' :True,
                                          'fks' : 'i'})
-                                        ], self.mymodel)]
-                                        )        
+                                        ], self.mymodel),
+                                        ])        
+        # leg 3 and 4 can split in lep/lep, u u~ / d d~
+        target3.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :11,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-11,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :13,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-13,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :1,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-1,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :2,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-2,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                                        ])        
+        # leg 3 and 4 can split in lep/lep, u u~ / d d~
+        target3.append( [fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :11,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-11,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :13,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-13,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 1,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-1,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                    fks_common.to_fks_legs([
+                                        fks_common.FKSLeg(
+                                        {'id' :1,
+                                         'number' :1,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' :-1,
+                                         'number' :2,
+                                         'state' :False,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 22,
+                                         'number' :3,
+                                         'state' :True,
+                                         'fks' : 'n'}),
+                                        fks_common.FKSLeg(
+                                         {'id' : 2,
+                                         'number' :4,
+                                         'state' :True,
+                                         'fks' : 'j'}),
+                                        fks_common.FKSLeg( 
+                                         {'id' :-2,
+                                         'number' :5,
+                                         'state' :True,
+                                         'fks' : 'i'})
+                                        ], self.mymodel),
+                                        ])        
 
-        for real, res in zip(fksproc3.reals, target3):
-            self.assertEqual(real, res) 
+        for i in range(len(fksproc3.reals)):
+            for j in range(len(fksproc3.reals[i])):
+                self.assertEqual(fksproc3.reals[i][j]['leglist'], target3[i][j])
 
 
     def test_sort_fks_proc(self):
