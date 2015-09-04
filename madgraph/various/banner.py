@@ -1846,8 +1846,8 @@ class RunCardNLO(RunCard):
         self.add_param('iseed', 0)
         self.add_param('lpp1', 1, fortran_name='lpp(1)')        
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
-        self.add_param('ebeam1', 6500, fortran_name='ebeam(1)')
-        self.add_param('ebeam2', 6500, fortran_name='ebeam(2)')        
+        self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
+        self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo')                
         self.add_param('lhaid', 244600)
         #shower and scale
