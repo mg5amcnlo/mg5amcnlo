@@ -2515,6 +2515,18 @@ Integrated cross-section
         
         mcatnlo_log = pjoin(self.me_dir, 'mcatnlo.log')
         self.update_status('Compiling MCatNLO for %s...' % shower, level='shower') 
+
+        
+        # libdl may be needded for pythia 82xx
+        if shower == 'PYTHIA8' and not \
+           os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')) and \
+           'dl' not in self.shower_card['extralibs'].split():
+            # 'dl' has to be linked with the extralibs
+            self.shower_card['extralibs'] += ' dl'
+            logger.warning("'dl' was added to extralibs from the shower_card.dat.\n" + \
+                          "It is needed for the correct running of PY8.2xx.\n" + \
+                          "If this library cannot be found on your system, a crash will occur.")
+
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
                     cwd=pjoin(self.me_dir, 'MCatNLO'))
@@ -2566,10 +2578,10 @@ Integrated cross-section
         # special treatment for pythia8
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.cmd'), rundir)
             files.mv(pjoin(self.me_dir, 'MCatNLO', 'Pythia8.exe'), rundir)
-            if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
+            if os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')): # this is PY8.1xxx
                 files.ln(pjoin(self.options['pythia8_path'], 'examples', 'config.sh'), rundir)
                 files.ln(pjoin(self.options['pythia8_path'], 'xmldoc'), rundir)
-            else:
+            else: # this is PY8.2xxx
                 files.ln(pjoin(self.options['pythia8_path'], 'share/Pythia8/xmldoc'), rundir)
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
