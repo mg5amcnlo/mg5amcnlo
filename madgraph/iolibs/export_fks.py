@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import string
 import copy
+import platform
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -1382,11 +1383,20 @@ end
         make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
         make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
         if OLP=='GoSam':
-            # apparently -rpath=../$(LIBDIR) is necessary on condor
-            #make_opts_content=make_opts_content.replace('libOLP=',
-            #     'libOLP=-Wl,-rpath='+str(pjoin(export_path,'lib'))+' -lgolem_olp')
-            make_opts_content=make_opts_content.replace('libOLP=',
+            if platform.system().lower()=='darwin':
+                # On mac the -rpath is not supported and the path of the dynamic
+                # library is automatically wired in the executable
+                make_opts_content=make_opts_content.replace('libOLP=',
                                                           'libOLP=-Wl,-lgolem_olp')
+            else:
+                # elsewhere, -rpath=../$(LIBDIR) is necessary
+                make_opts_content=make_opts_content.replace('libOLP=',
+                                      'libOLP=-Wl,-rpath=../$(LIBDIR) -lgolem_olp')
+                # Using the absolute path might be preferable in certain circumstances
+#                make_opts_content=make_opts_content.replace('libOLP=', 
+#                 'libOLP=-Wl,-rpath='+str(pjoin(export_path,'lib'))+' -lgolem_olp')
+            
+            
         make_opts.write(make_opts_content)
         make_opts.close()
 
