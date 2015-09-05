@@ -1389,12 +1389,15 @@ end
                 make_opts_content=make_opts_content.replace('libOLP=',
                                                           'libOLP=-Wl,-lgolem_olp')
             else:
-                # elsewhere, -rpath=../$(LIBDIR) is necessary
-                make_opts_content=make_opts_content.replace('libOLP=',
-                                      'libOLP=-Wl,-rpath=../$(LIBDIR) -lgolem_olp')
-                # Using the absolute path might be preferable in certain circumstances
-#                make_opts_content=make_opts_content.replace('libOLP=', 
-#                 'libOLP=-Wl,-rpath='+str(pjoin(export_path,'lib'))+' -lgolem_olp')
+                # On other platforms the option , -rpath= path to libgolem.so is necessary
+                # Using a relative path is not ideal because the file libgolem.so is not
+                # copied on the worker nodes.
+#                make_opts_content=make_opts_content.replace('libOLP=',
+#                                      'libOLP=-Wl,-rpath=../$(LIBDIR) -lgolem_olp')
+                # Using the absolute path is working in the case where the disk of the 
+                # front end machine is mounted on all worker nodes as well.
+                make_opts_content=make_opts_content.replace('libOLP=', 
+                 'libOLP=-Wl,-rpath='+str(pjoin(export_path,'lib'))+' -lgolem_olp')
             
             
         make_opts.write(make_opts_content)
