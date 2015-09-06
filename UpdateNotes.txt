@@ -1,5 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.3.3 (06/09/15)
+        VH: Finalized the MG5aMC-GoSam interface
+
 2.3.2(20/08/15)   
         OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)
             New Capabilities: 
