@@ -492,6 +492,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'syscalc_path': './SysCalc',
                        'lhapdf': 'lhapdf-config',
                        'timeout': 60,
+                       'f2py_compiler':None,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
