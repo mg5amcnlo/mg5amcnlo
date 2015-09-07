@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import string
 import copy
+import platform
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -1382,11 +1383,23 @@ end
         make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
         make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
         if OLP=='GoSam':
-            # apparently -rpath=../$(LIBDIR) is not necessary.
-            #make_opts_content=make_opts_content.replace('libOLP=',
-            #                       'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
-            make_opts_content=make_opts_content.replace('libOLP=',
+            if platform.system().lower()=='darwin':
+                # On mac the -rpath is not supported and the path of the dynamic
+                # library is automatically wired in the executable
+                make_opts_content=make_opts_content.replace('libOLP=',
                                                           'libOLP=-Wl,-lgolem_olp')
+            else:
+                # On other platforms the option , -rpath= path to libgolem.so is necessary
+                # Using a relative path is not ideal because the file libgolem.so is not
+                # copied on the worker nodes.
+#                make_opts_content=make_opts_content.replace('libOLP=',
+#                                      'libOLP=-Wl,-rpath=../$(LIBDIR) -lgolem_olp')
+                # Using the absolute path is working in the case where the disk of the 
+                # front end machine is mounted on all worker nodes as well.
+                make_opts_content=make_opts_content.replace('libOLP=', 
+                 'libOLP=-Wl,-rpath='+str(pjoin(export_path,'lib'))+' -lgolem_olp')
+            
+            
         make_opts.write(make_opts_content)
         make_opts.close()
 

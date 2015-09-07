@@ -3498,6 +3498,10 @@ Integrated cross-section
                      pjoin(cwd, 'leshouche_info.dat'),
                      pjoin(cwd, 'FKS_params.dat')]
 
+        # For GoSam interface, we must copy the SLHA card as well
+        if os.path.exists(pjoin(self.me_dir,'OLP_virtuals','gosam.rc')):
+            input_files.append(pjoin(self.me_dir, 'Cards', 'param_card.dat'))
+
         if os.path.exists(pjoin(cwd,'nevents.tar')):
             input_files.append(pjoin(cwd,'nevents.tar'))
         
