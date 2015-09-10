@@ -4613,6 +4613,13 @@ This implies that with decay chains:
                 split = line.split()
                 path[split[0]] = split[1]
 
+################################################################################
+# TEMPORARY HACK WHERE WE ADD ENTRIES TO WHAT WILL BE EVENTUALLY ON THE WEB
+################################################################################
+            path['PY8'] = ''
+            path['InstallScripts'] = '' 
+################################################################################
+
         if args[0] == 'PJFry' and not os.path.exists(
                                  pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
             logger.info("Installing PJFRY's dependence QCDLoop...")
@@ -4641,6 +4648,8 @@ This implies that with decay chains:
 
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
+        misc.sprint(path.values())
+        stop
         if sys.platform == "darwin":
             misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
         else:
@@ -5083,7 +5092,6 @@ This implies that with decay chains:
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
             return
-
 
         # read the data present in .autoupdate
         data = {}
