@@ -85,7 +85,7 @@ class DecayParticle(base_objects.Particle):
     """
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'line',
                    'is_part', 'self_antipart', 'is_stable',
                    'decay_vertexlist', 'decay_channels', 'apx_decaywidth',
                    'apx_decaywidth_err', '2body_massdiff',
