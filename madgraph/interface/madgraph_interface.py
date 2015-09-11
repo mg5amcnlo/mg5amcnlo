@@ -4579,26 +4579,26 @@ This implies that with decay chains:
         HEP tools with more complicated dependences."""
         
         # Fist download the installer if not already present
-        if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HepToolsInstallers')):
+        if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
             if not os.path.isdir(pjoin(MG5DIR,'HEPTools')):
                 os.mkdir(pjoin(MG5DIR,'HEPTools'))
             logger.info('Downloading the HEPToolInstaller at:\n   %s'%
                                                   HepToolsInstaller_web_address)
             if sys.platform == "darwin":
                 misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
-                  %pjoin(MG5DIR,'HEPTools','HepToolsInstallers.tar.gz')],
+                  %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
                   stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
                                                                      cwd=MG5DIR)
             else:
                 misc.call(['wget', HepToolsInstaller_web_address, 
                   '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
-                  'HepToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
+                  'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
                                        stdout=open(os.devnull, 'w'), cwd=MG5DIR)
             # Untar the file
-            returncode = misc.call(['tar', '-xzpf', 'HepToolsInstallers.tar.gz'],
+            returncode = misc.call(['tar', '-xzpf', 'HEPToolsInstallers.tar.gz'],
                      cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
             # Remove the tarball
-            os.remove(pjoin(MG5DIR,'HEPTools','HepToolsInstallers.tar.gz'))
+            os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
         # Potential change in naming convention
         name_map = {}
@@ -4651,14 +4651,14 @@ This implies that with decay chains:
             
             logger.info('Now installing Pythia8. Be patient...','$MG:color:GREEN')
             return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
-             'HepToolsInstallers','HEPToolInstaller.py'),'pythia8',
+             'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
              '--prefix=%s'%pjoin(MG5DIR,'HEPTools'),
              '--with_lhapdf6=%s'%('OFF' if lhapdf_path is None else lhapdf_path)]
               +compiler_options),shell=True)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
             return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
-              'HepToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
+              'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
                          pjoin(MG5DIR,'HEPTools')]+compiler_options),shell=True)
 
         if return_code == 0:
