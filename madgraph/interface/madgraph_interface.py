@@ -4582,14 +4582,18 @@ This implies that with decay chains:
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HepToolsInstallers')):
             if not os.path.isdir(pjoin(MG5DIR,'HEPTools')):
                 os.mkdir(pjoin(MG5DIR,'HEPTools'))
+            logger.info('Downloading the HEPToolInstaller at:\n   %s'%
+                                                  HepToolsInstaller_web_address)
             if sys.platform == "darwin":
                 misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
-                % pjoin(MG5DIR,'HEPTools',
-                                      'HepToolsInstallers.tar.gz')], cwd=MG5DIR)
+                  %pjoin(MG5DIR,'HEPTools','HepToolsInstallers.tar.gz')],
+                  stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                                                                     cwd=MG5DIR)
             else:
                 misc.call(['wget', HepToolsInstaller_web_address, 
-                    '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
-                                      'HepToolsInstallers.tar.gz')], cwd=MG5DIR)
+                  '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
+                  'HepToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
+                                       stdout=open(os.devnull, 'w'), cwd=MG5DIR)
             # Untar the file
             returncode = misc.call(['tar', '-xzpf', 'HepToolsInstallers.tar.gz'],
                      cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
@@ -4629,10 +4633,10 @@ This implies that with decay chains:
         
             if lhapdf_version is None or lhapdf_version<=5:
                 answer = cmd.Cmd.timed_input(question=
-""" LHAPDF was %s. Do you want to install LHPADF6 (recommended) [y]/n >"""%\
+""" LHAPDF was %s. Do you want to install LHPADF6? (recommended) [y]/n >"""%\
         ("not found" if lhapdf_version is None else
-               "found to be incompatible (version %d)"%lhapdf_version)+
-                                        " with the automatic Pythia8 installer")
+               "found to be incompatible (version %d)"%lhapdf_version+
+                            " with the automatic Pythia8 installer"),default='y')
                 if answer.lower() != 'y':
                     lhapdf_path = None
                 else:
@@ -4646,29 +4650,26 @@ This implies that with decay chains:
                   ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
             
             logger.info('Now installing Pythia8. Be patient...')
-            installer = misc.Popen(
-            [pjoin(MG5DIR,'HEPTools','HepToolsInstallers','HEPToolInstaller.py'),
-             'pythia8','--prefix=%s'%pjoin(MG5DIR,'HEPTools'),            
+            return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
+             'HepToolsInstallers','HEPToolInstaller.py'),'pythia8',
+             '--prefix=%s'%pjoin(MG5DIR,'HEPTools'),
              '--with_lhapdf=%s'%('OFF' if lhapdf_path is None else lhapdf_path)]
-              +compiler_options, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+              +compiler_options),shell=True)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
-            installer = misc.Popen(
-            [pjoin(MG5DIR,'HEPTools','HepToolsInstallers','HEPToolInstaller.py'),
-             tool,'--prefix=%s'%pjoin(MG5DIR,'HEPTools')]+compiler_options,
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
+              'HepToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
+                         pjoin(MG5DIR,'HEPTools')]+compiler_options),shell=True)
 
-        installer_log = installer.communicate()[0]
-        if installer.returncode == 0:
+        if return_code == 0:
             logger.info("%s successfully installed in %s."%(
                                      tool_to_install, pjoin(MG5DIR,'HEPTools')))
-        elif installer.returncode == 1:
+        elif return_code == 1:
             logger.info("%s already installed in %s."%(
                                      tool_to_install, pjoin(MG5DIR,'HEPTools')))
         else:
-            raise self.InvalidCmd("Installation of %s failed. See log below:\n%s"%(
-                                                tool_to_install, installer_log))
-        if installer.returncode != 0:
+            raise self.InvalidCmd("Installation of %s failed."%tool_to_install)
+        if return_code != 0:
             return
 
         # Post-installation treatment
