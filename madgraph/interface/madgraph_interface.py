@@ -4601,7 +4601,7 @@ This implies that with decay chains:
             os.remove(pjoin(MG5DIR,'HEPTools','HepToolsInstallers.tar.gz'))
             
         # Potential change in naming convention
-        name_map = {'lhapdf6':'lhapdf'}
+        name_map = {}
         try:
             tool = name_map[tool_to_install]
         except:
@@ -4641,7 +4641,7 @@ This implies that with decay chains:
                     lhapdf_path = None
                 else:
                     self.advanced_install('lhapdf6',HepToolsInstaller_web_address)
-                    lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf')
+                    lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf6')
             else:
                 lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
                                                  lhapdf_config),os.path.pardir))
@@ -4663,7 +4663,7 @@ This implies that with decay chains:
 
         if return_code == 0:
             logger.info("%s successfully installed in %s."%(
-                                     tool_to_install, pjoin(MG5DIR,'HEPTools')))
+                   tool_to_install, pjoin(MG5DIR,'HEPTools')),'$MG:color:GREEN')
         elif return_code == 1:
             logger.info("%s already installed in %s."%(
                                      tool_to_install, pjoin(MG5DIR,'HEPTools')))
@@ -4676,8 +4676,8 @@ This implies that with decay chains:
         if tool == 'pythia8':
             self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.exec_cmd('save options')            
-        elif tool == 'lhapdf':
-            self.options['lhapdf'] = pjoin(MG5DIR,HEPTools,'lhapdf','bin',
+        elif tool == 'lhapdf6':
+            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf6','bin',
                                                                 'lhapdf-config')
             self.exec_cmd('save options')
 
