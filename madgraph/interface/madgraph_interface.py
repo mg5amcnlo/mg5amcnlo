@@ -2450,7 +2450,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
-                                                                      'QCDLoop']
+                     'QCDLoop']
+    # The targets below are installed using the HEPToolsInstaller.py script
+    _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','hepmc']
+    _install_opts.extend(_advanced_install_opts)
+
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
@@ -4570,6 +4574,112 @@ This implies that with decay chains:
         line = 'all =' + ' '.join(line)
         self.do_define(line)
 
+    def advanced_install(self, tool_to_install, HepToolsInstaller_web_address):
+        """ Uses the HEPToolsInstaller.py script maintened online to install
+        HEP tools with more complicated dependences."""
+        
+        # Fist download the installer if not already present
+        if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HepToolsInstallers')):
+            if not os.path.isdir(pjoin(MG5DIR,'HEPTools')):
+                os.mkdir(pjoin(MG5DIR,'HEPTools'))
+            if sys.platform == "darwin":
+                misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
+                % pjoin(MG5DIR,'HEPTools',
+                                      'HepToolsInstallers.tar.gz')], cwd=MG5DIR)
+            else:
+                misc.call(['wget', HepToolsInstaller_web_address, 
+                    '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
+                                      'HepToolsInstallers.tar.gz')], cwd=MG5DIR)
+            # Untar the file
+            returncode = misc.call(['tar', '-xzpf', 'HepToolsInstallers.tar.gz'],
+                     cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
+            # Remove the tarball
+            os.remove(pjoin(MG5DIR,'HEPTools','HepToolsInstallers.tar.gz'))
+            
+        # Potential change in naming convention
+        name_map = {'lhapdf6':'lhapdf'}
+        try:
+            tool = name_map[tool_to_install]
+        except:
+            tool = tool_to_install
+     
+        # Compiler options
+        compiler_options = []
+        if not self.options['cpp_compiler'] is None:
+            compiler_options.append('--cpp_compiler=%s'%
+                                                   self.options['cpp_compiler'])
+        if not self.options['fortran_compiler'] is None:
+            compiler_options.append('--fortran_compiler=%s'%
+                                               self.options['fortran_compiler'])
+
+        # Special rules for certain tools  
+        if tool=='pythia8':
+            # All what's below is to handle the lhapdf dependency of Pythia8
+            lhapdf_config  = misc.which(self.options['lhapdf'])
+            lhapdf_version = None
+            if lhapdf_config is None:
+                lhapdf_version = None
+            else:
+                try:
+                    version = misc.Popen(
+                           [lhapdf_config,'--version'], stdout=subprocess.PIPE)
+                    lhapdf_version = int(version.stdout.read()[0])
+                except:
+                    lhapdf_version = 0
+        
+            if lhapdf_version is None or lhapdf_version<=5:
+                answer = cmd.Cmd.timed_input(question=
+""" LHAPDF was %s. Do you want to install LHPADF6 (recommended) [y]/n >"""%\
+        ("not found" if lhapdf_version is None else
+               "found to be incompatible (version %d)"%lhapdf_version)+
+                                        " with the automatic Pythia8 installer")
+                if answer.lower() != 'y':
+                    lhapdf_path = None
+                else:
+                    self.advanced_install('lhapdf',HepToolsInstaller_web_address)
+                    lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf')
+            else:
+                lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
+                                                 lhapdf_config),os.path.pardir))
+            if lhapdf_path is None:
+                logger.warning('You decided not to link the Pythia8 installation'+
+                  ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
+            
+            logger.info('Now installing Pythia8. Be patient...')
+            installer = misc.Popen(
+            [pjoin(MG5DIR,'HEPTools','HepToolsInstallers','HEPToolInstaller.py'),
+             'pythia8','--prefix=%s'%pjoin(MG5DIR,'HEPTools'),            
+             '--with_lhapdf=%s'%('OFF' if lhapdf_path is None else lhapdf_path)]
+              +compiler_options, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        else:
+            logger.info('Now installing %s. Be patient...'%tool)
+            installer = misc.Popen(
+            [pjoin(MG5DIR,'HEPTools','HepToolsInstallers','HEPToolInstaller.py'),
+             tool,'--prefix=%s'%pjoin(MG5DIR,'HEPTools')]+compiler_options,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        installer_log = installer.communicate()[0]
+        if installer.returncode == 0:
+            logger.info("%s successfully installed in %s."%(
+                                     tool_to_install, pjoin(MG5DIR,'HEPTools')))
+        elif installer.returncode == 1:
+            logger.info("%s already installed in %s."%(
+                                     tool_to_install, pjoin(MG5DIR,'HEPTools')))
+        else:
+            raise self.InvalidCmd("Installation of %s failed. See log below:\n%s"%(
+                                                tool_to_install, installer_log))
+        if installer.returncode != 0:
+            return
+
+        # Post-installation treatment
+        if tool == 'pythia8':
+            self.options['pythia8_path'] = pjoin(MG5DIR,HEPTools,'pythia8')
+            self.exec_cmd('save options')            
+        elif tool == 'lhapdf':
+            self.options['lhapdf'] = pjoin(MG5DIR,HEPTools,'lhapdf','bin',
+                                                                'lhapdf-config')
+            self.exec_cmd('save options')
+
     def do_install(self, line, paths=None):
         """Install optional package from the MG suite."""
 
@@ -4612,13 +4722,18 @@ This implies that with decay chains:
             for line in data:
                 split = line.split()
                 path[split[0]] = split[1]
-
 ################################################################################
 # TEMPORARY HACK WHERE WE ADD ENTRIES TO WHAT WILL BE EVENTUALLY ON THE WEB
 ################################################################################
-            path['PY8'] = ''
-            path['InstallScripts'] = '' 
+            path['HEPToolsInstaller'] = 'http://madgraph.phys.ucl.ac.be/'+\
+                                           'Downloads/HEPToolsInstallers.tar.gz'
 ################################################################################
+
+        if args[0] in self._advanced_install_opts:
+            # Now launch the advanced installation of the tool args[0]
+            # path['HEPToolsInstaller'] is the online adress where to downlaod
+            # the installers if necessary.
+            return self.advanced_install(args[0], path['HEPToolsInstaller'])
 
         if args[0] == 'PJFry' and not os.path.exists(
                                  pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
@@ -4628,13 +4743,16 @@ This implies that with decay chains:
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
-
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
+        
+        try:
+            name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
                 'PJFry':'PJFry','QCDLoop':'QCDLoop'}
-        name = name[args[0]]
+            name = name[args[0]]
+        except:
+            pass
 
         #check outdated install
         if args[0] in ['Delphes2', 'pythia-pgs']:
@@ -4648,8 +4766,6 @@ This implies that with decay chains:
 
         # Load that path
         logger.info('Downloading %s' % path[args[0]])
-        misc.sprint(path.values())
-        stop
         if sys.platform == "darwin":
             misc.call(['curl', path[args[0]], '-o%s.tgz' % name], cwd=MG5DIR)
         else:
