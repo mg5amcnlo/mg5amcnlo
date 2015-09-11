@@ -4637,7 +4637,7 @@ This implies that with decay chains:
         ("not found" if lhapdf_version is None else
                "found to be incompatible (version %d)"%lhapdf_version+
                             " with the automatic Pythia8 installer"),default='y')
-                if answer.lower() != 'y':
+                if not answer.lower() in ['y','']:
                     lhapdf_path = None
                 else:
                     self.advanced_install('lhapdf6',HepToolsInstaller_web_address)
@@ -4649,11 +4649,11 @@ This implies that with decay chains:
                 logger.warning('You decided not to link the Pythia8 installation'+
                   ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
             
-            logger.info('Now installing Pythia8. Be patient...')
+            logger.info('Now installing Pythia8. Be patient...','$MG:color:GREEN')
             return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
              'HepToolsInstallers','HEPToolInstaller.py'),'pythia8',
              '--prefix=%s'%pjoin(MG5DIR,'HEPTools'),
-             '--with_lhapdf=%s'%('OFF' if lhapdf_path is None else lhapdf_path)]
+             '--with_lhapdf6=%s'%('OFF' if lhapdf_path is None else lhapdf_path)]
               +compiler_options),shell=True)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
