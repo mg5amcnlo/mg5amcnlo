@@ -128,8 +128,8 @@ class Banner(dict):
         store = False
         for line in input_path:
             if self.pat_begin.search(line):
-                tag = self.pat_begin.search(line).group('name').lower()
-                if tag in self.tag_to_file:
+                if self.pat_begin.search(line).group('name').lower() in self.tag_to_file:
+                    tag = self.pat_begin.search(line).group('name').lower()
                     store = True
                     continue
             if store and self.pat_end.search(line):
