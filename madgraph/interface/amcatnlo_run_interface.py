@@ -4065,7 +4065,7 @@ Integrated cross-section
         void = 'NOT INSTALLED'
         switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight']
         switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
-                  'madspin': void}
+                  'madspin': void,'reweight':'OFF'}
         if not switch:
             switch = switch_default
         else:

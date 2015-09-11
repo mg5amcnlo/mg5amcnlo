@@ -4656,7 +4656,7 @@ This implies that with decay chains:
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
-            created_name = [n for n in os.listdir(MG5DIR) if n.startswith(
+            created_name = [n for n in os.listdir(MG5DIR) if n.lower().startswith(
                                          name.lower()) and not n.endswith('gz')]
             if not created_name:
                 raise MadGraph5Error, 'The file was not loaded correctly. Stop'
