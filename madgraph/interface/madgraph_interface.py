@@ -4636,7 +4636,7 @@ This implies that with decay chains:
                 if answer.lower() != 'y':
                     lhapdf_path = None
                 else:
-                    self.advanced_install('lhapdf',HepToolsInstaller_web_address)
+                    self.advanced_install('lhapdf6',HepToolsInstaller_web_address)
                     lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf')
             else:
                 lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
@@ -4673,7 +4673,7 @@ This implies that with decay chains:
 
         # Post-installation treatment
         if tool == 'pythia8':
-            self.options['pythia8_path'] = pjoin(MG5DIR,HEPTools,'pythia8')
+            self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.exec_cmd('save options')            
         elif tool == 'lhapdf':
             self.options['lhapdf'] = pjoin(MG5DIR,HEPTools,'lhapdf','bin',
