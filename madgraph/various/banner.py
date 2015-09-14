@@ -1852,6 +1852,7 @@ class RunCardNLO(RunCard):
         self.add_param('lhaid', 244600)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
+        self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('mur_ref_fixed', 91.118)                       
