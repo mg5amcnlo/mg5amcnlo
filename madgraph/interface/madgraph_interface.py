@@ -4650,16 +4650,16 @@ This implies that with decay chains:
                   ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
             
             logger.info('Now installing Pythia8. Be patient...','$MG:color:GREEN')
-            return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
-             'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
+            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+             'HepToolsInstallers','HEPToolInstaller.py'),'pythia8',
              '--prefix=%s'%pjoin(MG5DIR,'HEPTools'),
              '--with_lhapdf6=%s'%('OFF' if lhapdf_path is None else lhapdf_path)]
-              +compiler_options),shell=True)
+              +compiler_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
-            return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
-              'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
-                         pjoin(MG5DIR,'HEPTools')]+compiler_options),shell=True)
+            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+              'HepToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
+                         pjoin(MG5DIR,'HEPTools')]+compiler_options)
 
         if return_code == 0:
             logger.info("%s successfully installed in %s."%(
@@ -4782,7 +4782,7 @@ This implies that with decay chains:
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
-            created_name = [n for n in os.listdir(MG5DIR) if n.startswith(
+            created_name = [n for n in os.listdir(MG5DIR) if n.lower().startswith(
                                          name.lower()) and not n.endswith('gz')]
             if not created_name:
                 raise MadGraph5Error, 'The file was not loaded correctly. Stop'

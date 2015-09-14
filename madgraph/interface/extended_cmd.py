@@ -194,7 +194,6 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -231,18 +230,19 @@ class BasicCmd(cmd.Cmd):
                 data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
-            # correct wrong splitting with '-'
-            elif line and line[begidx-1] == '-':
+            # correct wrong splitting with '-'/"="
+            elif line and line[begidx-1] in ['-',"="]:
              try:    
+                sep = line[begidx-1]
                 Ntext = line.split()[-1]
-                self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
+                self.completion_prefix = Ntext.rsplit(sep,1)[0] + sep
                 to_rm = len(self.completion_prefix)
                 Nbegidx = len(line.rsplit(None, 1)[0])
                 data = compfunc(Ntext, line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]
              except Exception, error:
-                 print error
+                 print error                
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
@@ -1460,6 +1460,8 @@ class SmartQuestion(BasicCmd):
             return self.deal_multiple_categories(out)
         except Exception, error:
             print error
+    
+    completedefault = completenames
 
     def get_names(self):
         # This method used to pull in base class attributes
@@ -1513,6 +1515,34 @@ class SmartQuestion(BasicCmd):
                 self.question = pat.sub('',self.question)
             print self.question
         return False
+    
+    def do_help(self, line):
+        
+        text=line
+        out ={}
+        out['Options'] = Cmd.list_completion(text, self.allow_arg)
+        out['command'] = BasicCmd.completenames(self, text)
+        
+        if not text:
+            if out['Options']:
+                logger.info( "Here is the list of all valid options:", '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['Options']))
+            if out['command']: 
+                logger.info( "Here is the list of command available:", '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['command']))
+        else:
+            if out['Options']:
+                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['Options']))
+            if out['command']: 
+                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['command']))
+            elif not  out['Options']:
+                logger.info( "No possibility starting with \'%s\'" % text, '$MG:color:BLACK')           
+        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:color:BLACK')
+    def complete_help(self, text, line, begidx, endidx):
+        """ """
+        return self.completenames(text, line)
         
     def default(self, line):
         """Default action if line is not recognized"""
