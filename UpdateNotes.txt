@@ -4,6 +4,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	RF: For fixed order NLO runs, when the required accuracy is set rather small, do an extra integration step.
 	RF: Fix for factorisation scale setting in FxFx merging when very large difference in scale in the
  	    non-QCD part of a process. 
+	RF: Better discarding of numerical instabilities in the real-emission matrix elements. Only of interested for
+	    processes which have jets at Born level, but do not require generation cut (like t-channel single-top). 
 
 2.3.2(20/08/15)   
         OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)

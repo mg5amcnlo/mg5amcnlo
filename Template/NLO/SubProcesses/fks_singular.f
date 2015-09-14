@@ -1034,6 +1034,10 @@ c        the iproc contribution
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
+c Check for NaN's and INF's. Simply skip the contribution
+      if (wgt1.ne.wgt1) return
+      if (wgt2.ne.wgt2) return
+      if (wgt3.ne.wgt3) return
       icontr=icontr+1
       if (icontr.gt.max_contr) then
          write (*,*) 'ERROR in add_wgt: too many contributions'
@@ -2687,6 +2691,9 @@ c Born and multiplies with the AP splitting function or eikonal factors.
 
       double precision zero,tiny
       parameter (zero=0d0)
+      
+      integer icount
+      data icount /0/
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
@@ -2741,11 +2748,20 @@ c i_fks is (anti-)quark
       endif
 
       if(wgt.lt.0.d0)then
-         write(*,*) 'Fatal error #2 in sreal',wgt,xi_i_fks,y_ij_fks
-         do i=1,nexternal
-            write(*,*) 'particle ',i,', ',(pp(j,i),j=0,3)
-         enddo
-         stop
+         icount=icount+1
+         if (icount.le.10) then
+            write(*,*) 'Warning, numerical problem found in sreal. '/
+     $           /'Setting weight to zero',wgt,xi_i_fks,y_ij_fks
+            do i=1,nexternal
+               write(*,*) 'particle ',i,', ',(pp(j,i),j=0,3)
+            enddo
+            if (icount.eq.25) then
+               write (*,*) 'ERROR 25 problems found... '/
+     $              /'stopping the code'
+               stop
+            endif
+         endif
+         wgt=0d0
       endif
 
       return
