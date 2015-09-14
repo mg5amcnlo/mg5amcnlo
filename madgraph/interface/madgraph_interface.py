@@ -1140,7 +1140,8 @@ This will take effect only in a NEW terminal
         subproc_path = pjoin(path,'SubProcesses')
         mw_path = pjoin(path,'Source','MadWeight')
 
-        if os.path.isfile(pjoin(include_path, 'Pythia.h')):
+        if os.path.isfile(pjoin(include_path, 'Pythia.h')) or \
+            os.path.isfile(pjoin(include_path, 'Pythia8', 'Pythia.h')):
             return 'pythia8'
         elif not os.path.isdir(os.path.join(path, 'SubProcesses')):
             raise self.InvalidCmd, '%s : Not a valid directory' % path
@@ -2127,6 +2128,10 @@ class CompleteForCmd(cmd.CompleteCmd):
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
         if len(args) >= 1:
+            
+            if args[1] == 'pythia8':
+                possible_options_full = list(possible_options_full) + ['--version=8.1','--version=8.2'] 
+            
             if len(args) > 1 and args[1] == 'aloha':
                 try:
                     return self.aloha_complete_output(text, line, begidx, endidx)
@@ -2140,6 +2145,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             # options
             if args[-1][0] == '-' or len(args) > 1 and args[-2] == '-':
                 return self.list_completion(text, possible_options)
+            
             if len(args) > 2:
                 return self.list_completion(text, possible_options_full)
             # Formats
@@ -2151,6 +2157,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             content = [name for name in self.path_completion(text, '.', only_dirs = True) \
                        if name not in forbidden_names]
             content += ['auto']
+            content += possible_options_full
             return self.list_completion(text, content)
 
     def aloha_complete_output(self, text, line, begidx, endidx):
@@ -5965,6 +5972,9 @@ This implies that with decay chains:
         force = '-f' in args
         nojpeg = '-nojpeg' in args
         flaglist = []
+        
+
+            
         if '--postpone_model' in args:
             flaglist.append('store_model')
         
@@ -6129,6 +6139,12 @@ This implies that with decay chains:
                                                                        args=[]):
         """Export a generated amplitude to file."""
 
+        version = [arg[10:] for arg in args if arg.startswith('--version=')]
+        if version:
+            version = version[-1]
+        else:
+            version = ''
+
         def generate_matrix_elements(self, group_processes=True):
             """Helper function to generate the matrix elements before
             exporting. Uses the main function argument 'group_processes' to decide 
@@ -6263,7 +6279,8 @@ This implies that with decay chains:
                     exporter = export_cpp.generate_process_files_pythia8(\
                             me_group.get('matrix_elements'), self._curr_cpp_model,
                             process_string = me_group.get('name'),
-                            process_number = group_number, path = path)
+                            process_number = group_number, path = path,
+                            version = version)
                     process_names.append(exporter.process_name)
             else:
                 exporter = export_cpp.generate_process_files_pythia8(\
@@ -6272,7 +6289,7 @@ This implies that with decay chains:
                 process_names.append(exporter.process_file_name)
 
             # Output the model parameter and ALOHA files
-            model_name, model_path = export_cpp.convert_model_to_pythia8(\
+            model_name, model_path = exporter.convert_model_to_pythia8(\
                             self._curr_model, self._export_dir)
 
             # Generate the main program file
