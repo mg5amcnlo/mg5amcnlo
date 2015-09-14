@@ -2452,7 +2452,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
                      'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
-    _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','hepmc']
+    _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','hepmc']
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
@@ -4574,14 +4574,22 @@ This implies that with decay chains:
         line = 'all =' + ' '.join(line)
         self.do_define(line)
 
-    def advanced_install(self, tool_to_install, HepToolsInstaller_web_address):
+    def advanced_install(self, tool_to_install, 
+                                            HepToolsInstaller_web_address=None):
         """ Uses the HEPToolsInstaller.py script maintened online to install
         HEP tools with more complicated dependences."""
         
-        # Fist download the installer if not already present
+        # Always refresh the installer if already present
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
+            if HepToolsInstaller_web_address is None:
+                raise MadGraph5Error, "The option 'HepToolsInstaller_web_address'"+\
+                             " must be specified in function advanced_install"+\
+                                " if the installers are not already downloaded."
             if not os.path.isdir(pjoin(MG5DIR,'HEPTools')):
                 os.mkdir(pjoin(MG5DIR,'HEPTools'))
+        elif not HepToolsInstaller_web_address is None:
+            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+        if not HepToolsInstaller_web_address is None:
             logger.info('Downloading the HEPToolInstaller at:\n   %s'%
                                                   HepToolsInstaller_web_address)
             if sys.platform == "darwin":
@@ -4632,7 +4640,7 @@ This implies that with decay chains:
                     lhapdf_version = 0
         
             if lhapdf_version is None or lhapdf_version<=5:
-                answer = cmd.Cmd.timed_input(question=
+                answer = self.ask(question=
 """ LHAPDF was %s. Do you want to install LHPADF6? (recommended) [y]/n >"""%\
         ("not found" if lhapdf_version is None else
                "found to be incompatible (version %d)"%lhapdf_version+
@@ -4640,7 +4648,7 @@ This implies that with decay chains:
                 if not answer.lower() in ['y','']:
                     lhapdf_path = None
                 else:
-                    self.advanced_install('lhapdf6',HepToolsInstaller_web_address)
+                    self.advanced_install('lhapdf6')
                     lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf6')
             else:
                 lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
