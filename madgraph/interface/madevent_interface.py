@@ -4285,7 +4285,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 options.append(key)
                 
         options += ['parton', 'pythia', 'pgs', 'delphes'] + sorted(list(set(available_mode)))    
-        
+        options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
         if mode or not self.force:
             answer = ''
@@ -4297,24 +4297,61 @@ Beware that this can be dangerous for local multicore runs.""")
                     question = "The following switches determine which programs are run:\n"
                     for id, key in enumerate(switch_order):
                         question += switch_format % (id+1, description[key], key, switch[key])
-                    question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
+                    question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
                     question += '  Type \'help\' for the list of all valid option\n' 
                     question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
                     answer = self.ask(question, '0', options)
-                if answer.isdigit() and answer != '0':
-                    key = switch_order[int(answer) - 1]
-                    if switch[key] == 'OFF':
-                        for opt in valid_options[key]:
-                            if opt != "OFF":
-                                answer = '%s=%s' % (key, opt)
-                                break
+                if (answer.isdigit() and answer != '0') or answer in ['shower', 'detector']:
+                    if answer.isdigit():
+                        key = switch_order[int(answer) - 1]
                     else:
-                        answer = '%s=OFF' % key
+                        key = answer
+                    for i, opt in enumerate(valid_options[key]):
+                        if opt == switch[key]:
+                            break
+                    i +=1
+                    if i == len(valid_options[key]):
+                        i=0
+                    answer = '%s=%s' % (key, valid_options[key][i])
 
                 if '=' in answer:
                     key, status = answer.split('=')
                     key, status = key.lower().strip(), status.upper().strip()
+                    
+                    if key not in switch:
+                        # this means use use outdated switch. Use converter to new syntax
+                        logger.warning("Using old syntax. Please check that we run what you expect.")
+                        if key == "pythia" and status == "ON":
+                            key, status = "shower", "PYTHIA6"
+                        elif key == "pythia" and status == "OFF":
+                            key, status = "shower", "OFF"
+                        elif key == "pgs" and status == "ON":
+                            if switch["detector"] in ["OFF", "PGS"] :
+                                key, status = "detector", "PGS"
+                            else:
+                                key, status = "detector", "DELPHES+PGS"
+                        elif key == "delphes" and status == "ON":
+                            if switch["detector"] in ["OFF", "DELPHES"] :
+                                key, status = "detector", "DELPHES"
+                            else:
+                                key, status = "detector", "DELPHES+PGS"                                
+                        elif key == "pgs" and status == "OFF":
+                            if switch["detector"] in ["OFF", "PGS"] :
+                                key, status = "detector", "OFF"
+                            elif switch["detector"] == "DELPHES+PGS":
+                                key, status = "detector", "DELPHES"
+                            else:
+                                key, status = "detector", switch['detector']
+                        elif key == "delphes" and status == "OFF":
+                            if switch["detector"] in ["OFF", "DELPHES"] :
+                                key, status = "detector", "OFF"
+                            elif switch["detector"] == "DELPHES+PGS":
+                                key, status = "detector", "PGS"
+                            else:
+                                key, status = "detector", switch['detector']                            
+                                                  
+
                     switch[key] = status
                     if (key, status) in force_switch:
                         for key2, status2 in force_switch[(key, status)].items():
@@ -4324,13 +4361,13 @@ Beware that this can be dangerous for local multicore runs.""")
                                                 % (key2, status2), '$MG:color:BLACK')
                                     switch[key2] = status2
                             else:
-                                if switch[key2] not in  status2 + void:
+                                if switch[key2] not in  status2 + [void]:
                                     logger.info('For coherence \'%s\' is set to \'%s\''
                                                 % (key2, status2[0]), '$MG:color:BLACK')
                                     switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                else:
+                elif answer in ['parton', 'pythia','pgs','madspin','reweight']:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
@@ -4353,7 +4390,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     elif answer == 'reweight':
                         switch_assign('reweight', 'ON')
                         switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF')
+                        switch_assign('detector', 'OFF') 
                     
                 if mode:
                     answer =  '0' #mode auto didn't pass here (due to the continue)
@@ -4368,9 +4405,9 @@ Beware that this can be dangerous for local multicore runs.""")
             cards.append('pythia_card.dat')
         if switch['shower'] in ['PY8', 'PYTHIA8']:
             cards.append('pythia8_card.dat')            
-        if switch['detector'] in  ['PGS']:
+        if switch['detector'] in  ['PGS','DELPHES+PGS']:
             cards.append('pgs_card.dat')
-        if switch['detector'] in ['DELPHES']:
+        if switch['detector'] in ['DELPHES', 'DELPHES+PGS']:
             cards.append('delphes_card.dat')
             delphes3 = True
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
