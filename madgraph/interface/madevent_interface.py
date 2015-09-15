@@ -4193,70 +4193,98 @@ Beware that this can be dangerous for local multicore runs.""")
         
         available_mode = ['0']
         void = 'NOT INSTALLED'
-        switch_order = ['pythia', 'pgs', 'delphes', 'madspin', 'reweight']
-        switch = {'pythia': void, 'pgs': void, 'delphes': void,
-                  'madspin': void, 'reweight': void}
-        description = {'pythia': 'Run the pythia shower/hadronization:',
-                       'pgs': 'Run PGS as detector simulator:',
-                       'delphes':'Run Delphes as detector simulator:',
-                       'madspin':'Decay particles with the MadSpin module:',
+        switch_order = ['shower', 'detector', 'madspin', 'reweight']
+        
+        switch = dict((k, void) for k in switch_order)
+
+        description = {'shower': 'Choose the shower/hadronization program:',
+                       'detector': 'Choose the detector simulation program:',
+                       'madspin': 'Decay particles with the MadSpin module:',
                        'reweight':'Add weights to the events based on changing model parameters:',
                        }
-        force_switch = {('pythia', 'OFF'): {'pgs': 'OFF', 'delphes': 'OFF'},
-                       ('pgs', 'ON'): {'pythia':'ON'},
-                       ('delphes', 'ON'): {'pythia': 'ON'}}
-        switch_assign = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
 
+        force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
+                       ('detector', 'PGS'): {'shower':'PYTHIA6'},
+                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
+
+        switch_assign = lambda key, value: switch.__setitem__(key, value if value \
+                                         in valid_options[key] else switch[key])
+
+        valid_options = dict((k, ['OFF']) for k in switch_order) # track of all possible input for an entry
         
         # Init the switch value according to the current status
         if self.options['pythia-pgs_path']:
             available_mode.append('1')
             available_mode.append('2')
+            valid_options['shower'].append('PYTHIA6')
+            valid_options['detector'].append('PGS')
             if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                switch['pythia'] = 'ON'
+                switch['shower'] = 'PYTHIA6'
             else:
-                switch['pythia'] = 'OFF'
+                switch['shower'] = 'OFF'
             if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                switch['pgs'] = 'ON'
+                switch['detector'] = 'PGS'
             else:
-                switch['pgs'] = 'OFF'                
-            if self.options['delphes_path']:
-                available_mode.append('3')
+                switch['detector'] = 'OFF'
+        
+        if self.options['pythia8_path']:
+            available_mode.append('1')
+            valid_options['shower'].append('PYTHIA8')
+            if os.path.exists(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
+                switch['shower'] = 'PYTHIA8'
+            elif switch['shower'] == void:
+                switch['shower'] = 'OFF'            
+            
+        # Need to allow Delphes only if a shower exists                
+        if self.options['delphes_path']:
+            if valid_options['shower'] != ['OFF']:
+                available_mode.append('2')
+                valid_options['detector'].append('DELPHES')
+                valid_options['detector'].append('DELPHES-CMS')
+                valid_options['detector'].append('DELPHES-ATLAS')                
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    switch['delphes'] = 'ON'
+                    switch['detector'] = 'DELPHES'
                 else:
-                    switch['delphes'] = 'OFF'
-                    
+                    switch['detector'] = 'OFF'
+            elif valid_options['detector'] == ['OFF']:
+                switch['detector'] = "Requires a shower"
+                        
         # Check switch status for MS/reweight
         if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
-            available_mode.append('4')
-            available_mode.append('5')
+            available_mode.append('3')
+            valid_options['madspin'] = ['ON', 'OFF']
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
             if misc.has_f2py() or self.options['f2py_compiler']:
+                available_mode.append('4')
+                valid_options['reweight'] = ['ON', 'OFF']
                 if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                     switch['reweight'] = 'ON'
                 else:
                     switch['reweight'] = 'OFF'
             else: 
                 switch['reweight'] = 'Not available (requires NumPy)'
-                 
+                       
         if '-R' in args or '--reweight' in args:
             if switch['reweight'] == 'OFF':
                 switch['reweight'] = 'ON'
             elif switch['reweight'] != 'ON':
                 logger.critical("Cannot run reweight: %s", switch['reweight'])
         if '-M' in args or '--madspin' in args:
-            switch['madspin'] = 'ON'
-
-        options = list(available_mode) + ['auto', 'done']
+            if switch['madspin'] == 'OFF':
+                switch['madspin'] = 'ON'
+            elif switch['madspin'] != 'ON':
+                logger.critical("Cannot run madspin: %s", switch['reweight'])            
+        
+        options =  ['auto', 'done']
         for id, key in enumerate(switch_order):
-            if switch[key] not in [void, 'Not available (requires NumPy)']:
-                options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
+            if len(valid_options[key]) >1:
+                options += ['%s=%s' % (key, s) for s in valid_options[key]]
                 options.append(key)
-        options.append('parton')    
+                
+        options += ['parton', 'pythia', 'pgs', 'delphes'] + sorted(list(set(available_mode)))    
         
         #ask the question
         if mode or not self.force:
@@ -4270,22 +4298,36 @@ Beware that this can be dangerous for local multicore runs.""")
                     for id, key in enumerate(switch_order):
                         question += switch_format % (id+1, description[key], key, switch[key])
                     question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
-                    question += '  or set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
+                    question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
+                    question += '  Type \'help\' for the list of all valid option\n' 
                     question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
                     answer = self.ask(question, '0', options)
                 if answer.isdigit() and answer != '0':
                     key = switch_order[int(answer) - 1]
-                    answer = '%s=%s' % (key, 'ON' if switch[key] == 'OFF' else 'OFF')
+                    if switch[key] == 'OFF':
+                        for opt in valid_options[key]:
+                            if opt != "OFF":
+                                answer = '%s=%s' % (key, opt)
+                                break
+                    else:
+                        answer = '%s=OFF' % key
 
                 if '=' in answer:
                     key, status = answer.split('=')
+                    key, status = key.lower().strip(), status.upper().strip()
                     switch[key] = status
                     if (key, status) in force_switch:
                         for key2, status2 in force_switch[(key, status)].items():
-                            if switch[key2] not in  [status2, void]:
-                                logger.info('For coherence \'%s\' is set to \'%s\''
-                                            % (key2, status2), '$MG:color:BLACK')
-                                switch[key2] = status2
+                            if isinstance(status2, str):
+                                if switch[key2] not in  [status2, void]:
+                                    logger.info('For coherence \'%s\' is set to \'%s\''
+                                                % (key2, status2), '$MG:color:BLACK')
+                                    switch[key2] = status2
+                            else:
+                                if switch[key2] not in  status2 + void:
+                                    logger.info('For coherence \'%s\' is set to \'%s\''
+                                                % (key2, status2[0]), '$MG:color:BLACK')
+                                    switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
                 else:
@@ -4293,32 +4335,25 @@ Beware that this can be dangerous for local multicore runs.""")
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
                     if answer == 'parton':
-                        switch_assign('pythia', 'OFF')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OFF')
+                        switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF')
                     elif answer == 'pythia':
-                        switch_assign('pythia', 'ON')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OFF')
+                        switch_assign('shower', 'PYTHIA6')
+                        switch_assign('detector', 'OFF')
                     elif answer == 'pgs':
-                        switch_assign('pythia', 'ON')
-                        switch_assign('pgs', 'ON')
-                        switch_assign('delphes', 'OFF')
+                        switch_assign('shower', 'PYTHIA6')
+                        switch_assign('detector', 'PGS')
                     elif answer == 'delphes':
-                        switch_assign('pythia', 'ON')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'ON')
+                        switch_assign('shower', 'PYTHIA6')
+                        switch_assign('detector', 'DELPHES')
                     elif answer == 'madspin':
                         switch_assign('madspin', 'ON')
-                        switch_assign('pythia', 'OFF')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OF')                        
+                        switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF')
                     elif answer == 'reweight':
                         switch_assign('reweight', 'ON')
-                        switch_assign('pythia', 'OFF')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OFF')
-                    
+                        switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF')
                     
                 if mode:
                     answer =  '0' #mode auto didn't pass here (due to the continue)
@@ -4329,11 +4364,13 @@ Beware that this can be dangerous for local multicore runs.""")
         #exists (copy default if needed)
 
         cards = ['param_card.dat', 'run_card.dat']
-        if switch['pythia'] == 'ON':
+        if switch['shower'] in ['PY6', 'PYTHIA6']:
             cards.append('pythia_card.dat')
-        if switch['pgs'] == 'ON':
+        if switch['shower'] in ['PY8', 'PYTHIA8']:
+            cards.append('pythia8_card.dat')            
+        if switch['detector'] in  ['PGS']:
             cards.append('pgs_card.dat')
-        if switch['delphes'] == 'ON':
+        if switch['detector'] in ['DELPHES']:
             cards.append('delphes_card.dat')
             delphes3 = True
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):

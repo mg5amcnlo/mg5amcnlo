@@ -4575,9 +4575,11 @@ This implies that with decay chains:
         self.do_define(line)
 
     def advanced_install(self, tool_to_install, 
-                                            HepToolsInstaller_web_address=None):
+                                            HepToolsInstaller_web_address=None,
+                                            additional_options=[]):
         """ Uses the HEPToolsInstaller.py script maintened online to install
-        HEP tools with more complicated dependences."""
+        HEP tools with more complicated dependences.
+        Additional options will be added to the list when calling HEPInstaller"""
         
         # Always refresh the installer if already present
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
@@ -4608,6 +4610,12 @@ This implies that with decay chains:
             # Remove the tarball
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
+############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
+            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+################################################################################
+            
         # Potential change in naming convention
         name_map = {}
         try:
@@ -4636,49 +4644,70 @@ This implies that with decay chains:
                     version = misc.Popen(
                            [lhapdf_config,'--version'], stdout=subprocess.PIPE)
                     lhapdf_version = int(version.stdout.read()[0])
+                    if lhapdf_version not in [5,6]:
+                        raise 
                 except:
-                    lhapdf_version = 0
+                    raise self.InvalidCmd('Could not detect LHAPDF version. Make'+
+                           " sure '%s --version ' runs properly."%lhapdf_config)
         
-            if lhapdf_version is None or lhapdf_version<=5:
+            if lhapdf_version is None:
                 answer = self.ask(question=
-""" LHAPDF was %s. Do you want to install LHPADF6? (recommended) [y]/n >"""%\
-        ("not found" if lhapdf_version is None else
-               "found to be incompatible (version %d)"%lhapdf_version+
-                            " with the automatic Pythia8 installer"),default='y')
+"\033[33;34mLHAPDF was not found. Do you want to install LHPADF6? "+
+"(recommended) \033[0m \033[33;32my\033[0m/\033[33;31mn\033[0m >",
+                                                default='y',text_format='33;32')
                 if not answer.lower() in ['y','']:
                     lhapdf_path = None
                 else:
                     self.advanced_install('lhapdf6')
                     lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf6')
+                    lhapdf_version = 6
             else:
                 lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
                                                  lhapdf_config),os.path.pardir))
-            if lhapdf_path is None:
+            if lhapdf_version is None:
                 logger.warning('You decided not to link the Pythia8 installation'+
                   ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
-            
+            else:
+                logger.info('Pythia8 will be linked to LHAPDF v%d.'%lhapdf_version)
             logger.info('Now installing Pythia8. Be patient...','$MG:color:GREEN')
-            return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
-             'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
-             '--prefix=%s'%pjoin(MG5DIR,'HEPTools'),
-             '--with_lhapdf6=%s'%('OFF' if lhapdf_path is None else lhapdf_path)]
-              +compiler_options),shell=True)
+            lhapdf_option = []
+            if lhapdf_version is None:
+                lhapdf_option.append('--with_lhapdf6=OFF')
+                lhapdf_option.append('--with_lhapdf5=OFF')                
+            elif lhapdf_version==5:
+                lhapdf_option.append('--with_lhapdf5=%s'%lhapdf_path)
+                lhapdf_option.append('--with_lhapdf6=OFF')
+            elif lhapdf_version==6:
+                lhapdf_option.append('--with_lhapdf5=OFF')
+                lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
+
+            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+             'HepToolsInstallers','HEPToolInstaller.py'),'pythia8',
+             '--prefix=%s'%pjoin(MG5DIR,'HEPTools')]
+                        + lhapdf_option + compiler_options + additional_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
-            return_code = misc.call(' '.join([pjoin(MG5DIR,'HEPTools',
-              'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
-                         pjoin(MG5DIR,'HEPTools')]+compiler_options),shell=True)
+            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+              'HepToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
+              pjoin(MG5DIR,'HEPTools')] + compiler_options + additional_options)
 
         if return_code == 0:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, pjoin(MG5DIR,'HEPTools')),'$MG:color:GREEN')
-        elif return_code == 1:
-            logger.info("%s already installed in %s."%(
-                                     tool_to_install, pjoin(MG5DIR,'HEPTools')))
+        elif return_code == 66:
+            answer = self.ask(question=
+"""\033[33;34mTool %s already installed in %s."""%(tool_to_install, pjoin(MG5DIR,'HEPTools'))+
+""" Do you want to overwrite its installation?\033[0m \033[33;32my\033[0m/\033[33;31mn\033[0m >"""
+    ,default='y',text_format='33;32')
+            if not answer.lower() in ['y','']:
+                logger.info("Installation of %s aborted."%tool_to_install,
+                                                              '$MG:color:GREEN')
+                return
+            else:
+                return self.advanced_install(tool_to_install,
+                                                 additional_options=['--force'])            
         else:
             raise self.InvalidCmd("Installation of %s failed."%tool_to_install)
-        if return_code != 0:
-            return
 
         # Post-installation treatment
         if tool == 'pythia8':
@@ -4686,6 +4715,10 @@ This implies that with decay chains:
             self.exec_cmd('save options')            
         elif tool == 'lhapdf6':
             self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf6','bin',
+                                                                'lhapdf-config')
+            self.exec_cmd('save options')
+        elif tool == 'lhapdf5':
+            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf5','bin',
                                                                 'lhapdf-config')
             self.exec_cmd('save options')
 
@@ -4790,7 +4823,7 @@ This implies that with decay chains:
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
-            created_name = [n for n in os.listdir(MG5DIR) if n.startswith(
+            created_name = [n for n in os.listdir(MG5DIR) if n.lower().startswith(
                                          name.lower()) and not n.endswith('gz')]
             if not created_name:
                 raise MadGraph5Error, 'The file was not loaded correctly. Stop'
