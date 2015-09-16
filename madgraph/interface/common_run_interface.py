@@ -2412,7 +2412,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             self.ml_vars = [k.lower() for k in self.MLcard.keys()]
             # check for conflict
-            for var in self.MLcard:
+            for var in self.ml_vars:
                 if var in self.run_card:
                     self.conflict.append(var)
                 if var in self.pname2block:
@@ -2439,7 +2439,27 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if var in self.run_card:
                     self.conflict.append(var)
 
-
+       #check if MadLoopParams.dat is present:
+        self.has_PY8 = False
+        if os.path.isfile(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
+            self.has_PY8 = True
+            self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,
+                                                    'Cards','pythia8_card.dat'))
+            self.PY8CardDefault = banner_mod.PY8Card()
+            
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
+                                     k.lower() not in self.PY8Card.hidden_param]
+            # check for conflict
+            for var in self.py8_vars:
+                if var in self.run_card:
+                    self.conflict.append(var)
+                if var in self.pname2block:
+                    self.conflict.append(var)
+                if self.has_mw and var in self.mw_vars:
+                    self.conflict.append(var)
+                if self.has_ml and var in self.ml_vars:
+                    self.conflict.append(var)
+                    
     def complete_set(self, text, line, begidx, endidx):
         """ Complete the set command"""
 
@@ -2464,6 +2484,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['shower_card'] = ''
             if self.has_ml:
                 allowed['madloop_card'] = ''
+            if self.has_PY8:
+                allowed['pythia8_card'] = ''
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -2477,6 +2499,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'madweight_card':'default', 'mw_block': 'all'}
             elif args[1] == 'MadLoop_card':
                 allowed = {'madloop_card':'default'}
+            elif args[1] == 'pythia8_card':
+                allowed = {'pythia8_card':'default'}                
             elif self.has_mw and args[1] in self.mw_card.keys():
                 allowed = {'mw_block':args[1]}
             elif args[1] == 'shower_card':
@@ -2485,7 +2509,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'value':''}
         else:
             start = 1
-            if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'MadLoop_card']:
+            if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
+                            'MadLoop_card','pythia8_card']:
                 start = 2
             if args[-1] in self.pname2block.keys():
                 allowed['value'] = 'default'
@@ -2514,7 +2539,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.has_shower:
                 categories.append('shower_card')
             if self.has_ml:
-                categories.append('MadLoop_card')            
+                categories.append('MadLoop_card')
+            if self.has_PY8:
+                categories.append('pythia8_card')  
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -2545,8 +2572,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             opts = self.ml_vars
             if allowed['madloop_card'] == 'default':
                 opts.append('default')
-
             possibilities['MadLoop Parameter'] = self.list_completion(text, opts)
+                                
+        if 'pythia8_card' in allowed.keys():
+            opts = self.py8_vars
+            if allowed['pythia8_card'] == 'default':
+                opts.append('default')
+            possibilities['Pythia8 Parameter'] = self.list_completion(text, opts)
                                 
         if 'shower_card' in allowed.keys():
             opts = self.shower_vars + [k for k in self.shower_card.keys() if k !='comment']
@@ -2716,6 +2748,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             args[0] = 'MadLoop_card'
 
+        if args[0] == "pythia8_card":
+            if not self.has_PY8:
+                logger.warning('Invalid Command: No Pythia8 card defined.')
+                return
+            args[0] = 'pythia8_card'
+
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card']:
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
@@ -2741,6 +2779,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.MLcard = banner_mod.MadLoopParam(self.MLcardDefault)
                 self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
                                   commentdefault=True)
+                return
+            else:
+                card = args[0]
+            start=1
+            if len(args) < 3:
+                logger.warning('Invalid set command: %s (not enough arguments)' % line)
+                return
+        elif args[0] in ['pythia8_card']:
+            if args[1] == 'default':
+                logging.info('replace pythia8_card.dat by the default card')
+                self.PY8Card = banner_mod.PY8Card(self.PY8CardDefault)
+                self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
+                          pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                          print_only_visible=True)
                 return
             else:
                 card = args[0]
@@ -2966,11 +3018,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.setML(args[start], value, default=default)
             self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
                               commentdefault=True)
+
+        # Pythia8 Parameter  ---------------------------------------------------
+        elif self.has_PY8 and args[start] in self.py8_vars \
+                                               and card in ['', 'pythia8_card']:
+        
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+
+            if args[start+1] == 'default':
+                value = self.PY8CardDefault[args[start]]
+                default = True
+            else:
+                value = args[start+1]
+                default = False
+            self.setPY8(args[start], value, default=default)
+            self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
+                          pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                          print_only_visible=True)
                 
         #INVALID --------------------------------------------------------------
         else:            
             logger.warning('invalid set command %s ' % line)
-            return            
+            return
 
     def setM(self, block, name, value):
         
@@ -3016,6 +3088,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if default and name.lower() in self.MLcard.user_set:
             self.MLcard.user_set.remove(name.lower())
 
+    def setPY8(self, name, value, default=False):
+        try:
+            self.PY8Card.userSet(name, value)
+        except Exception, error:
+            logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
+            return
+        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value))
+        if default and name.lower() in self.PY8Card.user_set:
+            self.PY8Card.user_set.remove(name.lower())
+
     def setP(self, block, lhaid, value):
         if isinstance(value, str):
             value = value.lower()
@@ -3052,10 +3134,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         '''help message for set'''
 
         logger.info('********************* HELP SET ***************************')
-        logger.info("syntax: set [run_card|param_card] NAME [VALUE|default]")
+        logger.info("syntax: set [run_card|param_card|...] NAME [VALUE|default]")
         logger.info("syntax: set [param_card] BLOCK ID(s) [VALUE|default]")
         logger.info('')
-        logger.info('-- Edit the param_card/run_card and replace the value of the')
+        logger.info('-- Edit the param_card/run_card/... and replace the value of the')
         logger.info('    parameter by the value VALUE.')
         logger.info('   ')
         logger.info('-- Example:')
@@ -3274,9 +3356,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = self.cards[int(answer)-1]
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
-        
         if 'MadLoopParams' in answer:
             answer = pjoin(me_dir,'Cards','MadLoopParams.dat')
+        if 'pythia8_card' in answer:
+            answer = pjoin(me_dir,'Cards','pythia8_card.dat')
+            
         if not '.dat' in answer and not '.lhco' in answer:
             if answer != 'trigger':
                 path = pjoin(me_dir,'Cards','%s_card.dat' % answer)
@@ -3322,6 +3406,8 @@ You can also copy/paste, your event file here.''')
             self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
         elif path == pjoin(self.me_dir,'Cards','MadLoopParams.dat'):
             self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
+        elif path == pjoin(self.me_dir,'Cards','pythia8_card.dat'):
+            self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,'Cards','pythia8_card.dat'))
         elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
             try:
                 import madgraph.madweight.Cards as mwcards

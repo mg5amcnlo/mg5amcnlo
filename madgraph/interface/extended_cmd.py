@@ -231,7 +231,7 @@ class BasicCmd(cmd.Cmd):
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
             # correct wrong splitting with '-'/"="
-            elif line and line[begidx-1] in ['-',"="]:
+            elif line and line[begidx-1] in ['-',"=",':']:
              try:    
                 sep = line[begidx-1]
                 Ntext = line.split()[-1]

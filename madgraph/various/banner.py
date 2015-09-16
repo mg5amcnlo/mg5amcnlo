@@ -111,6 +111,7 @@ class Banner(dict):
       'initrwgt':'',
       'madspin':'madspin_card.dat',
       'mgshowercard':'shower_card.dat',
+      'pythia8':'pythia8_card.dat',
       'run_settings':''
       }
     
@@ -897,9 +898,8 @@ class ConfigFile(dict):
         
         
         # if input is define read that input
-        if isinstance(finput, (file, str)):
+        if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput)
-    
 
     def default_setup(self):
         pass
@@ -949,8 +949,10 @@ class ConfigFile(dict):
         else:
             lower_name = name.lower()          
             logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
-                        'This argument is not defined by default. Please consider to add it.')
-            logger.debug("Did you mean %s", [k for k in self.keys() if k.startswith(name[0].lower())])
+              'This argument is not defined by default. Please consider adding it.')
+            suggestions = [k for k in self.keys() if k.startswith(name[0].lower())]
+            if len(suggestions)>0:
+                logger.debug("Did you mean one of the following: %s"%suggestions)
             self.add_param(lower_name, self.format_variable(str(value), str, name))
             self.lower_to_case[lower_name] = name
             if change_userdefine:
@@ -1192,19 +1194,23 @@ class GridpackCard(ConfigFile):
 class PY8Card(ConfigFile):
     """ Implements the Pythia8 card."""
 
-    def add_default_subruns(self):
+    def add_default_subruns(self, type):
         """ Placeholder function to allow overwriting in the PY8SubRun daughter.
         The initialization of the self.subruns attribute should of course not
         be performed in PY8SubRun."""
-        self.add_param("LHEFInputs:nSubruns", 1,
-            hidden='ALWAYS_WRITTEN',
-            comment="""
-====================
-Subrun definitions
-====================
-""")
-        first_subrun = PY8SubRun(subrun_id=0)
-        self.subruns = dict([(first_subrun['Main:subrun'],first_subrun)])
+        if type == 'parameters':
+            if "LHEFInputs:nSubruns" not in self:
+                self.add_param("LHEFInputs:nSubruns", 1,
+                hidden='ALWAYS_WRITTEN',
+                comment="""
+    ====================
+    Subrun definitions
+    ====================
+    """)
+        if type == 'attributes':
+            if not(hasattr(self,'subruns')):
+                first_subrun = PY8SubRun(subrun_id=0)
+                self.subruns = dict([(first_subrun['Main:subrun'],first_subrun)])
 
     def default_setup(self):
         """ Sets up the list of available PY8 parameters."""
@@ -1263,8 +1269,9 @@ Subrun definitions
         # To be added in subruns for CKKWL
         self.add_param("Merging:doPTLundMerging", False, hidden=True)
 
-        # By default consider a single SubRun
-        self.add_default_subruns()
+        # Add parameters controlling the subruns execution flow.
+        # These parameters should not be part of PY8SubRun daughter.
+        self.add_default_subruns('parameters')
              
     def __init__(self, *args, **opts):
         # Parameters which are not printed in the card unless they are 
@@ -1276,6 +1283,10 @@ Subrun definitions
         # Parameters which have been set by the system (i.e. MG5 itself during
         # the regular course of the shower interface)
         self.system_set = set()
+        
+        # Add attributes controlling the subruns execution flow.
+        # These attributes should not be part of PY8SubRun daughter.
+        self.add_default_subruns('attributes')
         
         # Comments to be printed out with hidden parameters
         self.hidden_param_comments = {}
@@ -1594,7 +1605,6 @@ Subrun definitions
     def read(self, file_input, read_subrun=False):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
-      
         if isinstance(file_input, str):
             if "\n" in file_input:
                 finput = StringIO.StringIO(file_input)
@@ -1648,6 +1658,7 @@ Subrun definitions
                         NewSubrun=PY8SubRun()
                         NewSubrun.read(finput,read_subrun=True)
                         self.add_subrun(NewSubrun)
+
                     # proceed to next line
                     last_pos = finput.tell()
                     line     = finput.readline()
@@ -1663,7 +1674,7 @@ Subrun definitions
 class PY8SubRun(PY8Card):
     """ Class to characterize a specific PY8 card subrun section. """
 
-    def add_default_subruns(self):
+    def add_default_subruns(self, type):
         """ Overloading of the homonym function called in the __init__ of PY8Card.
         The initialization of the self.subruns attribute should of course not
         be performed in PY8SubRun."""
@@ -1682,10 +1693,11 @@ class PY8SubRun(PY8Card):
 
     def default_setup(self):
         """Sets up the list of available PY8SubRun parameters."""
+        
+        # Add all default PY8Card parameters
         super(PY8SubRun, self).default_setup()
-
         # Make sure they are all hidden
-        self.hidden_param = self.keys()
+        self.hidden_param = [k.lower() for k in self.keys()]
         self.hidden_params_to_always_write = set()
 
         # Now add Main:subrun and Beams:LHEF. They are not hidden.

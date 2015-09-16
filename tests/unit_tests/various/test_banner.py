@@ -154,8 +154,18 @@ class TestPythia8Card(unittest.TestCase):
         self.assertEqual(pythia8_card_out,pythia8_card_read)
         
         return
-        # Below are some debug lines, comment the above return to run them
         
+        # Below are some debug lines, comment the above return to run them
+        # ========== 
+        # Keep the following if you want to print out all parameters with
+        # print_only_visible=False
+        pythia8_card_read.system_set = set([k.lower() for k in 
+                                                      pythia8_card_read.keys()])
+        for subrunID in pythia8_card_read.subruns.keys():
+            pythia8_card_read.subruns[subrunID].system_set = \
+              set([k.lower() for k in pythia8_card_read.subruns[subrunID].keys()])
+        # ==========
+              
         out = StringIO.StringIO()
         pythia8_card_read.write(out,self.basic_PY8_template)       
         misc.sprint('READ:',out.getvalue())
@@ -198,7 +208,27 @@ Beams:LHEF='events_ouaf.lhe.gz'
         PY8SubRun12['Main:numberOfEvents']=120
         PY8SubRun12.add_param('bloublou','kramoisi')
         default_PY8Card.add_subrun(PY8SubRun12)
-        self.assertEqual(default_PY8Card.subruns, modified_PY8Card.subruns)
+        self.assertEqual(default_PY8Card, modified_PY8Card)
+
+        # Now write the card
+        out = StringIO.StringIO()
+        modified_PY8Card.write(out,self.basic_PY8_template)
+        out.seek(0)
+        read_PY8Card=bannermod.PY8Card(out)
+        self.assertEqual(modified_PY8Card, read_PY8Card)
+
+        # Now write the card, and write all parameters, including hidden ones.
+        # We force that by setting them 'system_set'
+        modified_PY8Card.system_set = set([k.lower() for k in 
+                                                      modified_PY8Card.keys()])
+        for subrunID in modified_PY8Card.subruns.keys():
+            modified_PY8Card.subruns[subrunID].system_set = \
+              set([k.lower() for k in modified_PY8Card.subruns[subrunID].keys()])
+        out = StringIO.StringIO()
+        modified_PY8Card.write(out,self.basic_PY8_template)
+        out.seek(0)        
+        read_PY8Card=bannermod.PY8Card(out)
+        self.assertEqual(modified_PY8Card, read_PY8Card)
 
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
