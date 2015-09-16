@@ -2156,7 +2156,7 @@ c                  open(unit=22,file=result_file,status='old',
 c     $                 access='append',err=129)
 c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 129              close(22)
-                  tsigma = tsigma*sqrt(chi2) !This gives the 68% confidence cross section
+                  tsigma = tsigma*sqrt(max(0d0,chi2)) !This gives the 68% confidence cross section
                   cur_it = itm+20
                   return
                endif
