@@ -811,7 +811,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'shower_card.dat'
         elif 'fo_analysis_format' in text:
             return 'FO_analyse_card.dat'
-        elif 'Main:numberOfEvents' in text:
+        elif 'main:numberofevents' in text:
             return 'pythia8_card.dat'            
         elif 'launch' in text:
             # need to separate madspin/reweight.

@@ -47,6 +47,10 @@ class TestMadEventCmd(unittest.TestCase):
         self.assertEqual(detect(pjoin(card_dir, 'pythia_card_default.dat')),
                          'pythia_card.dat')
 
+        # PYTHIA8_CARD
+        self.assertEqual(detect(pjoin(card_dir, 'pythia8_card_default.dat')),
+                                                             'pythia8_card.dat')
+
         # PARAM_CARD
         self.assertEqual(detect(pjoin(card_dir, 'param_card.dat')),
                          'param_card.dat')
