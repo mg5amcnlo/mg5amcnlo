@@ -20,6 +20,7 @@ import madgraph.various.banner as bannermod
 import madgraph.various.misc as misc
 import os
 import models
+import StringIO
 from madgraph import MG5DIR
 
 import StringIO
@@ -29,7 +30,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 pjoin = os.path.join
 
 
-class TESTBanner(unittest.TestCase):
+class TestBanner(unittest.TestCase):
     """ A class to test the banner functionality """
     
     
@@ -131,6 +132,74 @@ class TestConfigFileCase(unittest.TestCase):
 #        """actually tested in sum_object"""
 
 
+class TestPythia8Card(unittest.TestCase):
+    """ A class to test the Pythia8 card IO functionality """
+   
+    def setUp(self):
+        self.basic_PY8_template = open(pjoin(MG5DIR,'Template','LO','Cards',
+                                         'pythia8_card_default.dat'),'r').read()
+        
+    def test_PY8Card_basic(self):
+        """ Basic consistency check of a read-write of the default card."""
+        
+        pythia8_card_out = bannermod.PY8Card()
+        out = StringIO.StringIO()
+        pythia8_card_out.write(out,self.basic_PY8_template)
+        #       misc.sprint('WRITTEN:',out.getvalue())
+        
+        pythia8_card_read = bannermod.PY8Card()
+        # Rewind
+        out.seek(0)
+        pythia8_card_read.read(out)       
+        self.assertEqual(pythia8_card_out,pythia8_card_read)
+        
+        return
+        # Below are some debug lines, comment the above return to run them
+        
+        out = StringIO.StringIO()
+        pythia8_card_read.write(out,self.basic_PY8_template)       
+        misc.sprint('READ:',out.getvalue())
+        out = StringIO.StringIO()
+        pythia8_card_read.write(out,self.basic_PY8_template,print_only_visible=True)       
+        misc.sprint('Only visible:',out.getvalue())
+
+    def test_PY8Card_with_subruns(self):
+        """ Basic consistency check of a read-write of the default card."""
+       
+        default_PY8Card = bannermod.PY8Card(self.basic_PY8_template)
+
+        template_with_subruns = self.basic_PY8_template + \
+"""
+Main:subrun=0
+! My Run 0
+blabla=2
+Main:numberOfEvents      = 0
+Main:subrun=7
+! My Run 7
+Main:numberOfEvents      = 73
+Beams:LHEF='events_miaou.lhe.gz'
+Main:subrun=12
+! My other Run 
+Main:numberOfEvents      = 120
+bloublou=kramoisi
+Beams:LHEF='events_ouaf.lhe.gz'
+"""
+        modified_PY8Card = bannermod.PY8Card(template_with_subruns)
+        
+        # Add the corresponding features to the default PY8 card
+        default_PY8Card.subruns[0].add_param('blabla','2')
+        default_PY8Card.subruns[0]['Main:numberOfEvents']=0
+        PY8SubRun7 = bannermod.PY8SubRun(subrun_id=7)
+        PY8SubRun7['Beams:LHEF']='events_miaou.lhe.gz'
+        PY8SubRun7['Main:numberOfEvents']=73
+        default_PY8Card.add_subrun(PY8SubRun7)
+        PY8SubRun12 = bannermod.PY8SubRun(subrun_id=12)
+        PY8SubRun12['Beams:LHEF']='events_ouaf.lhe.gz'
+        PY8SubRun12['Main:numberOfEvents']=120
+        PY8SubRun12.add_param('bloublou','kramoisi')
+        default_PY8Card.add_subrun(PY8SubRun12)
+        self.assertEqual(default_PY8Card.subruns, modified_PY8Card.subruns)
+
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
     # a lot of the funtionality are actually already tested in the child
@@ -192,7 +261,7 @@ class TestRunCard(unittest.TestCase):
             self.assertEqual(run_card[key], run_card2[key])      
 
 MadLoopParam = bannermod.MadLoopParam
-class TESTMadLoopParam(unittest.TestCase):
+class TestMadLoopParam(unittest.TestCase):
     """ A class to test the MadLoopParam functionality """
     
     

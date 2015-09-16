@@ -22,6 +22,7 @@ import os
 import sys
 import re
 import math
+import StringIO
 
 pjoin = os.path.join
 
@@ -1000,9 +1001,9 @@ class ConfigFile(dict):
             # We have a string we have to format the attribute from the string
             if targettype == bool:
                 value = value.strip()
-                if value.lower() in ['0', '.false.', 'f', 'false']:
+                if value.lower() in ['0', '.false.', 'f', 'false', 'off']:
                     value = False
-                elif value.lower() in ['1', '.true.', 't', 'true']:
+                elif value.lower() in ['1', '.true.', 't', 'true', 'on']:
                     value = True
                 else:
                     raise Exception, "%s can not be mapped to True/False for %s" % (repr(value),name)
@@ -1187,7 +1188,510 @@ class GridpackCard(ConfigFile):
         fsock = open(output_file,'w')
         fsock.write(text)
         fsock.close()
-    
+
+class PY8Card(ConfigFile):
+    """ Implements the Pythia8 card."""
+
+    def add_default_subruns(self):
+        """ Placeholder function to allow overwriting in the PY8SubRun daughter.
+        The initialization of the self.subruns attribute should of course not
+        be performed in PY8SubRun."""
+        self.add_param("LHEFInputs:nSubruns", 1,
+            hidden='ALWAYS_WRITTEN',
+            comment="""
+====================
+Subrun definitions
+====================
+""")
+        first_subrun = PY8SubRun(subrun_id=0)
+        self.subruns = dict([(first_subrun['Main:subrun'],first_subrun)])
+
+    def default_setup(self):
+        """ Sets up the list of available PY8 parameters."""
+        
+        # Visible parameters
+        # ==================
+        self.add_param("Main:numberOfEvents", -1)
+        # for MLM merging
+        self.add_param("JetMatching:qCut", 10.0)
+        # for CKKWL merging
+        self.add_param("Merging:TMS", 10.0)        
+        self.add_param("Merging:Process", 'pp>LEPTONS,NEUTRINOS')        
+        
+        # Hidden parameters always written out
+        # ====================================
+        self.add_param("PDF:pSet", 'LHAPDF5:CT10.LHgrid',
+            hidden='ALWAYS_WRITTEN',
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("SpaceShower:alphaSvalue", 0.118,
+            hidden='ALWAYS_WRITTEN',
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("TimeShower:alphaSvalue", 0.118,
+            hidden='ALWAYS_WRITTEN',
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("Beams:frameType", 4,
+            hidden='ALWAYS_WRITTEN',
+            comment='Tell Pythia8 that an LHEF input is used.')
+        self.add_param("Check:epTolErr", 1e-2,
+            hidden='ALWAYS_WRITTEN',
+            comment='Be more forgiving with momentum mismatches.')
+
+        # Hidden parameters written out only if user_set or system_set
+        # ============================================================
+        # for MLM merging
+        self.add_param("JetMatching:merge", False, hidden=True,
+          comment='Specifiy if we are merging sample of different multiplicity.')
+        self.add_param("JetMatching:scheme", 1, hidden=True) 
+        self.add_param("JetMatching:setMad", True, hidden=True,
+                                     comment='Specify if from MadGraph origin.') 
+        self.add_param("JetMatching:coneRadius", 1.0, hidden=True) 
+        self.add_param("JetMatching:etaJetMax", 10.0, hidden=True) 
+        self.add_param("JetMatching:nJetMax", 2, hidden=True)        
+        # for CKKWL merging (common with UMEPS, UNLOPS)
+        self.add_param("Merging:nJetMax", 2, hidden=True)
+        self.add_param("TimeShower:pTmaxMatch", 2, hidden=True)
+        self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True)
+        self.add_param("Merging:muFac", 91.188, hidden=True,
+                        comment='Set factorisation scales of the 2->2 process.')
+        self.add_param("Merging:muRen", 91.188, hidden=True,
+                      comment='Set renormalization scales of the 2->2 process.')
+        self.add_param("Merging:muFacInME", 91.188, hidden=True,
+                 comment='Set factorisation scales of the 2->2 Matrix Element.')
+        self.add_param("Merging:muRenInME", 91.188, hidden=True,
+               comment='Set renormalization scales of the 2->2 Matrix Element.')
+        self.add_param("SpaceShower:rapidityOrder", False, hidden=True)
+        # To be added in subruns for CKKWL
+        self.add_param("Merging:doPTLundMerging", False, hidden=True)
+
+        # By default consider a single SubRun
+        self.add_default_subruns()
+             
+    def __init__(self, *args, **opts):
+        # Parameters which are not printed in the card unless they are 
+        # 'user_set' or 'system_set' or part of the 
+        #  self.hidden_params_to_always_print set.
+        self.hidden_param = []
+        self.hidden_params_to_always_write = set()
+        
+        # Parameters which have been set by the system (i.e. MG5 itself during
+        # the regular course of the shower interface)
+        self.system_set = set()
+        
+        # Comments to be printed out with hidden parameters
+        self.hidden_param_comments = {}
+
+        # Parameters which have been set by the 
+        super(PY8Card, self).__init__(*args, **opts)
+
+    def add_param(self, name, value, hidden=False, comment=None):
+        """ add a parameter to the card. value is the default value and 
+        defines the type (int/float/bool/str) of the input.
+        The option 'hidden' decides whether the parameter should be visible to the user.
+        If it should not be visible to the user, one can also decide whether it should
+        always be printed or only when it is system_set or user_set.
+        Therefore the option 'hidden' can be
+          > hidden=False: visible to the user.
+          > hidden=True: non visible to the user and only written out if 
+              it is user_set or system_set.
+          > hidden='ALWAYS_WRITTEN': non visible to the user but always written 
+              out to the card, even if not user_set or system_set (in which case
+              the parameter's default value is used).
+        The option 'comment' can be used to specify a comment to write above
+        hidden parameters.
+        """
+        super(PY8Card, self).add_param(name, value)
+        name = name.lower()
+        if hidden:
+            self.hidden_param.append(name)
+            if isinstance(hidden,str) and hidden=='ALWAYS_WRITTEN':
+                self.hidden_params_to_always_write.add(name)
+        if not comment is None:
+            if not isinstance(comment, str):
+                raise MadGraph5Error("Option 'comment' must be a string, not"+\
+                                                          " '%s'."%str(comment))
+            if hidden:
+                self.hidden_param_comments[name] = comment
+            else:
+                raise MadGraph5Error("Option 'comment' can only be specified"+\
+                    " for hidden parameters. Edit the pythia8_card_default"+\
+                    " template to format how visible parameters are written.")
+
+    def add_subrun(self, py8_subrun):
+        """Add a subrun to this PY8 Card."""
+        assert(isinstance(py8_subrun,PY8SubRun))
+        if py8_subrun['Main:subrun']==-1:
+            raise MadGraph5Error, "Make sure to correctly set the subrun ID"+\
+                            " 'Main:subrun' *before* adding it to the PY8 Card."
+        if py8_subrun['Main:subrun'] in self.subruns:
+            raise MadGraph5Error, "A subrun with ID '%s'"%py8_subrun['Main:subrun']+\
+                " is already present in this PY8 card. Remove it first, or "+\
+                                                          " access it directly."
+        self.subruns[py8_subrun['Main:subrun']] = py8_subrun
+        if not 'LHEFInputs:nSubruns' in self.user_set:
+            self['LHEFInputs:nSubruns'] = max(self.subruns.keys())
+        
+    def userSet(self, name, value, **opts):
+        """Set an attribute of this card, following a user_request"""
+        self.__setitem__(name, value, change_userdefine=True, **opts)
+
+    def systemSet(self, name, value, **opts):
+        """Set an attribute of this card, independently of a specific user
+        request."""
+        self.__setitem__(name, value, change_userdefine=False, **opts)
+        self.system_set.add(name.lower())
+        
+    @staticmethod
+    def pythia8_formatting(value, formatv=None):
+        """format the variable into pythia8 card convention.
+        The type is detected by default"""
+        if not formatv:
+            if isinstance(value, bool):
+                formatv = 'bool'
+            elif isinstance(value, int):
+                formatv = 'int'
+            elif isinstance(value, float):
+                formatv = 'float'
+            elif isinstance(value, str):
+                formatv = 'str'
+            else:
+                logger.debug("unknow format for pythia8_formatting: %s" , value)
+                formatv = 'str'
+        else:
+            assert formatv
+        if formatv == 'bool':
+            if str(value) in ['1','T','.true.','True','on']:
+                return 'on'
+            else:
+                return 'false'
+        elif formatv == 'int':
+            try:
+                return str(int(value))
+            except ValueError:
+                fl = float(value)
+                if int(fl) == fl:
+                    return str(int(fl))
+                else:
+                    raise
+        elif formatv == 'float':
+            return '%.10e' % float(value)
+        elif formatv == 'str':
+            return "'%s'" % value
+
+    def write(self, output_file, template, read_subrun=False, 
+                                                      print_only_visible=False):
+        """ Write the card to output_file using a specific template."""
+        
+        # First list the visible parameters
+        visible_param = [p for p in self if p.lower() not in self.hidden_param]                   
+        # Now the hidden param which must be written out
+        if print_only_visible:
+            hidden_output_param = []
+        else:
+            hidden_output_param = [p for p in self if p.lower() in self.hidden_param and
+              (p.lower() in self.hidden_params_to_always_write or 
+               p.lower() in self.user_set or p.lower() in self.system_set)]
+        
+        if print_only_visible:
+            subruns = []
+        else:
+            if not read_subrun:
+                subruns = sorted(self.subruns.keys())
+        
+        # Store the subruns to write in a dictionary, with its ID in key
+        # and the corresponding stringstream in value
+        subruns_to_write = {}
+        
+        # Sort these parameters nicely so as to put together parameters
+        # belonging to the same group (i.e. prefix before the ':' in their name).
+        def group_params(params):
+            if len(params)==0:
+                return []
+            groups = {}
+            for p in params:
+                try:
+                    groups[':'.join(p.split(':')[:-1])].append(p)
+                except KeyError:
+                    groups[':'.join(p.split(':')[:-1])] = [p,]
+            res =  sum(groups.values(),[])
+            # Make sure 'Main:subrun' appears first
+            if 'Main:subrun' in res:
+                res.insert(0,res.pop(res.index('Main:subrun')))
+            # Make sure 'LHEFInputs:nSubruns' appears last
+            if 'LHEFInputs:nSubruns' in res:
+                res.append(res.pop(res.index('LHEFInputs:nSubruns')))
+            return res
+
+        visible_param       = group_params(visible_param)
+        hidden_output_param = group_params(hidden_output_param)
+
+        # First dump in a temporary_output (might need to have a second pass
+        # at the very end to update 'LHEFInputs:nSubruns')
+        output = StringIO.StringIO()
+            
+        # Setup template from which to read
+        if isinstance(template, str):
+            if os.path.isfile(template):
+                tmpl = open(template, 'r')
+            elif '\n' in template:
+                tmpl = StringIO.StringIO(template)
+            else:
+                raise Exception, "File input '%s' not found." % file_input     
+        elif template is None:
+            # Then use a dummy empty StringIO, hence skipping the reading
+            tmpl = StringIO.StringIO()
+        elif isinstance(template, (StringIO.StringIO, file)):
+            tmpl = template
+        else:
+            raise MadGraph5Error("Incorrect type for argument 'template': %s"%
+                                                    template.__class__.__name__)
+
+        # Read the template
+        last_pos = tmpl.tell()
+        line     = tmpl.readline()
+        started_subrun_reading = False
+        while line!='':
+            # Skip comments
+            if line.strip().startswith('!') or line.strip().startswith('\n'):
+                output.write(line)
+                # Proceed to next line
+                last_pos = tmpl.tell()
+                line     = tmpl.readline()
+                continue
+            # Read parameter
+            try:
+                param_entry, value_entry = line.split('=')
+                param = param_entry.strip()
+                value = value_entry.strip()
+            except ValueError:
+                line = line.replace('\n','')
+                raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
+                                                                            line
+            # Read a subrun if detected:
+            if param=='Main:subrun':
+                if read_subrun:
+                    if not started_subrun_reading:
+                        # Record that the subrun reading has started and proceed
+                        started_subrun_reading = True
+                    else:
+                        # We encountered the next subrun. rewind last line and exit
+                        tmpl.seek(last_pos)
+                        break
+                else:
+                    # Start the reading of this subrun
+                    tmpl.seek(last_pos)
+                    subruns_to_write[int(value)] = StringIO.StringIO()
+                    if int(value) in subruns:
+                        self.subruns[int(value)].write(subruns_to_write[int(value)],
+                                                      tmpl,read_subrun=True)
+                        # Remove this subrun ID from the list
+                        subruns.pop(subruns.index(int(value)))
+                    else:
+                        # Unknow subrun, create a dummy one
+                        DummySubrun=PY8SubRun()
+                        # Remove all of its variables (so that nothing is overwritten)
+                        DummySubrun.clear()
+                        DummySubrun.write(subruns_to_write[int(value)],
+                                                          tmpl,read_subrun=True)
+                        logger.info('Adding new unknown subrun with ID %d.'%
+                                                                     int(value))
+                    # Proceed to next line
+                    last_pos = tmpl.tell()
+                    line     = tmpl.readline()
+                    continue
+            
+            # Change parameters which must be output
+            if param in visible_param:
+                new_value = PY8Card.pythia8_formatting(self[param])
+                visible_param.pop(visible_param.index(param))
+            elif param in hidden_output_param:
+                new_value = PY8Card.pythia8_formatting(self[param])
+                hidden_output_param.pop(hidden_output_param.index(param))
+            else:
+                # Just copy parameters which don't need to be specified
+                output.write(line)
+                # Proceed to next line
+                last_pos = tmpl.tell()
+                line     = tmpl.readline()
+                continue
+            
+            # Substitute the value
+            output.write('%s=%s'%(param_entry,value_entry.replace(value,
+                                                                    new_value)))
+        
+            # Proceed to next line
+            last_pos = tmpl.tell()
+            line     = tmpl.readline()
+        
+        # Now output the missing parameters. Warn about visible ones.
+        if len(visible_param)>0 and not template is None:
+            output.write(
+"""!
+! Additional general parameters%s.
+!
+"""%(' for subrun %d'%self['Main:subrun'] if 'Main:subrun' in self else ''))
+        for param in visible_param:
+            value = PY8Card.pythia8_formatting(self[param])
+            output.write('%s=%s\n'%(param,value))
+            if template is None:
+                if param=='Main:subrun':
+                    output.write(
+"""!
+!  Definition of subrun %d
+!
+"""%self['Main:subrun'])
+            else:
+                logger.info('Adding missing parameter %s to current '%param+
+                                           'pythia8 card (with value %s)'%value)
+
+        if len(hidden_output_param)>0 and not template is None:
+            output.write(
+"""!
+! Additional technical parameters%s set by MG5_aMC.
+!
+"""%(' for subrun %d'%self['Main:subrun'] if 'Main:subrun' in self else ''))
+        for param in hidden_output_param:
+            if param.lower() in self.hidden_param_comments:
+                comment = '\n'.join('! %s'%c for c in 
+                          self.hidden_param_comments[param.lower()].split('\n'))
+                output.write(comment+'\n')
+            output.write('%s=%s\n'%(param,PY8Card.pythia8_formatting(self[param])))
+        
+        # Don't close the file if we were reading a subrun, but simply write 
+        # output and return now
+        if read_subrun:
+            output_file.write(output.getvalue())
+            return
+
+        # Now add subruns not present in the template
+        for subrunID in subruns:
+            new_subrun = StringIO.StringIO()
+            self.subruns[subrunID].write(new_subrun,None,read_subrun=True)
+            subruns_to_write[subrunID] = new_subrun
+
+        # Add all subruns to the output, in the right order
+        for subrunID in sorted(subruns_to_write):
+            output.write(subruns_to_write[subrunID].getvalue())
+
+        # If 'LHEFInputs:nSubruns' is not user_set, then make sure it is
+        # updated at least larger or equal to the maximum SubRunID
+        if 'LHEFInputs:nSubruns'.lower() not in self.user_set and \
+             len(subruns_to_write)>0 and self['LHEFInputs:nSubruns']<\
+                                                   max(subruns_to_write.keys()):
+            logger.info("Updating PY8 parameter 'LHEFInputs:nSubruns' to "+
+          "%d so as to cover all defined subruns."%max(subruns_to_write.keys()))
+            self['LHEFInputs:nSubruns'] = max(subruns_to_write.keys())
+            output = StringIO.StringIO()
+            self.write(output,template,print_only_visible=print_only_visible)
+
+        # Write output
+        if isinstance(output_file, str):
+            out = open(output_file,'w')
+            out.write(output.getvalue())
+            out.close()
+        else:
+            output_file.write(output.getvalue())
+        
+    def read(self, file_input, read_subrun=False):
+        """Read the input file, this can be a path to a file, 
+           a file object, a str with the content of the file."""
+      
+        if isinstance(file_input, str):
+            if "\n" in file_input:
+                finput = StringIO.StringIO(file_input)
+            elif os.path.isfile(file_input):
+                finput = open(file_input)
+            else:
+                raise Exception, "File input '%s' not found." % file_input
+        elif isinstance(file_input, (StringIO.StringIO, file)):
+            finput = file_input
+        else:
+            raise MadGraph5Error("Incorrect type for argument 'file_input': %s"%
+                                                    file_inp .__class__.__name__)
+
+        # Read the template
+        last_pos = finput.tell()
+        line     = finput.readline()
+        started_subrun_reading = False
+        while line!='':
+            # Skip comments
+            if line.strip().startswith('!') or line.strip()=='':
+                # proceed to next line
+                last_pos = finput.tell()
+                line     = finput.readline()
+                continue
+            # Read parameter
+            try:
+                param, value = line.split('=')
+                param = param.strip()
+                value = value.strip()
+            except ValueError:
+                line = line.replace('\n','')
+                raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
+                                                                            line
+            # Read a subrun if detected:
+            if param=='Main:subrun':
+                if read_subrun:
+                    if not started_subrun_reading:
+                        # Record that the subrun reading has started and proceed
+                        started_subrun_reading = True
+                    else:
+                        # We encountered the next subrun. rewind last line and exit
+                        finput.seek(last_pos)
+                        return
+                else:
+                    # Start the reading of this subrun
+                    finput.seek(last_pos)
+                    if int(value) in self.subruns:
+                        self.subruns[int(value)].read(finput,read_subrun=True)
+                    else:
+                        # Unknow subrun, create a dummy one
+                        NewSubrun=PY8SubRun()
+                        NewSubrun.read(finput,read_subrun=True)
+                        self.add_subrun(NewSubrun)
+                    # proceed to next line
+                    last_pos = finput.tell()
+                    line     = finput.readline()
+                    continue
+            
+            # Read parameter. The case of a parameter not defined in the card is
+            # handled directly in ConfigFile.
+            self.systemSet(param,value)
+            # proceed to next line
+            last_pos = finput.tell()
+            line     = finput.readline()
+
+class PY8SubRun(PY8Card):
+    """ Class to characterize a specific PY8 card subrun section. """
+
+    def add_default_subruns(self):
+        """ Overloading of the homonym function called in the __init__ of PY8Card.
+        The initialization of the self.subruns attribute should of course not
+        be performed in PY8SubRun."""
+        pass
+
+    def __init__(self, *args, **opts):
+        """ Initialize a subrun """
+        
+        # Force user to set it manually.
+        subrunID = -1
+        if 'subrun_id' in opts:
+            subrunID = opts.pop('subrun_id')
+
+        super(PY8SubRun, self).__init__(*args, **opts)
+        self['Main:subrun']=subrunID
+
+    def default_setup(self):
+        """Sets up the list of available PY8SubRun parameters."""
+        super(PY8SubRun, self).default_setup()
+
+        # Make sure they are all hidden
+        self.hidden_param = self.keys()
+        self.hidden_params_to_always_write = set()
+
+        # Now add Main:subrun and Beams:LHEF. They are not hidden.
+        self.add_param("Main:subrun", -1)
+        self.add_param("Beams:LHEF", "events.lhe.gz")
+
 class RunCard(ConfigFile):
 
     def __new__(cls, finput=None):
