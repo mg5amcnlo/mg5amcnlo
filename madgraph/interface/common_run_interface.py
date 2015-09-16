@@ -144,6 +144,17 @@ class HelpToCmd(object):
                                ('--tag=', 'define the tag for the pythia run'),
                                ('--no_default', 'not run if pythia_card not present')])
 
+    def help_pythia8(self):
+        logger.info("syntax: pythia8 [RUN] [--run_options]")
+        logger.info("-- run pythia8 on RUN (current one by default)")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--tag=', 'define the tag for the pythia8 run'),
+                               ('--no_default', 'not run if pythia8_card not present')])
+
+    def help_shower(self):
+        logger.info("syntax: shower [shower_name] [shower_options]")
+        logger.info("-- This is equivalent to running '[shower_name] [shower_options]'")
+
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
         logger.info("-- run pgs on RUN (current one by default)")

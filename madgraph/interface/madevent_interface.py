@@ -1550,7 +1550,39 @@ class CompleteForCmd(CheckValidForCmd):
             data = [n.rsplit('/',2)[1] for n in data]
             return self.list_completion(text, ['all'] + data)
          
-        
+    
+    def complete_shower(self,text, line, begidx, endidx):
+        "Complete the shower command"
+        args = self.split_arg(line[0:begidx], error=False)
+        misc.sprint(args)
+        misc.sprint(len(args),args[1], args[1] in ['pythia8','pythia'])
+        if len(args) == 1:
+            return self.list_completion(text, ['pythia8','pythia'])
+        elif len(args)>1 and args[1] in ['pythia8','pythia']:
+            misc.sprint('self.complete_%s(text,%s,%d,%d)'%
+              (args[1],line.replace(args[0],' '),begidx-len(args[0]),endidx-len(args[0])))
+            return eval('self.complete_%s(text,%s,%d,%d)'%
+              (args[1],line.replace(args[0],' '),begidx-len(args[0]),endidx-len(args[0])))
+
+    def complete_pythia8(self,text, line, begidx, endidx):
+        "Complete the pythia8 command"
+        args = self.split_arg(line[0:begidx], error=False)
+
+        if len(args) == 1:
+            #return valid run_name
+            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, self._run_options + ['-f', 
+                                                '--no_default', '--tag='], line)
+                return tmp1 + tmp2
+        elif line[-1] != '=':
+            return self.list_completion(text, self._run_options + ['-f', 
+                                                 '--no_default','--tag='], line)
+    
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"
         args = self.split_arg(line[0:begidx], error=False)
@@ -1607,6 +1639,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _generate_options = ['-f', '--laststep=parton', '--laststep=pythia', '--laststep=pgs', '--laststep=delphes']
     _calculate_decay_options = ['-f', '--accuracy=0.']
+    _interfaced_showers = ['pythia','pythia8']
     _set_options = ['stdout_level','fortran_compiler','timeout']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _syscalc_mode = ['all', 'parton','pythia']
@@ -2023,8 +2056,10 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             if self.run_card['time_of_flight']>=0:
                 self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
-            self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
-            # pythia launches pgs/delphes if needed    
+            
+            self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)            
+            
+            # shower launches pgs/delphes if needed    
             self.store_result()
     
     def do_initMadLoop(self,line):
@@ -3092,6 +3127,25 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('gridpack created', level='gridpack')
         
     ############################################################################      
+    def do_shower(self, line):
+        """launches the shower"""
+
+        args = self.split_arg(line)
+        if len(args)>1 and args[0] in self._interfaced_showers:
+            chosen_showers = args.pop(0)
+        else:
+            chosen_showers = list(self._interfaced_showers)
+
+        # If '--no_default' was specified in the arguments, then only one 
+        # shower will be run, depending on which card is present.
+        for shower in chosen_showers:
+            self.exec_cmd('%s --no_default'%shower, postcmd=False, printcmd=False)
+
+    def do_pythia8(self, line):
+        """launch pythia8"""
+        
+        pass
+    
     def do_pythia(self, line):
         """launch pythia"""
         
@@ -3125,8 +3179,6 @@ Beware that this can be dangerous for local multicore runs.""")
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
-                     
-   
 
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
