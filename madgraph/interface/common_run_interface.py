@@ -2450,7 +2450,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if var in self.run_card:
                     self.conflict.append(var)
 
-       #check if MadLoopParams.dat is present:
+       #check if pythia8_card.dat is present:
         self.has_PY8 = False
         if os.path.isfile(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
             self.has_PY8 = True
@@ -3031,7 +3031,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                               commentdefault=True)
 
         # Pythia8 Parameter  ---------------------------------------------------
-        elif self.has_PY8 and args[start] in self.py8_vars \
+        elif self.has_PY8 and args[start] in self.PY8Card \
                                                and card in ['', 'pythia8_card']:
         
             if args[start] in self.conflict and card == '':
@@ -3419,6 +3419,8 @@ You can also copy/paste, your event file here.''')
             self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
         elif path == pjoin(self.me_dir,'Cards','pythia8_card.dat'):
             self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,'Cards','pythia8_card.dat'))
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
+                                     k.lower() not in self.PY8Card.hidden_param]
         elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
             try:
                 import madgraph.madweight.Cards as mwcards

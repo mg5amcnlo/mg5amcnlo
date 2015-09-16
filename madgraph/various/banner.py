@@ -1393,14 +1393,16 @@ class PY8Card(ConfigFile):
         """ Write the card to output_file using a specific template."""
         
         # First list the visible parameters
-        visible_param = [p for p in self if p.lower() not in self.hidden_param]                   
+        visible_param = [p for p in self if p.lower() not in self.hidden_param
+                                                  or p.lower() in self.user_set]        
         # Now the hidden param which must be written out
         if print_only_visible:
             hidden_output_param = []
         else:
             hidden_output_param = [p for p in self if p.lower() in self.hidden_param and
+              not p.lower() in self.user_set and
               (p.lower() in self.hidden_params_to_always_write or 
-               p.lower() in self.user_set or p.lower() in self.system_set)]
+                                                  p.lower() in self.system_set)]
         
         if print_only_visible:
             subruns = []
@@ -1550,9 +1552,9 @@ class PY8Card(ConfigFile):
 !  Definition of subrun %d
 !
 """%self['Main:subrun'])
-            else:
-                logger.info('Adding missing parameter %s to current '%param+
-                                           'pythia8 card (with value %s)'%value)
+            elif param.lower() not in self.hidden_param:
+                logger.debug('Adding parameter %s (missing in the template) to current '+\
+                                    'pythia8 card (with value %s)',param, value)
 
         if len(hidden_output_param)>0 and not template is None:
             output.write(

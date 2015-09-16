@@ -939,7 +939,7 @@ class CheckValidForCmd(object):
     def check_pythia(self, args):
         """Check the argument for pythia command
         syntax: pythia [NAME] 
-        Note that other option are already remove at this point
+        Note that other option are already removed at this point
         """
         
         mode = None
@@ -995,6 +995,72 @@ class CheckValidForCmd(object):
             files.ln(input_file, os.path.dirname(output_file))
         else:
             misc.gunzip(input_file, keep=True, stdout=output_file)
+        
+        args.append(mode)
+    
+    def check_pythia8(self, args):
+        """Check the argument for pythia command
+        syntax: pythia8 [NAME] 
+        Note that other option are already removed at this point
+        """
+        
+        mode = None
+        laststep = [arg for arg in args if arg.startswith('--laststep=')]
+        if laststep and len(laststep)==1:
+            mode = laststep[0].split('=')[-1]
+            if mode not in ['auto', 'pythia', 'delphes']:
+                self.help_pythia8()
+                raise self.InvalidCmd('invalid %s argument'% args[-1])     
+        elif laststep:
+            raise self.InvalidCmd('only one laststep argument is allowed')
+     
+        # If not pythia-pgs path
+        if not self.options['pythia8']:
+            logger.info('Retry reading configuration file to find pythia8 path')
+            self.set_configuration()
+            
+        if not self.options['pythia8'] or not \
+            os.path.exists(pjoin(self.options['pythia8'],'bin','pythia8-config')):
+            error_msg = 'No valid pythia8 path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            error_msg += 'Finally, it can be installed automatically using the'
+            error_msg += ' install command.\n'
+            raise self.InvalidCmd(error_msg)
+
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+
+        if len(args) == 0 and not self.run_name:
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. '+
+                                                 'Please add this information.')             
+        
+        if len(args) >= 1:
+            if args[0] != self.run_name and\
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 
+                                                  'unweighted_events.lhe.gz')):
+                raise self.InvalidCmd('No events file corresponding to %s run. '
+                                                                      % args[0])
+            self.set_run_name(args[0], tag, 'pythia8')
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'pythia8')
+
+        input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
+        output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
+        if os.path.exists('%s.gz' % input_file):
+            files.ln(input_file, os.path.dirname(output_file))
+        else:
+            if not os.path.exists(input_file):
+                raise self.InvalidCmd('No event file corresponding to %s run. '
+                                                                % self.run_name)
+            misc.gzip(input_file, keep=True, stdout=output_file)
         
         args.append(mode)
     
@@ -1554,15 +1620,12 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_shower(self,text, line, begidx, endidx):
         "Complete the shower command"
         args = self.split_arg(line[0:begidx], error=False)
-        misc.sprint(args)
-        misc.sprint(len(args),args[1], args[1] in ['pythia8','pythia'])
         if len(args) == 1:
-            return self.list_completion(text, ['pythia8','pythia'])
-        elif len(args)>1 and args[1] in ['pythia8','pythia']:
-            misc.sprint('self.complete_%s(text,%s,%d,%d)'%
-              (args[1],line.replace(args[0],' '),begidx-len(args[0]),endidx-len(args[0])))
-            return eval('self.complete_%s(text,%s,%d,%d)'%
-              (args[1],line.replace(args[0],' '),begidx-len(args[0]),endidx-len(args[0])))
+            return self.list_completion(text, self._interfaced_showers)
+        elif len(args)>1 and args[1] in self._interfaced_showers:
+            return eval("self.complete_%s(text,'%s',%d,%d)"%
+              (args[1],line.replace(args[0]+' ',''),begidx-len(args[0])-1,
+                                                         endidx-len(args[0])-1))
 
     def complete_pythia8(self,text, line, begidx, endidx):
         "Complete the pythia8 command"
@@ -1584,7 +1647,7 @@ class CompleteForCmd(CheckValidForCmd):
                                                  '--no_default','--tag='], line)
     
     def complete_pythia(self,text, line, begidx, endidx):
-        "Complete the pythia command"
+        "Complete the pythia command"     
         args = self.split_arg(line[0:begidx], error=False)
 
         if len(args) == 1:
@@ -3128,22 +3191,41 @@ Beware that this can be dangerous for local multicore runs.""")
         
     ############################################################################      
     def do_shower(self, line):
-        """launches the shower"""
+        """launch the shower"""
 
         args = self.split_arg(line)
         if len(args)>1 and args[0] in self._interfaced_showers:
-            chosen_showers = args.pop(0)
+            chosen_showers = [args.pop(0)]
         else:
             chosen_showers = list(self._interfaced_showers)
 
         # If '--no_default' was specified in the arguments, then only one 
         # shower will be run, depending on which card is present.
         for shower in chosen_showers:
-            self.exec_cmd('%s --no_default'%shower, postcmd=False, printcmd=False)
+            self.exec_cmd('%s %s'%(shower,' '.join(args)), 
+                                                  postcmd=False, printcmd=False)
 
     def do_pythia8(self, line):
         """launch pythia8"""
-        
+
+        # Check argument's validity
+        args = self.split_arg(line)
+        if '--no_default' in args:
+            if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat')):
+                return
+            no_default = True
+            args.remove('--no_default')
+        else:
+            no_default = False
+            
+        if not self.run_name:
+            self.check_pythia8(args)
+            self.configure_directory(html_opening =False)
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory(html_opening =False)
+            self.check_pythia8(args)        
+
         pass
     
     def do_pythia(self, line):
@@ -3810,7 +3892,6 @@ Beware that this can be dangerous for local multicore runs.""")
     ############################################################################   
     def configure_directory(self, html_opening=True):
         """ All action require before any type of run """   
-
 
         # Basic check
         assert os.path.exists(pjoin(self.me_dir,'SubProcesses'))
