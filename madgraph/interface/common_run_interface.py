@@ -2470,7 +2470,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
                 if self.has_ml and var in self.ml_vars:
                     self.conflict.append(var)
-                    
+    
+    def do_help(self, line):    
+        
+        return cmd.BasicCmd.do_help(self, line)
+        
     def complete_set(self, text, line, begidx, endidx):
         """ Complete the set command"""
 
@@ -3275,12 +3279,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def help_add(self):
         """help for add command"""
 
-        print '-- syntax: add pythia8_card NAME VALUE'
-        print "   add a definition of name in the pythia8_card with the given value"
-        print "   Do not work for the param_card"        
-        print '-- syntax: add filename line'
-        print '   add the given LINE to the end of the associate file (all file supportedd).'
- 
+        logger.info('********************* HELP ADD ***************************')
+        logger.info( '-- syntax: add pythia8_card NAME VALUE')
+        logger.info( "   add a definition of name in the pythia8_card with the given value")
+        logger.info( "   Do not work for the param_card"        )
+        logger.info( '-- syntax: add filename line')
+        logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
+        logger.info('********************* HELP ADD ***************************') 
     def complete_add(self, text, line, begidx, endidx):
         """ auto-completion for add command"""
         signal.alarm(0) # avoid timer if any
@@ -3297,8 +3302,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             syntax: add filename LINE"""
 
         args = self.split_arg(line)
-        misc.sprint(args)
-        misc.sprint(len(args))
         if len(args) == 3 and args[0] in ['pythia8_card', 'pythia8_card.dat'] and self.has_PY8:
             name= args[1]
             value = args[2]
