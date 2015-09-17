@@ -2452,7 +2452,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
        #check if pythia8_card.dat is present:
         self.has_PY8 = False
-        if os.path.isfile(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
+        if 'pythia8_card.dat' in cards:
             self.has_PY8 = True
             self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,
                                                     'Cards','pythia8_card.dat'))
@@ -3272,6 +3272,57 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.mother_interface.complete_compute_widths(*args,**opts)
 
 
+    def help_add(self):
+        """help for add command"""
+
+        print '-- syntax: add pythia8_card NAME VALUE'
+        print "   add a definition of name in the pythia8_card with the given value"
+        print "   Do not work for the param_card"        
+        print '-- syntax: add filename line'
+        print '   add the given LINE to the end of the associate file (all file supportedd).'
+ 
+    def complete_add(self, text, line, begidx, endidx):
+        """ auto-completion for add command"""
+        signal.alarm(0) # avoid timer if any
+                 
+        possibilities = {} 
+        cards = [c.rsplit('.',1)[0] for c in self.cards]   
+        possibilities['category of parameter (optional)'] = \
+                          self.list_completion(text, cards)
+                          
+        return self.deal_multiple_categories(possibilities)
+    
+    def do_add(self, line):
+        """ syntax: add filename NAME VALUE
+            syntax: add filename LINE"""
+
+        args = self.split_arg(line)
+        misc.sprint(args)
+        misc.sprint(len(args))
+        if len(args) == 3 and args[0] in ['pythia8_card', 'pythia8_card.dat'] and self.has_PY8:
+            name= args[1]
+            value = args[2]
+            self.PY8Card.userSet(name, value)
+            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value))
+        elif len(args) > 0: 
+            if args[0] in self.cards:
+                card = args[0]
+            elif "%s.dat" % args[0] in self.cards:
+                card = "%s.dat" % args[0]
+            elif "%s_card.dat" % args[0] in self.cards: 
+                card = "%s_card.dat" % args[0]
+            elif self.has_ml and args[0].lower() == "madloop":
+                card = "MadLoopParams.dat"
+            else:
+                logger.error("unknow card %s. Please retry." % args[0])
+                return
+            
+            ff = open(pjoin(self.me_dir,'Cards',card),'a')
+            ff.write("%s \n" % line.split(None,1)[1])
+            ff.close()
+            self.reload_card(pjoin(self.me_dir,'Cards',card))
+            logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ))
+
 
     def help_asperge(self):
         """Help associated to the asperge command"""
@@ -3351,11 +3402,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
             files.cp(path, pjoin(self.me_dir, 'Cards', card_name))
+            self.reload_card(pjoin(self.me_dir, 'Cards', card_name))
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')
             if not self.mode == 'auto':
                 self.mother_interface.keep_cards(self.cards)
+            for card_name in self.cards:
+                self.reload_card(pjoin(self.me_dir, 'Cards', card_name))
 
     def open_file(self, answer):
         """open the file"""
@@ -3403,8 +3457,11 @@ You can also copy/paste, your event file here.''')
                 self.open_file(path)
             else:
                 raise
-            
-        # reload object to have it in sync
+        self.reload_card(path)
+        
+    def reload_card(self, path): 
+        """reload object to have it in sync"""
+        
         if path == pjoin(self.me_dir,'Cards','param_card.dat'):
             try:
                 self.param_card = check_param_card.ParamCard(path) 
