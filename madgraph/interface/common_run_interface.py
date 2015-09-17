@@ -3306,6 +3306,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             name= args[1]
             value = args[2]
             self.PY8Card.userSet(name, value)
+            self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
+                          pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                          print_only_visible=True)
             logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value))
         elif len(args) > 0: 
             if args[0] in self.cards:
