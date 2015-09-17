@@ -48,6 +48,10 @@ else:
 
 logger = logging.getLogger('madevent.cards')
 
+# A placeholder class to store unknown parameters with undecided format
+class UnknownType(str):
+    pass
+
 #dict
 class Banner(dict):
     """ """
@@ -953,7 +957,8 @@ class ConfigFile(dict):
             suggestions = [k for k in self.keys() if k.startswith(name[0].lower())]
             if len(suggestions)>0:
                 logger.debug("Did you mean one of the following: %s"%suggestions)
-            self.add_param(lower_name, self.format_variable(str(value), str, name))
+            self.add_param(lower_name, self.format_variable(UnknownType(value), 
+                                                             UnknownType, name))
             self.lower_to_case[lower_name] = name
             if change_userdefine:
                 self.user_set.add(lower_name)
@@ -1001,7 +1006,10 @@ class ConfigFile(dict):
                         (name, type(value), targettype, value)                
         else:
             # We have a string we have to format the attribute from the string
-            if targettype == bool:
+            if targettype == UnknownType:
+                # No formatting
+                pass
+            elif targettype == bool:
                 value = value.strip()
                 if value.lower() in ['0', '.false.', 'f', 'false', 'off']:
                     value = False
@@ -1041,7 +1049,7 @@ class ConfigFile(dict):
                 except ValueError:
                     raise Exception, "%s can not be mapped to a float" % value
             else:
-                raise Exception, "type %s is not handle by MadLoopParam" % targettype
+                raise Exception, "type %s is not handle by the card" % targettype
             
         return value
             
@@ -1222,19 +1230,10 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:qCut", 10.0)
         # for CKKWL merging
         self.add_param("Merging:TMS", 10.0)        
-        self.add_param("Merging:Process", 'pp>LEPTONS,NEUTRINOS')        
+        self.add_param("Merging:Process", '<set_by_user>')        
         
         # Hidden parameters always written out
         # ====================================
-        self.add_param("PDF:pSet", 'LHAPDF5:CT10.LHgrid',
-            hidden='ALWAYS_WRITTEN',
-            comment='Reminder: Parameter below is shower tune dependent.')
-        self.add_param("SpaceShower:alphaSvalue", 0.118,
-            hidden='ALWAYS_WRITTEN',
-            comment='Reminder: Parameter below is shower tune dependent.')
-        self.add_param("TimeShower:alphaSvalue", 0.118,
-            hidden='ALWAYS_WRITTEN',
-            comment='Reminder: Parameter below is shower tune dependent.')
         self.add_param("Beams:frameType", 4,
             hidden='ALWAYS_WRITTEN',
             comment='Tell Pythia8 that an LHEF input is used.')
@@ -1244,6 +1243,12 @@ class PY8Card(ConfigFile):
 
         # Hidden parameters written out only if user_set or system_set
         # ============================================================
+        self.add_param("PDF:pSet", 'LHAPDF5:CT10.LHgrid', hidden=True,
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("SpaceShower:alphaSvalue", 0.118, hidden=True,
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("TimeShower:alphaSvalue", 0.118, hidden=True,
+            comment='Reminder: Parameter below is shower tune dependent.')
         # for MLM merging
         self.add_param("JetMatching:merge", False, hidden=True,
           comment='Specifiy if we are merging sample of different multiplicity.')
@@ -1347,16 +1352,19 @@ class PY8Card(ConfigFile):
 
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
-        request."""
-        self.__setitem__(name, value, change_userdefine=False, **opts)
-        self.system_set.add(name.lower())
+        request and only if not already user_set."""
+        if name.lower() not in self.user_set:
+            self.__setitem__(name, value, change_userdefine=False, **opts)
+            self.system_set.add(name.lower())
         
     @staticmethod
     def pythia8_formatting(value, formatv=None):
         """format the variable into pythia8 card convention.
         The type is detected by default"""
         if not formatv:
-            if isinstance(value, bool):
+            if isinstance(value,UnknownType):
+                formatv = 'unknown'                
+            elif isinstance(value, bool):
                 formatv = 'bool'
             elif isinstance(value, int):
                 formatv = 'int'
@@ -1369,6 +1377,9 @@ class PY8Card(ConfigFile):
                 formatv = 'str'
         else:
             assert formatv
+        if formatv == 'unknown':
+            # No formatting then
+            return str(value)
         if formatv == 'bool':
             if str(value) in ['1','T','.true.','True','on']:
                 return 'on'

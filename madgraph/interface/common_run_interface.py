@@ -1301,9 +1301,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # ask for edition of the card.
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
             if no_default:
-                logger.info('No delphes_card detected, so not run Delphes')
+                logger.info('No delphes_card detected, so not running Delphes')
                 return
-
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
@@ -1315,6 +1314,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.ask_edit_cards(['delphes_card.dat'], args)
             else:
                 self.ask_edit_cards(['delphes_card.dat', 'delphes_trigger.dat'], args)
+
+###### TEMPORARY STOP AS DELPHES IS NOT YET IMPLEMENTED FOR HEPMC PYTHIA8 OUTPUT
+        if os.path.isfile(pjoin(self.me_dir, 'Events', self.run_name,
+                                "%s_pythia8_events.hepmc"%self.run_tag)) and \
+           not os.path.isfile(pjoin(self.me_dir, 'Events', self.run_name,
+                                             "pythia_events.hep"%self.run_tag)):
+            raise MadGraph5Error, 'Delphes interface to Pythia8 hepmc output'+\
+                                                           ' not available yet.'
+################################################################################
 
         self.update_status('Running Delphes', level=None)
         # Wait that the gunzip of the files is finished (if any)

@@ -17,7 +17,9 @@ JetMatching:qCut         = 10
 ! ------------------------------------------------------
 !
 Merging:TMS              = 10
-Merging:Process          = pp>LEPTONS,NEUTRINOS
+! This must be set manually, according to Pythia8 directives.
+! An example of possible value is 'pp>LEPTONS,NEUTRINOS'
+Merging:Process          = <set_by_user>
 !
 ! ==========================
 ! User customized parameters 

@@ -1015,12 +1015,12 @@ class CheckValidForCmd(object):
             raise self.InvalidCmd('only one laststep argument is allowed')
      
         # If not pythia-pgs path
-        if not self.options['pythia8']:
+        if not self.options['pythia8_path']:
             logger.info('Retry reading configuration file to find pythia8 path')
             self.set_configuration()
             
-        if not self.options['pythia8'] or not \
-            os.path.exists(pjoin(self.options['pythia8'],'bin','pythia8-config')):
+        if not self.options['pythia8_path'] or not \
+            os.path.exists(pjoin(self.options['pythia8_path'],'bin','pythia8-config')):
             error_msg = 'No valid pythia8 path set.\n'
             error_msg += 'Please use the set command to define the path and retry.\n'
             error_msg += 'You can also define it in the configuration file.\n'
@@ -1046,11 +1046,13 @@ class CheckValidForCmd(object):
                                                   'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '
                                                                       % args[0])
-            self.set_run_name(args[0], tag, 'pythia8')
+            # Here pythia is just the level keyword, so it shouldn't be changed to pythia8
+            self.set_run_name(args[0], tag, 'pythia')
         else:
             if tag:
                 self.run_card['run_tag'] = tag
-            self.set_run_name(self.run_name, tag, 'pythia8')
+            # Here pythia is just the level keyword, so it shouldn't be changed to pythia8
+            self.set_run_name(self.run_name, tag, 'pythia')
 
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
@@ -3226,7 +3228,152 @@ Beware that this can be dangerous for local multicore runs.""")
             self.configure_directory(html_opening =False)
             self.check_pythia8(args)        
 
-        pass
+        # the args are modify and the last arg is always the mode 
+        if not no_default:
+            self.ask_pythia_run_configuration(args[-1], pythia_version=8)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
+        # Update the banner with the pythia card
+        if not self.banner or len(self.banner) <=1:
+            # Here the level keyword 'pythia' must not be changed to 'pythia8'.
+            self.banner = banner_mod.recover_banner(self.results, 'pythia')
+
+        pythia_main = pjoin(self.options['pythia8'],'share',
+                                                  'Pythia8','examples','main89')
+        
+        # Again here 'pythia' is just a keyword for the simulation level.
+        self.update_status('Running Pythia8', 'pythia')
+        
+        tag = self.run_tag        
+        # Write Pythia8 card
+        PY8_Card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'))
+        ########################################################################
+        ### Special setup of the Hidden parameters in the card for each MG type of run
+        PY8_Card.subruns[0].systemSet('Beams:LHEF',
+                         pjoin(self.me_dir,"Events","unweighted_events.lhe.gz"))        
+        if int(self.run_card['ickkw'])==1:
+            # Specific MLM settings
+            PY8_Card.systemSet('JetMatching:merge',True)
+            PY8_Card.systemSet('JetMatching:scheme',1)
+            PY8_Card.systemSet('JetMatching:setMad',True)
+            PY8_Card.systemSet('JetMatching:coneRadius',self.run_card['drjj'])
+            PY8_Card.systemSet('JetMatching:etaJetMax',self.run_card['etaj'])
+            logger.error("MLM automatic 'JetMatching:nJetMax' setting not"+
+                                                            " implemented yet!")
+            TO_BE_IMPLEMENTED = -1
+            PY8_Card.systemSet('JetMatching:nJetMax',TO_BE_IMPLEMENTED)
+        elif int(self.run_card['ickkw'])==2:
+            # Specific CKKW settings
+            if PY8_Card['Merging:Process']=='<set_by_user>':
+                raise self.InvalidCmd('When running CKKW merging, the user must'+
+                    " specifiy the option 'Merging:Process' in pythia8_card.dat")
+            PY8_Card.systemSet('TimeShower:pTmaxMatch',1)
+            PY8_Card.systemSet('SpaceShower:pTmaxMatch',1)
+            PY8_Card.systemSet('SpaceShower:rapidityOrder',False)
+            if self.run_card['fixed_ren_scale']:
+                PY8_Card.systemSet('Merging:muRen',
+                              self.run_card['scale']*self.run_card['scalefact'])
+                PY8_Card.systemSet('Merging:muRenInME',
+                              self.run_card['scale']*self.run_card['scalefact'])
+            if self.run_card['fixed_fac_scale']:
+                PY8_Card.systemSet('Merging:muFac',self.run_card['scalefact']*
+                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
+                PY8_Card.systemSet('Merging:muFacInME',self.run_card['scalefact']*
+                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
+            PY8_Card.subruns[0].systemSet('Merging:doPTLundMerging',True)
+        ########################################################################
+        pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
+                                                         '%s_pythia8.cmd' % tag)
+        cmd_card = StringIO.StringIO()
+        PY8_Card.write(cmd_card,pjoin(self.me_dir,'Cards','pythia8_card_default.dat'))
+        open(pythia_cmd_card,'w').write("""!
+! It is possible to run this card manually with:
+!    %s %s my_hepmc_output_events.hepmc
+!
+"""%(pythia_main,pythia_cmd_card)+cmd_card.getvalue())
+        
+        HepMC_event_output = pjoin(self.me_dir,'Events',self.run_name,
+                                                  '%s_pythia8_events.hepmc'%tag)
+        # launch pythia8
+        pythia_log = pjoin(self.me_dir, 'Events', self.run_name ,
+                                                         '%s_pythia8.log' % tag)
+        self.cluster.launch_and_wait(pythia_main, 
+                        argument= [pythia_cmd_card,HepMC_event_output],
+                        stdout= pythia_log,
+                        stderr=subprocess.STDOUT,
+                        cwd=pjoin(self.me_dir,'Events'))
+
+        os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe.gz"))
+
+        if not os.path.exists(HepMC_event_output):
+            logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
+            return
+        
+        self.to_store.append('pythia8')
+
+        # Find the matched cross-section
+        if int(self.run_card['ickkw']):
+            # read the line from the bottom of the file
+            pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
+                                                        '%s_pythia8.log' % tag))
+####################################################
+# MUST MODIFY main89 to output this.
+####################################################
+            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+            for line in pythia_log:
+                info = pythiare.search(line)
+                if not info:
+                    continue
+                try:
+                    # Pythia cross section in mb, we want pb
+                    sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                    Nacc = int(info.group('generated'))
+                    Ntry = int(info.group('tried'))
+                except ValueError:
+                    # xsec is not float - this should not happen
+                    self.results.add_detail('cross_pythia', 0)
+                    self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('error_pythia', 0)
+                else:
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
+                    #compute pythia error
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
+                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    # works both for fixed number of generated events and fixed accepted events
+                    self.results.add_detail('error_pythia', error_m)
+                break                 
+
+            pythia_log.close()
+        
+        pydir = pjoin(self.options['pythia-pgs_path'], 'src')
+        eradir = self.options['exrootanalysis_path']
+        madir = self.options['madanalysis_path']
+        td = self.options['td_path']
+
+        #Update the banner
+        self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
+        if int(self.run_card['ickkw']):
+            # Add the matched cross-section
+            if 'MGGenerationInfo' in self.banner:
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+            else:
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        self.banner.write(banner_path)
+        
+        # For now, bypass the hep2lhe step as we anyway have hepmc on our hands
+        # now. We will see what is the best way to proceed later and how to 
+        # link SysCalc to this (i.e. check with Simon).
+        logger.error('Hep2Lhe (for DJR plots) and SysCalc not compatible with Pythia8 yet!')
+
+        self.update_status('finish', level='pythia', makehtml=False)
+        if self.options['delphes_path']:
+            self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+        self.print_results_in_shell(self.results.current)
     
     def do_pythia(self, line):
         """launch pythia"""
@@ -3326,10 +3473,7 @@ Beware that this can be dangerous for local multicore runs.""")
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
-        
-        
- 
-        
+
         #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
         if int(self.run_card['ickkw']):
@@ -3663,7 +3807,7 @@ Beware that this can be dangerous for local multicore runs.""")
             return 
         
         tag = self.run_card['run_tag']
-        self.update_status('storring files of previous run', level=None,\
+        self.update_status('storing files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
             if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
@@ -3677,8 +3821,18 @@ Beware that this can be dangerous for local multicore runs.""")
             t = tag
             misc.gzip(pjoin(p,'pythia_events.hep'), 
                       stdout=pjoin(p,'%s/%s_pythia_events.hep' % (n,t)))
-
             self.to_store.remove('pythia')
+
+        if 'pythia8' in self.to_store:
+            self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
+            
+            p = pjoin(self.me_dir,'Events')
+            n = self.run_name
+            t = tag
+            misc.gzip(pjoin(p,'%s_pythia8_events.hepmc'%t), 
+                      stdout=pjoin(p,'%s/%s_pythia8_events.hepmc' % (n,t)))
+            self.to_store.remove('pythia8')            
+            
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
@@ -4566,20 +4720,29 @@ Beware that this can be dangerous for local multicore runs.""")
         return
     
     ############################################################################
-    def ask_pythia_run_configuration(self, mode=None):
+    def ask_pythia_run_configuration(self, mode=None, pythia_version=6):
         """Ask the question when launching pythia"""
         
-        available_mode = ['0', '1', '2']
+        pythia_suffix = '' if pythia_version==6 else '%d'%pythia_version
+        
+        available_mode = ['0', '1']
+        if pythia_version==6:
+            available_mode.append('2')
         if self.options['delphes_path']:
                 available_mode.append('3')
-        name = {'0': 'auto', '1': 'pythia', '2':'pgs', '3':'delphes'}
+        name = {'0': 'auto', '2':'pgs', '3':'delphes'}
+        name['1'] = 'pythia%s'%pythia_suffix
         options = available_mode + [name[val] for val in available_mode]
         question = """Which programs do you want to run?
-    0 / auto    : running existing card
-    1 / pythia  : Pythia 
-    2 / pgs     : Pythia + PGS\n"""
+    0 / auto    : running existing card"""
+        if pythia_version==6:
+            question += """1 / pythia  : Pythia """
+            question += """2 / pgs     : Pythia + PGS\n"""
+        else:
+            question += """"1 / pythia8  : Pythia8 """
+
         if '3' in available_mode:
-            question += """    3 / delphes  : Pythia + Delphes.\n"""
+            question += """    3 / delphes  : Pythia%s + Delphes.\n"""%pythia_suffix
 
         if not self.force:
             if not mode:
@@ -4593,18 +4756,19 @@ Beware that this can be dangerous for local multicore runs.""")
         auto = False
         if mode == 'auto':
             auto = True
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+            if pythia_version==6 and os.path.exists(pjoin(self.me_dir,
+                                                      'Cards', 'pgs_card.dat')):
                 mode = 'pgs'
             elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
                 mode = 'delphes'
             else: 
-                mode = 'pythia'
+                mode = 'pythia%s'%pythia_suffix
         logger.info('Will run in mode %s' % mode)
                                                
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed) remove pointless one
-        cards = ['pythia_card.dat']
-        if mode == 'pgs':
+        cards = ['pythia%s_card.dat'%pythia_suffix]
+        if mode == 'pgs' and pythia_version==6:
             cards.append('pgs_card.dat')
         if mode == 'delphes':
             cards.append('delphes_card.dat')
@@ -4623,10 +4787,6 @@ Beware that this can be dangerous for local multicore runs.""")
             self.ask_edit_cards(cards)
 
         return mode
-                
-  
-            
-
                 
 #===============================================================================
 # MadEventCmd
