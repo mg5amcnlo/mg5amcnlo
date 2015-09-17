@@ -417,6 +417,8 @@ class Banner(dict):
                 tag = 'MGRunCard'
             elif 'pythia_card' in card_name:
                 tag = 'MGPythiaCard'
+            elif 'pythia8_card' in card_name:
+                tag = 'MGPythiaCard'
             elif 'pgs_card' in card_name:
                 tag = 'MGPGSCard'
             elif 'delphes_card' in card_name:
@@ -1397,7 +1399,7 @@ class PY8Card(ConfigFile):
         elif formatv == 'float':
             return '%.10e' % float(value)
         elif formatv == 'str':
-            return "'%s'" % value
+            return "%s" % value
 
     def write(self, output_file, template, read_subrun=False, 
                                                       print_only_visible=False):

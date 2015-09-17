@@ -35,6 +35,7 @@ import sys
 import traceback
 import time
 import tarfile
+import StringIO
 
 try:
     import readline
@@ -1056,8 +1057,8 @@ class CheckValidForCmd(object):
 
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
-        if os.path.exists('%s.gz' % input_file):
-            files.ln(input_file, os.path.dirname(output_file))
+        if os.path.exists('%s.gz'%input_file):
+            files.ln('%s.gz'%input_file, os.path.dirname(output_file))
         else:
             if not os.path.exists(input_file):
                 raise self.InvalidCmd('No event file corresponding to %s run. '
@@ -3240,8 +3241,8 @@ Beware that this can be dangerous for local multicore runs.""")
         if not self.banner or len(self.banner) <=1:
             # Here the level keyword 'pythia' must not be changed to 'pythia8'.
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
-
-        pythia_main = pjoin(self.options['pythia8'],'share',
+        
+        pythia_main = pjoin(self.options['pythia8_path'],'share',
                                                   'Pythia8','examples','main89')
         
         # Again here 'pythia' is just a keyword for the simulation level.
@@ -3255,15 +3256,19 @@ Beware that this can be dangerous for local multicore runs.""")
         PY8_Card.subruns[0].systemSet('Beams:LHEF',
                          pjoin(self.me_dir,"Events","unweighted_events.lhe.gz"))        
         if int(self.run_card['ickkw'])==1:
+            if 'JetMatching:qCut'.lower() not in PY8_Card.user_set:
+                PY8_Card.systemSet('JetMatching:qCut',1.2*self.run_card['xqcut'])                
             # Specific MLM settings
             PY8_Card.systemSet('JetMatching:merge',True)
             PY8_Card.systemSet('JetMatching:scheme',1)
             PY8_Card.systemSet('JetMatching:setMad',True)
             PY8_Card.systemSet('JetMatching:coneRadius',self.run_card['drjj'])
             PY8_Card.systemSet('JetMatching:etaJetMax',self.run_card['etaj'])
+################################################################################
             logger.error("MLM automatic 'JetMatching:nJetMax' setting not"+
                                                             " implemented yet!")
             TO_BE_IMPLEMENTED = -1
+################################################################################
             PY8_Card.systemSet('JetMatching:nJetMax',TO_BE_IMPLEMENTED)
         elif int(self.run_card['ickkw'])==2:
             # Specific CKKW settings
@@ -3295,11 +3300,14 @@ Beware that this can be dangerous for local multicore runs.""")
 !
 """%(pythia_main,pythia_cmd_card)+cmd_card.getvalue())
         
-        HepMC_event_output = pjoin(self.me_dir,'Events',self.run_name,
+        HepMC_event_output = pjoin(self.me_dir,'Events',
                                                   '%s_pythia8_events.hepmc'%tag)
         # launch pythia8
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.log' % tag)
+        logger.info('Follow Pythia8 shower by running the following command'+
+                        ' (in a separate terminal):\n    tail -f %s'%pythia_log)
+
         self.cluster.launch_and_wait(pythia_main, 
                         argument= [pythia_cmd_card,HepMC_event_output],
                         stdout= pythia_log,
@@ -3308,7 +3316,8 @@ Beware that this can be dangerous for local multicore runs.""")
 
         os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe.gz"))
 
-        if not os.path.exists(HepMC_event_output):
+        if not os.path.isfile(pythia_log) or \
+             'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[-20]):
             logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
             return
         
@@ -3319,11 +3328,17 @@ Beware that this can be dangerous for local multicore runs.""")
             # read the line from the bottom of the file
             pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
                                                         '%s_pythia8.log' % tag))
+            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
+            for line in pythia_log:
 ####################################################
 # MUST MODIFY main89 to output this.
 ####################################################
-            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
-            for line in pythia_log:
+                logger.error('Main89 must be modified so that MG5_aMC can parse its output.')
+                self.results.add_detail('cross_pythia8', 0)
+                self.results.add_detail('nb_event_pythia8', 0)
+                self.results.add_detail('error_pythia8', 0)
+                break
+####################################################    
                 info = pythiare.search(line)
                 if not info:
                     continue
@@ -3334,17 +3349,17 @@ Beware that this can be dangerous for local multicore runs.""")
                     Ntry = int(info.group('tried'))
                 except ValueError:
                     # xsec is not float - this should not happen
-                    self.results.add_detail('cross_pythia', 0)
-                    self.results.add_detail('nb_event_pythia', 0)
-                    self.results.add_detail('error_pythia', 0)
+                    self.results.add_detail('cross_pythia8', 0)
+                    self.results.add_detail('nb_event_pythia8', 0)
+                    self.results.add_detail('error_pythia8', 0)
                 else:
-                    self.results.add_detail('cross_pythia', sigma_m)
-                    self.results.add_detail('nb_event_pythia', Nacc)
+                    self.results.add_detail('cross_pythia8', sigma_m)
+                    self.results.add_detail('nb_event_pythia8', Nacc)
                     #compute pythia error
                     error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
                     error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
                     # works both for fixed number of generated events and fixed accepted events
-                    self.results.add_detail('error_pythia', error_m)
+                    self.results.add_detail('error_pythia8', error_m)
                 break                 
 
             pythia_log.close()
@@ -3359,9 +3374,9 @@ Beware that this can be dangerous for local multicore runs.""")
         if int(self.run_card['ickkw']):
             # Add the matched cross-section
             if 'MGGenerationInfo' in self.banner:
-                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia8']
             else:
-                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia8']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
         
