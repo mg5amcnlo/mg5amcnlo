@@ -1230,19 +1230,19 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
         #check if the param_card defines a scan.
-        if self.param_card_iterator[0]:
+        if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
-            self.param_card_iterator = [[],[]] #avoid to next generate go trough here
-            param_card_iterator[1].store_entry(self.run_name, self.results.current['cross'])
+            self.param_card_iterator = [] #avoid to next generate go trough here
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
             #go trough the scal
-            for card in param_card_iterator[0]:
+            for card in param_card_iterator:
                 card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                 self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                param_card_iterator[1].store_entry(self.run_name, self.results.current['cross'])
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
             #restore original param_card
-            param_card_iterator[1].write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             logger.info("write all cross-section results in %s" % pjoin('Events','scan_%s.txt' %self.run_name), '$MG:color:BLACK')
-            param_card_iterator[1].write_summary(pjoin(self.me_dir, 'Events','scan_%s.txt' %self.run_name))
+            param_card_iterator.write_summary(pjoin(self.me_dir, 'Events','scan_%s.txt' %self.run_name))
             
     ############################################################################      
     def do_compile(self, line):

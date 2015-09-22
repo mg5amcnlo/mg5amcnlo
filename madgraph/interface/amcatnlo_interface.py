@@ -636,7 +636,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             stop = self.define_child_cmd_interface(ME)                
             return stop
 
-        ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
+        ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1],
+                                                  shell = hasattr(self, 'do_shell'),
+                                                  **options)
         ext_program.run()
         
                     

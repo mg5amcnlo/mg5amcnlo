@@ -59,6 +59,9 @@ class Parameter (object):
 
 
         data = data.split()
+        if any(d.startswith('scan') for d in data):
+            position = [i for i,d in enumerate(data) if d.startswith('scan')][0]
+            data = data[:position] + [' '.join(data[position:])] 
         if not len(data):
             return
         try:
@@ -589,16 +592,39 @@ class ParamCardIterator(ParamCard):
     def __init__(self, input_path=None):
         super(ParamCardIterator, self).__init__(input_path=input_path)
         self.itertag = [] #all the current value use
-        self.cross = {}   # keep track of all the cross-section computed 
+        self.cross = []   # keep track of all the cross-section computed 
         self.param_order = []
         
     def __iter__(self):
         """generate the next param_card (in a abstract way) related to the scan.
            Technically this generates only the generator."""
         
+        if hasattr(self, 'iterator'):
+            return self.iterator
+        self.iterator = self.iterate()
+        return self.iterator
+    
+    def next(self, autostart=False):
+        """call the next iteration value"""
+        try:
+            iterator = self.iterator
+        except:
+            if autostart:
+                iterator = self.__iter__()
+            else:
+                raise
+        try:
+            out = iterator.next()
+        except StopIteration:
+            del self.iterator
+            raise
+        return out
+    
+    def iterate(self):
+        """create the actual generator"""
         all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
 
-        pattern = re.compile(r'''scan(?P<id>\d*):(?P<value>[^#]*)''', re.I)
+        pattern = re.compile(r'''scan(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
         # First determine which parameter to change and in which group
         # so far only explicit value of the scan (no lambda function are allowed)
         for block in self.order:
@@ -639,22 +665,20 @@ class ParamCardIterator(ParamCard):
     
     def store_entry(self, run_name, cross):
         """store the value of the cross-section"""
-        self.cross[tuple(self.itertag)] = {'run_name': run_name, 'cross':cross} 
+        self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross':cross})
+        
 
     def write_summary(self, path):
         """ """
         
         ff = open(path, 'w')
         ff.write("#run_name %s cross\n" % ' '.join(self.param_order))
-        for bench, values in self.cross.items():
-            cross = values['cross']
-            name = values['run_name']
-            bench = [str(p) for p in bench]
+        for info in self.cross:
+            bench = [str(p) for p in info['bench']]
+            cross = info['cross']
+            name = info['run_name']
             ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
             
-        
-        
-        
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of

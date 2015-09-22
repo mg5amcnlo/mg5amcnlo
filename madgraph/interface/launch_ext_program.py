@@ -474,6 +474,7 @@ class aMCatNLOLauncher(ExtLauncher):
     def __init__(self, running_dir, cmd_int, run_mode='', unit='pb', **option):
         """ initialize the StandAlone Version"""
 
+        misc.sprint(option)
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)
         #self.executable = os.path.join('.', 'bin','generate_events')
 
@@ -481,7 +482,7 @@ class aMCatNLOLauncher(ExtLauncher):
         assert hasattr(self, 'cluster')
         assert hasattr(self, 'multicore')
         assert hasattr(self, 'name')
-#        assert hasattr(self, 'shell')
+        assert hasattr(self, 'shell')
 
         self.unit = unit
         self.run_mode = run_mode
@@ -519,7 +520,8 @@ class aMCatNLOLauncher(ExtLauncher):
                 nb_node=max_node
                 
         import madgraph.interface.amcatnlo_run_interface as run_int
-        if hasattr(self, 'shell'):
+        
+        if hasattr(self, 'shell') and self.shell:
             usecmd = run_int.aMCatNLOCmdShell(me_dir=self.running_dir, options = self.cmd_int.options)
         else:
             usecmd = run_int.aMCatNLOCmd(me_dir=self.running_dir, options = self.cmd_int.options)
@@ -542,7 +544,7 @@ class aMCatNLOLauncher(ExtLauncher):
                      usecmd, interface=False)
         #launch.me_dir = self.running_dir
         option_line = ' '.join([' --%s' % opt for opt in self.options.keys() \
-                if self.options[opt] and not opt in ['cluster', 'multicore', 'name', 'appl_start_grid']])
+                if self.options[opt] and not opt in ['cluster', 'multicore', 'name', 'appl_start_grid','shell']])
         if self.options['name']:
             option_line += ' --name %s' %  self.options['name']
         if 'appl_start_grid' in self.options and  self.options['appl_start_grid']:

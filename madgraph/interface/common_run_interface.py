@@ -528,7 +528,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.me_dir = me_dir
         self.options = options
         
-        self.param_card_iterator = [[],[]] #an placeholder containing a generator of paramcard for scanning
+        self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
 
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
@@ -1609,10 +1609,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         
         if pattern_scan.search(text):
+            if not hasattr(self, 'do_shell'):
+                # we are in web mode => forbid scan due to security risk
+                raise Exception, "Scan are not allowed in web mode"
             # at least one scan parameter found. create an iterator to go trough the cards
             main_card = check_param_card.ParamCardIterator(text)
-            self.param_card_iterator = (main_card.__iter__(), main_card)
-            first_card = self.param_card_iterator[0].next()
+            self.param_card_iterator = main_card
+            first_card = main_card.next(autostart=True)
             first_card.write(path)
             return self.check_param_card(path, run)
         
@@ -2648,9 +2651,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # do not set lowercase the case-sensitive parameters from the shower_card
         if args[0].lower() not in ['analyse', 'extralibs', 'extrapaths', 'includepaths']:
             args[:-1] = [ a.lower() for a in args[:-1]]
-        if any(t.startswith('scan') for t in args):
-            index = [i for i,t in enumerate(args) if t.startswith('scan')][0]
-            args = args[:index] + [' '.join(args[index:])]
         # special shortcut:
         if args[0] in self.special_shortcut:
             if len(args) == 1:
@@ -2816,6 +2816,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
                                                   and card in ['','param_card']:
+            #special treatment for scan
+            if any(t.startswith('scan') for t in args):
+                index = [i for i,t in enumerate(args) if t.startswith('scan')][0]
+                args = args[:index] + [' '.join(args[index:])]
+                
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 text += ' in the format < set card parameter value>'

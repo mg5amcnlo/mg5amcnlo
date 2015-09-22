@@ -5426,7 +5426,9 @@ This implies that with decay chains:
                     ME.exec_cmd(line)
                 stop = self.define_child_cmd_interface(ME)
                 return stop
-            ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
+            ext_program = launch_ext.aMCatNLOLauncher( args[1], self,
+                                                       shell = hasattr(self, 'do_shell'),
+                                                        **options)
         elif args[0] == 'madweight':
             import madgraph.interface.madweight_interface as madweight_interface
             if options['interactive']:
