@@ -85,7 +85,9 @@ class IOExportFKSEWTest(unittest.TestCase,\
 
             myproc = MG.ProcessDefinition({'legs': myleglist,
                                  'model': mymodel,
-                                 'orders':{'QCD': 0, 'QED': 2},
+                                 'orders':{'QCD': 0, 'QED': 4},
+                                 'born_orders':{'QCD': 0, 'QED': 2},
+                                 'squared_orders':{'QCD': 0, 'QED': 6},
                                  'perturbation_couplings': ['QED'],
                                  'NLO_mode': 'real'})
             my_process_definitions = MG.ProcessDefinitionList([myproc])
@@ -161,13 +163,13 @@ Parameters              alpha_s
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel)
         
         process_exporter.write_coloramps_file(
                     writers.FortranWriter(self.give_pos(self.created_files[0])),
                     mapconfigs,
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel)        
 
         self.assertFileContains(self.created_files[0], goal)
@@ -593,7 +595,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
         nflows = \
             process_exporter.write_leshouche_file(
                     writers.FortranWriter(self.give_pos(self.created_files[0])),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel)  
 
         self.assertFileContains(self.created_files[0], goal) 
@@ -1376,7 +1378,7 @@ C     Number of configs
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos(self.created_files[0])),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel)
 
         self.assertFileContains(self.created_files[0], goal) 
@@ -1394,7 +1396,7 @@ C     Number of configs
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel)
 
         process_exporter.write_decayBW_file(
@@ -1435,12 +1437,12 @@ C     Number of configs
         nconfigs, mapconfigs, s_and_t_channels = \
             process_exporter.write_configs_file(
                     writers.FortranWriter(self.give_pos('test1')),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel)
         
         process_exporter.write_props_file(
                     writers.FortranWriter(self.give_pos(self.created_files[0])),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel,
                     s_and_t_channels)        
 
@@ -1695,12 +1697,12 @@ C     ----------
         nflows = \
             process_exporter.write_leshouche_file(
                     writers.FortranWriter(self.give_pos('test2')),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     self.myfortranmodel)  
                 
         process_exporter.write_born_nhel_file(
                     writers.FortranWriter(self.give_pos(self.created_files[0])),
-                    self.myfks_me.born_matrix_element,
+                    self.myfks_me.born_me,
                     nflows,
                     self.myfortranmodel,
                     ncolor)  

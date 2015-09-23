@@ -1948,6 +1948,10 @@ c to greatly reduce the calls to the analysis routines.
       external momenta_equal,pdg_equal
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       double precision www(max_weight)
+      ! stuff for the unwgt function
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      double precision unwgtfun
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c fill the plots_wgts. Check if we can sum weights together before
@@ -1983,6 +1987,7 @@ c contribution makes sure that it is added as a new element.
             exit
          enddo
       enddo
+      call unweight_function(p_born,unwgtfun)
       do i=1,icontr
          if (plot_wgts(1,i).ne.0d0) then
             if (iwgt.gt.max_weight) then
@@ -1991,7 +1996,7 @@ c contribution makes sure that it is added as a new element.
                stop 1
             endif
             do j=1,iwgt
-               www(j)=plot_wgts(j,i)
+               www(j)=plot_wgts(j,i)/unwgtfun
             enddo
 c call the analysis/histogramming routines
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
