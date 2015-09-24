@@ -117,7 +117,7 @@ def get_pkg_info(info_str=None):
     elif MADEVENT:
         info_dict ={}
         info_dict['version'] = open(pjoin(internal.__path__[0],'..','..','MGMEVersion.txt')).read().strip()
-        info_dict[date] = '20xx-xx-xx'                        
+        info_dict['date'] = '20xx-xx-xx'                        
     else:
         info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
