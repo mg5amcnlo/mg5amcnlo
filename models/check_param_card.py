@@ -624,19 +624,25 @@ class ParamCardIterator(ParamCard):
         """create the actual generator"""
         all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
 
-        pattern = re.compile(r'''scan(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+        pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
         # First determine which parameter to change and in which group
         # so far only explicit value of the scan (no lambda function are allowed)
         for block in self.order:
             for param in block:
                 if isinstance(param.value, str) and param.value.strip().lower().startswith('scan'):
-                    key, def_list = pattern.findall(param.value)[0]
+                    try:
+                        key, def_list = pattern.findall(param.value)[0]
+                    except:
+                        raise Exception, "Fail to handle scanning tag: Please check that the syntax is valid"
                     if key == '': 
                         key = -1 * len(all_iterators)
                     if key not in all_iterators:
                         all_iterators[key] = []
-                    all_iterators[key].append( (param, eval(def_list)))
-        
+                    try:
+                        all_iterators[key].append( (param, eval(def_list)))
+                    except SyntaxError:
+                        raise Exception, "Fail to handle your scan definition. Please check your syntax."
+                    
         keys = all_iterators.keys() # need to fix an order for the scan
         param_card = ParamCard(self)
         #store the type of parameter
@@ -672,7 +678,7 @@ class ParamCardIterator(ParamCard):
         """ """
         
         ff = open(path, 'w')
-        ff.write("#run_name %s cross\n" % ' '.join(self.param_order))
+        ff.write("#run_name %s cross(pb)\n" % ' '.join(self.param_order))
         for info in self.cross:
             bench = [str(p) for p in info['bench']]
             cross = info['cross']

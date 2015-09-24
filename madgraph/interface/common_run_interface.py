@@ -3056,6 +3056,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
                     return
             elif value.startswith('scan'):
+                if ':' not in value:
+                    logger.warning('Invalid input: \'scan\' mode requires a \':\' before the definition.')
+                    return
+                tag = value.split(':')[0]
+                tag = tag[4:].strip()
+                if tag and not tag.isdigit():
+                    logger.warning('Invalid input: scan tag need to be integer and not "%s"' % tag)
+                    return
+                
+                
                 pass
             else:
                 try:
