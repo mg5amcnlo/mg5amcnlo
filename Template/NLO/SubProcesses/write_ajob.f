@@ -53,7 +53,7 @@ c-----
          if (index(buff,'TAGTAGTAGTAGTAG').ne.0) exit
          write(lun,15) buff
       enddo
-      write(lun,'(a$)') 'for i in '
+      write(lun,'(a$)') 'for i in $channel '
       return
  99   write (*,*) 'ajob_template or ajob_template_cluster '/
      &     /'does not have the correct format'

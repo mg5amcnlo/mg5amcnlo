@@ -1317,70 +1317,25 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if not 'only_generation' in options.keys():
             options['only_generation'] = False
 
+        # for second step in applgrid mode, do only the event generation step
         if mode in ['LO', 'NLO'] and self.run_card['iappl'] == 2 and not options['only_generation']:
             options['only_generation'] = True
         self.get_characteristics(pjoin(self.me_dir, 'SubProcesses', 'proc_characteristics'))
-
-        if self.cluster_mode == 1:
-            cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](**self.options)
-        if self.cluster_mode == 2:
-            try:
-                import multiprocessing
-                if not self.nb_core:
-                    try:
-                        self.nb_core = int(self.options['nb_core'])
-                    except TypeError:
-                        self.nb_core = multiprocessing.cpu_count()
-                logger.info('Using %d cores' % self.nb_core)
-            except ImportError:
-                self.nb_core = 1
-                logger.warning('Impossible to detect the number of cores => Using One.\n'+
-                        'Use set nb_core X in order to set this number and be able to'+
-                        'run in multicore.')
-
-            self.cluster = cluster.MultiCore(**self.options)
+        self.setup_cluster_or_multicore()
         self.update_random_seed()
         #find and keep track of all the jobs
         folder_names = {'LO': ['born_G*'], 'NLO': ['all_G*'],
                     'aMC@LO': ['GB*'], 'aMC@NLO': ['GF*']}
         folder_names['noshower'] = folder_names['aMC@NLO']
         folder_names['noshowerLO'] = folder_names['aMC@LO']
-        job_dict = {}
         p_dirs = [d for d in \
                 open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
         #find jobs and clean previous results
-        if not options['only_generation'] and not options['reweightonly']:
-            self.update_status('Cleaning previous results', level=None)
-        for dir in p_dirs:
-            job_dict[dir] = [file for file in \
-                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                                 if file.startswith('ajob')] 
-            #find old folders to be removed
-            for obj in folder_names[mode]:
-                to_rm = [file for file in \
-                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                             if file.startswith(obj[:-1]) and \
-                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
-                #always clean dirs for the splitted event generation
-                # do not include the born_G/ grid_G which should be kept when
-                # doing a f.o. run keeping old grids
-                to_always_rm = [file for file in \
-                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                             if file.startswith(obj[:-1]) and
-                             '_' in file and not '_G' in file and \
-                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
-                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
-
-                if not options['only_generation'] and not options['reweightonly']:
-                    to_always_rm.extend(to_rm)
-                    if os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz')):
-                        to_always_rm.append(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz'))
-                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
+        job_dict = self.clean_previous_results(options,p_dirs,folder_names[mode])
 
         mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
 
+        # Re-distribute the grids for the 2nd step of the applgrid running
         if self.run_card['iappl'] == 2:
             self.applgrid_distribute(options,mode,p_dirs)
 
@@ -1390,136 +1345,53 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
         devnull = os.open(os.devnull, os.O_RDWR) 
+
         if mode in ['LO', 'NLO']:
             # this is for fixed order runs
             mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
             req_acc = self.run_card['req_acc_FO']
-            if not options['only_generation'] and req_acc != -1:
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, '-1', '6','0.10') 
-                self.update_status('Setting up grids', level=None)
-                self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
-            elif not options['only_generation']:
-                npoints = self.run_card['npoints_FO_grid']
-                niters = self.run_card['niters_FO_grid']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], 0, npoints, niters) 
-                self.update_status('Setting up grids', level=None)
-                self.run_all(job_dict, [['0', mode_dict[mode], '0']], 'Setting up grids')
 
-            if req_acc != -1 and req_acc <= 0.003 and not options['only_generation']:
-                # required accuracy is rather smal. It is more
-                # efficient to do an extra step in between with a
-                # required accuracy of 10*req_acc, and only after that
-                # to go to final req_acc. This is particularly true
-                # for the plots, that otherwise might see larger
-                # fluctuations from the first (couple of) iterations.
-                req_accs=[min(req_acc*10,0.01),req_acc]
-            else:
-                req_accs=[req_acc]
+            # create a list of tuples with all the jobs that need to be run
+            integration_step=-1
+            jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
+                                req_acc,mode_dict[mode],integration_step,mode,fixed_order=True)
+            jobs_to_collect=copy.copy(jobs_to_run)
 
-            for req_acc in req_accs:
-                npoints = self.run_card['npoints_FO']
-                niters = self.run_card['niters_FO']
-                self.write_madin_file(pjoin(self.me_dir, 'SubProcesses'), mode_dict[mode], -1, npoints, niters) 
-                # collect the results and logs
-                self.collect_log_files(folder_names[mode], 0)
-                p = misc.Popen(['./combine_results_FO.sh', str(req_acc), '%s_G*' % mode_dict[mode]], \
-                               stdout=subprocess.PIPE, \
-                               cwd=pjoin(self.me_dir, 'SubProcesses'))
-                output = p.communicate()
-
-                self.cross_sect_dict = self.read_results(output, mode)
-                self.print_summary(options, 0, mode)
-                cross, error = sum_html.make_all_html_results(self, ['%s*' % mode_dict[mode]])
-                self.results.add_detail('cross', cross)
-                self.results.add_detail('error', error) 
-
-                self.update_status('Computing cross-section', level=None)
-                self.run_all(job_dict, [['0', mode_dict[mode], '0', mode_dict[mode]]], 'Computing cross-section')
-
-            # collect the results and logs
-            self.collect_log_files(folder_names[mode], 1)
-            p = misc.Popen(['./combine_results_FO.sh', '-1'] + folder_names[mode], \
-                                stdout=subprocess.PIPE, 
-                                cwd=pjoin(self.me_dir, 'SubProcesses'))
-            output = p.communicate()
-            self.cross_sect_dict = self.read_results(output, mode)
-
-            # collect the scale and PDF uncertainties
-            scale_pdf_info={}
-            if self.run_card['reweight_scale'] or self.run_card['reweight_PDF']:
-                data_files=[]
-                for dir in p_dirs:
-                    for obj in folder_names[mode]:
-                        for file in os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)):
-                            if file.startswith(obj[:-1]) and \
-                                    (os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file,'scale_pdf_dependence.dat'))):
-                                data_files.append(pjoin(dir,file,'scale_pdf_dependence.dat'))
-                scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
-            # print the results:
-            self.print_summary(options, 1, mode, scale_pdf_info)
-
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'res.txt'),
-                     pjoin(self.me_dir, 'Events', self.run_name))
-            
-            if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
-                misc.call(['./combine_plots_FO.sh'] + folder_names[mode], \
-                                stdout=devnull, 
-                                cwd=pjoin(self.me_dir, 'SubProcesses'))
-                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
-                                pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('The results of this run and the TopDrawer file with the plots' + \
-                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-            elif self.analyse_card['fo_analysis_format'].lower() == 'hwu':
-                self.combine_plots_HwU(folder_names[mode])
-                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.HwU'),
-                                pjoin(self.me_dir, 'Events', self.run_name))
-                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
-                                pjoin(self.me_dir, 'Events', self.run_name))
-                try:
-                    misc.call(['gnuplot','MADatNLO.gnuplot'],\
-                              stdout=os.open(os.devnull, os.O_RDWR),\
-                              stderr=os.open(os.devnull, os.O_RDWR),\
-                              cwd=pjoin(self.me_dir, 'Events', self.run_name))
-                except Exception:
-                    pass
-
-
-                logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
-                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-            elif self.analyse_card['fo_analysis_format'].lower() == 'root':
-                misc.call(['./combine_root.sh'] + folder_names[mode], \
-                                stdout=devnull, 
-                                cwd=pjoin(self.me_dir, 'SubProcesses'))
-                files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
-                                pjoin(self.me_dir, 'Events', self.run_name))
-                logger.info('The results of this run and the ROOT file with the plots' + \
-                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-            else:
-                logger.info('The results of this run' + \
-                            ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-                
-            cross, error = sum_html.make_all_html_results(self, folder_names[mode])
-            self.results.add_detail('cross', cross)
-            self.results.add_detail('error', error)
-            if self.run_card['iappl'] != 0:
-                self.applgrid_combine(cross,error)
+            # loop over the integration steps. After every step, check
+            # if we have the required accuracy. If this is the case,
+            # stop running, else do another step.
+            while True:
+                integration_step=integration_step+1
+                self.prepare_directories(jobs_to_run,mode)
+                self.run_all_jobs(jobs_to_run,integration_step)
+                self.collect_log_files(jobs_to_run,integration_step)
+                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+                                  jobs_to_collect,integration_step,mode,mode_dict[mode])
+                if not jobs_to_run:
+                    # there are no more jobs to run (jobs_to_run is empty)
+                    break
+            # We are done.
+            self.finalise_run_FO(folder_names[mode],jobs_to_collect)
             self.update_status('Run complete', level='parton', update_results=True)
-
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
+            mode_dict = {'aMC@NLO': 'all', 'aMC@LO': 'born',\
+                         'noshower': 'all', 'noshowerLO': 'born'}
             shower = self.run_card['parton_shower'].upper()
             nevents = int(self.run_card['nevents'])
             req_acc = self.run_card['req_acc']
             if nevents == 0 and float(req_acc) < 0 :
                 raise aMCatNLOError('Cannot determine the required accuracy from the number '\
                                         'of events, because 0 events requested. Please set '\
-                                        'the "req_acc" parameter in the run_card to a value between 0 and 1')
+                                        'the "req_acc" parameter in the run_card to a value '\
+                                        'between 0 and 1')
             elif float(req_acc) >1 or float(req_acc) == 0 :
                 raise aMCatNLOError('Required accuracy ("req_acc" in the run_card) should '\
                                         'be between larger than 0 and smaller than 1, '\
-                                        'or set to -1 for automatic determination. Current value is %s' % req_acc)
+                                        'or set to -1 for automatic determination. Current '\
+                                        'value is %s' % req_acc)
 # For more than 1M events, set req_acc to 0.001 (except when it was explicitly set in the run_card)
             elif float(req_acc) < 0 and nevents > 1000000 :
                 req_acc='0.001'
@@ -1527,8 +1399,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
             if not shower in shower_list:
-                raise aMCatNLOError('%s is not a valid parton shower. Please use one of the following: %s' \
-                    % (shower, ', '.join(shower_list)))
+                raise aMCatNLOError('%s is not a valid parton shower. '\
+                                    'Please use one of the following: %s' \
+                                    % (shower, ', '.join(shower_list)))
 
 # check that PYTHIA6PT is not used for processes with FSR
             if shower == 'PYTHIA6PT' and self.proc_characteristics['has_fsr']:
@@ -1541,8 +1414,20 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             elif options['only_generation']:
                 logger.info('Generating events starting from existing results')
             
+            jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
+                                            req_acc,mode_dict[mode],1,mode,fixed_order=False)
+            jobs_to_collect=copy.copy(jobs_to_run)
 
-            for i, status in enumerate(mcatnlo_status):
+            for mint_step, status in enumerate(mcatnlo_status):
+                self.update_status(status, level='parton')
+                self.prepare_directories(jobs_to_run,mode,fixed_order=False)
+                self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
+                self.collect_log_files(jobs_to_run,mint_step)
+                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+                                jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
+
+                continue
+                i=mint_step
                 #check if need to split jobs 
                 # at least one channel must have enough events
                 try:
@@ -1572,16 +1457,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                             'nevents_unweighted_splitted'))
 
                     self.update_status(status, level='parton')
-                    if mode in ['aMC@NLO', 'noshower']:
-                        self.write_madinMMC_file(pjoin(self.me_dir, 'SubProcesses'), 'all', i) 
-                        self.run_all(job_dict, [['2', 'F', '%d' % i]], status, split_jobs = split)
-                        
-                    elif mode in ['aMC@LO', 'noshowerLO']:
-                        self.write_madinMMC_file(
-                            pjoin(self.me_dir, 'SubProcesses'), 'born', i) 
-                        self.run_all(job_dict, 
-                                     [['2', 'B', '%d' % i]], 
-                                     '%s at LO' % status, split_jobs = split)
+                    if i!=2:
+                        job = jobs_to_run[0] # Need to write it only once in SubProcesses/
+                        self.write_madinMMC_file(pjoin(self.me_dir,'SubProcesses'),job['run_mode'], i)
+                    else:
+                        for job in jobs_to_run:
+                            self.write_madinMMC_file(job['dirname'],job['run_mode'], i)
+                    self.run_all_jobs(jobs_to_run,i,fixed_order=False)
 
                 if (i < 2 and not options['only_generation']) or i == 1 :
                     # collect the results and logs
@@ -1621,18 +1503,439 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         self.collect_log_files(folder_names[mode], 2)
         return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
-    def combine_plots_HwU(self,folder_names):
-        """Sums all the plots in the HwU format."""
-        
-        logger.debug('Combining HwU plots.')
-        
-        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
-            all_histo_paths = dirf.readlines()
-        all_histo_paths = [pjoin(self.me_dir,'SubProcesses',
-                      path.rstrip(),"MADatNLO.HwU") for path in all_histo_paths]
-        
-        histogram_list = histograms.HwUList(all_histo_paths[0])
+    def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
+                           integration_step,mode,fixed_order=True):
+        """Creates a list of tuples with all the jobs to be run"""
+        jobs_to_run=[]
+        if not options['only_generation']:
+            npoints = self.run_card['npoints_FO_grid']
+            niters = self.run_card['niters_FO_grid']
+            for p_dir in p_dirs:
+                with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
+                    channels=chan_file.readline().split()
+                for channel in channels:
+                    job={}
+                    job['p_dir']=p_dir
+                    job['channel']=channel
+                    job['split']=0
+                    if fixed_order and req_acc == 1:
+                        job['accuracy']=0
+                        job['niters']=niters
+                        job['npoints']=npoints
+                    elif fixed_order and req_acc > 0:
+                        job['accuracy']=0.10
+                        job['niters']=6
+                        job['npoints']=-1
+                    else:
+                        job['accuracy']=0.03
+                        job['niters']=12
+                        job['npoints']=-1
+                    job['mint_mode']=0
+                    job['run_mode']=run_mode
+                    job['wgt_frac']=1.0
+                    jobs_to_run.append(job)
+        else:
+            name_suffix={'born' :'B' , 'all':'F'}
+            for p_dir in p_dirs:
+                for chan_dir in os.listdir(pjoin(self.me_dir,'SubProcesses',p_dir)):
+                    if ((chan_dir.startswith(run_mode+'_G') and fixed_order) or\
+                        (chan_dir.startswith('G'+name_suffix[run_mode]) and (not fixed_order))) and \
+                       (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)) or \
+                        os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir))):
+                        job={}
+                        job['p_dir']=p_dir
+                        if fixed_order:
+                            channel=chan_dir.split('_')[1]
+                            job['channel']=channel[1:] # remove the 'G'
+                            if len(chan_dir.split('_')) == 3:
+                                split=int(chan_dir.split('_')[2])
+                            else:
+                                split=0
+                        else:
+                            if len(chan_dir.split('_')) == 2:
+                                split=int(chan_dir.split('_')[1])
+                                channel=chan_dir.split('_')[0]
+                                job['channel']=channel[2:] # remove the 'G?'
+                            else:
+                                job['channel']=chan_dir[2:] # remove the 'G?'
+                                split=0
+                        job['split']=split
+                        job['run_mode']=run_mode
+                        job['dirname']=pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)
+                        job['wgt_frac']=1.0
+                        jobs_to_run.append(job)
+            jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
+            if fixed_order:
+                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run,
+                                                 jobs_to_collect,integration_step,mode,run_mode)
+                # Update the integration_step to make sure that nothing will be overwritten
+                integration_step=1
+                for job in jobs_to_run:
+                    while os.path.exists(pjoin(job['dirname'],'res_%s.dat' % integration_step)):
+                        integration_step=integration_step+1
+                integration_step=integration_step-1
+            else:
+                self.append_the_results(jobs_to_collect,integration_step)
+        return jobs_to_run,integration_step
 
+    def prepare_directories(self,jobs_to_run,mode,fixed_order=True):
+        """Set-up the all_G*/born_G* directories for running"""
+        name_suffix={'born' :'B' , 'all':'F'}
+        for job in jobs_to_run:
+            if job['split'] == 0:
+                if fixed_order :
+                    dirname=pjoin(self.me_dir,'SubProcesses',job['p_dir'],
+                                  job['run_mode']+'_G'+job['channel'])
+                else:
+                    dirname=pjoin(self.me_dir,'SubProcesses',job['p_dir'],
+                                  'G'+name_suffix[job['run_mode']]+job['channel'])
+            else:
+                if fixed_order :
+                    dirname=pjoin(self.me_dir,'SubProcesses',job['p_dir'],
+                                  job['run_mode']+'_G'+job['channel']+'_'+job['split'])
+                else:
+                    dirname=pjoin(self.me_dir,'SubProcesses',job['p_dir'],
+                                  'G'+name_suffix[job['run_mode']]+job['channel']+'_'+job['split'])
+                    
+            job['dirname']=dirname
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
+            if fixed_order:
+                self.write_input_file(dirname,job)
+            else:
+                self.write_madinMMC_file(job['dirname'], job['run_mode'], job['mint_mode'])
+
+
+    def write_input_file(self,dirname,job):
+        """write the input_app.txt file in the appropriate directory"""
+        content= \
+"""NPOINTS = %(npoints)s
+NITERATIONS = %(niters)s
+ACCURACY = %(accuracy)s
+ADAPT_GRID = 2
+MULTICHANNEL = 1
+SUM_HELICITY = 0
+CHANNEL = %(channel)s
+SPLIT = %(split)s
+RUN_MODE = %(run_mode)s
+RESTART = %(mint_mode)s
+""" \
+            % job
+        with open(pjoin(dirname, 'input_app.txt'), 'w') as input_file:
+            input_file.write(content)
+
+
+    def run_all_jobs(self,jobs_to_run,integration_step,fixed_order=True):
+        """Loops over the jobs_to_run and executes them using the function 'run_exe'"""
+        if not integration_step:
+            self.update_status('Setting up grids', level=None)
+        elif fixed_order:
+                self.update_status('Refining results %i' % integration_step, level=None)
+
+        njob_split = 0
+        self.ijob = 0
+        name_suffix={'born' :'B' , 'all':'F'}
+
+        for job in jobs_to_run:
+            executable='ajob1'
+            if fixed_order:
+                arguments=[job['channel'],job['run_mode'], \
+                                    str(job['split']),str(integration_step)]
+                run_type="Fixed order integration step %s" % integration_step
+            else:
+                arguments=[job['channel'],name_suffix[job['run_mode']], \
+                                    str(job['split']),str(integration_step)]
+                run_type="MINT step %s" % integration_step
+            self.run_exe(executable,arguments,run_type,
+                         cwd=pjoin(self.me_dir,'SubProcesses',job['p_dir']))
+
+        if self.cluster_mode == 2:
+            time.sleep(1) # security to allow all jobs to be launched
+        self.njobs=len(jobs_to_run)
+        self.wait_for_complete(run_type)
+
+
+    def collect_the_results(self,options,req_acc,jobs_to_run,jobs_to_collect,\
+                            integration_step,mode,run_mode,fixed_order=True):
+        """Collect the results and determine if there are more jobs to run"""
+        self.append_the_results(jobs_to_run,integration_step)
+        self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
+        jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
+        if (not fixed_order) and integration_step+1==2:
+            jobs_to_run_new,jobs_to_collect_new= \
+                            self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
+            self.write_nevents_unweighted_file(jobs_to_collect)
+            self.write_nevts_files(jobs_to_run)
+        else:
+            jobs_to_collect_new=jobs_to_collect
+        if fixed_order:
+            cross, error = sum_html.make_all_html_results(self, ['%s*' % run_mode])
+        else:
+            name_suffix={'born' :'B' , 'all':'F'}
+            cross, error = sum_html.make_all_html_results(self, ['G%s*' % name_suffix[run_mode]])
+        
+        self.results.add_detail('cross', cross)
+        self.results.add_detail('error', error) 
+        if not jobs_to_run_new and fixed_order:
+            scale_pdf_info=self.collect_scale_pdf_info(options,jobs_to_collect)
+        else:
+            scale_pdf_info={}
+        if not jobs_to_run_new and fixed_order:
+            self.print_summary(options,integration_step,mode,scale_pdf_info,done=True)
+        elif jobs_to_run_new:
+            self.print_summary(options,integration_step,mode,scale_pdf_info,done=False)
+
+        return jobs_to_run_new,jobs_to_collect_new
+
+
+    def write_nevents_unweighted_file(self,jobs):
+        """writes the nevents_unweighted file in the SubProcesses directory"""
+        content=[]
+        for job in jobs:
+            path=pjoin(job['dirname'].split('/')[-2],job['dirname'].split('/')[-1])
+            lhefile=pjoin(path,'events.lhe')
+            content.append(' %s     %d     %9e     %9e' % \
+                (lhefile.ljust(40),job['nevents'],job['resultABS']*job['wgt_frac'],job['wgt_frac']))
+        with open(pjoin(self.me_dir,'SubProcesses',"nevents_unweighted"),'w') as f:
+            f.write('\n'.join(content)+'\n')
+
+    def write_nevts_files(self,jobs):
+        """write the nevts files in the SubProcesses/P*/G*/ directories"""
+        for job in jobs:
+            with open(pjoin(job['dirname'],'nevts'),'w') as f:
+                f.write('%i\n' % job['nevents'])
+
+    def check_the_need_to_split(self,jobs_to_run,jobs_to_collect):
+        """Looks in the jobs_to_run to see if there is the need to
+           split event generation. Updates jobs_to_run and jobs_to_collect
+           to replace the split-job by its splits"""
+        nevt_job=self.run_card['nevt_job']
+        if nevt_job > 0:
+            jobs_to_collect_new=copy.copy(jobs_to_collect)
+            for job in jobs_to_run:
+                nevents=job['nevents']
+                if nevents > nevt_job:
+                    jobs_to_collect_new=jobs_to_collect_new.remove(job)
+                    nsplit=int(nevents/nevt_job)
+                    for i in range(1,nsplit+1):
+                        if i != nsplit:
+                            job['nevents']=int(nevents/nsplit)
+                            job['wgt_frac']=float(job['nevents'])/float(nevents)
+                        elif i == nsplit:
+                            job['nevents']=int(nevents-(nsplit-1)*int(nevents/nsplit))
+                            job['wgt_frac']=float(job['nevents'])/float(nevents)
+                        job['split']=i
+                        job['dirname']=job['dirname']+'_%i' % job['split']
+                        jobs_to_collect_new.append(job)
+            jobs_to_run_new=copy.copy(jobs_to_collect_new)
+        else:
+            jobs_to_run_new=jobs_to_run
+            jobs_to_collect_new=jobs_to_collect
+
+        return jobs_to_run_new,jobs_to_collect_new
+    
+
+    def update_jobs_to_run(self,req_acc,integration_step,jobs,fixed_order=True):
+        """Determines which jobs need higher precision and returns those with
+           the newly requested precision"""
+        err=self.cross_sect_dict['errt']
+        tot=self.cross_sect_dict['xsect']
+        errABS=self.cross_sect_dict['erra']
+        totABS=self.cross_sect_dict['xseca']
+        jobs_new=[]
+        if fixed_order:
+            if req_acc == -1:
+                if integration_step == 0:
+                    npoints = self.run_card['npoints_FO']
+                    niters = self.run_card['niters_FO']
+                    for job in jobs:
+                        job['mint_mode']=-1
+                        job['niters']=niters
+                        job['npoints']=npoints
+                        jobs_new.append(job)
+            elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or integration_step == 0:
+                req_accABS=req_acc*abs(tot)/totABS # overal relative required accuracy on ABS Xsec.
+                for job in jobs:
+                    job['mint_mode']=-1
+                    # Determine relative required accuracy on the ABS for this job
+                    job['accuracy']=req_accABS*math.sqrt(totABS/job['resultABS'])
+                    # If already accurate enough, skip running
+                    if job['accuracy'] > job['errorABS']/job['resultABS'] and integration_step != 0:
+                        continue
+                    # Update the number of PS points based on errorABS, ncall and accuracy
+                    itmax_fl=job['niters_done']*math.pow(job['errorABS']/
+                                                         (job['accuracy']*job['resultABS']),2)
+                    if itmax_fl <= 4.0 :
+                        job['niters']=max(int(round(itmax_fl)),2)
+                        job['npoints']=job['npoints_done']*2
+                    elif itmax_fl > 4.0 and itmax_fl <= 16.0 :
+                        job['niters']=4
+                        job['npoints']=int(round(job['npoints_done']*itmax_fl/4.0))*2
+                    else:
+                        if itmax_fl > 100.0 : itmax_fl=50.0
+                        job['niters']=int(round(math.sqrt(itmax_fl)))
+                        job['npoints']=int(round(job['npoints_done']*itmax_fl/
+                                                 round(math.sqrt(itmax_fl))))*2
+                    # Add the job to the list of jobs that need to be run
+                    jobs_new.append(job)
+                    return jobs_new
+        elif integration_step+1 <= 2:
+            nevents=int(self.run_card['nevents'])
+            if req_acc<0: 
+                req_acc2_inv=nevents
+            else:
+                req_acc2_inv=1/(req_acc*req_acc)
+            r=self.get_randinit_seed()
+            random.seed(r)
+            totevts=nevents
+            for job in jobs:
+                job['nevents'] = 0
+            while totevts :
+                target = random.random() * totABS
+                crosssum = 0.
+                i = 0
+                while i<len(jobs) and crosssum < target:
+                    job = jobs[i]
+                    crosssum += job['resultABS']
+                    i += 1            
+                totevts -= 1
+                i -= 1
+                jobs[i]['nevents'] += 1
+            if integration_step == 1:
+                for job in jobs:
+                    accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
+                    job['accuracy']=accuracy
+            for job in jobs:
+                job['mint_mode']=integration_step+1 # next step
+            return jobs
+        else:
+            return []
+
+
+    def get_randinit_seed(self):
+        """ Get the random number seed from the randinit file """
+        with open(pjoin(self.me_dir,"SubProcesses","randinit")) as f:
+            exec f
+        return int(r)
+
+
+    def append_the_results(self,jobs,integration_step):
+        """Appends the results for each of the jobs to the job list"""
+        for job in jobs:
+            try:
+                if integration_step >= 0 :
+                    with open(pjoin(job['dirname'],'res_%s.dat' % integration_step)) as res_file:
+                        results=res_file.readline().split()
+                else:
+                # should only be here when doing fixed order with the 'only_generation'
+                # option equal to True
+                    with open(pjoin(job['dirname'],'res.dat')) as res_file:
+                        results=res_file.readline().split()
+            except IOError:
+                raise aMCatNLOError('An error occurred during the collection of results.\n' + 
+                'Please check the .log files inside the directories which failed.\n' +
+                pjoin(job['dirname'],'log.txt'))
+            job['resultABS']=float(results[0])
+            job['errorABS']=float(results[1])
+            job['result']=float(results[2])
+            job['error']=float(results[3])
+            job['niters_done']=int(results[4])
+            job['npoints_done']=int(results[5])
+            job['time_spend']=float(results[6])
+            job['err_percABS'] = job['errorABS']/job['resultABS']*100.
+            job['err_perc'] = job['error']/job['result']*100.
+
+
+    def write_res_txt_file(self,jobs,integration_step):
+        """writes the res.txt files in the SubProcess dir"""
+        jobs.sort(key = lambda job: -job['errorABS'])
+
+        content='\n\nCross-section per integration channel:\n'
+        for job in jobs:
+            content+='%(p_dir)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  job
+
+        content+='\n\nABS cross-section per integration channel:\n'
+        for job in jobs:
+            content+='%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  \n' %  job
+
+        totABS=0
+        errABS=0
+        tot=0
+        err=0
+        for job in jobs:
+            totABS+= job['resultABS']
+            errABS+= math.pow(job['errorABS'],2)
+            tot+= job['result']
+            err+= math.pow(job['error'],2)
+
+        content+='\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%)\n' %\
+            (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,tot, math.sqrt(err), math.sqrt(err)/tot *100.)
+
+        with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
+            res_file.write(content)
+            
+        randinit=self.get_randinit_seed()
+
+        return {'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
+                'erra':math.sqrt(errABS),'randinit':randinit}
+        
+
+    def collect_scale_pdf_info(self,options,jobs):
+        """read the scale_pdf_dependence.dat files and collects there results"""
+        scale_pdf_info={}
+        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF']:
+            data_files=[]
+            for job in jobs:
+                data_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
+            scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
+        return scale_pdf_info
+
+
+    def combine_plots_FO(self,folder_name,jobs):
+        """combines the plots and puts then in the Events/run* directory"""
+        devnull = os.open(os.devnull, os.O_RDWR) 
+        if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
+            misc.call(['./combine_plots_FO.sh'] + folder_name, \
+                      stdout=devnull, 
+                      cwd=pjoin(self.me_dir, 'SubProcesses'))
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.top'),
+                     pjoin(self.me_dir, 'Events', self.run_name))
+            logger.info('The results of this run and the TopDrawer file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+        elif self.analyse_card['fo_analysis_format'].lower() == 'hwu':
+            self.combine_plots_HwU(jobs)
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.HwU'),
+                     pjoin(self.me_dir, 'Events', self.run_name))
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
+                     pjoin(self.me_dir, 'Events', self.run_name))
+            try:
+                misc.call(['gnuplot','MADatNLO.gnuplot'],\
+                          stdout=devnull,stderr=devnull,\
+                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+            except Exception:
+                pass
+            logger.info('The results of this run and the HwU and GnuPlot files with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+        elif self.analyse_card['fo_analysis_format'].lower() == 'root':
+            misc.call(['./combine_root.sh'] + folder_name, \
+                      stdout=devnull, 
+                      cwd=pjoin(self.me_dir, 'SubProcesses'))
+            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.root'),
+                     pjoin(self.me_dir, 'Events', self.run_name))
+            logger.info('The results of this run and the ROOT file with the plots' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+        else:
+            logger.info('The results of this run' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+
+
+    def combine_plots_HwU(self,jobs):
+        """Sums all the plots in the HwU format."""
+        logger.debug('Combining HwU plots.')
+        all_histo_paths=[]
+        for job in jobs:
+            all_histo_paths.append(pjoin(job['dirname'],"MADatNLO.HwU"))
+        histogram_list = histograms.HwUList(all_histo_paths[0])
         for histo_path in all_histo_paths[1:]:
             for i, histo in enumerate(histograms.HwUList(histo_path)):
                 # First make sure the plots have the same weight labels and such
@@ -1644,19 +1947,18 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         histogram_list.output(pjoin(self.me_dir,'SubProcesses',"MADatNLO"),
                                                              format = 'gnuplot')
 
-    def applgrid_combine(self,cross,error):
+    def applgrid_combine(self,cross,error,jobs):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
         logger.debug('Combining APPLgrids \n')
         applcomb=pjoin(self.options['applgrid'].rstrip('applgrid-config'),
                                                             'applgrid-combine')
-        with open(pjoin(self.me_dir,'SubProcesses','dirs.txt')) as dirf:
-            all_jobs=dirf.readlines()
+        all_jobs=[]
+        for job in jobs:
+            all_jobs.append(job['dirname'])
         ngrids=len(all_jobs)
-        nobs  =len([name for name in os.listdir(pjoin(self.me_dir,'SubProcesses',
-                          all_jobs[0].rstrip())) if name.endswith("_out.root")])
+        nobs  =len([name for name in os.listdir(all_jobs[0]) if name.endswith("_out.root")])
         for obs in range(0,nobs):
-            gdir = [pjoin(self.me_dir,'SubProcesses',job.rstrip(),"grid_obs_"+
-                                     str(obs)+"_out.root") for job in all_jobs]
+            gdir = [pjoin(job,"grid_obs_"+str(obs)+"_out.root") for job in all_jobs]
             # combine APPLgrids from different channels for observable 'obs'
             if self.run_card["iappl"] == 1:
                 misc.call([applcomb,'-o', pjoin(self.me_dir,"Events",self.run_name,
@@ -1668,8 +1970,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         self.run_name,"aMCfast_obs_"+str(obs)+".root"),'-s',
                                   str(unc2_inv),'--weight',str(unc2_inv)]+ gdir)
                 for job in all_jobs:
-                    os.remove(pjoin(self.me_dir,'SubProcesses',job.rstrip(),
-                                               "grid_obs_"+str(obs)+"_in.root"))
+                    os.remove(pjoin(job,"grid_obs_"+str(obs)+"_in.root"))
             else:
                 raise aMCatNLOError('iappl parameter can only be 0, 1 or 2')
             # after combining, delete the original grids
@@ -1726,28 +2027,20 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                                     'grid_obs_'+obs+'_in.root'))
 
 
-    def collect_log_files(self, folders, istep):
+
+
+    def collect_log_files(self, jobs, integration_step):
         """collect the log files and put them in a single, html-friendly file
         inside the run_... directory"""
-        step_list = ['Grid setting', 'Cross-section computation', 
-                                                             'Event generation']
         log_file = pjoin(self.me_dir, 'Events', self.run_name, 
-                'alllogs_%d.html' % istep)
-        # this keeps track of which step has been computed for which channel
-        channel_dict = {}
-        log_files = []
-        for folder in folders:
-            log_files += glob.glob(pjoin(self.me_dir, 'SubProcesses', 'P*', 
-                                                             folder, 'log.txt'))
-
-        content = ''
-
+                         'alllogs_%d.html' % integration_step)
         outfile = open(log_file, 'w')
 
+        content = ''
         content += '<HTML><BODY>\n<font face="courier" size=2>'
-        for log in log_files:
-            channel_dict[os.path.dirname(log)] = [istep]
+        for job in jobs:
             # put an anchor
+            log=pjoin(job['dirname'],'log_MINT%s.txt' % integration_step)
             content += '<a name=%s></a>\n' % (os.path.dirname(log).replace(
                                           pjoin(self.me_dir,'SubProcesses'),''))
             # and put some nice header
@@ -1755,7 +2048,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             content += '<br>LOG file for integration channel %s, %s <br>' % \
                     (os.path.dirname(log).replace(pjoin(self.me_dir,
                                                            'SubProcesses'), ''), 
-                     step_list[istep])
+                     integration_step)
             content += '</font>\n'
             #then just flush the content of the small log inside the big log
             #the PRE tag prints everything verbatim
@@ -1766,6 +2059,76 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         outfile.write('</font>\n</BODY></HTML>\n')
         outfile.close()
+
+
+    def finalise_run_FO(self,folder_name,jobs):
+        # Copy the res_*.txt files to the Events/run* folder
+        res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res_*.txt'))
+        for res_file in res_files:
+            files.cp(res_file,pjoin(self.me_dir, 'Events', self.run_name))
+        # Collect the plots and put them in the Events/run* folder
+        self.combine_plots_FO(folder_name,jobs)
+        # If doing the applgrid-stuff, also combine those grids
+        # and put those in the Events/run* folder
+        if self.run_card['iappl'] != 0:
+            self.applgrid_combine(cross,error)
+
+
+    def setup_cluster_or_multicore(self):
+        if self.cluster_mode == 1:
+            cluster_name = self.options['cluster_type']
+            self.cluster = cluster.from_name[cluster_name](**self.options)
+        if self.cluster_mode == 2:
+            try:
+                import multiprocessing
+                if not self.nb_core:
+                    try:
+                        self.nb_core = int(self.options['nb_core'])
+                    except TypeError:
+                        self.nb_core = multiprocessing.cpu_count()
+                logger.info('Using %d cores' % self.nb_core)
+            except ImportError:
+                self.nb_core = 1
+                logger.warning('Impossible to detect the number of cores => Using One.\n'+
+                        'Use set nb_core X in order to set this number and be able to'+
+                        'run in multicore.')
+
+            self.cluster = cluster.MultiCore(**self.options)
+
+
+    def clean_previous_results(self,options,p_dirs,folder_name):
+        """clean previous results and create the job_dict{}"""
+        job_dict = {}
+        if not options['only_generation'] and not options['reweightonly']:
+            self.update_status('Cleaning previous results', level=None)
+        for dir in p_dirs:
+            job_dict[dir] = [file for file in \
+                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                                 if file.startswith('ajob')] 
+            #find old folders to be removed
+            for obj in folder_name:
+                to_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
+                #always clean dirs for the splitted event generation
+                # do not include the born_G/ grid_G which should be kept when
+                # doing a f.o. run keeping old grids
+                to_always_rm = [file for file in \
+                             os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
+                             if file.startswith(obj[:-1]) and
+                             '_' in file and not '_G' in file and \
+                            (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
+                             os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
+
+                if not options['only_generation'] and not options['reweightonly']:
+                    to_always_rm.extend(to_rm)
+                    if os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz')):
+                        to_always_rm.append(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz'))
+                files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
+        return job_dict
+
 
 
     def read_results(self, output, mode):
@@ -1814,7 +2177,8 @@ Integrated cross-section
             return {'xsect' : float(match.groups()[1]),
                     'errt' : float(match.groups()[2])}
 
-    def print_summary(self, options, step, mode, scale_pdf_info={}):
+
+    def print_summary(self, options, step, mode, scale_pdf_info={}, done=True):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
@@ -1833,17 +2197,16 @@ Integrated cross-section
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
                                     'SubProcesses', 'P*','G*','log_MINT*.txt'))
-            all_log_files = glob.glob(pjoin(self.me_dir, \
-                                          'SubProcesses', 'P*','G*','log*.txt'))
+            all_log_files = log_GV_files
         elif mode == 'NLO':
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','all_G*','log*.txt'))
-            all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['all_']],[])
+                                    'SubProcesses', 'P*','all_G*','log_MINT*.txt'))
+            all_log_files = log_GV_files
+
         elif mode == 'LO':
             log_GV_files = ''
-            all_log_files = sum([glob.glob(pjoin(self.me_dir,'SubProcesses', 'P*',
-              '%sG*'%foldName,'log*.txt')) for foldName in ['born_']],[])
+            all_log_files = glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','born_G*','log_MINT*.txt'))
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
             
@@ -1886,14 +2249,18 @@ Integrated cross-section
                          misc.format_timer(time.time()-self.start_time))
 
         elif mode in ['NLO', 'LO']:
-            status = ['Results after grid setup (cross-section is non-physical):',
+            status = ['Results after grid setup:','Current results:',
                       'Final results and run summary:']
-            if step == 0:
-                message = '\n      ' + status[step] + \
+            if (not done) and (step == 0):
+                message = '\n      ' + status[0] + \
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
-            elif step == 1:
-                message = '\n      ' + status[step] + proc_info + \
+            elif not done:
+                message = '\n      ' + status[1] + \
+                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
+                             self.cross_sect_dict
+            elif done:
+                message = '\n      ' + status[2] + proc_info + \
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
                 if self.run_card['reweight_scale']:
@@ -1910,7 +2277,7 @@ Integrated cross-section
                         ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                         (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
         
-        if (mode in ['NLO', 'LO'] and step!=1) or \
+        if (mode in ['NLO', 'LO'] and not done) or \
            (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
             logger.info(message+'\n')
             return
@@ -3436,7 +3803,7 @@ Integrated cross-section
             # the 'standard' amcatnlo job
             # check if args is a list of string 
             if type(args[0]) == str:
-                input_files, output_files, required_output, args = self.getIO_ajob(exe,cwd, args)
+                input_files, output_files, required_output, args = self.getIO_ajob(exe,cwd,args)
                 #submitting
                 self.cluster.submit2(exe, args, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
@@ -3511,7 +3878,6 @@ Integrated cross-section
         # use local disk if possible => need to stands what are the 
         # input/output files
         
-        keep_fourth_arg = False
         output_files = []
         required_output = []
         input_files = [pjoin(self.me_dir, 'SubProcesses', 'randinit'),
@@ -3536,84 +3902,45 @@ Integrated cross-section
                                                            dereference=True)
             tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
             tf.close()
-
-        Ire = re.compile("for i in ([\d\s]*) ; do")
-        try : 
-            fsock = open(exe)
-        except IOError:
-            fsock = open(pjoin(cwd,exe))
-        text = fsock.read()
-        data = Ire.findall(text)
-        subdir = ' '.join(data).split()
                
-        if args[0] == '0':
+        if args[1] == 'born' or args[1] == 'all':
             # MADEVENT MINT FO MODE
             input_files.append(pjoin(cwd, 'madevent_mintFO'))
-            input_files.append(pjoin(self.me_dir, 'SubProcesses','madin.%s' % args[1]))
-            #j=$2\_G$i
-            for i in subdir:
-                current = '%s_G%s' % (args[1],i)
-                if os.path.exists(pjoin(cwd,current)):
-                    input_files.append(pjoin(cwd, current))
-                output_files.append(current)
+            if args[2] == '0':
+                current = '%s_G%s' % (args[1],args[0])
+            else:
+                current = '%s_G%s_%s' % (args[1],args[0],args[2])
+            if os.path.exists(pjoin(cwd,current)):
+                input_files.append(pjoin(cwd, current))
+            output_files.append(current)
 
-                required_output.append('%s/results.dat' % current)
-                required_output.append('%s/log.txt' % current)
-                required_output.append('%s/mint_grids' % current)
-                required_output.append('%s/grid.MC_integer' % current)
-                if len(args) == 4:
-                    required_output.append('%s/scale_pdf_dependence.dat' % current)
-                    args[2] = '-1'
-                    # use a grid train on another part
-                    base = '%s_G%s' % (args[3],i)
-                    if args[0] == '0':
-                        to_move = ['grid.MC_integer','mint_grids']
-                    elif args[0] == '1':
-                        to_move = ['mint_grids', 'grid.MC_integer']
-                    else: 
-                        to_move  = []
-                    if self.run_card['iappl'] == 2:
-                        for grid in glob.glob(pjoin(cwd,base,'grid_obs_*_in.root')):
-                            to_move.append(grid)
-                    if not os.path.exists(pjoin(cwd,current)):
-                        os.mkdir(pjoin(cwd,current))
-                        input_files.append(pjoin(cwd, current))
-                    for name in to_move:
-                        files.cp(pjoin(cwd,base, name), 
-                                        pjoin(cwd,current))
-                    files.cp(pjoin(cwd,base, 'grid.MC_integer'), 
-                                        pjoin(cwd,current))
+            required_output.append('%s/results.dat' % current)
+            required_output.append('%s/res_%s.dat' % (current,args[3]))
+            required_output.append('%s/log_MINT%s.txt' % (current,args[3]))
+            required_output.append('%s/mint_grids' % current)
+            required_output.append('%s/grid.MC_integer' % current)
+            if args[3] != '0':
+                required_output.append('%s/scale_pdf_dependence.dat' % current)
                             
-        elif args[0] == '2':
+        elif args[1] == 'F' or args[1] == 'B':
             # MINTMC MODE
             input_files.append(pjoin(cwd, 'madevent_mintMC'))
-            if args[2] in ['0','2']:
-                input_files.append(pjoin(self.me_dir, 'SubProcesses','madinMMC_%s.2' % args[1]))
 
-            for i in subdir:
-                current = 'G%s%s' % (args[1], i)
-                if os.path.exists(pjoin(cwd,current)):
-                    input_files.append(pjoin(cwd, current))
-                output_files.append(current)
-                if len(args) == 4 and args[3] in ['H','S','V','B','F']:
-                    # use a grid train on another part
-                    base = '%s_%s' % (args[3],i)
-                    files.ln(pjoin(cwd,base,'mint_grids'), name = 'preset_mint_grids', 
-                                            starting_dir=pjoin(cwd,current))
-                    files.ln(pjoin(cwd,base,'grid.MC_integer'), 
-                                          starting_dir=pjoin(cwd,current))
-                elif len(args) ==4:
-                    keep_fourth_arg = True
-                    # this is for the split event generation
-                    output_files.append('G%s%s_%s' % (args[1], i, args[3]))
-                    required_output.append('G%s%s_%s/log_MINT%s.txt' % (args[1], i, args[3],args[2]))
+            current = 'G%s%s' % (args[1], args[0])
+            if os.path.exists(pjoin(cwd,current)):
+                input_files.append(pjoin(cwd, current))
+            output_files.append(current)
+            if args[2] > '0':
+                # this is for the split event generation
+                output_files.append('G%s%s_%s' % (args[1], args[0], args[2]))
+                required_output.append('G%s%s_%s/log_MINT%s.txt' % (args[1],args[0],args[2],args[3]))
 
-                else:
-                    required_output.append('%s/log_MINT%s.txt' % (current,args[2]))
-                if args[2] in ['0','1']:
-                    required_output.append('%s/results.dat' % current)
-                if args[2] == '1':
-                    output_files.append('%s/results.dat' % current)
+            else:
+                required_output.append('%s/log_MINT%s.txt' % (current,args[3]))
+            if args[3] in ['0','1']:
+                required_output.append('%s/results.dat' % current)
+            if args[3] == '1':
+                output_files.append('%s/results.dat' % current)
 
         else:
             raise aMCatNLOError, 'not valid arguments: %s' %(', '.join(args))
@@ -3621,11 +3948,7 @@ Integrated cross-section
         #Find the correct PDF input file
         pdfinput = self.get_pdf_input_filename()
         if os.path.exists(pdfinput):
-            input_files.append(pdfinput)
-
-        if len(args) == 4 and not keep_fourth_arg:
-            args = args[:3]
-            
+            input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
             
     def write_madinMMC_file(self, path, run_mode, mint_mode):
@@ -3637,15 +3960,9 @@ Integrated cross-section
                     % (run_mode, ', '.join(run_modes)))
         mint_modes = [0, 1, 2]
         if mint_mode not in mint_modes:
-            raise aMCatNLOError('%s is not a valid mode for mintMC. Please use one of the following: %s' \
-                    % (mint_mode, ', '.join(mint_modes)))
-        if run_mode in ['born']:
-            name_suffix = 'B'
-        elif run_mode in ['virt', 'viSB']:
-            name_suffix = 'V'
-        else:
-            name_suffix = 'F'
-
+            raise aMCatNLOError('%s is not a valid mode for mintMC. '\
+                                'Please use one of the following: %s' \
+                                % (mint_mode, ', '.join(mint_modes)))
         content = \
 """-1 12      ! points, iterations
 0.03       ! desired fractional accuracy
@@ -3659,35 +3976,8 @@ Integrated cross-section
 %s        ! all, born, real, virt
 """ \
                     % (mint_mode, run_mode)
-        file = open(pjoin(path, 'madinMMC_%s.2' % name_suffix), 'w')
-        file.write(content)
-        file.close()
-
-    def write_madin_file(self, path, run_mode, vegas_mode, npoints, niters, accuracy='0'):
-        """writes the madin.run_mode file"""
-        #check the validity of the arguments
-        run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB', 'grid']
-        if run_mode not in run_modes:
-            raise aMCatNLOError('%s is not a valid mode for run. Please use one of the following: %s' \
-                    % (run_mode, ', '.join(run_modes)))
-        name_suffix = run_mode
-
-        content = \
-"""%s %s  ! points, iterations
-%s ! accuracy
-2 ! 0 fixed grid 2 adjust
-1 ! 1 suppress amp, 0 doesnt
-1 ! 0 for exact hel sum
-1 ! hel configuration numb
-'test'
-1 ! 1 to save grids
-%s ! 0 to exclude, 1 for new run, 2 to restart, 3 to reset w/ keeping grid
-%s        ! all, born, real, virt
-""" \
-                    % (npoints,niters,accuracy,vegas_mode,run_mode)
-        file = open(pjoin(path, 'madin.%s' % name_suffix), 'w')
-        file.write(content)
-        file.close()
+        with open(pjoin(path, 'input_app.txt'), 'w') as file:
+            file.write(content)
 
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as

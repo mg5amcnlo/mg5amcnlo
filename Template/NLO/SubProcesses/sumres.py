@@ -178,15 +178,8 @@ if nevents>=0:
         nevts_file = open(os.path.join(proc['folder'], proc['channel'], 'nevts'),'w')
         nevts_file.write('%10d\n' % proc['nevents'])
         nevts_file.close()
-        if proc['channel'][1] == 'B':
-            fileinputs = open("madinMMC_B.2")
-        elif proc['channel'][1] == 'F':
-            fileinputs = open("madinMMC_F.2")
-        elif proc['channel'][1] == 'V':
-            fileinputs = open("madinMMC_V.2")
-        else:
-            sys.exit("ERROR, DONT KNOW WHICH INPUTS TO USE")
-        fileinputschannel = open(os.path.join(proc['folder'], proc['channel'], 'madinM1'),'w')
+        fileinputs = open("input_app.txt")
+        fileinputschannel = open(os.path.join(proc['folder'], proc['channel'], 'input_app.txt'),'w')
         i=0
         for line in fileinputs:
             i += 1

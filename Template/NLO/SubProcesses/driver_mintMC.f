@@ -301,7 +301,6 @@ c to save grids:
          write (12,*) virtual_fraction,average_virtual
          close (12)
 
-
 c*************************************************************
 c     event generation
 c*************************************************************
@@ -467,6 +466,15 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
       write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
+
+      open (unit=12, file='res.dat',status='unknown')
+      if (imode.eq.0) then
+         write (12,*)ans(1),unc(1),ans(2),unc(2),itmax,ncall,tTot
+      else
+         write (12,*)ans(1)+ans(5),sqrt(unc(1)**2+unc(5)**2),ans(2)
+     $        ,unc(2),itmax,ncall,tTot
+      endif
+      close(12)
 
       return
  999  write (*,*) 'nevts file not found'
