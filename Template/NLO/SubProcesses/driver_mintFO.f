@@ -713,11 +713,10 @@ c-----
                mc_hel=0
                write (*,*) 'Explicitly summing over helicities'
             else
-               mc_hel=i
-               write(*,*) 'Summing over',i
-     $              ,' helicities per phase-space point'
-               isum_hel=0
+               mc_hel=1
+               write(*,*) 'Do MC over helicities for the virtuals'
             endif
+            isum_hel=0
          elseif(buffer(1:7).eq.'CHANNEL') then
             read(buffer(10:),*) dconfig
             iconfig = int(dconfig)

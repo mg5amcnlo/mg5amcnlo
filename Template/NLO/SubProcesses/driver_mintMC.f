@@ -189,7 +189,7 @@ c initialize grids
             enddo
          else
 c to restore grids:
-            open (unit=12, file='preset_mint_grids',status='old')
+            open (unit=12, file='mint_grids',status='old')
             do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
@@ -285,7 +285,7 @@ c write the results.dat file
          close(58)
 
 c to save grids:
-         open (unit=12, file='mint_grids_NLO',status='unknown')
+         open (unit=12, file='mint_grids',status='unknown')
          write (12,*) (xgrid(0,i),i=1,ndim)
          do j=1,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
@@ -322,7 +322,7 @@ c Mass-shell stuff. This is MC-dependent
          ncall=nevts ! Update ncall with the number found in 'nevts'
 
 c to restore grids:
-         open (unit=12, file='mint_grids_NLO',status='unknown')
+         open (unit=12, file='mint_grids',status='unknown')
          read (12,*) (xgrid(0,i),i=1,ndim)
          do j=1,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)

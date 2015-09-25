@@ -1202,7 +1202,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.compile(mode, options) 
         evt_file = self.run(mode, options)
         
-        if int(self.run_card['nevents']) == 0 and not mode in ['LO', 'NLO']:
+        if self.run_card['nevents'] == 0 and not mode in ['LO', 'NLO']:
             logger.info('No event file generated: grids have been set-up with a '\
                             'relative precision of %s' % self.run_card['req_acc'])
             return
@@ -1222,7 +1222,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
 
         self.update_status('', level='all', update_results=True)
-        if int(self.run_card['ickkw']) == 3 and mode in ['noshower', 'aMC@NLO']:
+        if self.run_card['ickkw'] == 3 and mode in ['noshower', 'aMC@NLO']:
             logger.warning("""You are running with FxFx merging enabled.
 To be able to merge samples of various multiplicities without double counting,
 you have to remove some events after showering 'by hand'.
@@ -1248,59 +1248,11 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
         self.update_status('', level='all', update_results=True)
 
-    def print_results_in_shell(self, data):
-        """Have a nice results prints in the shell,
-        data should be of type: gen_crossxhtml.OneTagResults"""
-        if not data:
-            return
-        logger.info("  === Results Summary for run: %s tag: %s ===\n" % (data['run_name'],data['tag']))
-        if self.ninitial == 1:
-            logger.info("     Width :   %.4g +- %.4g GeV" % (data['cross'], data['error']))
-        else:
-            logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
-        logger.info("     Nb of events :  %s" % data['nb_event'] )
-        #if data['cross_pythia'] and data['nb_event_pythia']:
-        #    if self.ninitial == 1:
-        #        logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
-        #    else:
-        #        logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
-        #    logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
-        #    if self.run_card['use_syst'] in self.true:
-        #        logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")    
-        logger.info(" " )
-
-    def print_results_in_file(self, data, path, mode='w'):
-        """Have a nice results prints in the shell,
-        data should be of type: gen_crossxhtml.OneTagResults"""
-        if not data:
-            return
-        
-        fsock = open(path, mode)
-        
-        fsock.write("  === Results Summary for run: %s tag: %s  process: %s ===\n" % \
-                    (data['run_name'],data['tag'], os.path.basename(self.me_dir)))
-        
-        if self.ninitial == 1:
-            fsock.write("     Width :   %.4g +- %.4g GeV\n" % (data['cross'], data['error']))
-        else:
-            fsock.write("     Cross-section :   %.4g +- %.4g pb\n" % (data['cross'], data['error']))
-        fsock.write("     Nb of events :  %s\n" % data['nb_event'] )
-        #if data['cross_pythia'] and data['nb_event_pythia']:
-        #    if self.ninitial == 1:
-        #        fsock.write("     Matched Width :   %.4g +- %.4g GeV\n" % (data['cross_pythia'], data['error_pythia']))
-        #    else:
-        #        fsock.write("     Matched Cross-section :   %.4g +- %.4g pb\n" % (data['cross_pythia'], data['error_pythia']))            
-        #    fsock.write("     Nb of events after Matching :  %s\n" % data['nb_event_pythia'])
-        fsock.write(" \n" )
-
-
-
-
 
     def update_random_seed(self):
         """Update random number seed with the value from the run_card. 
         If this is 0, update the number according to a fresh one"""
-        iseed = int(self.run_card['iseed'])
+        iseed = self.run_card['iseed']
         if iseed == 0:
             randinit = open(pjoin(self.me_dir, 'SubProcesses', 'randinit'))
             iseed = int(randinit.read()[2:]) + 1
@@ -1333,15 +1285,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         #find jobs and clean previous results
         job_dict = self.clean_previous_results(options,p_dirs,folder_names[mode])
 
-        mcatnlo_status = ['Setting up grid', 'Computing upper envelope', 'Generating events']
+        mcatnlo_status = ['Setting up grids', 'Computing upper envelope', 'Generating events']
 
-        # Re-distribute the grids for the 2nd step of the applgrid running
-        if self.run_card['iappl'] == 2:
-            self.applgrid_distribute(options,mode,p_dirs)
 
         if options['reweightonly']:
             event_norm=self.run_card['event_norm']
-            nevents=int(self.run_card['nevents'])
+            nevents=self.run_card['nevents']
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
         devnull = os.open(os.devnull, os.O_RDWR) 
@@ -1351,6 +1300,10 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             mode_dict = {'NLO': 'all', 'LO': 'born'}
             logger.info('Doing fixed order %s' % mode)
             req_acc = self.run_card['req_acc_FO']
+
+            # Re-distribute the grids for the 2nd step of the applgrid running
+            if self.run_card['iappl'] == 2:
+                self.applgrid_distribute(options,mode_dict[mode],p_dirs)
 
             # create a list of tuples with all the jobs that need to be run
             integration_step=-1
@@ -1380,21 +1333,21 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             mode_dict = {'aMC@NLO': 'all', 'aMC@LO': 'born',\
                          'noshower': 'all', 'noshowerLO': 'born'}
             shower = self.run_card['parton_shower'].upper()
-            nevents = int(self.run_card['nevents'])
+            nevents = self.run_card['nevents']
             req_acc = self.run_card['req_acc']
-            if nevents == 0 and float(req_acc) < 0 :
+            if nevents == 0 and req_acc < 0 :
                 raise aMCatNLOError('Cannot determine the required accuracy from the number '\
                                         'of events, because 0 events requested. Please set '\
                                         'the "req_acc" parameter in the run_card to a value '\
                                         'between 0 and 1')
-            elif float(req_acc) >1 or float(req_acc) == 0 :
+            elif req_acc >1 or req_acc == 0 :
                 raise aMCatNLOError('Required accuracy ("req_acc" in the run_card) should '\
                                         'be between larger than 0 and smaller than 1, '\
                                         'or set to -1 for automatic determination. Current '\
-                                        'value is %s' % req_acc)
+                                        'value is %f' % req_acc)
 # For more than 1M events, set req_acc to 0.001 (except when it was explicitly set in the run_card)
-            elif float(req_acc) < 0 and nevents > 1000000 :
-                req_acc='0.001'
+            elif req_acc < 0 and nevents > 1000000 :
+                req_acc=0.001
 
             shower_list = ['HERWIG6', 'HERWIGPP', 'PYTHIA6Q', 'PYTHIA6PT', 'PYTHIA8']
 
@@ -1417,91 +1370,34 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
             jobs_to_collect=copy.copy(jobs_to_run)
+            self.prepare_directories(jobs_to_run,mode,fixed_order=False)
 
+            # Make sure to update all the jobs to be ready for the event generation step
+            if options['only_generation']:
+                jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
+                                jobs_to_collect,1,mode,mode_dict[mode],fixed_order=False)
+
+            # Main loop over the three event generation step:
             for mint_step, status in enumerate(mcatnlo_status):
+                if options['only_generation'] and mint_step < 2:
+                    continue
                 self.update_status(status, level='parton')
-                self.prepare_directories(jobs_to_run,mode,fixed_order=False)
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
                 self.collect_log_files(jobs_to_run,mint_step)
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
+            # Sanity check on the event files. If error the jobs are resubmitted
+            self.check_event_files(jobs_to_collect)
 
-                continue
-                i=mint_step
-                #check if need to split jobs 
-                # at least one channel must have enough events
-                try:
-                    nevents_unweighted = open(pjoin(self.me_dir, 
-                                                'SubProcesses', 
-                                                'nevents_unweighted')).read().split('\n')
-                except IOError:
-                    nevents_unweighted = []
-
-                split = i == 2 and \
-                        int(self.run_card['nevt_job']) > 0 
-
-                if i == 2 or not options['only_generation']:
-                    # if the number of events requested is zero,
-                    # skip mint step 2
-                    if i==2 and nevents==0:
-                        self.print_summary(options, 2,mode)
-                        return
-
-                    if split:
-                        # split the event generation
-                        misc.call([pjoin(self.me_dir, 'bin', 'internal', 'split_jobs.py')] + \
-                                   [str(self.run_card['nevt_job'])],
-                                   stdout = devnull,
-                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
-                        assert os.path.exists(pjoin(self.me_dir, 'SubProcesses', 
-                            'nevents_unweighted_splitted'))
-
-                    self.update_status(status, level='parton')
-                    if i!=2:
-                        job = jobs_to_run[0] # Need to write it only once in SubProcesses/
-                        self.write_madinMMC_file(pjoin(self.me_dir,'SubProcesses'),job['run_mode'], i)
-                    else:
-                        for job in jobs_to_run:
-                            self.write_madinMMC_file(job['dirname'],job['run_mode'], i)
-                    self.run_all_jobs(jobs_to_run,i,fixed_order=False)
-
-                if (i < 2 and not options['only_generation']) or i == 1 :
-                    # collect the results and logs
-                    self.collect_log_files(folder_names[mode], i)
-                    p = misc.Popen(['./combine_results.sh'] + \
-                                   ['%d' % i,'%d' % nevents, '%s' % req_acc ] + \
-                                   folder_names[mode],
-                                   stdout=subprocess.PIPE, 
-                                   cwd = pjoin(self.me_dir, 'SubProcesses'))
-                    output = p.communicate()
-                    files.cp(pjoin(self.me_dir, 'SubProcesses', 'res_%d.txt' % i), \
-                             pjoin(self.me_dir, 'Events', self.run_name))
-
-                    self.cross_sect_dict = self.read_results(output, mode)
-                    self.print_summary(options, i, mode)
-
-                    cross, error = sum_html.make_all_html_results(self, folder_names[mode])
-                    self.results.add_detail('cross', cross)
-                    self.results.add_detail('error', error) 
-
-                #check that split jobs are all correctly terminated
-                if split:
-                    self.check_event_files()
-
-        if self.cluster_mode == 1:
+            if self.cluster_mode == 1:
             #if cluster run, wait 15 sec so that event files are transferred back
-            self.update_status(
+                self.update_status(
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
-            time.sleep(10)
-        if split:
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted_splitted'), \
-                     pjoin(self.me_dir, 'SubProcesses', 'nevents_unweighted'))
+                time.sleep(10)
 
-
-        event_norm=self.run_card['event_norm']
-        self.collect_log_files(folder_names[mode], 2)
-        return self.reweight_and_collect_events(options, mode, nevents, event_norm)
+            event_norm=self.run_card['event_norm']
+            return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
@@ -1563,6 +1459,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['run_mode']=run_mode
                         job['dirname']=pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)
                         job['wgt_frac']=1.0
+                        if not fixed_order: job['mint_mode']=1
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
             if fixed_order:
@@ -1592,18 +1489,23 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             else:
                 if fixed_order :
                     dirname=pjoin(self.me_dir,'SubProcesses',job['p_dir'],
-                                  job['run_mode']+'_G'+job['channel']+'_'+job['split'])
+                            job['run_mode']+'_G'+job['channel']+'_'+str(job['split']))
                 else:
                     dirname=pjoin(self.me_dir,'SubProcesses',job['p_dir'],
-                                  'G'+name_suffix[job['run_mode']]+job['channel']+'_'+job['split'])
-                    
+                            'G'+name_suffix[job['run_mode']]+job['channel']+'_'+str(job['split']))
             job['dirname']=dirname
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
             if fixed_order:
                 self.write_input_file(dirname,job)
             else:
-                self.write_madinMMC_file(job['dirname'], job['run_mode'], job['mint_mode'])
+                self.write_madinMMC_file(job['dirname'], job['run_mode'], \
+                                         job['mint_mode'], job['channel'])
+                # copy the grids from the base directory to the split directory:
+                if job['split'] != 0:
+                    for f in ['grid.MC_integer','mint_grids','res_1']:
+                        if not os.path.isfile(pjoin(job['dirname'],f)):
+                            files.ln(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
 
 
     def write_input_file(self,dirname,job):
@@ -1614,7 +1516,7 @@ NITERATIONS = %(niters)s
 ACCURACY = %(accuracy)s
 ADAPT_GRID = 2
 MULTICHANNEL = 1
-SUM_HELICITY = 0
+SUM_HELICITY = 1
 CHANNEL = %(channel)s
 SPLIT = %(split)s
 RUN_MODE = %(run_mode)s
@@ -1627,12 +1529,11 @@ RESTART = %(mint_mode)s
 
     def run_all_jobs(self,jobs_to_run,integration_step,fixed_order=True):
         """Loops over the jobs_to_run and executes them using the function 'run_exe'"""
-        if not integration_step:
-            self.update_status('Setting up grids', level=None)
-        elif fixed_order:
-                self.update_status('Refining results %i' % integration_step, level=None)
-
-        njob_split = 0
+        if fixed_order:
+            if not integration_step:
+                self.update_status('Setting up grids', level=None)
+            else:
+                self.update_status('Refining results, step %i' % integration_step, level=None)
         self.ijob = 0
         name_suffix={'born' :'B' , 'all':'F'}
 
@@ -1657,34 +1558,39 @@ RESTART = %(mint_mode)s
 
     def collect_the_results(self,options,req_acc,jobs_to_run,jobs_to_collect,\
                             integration_step,mode,run_mode,fixed_order=True):
-        """Collect the results and determine if there are more jobs to run"""
+        """Collect the results, make HTML pages, print the summary and
+           determine if there are more jobs to run"""
         self.append_the_results(jobs_to_run,integration_step)
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
-        jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
-        if (not fixed_order) and integration_step+1==2:
-            jobs_to_run_new,jobs_to_collect_new= \
-                            self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
-            self.write_nevents_unweighted_file(jobs_to_collect)
-            self.write_nevts_files(jobs_to_run)
-        else:
-            jobs_to_collect_new=jobs_to_collect
         if fixed_order:
             cross, error = sum_html.make_all_html_results(self, ['%s*' % run_mode])
         else:
             name_suffix={'born' :'B' , 'all':'F'}
             cross, error = sum_html.make_all_html_results(self, ['G%s*' % name_suffix[run_mode]])
-        
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error) 
+# Set-up jobs for the next iteration/mint_step
+        jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
+        # if there are no more jobs, we are done!
         if not jobs_to_run_new and fixed_order:
             scale_pdf_info=self.collect_scale_pdf_info(options,jobs_to_collect)
+            self.print_summary(options,integration_step,mode,scale_pdf_info,done=True)
+            return jobs_to_run_new,jobs_to_collect
+        elif jobs_to_run_new:
+            scale_pdf_info={}
+            self.print_summary(options,integration_step,mode,scale_pdf_info,done=False)
         else:
             scale_pdf_info={}
-        if not jobs_to_run_new and fixed_order:
-            self.print_summary(options,integration_step,mode,scale_pdf_info,done=True)
-        elif jobs_to_run_new:
-            self.print_summary(options,integration_step,mode,scale_pdf_info,done=False)
-
+        if (not fixed_order) and integration_step+1 == 2 :
+            # next step is event generation (mint_step 2)
+            jobs_to_run_new,jobs_to_collect_new= \
+                            self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
+            self.prepare_directories(jobs_to_run_new,mode,fixed_order)
+            self.write_nevents_unweighted_file(jobs_to_collect_new)
+            self.write_nevts_files(jobs_to_run_new)
+        else:
+            self.prepare_directories(jobs_to_run_new,mode,fixed_order)
+            jobs_to_collect_new=jobs_to_collect
         return jobs_to_run_new,jobs_to_collect_new
 
 
@@ -1706,38 +1612,50 @@ RESTART = %(mint_mode)s
                 f.write('%i\n' % job['nevents'])
 
     def check_the_need_to_split(self,jobs_to_run,jobs_to_collect):
-        """Looks in the jobs_to_run to see if there is the need to
-           split event generation. Updates jobs_to_run and jobs_to_collect
-           to replace the split-job by its splits"""
+        """Looks in the jobs_to_run to see if there is the need to split
+           the event generation. Updates jobs_to_run and jobs_to_collect
+           to replace the split-job by its splits. Also removes jobs
+           that do not need any events"""
         nevt_job=self.run_card['nevt_job']
         if nevt_job > 0:
             jobs_to_collect_new=copy.copy(jobs_to_collect)
             for job in jobs_to_run:
                 nevents=job['nevents']
-                if nevents > nevt_job:
-                    jobs_to_collect_new=jobs_to_collect_new.remove(job)
-                    nsplit=int(nevents/nevt_job)
+                if nevents == 0:
+                    jobs_to_collect_new.remove(job)
+                elif nevents > nevt_job:
+                    jobs_to_collect_new.remove(job)
+                    nsplit=int(nevents/nevt_job)+1
                     for i in range(1,nsplit+1):
-                        if i != nsplit:
-                            job['nevents']=int(nevents/nsplit)
-                            job['wgt_frac']=float(job['nevents'])/float(nevents)
-                        elif i == nsplit:
-                            job['nevents']=int(nevents-(nsplit-1)*int(nevents/nsplit))
-                            job['wgt_frac']=float(job['nevents'])/float(nevents)
-                        job['split']=i
-                        job['dirname']=job['dirname']+'_%i' % job['split']
-                        jobs_to_collect_new.append(job)
+                        job_new=copy.copy(job)
+                        left_over=nevents % nsplit
+                        if i <= left_over:
+                            job_new['nevents']=int(nevents/nsplit)+1
+                            job_new['wgt_frac']=float(job_new['nevents'])/float(nevents)
+                        else:
+                            job_new['nevents']=int(nevents/nsplit)
+                            job_new['wgt_frac']=float(job_new['nevents'])/float(nevents)
+                        job_new['split']=i
+                        job_new['dirname']=job['dirname']+'_%i' % job_new['split']
+                        jobs_to_collect_new.append(job_new)
             jobs_to_run_new=copy.copy(jobs_to_collect_new)
         else:
-            jobs_to_run_new=jobs_to_run
-            jobs_to_collect_new=jobs_to_collect
+            jobs_to_run_new=copy.copy(jobs_to_collect)
+            for job in jobs_to_collect:
+                if job['nevents'] == 0:
+                    jobs_to_run_new.remove(job)
+            jobs_to_collect_new=copy.copy(jobs_to_run_new)
 
         return jobs_to_run_new,jobs_to_collect_new
     
 
     def update_jobs_to_run(self,req_acc,integration_step,jobs,fixed_order=True):
-        """Determines which jobs need higher precision and returns those with
-           the newly requested precision"""
+        """
+        For (N)LO+PS:    determines the number of events and/or the required
+                         accuracy per job.
+        For fixed order: determines which jobs need higher precision and
+                         returns those with the newly requested precision.
+        """
         err=self.cross_sect_dict['errt']
         tot=self.cross_sect_dict['xsect']
         errABS=self.cross_sect_dict['erra']
@@ -1780,7 +1698,7 @@ RESTART = %(mint_mode)s
                     jobs_new.append(job)
                     return jobs_new
         elif integration_step+1 <= 2:
-            nevents=int(self.run_card['nevents'])
+            nevents=self.run_card['nevents']
             if req_acc<0: 
                 req_acc2_inv=nevents
             else:
@@ -1820,7 +1738,7 @@ RESTART = %(mint_mode)s
 
 
     def append_the_results(self,jobs,integration_step):
-        """Appends the results for each of the jobs to the job list"""
+        """Appends the results for each of the jobs in the job list"""
         for job in jobs:
             try:
                 if integration_step >= 0 :
@@ -1849,15 +1767,12 @@ RESTART = %(mint_mode)s
     def write_res_txt_file(self,jobs,integration_step):
         """writes the res.txt files in the SubProcess dir"""
         jobs.sort(key = lambda job: -job['errorABS'])
-
         content='\n\nCross-section per integration channel:\n'
         for job in jobs:
             content+='%(p_dir)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  job
-
         content+='\n\nABS cross-section per integration channel:\n'
         for job in jobs:
             content+='%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  \n' %  job
-
         totABS=0
         errABS=0
         tot=0
@@ -1867,15 +1782,11 @@ RESTART = %(mint_mode)s
             errABS+= math.pow(job['errorABS'],2)
             tot+= job['result']
             err+= math.pow(job['error'],2)
-
         content+='\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%)\n' %\
             (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,tot, math.sqrt(err), math.sqrt(err)/tot *100.)
-
         with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
             res_file.write(content)
-            
         randinit=self.get_randinit_seed()
-
         return {'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
                 'erra':math.sqrt(errABS),'randinit':randinit}
         
@@ -2011,14 +1922,10 @@ RESTART = %(mint_mode)s
         if not hasattr(self, 'appl_start_grid') or not self.appl_start_grid:
             raise self.InvalidCmd('No APPLgrid name currently defined.'+
                                              'Please provide this information.')             
-        if mode == 'NLO':
-            gdir='all_G'
-        elif mode == 'LO':
-            gdir='born_G'
         #copy the grid to all relevant directories
         for pdir in p_dirs:
             g_dirs = [file for file in os.listdir(pjoin(self.me_dir,
-              "SubProcesses",pdir)) if file.startswith(gdir) and 
+                        "SubProcesses",pdir)) if file.startswith(mode+'_G') and 
                    os.path.isdir(pjoin(self.me_dir,"SubProcesses",pdir, file))]
             for g_dir in g_dirs:
                 for grid in all_grids:
@@ -2065,7 +1972,7 @@ RESTART = %(mint_mode)s
         # Copy the res_*.txt files to the Events/run* folder
         res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res_*.txt'))
         for res_file in res_files:
-            files.cp(res_file,pjoin(self.me_dir, 'Events', self.run_name))
+            files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
         # Collect the plots and put them in the Events/run* folder
         self.combine_plots_FO(folder_name,jobs)
         # If doing the applgrid-stuff, also combine those grids
@@ -2264,7 +2171,7 @@ Integrated cross-section
                      '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
                              self.cross_sect_dict
                 if self.run_card['reweight_scale']:
-                    if int(self.run_card['ickkw'])!=-1:
+                    if self.run_card['ickkw'] != -1:
                         message = message + \
                             ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                             (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
@@ -2738,7 +2645,6 @@ Integrated cross-section
         scale_pdf_info={}
         if self.run_card['reweight_scale'] or self.run_card['reweight_PDF'] :
             scale_pdf_info = self.run_reweight(options['reweightonly'])
-
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
                     cwd=pjoin(self.me_dir, 'SubProcesses'))
@@ -2762,6 +2668,10 @@ Integrated cross-section
         misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
+            res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res*.txt'))
+            for res_file in res_files:
+                files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
+
         logger.info('The %s file has been generated.\n' % (evt_file))
         self.results.add_detail('nb_event', nevents)
         self.update_status('Events generated', level='parton', update_results=True)
@@ -2782,9 +2692,9 @@ Integrated cross-section
 
         #check that the number of split event files divides the number of
         # events, otherwise set it to 1
-        if int(int(self.banner.get_detail('run_card', 'nevents')) / \
+        if int(self.banner.get_detail('run_card', 'nevents') / \
                 self.shower_card['nsplit_jobs']) * self.shower_card['nsplit_jobs'] \
-                != int(self.banner.get_detail('run_card', 'nevents')):
+                != self.banner.get_detail('run_card', 'nevents'):
             logger.warning(\
                 'nsplit_jobs in the shower card is not a divisor of the number of events.\n' + \
                 'Setting it to 1.')
@@ -2792,7 +2702,7 @@ Integrated cross-section
 
         # don't split jobs if the user asks to shower only a part of the events
         if self.shower_card['nevents'] > 0 and \
-           self.shower_card['nevents'] < int(self.banner.get_detail('run_card', 'nevents')) and \
+           self.shower_card['nevents'] < self.banner.get_detail('run_card', 'nevents') and \
            self.shower_card['nsplit_jobs'] != 1:
             logger.warning(\
                 'Only a part of the events will be showered.\n' + \
@@ -3378,8 +3288,8 @@ Integrated cross-section
         init_dict = self.get_init_dict(evt_file)
 
         if nevents < 0 or \
-           nevents > int(self.banner.get_detail('run_card', 'nevents')):
-            nevents = int(self.banner.get_detail('run_card', 'nevents'))
+           nevents > self.banner.get_detail('run_card', 'nevents'):
+            nevents = self.banner.get_detail('run_card', 'nevents')
 
         nevents = nevents / self.shower_card['nsplit_jobs']
 
@@ -3391,7 +3301,7 @@ Integrated cross-section
 
         content = 'EVPREFIX=%s\n' % pjoin(os.path.split(evt_file)[1])
         content += 'NEVENTS=%d\n' % nevents
-        content += 'NEVENTS_TOT=%d\n' % (int(self.banner.get_detail('run_card', 'nevents')) /\
+        content += 'NEVENTS_TOT=%d\n' % (self.banner.get_detail('run_card', 'nevents') /\
                                              self.shower_card['nsplit_jobs'])
         content += 'MCMODE=%s\n' % shower
         content += 'PDLABEL=%s\n' % pdlabel
@@ -3504,7 +3414,7 @@ Integrated cross-section
 
 
     def run_reweight(self, only):
-        """runs the reweight_xsec_events eecutables on each sub-event file generated
+        """runs the reweight_xsec_events executables on each sub-event file generated
         to compute on the fly scale and/or PDF uncertainities"""
         logger.info('   Doing reweight')
 
@@ -3622,7 +3532,7 @@ Integrated cross-section
                 scale_pdf_info['scale_low'] = 0.0
 
         # get the pdf uncertainty in percent (according to the Hessian method)
-        lhaid=int(self.run_card['lhaid'])
+        lhaid=self.run_card['lhaid']
         pdf_upp=0.0
         pdf_low=0.0
         if lhaid <= 90000:
@@ -3637,7 +3547,6 @@ Integrated cross-section
                 else:
                     scale_pdf_info['pdf_upp'] = 0.0
                     scale_pdf_info['pdf_low'] = 0.0
-
         else:
             # use Gaussian method (NNPDF)
             pdf_stdev=0.0
@@ -3654,7 +3563,6 @@ Integrated cross-section
 
     def wait_for_complete(self, run_type):
         """this function waits for jobs on cluster to complete their run."""
-
         starttime = time.time()
         #logger.info('     Waiting for submitted jobs to complete')
         update_status = lambda i, r, f: self.update_status((i, r, f, run_type), 
@@ -3667,29 +3575,15 @@ Integrated cross-section
 
     def run_all(self, job_dict, arg_list, run_type='monitor', split_jobs = False):
         """runs the jobs in job_dict (organized as folder: [job_list]), with arguments args"""
-        njob_split = 0
         self.ijob = 0
-
-        #  this is to keep track, if splitting evt generation, of the various 
-        # folders/args in order to resubmit the jobs if some of them fail
-        self.split_folders = {}
-
         if run_type != 'shower':
             self.njobs = sum(len(jobs) for jobs in job_dict.values()) * len(arg_list)
             for args in arg_list:
                 for Pdir, jobs in job_dict.items():
                     for job in jobs:
-                        if not split_jobs:
-                            self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
-                        else:
-                            for n in self.find_jobs_to_split(Pdir, job, args[1]):
-                                self.run_exe(job, args + [n], run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
-                                njob_split += 1
-                        # print some statistics if running serially
+                        self.run_exe(job, args, run_type, cwd=pjoin(self.me_dir, 'SubProcesses', Pdir) )
             if self.cluster_mode == 2:
                 time.sleep(1) # security to allow all jobs to be launched
-            if njob_split > 0:
-                self.njobs = njob_split
         else:
             self.njobs = len(arg_list)
             for args in arg_list:
@@ -3700,37 +3594,27 @@ Integrated cross-section
 
 
 
-    def check_event_files(self):
+    def check_event_files(self,jobs):
         """check the integrity of the event files after splitting, and resubmit 
         those which are not nicely terminated"""
-        to_resubmit = []
-        for dir in self.split_folders.keys():
+        jobs_to_resubmit = []
+        for job in jobs:
             last_line = ''
             try:
                 last_line = subprocess.Popen(
-                        ['tail', '-n1', pjoin(dir, 'events.lhe')], \
+                        ['tail', '-n1', pjoin(job['dirname'], 'events.lhe')], \
                     stdout = subprocess.PIPE).stdout.read().strip()
             except IOError:
                 pass
-
             if last_line != "</LesHouchesEvents>":
-                to_resubmit.append(dir)
-
+                jobs_to_resubmit.append(job)
         self.njobs = 0
-        if to_resubmit:
+        if jobs_to_resubmit:
             run_type = 'Resubmitting broken jobs'
             logger.info('Some event files are broken, corresponding jobs will be resubmitted.')
-            logger.debug('Resubmitting\n' + '\n'.join(to_resubmit) + '\n')
-            for dir in to_resubmit:
-                files.rm([dir])
-                job = self.split_folders[dir][0]
-                args = self.split_folders[dir][1:]
-                run_type = 'monitor'
-                cwd = os.path.split(dir)[0]
-                self.run_exe(job, args, run_type, cwd=cwd )
-                self.njobs +=1
-
-            self.wait_for_complete(run_type)
+            for job in jobs_to_resubmit:
+                logger.debug('Resubmitting ' + job['dirname'] + '\n')
+            self.run_all_jobs(jobs_to_resubmit,2,fixed_order=False)
 
 
     def find_jobs_to_split(self, pdir, job, arg):
@@ -3809,10 +3693,10 @@ Integrated cross-section
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
 
-                # keep track of folders and arguments for splitted evt gen
-                subfolder=output_files[-1].split('/')[0]
-                if len(args) == 4 and '_' in subfolder:
-                    self.split_folders[pjoin(cwd,subfolder)] = [exe] + args
+#                # keep track of folders and arguments for splitted evt gen
+#                subfolder=output_files[-1].split('/')[0]
+#                if len(args) == 4 and '_' in subfolder:
+#                    self.split_folders[pjoin(cwd,subfolder)] = [exe] + args
 
         elif 'shower' in exe:
             # a shower job
@@ -3926,7 +3810,10 @@ Integrated cross-section
             # MINTMC MODE
             input_files.append(pjoin(cwd, 'madevent_mintMC'))
 
-            current = 'G%s%s' % (args[1], args[0])
+            if args[2] == '0':
+                current = 'G%s%s' % (args[1],args[0])
+            else:
+                current = 'G%s%s_%s' % (args[1],args[0],args[2])
             if os.path.exists(pjoin(cwd,current)):
                 input_files.append(pjoin(cwd, current))
             output_files.append(current)
@@ -3951,7 +3838,7 @@ Integrated cross-section
             input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
             
-    def write_madinMMC_file(self, path, run_mode, mint_mode):
+    def write_madinMMC_file(self, path, run_mode, mint_mode, channel):
         """writes the madinMMC_?.2 file"""
         #check the validity of the arguments
         run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB']
@@ -3970,12 +3857,12 @@ Integrated cross-section
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
 1          ! Exact helicity sum (0 yes, n = number/event)?
-1          ! Enter Configuration Number:
+%s          ! Enter Configuration Number:
 %1d          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
 1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
 %s        ! all, born, real, virt
 """ \
-                    % (mint_mode, run_mode)
+                    % (channel, mint_mode, run_mode)
         with open(pjoin(path, 'input_app.txt'), 'w') as file:
             file.write(content)
 
@@ -4040,10 +3927,10 @@ Integrated cross-section
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [int(self.run_card['lhaid'])]
+            lhaid_list = [self.run_card['lhaid']]
             if self.run_card['reweight_PDF']:
-                lhaid_list.append(int(self.run_card['PDF_set_min']))
-                lhaid_list.append(int(self.run_card['PDF_set_max']))
+                lhaid_list.append(self.run_card['PDF_set_min'])
+                lhaid_list.append(self.run_card['PDF_set_max'])
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
         else:
@@ -4582,9 +4469,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
                     if mode in ['LO','aMC@LO','noshowerLO']:
                         self.run_name += '_LO' 
             self.set_run_name(self.run_name, self.run_tag, 'parton')
-            if int(self.run_card['ickkw']) == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
+            if self.run_card['ickkw'] == 3 and mode in ['LO', 'aMC@LO', 'noshowerLO']:
                 raise self.InvalidCmd("""FxFx merging (ickkw=3) not allowed at LO""")
-            elif int(self.run_card['ickkw']) == 3 and mode in ['aMC@NLO', 'noshower']:
+            elif self.run_card['ickkw'] == 3 and mode in ['aMC@NLO', 'noshower']:
                 logger.warning("""You are running with FxFx merging enabled.  To be able to merge
     samples of various multiplicities without double counting, you
     have to remove some events after showering 'by hand'.  Please
@@ -4600,7 +4487,7 @@ Please, shower the Les Houches events before using them for physics analyses."""
                         error = '''Stop opertation'''
                         self.ask_run_configuration(mode, options)
     #                    raise aMCatNLOError(error)
-            elif int(self.run_card['ickkw']) == -1 and mode in ['aMC@NLO', 'noshower']:
+            elif self.run_card['ickkw'] == -1 and mode in ['aMC@NLO', 'noshower']:
                     # NNLL+NLO jet-veto only possible for LO event generation or fNLO runs.
                 raise self.InvalidCmd("""NNLL+NLO jet veto runs (ickkw=-1) only possible for fNLO or LO.""")
         if 'aMC@' in mode or mode == 'onlyshower':

@@ -88,8 +88,6 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
         ../madevent_mintFO > log.txt <input_app.txt 2>&1
     else
         if [[ $runnumber != 0 ]]; then
-            tar --extract --file=../nevents.tar nevts_${j}_$runnumber
-            mv  nevts_${j}_$runnumber nevts
             echo "$runnumber" >& moffset.dat
         fi
         ../madevent_mintMC > log.txt <input_app.txt 2>&1
