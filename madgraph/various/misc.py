@@ -33,15 +33,18 @@ import gzip as ziplib
 try:
     # Use in MadGraph
     import madgraph
-    from madgraph import MadGraph5Error, InvalidCmd
-    import madgraph.iolibs.files as files
 except Exception, error:
-    if __debug__:
-        print error
     # Use in MadEvent
-    import internal as madgraph
+    import internal
     from internal import MadGraph5Error, InvalidCmd
     import internal.files as files
+    MADEVENT = True    
+else:
+    from madgraph import MadGraph5Error, InvalidCmd
+    import madgraph.iolibs.files as files
+    MADEVENT = False
+
+
     
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
@@ -108,14 +111,19 @@ def get_pkg_info(info_str=None):
     string can be passed to be read instead of the file content.
     """
 
-    if info_str is None:
+    if info_str:
+        info_dict = parse_info_str(StringIO.StringIO(info_str))
+
+    elif MADEVENT:
+        info_dict ={}
+        info_dict['version'] = open(pjoin(internal.__path__[0],'..','..','MGMEVersion.txt')).read().strip()
+        info_dict['date'] = '20xx-xx-xx'                        
+    else:
         info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
-    else:
-        info_dict = parse_info_str(StringIO.StringIO(info_str))
-
+        
     return info_dict
 
 #===============================================================================

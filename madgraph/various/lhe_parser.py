@@ -328,11 +328,11 @@ class EventFile(object):
         # need to modify the banner so load it to an object
         if self.banner:
             try:
-                import madgraph
+                import internal
             except:
-                import internal.banner as banner_module
-            else:
                 import madgraph.various.banner as banner_module
+            else:
+                import internal.banner as banner_module
             if not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
@@ -605,7 +605,8 @@ class MultiEventFile(EventFile):
         if run_card["lhe_version"] < 3:
             init_information["generator_info"] = ""
         else:
-            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='2.2.1'>please cite 1405.0301 </generator>\n"
+            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='%s'>please cite 1405.0301 </generator>\n" \
+                % misc.get_pkg_info()['version']
         
         # cross_information:
         cross_info = "%(cross)e %(error)e %(wgt)e %(id)i"
@@ -725,7 +726,8 @@ class MultiEventFile(EventFile):
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
         
-        if opts['event_target']:
+        if 'event_target' in opts and opts['event_target']:
+            misc.sprint(opts['event_target'])
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt

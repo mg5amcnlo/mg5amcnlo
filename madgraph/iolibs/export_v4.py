@@ -72,7 +72,8 @@ class ProcessExporterFortran(object):
     Fortran (v4) format."""
 
     default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent', 'mp': False
+                        'export_format':'madevent', 'mp': False,
+                        'v5_model': True
                         }
 
     def __init__(self, mgme_dir = "", dir_path = "", opt=None):
@@ -3279,7 +3280,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the driver.f 
         ncomb = matrix_element.get_helicity_combinations()
         filename = pjoin(Ppath,'driver.f')
-        self.write_driver(writers.FortranWriter(filename),ncomb,n_grouped_proc=1)
+        self.write_driver(writers.FortranWriter(filename),ncomb,n_grouped_proc=1,
+                          v5=self.opt['v5_model'])
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
         filename = pjoin(Ppath, 'matrix.f')
@@ -4209,7 +4211,7 @@ c           This is dummy particle used in multiparticle vertices
         replace_dict = {'param_card_name':card, 
                         'ncomb':ncomb,
                         'hel_init_points':n_grouped_proc*10*2}
-        if v5:
+        if not v5:
             replace_dict['secondparam']=',.true.'
         else:
             replace_dict['secondparam']=''            
@@ -4527,7 +4529,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'driver.f'
         self.write_driver(writers.FortranWriter(filename),ncomb,
-                                  n_grouped_proc=len(matrix_elements), v5=False)
+                                  n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
 
         for ime, matrix_element in \
                 enumerate(matrix_elements):
@@ -6252,7 +6254,8 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                'export_format':cmd._export_format,
                'mp': False,  
                'sa_symmetry':False, 
-               'model': cmd._curr_model.get('name') })
+               'model': cmd._curr_model.get('name'),
+               'v5_model': False if cmd._model_v4_path else True })
 
         format = cmd._export_format #shortcut
 
