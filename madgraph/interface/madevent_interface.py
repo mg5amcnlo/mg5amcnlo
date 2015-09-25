@@ -3670,7 +3670,7 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(cwd,G,'ftn25'))
                         except:
                             pass
-                    
+
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,
