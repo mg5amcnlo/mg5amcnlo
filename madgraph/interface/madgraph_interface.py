@@ -2676,7 +2676,8 @@ This implies that with decay chains:
   > Loop corrections cannot be considered."""
                     raise MadGraph5Error(error_msg)
                 else:
-                    myprocdef, line = self.extract_decay_chain_process(line)
+                    nb_proc = len([l for l in self.history if l.startswith(('generate','add process'))])
+                    myprocdef, line = self.extract_decay_chain_process(line, proc_number=nb_proc)
                     # Redundant with above, but not completely as in the future
                     # one might think of allowing the core process to be 
                     # corrected by loops.
@@ -4160,14 +4161,13 @@ This implies that with decay chains:
         pdg_list.sort(key = lambda i: \
                       model.get_particle(i).get('mass').lower() != 'zero')
 
-    def extract_decay_chain_process(self, line, level_down=False):
+    def extract_decay_chain_process(self, line, level_down=False, proc_number=0):
         """Recursively extract a decay chain process definition from a
         string. Returns a ProcessDefinition."""
 
         # Start with process number (identified by "@") and overall orders
         proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
-        proc_number = 0
         overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
@@ -4179,8 +4179,9 @@ This implies that with decay chains:
                 while order_re:
                     overall_orders[order_re.group(2)] = int(order_re.group(3))
                     order_line = order_re.group(1)
-                    order_re = order_pattern.match(order_line)
+                    order_re = order_pattern.match(order_line)                
             logger.info(line)
+            
 
         index_comma = line.find(",")
         index_par = line.find(")")

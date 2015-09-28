@@ -151,6 +151,7 @@ class gensym(object):
             (stdout, _) = p.communicate('')
             
             if os.path.exists(pjoin(self.me_dir,'error')):
+                misc.sprint(open(pjoin(self.me_dir,'error')).read())
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
                 P_zero_result.append(subdir)
                 continue            
