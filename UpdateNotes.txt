@@ -8,6 +8,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	RF: Better discarding of numerical instabilities in the real-emission matrix elements. Only of interested for
 	    processes which have jets at Born level, but do not require generation cut (like t-channel single-top). 
 	RF: Added an option to the run_card to allow for easier variation of the shower starting scale (NLO only).
+	RF: Fixed a problem in the setting of the flavour map used for runs with iAPPL >= 1. 
 
 2.3.2(20/08/15)   
         OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)
