@@ -1509,7 +1509,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 os.makedirs(dirname)
             self.write_input_file(job,fixed_order)
             if not fixed_order:
-                self.write_input_file(job,fixed_order)
                 # copy the grids from the base directory to the split directory:
                 if job['split'] != 0:
                     for f in ['grid.MC_integer','mint_grids','res_1']:
