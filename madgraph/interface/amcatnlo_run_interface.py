@@ -1312,13 +1312,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                 req_acc,mode_dict[mode],integration_step,mode,fixed_order=True)
             jobs_to_collect=copy.copy(jobs_to_run)
+            self.prepare_directories(jobs_to_run,mode)
 
             # loop over the integration steps. After every step, check
             # if we have the required accuracy. If this is the case,
             # stop running, else do another step.
             while True:
                 integration_step=integration_step+1
-                self.prepare_directories(jobs_to_run,mode)
                 self.run_all_jobs(jobs_to_run,integration_step)
                 self.collect_log_files(jobs_to_run,integration_step)
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
