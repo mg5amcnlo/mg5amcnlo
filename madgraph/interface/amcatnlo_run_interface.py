@@ -1536,7 +1536,7 @@ RESTART = %(mint_mode)s
         else:
             content = \
 """-1 12      ! points, iterations
-0.03       ! desired fractional accuracy
+%(accuracy)s       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
 -1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
@@ -1602,7 +1602,7 @@ RESTART = %(mint_mode)s
         jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
         # if there are no more jobs, we are done!
 # Print summary
-        if not jobs_to_run_new and fixed_order:
+        if (not jobs_to_run_new) and fixed_order:
             # print final summary of results (for fixed order)
             scale_pdf_info=self.collect_scale_pdf_info(options,jobs_to_collect)
             self.print_summary(options,integration_step,mode,scale_pdf_info,done=True)
