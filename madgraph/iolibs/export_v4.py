@@ -5792,17 +5792,35 @@ class UFO_model_to_mg4(object):
         """ Create model_functions.inc which contains the various declarations
         of auxiliary functions which might be used in the couplings expressions
         """
+
+        additional_fct = []
+        # check for functions define in the UFO model
+        ufo_fct = self.model.get('functions')
+        if ufo_fct:
+            for fct in ufo_fct:
+                # already handle by default
+                if fct.name not in ["complexconjugate", "re", "im", "sec", 
+                                "csc", "asec", "acsc", "theta_function", "cond", 
+                               "condif", "reglogp", "reglogm", "reglog", "arg"]:
+                    additional_fct.append(fct.name)
+
         
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
           double complex condif
           double complex reglog
-          double complex arg""")
+          double complex arg
+          %s
+          """ % "\n".join(["          double complex %s" % i for i in additional_fct]))
+
+        
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
           %(complex_mp_format)s mp_condif
           %(complex_mp_format)s mp_reglog
-          %(complex_mp_format)s mp_arg"""\
+          %(complex_mp_format)s mp_arg
+          %s
+          """ % "\n".join(["          %s %s" % (self.mp_complex_format, i) for i in additional_fct])\
           %{'complex_mp_format':self.mp_complex_format})
 
     def create_model_functions_def(self):

@@ -2129,7 +2129,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         args = self.split_arg(line[0:begidx])
         if len(args) >= 1:
             
-            if args[1] == 'pythia8':
+            if len(args) > 1 and args[1] == 'pythia8':
                 possible_options_full = list(possible_options_full) + ['--version=8.1','--version=8.2'] 
             
             if len(args) > 1 and args[1] == 'aloha':
