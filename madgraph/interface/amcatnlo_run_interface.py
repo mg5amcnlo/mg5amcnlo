@@ -1282,8 +1282,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         folder_names['noshowerLO'] = folder_names['aMC@LO']
         p_dirs = [d for d in \
                 open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
-        #find jobs and clean previous results
-        job_dict = self.clean_previous_results(options,p_dirs,folder_names[mode])
+        #Clean previous results
+        self.clean_previous_results(options,p_dirs,folder_names[mode])
 
         mcatnlo_status = ['Setting up grids', 'Computing upper envelope', 'Generating events']
 
@@ -1301,11 +1301,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             logger.info('Doing fixed order %s' % mode)
             req_acc = self.run_card['req_acc_FO']
 
-            # Re-distribute the grids for the 2nd step of the applgrid running
+            # Re-distribute the grids for the 2nd step of the applgrid
+            # running
             if self.run_card['iappl'] == 2:
                 self.applgrid_distribute(options,mode_dict[mode],p_dirs)
 
-            # create a list of tuples with all the jobs that need to be run
+            # create a list of dictionaries "jobs_to_run" with all the
+            # jobs that need to be run
             integration_step=-1
             jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                 req_acc,mode_dict[mode],integration_step,mode,fixed_order=True)
@@ -1377,7 +1379,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,1,mode,mode_dict[mode],fixed_order=False)
 
-            # Main loop over the three event generation step:
+            # Main loop over the three MINT generation steps:
             for mint_step, status in enumerate(mcatnlo_status):
                 if options['only_generation'] and mint_step < 2:
                     continue
@@ -1390,7 +1392,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             self.check_event_files(jobs_to_collect)
 
             if self.cluster_mode == 1:
-            #if cluster run, wait 15 sec so that event files are transferred back
+            #if cluster run, wait 10 sec so that event files are transferred back
                 self.update_status(
                     'Waiting while files are transferred back from the cluster nodes',
                     level='parton')
@@ -1401,9 +1403,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
     def create_jobs_to_run(self,options,p_dirs,req_acc,run_mode,\
                            integration_step,mode,fixed_order=True):
-        """Creates a list of tuples with all the jobs to be run"""
+        """Creates a list of dictionaries with all the jobs to be run"""
         jobs_to_run=[]
         if not options['only_generation']:
+            # Fresh, new run. Check all the P*/channels.txt files
+            # (created by the 'gensym' executable) to set-up all the
+            # jobs using the default inputs.
             npoints = self.run_card['npoints_FO_grid']
             niters = self.run_card['niters_FO_grid']
             for p_dir in p_dirs:
@@ -1414,7 +1419,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     job['p_dir']=p_dir
                     job['channel']=channel
                     job['split']=0
-                    if fixed_order and req_acc == 1:
+                    if fixed_order and req_acc == -1:
                         job['accuracy']=0
                         job['niters']=niters
                         job['npoints']=npoints
@@ -1422,16 +1427,22 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['accuracy']=0.10
                         job['niters']=6
                         job['npoints']=-1
-                    else:
+                    elif not fixed_order:
                         job['accuracy']=0.03
                         job['niters']=12
                         job['npoints']=-1
+                    else:
+                        raise aMCatNLOError('No consistent "req_acc_FO" set. Use a value '+
+                                            'between 0 and 1 or set it equal to -1.')
                     job['mint_mode']=0
                     job['run_mode']=run_mode
                     job['wgt_frac']=1.0
                     jobs_to_run.append(job)
         else:
-            name_suffix={'born' :'B' , 'all':'F'}
+            # if options['only_generation'] is true, we need to loop
+            # over all the existing G* directories and create the jobs
+            # from there.
+            name_suffix={'born' :'B', 'all':'F'}
             for p_dir in p_dirs:
                 for chan_dir in os.listdir(pjoin(self.me_dir,'SubProcesses',p_dir)):
                     if ((chan_dir.startswith(run_mode+'_G') and fixed_order) or\
@@ -1451,9 +1462,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                             if len(chan_dir.split('_')) == 2:
                                 split=int(chan_dir.split('_')[1])
                                 channel=chan_dir.split('_')[0]
-                                job['channel']=channel[2:] # remove the 'G?'
+                                job['channel']=channel[2:] # remove the 'G'
                             else:
-                                job['channel']=chan_dir[2:] # remove the 'G?'
+                                job['channel']=chan_dir[2:] # remove the 'G'
                                 split=0
                         job['split']=split
                         job['run_mode']=run_mode
@@ -1476,7 +1487,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         return jobs_to_run,integration_step
 
     def prepare_directories(self,jobs_to_run,mode,fixed_order=True):
-        """Set-up the all_G*/born_G* directories for running"""
+        """Set-up the G* directories for running"""
         name_suffix={'born' :'B' , 'all':'F'}
         for job in jobs_to_run:
             if job['split'] == 0:
@@ -1496,11 +1507,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             job['dirname']=dirname
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
-            if fixed_order:
-                self.write_input_file(dirname,job)
-            else:
-                self.write_madinMMC_file(job['dirname'], job['run_mode'], \
-                                         job['mint_mode'], job['channel'])
+            self.write_input_file(job,fixed_order)
+            if not fixed_order:
+                self.write_input_file(job,fixed_order)
                 # copy the grids from the base directory to the split directory:
                 if job['split'] != 0:
                     for f in ['grid.MC_integer','mint_grids','res_1']:
@@ -1508,9 +1517,10 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                             files.ln(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
 
 
-    def write_input_file(self,dirname,job):
-        """write the input_app.txt file in the appropriate directory"""
-        content= \
+    def write_input_file(self,job,fixed_order):
+        """write the input file for the madevent_mint* executable in the appropriate directory"""
+        if fixed_order:
+            content= \
 """NPOINTS = %(npoints)s
 NITERATIONS = %(niters)s
 ACCURACY = %(accuracy)s
@@ -1522,21 +1532,34 @@ SPLIT = %(split)s
 RUN_MODE = %(run_mode)s
 RESTART = %(mint_mode)s
 """ \
-            % job
-        with open(pjoin(dirname, 'input_app.txt'), 'w') as input_file:
+              % job
+        else:
+            content = \
+"""-1 12      ! points, iterations
+0.03       ! desired fractional accuracy
+1 -0.1     ! alpha, beta for Gsoft
+-1 -0.1    ! alpha, beta for Gazi
+1          ! Suppress amplitude (0 no, 1 yes)?
+1          ! Exact helicity sum (0 yes, n = number/event)?
+%(channel)s          ! Enter Configuration Number:
+%(mint_mode)s          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
+1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
+%(run_mode)s        ! all, born, real, virt
+""" \
+                    % job
+        with open(pjoin(job['dirname'], 'input_app.txt'), 'w') as input_file:
             input_file.write(content)
 
 
     def run_all_jobs(self,jobs_to_run,integration_step,fixed_order=True):
         """Loops over the jobs_to_run and executes them using the function 'run_exe'"""
         if fixed_order:
-            if not integration_step:
+            if integration_step == 0:
                 self.update_status('Setting up grids', level=None)
             else:
                 self.update_status('Refining results, step %i' % integration_step, level=None)
         self.ijob = 0
-        name_suffix={'born' :'B' , 'all':'F'}
-
+        name_suffix={'born' :'B', 'all':'F'}
         for job in jobs_to_run:
             executable='ajob1'
             if fixed_order:
@@ -1559,9 +1582,15 @@ RESTART = %(mint_mode)s
     def collect_the_results(self,options,req_acc,jobs_to_run,jobs_to_collect,\
                             integration_step,mode,run_mode,fixed_order=True):
         """Collect the results, make HTML pages, print the summary and
-           determine if there are more jobs to run"""
+           determine if there are more jobs to run. Returns the list
+           of the jobs that still need to be run, as well as the
+           complete list of jobs that need to be collected to get the
+           final answer.
+        """
+# Get the results of the current integration/MINT step
         self.append_the_results(jobs_to_run,integration_step)
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
+# Update HTML pages
         if fixed_order:
             cross, error = sum_html.make_all_html_results(self, ['%s*' % run_mode])
         else:
@@ -1569,22 +1598,29 @@ RESTART = %(mint_mode)s
             cross, error = sum_html.make_all_html_results(self, ['G%s*' % name_suffix[run_mode]])
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error) 
-# Set-up jobs for the next iteration/mint_step
+# Set-up jobs for the next iteration/MINT step
         jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
         # if there are no more jobs, we are done!
+# Print summary
         if not jobs_to_run_new and fixed_order:
+            # print final summary of results (for fixed order)
             scale_pdf_info=self.collect_scale_pdf_info(options,jobs_to_collect)
             self.print_summary(options,integration_step,mode,scale_pdf_info,done=True)
             return jobs_to_run_new,jobs_to_collect
         elif jobs_to_run_new:
+            # print intermediate summary of results
             scale_pdf_info={}
             self.print_summary(options,integration_step,mode,scale_pdf_info,done=False)
         else:
+            # When we are done for (N)LO+PS runs, do not print
+            # anything yet. This will be done after the reweighting
+            # and collection of the events
             scale_pdf_info={}
+# Prepare for the next integration/MINT step
         if (not fixed_order) and integration_step+1 == 2 :
             # next step is event generation (mint_step 2)
             jobs_to_run_new,jobs_to_collect_new= \
-                            self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
+                    self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
             self.write_nevents_unweighted_file(jobs_to_collect_new)
             self.write_nevts_files(jobs_to_run_new)
@@ -1612,10 +1648,11 @@ RESTART = %(mint_mode)s
                 f.write('%i\n' % job['nevents'])
 
     def check_the_need_to_split(self,jobs_to_run,jobs_to_collect):
-        """Looks in the jobs_to_run to see if there is the need to split
-           the event generation. Updates jobs_to_run and jobs_to_collect
-           to replace the split-job by its splits. Also removes jobs
-           that do not need any events"""
+        """Looks in the jobs_to_run to see if there is the need to split the
+           event generation step. Updates jobs_to_run and
+           jobs_to_collect to replace the split-job by its
+           splits. Also removes jobs that do not need any events.
+        """
         nevt_job=self.run_card['nevt_job']
         if nevt_job > 0:
             jobs_to_collect_new=copy.copy(jobs_to_collect)
@@ -1649,7 +1686,7 @@ RESTART = %(mint_mode)s
         return jobs_to_run_new,jobs_to_collect_new
     
 
-    def update_jobs_to_run(self,req_acc,integration_step,jobs,fixed_order=True):
+    def update_jobs_to_run(self,req_acc,step,jobs,fixed_order=True):
         """
         For (N)LO+PS:    determines the number of events and/or the required
                          accuracy per job.
@@ -1663,7 +1700,7 @@ RESTART = %(mint_mode)s
         jobs_new=[]
         if fixed_order:
             if req_acc == -1:
-                if integration_step == 0:
+                if step == 0:
                     npoints = self.run_card['npoints_FO']
                     niters = self.run_card['niters_FO']
                     for job in jobs:
@@ -1671,14 +1708,17 @@ RESTART = %(mint_mode)s
                         job['niters']=niters
                         job['npoints']=npoints
                         jobs_new.append(job)
-            elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or integration_step == 0:
+                elif step > 0:
+                    raise aMCatNLOError('Cannot determine number of iterations and PS points '+
+                                        'for integration step %i' % step )
+            elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or step == 0:
                 req_accABS=req_acc*abs(tot)/totABS # overal relative required accuracy on ABS Xsec.
                 for job in jobs:
                     job['mint_mode']=-1
                     # Determine relative required accuracy on the ABS for this job
                     job['accuracy']=req_accABS*math.sqrt(totABS/job['resultABS'])
                     # If already accurate enough, skip running
-                    if job['accuracy'] > job['errorABS']/job['resultABS'] and integration_step != 0:
+                    if job['accuracy'] > job['errorABS']/job['resultABS'] and step != 0:
                         continue
                     # Update the number of PS points based on errorABS, ncall and accuracy
                     itmax_fl=job['niters_done']*math.pow(job['errorABS']/
@@ -1696,35 +1736,40 @@ RESTART = %(mint_mode)s
                                                  round(math.sqrt(itmax_fl))))*2
                     # Add the job to the list of jobs that need to be run
                     jobs_new.append(job)
-                    return jobs_new
-        elif integration_step+1 <= 2:
+            return jobs_new
+        elif step+1 <= 2:
             nevents=self.run_card['nevents']
+            # Total required accuracy for the upper bounding envelope
             if req_acc<0: 
                 req_acc2_inv=nevents
             else:
                 req_acc2_inv=1/(req_acc*req_acc)
-            r=self.get_randinit_seed()
-            random.seed(r)
-            totevts=nevents
-            for job in jobs:
-                job['nevents'] = 0
-            while totevts :
-                target = random.random() * totABS
-                crosssum = 0.
-                i = 0
-                while i<len(jobs) and crosssum < target:
-                    job = jobs[i]
-                    crosssum += job['resultABS']
-                    i += 1            
-                totevts -= 1
-                i -= 1
-                jobs[i]['nevents'] += 1
-            if integration_step == 1:
+            if step+1 == 1:
+                # determine the req. accuracy for each of the jobs for Mint-step = 1
                 for job in jobs:
                     accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
                     job['accuracy']=accuracy
+            elif step+1 == 2:
+                # Randomly (based on the relative ABS Xsec of the job) determine the 
+                # number of events each job needs to generate for MINT-step = 2.
+                r=self.get_randinit_seed()
+                random.seed(r)
+                totevts=nevents
+                for job in jobs:
+                    job['nevents'] = 0
+                while totevts :
+                    target = random.random() * totABS
+                    crosssum = 0.
+                    i = 0
+                    while i<len(jobs) and crosssum < target:
+                        job = jobs[i]
+                        crosssum += job['resultABS']
+                        i += 1            
+                    totevts -= 1
+                    i -= 1
+                    jobs[i]['nevents'] += 1
             for job in jobs:
-                job['mint_mode']=integration_step+1 # next step
+                job['mint_mode']=step+1 # next step
             return jobs
         else:
             return []
@@ -1732,13 +1777,15 @@ RESTART = %(mint_mode)s
 
     def get_randinit_seed(self):
         """ Get the random number seed from the randinit file """
-        with open(pjoin(self.me_dir,"SubProcesses","randinit")) as f:
-            exec f
-        return int(r)
+        with open(pjoin(self.me_dir,"SubProcesses","randinit")) as randinit:
+            # format of the file is "r=%d".
+            iseed = int(randinit.read()[2:])
+        return iseed
 
 
     def append_the_results(self,jobs,integration_step):
         """Appends the results for each of the jobs in the job list"""
+        error_found=False
         for job in jobs:
             try:
                 if integration_step >= 0 :
@@ -1746,13 +1793,15 @@ RESTART = %(mint_mode)s
                         results=res_file.readline().split()
                 else:
                 # should only be here when doing fixed order with the 'only_generation'
-                # option equal to True
+                # option equal to True. Take the results from the final run done.
                     with open(pjoin(job['dirname'],'res.dat')) as res_file:
                         results=res_file.readline().split()
             except IOError:
-                raise aMCatNLOError('An error occurred during the collection of results.\n' + 
-                'Please check the .log files inside the directories which failed.\n' +
-                pjoin(job['dirname'],'log.txt'))
+                if not error_found:
+                    error_found=True
+                    error_log=[]
+                error_log.append(pjoin(job['dirname'],'log.txt'))
+                continue
             job['resultABS']=float(results[0])
             job['errorABS']=float(results[1])
             job['result']=float(results[2])
@@ -1762,17 +1811,23 @@ RESTART = %(mint_mode)s
             job['time_spend']=float(results[6])
             job['err_percABS'] = job['errorABS']/job['resultABS']*100.
             job['err_perc'] = job['error']/job['result']*100.
+        if error_found:
+            raise aMCatNLOError('An error occurred during the collection of results.\n' + 
+                   'Please check the .log files inside the directories which failed:\n' +
+                                '\n'.join(error_log)+'\n')
+
 
 
     def write_res_txt_file(self,jobs,integration_step):
         """writes the res.txt files in the SubProcess dir"""
         jobs.sort(key = lambda job: -job['errorABS'])
-        content='\n\nCross-section per integration channel:\n'
+        content=[]
+        content.append('\n\nCross-section per integration channel:')
         for job in jobs:
-            content+='%(p_dir)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  \n' %  job
-        content+='\n\nABS cross-section per integration channel:\n'
+            content.append('%(p_dir)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  ' %  job)
+        content.append('\n\nABS cross-section per integration channel:')
         for job in jobs:
-            content+='%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  \n' %  job
+            content.append('%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  ' %  job)
         totABS=0
         errABS=0
         tot=0
@@ -1782,10 +1837,10 @@ RESTART = %(mint_mode)s
             errABS+= math.pow(job['errorABS'],2)
             tot+= job['result']
             err+= math.pow(job['error'],2)
-        content+='\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%)\n' %\
-            (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,tot, math.sqrt(err), math.sqrt(err)/tot *100.)
+        content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
+            (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,tot, math.sqrt(err), math.sqrt(err)/tot *100.))
         with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
-            res_file.write(content)
+            res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
         return {'xsect':tot,'xseca':totABS,'errt':math.sqrt(err),\
                 'erra':math.sqrt(errABS),'randinit':randinit}
@@ -1938,7 +1993,7 @@ RESTART = %(mint_mode)s
 
     def collect_log_files(self, jobs, integration_step):
         """collect the log files and put them in a single, html-friendly file
-        inside the run_... directory"""
+        inside the Events/run_.../ directory"""
         log_file = pjoin(self.me_dir, 'Events', self.run_name, 
                          'alllogs_%d.html' % integration_step)
         outfile = open(log_file, 'w')
@@ -1969,6 +2024,7 @@ RESTART = %(mint_mode)s
 
 
     def finalise_run_FO(self,folder_name,jobs):
+        """Combine the plots and put the res*.txt files in the Events/run.../ folder."""
         # Copy the res_*.txt files to the Events/run* folder
         res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res_*.txt'))
         for res_file in res_files:
@@ -1982,6 +2038,7 @@ RESTART = %(mint_mode)s
 
 
     def setup_cluster_or_multicore(self):
+        """setup the number of cores for multicore, and the cluster-type for cluster runs"""
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
             self.cluster = cluster.from_name[cluster_name](**self.options)
@@ -2004,24 +2061,24 @@ RESTART = %(mint_mode)s
 
 
     def clean_previous_results(self,options,p_dirs,folder_name):
-        """clean previous results and create the job_dict{}"""
-        job_dict = {}
-        if not options['only_generation'] and not options['reweightonly']:
+        """Clean previous results.
+             o.  If doing only the reweighting step, do not delete anything and return directlty.
+             o.  Always remove all the G*_* files (from split event generation).
+             o.  Remove the G* (or born_G* or all_G*) only when NOT doing only_generation or reweight_only."""
+        if options['reweightonly']:
+            return
+        if not options['only_generation']:
             self.update_status('Cleaning previous results', level=None)
         for dir in p_dirs:
-            job_dict[dir] = [file for file in \
-                                 os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
-                                 if file.startswith('ajob')] 
             #find old folders to be removed
             for obj in folder_name:
+                # list all the G* (or all_G* or born_G*) directories
                 to_rm = [file for file in \
                              os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                              if file.startswith(obj[:-1]) and \
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))] 
-                #always clean dirs for the splitted event generation
-                # do not include the born_G/ grid_G which should be kept when
-                # doing a f.o. run keeping old grids
+                # list all the G*_* directories (from split event generation)
                 to_always_rm = [file for file in \
                              os.listdir(pjoin(self.me_dir, 'SubProcesses', dir)) \
                              if file.startswith(obj[:-1]) and
@@ -2029,60 +2086,12 @@ RESTART = %(mint_mode)s
                             (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', dir, file)) or \
                              os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir, file)))]
 
-                if not options['only_generation'] and not options['reweightonly']:
+                if not options['only_generation']:
                     to_always_rm.extend(to_rm)
                     if os.path.exists(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz')):
                         to_always_rm.append(pjoin(self.me_dir, 'SubProcesses', dir,'MadLoop5_resources.tar.gz'))
                 files.rm([pjoin(self.me_dir, 'SubProcesses', dir, d) for d in to_always_rm])
-        return job_dict
-
-
-
-    def read_results(self, output, mode):
-        """extract results (cross-section, absolute cross-section and errors)
-        from output, which should be formatted as
-            Found 4 correctly terminated jobs 
-            random seed found in 'randinit' is 33
-            Integrated abs(cross-section)
-            7.94473937e+03 +- 2.9953e+01  (3.7702e-01%)
-             Integrated cross-section
-            6.63392298e+03 +- 3.7669e+01  (5.6782e-01%)
-        for aMC@NLO/aMC@LO, and as
-
-        for NLO/LO
-        The cross_sect_dict is returned"""
-        res = {}
-        if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
-            pat = re.compile(\
-'''Found (\d+) correctly terminated jobs 
-random seed found in 'randinit' is (\d+)
-Integrated abs\(cross-section\)
-\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
-Integrated cross-section
-\s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
-        else:
-            pat = re.compile(\
-'''Found (\d+) correctly terminated jobs 
-\s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
-            pass
-
-        match = re.search(pat, output[0])
-        if not match or output[1]:
-            logger.info('Return code of the event collection: '+str(output[1]))
-            logger.info('Output of the event collection:\n'+output[0])
-            raise aMCatNLOError('An error occurred during the collection of results.\n' + 
-            'Please check the .log files inside the directories which failed.')
-#        if int(match.groups()[0]) != self.njobs:
-#            raise aMCatNLOError('Not all jobs terminated successfully')
-        if mode in ['aMC@LO', 'aMC@NLO', 'noshower', 'noshowerLO']:
-            return {'randinit' : int(match.groups()[1]),
-                    'xseca' : float(match.groups()[2]),
-                    'erra' : float(match.groups()[3]),
-                    'xsect' : float(match.groups()[5]),
-                    'errt' : float(match.groups()[6])}
-        else:
-            return {'xsect' : float(match.groups()[1]),
-                    'errt' : float(match.groups()[2])}
+        return
 
 
     def print_summary(self, options, step, mode, scale_pdf_info={}, done=True):
@@ -3837,34 +3846,7 @@ Integrated cross-section
         if os.path.exists(pdfinput):
             input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
-            
-    def write_madinMMC_file(self, path, run_mode, mint_mode, channel):
-        """writes the madinMMC_?.2 file"""
-        #check the validity of the arguments
-        run_modes = ['born', 'virt', 'novi', 'all', 'viSB', 'novB']
-        if run_mode not in run_modes:
-            raise aMCatNLOError('%s is not a valid mode for run. Please use one of the following: %s' \
-                    % (run_mode, ', '.join(run_modes)))
-        mint_modes = [0, 1, 2]
-        if mint_mode not in mint_modes:
-            raise aMCatNLOError('%s is not a valid mode for mintMC. '\
-                                'Please use one of the following: %s' \
-                                % (mint_mode, ', '.join(mint_modes)))
-        content = \
-"""-1 12      ! points, iterations
-0.03       ! desired fractional accuracy
-1 -0.1     ! alpha, beta for Gsoft
--1 -0.1    ! alpha, beta for Gazi
-1          ! Suppress amplitude (0 no, 1 yes)?
-1          ! Exact helicity sum (0 yes, n = number/event)?
-%s          ! Enter Configuration Number:
-%1d          ! MINT imode: 0 to set-up grids, 1 to perform integral, 2 generate events
-1 1 1      ! if imode is 1: Folding parameters for xi_i, phi_i and y_ij
-%s        ! all, born, real, virt
-""" \
-                    % (channel, mint_mode, run_mode)
-        with open(pjoin(path, 'input_app.txt'), 'w') as file:
-            file.write(content)
+
 
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
