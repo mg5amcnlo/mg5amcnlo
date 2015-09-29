@@ -474,7 +474,6 @@ class aMCatNLOLauncher(ExtLauncher):
     def __init__(self, running_dir, cmd_int, run_mode='', unit='pb', **option):
         """ initialize the StandAlone Version"""
 
-        misc.sprint(option)
         ExtLauncher.__init__(self, cmd_int, running_dir, './Cards', **option)
         #self.executable = os.path.join('.', 'bin','generate_events')
 

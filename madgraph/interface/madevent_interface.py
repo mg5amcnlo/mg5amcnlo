@@ -2032,13 +2032,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 self.param_card_iterator = []
                 param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
                 #check if the param_card defines a scan.
+                orig_name = self.run_name
                 for card in param_card_iterator:
                     card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                     self.exec_cmd("generate_events -f ",precmd=True, postcmd=True,errorhandling=False)
                     param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
                 param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                logger.info("write all cross-section results in %s" % pjoin('Events','scan_%s.txt' %self.run_name),'$MG:color:BLACK')
-                param_card_iterator.write_summary(pjoin(self.me_dir, 'Events','scan_%s.txt' %self.run_name))
+                name = misc.get_scan_name(orig_name, self.run_name)
+                path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+                logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
+                param_card_iterator.write_summary(path)
     
     def do_initMadLoop(self,line):
         """Compile and run MadLoop for a certain number of PS point so as to 
@@ -2392,13 +2395,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
             param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
             #check if the param_card defines a scan.
+            orig_name=self.run_name
             for card in param_card_iterator:
                 card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                 self.exec_cmd("multi_run %s -f " % nb_run ,precmd=True, postcmd=True,errorhandling=False)
                 param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-            logger.info("write all cross-section results in %s" % pjoin('Events','scan_%s.txt' %self.run_name), '$MG:color:BLACK')
-            param_card_iterator.write_summary(pjoin(self.me_dir, 'Events','scan_%s.txt' %self.run_name))
+            scan_name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
+            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            param_card_iterator.write_summary(path)
     
 
     ############################################################################      

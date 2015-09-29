@@ -5382,7 +5382,8 @@ This implies that with decay chains:
                                                 options=self.options, **options)
         elif args[0] == 'madevent':
             if options['interactive']:
-                if hasattr(self, 'do_shell'):
+                
+                if isinstance(self, cmd.CmdShell):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
                 else:
                     ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
@@ -5402,12 +5403,12 @@ This implies that with decay chains:
 
             if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self,
-                                shell = hasattr(self, 'do_shell'),
+                                shell = isinstance(self, cmd.CmdShell),
                                 options=self.options,**options)
             else:
                 # This is a width computation
                 ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
-                                shell = hasattr(self, 'do_shell'),
+                                shell = isinstance(self, cmd.CmdShell),
                                 options=self.options,**options)
 
         elif args[0] == 'pythia8':
@@ -5415,7 +5416,7 @@ This implies that with decay chains:
 
         elif args[0] == 'aMC@NLO':
             if options['interactive']:
-                if hasattr(self, 'do_shell'):
+                if isinstance(self, cmd.CmdShell):
                     ME = amcatnlo_run.aMCatNLOCmdShell(me_dir=args[1], options=self.options)
                 else:
                     ME = amcatnlo_run.aMCatNLOCmd(me_dir=args[1],options=self.options)
@@ -5427,12 +5428,12 @@ This implies that with decay chains:
                 stop = self.define_child_cmd_interface(ME)
                 return stop
             ext_program = launch_ext.aMCatNLOLauncher( args[1], self,
-                                                       shell = hasattr(self, 'do_shell'),
+                                                       shell = isinstance(self, cmd.CmdShell),
                                                         **options)
         elif args[0] == 'madweight':
             import madgraph.interface.madweight_interface as madweight_interface
             if options['interactive']:
-                if hasattr(self, 'do_shell'):
+                if isinstance(self, cmd.CmdShell):
                     MW = madweight_interface.MadWeightCmdShell(me_dir=args[1], options=self.options)
                 else:
                     MW = madweight_interface.MadWeightCmd(me_dir=args[1],options=self.options)
@@ -5443,7 +5444,7 @@ This implies that with decay chains:
                 stop = self.define_child_cmd_interface(MW)                
                 return stop
             ext_program = launch_ext.MWLauncher( self, args[1],
-                                                 shell = hasattr(self, 'do_shell'),
+                                                 shell = isinstance(self, cmd.CmdShell),
                                                  options=self.options,**options)            
         else:
             os.chdir(start_cwd) #ensure to go to the initial path

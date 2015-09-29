@@ -386,11 +386,11 @@ class ReweightInterface(extended_cmd.Cmd):
         pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
-            if not hasattr(self.mother, 'do_shell'):
+            if not isinstance(self.mother, cmd.CmdShell): 
                 raise Exception, "scan are not allowed on the Web"
             # at least one scan parameter found. create an iterator to go trough the cards
             main_card = check_param_card.ParamCardIterator(new_card)
-            misc.sprint(main_card.write())
+
             param_card_iterator = main_card
             first_card = param_card_iterator.next(autostart=True)
             new_card = first_card.write()

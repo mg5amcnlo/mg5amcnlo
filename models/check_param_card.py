@@ -623,7 +623,7 @@ class ParamCardIterator(ParamCard):
     def iterate(self):
         """create the actual generator"""
         all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
-
+        auto = 'Auto'
         pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
         # First determine which parameter to change and in which group
         # so far only explicit value of the scan (no lambda function are allowed)
@@ -678,12 +678,13 @@ class ParamCardIterator(ParamCard):
         """ """
         
         ff = open(path, 'w')
-        ff.write("#run_name %s cross(pb)\n" % ' '.join(self.param_order))
+        ff.write("#%-19s %-20s %-20s\n" % ('run_name',' '.join(self.param_order), 'cross(pb)'))
         for info in self.cross:
             bench = [str(p) for p in info['bench']]
             cross = info['cross']
             name = info['run_name']
-            ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
+            ff.write("%-20s %-20s %-20s \n" % (name,' '.join(bench) ,cross))
+            #ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
             
 
 class ParamCardRule(object):

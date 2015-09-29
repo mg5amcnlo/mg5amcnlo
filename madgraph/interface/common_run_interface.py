@@ -1603,13 +1603,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
           on the first element.
         - If some width are set on 'Auto', call the computation tools."""
         
-        pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M)  
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
         pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        
-        
+               
         if pattern_scan.search(text):
-            if not hasattr(self, 'do_shell'):
+            if not isinstance(self, cmd.CmdShell):
                 # we are in web mode => forbid scan due to security risk
                 raise Exception, "Scan are not allowed in web mode"
             # at least one scan parameter found. create an iterator to go trough the cards
