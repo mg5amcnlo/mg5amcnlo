@@ -3540,9 +3540,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
         logger.warning("------------------------------------------------------")
 
     if len(multiprocess_nwa.get('perturbation_couplings'))>0 and \
-                                              len(multiprocess_nwa.get('legs')):
+                                            len(multiprocess_nwa.get('legs'))<=4:
         logger.warning("------------------------------------------------------")
-        logger.warning("Processes with four external states are typically not"+\
+        logger.warning("Processes with four or less external states are typically not"+\
           " sensitive to incorrect Complex Mass Scheme implementations.")
         logger.warning("You can test this sensitivity by making sure that the"+
           " same check on the leading-order counterpart of this process *fails*"+
