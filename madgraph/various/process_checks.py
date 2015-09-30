@@ -3523,6 +3523,34 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
     has_FRdecay = os.path.isfile(pjoin(cmd._curr_model.get('modelpath'),
                                                                    'decays.py'))
 
+    # Proceed with some warning
+    missing_perturbations = cmd._curr_model.get_coupling_orders()-\
+                             set(multiprocess_nwa.get('perturbation_couplings'))
+
+    if len(multiprocess_nwa.get('perturbation_couplings'))>0 and \
+                                                   len(missing_perturbations)>0:
+        logger.warning("------------------------------------------------------")
+        logger.warning("The process considered does not specify the following "+
+           "type of loops to be included : %s"%str(list(missing_perturbations)))
+        logger.warning("Consequently, the CMS check will be unsuccessful if the"+
+         " process involves any resonating particle whose LO decay is "+
+         "mediated by one of these orders.")
+        logger.warning("You can use the syntax '[virt=all]' to automatically"+
+                                    "include all loops supported by the model.")
+        logger.warning("------------------------------------------------------")
+
+    if len(multiprocess_nwa.get('perturbation_couplings'))>0 and \
+                                              len(multiprocess_nwa.get('legs')):
+        logger.warning("------------------------------------------------------")
+        logger.warning("Processes with four external states are typically not"+\
+          " sensitive to incorrect Complex Mass Scheme implementations.")
+        logger.warning("You can test this sensitivity by making sure that the"+
+          " same check on the leading-order counterpart of this process *fails*"+
+          " when using the option '--diff_lambda_power=2'.")
+        logger.warning("If it does not, then consider adding a massless "+
+                                         "gauge vector to the external states.")
+        logger.warning("------------------------------------------------------")
+
     if options['recompute_width']=='auto':
         if multiprocess_nwa.get('perturbation_couplings')!=[]:
             # NLO, so it is necessary to have the correct LO width for the check
@@ -5025,7 +5053,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     """ Outputs nicely the outcome of the complex mass scheme check performed
     by varying the width in the offshell region of resonances found for eahc process.
     Output just specifies whether text should be returned or a list of failed
-    processes."""
+    processes. Use 'concise_text' for a consise report of the results."""
     
     pert_orders=result['perturbation_orders']
     
@@ -5092,7 +5120,14 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
 #            misc.sprint(res['resonance']['PS_point_used'])
 #    stop
     
-    res_str = ''
+    res_str           = ''
+    # Variables for the concise report
+    concise_str       = ''
+    concise_data      = '%%(process)-%ds%%(asymptot)-15s%%(cms_check)-25s%%(status)-25s\n'
+    concise_repl_dict = {'Header':{'process':'Process',
+                                   'asymptot':'Asymptot',
+                                   'cms_check':'Deviation to asymptot',
+                                   'status':'Result'}}
     
     ####### BEGIN helper functions
 
@@ -5199,14 +5234,18 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         if options['reuse']:
             save_path = CMS_save_path('pkl', result, model, options, 
                                                         output_path=output_path)
-            res_str += "\nThe results of this check have been stored on disk and its "+\
+            buff = "\nThe results of this check have been stored on disk and its "+\
               "analysis can be rerun at anytime with the MG5aMC command:\n   "+\
             "      check cms --analyze=%s\n"%save_path
+            res_str += buff
+            concise_str += buff
             save_load_object.save_to_file(save_path, result)
         elif len(result['ordered_processes'])>0:
-            res_str += "\nUse the following synthax if you want to store "+\
+            buff = "\nUse the following synthax if you want to store "+\
                     "the raw results on disk.\n"+\
                     "    check cms -reuse <proc_def> <options>\n"
+            res_str += buff
+            concise_str += buff            
     
     ############################
     # Numerical check first    #
@@ -5253,6 +5292,12 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     # Store here the asymptot detected for each difference curve
     differences_target = {}
     for process, resID in checks:
+        # Reinitialize the concise result replacement dictionary 
+        # (only one resonance is indicated in this one, no matter what.)
+        concise_repl_dict[process] = {'process':process,
+                                      'asymptot':'N/A',
+                                      'cms_check':'N/A',
+                                      'status':'N/A'}
         proc_res = result[process]
         cms_res = proc_res['CMS'][resID]
         nwa_res = proc_res['NWA'][resID]
@@ -5426,6 +5471,8 @@ minimum value of lambda to be considered in the CMS check."""\
                                                              %('%.3g'%reference)
         res_str += "== Asymptotic difference value detected      = %s\n"\
                                                        %('%.3g'%low_diff_median)
+        concise_repl_dict[process]['asymptot'] = '%.3e'%low_diff_median
+
         # Pass information to the plotter for the difference target
         differences_target[(process,resID)]= low_diff_median
 #        misc.sprint('Now doing resonance %s.'%res_str)
@@ -5438,23 +5485,42 @@ minimum value of lambda to be considered in the CMS check."""\
             scan_index += 1
         
         # Now use the CMS check result
-        res_str += "== CMS check result (threshold)              = "+\
-                   "%.3g%% (%s%.3g%%)\n"%(max_diff*100.0, 
-                     '>' if max_diff>CMS_test_threshold else '<',
-                                                       CMS_test_threshold*100.0)
+        cms_check = (max_diff*100.0, '>' if max_diff>CMS_test_threshold else '<',
+                                                       CMS_test_threshold*100.0) 
+        res_str += "== CMS check result (threshold)              = %.3g%% (%s%.3g%%)\n"%cms_check
+        concise_repl_dict[process]['cms_check'] = \
+            "%-10s (%s%.3g%%)"%('%.3g%%'%cms_check[0],cms_check[1],cms_check[2])
+
         if max_diff>CMS_test_threshold:
             failed_procs.append((process,resonance))
         res_str += "%s %s %s\n"%(bar('='),
                  'FAILED' if max_diff>CMS_test_threshold else 'PASSED',bar('='))
+        concise_repl_dict[process]['status'] = 'Failed' if max_diff>CMS_test_threshold \
+                                                                   else 'Passed'
+
+    if output=='concise_text':
+        # Find what is the maximum size taken by the process string
+        max_proc_size = max(
+                 [len(process) for process in result['ordered_processes']]+[10])
+        # Re-initialize the res_str so as to contain only the minimal report
+        res_str = concise_str
+        res_str += '\n'+concise_data%(max_proc_size+4)%concise_repl_dict['Header']
+        for process in result['ordered_processes']:
+            res_str += (concise_data%(max_proc_size+4)%concise_repl_dict[process])
 
     if len(checks):
-        res_str += "\nSummary: %i/%i passed"%(len(checks)-len(failed_procs),len(checks))+\
+        res_str += "Summary: %i/%i passed"%(len(checks)-len(failed_procs),len(checks))+\
                     ('.\n' if not failed_procs else ', failed checks are for:\n')
     else:
-        return "\nNo CMS check to perform (the process does not feature any massive s-channel resonances)."
+        return "\nNo CMS check to perform, the process either has no diagram or does not "+\
+                                  "not feature any massive s-channel resonance."
         
     for process, resonance in failed_procs:
         res_str += ">  %s, %s\n"%(process, resonance)
+
+    if output=='concise_text':
+        res_str += '\nMore detailed information on this check available with the command:\n'
+        res_str += '  MG5_aMC>display checks\n'
 
     ############################
     # Now we turn to the plots #
@@ -5463,7 +5529,7 @@ minimum value of lambda to be considered in the CMS check."""\
         if options['reuse']:
             logFile.write(res_str)
             logFile.close()
-        if output=='text':
+        if output.endswith('text'):
             return res_str
         else:
             return failed_procs
@@ -5571,6 +5637,7 @@ minimum value of lambda to be considered in the CMS check."""\
     try:
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
+        logger.info('Rendering plots... (this can take some time because of the latex labels)')
 
         res_str += \
 """\n-----------------------------------------------------------------------------------------------
@@ -5719,14 +5786,11 @@ minimum value of lambda to be considered in the CMS check."""\
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
               minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
             
-            logger.info('Rendering plots... (this can take some time because of the latex labels)')
             plt.savefig(pp,format='pdf')
 
         pp.close()
         
         if len(checks)>0:
-            logger.info('Some cms check statistics will be displayed once you '+\
-                            'close the plot window')
             logger.info('Complex Mass Scheme check plot output to file %s. '%fig_output_file)
             
             if sys.platform.startswith('linux'):
@@ -5757,7 +5821,7 @@ minimum value of lambda to be considered in the CMS check."""\
         logFile.write(res_str)
         logFile.close()
 
-    if output=='text':
+    if output.endswith('text'):
         return res_str
     else:
         return failed_procs

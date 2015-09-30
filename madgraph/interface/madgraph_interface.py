@@ -100,6 +100,7 @@ import mg5decay.decay_objects as decay_objects
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
+logger_check = logging.getLogger('check') # -> stdout
 logger_mg = logging.getLogger('madgraph') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
@@ -505,6 +506,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-6'")
         logger.info("      for which an optimal list of progressive values is picked up to 1.0e-6")
         logger.info("    --show_plot = True or False: Whether to show plot during analysis (default is True)")
+        logger.info("    --report = concise or full: Whether return a concise or full report.")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
@@ -931,6 +933,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--analyze']='None'
             # Decides whether to show plot or not during the analysis
             user_options['--show_plot']='True'
+            # Decides what kind of report 
+            user_options['--report']='concise'
             # 'secret' option to chose by which lambda power one should divide
             # the nwa-cms difference. Useful to set to 2 when doing the Born check
             # to see whether the NLO check will have sensitivity to the CMS
@@ -1785,7 +1789,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         nlo_modes = allowed_loop_mode if not allowed_loop_mode is None else \
                                                   self._nlo_modes_for_completion
         if isinstance(self._curr_model,loop_base_objects.LoopModel):
-            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+            pert_couplings_allowed = ['all']+self._curr_model['perturbation_couplings']
         else:
             pert_couplings_allowed = []
         if self._curr_model.get('name').startswith('sm'):
@@ -1859,7 +1863,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
         if isinstance(self._curr_model,loop_base_objects.LoopModel):
-            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+            pert_couplings_allowed = ['all'] + self._curr_model['perturbation_couplings']
         else:
             pert_couplings_allowed = []
         if self._curr_model.get('name').startswith('sm'):
@@ -2019,7 +2023,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         cms_check_mode = len(args) >= 2 and args[1]=='cms'
 
         cms_options = ['--name=','--tweak=','--seed=','--offshellness=',
-          '--lambdaCMS=','--show_plot=','--lambda_plot_range=','--recompute_width=',
+          '--lambdaCMS=','--show_plot=','--report=','--lambda_plot_range=','--recompute_width=',
           '--CTModeRun=','--helicity=','--reduction=','--cms=','--diff_lambda_power=',
           '--loop_filter=','--resonances=']
 
@@ -2052,7 +2056,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                   '--lambdaCMS=':
 ['(1.0e-2,5)',"[float('1.0e-%d'%exp)\\ for\\ exp\\ in\\ range(8)]","[1.0,0.5,0.001]"],
                   '--lambda_plot_range=':
-['[1e-05,1e-02]','[0.01,1.0]'],
+[' [1e-05,1e-02]','[0.01,1.0]'],
                   '--reduction=':
 ['1','1|2|3|4','1|2','3'],
                   '--cms=':
@@ -2069,14 +2073,17 @@ class CompleteForCmd(cmd.CompleteCmd):
                 for name, example in examples.items():
                     if  args[-1].startswith(name):
                         return self.deal_multiple_categories(
-          {"Examples of completion for option '%s'"%args[-1]:
-                    ['%d: %s'%(i+1,ex) for i, ex in enumerate(example)]},
+          {"Examples of completion for option '%s'"%args[-1].split('=')[0]:
+#                    ['%d: %s'%(i+1,ex) for i, ex in enumerate(example)]},
+                    ['%s'%ex for i, ex in enumerate(example)]},
                                                              forceCategory=True)
                 if args[-1]=='--recompute_width=':
                     return self.list_completion(text,
                                          ['never','first_time','always','auto'])
                 elif args[-1]=='--show_plot=':
                     return self.list_completion(text,['True','False'])
+                elif args[-1]=='--report=':
+                    return self.list_completion(text,['concise','full'])
                 elif args[-1]=='--CTModeRun=':
                     return self.list_completion(text,['-1','1','2','3','4'])
                 else:
@@ -3437,7 +3444,7 @@ This implies that with decay chains:
 
         options= {'events':None} # If the momentum needs to be picked from a event file
         if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
-            logger.info("Will use the param_card contained in the banner and  the events associated")
+            logger_check.info("Will use the param_card contained in the banner and  the events associated")
             import madgraph.various.banner as banner
             options['events'] = param_card
             mybanner = banner.Banner(param_card)
@@ -3486,6 +3493,8 @@ This implies that with decay chains:
                 options['analyze'] = option[1]
             elif option[0]=='--show_plot':
                 options['show_plot'] = 'true' in option[1].lower()
+            elif option[0]=='--report':
+                options['report'] = option[1].lower()
             elif option[0]=='--seed':
                 CMS_options['seed'] = int(option[1])
             elif option[0]=='--name':
@@ -3696,20 +3705,20 @@ This implies that with decay chains:
         
         if args[0]=='options':
             # Simple printout of the check command options
-            logger.info("Options for the command 'check' are:")
-            logger.info("{:<20}     {}".format('  name','default value'))
-            logger.info("-"*40)
+            logger_check.info("Options for the command 'check' are:")
+            logger_check.info("{:<20}     {}".format('  name','default value'))
+            logger_check.info("-"*40)
             for key, value in options.items():
-                logger.info("{:<20} =   {}".format('--%s'%key,str(value)))
+                logger_check.info("{:<20} =   {}".format('--%s'%key,str(value)))
             return
 
         if args[0].lower()=='cmsoptions':
             # Simple printout of the special check cms options
-            logger.info("Special options for the command 'check cms' are:")
-            logger.info("{:<20}     {}".format('  name','default value'))
-            logger.info("-"*40)
+            logger_check.info("Special options for the command 'check cms' are:")
+            logger_check.info("{:<20}     {}".format('  name','default value'))
+            logger_check.info("-"*40)
             for key, value in CMS_options.items():
-                logger.info("{:<20} =   {}".format('--%s'%key,str(value)))
+                logger_check.info("{:<20} =   {}".format('--%s'%key,str(value)))
             return        
         
         proc_line = " ".join(args[1:])
@@ -3720,12 +3729,11 @@ This implies that with decay chains:
             # Check that we have something
             if not myprocdef:
                 raise self.InvalidCmd("Empty or wrong format process, please try again.")
+            # For the check command, only the mode 'virt' make sense.
+            if myprocdef.get('NLO_mode')=='all':
+                myprocdef.set('NLO_mode','virt')
         else:
             myprocdef = None
-
-        # For the check command, only the mode 'virt' make sense.
-        if myprocdef.get('NLO_mode')=='all':
-           myprocdef.set('NLO_mode','virt')
             
         # If the test has to write out on disk, it should do so at the location
         # specified below where the user must be sure to have writing access.
@@ -3799,7 +3807,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 3 in MLoptions["MLReductionLib"]:
-                    logger.warning('IREGI not available on your system; it will be skipped.')                    
+                    logger_check.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
 
         if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
@@ -3807,7 +3815,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 2 in MLoptions["MLReductionLib"]:
-                    logger.warning('PJFRY not available on your system; it will be skipped.')                    
+                    logger_check.warning('PJFRY not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):
@@ -3815,7 +3823,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 4 in MLoptions["MLReductionLib"]:
-                    logger.warning('GOLEM not available on your system; it will be skipped.')
+                    logger_check.warning('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
         
         if args[0] in ['timing']:
@@ -3869,7 +3877,7 @@ This implies that with decay chains:
             nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
             nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
             if nb_part_feyn == nb_part_unit:
-                logger.error('No Goldstone present for this check!!')
+                logger_check.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
@@ -3936,7 +3944,6 @@ This implies that with decay chains:
                                                    " and CMS_option dictionary." 
             
             if options['analyze']=='None':
-                start = time.time()
                 cms_results = []
                 for tweak in CMS_options['tweak']:
                     options['tweak']=tweak
@@ -3952,7 +3959,7 @@ This implies that with decay chains:
                              self._curr_model, options, output_path=output_path)
                     if os.path.isfile(save_path) and options['reuse']:
                         cms_result = save_load_object.load_from_file(save_path)
-                        logger.info("The cms check for tweak %s is recycled from file:\n %s"%
+                        logger_check.info("The cms check for tweak %s is recycled from file:\n %s"%
                                                       (tweak['name'],save_path))
                         if cms_result is None:
                             raise self.InvalidCmd('The complex mass scheme check result'+
@@ -3970,10 +3977,7 @@ This implies that with decay chains:
                         # Now set the correct save path
                         save_path = process_checks.CMS_save_path('pkl', cms_result, 
                              self._curr_model, options, output_path=output_path)
-                    cms_results.append((cms_result,save_path,tweak['name']))    
-
-                logger.debug('CMS check performed finished in %s.'\
-                                      %misc.format_time(int(time.time()-start)))
+                    cms_results.append((cms_result,save_path,tweak['name']))
             else:
                 cms_result = save_load_object.load_from_file(
                                                options['analyze'].split(',')[0])
@@ -3991,9 +3995,8 @@ This implies that with decay chains:
             nb_processes += len(cms_result['ordered_processes'])
 
         cpu_time2 = time.time()
-        logger.info("%i checked performed in %0.3f s" \
-                    % (nb_processes,
-                      (cpu_time2 - cpu_time1)))
+        logger_check.info("%i check performed in %s"% (nb_processes,
+                                  misc.format_time(int(cpu_time2 - cpu_time1))))
 
         if args[0] in ['cms']:
                 text = "Note that the complex mass scheme test in principle only\n"
@@ -4040,7 +4043,7 @@ This implies that with decay chains:
                 analyze = []
                 for i, (cms_res, save_path, tweakname) in enumerate(cms_results):
                     save_load_object.save_to_file(save_path, cms_res)
-                    logger.info("Pickle file for tweak '%s' saved to disk at:\n ->%s"%
+                    logger_check.info("Pickle file for tweak '%s' saved to disk at:\n ->%s"%
                                                           (tweakname,save_path))
                     if i==0:
                         analyze.append(save_path)
@@ -4051,8 +4054,9 @@ This implies that with decay chains:
             
             self._cms_checks.append({'line':line, 'cms_result':cms_result,
                                   'options':options, 'output_path':output_path})
-            text += process_checks.output_complex_mass_scheme(
-                    cms_result , output_path, options, self._curr_model) + '\n'
+            text += process_checks.output_complex_mass_scheme(cms_result,
+              output_path, options, self._curr_model,
+              output='concise_text' if options['report']=='concise' else 'text')+'\n'
 
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
@@ -4319,8 +4323,11 @@ This implies that with decay chains:
                 myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                         'state':state}))
             else:
-                raise self.InvalidCmd, \
-                      "No particle %s in model" % part_name
+                raise self.InvalidCmd, "No particle %s in model" % part_name
+
+        # Apply the keyword 'all' for perturbed coupling orders.
+        if perturbation_couplings.lower()=='all':
+            perturbation_couplings=' '.join(self._curr_model['perturbation_couplings'])
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
