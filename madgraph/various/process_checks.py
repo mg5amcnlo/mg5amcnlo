@@ -4404,7 +4404,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
             param_card = check_param_card.ParamCard(
                      StringIO.StringIO(evaluator.full_model.write_param_card()))
         options['cached_param_card'][mode][0] = param_card
-        name2block, _ = AskforEditCard.analyze_param_card(param_card)
+        name2block, _ = param_card.analyze_param_card()
         options['cached_param_card'][mode][1] = name2block
         
     else:
@@ -4466,7 +4466,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
     # Display progressbar both for LO and NLO for now but not when not showing
     # the plots
-    if (NLO or True) and options['show_plot']:
+    if NLO and options['show_plot']:
         widgets = ['ME evaluations:', pbar.Percentage(), ' ', 
                                                 pbar.Bar(),' ', pbar.ETA(), ' ']
         progress_bar = pbar.ProgressBar(widgets=widgets, 
@@ -5451,7 +5451,7 @@ minimum value of lambda to be considered in the CMS check."""\
         res_str += "\nSummary: %i/%i passed"%(len(checks)-len(failed_procs),len(checks))+\
                     ('.\n' if not failed_procs else ', failed checks are for:\n')
     else:
-        res_str += "\nNo CMS check to perform."
+        return "\nNo CMS check to perform (the process does not feature any massive s-channel resonances)."
         
     for process, resonance in failed_procs:
         res_str += ">  %s, %s\n"%(process, resonance)
@@ -5571,6 +5571,12 @@ minimum value of lambda to be considered in the CMS check."""\
     try:
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_pdf import PdfPages
+
+        res_str += \
+"""\n-----------------------------------------------------------------------------------------------
+| In the plots, the Complex Mass Scheme check is successful if the normalized difference      |
+| between the CMS and NWA result (lower inset) tends to a constant when \lambda goes to zero. |
+-----------------------------------------------------------------------------------------------\n"""
 
         # output the figures
         if lambda_range[1]>0:
@@ -5713,6 +5719,7 @@ minimum value of lambda to be considered in the CMS check."""\
             plt.axis([min(lambdaCMS_list),max(lambdaCMS_list),\
               minvalue-(maxvalue-minvalue)/5., maxvalue+(maxvalue-minvalue)/5.])
             
+            logger.info('Rendering plots... (this can take some time because of the latex labels)')
             plt.savefig(pp,format='pdf')
 
         pp.close()
@@ -5729,13 +5736,22 @@ minimum value of lambda to be considered in the CMS check."""\
         
         plt.close("all")
     
-    except IOError as e:
+    except Exception as e:
         if isinstance(e, ImportError):
             res_str += "\n= Install matplotlib to get a "+\
                 "graphical display of the results of the cms check."
         else:
-            res_str += "\n= Could not produce the cms check plot because of "+\
-                                                "the following error: %s"%str(e)
+            general_error = "\n= Could not produce the cms check plot because of "+\
+                                                    "the following error: %s"%str(e)
+            try:
+                import Tkinter
+                if isinstance(e, Tkinter.TclError):
+                    res_str += "\n= Plots are not generated because your system"+\
+                                          " does not support graphical display."
+                else:
+                    res_str += general_error
+            except:
+                res_str += general_error
     
     if options['reuse']:
         logFile.write(res_str)

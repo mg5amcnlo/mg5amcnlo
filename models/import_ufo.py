@@ -148,6 +148,9 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
                                                       complex_mass_scheme=False)
             model.change_mass_to_complex_scheme(toCMS=True)
         else:
+            # Make sure that the parameter 'CMSParam' of the model is set to 0.0
+            # as it should in order to have the correct NWA renormalization condition.
+            # It might be that the default of the model is CMS.
             model.change_mass_to_complex_scheme(toCMS=False)
 
         if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
@@ -162,6 +165,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
         if useCMS:
             model.change_mass_to_complex_scheme(toCMS=True)
         else:
+            # It might be that the default of the model (i.e. 'CMSParam') is CMS.
             model.change_mass_to_complex_scheme(toCMS=False)
 
         

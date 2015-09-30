@@ -2217,53 +2217,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
                         }
     
-    @staticmethod
-    def analyze_param_card(param_card):
-        """ Analyzes the comment of the parameter in the param_card and returns
-        a dictionary with parameter names in values and the tuple (lhablock, id)
-        in value as well as a dictionary for restricted values."""
-    
-        pname2block = {}
-        restricted_value = {}
-
-        for bname, block in param_card.items():
-            for lha_id, param in block.param_dict.items():
-                all_var = []
-                comment = param.comment
-                # treat merge parameter
-                if comment.strip().startswith('set of param :'):
-                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
-                # just the variable name as comment
-                elif len(comment.split()) == 1:
-                    all_var = [comment.strip().lower()]
-                # either contraction or not formatted
-                else:
-                    split = comment.split()
-                    if len(split) >2 and split[1] == ':':
-                        # NO VAR associated
-                        restricted_value[(bname, lha_id)] = ' '.join(split[1:])
-                    elif len(split) == 2:
-                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
-                            all_var = [comment.strip().lower()]
-                    elif len(split) >=2 and split[1].startswith('('):
-                        all_var = [split[0].strip().lower()]
-                    else:
-                        if not bname.startswith('qnumbers'):
-                            logger.debug("not recognize information for %s %s : %s",
-                                      bname, lha_id, comment)
-                        # not recognized format
-                        continue
-
-                for var in all_var:
-                    var = var.lower()
-                    if var in pname2block:
-                        pname2block[var].append((bname, lha_id))
-                    else:
-                        pname2block[var] = [(bname, lha_id)]
-        
-        return pname2block, restricted_value
-
-    
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
         # Initiation
@@ -2308,8 +2261,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.
-        self.pname2block, self.restricted_value = self.analyze_param_card(
-                                                                  default_param)
+        self.pname2block, self.restricted_value = \
+                                              default_param.analyze_param_card()
 
         if run_card_def:
             self.run_set = run_card_def.keys() + self.run_card.hidden_param

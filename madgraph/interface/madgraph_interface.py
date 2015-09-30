@@ -836,7 +836,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 # check that either _curr_amps or _fks_multi_proc exists
         if (args[0] in ['processes', 'diagrams'] and not self._curr_amps and not self._fks_multi_proc):
            raise self.InvalidCmd("No process generated, please generate a process!")
-        if args[0] == 'checks' and not self._comparisons:
+        if args[0] == 'checks' and not self._comparisons and not self._cms_checks:
             raise self.InvalidCmd("No check results to display.")
 
         if args[0] == 'variable' and len(args) !=2:
@@ -859,7 +859,6 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_check(self, args):
         """check the validity of args"""
-        
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
@@ -2016,6 +2015,18 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 1:
             return self.list_completion(text, self._check_opts)
 
+
+        cms_check_mode = len(args) >= 2 and args[1]=='cms'
+
+        cms_options = ['--name=','--tweak=','--seed=','--offshellness=',
+          '--lambdaCMS=','--show_plot=','--lambda_plot_range=','--recompute_width=',
+          '--CTModeRun=','--helicity=','--reduction=','--cms=','--diff_lambda_power=',
+          '--loop_filter=','--resonances=']
+
+        options = ['--energy=']
+        if cms_options:
+            options.extend(cms_options)
+
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text, pjoin(*[a for a in args \
@@ -2028,8 +2039,68 @@ class CompleteForCmd(cmd.CompleteCmd):
           {'Process completion': self.model_completion(text, ' '.join(args[2:]),
           line, categories = False, allowed_loop_mode=['virt']),
           'Param_card.dat path completion:':self.path_completion(text),
-          'options': self.list_completion(text, ['--energy='])})
+          'options': self.list_completion(text,options)})
 
+        #Special rules for check cms completion
+        if cms_check_mode:
+            # A couple of useful value completions
+            if line[-1]!=' ' and line[-2]!='\\' and not '--' in line[begidx:endidx] \
+                              and args[-1].startswith('--') and '=' in args[-1]:
+                examples = {
+                  '--tweak=':
+['default','alltweaks',"['default','allwidths->1.1*all_withds&seed333(Increased_widths_and_seed_333)','logp->logm&logm->logp(inverted_logs)']"],
+                  '--lambdaCMS=':
+['(1.0e-2,5)',"[float('1.0e-%d'%exp)\\ for\\ exp\\ in\\ range(8)]","[1.0,0.5,0.001]"],
+                  '--lambda_plot_range=':
+['[1e-05,1e-02]','[0.01,1.0]'],
+                  '--reduction=':
+['1','1|2|3|4','1|2','3'],
+                  '--cms=':
+['QED&QCD,aewm1->10.0/lambdaCMS&as->0.1*lambdaCMS',
+'NP&QED&QCD,aewm1->10.0/lambdaCMS&as->0.1*lambdaCMS&newExpansionParameter->newExpansionParameter*lambdaCMS'],
+                  '--loop_filter=':
+['None','n>3','n<4 and 6 in loop_pdgs and 3<=id<=7'],
+                  '--resonances=':
+['1','all','(24,(3,4))','[(24,(3,4)),(24,(4,5))]'],
+                  '--analyze=':
+['my_default_run.pkl',
+'default_run.pkl,increased_widths.pkl(Increased_widths),logs_modified.pkl(Inverted_logs),seed_668.pkl(Different_seed)']
+                    }
+                for name, example in examples.items():
+                    if  args[-1].startswith(name):
+                        return self.deal_multiple_categories(
+          {"Examples of completion for option '%s'"%args[-1]:
+                    ['%d: %s'%(i+1,ex) for i, ex in enumerate(example)]},
+                                                             forceCategory=True)
+                if args[-1]=='--recompute_width=':
+                    return self.list_completion(text,
+                                         ['never','first_time','always','auto'])
+                elif args[-1]=='--show_plot=':
+                    return self.list_completion(text,['True','False'])
+                elif args[-1]=='--CTModeRun=':
+                    return self.list_completion(text,['-1','1','2','3','4'])
+                else:
+                    return text
+            if len(args)==2 or len(args)==3 and args[-1]=='-reuse':
+                return self.deal_multiple_categories(
+          {'Process completion': self.model_completion(text, ' '.join(args[2:]),
+                        line, categories = False, allowed_loop_mode=['virt']),
+                   'Param_card.dat path completion:': self.path_completion(text),
+               'reanalyze result on disk / save output:':self.list_completion(
+                                                  text,['-reuse','--analyze='])})
+            elif not any(arg.startswith('--') for arg in args):
+                if '>' in args:
+                    return self.deal_multiple_categories({'Process completion': 
+                        self.model_completion(text, ' '.join(args[2:]),
+                        line, categories = False, allowed_loop_mode=['virt']),
+                        'options': self.list_completion(text,options)})
+                else:
+                    return self.deal_multiple_categories({'Process completion': 
+                        self.model_completion(text, ' '.join(args[2:]),
+                        line, categories = False, allowed_loop_mode=['virt'])})
+            else:
+                return self.list_completion(text,options)
+            
         if len(args) == 2:
             return model_comp_and_path
         elif len(args) == 3:
@@ -2536,6 +2607,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
                      'update', 'Delphes2', 'SysCalc', 'Golem95']
+
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
@@ -2664,6 +2736,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
         self._comparisons = None
+        self._cms_checks = []
         self._nlo_modes_for_completion = ['all','virt','real','LOonly']
 
         # Load the configuration file,i.e.mg5_configuration.txt
@@ -3144,33 +3217,48 @@ This implies that with decay chains:
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
 
         elif args[0] == 'checks':
-            comparisons = self._comparisons[0]
-            if len(args) > 1 and args[1] == 'failed':
-                comparisons = [c for c in comparisons if not c['passed']]
-            outstr = "Process check results:"
-            for comp in comparisons:
-                outstr += "\n%s:" % comp['process'].nice_string()
-                outstr += "\n   Phase space point: (px py pz E)"
-                for i, p in enumerate(comp['momenta']):
-                    outstr += "\n%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
-                outstr += "\n   Permutation values:"
-                outstr += "\n   " + str(comp['values'])
-                if comp['passed']:
-                    outstr += "\n   Process passed (rel. difference %.9e)" % \
-                          comp['difference']
-                else:
-                    outstr += "\n   Process failed (rel. difference %.9e)" % \
-                          comp['difference']
+            outstr = ''
+            if self._comparisons:
+                comparisons = self._comparisons[0]
+                if len(args) > 1 and args[1] == 'failed':
+                    comparisons = [c for c in comparisons if not c['passed']]
+                outstr += "Process check results:"
+                for comp in comparisons:
+                    outstr += "\n%s:" % comp['process'].nice_string()
+                    outstr += "\n   Phase space point: (px py pz E)"
+                    for i, p in enumerate(comp['momenta']):
+                        outstr += "\n%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
+                    outstr += "\n   Permutation values:"
+                    outstr += "\n   " + str(comp['values'])
+                    if comp['passed']:
+                        outstr += "\n   Process passed (rel. difference %.9e)" % \
+                              comp['difference']
+                    else:
+                        outstr += "\n   Process failed (rel. difference %.9e)" % \
+                              comp['difference']
 
-            used_aloha = sorted(self._comparisons[1])
-            outstr += "\nChecked ALOHA routines:"
-            for aloha in used_aloha:
-                aloha_str = aloha[0]
-                if aloha[1]:
-                    aloha_str += 'C' + 'C'.join([str(ia) for ia in aloha[1]])
-                aloha_str += "_%d" % aloha[2]
-                outstr += "\n" + aloha_str
-
+                used_aloha = sorted(self._comparisons[1])
+                if used_aloha:
+                    outstr += "\nChecked ALOHA routines:"
+                for aloha in used_aloha:
+                    aloha_str = aloha[0]
+                    if aloha[1]:
+                        aloha_str += 'C' + 'C'.join([str(ia) for ia in aloha[1]])
+                    aloha_str += "_%d" % aloha[2]
+                    outstr += "\n" + aloha_str
+            
+            outstr += '\n'
+            for cms_check in self._cms_checks:
+                outstr += '*'*102+'\n'
+                outstr += 'Complex Mass Scheme check:\n'
+                outstr += '    -> check %s\n'%cms_check['line']
+                outstr += '*'*102+'\n'
+                tmp_options = copy.copy(cms_check['options'])
+                tmp_options['show_plot']=False
+                outstr += process_checks.output_complex_mass_scheme(
+                            cms_check['cms_result'], cms_check['output_path'], 
+                                           tmp_options, self._curr_model) + '\n'
+                outstr += '*'*102+'\n\n'
             pydoc.pager(outstr)
 
         elif args[0] == 'options':
@@ -3317,8 +3405,7 @@ This implies that with decay chains:
     # Perform checks
     def do_check(self, line):
         """Check a given process or set of processes"""
-        
-        ###### BEGIN do_check
+
         def create_lambda_values_list(lower_bound, N):
             """ Returns a list of values spanning the range [1.0, lower_bound] with
              lower_bound < 1.0 and with each interval [1e-i, 1e-(i+1)] covered
@@ -3454,7 +3541,7 @@ This implies that with decay chains:
                         name    = specs.group('name')
                     else:
                         if tweakset!='default':
-                            name = 'tweak#%d'%(tweakID+1)
+                            name = 'tweak_%d'%(tweakID+1)
                         else:
                             name = ''
                     new_tweak_set = {'custom':[],'params':{},'name':name}
@@ -3636,6 +3723,10 @@ This implies that with decay chains:
         else:
             myprocdef = None
 
+        # For the check command, only the mode 'virt' make sense.
+        if myprocdef.get('NLO_mode')=='all':
+           myprocdef.set('NLO_mode','virt')
+            
         # If the test has to write out on disk, it should do so at the location
         # specified below where the user must be sure to have writing access.
         output_path = os.getcwd()
@@ -3890,7 +3981,8 @@ This implies that with decay chains:
                                                CMS_options['tweak'][0]['name']))
                 if cms_result is None:
                     raise self.InvalidCmd('The complex mass scheme check result'+
-                       " file below could not be read.\n     %s"%options['analyze'])
+                       " file below could not be read.\n     %s"
+                                              %options['analyze'].split(',')[0])
 
             # restore previous settings
             self.do_set('complex_mass_scheme %s'%str(cms_original_setup),
@@ -3957,6 +4049,8 @@ This implies that with decay chains:
                 options['analyze']=','.join(analyze)
                 options['tweak']  = CMS_options['tweak'][0]
             
+            self._cms_checks.append({'line':line, 'cms_result':cms_result,
+                                  'options':options, 'output_path':output_path})
             text += process_checks.output_complex_mass_scheme(
                     cms_result , output_path, options, self._curr_model) + '\n'
 
@@ -5051,14 +5145,14 @@ This implies that with decay chains:
             split = line.split()
             path[split[0]] = split[1]
 
-
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
 
         name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc', 'Golem95': 'golem95'}
+                'SysCalc':'SysCalc', 'Golem95': 'golem95',
+                'Pythia8':'PY8'}
         name = name[args[0]]
 
 

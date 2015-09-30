@@ -343,6 +343,54 @@ class ParamCard(dict):
                   
         return self
     
+    def analyze_param_card(self):
+        """ Analyzes the comment of the parameter in the param_card and returns
+        a dictionary with parameter names in values and the tuple (lhablock, id)
+        in value as well as a dictionary for restricted values.
+        WARNING: THIS FUNCTION RELIES ON THE FORMATTING OF THE COMMENT IN THE
+        CARD TO FETCH THE PARAMETER NAME. This is mostly ok on the *_default.dat
+        but typically dangerous on the user-defined card."""
+    
+        pname2block = {}
+        restricted_value = {}
+
+        for bname, block in self.items():
+            for lha_id, param in block.param_dict.items():
+                all_var = []
+                comment = param.comment
+                # treat merge parameter
+                if comment.strip().startswith('set of param :'):
+                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
+                # just the variable name as comment
+                elif len(comment.split()) == 1:
+                    all_var = [comment.strip().lower()]
+                # either contraction or not formatted
+                else:
+                    split = comment.split()
+                    if len(split) >2 and split[1] == ':':
+                        # NO VAR associated
+                        restricted_value[(bname, lha_id)] = ' '.join(split[1:])
+                    elif len(split) == 2:
+                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
+                            all_var = [comment.strip().lower()]
+                    elif len(split) >=2 and split[1].startswith('('):
+                        all_var = [split[0].strip().lower()]
+                    else:
+                        if not bname.startswith('qnumbers'):
+                            logger.debug("not recognize information for %s %s : %s",
+                                      bname, lha_id, comment)
+                        # not recognized format
+                        continue
+
+                for var in all_var:
+                    var = var.lower()
+                    if var in pname2block:
+                        pname2block[var].append((bname, lha_id))
+                    else:
+                        pname2block[var] = [(bname, lha_id)]
+        
+        return pname2block, restricted_value
+    
     def write(self, outpath=None):
         """schedular for writing a card"""
   
