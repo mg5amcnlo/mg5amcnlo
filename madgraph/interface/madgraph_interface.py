@@ -4682,13 +4682,13 @@ This implies that with decay chains:
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
 
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
-             'HepToolsInstallers','HEPToolInstaller.py'),'pythia8',
+             'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
              '--prefix=%s'%pjoin(MG5DIR,'HEPTools')]
                         + lhapdf_option + compiler_options + additional_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
-              'HepToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
+              'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               pjoin(MG5DIR,'HEPTools')] + compiler_options + additional_options)
 
         if return_code == 0:
