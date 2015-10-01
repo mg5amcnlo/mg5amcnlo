@@ -3339,9 +3339,9 @@ Beware that this can be dangerous for local multicore runs.""")
                                                         '%s_pythia8.log' % tag))
             pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
             for line in pythia_log:
-####################################################
-# MUST MODIFY main89 to output this.
-####################################################
+########################################################
+# MUST MODIFY main89 to output this. TO_BE_IMPLEMENTED
+########################################################
                 logger.error('Main89 must be modified so that MG5_aMC can parse its output.')
                 self.results.add_detail('cross_pythia8', 0)
                 self.results.add_detail('nb_event_pythia8', 0)
@@ -3392,7 +3392,8 @@ Beware that this can be dangerous for local multicore runs.""")
         # For now, bypass the hep2lhe step as we anyway have hepmc on our hands
         # now. We will see what is the best way to proceed later and how to 
         # link SysCalc to this (i.e. check with Simon).
-        logger.error('Hep2Lhe (for DJR plots) and SysCalc not compatible with Pythia8 yet!')
+        # TO_BE_IMPLEMENTED
+        logger.error('Hep2Lhe and SysCalc not compatible with Pythia8 yet!')
 
         self.update_status('finish', level='pythia', makehtml=False)
         if self.options['delphes_path']:
@@ -4134,7 +4135,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                                                
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
-            self.treat_CKKW_matching()
+            self.treat_ckkw_matching()
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
@@ -4395,13 +4396,13 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
                 logger.info(msg)
-                self.update_status('GENERATE SUDAKOF GRID', level='parton')
+                self.update_status('GENERATE SUDAKOV GRID', level='parton')
                 
                 for i in range(-2,6):
                     self.cluster.submit('%s/gensudgrid ' % self.dirbin, 
-                                    arguments = [i],
-                                    cwd=self.me_dir, 
-                                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % i,'w')))
+                    argument = ['%d'%i],
+                    cwd=self.me_dir, 
+                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % i),'w'))
                 self.monitor()
                 for i in range(-2,6):
                     path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')

@@ -143,6 +143,10 @@ class AllResults(dict):
     
     web = False 
     
+    _run_entries = ['cross', 'error','nb_event_pythia','run_mode','run_statistics',
+                    'nb_event','cross_pythia','error_pythia',
+                    'nb_event_pythia8','cross_pythia8','error_pythia8']
+
     def __init__(self, model, process, path, recreateold=True):
         
         dict.__init__(self)
@@ -354,9 +358,7 @@ class AllResults(dict):
 
     def add_detail(self, name, value, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
-        assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
-                        'nb_event_pythia','error_pythia', 'run_mode',
-                        'run_statistics']
+        assert name in AllResults._run_entries
 
         if not run and not self.current:
             return
@@ -366,11 +368,11 @@ class AllResults(dict):
         else:
             run = self[run].return_tag(tag)
             
-        if name == 'cross_pythia':
-            run['cross_pythia'] = float(value)
-        elif name == 'nb_event':
+        if name in ['cross_pythia','cross_pythia8']:
+            run[name] = float(value)
+        elif name in ['nb_event','nb_event8']:
             run[name] = int(value)
-        elif name == 'nb_event_pythia':
+        elif name in ['nb_event_pythia','nb_event_pythia8']:
             run[name] = int(value)
         elif name in ['run_mode','run_statistics']:
             run[name] = value
@@ -379,9 +381,7 @@ class AllResults(dict):
     
     def get_detail(self, name, run=None, tag=None):
         """ add information to current run (cross/error/event)"""
-        assert name in ['cross', 'error', 'nb_event', 'cross_pythia',
-                        'nb_event_pythia','error_pythia', 'run_mode',
-                        'run_statistics']
+        assert name in AllResults._run_entries
 
         if not run and not self.current:
             return None
