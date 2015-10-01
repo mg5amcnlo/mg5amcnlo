@@ -3622,7 +3622,7 @@ V_UV1eps3G = CTVertex(name = 'V_UV1eps3G',
               lorentz = [ L.VVV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_3Gq,(0,0,1):C.UV_3Gb,(0,0,2):C.UV_3Gt,(0,0,3):C.UV_3Gg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gggg
 V_UV4G = CTVertex(name = 'V_UV1eps4G',
@@ -3633,7 +3633,7 @@ V_UV4G = CTVertex(name = 'V_UV1eps4G',
               couplings = {(0,0,0):C.UV_4Gq,(0,0,1):C.UV_4Gb,(0,0,2):C.UV_4Gt,(0,0,3):C.UV_4Gg,
                            (1,1,0):C.UV_4Gq,(1,1,1):C.UV_4Gb,(1,1,2):C.UV_4Gt,(1,1,3):C.UV_4Gg,
                            (2,2,0):C.UV_4Gq,(2,2,1):C.UV_4Gb,(2,2,2):C.UV_4Gt,(2,2,3):C.UV_4Gg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gdd~
 V_UVGDD = CTVertex(name = 'V_UVGDD',
@@ -3642,7 +3642,7 @@ V_UVGDD = CTVertex(name = 'V_UVGDD',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # guu~
 V_UVGUU = CTVertex(name = 'V_UVGUU',
@@ -3651,7 +3651,7 @@ V_UVGUU = CTVertex(name = 'V_UVGUU',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gcc~
 V_UVGCC = CTVertex(name = 'V_UVGCC',
@@ -3660,7 +3660,7 @@ V_UVGCC = CTVertex(name = 'V_UVGCC',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gss~
 V_UVGSS = CTVertex(name = 'V_UVGSS',
@@ -3669,7 +3669,7 @@ V_UVGSS = CTVertex(name = 'V_UVGSS',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gbb~
 V_UVGBB = CTVertex(name = 'V_UVGBB',
@@ -3678,7 +3678,7 @@ V_UVGBB = CTVertex(name = 'V_UVGBB',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # gtt~
 V_UVGTT = CTVertex(name = 'V_UVGTT',
@@ -3687,7 +3687,7 @@ V_UVGTT = CTVertex(name = 'V_UVGTT',
               lorentz = [ L.FFV1 ],
               loop_particles = [[[P.u],[P.d],[P.c],[P.s]],[[P.b]],[[P.t]],[[P.G]]],
               couplings = {(0,0,0):C.UV_GQQq,(0,0,1):C.UV_GQQb,(0,0,2):C.UV_GQQt,(0,0,3):C.UV_GQQg},
-              type = 'UV')
+              type = 'UVtree')
 
 # These are the mass renormalization vertices.
 
@@ -3927,7 +3927,7 @@ V_UVWpWpWmWmEW = CTVertex(name = 'V_UVWpWpWmWmEW',
                           lorentz = [ L.l_WpWpWmWm12, L.l_WpWpWmWm13, L.l_WpWpWmWm14 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVWpWpWmWm1EW, (0, 1, 0) : C.c_UVWpWpWmWm2EW, (0, 2, 0) : C.c_UVWpWpWmWm2EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVWpWmZZEW = CTVertex(name = 'V_UVWpWmZZEW',
@@ -3936,7 +3936,7 @@ V_UVWpWmZZEW = CTVertex(name = 'V_UVWpWmZZEW',
                         lorentz = [ L.l_WpWpWmWm12, L.l_WpWpWmWm13, L.l_WpWpWmWm14 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVWpWmZZ1EW, (0, 1, 0) : C.c_UVWpWmZZ2EW, (0, 2, 0) : C.c_UVWpWmZZ2EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVWpWmAZEW = CTVertex(name = 'V_UVWpWmAZEW',
@@ -3945,7 +3945,7 @@ V_UVWpWmAZEW = CTVertex(name = 'V_UVWpWmAZEW',
                         lorentz = [ L.l_WpWpWmWm12, L.l_WpWpWmWm13, L.l_WpWpWmWm14 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVWpWmAZ1EW, (0, 1, 0) : C.c_UVWpWmAZ2EW, (0, 2, 0) : C.c_UVWpWmAZ2EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVWpWmAAEW = CTVertex(name = 'V_UVWpWmAAEW',
@@ -3954,7 +3954,7 @@ V_UVWpWmAAEW = CTVertex(name = 'V_UVWpWmAAEW',
                         lorentz = [ L.l_WpWpWmWm12, L.l_WpWpWmWm13, L.l_WpWpWmWm14 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVWpWmAA1EW, (0, 1, 0) : C.c_UVWpWmAA2EW, (0, 2, 0) : C.c_UVWpWmAA2EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVAWpWmEW = CTVertex(name = 'V_UVAWpWmEW',
@@ -3963,7 +3963,7 @@ V_UVAWpWmEW = CTVertex(name = 'V_UVAWpWmEW',
                        lorentz = [ L.l_AWpWm15 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVAWpWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVZWpWmEW = CTVertex(name = 'V_UVZWpWmEW',
@@ -3972,7 +3972,7 @@ V_UVZWpWmEW = CTVertex(name = 'V_UVZWpWmEW',
                        lorentz = [ L.l_AWpWm15 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVZWpWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVHHHHEW = CTVertex(name = 'V_UVHHHHEW',
@@ -3981,7 +3981,7 @@ V_UVHHHHEW = CTVertex(name = 'V_UVHHHHEW',
                       lorentz = [ L.l_HHHH16 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVHHHH1EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVHHG0G0EW = CTVertex(name = 'V_UVHHG0G0EW',
@@ -3990,7 +3990,7 @@ V_UVHHG0G0EW = CTVertex(name = 'V_UVHHG0G0EW',
                         lorentz = [ L.l_HHHH16 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHG0G01EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHHGmGpEW = CTVertex(name = 'V_UVHHGmGpEW',
@@ -3999,7 +3999,7 @@ V_UVHHGmGpEW = CTVertex(name = 'V_UVHHGmGpEW',
                         lorentz = [ L.l_HHHH16 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHGmGp1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVG0G0G0G0EW = CTVertex(name = 'V_UVG0G0G0G0EW',
@@ -4008,7 +4008,7 @@ V_UVG0G0G0G0EW = CTVertex(name = 'V_UVG0G0G0G0EW',
                           lorentz = [ L.l_HHHH16 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVG0G0G0G01EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVG0G0GmGpEW = CTVertex(name = 'V_UVG0G0GmGpEW',
@@ -4017,7 +4017,7 @@ V_UVG0G0GmGpEW = CTVertex(name = 'V_UVG0G0GmGpEW',
                           lorentz = [ L.l_HHHH16 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVG0G0GmGp1EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVGmGmGpGpEW = CTVertex(name = 'V_UVGmGmGpGpEW',
@@ -4026,7 +4026,7 @@ V_UVGmGmGpGpEW = CTVertex(name = 'V_UVGmGmGpGpEW',
                           lorentz = [ L.l_HHHH16 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVGmGmGpGp1EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVHHHEW = CTVertex(name = 'V_UVHHHEW',
@@ -4035,7 +4035,7 @@ V_UVHHHEW = CTVertex(name = 'V_UVHHHEW',
                      lorentz = [ L.l_HHH17 ],
                      loop_particles = [  ],
                      couplings = {(0, 0, 0) : C.c_UVHHH1EW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 
 V_UVHG0G0EW = CTVertex(name = 'V_UVHG0G0EW',
@@ -4044,7 +4044,7 @@ V_UVHG0G0EW = CTVertex(name = 'V_UVHG0G0EW',
                        lorentz = [ L.l_HHH17 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVHG0G01EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGmHGpEW = CTVertex(name = 'V_UVGmHGpEW',
@@ -4053,7 +4053,7 @@ V_UVGmHGpEW = CTVertex(name = 'V_UVGmHGpEW',
                        lorentz = [ L.l_HHH17 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGmHGp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVHHWmWpEW = CTVertex(name = 'V_UVHHWmWpEW',
@@ -4062,7 +4062,7 @@ V_UVHHWmWpEW = CTVertex(name = 'V_UVHHWmWpEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHWmWp1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVG0G0WmWpEW = CTVertex(name = 'V_UVG0G0WmWpEW',
@@ -4071,7 +4071,7 @@ V_UVG0G0WmWpEW = CTVertex(name = 'V_UVG0G0WmWpEW',
                           lorentz = [ L.l_HHWmWp18 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVG0G0WmWp1EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVGmGpWmWpEW = CTVertex(name = 'V_UVGmGpWmWpEW',
@@ -4080,7 +4080,7 @@ V_UVGmGpWmWpEW = CTVertex(name = 'V_UVGmGpWmWpEW',
                           lorentz = [ L.l_HHWmWp18 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVGmGpWmWp1EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVGmGpZZEW = CTVertex(name = 'V_UVGmGpZZEW',
@@ -4089,7 +4089,7 @@ V_UVGmGpZZEW = CTVertex(name = 'V_UVGmGpZZEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmGpZZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVGmGpAZEW = CTVertex(name = 'V_UVGmGpAZEW',
@@ -4098,7 +4098,7 @@ V_UVGmGpAZEW = CTVertex(name = 'V_UVGmGpAZEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmGpAZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVGmGpAAEW = CTVertex(name = 'V_UVGmGpAAEW',
@@ -4107,7 +4107,7 @@ V_UVGmGpAAEW = CTVertex(name = 'V_UVGmGpAAEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmGpAA1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHHZZEW = CTVertex(name = 'V_UVHHZZEW',
@@ -4116,7 +4116,7 @@ V_UVHHZZEW = CTVertex(name = 'V_UVHHZZEW',
                       lorentz = [ L.l_HHWmWp18 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVHHZZ1EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVG0G0ZZEW = CTVertex(name = 'V_UVG0G0ZZEW',
@@ -4125,7 +4125,7 @@ V_UVG0G0ZZEW = CTVertex(name = 'V_UVG0G0ZZEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVG0G0ZZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHHAZEW = CTVertex(name = 'V_UVHHAZEW',
@@ -4134,7 +4134,7 @@ V_UVHHAZEW = CTVertex(name = 'V_UVHHAZEW',
                       lorentz = [ L.l_HHWmWp18 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVHHAZ1EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVG0G0AZEW = CTVertex(name = 'V_UVG0G0AZEW',
@@ -4143,7 +4143,7 @@ V_UVG0G0AZEW = CTVertex(name = 'V_UVG0G0AZEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHHAZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHGmWpZEW = CTVertex(name = 'V_UVHGmWpZEW',
@@ -4152,7 +4152,7 @@ V_UVHGmWpZEW = CTVertex(name = 'V_UVHGmWpZEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHGmWpZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHGpWmZEW = CTVertex(name = 'V_UVHGpWmZEW',
@@ -4161,7 +4161,7 @@ V_UVHGpWmZEW = CTVertex(name = 'V_UVHGpWmZEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHGpWmZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHGpWmAEW = CTVertex(name = 'V_UVHGpWmAEW',
@@ -4170,7 +4170,7 @@ V_UVHGpWmAEW = CTVertex(name = 'V_UVHGpWmAEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHGpWmA1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHGmWpAEW = CTVertex(name = 'V_UVHGmWpAEW',
@@ -4179,7 +4179,7 @@ V_UVHGmWpAEW = CTVertex(name = 'V_UVHGmWpAEW',
                         lorentz = [ L.l_HHWmWp18 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVHGmWpA1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVGpG0ZWmEW = CTVertex(name = 'V_UVGpG0ZWmEW',
@@ -4188,7 +4188,7 @@ V_UVGpG0ZWmEW = CTVertex(name = 'V_UVGpG0ZWmEW',
                          lorentz = [ L.l_HHWmWp18 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVGpG0ZWm1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVGmG0ZWpEW = CTVertex(name = 'V_UVGmG0ZWpEW',
@@ -4197,7 +4197,7 @@ V_UVGmG0ZWpEW = CTVertex(name = 'V_UVGmG0ZWpEW',
                          lorentz = [ L.l_HHWmWp18 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVGpG0ZWm1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVGpG0AWmEW = CTVertex(name = 'V_UVGpG0AWmEW',
@@ -4206,7 +4206,7 @@ V_UVGpG0AWmEW = CTVertex(name = 'V_UVGpG0AWmEW',
                          lorentz = [ L.l_HHWmWp18 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVGpG0AWm1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVGmG0AWpEW = CTVertex(name = 'V_UVGmG0AWpEW',
@@ -4215,7 +4215,7 @@ V_UVGmG0AWpEW = CTVertex(name = 'V_UVGmG0AWpEW',
                          lorentz = [ L.l_HHWmWp18 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVGpG0AWm1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVG0HAEW = CTVertex(name = 'V_UVG0HAEW',
@@ -4224,7 +4224,7 @@ V_UVG0HAEW = CTVertex(name = 'V_UVG0HAEW',
                       lorentz = [ L.l_G0HA19 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVG0HA1EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVG0HZEW = CTVertex(name = 'V_UVG0HZEW',
@@ -4233,7 +4233,7 @@ V_UVG0HZEW = CTVertex(name = 'V_UVG0HZEW',
                       lorentz = [ L.l_G0HA19 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVG0HZ1EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVGpGmAEW = CTVertex(name = 'V_UVGpGmAEW',
@@ -4242,7 +4242,7 @@ V_UVGpGmAEW = CTVertex(name = 'V_UVGpGmAEW',
                        lorentz = [ L.l_G0HA19 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpGmA1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGpGmZEW = CTVertex(name = 'V_UVGpGmZEW',
@@ -4251,7 +4251,7 @@ V_UVGpGmZEW = CTVertex(name = 'V_UVGpGmZEW',
                        lorentz = [ L.l_G0HA19 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpGmZ1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGpHWmEW = CTVertex(name = 'V_UVGpHWmEW',
@@ -4260,7 +4260,7 @@ V_UVGpHWmEW = CTVertex(name = 'V_UVGpHWmEW',
                        lorentz = [ L.l_G0HA19 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpHWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGmHWpEW = CTVertex(name = 'V_UVGmHWpEW',
@@ -4269,7 +4269,7 @@ V_UVGmHWpEW = CTVertex(name = 'V_UVGmHWpEW',
                        lorentz = [ L.l_G0HA19 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpHWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGpG0WmEW = CTVertex(name = 'V_UVGpG0WmEW',
@@ -4278,7 +4278,7 @@ V_UVGpG0WmEW = CTVertex(name = 'V_UVGpG0WmEW',
                         lorentz = [ L.l_G0HA19 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGpG0Wm1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVGmG0WpEW = CTVertex(name = 'V_UVGmG0WpEW',
@@ -4287,7 +4287,7 @@ V_UVGmG0WpEW = CTVertex(name = 'V_UVGmG0WpEW',
                         lorentz = [ L.l_G0HA19 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVGmG0Wp1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVHWpWmEW = CTVertex(name = 'V_UVHWpWmEW',
@@ -4296,7 +4296,7 @@ V_UVHWpWmEW = CTVertex(name = 'V_UVHWpWmEW',
                        lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVHWpWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVHZZEW = CTVertex(name = 'V_UVHZZEW',
@@ -4305,7 +4305,7 @@ V_UVHZZEW = CTVertex(name = 'V_UVHZZEW',
                      lorentz = [ L.l_HWpWm20 ],
                      loop_particles = [  ],
                      couplings = {(0, 0, 0) : C.c_UVHZZ1EW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 
 V_UVHZAEW = CTVertex(name = 'V_UVHZAEW',
@@ -4314,7 +4314,7 @@ V_UVHZAEW = CTVertex(name = 'V_UVHZAEW',
                      lorentz = [ L.l_HWpWm20 ],
                      loop_particles = [  ],
                      couplings = {(0, 0, 0) : C.c_UVHZA1EW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 
 V_UVGmWpZEW = CTVertex(name = 'V_UVGmWpZEW',
@@ -4323,7 +4323,7 @@ V_UVGmWpZEW = CTVertex(name = 'V_UVGmWpZEW',
                        lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGmWpZ1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGpWmZEW = CTVertex(name = 'V_UVGpWmZEW',
@@ -4332,7 +4332,7 @@ V_UVGpWmZEW = CTVertex(name = 'V_UVGpWmZEW',
                        lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpWmZ1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGmWpAEW = CTVertex(name = 'V_UVGmWpAEW',
@@ -4341,7 +4341,7 @@ V_UVGmWpAEW = CTVertex(name = 'V_UVGmWpAEW',
                        lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGmWpA1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVGpWmAEW = CTVertex(name = 'V_UVGpWmAEW',
@@ -4350,7 +4350,7 @@ V_UVGpWmAEW = CTVertex(name = 'V_UVGpWmAEW',
                        lorentz = [ L.l_HWpWm20 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVGpWmA1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVvexveAEW = CTVertex(name = 'V_UVvexveAEW',
@@ -4359,7 +4359,7 @@ V_UVvexveAEW = CTVertex(name = 'V_UVvexveAEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveA1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVvmxvmAEW = CTVertex(name = 'V_UVvmxvmAEW',
@@ -4368,7 +4368,7 @@ V_UVvmxvmAEW = CTVertex(name = 'V_UVvmxvmAEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveA1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVvtxvtAEW = CTVertex(name = 'V_UVvtxvtAEW',
@@ -4377,7 +4377,7 @@ V_UVvtxvtAEW = CTVertex(name = 'V_UVvtxvtAEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveA1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVepemAEW = CTVertex(name = 'V_UVepemAEW',
@@ -4386,7 +4386,7 @@ V_UVepemAEW = CTVertex(name = 'V_UVepemAEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVepemA1EW, (0, 1, 0) : C.c_UVepemA2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVmpmmAEW = CTVertex(name = 'V_UVmpmmAEW',
@@ -4395,7 +4395,7 @@ V_UVmpmmAEW = CTVertex(name = 'V_UVmpmmAEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVmpmmA1EW, (0, 1, 0) : C.c_UVmpmmA2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVttpttmAEW = CTVertex(name = 'V_UVttpttmAEW',
@@ -4404,7 +4404,7 @@ V_UVttpttmAEW = CTVertex(name = 'V_UVttpttmAEW',
                          lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpttmA1EW, (0, 1, 0) : C.c_UVttpttmA2EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVuxuAEW = CTVertex(name = 'V_UVuxuAEW',
@@ -4413,7 +4413,7 @@ V_UVuxuAEW = CTVertex(name = 'V_UVuxuAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [[[P.u, P.Z]]],
                       couplings = {(0, 0, 0) : C.c_UVuxuA1EW, (0, 1, 0) : C.c_UVuxuA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxuAEW = CTVertex(name = 'V_UVcxuAEW',
@@ -4422,7 +4422,7 @@ V_UVcxuAEW = CTVertex(name = 'V_UVcxuAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxuA1EW, (0, 1, 0) : C.c_UVcxuA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxuAEW = CTVertex(name = 'V_UVtxuAEW',
@@ -4431,7 +4431,7 @@ V_UVtxuAEW = CTVertex(name = 'V_UVtxuAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxuA1EW, (0, 1, 0) : C.c_UVtxuA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVuxcAEW = CTVertex(name = 'V_UVuxcAEW',
@@ -4440,7 +4440,7 @@ V_UVuxcAEW = CTVertex(name = 'V_UVuxcAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxcA1EW, (0, 1, 0) : C.c_UVuxcA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxcAEW = CTVertex(name = 'V_UVcxcAEW',
@@ -4449,7 +4449,7 @@ V_UVcxcAEW = CTVertex(name = 'V_UVcxcAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [[[P.c, P.Z]]],
                       couplings = {(0, 0, 0) : C.c_UVcxcA1EW, (0, 1, 0) : C.c_UVcxcA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxcAEW = CTVertex(name = 'V_UVtxcAEW',
@@ -4458,7 +4458,7 @@ V_UVtxcAEW = CTVertex(name = 'V_UVtxcAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxcA1EW, (0, 1, 0) : C.c_UVtxcA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVuxtAEW = CTVertex(name = 'V_UVuxtAEW',
@@ -4467,7 +4467,7 @@ V_UVuxtAEW = CTVertex(name = 'V_UVuxtAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxtA1EW, (0, 1, 0) : C.c_UVuxtA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxtAEW = CTVertex(name = 'V_UVcxtAEW',
@@ -4476,7 +4476,7 @@ V_UVcxtAEW = CTVertex(name = 'V_UVcxtAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxtA1EW, (0, 1, 0) : C.c_UVcxtA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxtAEW = CTVertex(name = 'V_UVtxtAEW',
@@ -4485,7 +4485,7 @@ V_UVtxtAEW = CTVertex(name = 'V_UVtxtAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [[[P.t,P.Z]]],
                       couplings = {(0, 0, 0) : C.c_UVtxtA1EW, (0, 1, 0) : C.c_UVtxtA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxdAEW = CTVertex(name = 'V_UVdxdAEW',
@@ -4494,7 +4494,7 @@ V_UVdxdAEW = CTVertex(name = 'V_UVdxdAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [[[P.d,P.Z]]],
                       couplings = {(0, 0, 0) : C.c_UVdxdA1EW, (0, 1, 0) : C.c_UVdxdA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxdAEW = CTVertex(name = 'V_UVsxdAEW',
@@ -4503,7 +4503,7 @@ V_UVsxdAEW = CTVertex(name = 'V_UVsxdAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxdA1EW, (0, 1, 0) : C.c_UVsxdA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxdAEW = CTVertex(name = 'V_UVbxdAEW',
@@ -4512,7 +4512,7 @@ V_UVbxdAEW = CTVertex(name = 'V_UVbxdAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxdA1EW, (0, 1, 0) : C.c_UVbxdA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxsAEW = CTVertex(name = 'V_UVdxsAEW',
@@ -4521,7 +4521,7 @@ V_UVdxsAEW = CTVertex(name = 'V_UVdxsAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxsA1EW, (0, 1, 0) : C.c_UVdxsA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxsAEW = CTVertex(name = 'V_UVsxsAEW',
@@ -4530,7 +4530,7 @@ V_UVsxsAEW = CTVertex(name = 'V_UVsxsAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [[[P.s,P.Z]]],
                       couplings = {(0, 0, 0) : C.c_UVsxsA1EW, (0, 1, 0) : C.c_UVsxsA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxsAEW = CTVertex(name = 'V_UVbxsAEW',
@@ -4539,7 +4539,7 @@ V_UVbxsAEW = CTVertex(name = 'V_UVbxsAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxsA1EW, (0, 1, 0) : C.c_UVbxsA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxbAEW = CTVertex(name = 'V_UVdxbAEW',
@@ -4548,7 +4548,7 @@ V_UVdxbAEW = CTVertex(name = 'V_UVdxbAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxbA1EW, (0, 1, 0) : C.c_UVdxbA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxbAEW = CTVertex(name = 'V_UVsxbAEW',
@@ -4557,7 +4557,7 @@ V_UVsxbAEW = CTVertex(name = 'V_UVsxbAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxbA1EW, (0, 1, 0) : C.c_UVsxbA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxbAEW = CTVertex(name = 'V_UVbxbAEW',
@@ -4566,7 +4566,7 @@ V_UVbxbAEW = CTVertex(name = 'V_UVbxbAEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [[[P.b,P.Z]]],
                       couplings = {(0, 0, 0) : C.c_UVbxbA1EW, (0, 1, 0) : C.c_UVbxbA2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVvexveZEW = CTVertex(name = 'V_UVvexveZEW',
@@ -4575,7 +4575,7 @@ V_UVvexveZEW = CTVertex(name = 'V_UVvexveZEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvexveZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVvmxvmZEW = CTVertex(name = 'V_UVvmxvmZEW',
@@ -4584,7 +4584,7 @@ V_UVvmxvmZEW = CTVertex(name = 'V_UVvmxvmZEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvmxvmZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVvtxvtZEW = CTVertex(name = 'V_UVvtxvtZEW',
@@ -4593,7 +4593,7 @@ V_UVvtxvtZEW = CTVertex(name = 'V_UVvtxvtZEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVvtxvtZ1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVepemZEW = CTVertex(name = 'V_UVepemZEW',
@@ -4602,7 +4602,7 @@ V_UVepemZEW = CTVertex(name = 'V_UVepemZEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVepemZ1EW, (0, 1, 0) : C.c_UVepemZ2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVmpmmZEW = CTVertex(name = 'V_UVmpmmZEW',
@@ -4611,7 +4611,7 @@ V_UVmpmmZEW = CTVertex(name = 'V_UVmpmmZEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVmpmmZ1EW, (0, 1, 0) : C.c_UVmpmmZ2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVttpttmZEW = CTVertex(name = 'V_UVttpttmZEW',
@@ -4620,7 +4620,7 @@ V_UVttpttmZEW = CTVertex(name = 'V_UVttpttmZEW',
                          lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpttmZ1EW, (0, 1, 0) : C.c_UVttpttmZ2EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVuxuZEW = CTVertex(name = 'V_UVuxuZEW',
@@ -4629,7 +4629,7 @@ V_UVuxuZEW = CTVertex(name = 'V_UVuxuZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxuZ1EW, (0, 1, 0) : C.c_UVuxuZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxuZEW = CTVertex(name = 'V_UVcxuZEW',
@@ -4638,7 +4638,7 @@ V_UVcxuZEW = CTVertex(name = 'V_UVcxuZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxuZ1EW, (0, 1, 0) : C.c_UVcxuZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxuZEW = CTVertex(name = 'V_UVtxuZEW',
@@ -4647,7 +4647,7 @@ V_UVtxuZEW = CTVertex(name = 'V_UVtxuZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxuZ1EW, (0, 1, 0) : C.c_UVtxuZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVuxcZEW = CTVertex(name = 'V_UVuxcZEW',
@@ -4656,7 +4656,7 @@ V_UVuxcZEW = CTVertex(name = 'V_UVuxcZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxcZ1EW, (0, 1, 0) : C.c_UVuxcZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxcZEW = CTVertex(name = 'V_UVcxcZEW',
@@ -4665,7 +4665,7 @@ V_UVcxcZEW = CTVertex(name = 'V_UVcxcZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxcZ1EW, (0, 1, 0) : C.c_UVcxcZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxcZEW = CTVertex(name = 'V_UVtxcZEW',
@@ -4674,7 +4674,7 @@ V_UVtxcZEW = CTVertex(name = 'V_UVtxcZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxcZ1EW, (0, 1, 0) : C.c_UVtxcZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVuxtZEW = CTVertex(name = 'V_UVuxtZEW',
@@ -4683,7 +4683,7 @@ V_UVuxtZEW = CTVertex(name = 'V_UVuxtZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxtZ1EW, (0, 1, 0) : C.c_UVuxtZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxtZEW = CTVertex(name = 'V_UVcxtZEW',
@@ -4692,7 +4692,7 @@ V_UVcxtZEW = CTVertex(name = 'V_UVcxtZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxtZ1EW, (0, 1, 0) : C.c_UVcxtZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxtZEW = CTVertex(name = 'V_UVtxtZEW',
@@ -4701,7 +4701,7 @@ V_UVtxtZEW = CTVertex(name = 'V_UVtxtZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxtZ1EW, (0, 1, 0) : C.c_UVtxtZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxdZEW = CTVertex(name = 'V_UVdxdZEW',
@@ -4710,7 +4710,7 @@ V_UVdxdZEW = CTVertex(name = 'V_UVdxdZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxdZ1EW, (0, 1, 0) : C.c_UVdxdZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxdZEW = CTVertex(name = 'V_UVsxdZEW',
@@ -4719,7 +4719,7 @@ V_UVsxdZEW = CTVertex(name = 'V_UVsxdZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxdZ1EW, (0, 1, 0) : C.c_UVsxdZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxdZEW = CTVertex(name = 'V_UVbxdZEW',
@@ -4728,7 +4728,7 @@ V_UVbxdZEW = CTVertex(name = 'V_UVbxdZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxdZ1EW, (0, 1, 0) : C.c_UVbxdZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxsZEW = CTVertex(name = 'V_UVdxsZEW',
@@ -4737,7 +4737,7 @@ V_UVdxsZEW = CTVertex(name = 'V_UVdxsZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxsZ1EW, (0, 1, 0) : C.c_UVdxsZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxsZEW = CTVertex(name = 'V_UVsxsZEW',
@@ -4746,7 +4746,7 @@ V_UVsxsZEW = CTVertex(name = 'V_UVsxsZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxsZ1EW, (0, 1, 0) : C.c_UVsxsZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxsZEW = CTVertex(name = 'V_UVbxsZEW',
@@ -4755,7 +4755,7 @@ V_UVbxsZEW = CTVertex(name = 'V_UVbxsZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxsZ1EW, (0, 1, 0) : C.c_UVbxsZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxbZEW = CTVertex(name = 'V_UVdxbZEW',
@@ -4764,7 +4764,7 @@ V_UVdxbZEW = CTVertex(name = 'V_UVdxbZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxbZ1EW, (0, 1, 0) : C.c_UVdxbZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxbZEW = CTVertex(name = 'V_UVsxbZEW',
@@ -4773,7 +4773,7 @@ V_UVsxbZEW = CTVertex(name = 'V_UVsxbZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxbZ1EW, (0, 1, 0) : C.c_UVsxbZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxbZEW = CTVertex(name = 'V_UVbxbZEW',
@@ -4782,7 +4782,7 @@ V_UVbxbZEW = CTVertex(name = 'V_UVbxbZEW',
                       lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxbZ1EW, (0, 1, 0) : C.c_UVbxbZ2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVepveWmEW = CTVertex(name = 'V_UVepveWmEW',
@@ -4791,7 +4791,7 @@ V_UVepveWmEW = CTVertex(name = 'V_UVepveWmEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVepveWm1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVmpvmWmEW = CTVertex(name = 'V_UVmpvmWmEW',
@@ -4800,7 +4800,7 @@ V_UVmpvmWmEW = CTVertex(name = 'V_UVmpvmWmEW',
                         lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVmpvmWm1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVttpvtWmEW = CTVertex(name = 'V_UVttpvtWmEW',
@@ -4809,7 +4809,7 @@ V_UVttpvtWmEW = CTVertex(name = 'V_UVttpvtWmEW',
                          lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpvtWm1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVvexemWpEW = CTVertex(name = 'V_UVvexemWpEW',
@@ -4818,7 +4818,7 @@ V_UVvexemWpEW = CTVertex(name = 'V_UVvexemWpEW',
                          lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVvexemWp1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVvmxmmWpEW = CTVertex(name = 'V_UVvmxmmWpEW',
@@ -4827,7 +4827,7 @@ V_UVvmxmmWpEW = CTVertex(name = 'V_UVvmxmmWpEW',
                          lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVvmxmmWp1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVvtxttmWpEW = CTVertex(name = 'V_UVvtxttmWpEW',
@@ -4836,7 +4836,7 @@ V_UVvtxttmWpEW = CTVertex(name = 'V_UVvtxttmWpEW',
                           lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVvtxttmWp1EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVdxuWmEW = CTVertex(name = 'V_UVdxuWmEW',
@@ -4845,7 +4845,7 @@ V_UVdxuWmEW = CTVertex(name = 'V_UVdxuWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVdxuWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxuWmEW = CTVertex(name = 'V_UVsxuWmEW',
@@ -4854,7 +4854,7 @@ V_UVsxuWmEW = CTVertex(name = 'V_UVsxuWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVsxuWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxuWmEW = CTVertex(name = 'V_UVbxuWmEW',
@@ -4863,7 +4863,7 @@ V_UVbxuWmEW = CTVertex(name = 'V_UVbxuWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVbxuWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxcWmEW = CTVertex(name = 'V_UVdxcWmEW',
@@ -4872,7 +4872,7 @@ V_UVdxcWmEW = CTVertex(name = 'V_UVdxcWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVdxcWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxcWmEW = CTVertex(name = 'V_UVsxcWmEW',
@@ -4881,7 +4881,7 @@ V_UVsxcWmEW = CTVertex(name = 'V_UVsxcWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVsxcWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxcWmEW = CTVertex(name = 'V_UVbxcWmEW',
@@ -4890,7 +4890,7 @@ V_UVbxcWmEW = CTVertex(name = 'V_UVbxcWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVbxcWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxtWmEW = CTVertex(name = 'V_UVdxtWmEW',
@@ -4899,7 +4899,7 @@ V_UVdxtWmEW = CTVertex(name = 'V_UVdxtWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVdxtWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxtWmEW = CTVertex(name = 'V_UVsxtWmEW',
@@ -4908,7 +4908,7 @@ V_UVsxtWmEW = CTVertex(name = 'V_UVsxtWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVsxtWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxtWmEW = CTVertex(name = 'V_UVbxtWmEW',
@@ -4917,7 +4917,7 @@ V_UVbxtWmEW = CTVertex(name = 'V_UVbxtWmEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVbxtWm1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxdWpEW = CTVertex(name = 'V_UVuxdWpEW',
@@ -4926,7 +4926,7 @@ V_UVuxdWpEW = CTVertex(name = 'V_UVuxdWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVuxdWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxdWpEW = CTVertex(name = 'V_UVcxdWpEW',
@@ -4935,7 +4935,7 @@ V_UVcxdWpEW = CTVertex(name = 'V_UVcxdWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVcxdWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxdWpEW = CTVertex(name = 'V_UVtxdWpEW',
@@ -4944,7 +4944,7 @@ V_UVtxdWpEW = CTVertex(name = 'V_UVtxdWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVtxdWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxsWpEW = CTVertex(name = 'V_UVuxsWpEW',
@@ -4953,7 +4953,7 @@ V_UVuxsWpEW = CTVertex(name = 'V_UVuxsWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVuxsWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxsWpEW = CTVertex(name = 'V_UVcxsWpEW',
@@ -4962,7 +4962,7 @@ V_UVcxsWpEW = CTVertex(name = 'V_UVcxsWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVcxsWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxsWpEW = CTVertex(name = 'V_UVtxsWpEW',
@@ -4971,7 +4971,7 @@ V_UVtxsWpEW = CTVertex(name = 'V_UVtxsWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVtxsWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxbWpEW = CTVertex(name = 'V_UVuxbWpEW',
@@ -4980,7 +4980,7 @@ V_UVuxbWpEW = CTVertex(name = 'V_UVuxbWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVuxbWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxbWpEW = CTVertex(name = 'V_UVcxbWpEW',
@@ -4989,7 +4989,7 @@ V_UVcxbWpEW = CTVertex(name = 'V_UVcxbWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVcxbWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxbWpEW = CTVertex(name = 'V_UVtxbWpEW',
@@ -4998,7 +4998,7 @@ V_UVtxbWpEW = CTVertex(name = 'V_UVtxbWpEW',
                        lorentz = [ L.l_vexveA21, L.l_vexveA22 ],
                        loop_particles = [  ],
                        couplings = {(1, 0, 0) : C.c_UVtxbWp1EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVepemHEW = CTVertex(name = 'V_UVepemHEW',
@@ -5007,7 +5007,7 @@ V_UVepemHEW = CTVertex(name = 'V_UVepemHEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVepemH1EW, (0, 1, 0) : C.c_UVepemH2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVmpmmHEW = CTVertex(name = 'V_UVmpmmHEW',
@@ -5016,7 +5016,7 @@ V_UVmpmmHEW = CTVertex(name = 'V_UVmpmmHEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVmpmmH1EW, (0, 1, 0) : C.c_UVmpmmH2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVttpttmHEW = CTVertex(name = 'V_UVttpttmHEW',
@@ -5025,7 +5025,7 @@ V_UVttpttmHEW = CTVertex(name = 'V_UVttpttmHEW',
                          lorentz = [ L.l_epemH23, L.l_epemH24 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVttpttmH1EW, (0, 1, 0) : C.c_UVttpttmH2EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVuxuHEW = CTVertex(name = 'V_UVuxuHEW',
@@ -5034,7 +5034,7 @@ V_UVuxuHEW = CTVertex(name = 'V_UVuxuHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxuH1EW, (0, 1, 0) : C.c_UVuxuH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxuHEW = CTVertex(name = 'V_UVcxuHEW',
@@ -5043,7 +5043,7 @@ V_UVcxuHEW = CTVertex(name = 'V_UVcxuHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxuH1EW, (0, 1, 0) : C.c_UVcxuH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxuHEW = CTVertex(name = 'V_UVtxuHEW',
@@ -5052,7 +5052,7 @@ V_UVtxuHEW = CTVertex(name = 'V_UVtxuHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxuH1EW, (0, 1, 0) : C.c_UVtxuH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVuxcHEW = CTVertex(name = 'V_UVuxcHEW',
@@ -5061,7 +5061,7 @@ V_UVuxcHEW = CTVertex(name = 'V_UVuxcHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxcH1EW, (0, 1, 0) : C.c_UVuxcH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxcHEW = CTVertex(name = 'V_UVcxcHEW',
@@ -5070,7 +5070,7 @@ V_UVcxcHEW = CTVertex(name = 'V_UVcxcHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxcH1EW, (0, 1, 0) : C.c_UVcxcH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxcHEW = CTVertex(name = 'V_UVtxcHEW',
@@ -5079,7 +5079,7 @@ V_UVtxcHEW = CTVertex(name = 'V_UVtxcHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxcH1EW, (0, 1, 0) : C.c_UVtxcH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVuxtHEW = CTVertex(name = 'V_UVuxtHEW',
@@ -5088,7 +5088,7 @@ V_UVuxtHEW = CTVertex(name = 'V_UVuxtHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVuxtH1EW, (0, 1, 0) : C.c_UVuxtH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVcxtHEW = CTVertex(name = 'V_UVcxtHEW',
@@ -5097,7 +5097,7 @@ V_UVcxtHEW = CTVertex(name = 'V_UVcxtHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVcxtH1EW, (0, 1, 0) : C.c_UVcxtH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVtxtHEW = CTVertex(name = 'V_UVtxtHEW',
@@ -5106,7 +5106,7 @@ V_UVtxtHEW = CTVertex(name = 'V_UVtxtHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVtxtH1EW, (0, 1, 0) : C.c_UVtxtH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxdHEW = CTVertex(name = 'V_UVdxdHEW',
@@ -5115,7 +5115,7 @@ V_UVdxdHEW = CTVertex(name = 'V_UVdxdHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxdH1EW, (0, 1, 0) : C.c_UVdxdH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxdHEW = CTVertex(name = 'V_UVsxdHEW',
@@ -5124,7 +5124,7 @@ V_UVsxdHEW = CTVertex(name = 'V_UVsxdHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxdH1EW, (0, 1, 0) : C.c_UVsxdH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxdHEW = CTVertex(name = 'V_UVbxdHEW',
@@ -5133,7 +5133,7 @@ V_UVbxdHEW = CTVertex(name = 'V_UVbxdHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxdH1EW, (0, 1, 0) : C.c_UVbxdH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxsHEW = CTVertex(name = 'V_UVdxsHEW',
@@ -5142,7 +5142,7 @@ V_UVdxsHEW = CTVertex(name = 'V_UVdxsHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxsH1EW, (0, 1, 0) : C.c_UVdxsH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxsHEW = CTVertex(name = 'V_UVsxsHEW',
@@ -5151,7 +5151,7 @@ V_UVsxsHEW = CTVertex(name = 'V_UVsxsHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxsH1EW, (0, 1, 0) : C.c_UVsxsH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxsHEW = CTVertex(name = 'V_UVbxsHEW',
@@ -5160,7 +5160,7 @@ V_UVbxsHEW = CTVertex(name = 'V_UVbxsHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxsH1EW, (0, 1, 0) : C.c_UVbxsH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVdxbHEW = CTVertex(name = 'V_UVdxbHEW',
@@ -5169,7 +5169,7 @@ V_UVdxbHEW = CTVertex(name = 'V_UVdxbHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVdxbH1EW, (0, 1, 0) : C.c_UVdxbH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVsxbHEW = CTVertex(name = 'V_UVsxbHEW',
@@ -5178,7 +5178,7 @@ V_UVsxbHEW = CTVertex(name = 'V_UVsxbHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVsxbH1EW, (0, 1, 0) : C.c_UVsxbH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVbxbHEW = CTVertex(name = 'V_UVbxbHEW',
@@ -5187,7 +5187,7 @@ V_UVbxbHEW = CTVertex(name = 'V_UVbxbHEW',
                       lorentz = [ L.l_epemH23, L.l_epemH24 ],
                       loop_particles = [  ],
                       couplings = {(0, 0, 0) : C.c_UVbxbH1EW, (0, 1, 0) : C.c_UVbxbH2EW},
-                      type = 'UV')
+                      type = 'UVtree')
 
 
 V_UVepemG0EW = CTVertex(name = 'V_UVepemG0EW',
@@ -5196,7 +5196,7 @@ V_UVepemG0EW = CTVertex(name = 'V_UVepemG0EW',
                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVepemG01EW, (0, 1, 0) : C.c_UVepemG02EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVmpmmG0EW = CTVertex(name = 'V_UVmpmmG0EW',
@@ -5205,7 +5205,7 @@ V_UVmpmmG0EW = CTVertex(name = 'V_UVmpmmG0EW',
                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
                         couplings = {(0, 0, 0) : C.c_UVmpmmG01EW, (0, 1, 0) : C.c_UVmpmmG02EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVttpttmG0EW = CTVertex(name = 'V_UVttpttmG0EW',
@@ -5214,7 +5214,7 @@ V_UVttpttmG0EW = CTVertex(name = 'V_UVttpttmG0EW',
                           lorentz = [ L.l_epemH23, L.l_epemH24 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVttpttmG01EW, (0, 1, 0) : C.c_UVttpttmG02EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 V_UVuxuG0EW = CTVertex(name = 'V_UVuxuG0EW',
@@ -5223,7 +5223,7 @@ V_UVuxuG0EW = CTVertex(name = 'V_UVuxuG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVuxuG01EW, (0, 1, 0) : C.c_UVuxuG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxuG0EW = CTVertex(name = 'V_UVcxuG0EW',
@@ -5232,7 +5232,7 @@ V_UVcxuG0EW = CTVertex(name = 'V_UVcxuG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVcxuG01EW, (0, 1, 0) : C.c_UVcxuG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxuG0EW = CTVertex(name = 'V_UVtxuG0EW',
@@ -5241,7 +5241,7 @@ V_UVtxuG0EW = CTVertex(name = 'V_UVtxuG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxuG01EW, (0, 1, 0) : C.c_UVtxuG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxcG0EW = CTVertex(name = 'V_UVuxcG0EW',
@@ -5250,7 +5250,7 @@ V_UVuxcG0EW = CTVertex(name = 'V_UVuxcG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVuxcG01EW, (0, 1, 0) : C.c_UVuxcG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxcG0EW = CTVertex(name = 'V_UVcxcG0EW',
@@ -5259,7 +5259,7 @@ V_UVcxcG0EW = CTVertex(name = 'V_UVcxcG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVcxcG01EW, (0, 1, 0) : C.c_UVcxcG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxcG0EW = CTVertex(name = 'V_UVtxcG0EW',
@@ -5268,7 +5268,7 @@ V_UVtxcG0EW = CTVertex(name = 'V_UVtxcG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxcG01EW, (0, 1, 0) : C.c_UVtxcG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxtG0EW = CTVertex(name = 'V_UVuxtG0EW',
@@ -5277,7 +5277,7 @@ V_UVuxtG0EW = CTVertex(name = 'V_UVuxtG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVuxtG01EW, (0, 1, 0) : C.c_UVuxtG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxtG0EW = CTVertex(name = 'V_UVcxtG0EW',
@@ -5286,7 +5286,7 @@ V_UVcxtG0EW = CTVertex(name = 'V_UVcxtG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVcxtG01EW, (0, 1, 0) : C.c_UVcxtG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxtG0EW = CTVertex(name = 'V_UVtxtG0EW',
@@ -5295,7 +5295,7 @@ V_UVtxtG0EW = CTVertex(name = 'V_UVtxtG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxtG01EW, (0, 1, 0) : C.c_UVtxtG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxdG0EW = CTVertex(name = 'V_UVdxdG0EW',
@@ -5304,7 +5304,7 @@ V_UVdxdG0EW = CTVertex(name = 'V_UVdxdG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxdG01EW, (0, 1, 0) : C.c_UVdxdG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxdG0EW = CTVertex(name = 'V_UVsxdG0EW',
@@ -5313,7 +5313,7 @@ V_UVsxdG0EW = CTVertex(name = 'V_UVsxdG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxdG01EW, (0, 1, 0) : C.c_UVsxdG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxdG0EW = CTVertex(name = 'V_UVbxdG0EW',
@@ -5322,7 +5322,7 @@ V_UVbxdG0EW = CTVertex(name = 'V_UVbxdG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxdG01EW, (0, 1, 0) : C.c_UVbxdG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxsG0EW = CTVertex(name = 'V_UVdxsG0EW',
@@ -5331,7 +5331,7 @@ V_UVdxsG0EW = CTVertex(name = 'V_UVdxsG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxsG01EW, (0, 1, 0) : C.c_UVdxsG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxsG0EW = CTVertex(name = 'V_UVsxsG0EW',
@@ -5340,7 +5340,7 @@ V_UVsxsG0EW = CTVertex(name = 'V_UVsxsG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxsG01EW, (0, 1, 0) : C.c_UVsxsG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxsG0EW = CTVertex(name = 'V_UVbxsG0EW',
@@ -5349,7 +5349,7 @@ V_UVbxsG0EW = CTVertex(name = 'V_UVbxsG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxsG01EW, (0, 1, 0) : C.c_UVbxsG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxbG0EW = CTVertex(name = 'V_UVdxbG0EW',
@@ -5358,7 +5358,7 @@ V_UVdxbG0EW = CTVertex(name = 'V_UVdxbG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxbG01EW, (0, 1, 0) : C.c_UVdxbG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxbG0EW = CTVertex(name = 'V_UVsxbG0EW',
@@ -5367,7 +5367,7 @@ V_UVsxbG0EW = CTVertex(name = 'V_UVsxbG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxbG01EW, (0, 1, 0) : C.c_UVsxbG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxbG0EW = CTVertex(name = 'V_UVbxbG0EW',
@@ -5376,7 +5376,7 @@ V_UVbxbG0EW = CTVertex(name = 'V_UVbxbG0EW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxbG01EW, (0, 1, 0) : C.c_UVbxbG02EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxuGmEW = CTVertex(name = 'V_UVdxuGmEW',
@@ -5385,7 +5385,7 @@ V_UVdxuGmEW = CTVertex(name = 'V_UVdxuGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxuGm1EW, (0, 1, 0) : C.c_UVdxuGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxuGmEW = CTVertex(name = 'V_UVsxuGmEW',
@@ -5394,7 +5394,7 @@ V_UVsxuGmEW = CTVertex(name = 'V_UVsxuGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxuGm1EW, (0, 1, 0) : C.c_UVsxuGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxuGmEW = CTVertex(name = 'V_UVbxuGmEW',
@@ -5403,7 +5403,7 @@ V_UVbxuGmEW = CTVertex(name = 'V_UVbxuGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxuGm1EW, (0, 1, 0) : C.c_UVbxuGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxcGmEW = CTVertex(name = 'V_UVdxcGmEW',
@@ -5412,7 +5412,7 @@ V_UVdxcGmEW = CTVertex(name = 'V_UVdxcGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxcGm1EW, (0, 1, 0) : C.c_UVdxcGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxcGmEW = CTVertex(name = 'V_UVsxcGmEW',
@@ -5421,7 +5421,7 @@ V_UVsxcGmEW = CTVertex(name = 'V_UVsxcGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxcGm1EW, (0, 1, 0) : C.c_UVsxcGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxcGmEW = CTVertex(name = 'V_UVbxcGmEW',
@@ -5430,7 +5430,7 @@ V_UVbxcGmEW = CTVertex(name = 'V_UVbxcGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxcGm1EW, (0, 1, 0) : C.c_UVbxcGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVdxtGmEW = CTVertex(name = 'V_UVdxtGmEW',
@@ -5439,7 +5439,7 @@ V_UVdxtGmEW = CTVertex(name = 'V_UVdxtGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVdxtGm1EW, (0, 1, 0) : C.c_UVdxtGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVsxtGmEW = CTVertex(name = 'V_UVsxtGmEW',
@@ -5448,7 +5448,7 @@ V_UVsxtGmEW = CTVertex(name = 'V_UVsxtGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVsxtGm1EW, (0, 1, 0) : C.c_UVsxtGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVbxtGmEW = CTVertex(name = 'V_UVbxtGmEW',
@@ -5457,7 +5457,7 @@ V_UVbxtGmEW = CTVertex(name = 'V_UVbxtGmEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVbxtGm1EW, (0, 1, 0) : C.c_UVbxtGm2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxdGpEW = CTVertex(name = 'V_UVuxdGpEW',
@@ -5466,7 +5466,7 @@ V_UVuxdGpEW = CTVertex(name = 'V_UVuxdGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVuxdGp1EW, (0, 1, 0) : C.c_UVuxdGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxdGpEW = CTVertex(name = 'V_UVcxdGpEW',
@@ -5475,7 +5475,7 @@ V_UVcxdGpEW = CTVertex(name = 'V_UVcxdGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVcxdGp1EW, (0, 1, 0) : C.c_UVcxdGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxdGpEW = CTVertex(name = 'V_UVtxdGpEW',
@@ -5484,7 +5484,7 @@ V_UVtxdGpEW = CTVertex(name = 'V_UVtxdGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxdGp1EW, (0, 1, 0) : C.c_UVtxdGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxsGpEW = CTVertex(name = 'V_UVuxsGpEW',
@@ -5493,7 +5493,7 @@ V_UVuxsGpEW = CTVertex(name = 'V_UVuxsGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVuxsGp1EW, (0, 1, 0) : C.c_UVuxsGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxsGpEW = CTVertex(name = 'V_UVcxsGpEW',
@@ -5502,7 +5502,7 @@ V_UVcxsGpEW = CTVertex(name = 'V_UVcxsGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVcxsGp1EW, (0, 1, 0) : C.c_UVcxsGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxsGpEW = CTVertex(name = 'V_UVtxsGpEW',
@@ -5511,7 +5511,7 @@ V_UVtxsGpEW = CTVertex(name = 'V_UVtxsGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxsGp1EW, (0, 1, 0) : C.c_UVtxsGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVuxbGpEW = CTVertex(name = 'V_UVuxbGpEW',
@@ -5520,7 +5520,7 @@ V_UVuxbGpEW = CTVertex(name = 'V_UVuxbGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVuxbGp1EW, (0, 1, 0) : C.c_UVuxbGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVcxbGpEW = CTVertex(name = 'V_UVcxbGpEW',
@@ -5529,7 +5529,7 @@ V_UVcxbGpEW = CTVertex(name = 'V_UVcxbGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVcxbGp1EW, (0, 1, 0) : C.c_UVcxbGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVtxbGpEW = CTVertex(name = 'V_UVtxbGpEW',
@@ -5538,7 +5538,7 @@ V_UVtxbGpEW = CTVertex(name = 'V_UVtxbGpEW',
                        lorentz = [ L.l_epemH23, L.l_epemH24 ],
                        loop_particles = [  ],
                        couplings = {(0, 0, 0) : C.c_UVtxbGp1EW, (0, 1, 0) : C.c_UVtxbGp2EW},
-                       type = 'UV')
+                       type = 'UVtree')
 
 
 V_UVepveGmEW = CTVertex(name = 'V_UVepveGmEW',
@@ -5547,7 +5547,7 @@ V_UVepveGmEW = CTVertex(name = 'V_UVepveGmEW',
                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
                         couplings = {(0, 1, 0) : C.c_UVepveGm1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVmpvmGmEW = CTVertex(name = 'V_UVmpvmGmEW',
@@ -5556,7 +5556,7 @@ V_UVmpvmGmEW = CTVertex(name = 'V_UVmpvmGmEW',
                         lorentz = [ L.l_epemH23, L.l_epemH24 ],
                         loop_particles = [  ],
                         couplings = {(0, 1, 0) : C.c_UVmpvmGm1EW},
-                        type = 'UV')
+                        type = 'UVtree')
 
 
 V_UVttpvtGmEW = CTVertex(name = 'V_UVttpvtGmEW',
@@ -5565,7 +5565,7 @@ V_UVttpvtGmEW = CTVertex(name = 'V_UVttpvtGmEW',
                          lorentz = [ L.l_epemH23, L.l_epemH24 ],
                          loop_particles = [  ],
                          couplings = {(0, 1, 0) : C.c_UVttpvtGm1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVvexemGpEW = CTVertex(name = 'V_UVvexemGpEW',
@@ -5574,7 +5574,7 @@ V_UVvexemGpEW = CTVertex(name = 'V_UVvexemGpEW',
                          lorentz = [ L.l_epemH23, L.l_epemH24 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVvexemGp1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVvmxmmGpEW = CTVertex(name = 'V_UVvmxmmGpEW',
@@ -5583,7 +5583,7 @@ V_UVvmxmmGpEW = CTVertex(name = 'V_UVvmxmmGpEW',
                          lorentz = [ L.l_epemH23, L.l_epemH24 ],
                          loop_particles = [  ],
                          couplings = {(0, 0, 0) : C.c_UVvmxmmGp1EW},
-                         type = 'UV')
+                         type = 'UVtree')
 
 
 V_UVvtxttmGpEW = CTVertex(name = 'V_UVvtxttmGpEW',
@@ -5592,7 +5592,7 @@ V_UVvtxttmGpEW = CTVertex(name = 'V_UVvtxttmGpEW',
                           lorentz = [ L.l_epemH23, L.l_epemH24 ],
                           loop_particles = [  ],
                           couplings = {(0, 0, 0) : C.c_UVvtxttmGp1EW},
-                          type = 'UV')
+                          type = 'UVtree')
 
 
 # ============== #
@@ -5605,7 +5605,7 @@ V_UVHtt = CTVertex(name = 'V_UVHtt',
               lorentz = [ L.FFS5 ],
               loop_particles = [[[P.G,P.t]]],                   
               couplings = {(0,0,0):C.UV_Htt},
-              type = 'UV')
+              type = 'UVtree')
 
 V_UVHbb = CTVertex(name = 'V_UVHbb',
               particles = [ P.b__tilde__, P.b, P.H ],
@@ -5613,7 +5613,7 @@ V_UVHbb = CTVertex(name = 'V_UVHbb',
               lorentz = [ L.FFS5 ],
               loop_particles = [[[P.G,P.b]]],
               couplings = {(0,0,0):C.UV_Hbb},
-              type = 'UV')
+              type = 'UVtree')
 
 # ============================== #
 # Goldstone UV counter vertices  #
@@ -5625,7 +5625,7 @@ V_UV_txbGp = CTVertex(name = 'V_UV_txbGp',
                       lorentz = [ L.FFS1, L.FFS3 ],
                       loop_particles = [[[P.G,P.b,P.t]]],
                       couplings = {(0,0,0):C.GC_UV_1015,(0,1,0):C.GC_UV_1021},
-                      type = 'UV')
+                      type = 'UVtree')
 
 V_UV_bxtGm = CTVertex(name = 'V_UV_bxtGm',
                       particles = [ P.b__tilde__, P.t, P.G__minus__ ],
@@ -5633,7 +5633,7 @@ V_UV_bxtGm = CTVertex(name = 'V_UV_bxtGm',
                       lorentz = [ L.FFS1, L.FFS3 ],
                       loop_particles = [[[P.G,P.b,P.t]]],
                       couplings = {(0,0,0):C.GC_UV_1027,(0,1,0):C.GC_UV_1030},
-                      type = 'UV')
+                      type = 'UVtree')
 
 V_UV_bxbG0 = CTVertex(name = 'V_UV_bxbG0',
                      particles = [ P.b__tilde__, P.b, P.G0 ],
@@ -5641,7 +5641,7 @@ V_UV_bxbG0 = CTVertex(name = 'V_UV_bxbG0',
                      lorentz = [ L.FFS2 ],
                      loop_particles = [[[P.G,P.b]]],
                      couplings = {(0,0,0):C.GC_UV_1082},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_cxcG0 = CTVertex(name = 'V_UV_cxcG0',
                      particles = [ P.c__tilde__, P.c, P.G0 ],
@@ -5649,7 +5649,7 @@ V_UV_cxcG0 = CTVertex(name = 'V_UV_cxcG0',
                      lorentz = [ L.FFS2 ],
                      loop_particles = [[[P.G,P.c]]],
                      couplings = {(0,0,0):C.GC_UV_1085},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_txtG0 = CTVertex(name = 'V_UV_txtG0',
                      particles = [ P.t__tilde__, P.t, P.G0 ],
@@ -5657,7 +5657,7 @@ V_UV_txtG0 = CTVertex(name = 'V_UV_txtG0',
                      lorentz = [ L.FFS2 ],
                      loop_particles = [[[P.G,P.t]]],
                      couplings = {(0,0,0):C.GC_UV_1095},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_cxsGp = CTVertex(name = 'V_UV_cxsGp',
                      particles = [ P.c__tilde__, P.s, P.G__plus__ ],
@@ -5665,7 +5665,7 @@ V_UV_cxsGp = CTVertex(name = 'V_UV_cxsGp',
                      lorentz = [ L.FFS3 ],
                      loop_particles = [[[P.G,P.c,P.s]]],
                      couplings = {(0,0,0):C.GC_UV_1018},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_txsGp = CTVertex(name = 'V_UV_txsGp',
                      particles = [ P.t__tilde__, P.s, P.G__plus__ ],
@@ -5673,7 +5673,7 @@ V_UV_txsGp = CTVertex(name = 'V_UV_txsGp',
                      lorentz = [ L.FFS3 ],
                      loop_particles = [[[P.G,P.t,P.s]]],
                      couplings = {(0,0,0):C.GC_UV_1019},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_uxbGp = CTVertex(name = 'V_UV_uxbGp',
                      particles = [ P.u__tilde__, P.b, P.G__plus__ ],
@@ -5681,7 +5681,7 @@ V_UV_uxbGp = CTVertex(name = 'V_UV_uxbGp',
                      lorentz = [ L.FFS1 ],
                      loop_particles = [[[P.G,P.u,P.b]]],
                      couplings = {(0,0,0):C.GC_UV_1013},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_cxbGp = CTVertex(name = 'V_UV_cxbGp',
                      particles = [ P.c__tilde__, P.b, P.G__plus__ ],
@@ -5689,7 +5689,7 @@ V_UV_cxbGp = CTVertex(name = 'V_UV_cxbGp',
                      lorentz = [ L.FFS1, L.FFS3 ],
                      loop_particles = [[[P.G,P.c,P.b]]],
                      couplings = {(0,0,0):C.GC_UV_1014,(0,1,0):C.GC_UV_1020},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_bxuGm = CTVertex(name = 'V_UV_bxuGm',
                      particles = [ P.b__tilde__, P.u, P.G__minus__ ],
@@ -5697,7 +5697,7 @@ V_UV_bxuGm = CTVertex(name = 'V_UV_bxuGm',
                      lorentz = [ L.FFS1 ],
                      loop_particles = [[[P.G,P.u,P.b]]],
                      couplings = {(0,0,0):C.GC_UV_1028},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_dxcGm = CTVertex(name = 'V_UV_dxcGm',
                      particles = [ P.d__tilde__, P.c, P.G__minus__ ],
@@ -5705,7 +5705,7 @@ V_UV_dxcGm = CTVertex(name = 'V_UV_dxcGm',
                      lorentz = [ L.FFS1 ],
                      loop_particles = [[[P.G,P.c,P.d]]],
                      couplings = {(0,0,0):C.GC_UV_1022},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_sxcGm = CTVertex(name = 'V_UV_sxcGm',
                      particles = [ P.s__tilde__, P.c, P.G__minus__ ],
@@ -5713,7 +5713,7 @@ V_UV_sxcGm = CTVertex(name = 'V_UV_sxcGm',
                      lorentz = [ L.FFS1 ],
                      loop_particles = [[[P.G,P.c,P.s]]],
                      couplings = {(0,0,0):C.GC_UV_1023},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_bxcGm = CTVertex(name = 'V_UV_bxcGm',
                      particles = [ P.b__tilde__, P.c, P.G__minus__ ],
@@ -5721,7 +5721,7 @@ V_UV_bxcGm = CTVertex(name = 'V_UV_bxcGm',
                      lorentz = [ L.FFS1, L.FFS3 ],
                      loop_particles = [[[P.G,P.c,P.b]]],
                      couplings = {(0,0,0):C.GC_UV_1024,(0,1,0):C.GC_UV_1029},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_dxtGm = CTVertex(name = 'V_UV_dxtGm',
                      particles = [ P.d__tilde__, P.t, P.G__minus__ ],
@@ -5729,7 +5729,7 @@ V_UV_dxtGm = CTVertex(name = 'V_UV_dxtGm',
                      lorentz = [ L.FFS1 ],
                      loop_particles = [[[P.G,P.t,P.d]]],
                      couplings = {(0,0,0):C.GC_UV_1025},
-                     type = 'UV')
+                     type = 'UVtree')
 
 V_UV_sxtGm = CTVertex(name = 'V_UV_sxtGm',
                      particles = [ P.s__tilde__, P.t, P.G__minus__ ],
@@ -5737,7 +5737,7 @@ V_UV_sxtGm = CTVertex(name = 'V_UV_sxtGm',
                      lorentz = [ L.FFS1 ],
                      loop_particles = [[[P.G,P.s,P.t]]],
                      couplings = {(0,0,0):C.GC_UV_1026},
-                     type = 'UV')
+                     type = 'UVtree')
 
 # treat the diagonal of CKM
 # guu~
@@ -5747,7 +5747,7 @@ V_UVGUUEW = CTVertex(name = 'V_UVGUUEW',
                    lorentz = [ L.FFV2, L.FFV6 ],
                    loop_particles = [[[P.u,P.Z]]],
                    couplings = {(0,0,0):C.UV_GUULEW,(0,1,0):C.UV_GUUREW},
-                   type = 'UV')
+                   type = 'UVtree')
 
 # gdd~
 V_UVGDDEW = CTVertex(name = 'V_UVGDDEW',
@@ -5756,7 +5756,7 @@ V_UVGDDEW = CTVertex(name = 'V_UVGDDEW',
                      lorentz = [ L.FFV2, L.FFV6 ],
                      loop_particles = [[[P.d,P.Z]]],
                      couplings = {(0,0,0):C.UV_GDDLEW,(0,1,0):C.UV_GDDREW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 # gss~
 V_UVGSSEW = CTVertex(name = 'V_UVGSSEW',
@@ -5765,7 +5765,7 @@ V_UVGSSEW = CTVertex(name = 'V_UVGSSEW',
                      lorentz = [ L.FFV2, L.FFV6 ],
                      loop_particles = [[[P.s,P.Z]]],
                      couplings = {(0,0,0):C.UV_GSSLEW,(0,1,0):C.UV_GSSREW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 # gcc~
 V_UVGCCEW = CTVertex(name = 'V_UVGCCEW',
@@ -5774,7 +5774,7 @@ V_UVGCCEW = CTVertex(name = 'V_UVGCCEW',
                      lorentz = [ L.FFV2, L.FFV6 ],
                      loop_particles = [[[P.c,P.Z]]],
                      couplings = {(0,0,0):C.UV_GCCLEW,(0,1,0):C.UV_GCCREW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 # gbb~
 V_UVGBBEW = CTVertex(name = 'V_UVGBBEW',
@@ -5783,7 +5783,7 @@ V_UVGBBEW = CTVertex(name = 'V_UVGBBEW',
                      lorentz = [ L.FFV2, L.FFV6 ],
                      loop_particles = [[[P.b,P.Z]]],
                      couplings = {(0,0,0):C.UV_GBBLEW,(0,1,0):C.UV_GBBREW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 # gtt~
 V_UVGTTEW = CTVertex(name = 'V_UVGTTEW',
@@ -5792,7 +5792,7 @@ V_UVGTTEW = CTVertex(name = 'V_UVGTTEW',
                      lorentz = [ L.FFV2, L.FFV6 ],
                      loop_particles = [[[P.t,P.Z]]],
                      couplings = {(0,0,0):C.UV_GTTLEW,(0,1,0):C.UV_GTTREW},
-                     type = 'UV')
+                     type = 'UVtree')
 
 
 
