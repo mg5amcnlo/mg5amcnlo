@@ -303,7 +303,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='loop_sm':
-		           model_name = model_name[5:]
+                    model_name = model_name[5:]
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
                     if not self.options['gauge']=='Feynman' and 'QED' in coupling_type:
@@ -316,7 +316,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     elif coupling_type in [['QED'],['QCD','QED']]:
                         add_on = 'qcd_qed_'
                     else:
-			            raise MadGraph5Error(
+                        raise MadGraph5Error(
                           "The pertubation coupling cannot be '%s'"\
                                     %str(coupling_type)+" in SM loop processes")
 
@@ -663,7 +663,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if QED_found:
             self.validate_model(coupling_type='QED')
         else:
-       	    self.validate_model()
+            self.validate_model()
         
         param_card = self.check_check(argss)
         reuse = argss[1]=="-reuse"   

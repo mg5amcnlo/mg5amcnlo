@@ -788,7 +788,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
-	
+
         # Make final link in the Process
         self.make_model_symbolic_link()
     
@@ -1171,19 +1171,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                               ['%s=%i'%order for order in zip(split_order_names,
                                                                 amp_order[0])]))
             if self.opt['export_format'] in ['madloop_matchbox']:
-                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                res_list.extend(self.get_JAMP_lines(col_amps_order,
                                    JAMP_format="JAMP(%s,{0})".format(str(i+1)),
                                    JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1))))
             else:
-                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                res_list.extend(self.get_JAMP_lines(col_amps_order,
                                    JAMP_format="JAMP(%s,{0})".format(str(i+1))))         
-	    
-	    
-	    
-	    
-	    
-	    
-
 
         return res_list
 
@@ -2178,9 +2171,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                   " available for individual ME evaluation of given coupl. orders."+\
                   " Only the total ME will be computed.", self.opt['export_format'])
             elif  self.opt['export_format'] in ['madloop_matchbox']:
-		replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
-		matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
-	    else:
+                replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+                matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
+            else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
 
         if write:
@@ -5234,7 +5227,7 @@ class UFO_model_to_mg4(object):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
         elif self.opt['export_format'].startswith('standalone') or self.opt['export_format'] in ['madweight']\
-	        or self.opt['export_format'].startswith('matchbox'):
+                            or self.opt['export_format'].startswith('matchbox'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:

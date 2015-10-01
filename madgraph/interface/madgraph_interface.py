@@ -5767,14 +5767,14 @@ This implies that with decay chains:
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
-		                                     % self._curr_model.get('name'))
+                                           % self._curr_model.get('name'))
             else:
                 if 1 in self._curr_model.get('gauge'):
                     aloha.unitary_gauge = False
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
-		                                     % self._curr_model.get('name'))
+                                           % self._curr_model.get('name'))
             self.options[args[0]] = args[1]
 
             if able_to_mod and log and args[0] == 'gauge' and \

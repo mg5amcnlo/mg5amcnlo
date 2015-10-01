@@ -1026,7 +1026,7 @@ class ProcessExporterMatchbox(ProcessExporterCPP):
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
                 self.wavefunctions, self.amplitudes))
-	    ret_lines.append(self.get_jamp_lines(color_amplitudes[0]))
+            ret_lines.append(self.get_jamp_lines(color_amplitudes[0]))
             ret_lines.append("}")
         else:
             ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
