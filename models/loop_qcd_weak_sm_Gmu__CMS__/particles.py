@@ -368,7 +368,7 @@ b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 t.loop_particles = [[[6,21]]]
 t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
-G.loop_particles = [[[4]],[[6]]]
+G.loop_particles = [[[5]],[[6]]]
 G.counterterm = {(1,0,0):CTParam.GWcft_UV_b.value,(1,0,1):CTParam.GWcft_UV_t.value}
 
 Param.MB.loop_particles= [[[5,21]]]
