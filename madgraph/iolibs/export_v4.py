@@ -5801,7 +5801,7 @@ class UFO_model_to_mg4(object):
                 # already handle by default
                 if fct.name not in ["complexconjugate", "re", "im", "sec", 
                                 "csc", "asec", "acsc", "theta_function", "cond", 
-                               "condif", "reglogp", "reglogm", "reglog", "arg"]:
+                               "condif", "reglogp", "reglogm", "reglog", "arg", "cot"]:
                     additional_fct.append(fct.name)
 
         
@@ -5819,9 +5819,12 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_condif
           %(complex_mp_format)s mp_reglog
           %(complex_mp_format)s mp_arg
-          %s
-          """ % "\n".join(["          %s %s" % (self.mp_complex_format, i) for i in additional_fct])\
-          %{'complex_mp_format':self.mp_complex_format})
+          %(additional)s
+          """ %\
+          {"additional": "\n".join(["          %s %s" % (self.mp_complex_format, i) for i in additional_fct]),
+           'complex_mp_format':self.mp_complex_format
+           }) 
+
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
