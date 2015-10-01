@@ -3489,7 +3489,13 @@ You can also copy/paste, your event file here.''')
         elif path == pjoin(self.me_dir,'Cards','MadLoopParams.dat'):
             self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
         elif path == pjoin(self.me_dir,'Cards','pythia8_card.dat'):
-            self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,'Cards','pythia8_card.dat'))
+            # Use the read function so that modified/new parameters are correctly
+            # set as 'user_set'
+            if not self.PY8Card:
+                self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,'Cards',
+                                                    'pythia8_card_default.dat'))
+            self.PY8Card.read(
+                   pjoin(self.me_dir,'Cards','pythia8_card.dat'), setter='user')
             self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
                                      k.lower() not in self.PY8Card.hidden_param]
         elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):

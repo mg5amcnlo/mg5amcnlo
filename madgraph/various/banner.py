@@ -1229,52 +1229,53 @@ class PY8Card(ConfigFile):
         # ==================
         self.add_param("Main:numberOfEvents", -1)
         # for MLM merging
-        self.add_param("JetMatching:qCut", 10.0)
+        # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
+        self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
         # for CKKWL merging
-        self.add_param("Merging:TMS", 10.0)        
-        self.add_param("Merging:Process", '<set_by_user>')        
+        self.add_param("Merging:TMS", 10.0, always_write_to_card=False)  
+        self.add_param("Merging:Process", '<set_by_user>', always_write_to_card=False)      
         
         # Hidden parameters always written out
         # ====================================
         self.add_param("Beams:frameType", 4,
-            hidden='ALWAYS_WRITTEN',
+            hidden=True,
             comment='Tell Pythia8 that an LHEF input is used.')
         self.add_param("Check:epTolErr", 1e-2,
-            hidden='ALWAYS_WRITTEN',
+            hidden=True,
             comment='Be more forgiving with momentum mismatches.')
 
         # Hidden parameters written out only if user_set or system_set
         # ============================================================
-        self.add_param("PDF:pSet", 'LHAPDF5:CT10.LHgrid', hidden=True,
+        self.add_param("PDF:pSet", 'LHAPDF5:CT10.LHgrid', hidden=True, always_write_to_card=False,
             comment='Reminder: Parameter below is shower tune dependent.')
-        self.add_param("SpaceShower:alphaSvalue", 0.118, hidden=True,
+        self.add_param("SpaceShower:alphaSvalue", 0.118, hidden=True, always_write_to_card=False,
             comment='Reminder: Parameter below is shower tune dependent.')
-        self.add_param("TimeShower:alphaSvalue", 0.118, hidden=True,
+        self.add_param("TimeShower:alphaSvalue", 0.118, hidden=True, always_write_to_card=False,
             comment='Reminder: Parameter below is shower tune dependent.')
         # for MLM merging
-        self.add_param("JetMatching:merge", False, hidden=True,
+        self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
-        self.add_param("JetMatching:scheme", 1, hidden=True) 
-        self.add_param("JetMatching:setMad", True, hidden=True,
+        self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
+        self.add_param("JetMatching:setMad", True, hidden=True, always_write_to_card=False,
                                      comment='Specify if from MadGraph origin.') 
-        self.add_param("JetMatching:coneRadius", 1.0, hidden=True) 
-        self.add_param("JetMatching:etaJetMax", 10.0, hidden=True) 
-        self.add_param("JetMatching:nJetMax", 2, hidden=True)        
+        self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False) 
+        self.add_param("JetMatching:etaJetMax", 10.0, hidden=True, always_write_to_card=False) 
+        self.add_param("JetMatching:nJetMax", 2, hidden=True, always_write_to_card=False) 
         # for CKKWL merging (common with UMEPS, UNLOPS)
-        self.add_param("Merging:nJetMax", 2, hidden=True)
-        self.add_param("TimeShower:pTmaxMatch", 2, hidden=True)
-        self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True)
-        self.add_param("Merging:muFac", 91.188, hidden=True,
+        self.add_param("Merging:nJetMax", 2, hidden=True, always_write_to_card=False)
+        self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
+        self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
+        self.add_param("Merging:muFac", 91.188, hidden=True, always_write_to_card=False,
                         comment='Set factorisation scales of the 2->2 process.')
-        self.add_param("Merging:muRen", 91.188, hidden=True,
+        self.add_param("Merging:muRen", 91.188, hidden=True, always_write_to_card=False,
                       comment='Set renormalization scales of the 2->2 process.')
-        self.add_param("Merging:muFacInME", 91.188, hidden=True,
+        self.add_param("Merging:muFacInME", 91.188, hidden=True, always_write_to_card=False,
                  comment='Set factorisation scales of the 2->2 Matrix Element.')
-        self.add_param("Merging:muRenInME", 91.188, hidden=True,
+        self.add_param("Merging:muRenInME", 91.188, hidden=True, always_write_to_card=False,
                comment='Set renormalization scales of the 2->2 Matrix Element.')
-        self.add_param("SpaceShower:rapidityOrder", False, hidden=True)
+        self.add_param("SpaceShower:rapidityOrder", False, hidden=True, always_write_to_card=False)
         # To be added in subruns for CKKWL
-        self.add_param("Merging:doPTLundMerging", False, hidden=True)
+        self.add_param("Merging:doPTLundMerging", False, hidden=True, always_write_to_card=False)
 
         # Add parameters controlling the subruns execution flow.
         # These parameters should not be part of PY8SubRun daughter.
@@ -1286,6 +1287,7 @@ class PY8Card(ConfigFile):
         #  self.hidden_params_to_always_print set.
         self.hidden_param = []
         self.hidden_params_to_always_write = set()
+        self.visible_params_to_always_write = set()
         
         # Parameters which have been set by the system (i.e. MG5 itself during
         # the regular course of the shower interface)
@@ -1301,19 +1303,13 @@ class PY8Card(ConfigFile):
         # Parameters which have been set by the 
         super(PY8Card, self).__init__(*args, **opts)
 
-    def add_param(self, name, value, hidden=False, comment=None):
+    def add_param(self, name, value, hidden=False, always_write_to_card=True, 
+                                                                  comment=None):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
         The option 'hidden' decides whether the parameter should be visible to the user.
-        If it should not be visible to the user, one can also decide whether it should
+        The option 'always_write_to_card' decides whether it should
         always be printed or only when it is system_set or user_set.
-        Therefore the option 'hidden' can be
-          > hidden=False: visible to the user.
-          > hidden=True: non visible to the user and only written out if 
-              it is user_set or system_set.
-          > hidden='ALWAYS_WRITTEN': non visible to the user but always written 
-              out to the card, even if not user_set or system_set (in which case
-              the parameter's default value is used).
         The option 'comment' can be used to specify a comment to write above
         hidden parameters.
         """
@@ -1321,8 +1317,11 @@ class PY8Card(ConfigFile):
         name = name.lower()
         if hidden:
             self.hidden_param.append(name)
-            if isinstance(hidden,str) and hidden=='ALWAYS_WRITTEN':
+            if always_write_to_card:
                 self.hidden_params_to_always_write.add(name)
+        else:
+            if always_write_to_card:
+                self.visible_params_to_always_write.add(name)                
         if not comment is None:
             if not isinstance(comment, str):
                 raise MadGraph5Error("Option 'comment' must be a string, not"+\
@@ -1358,6 +1357,16 @@ class PY8Card(ConfigFile):
         if name.lower() not in self.user_set:
             self.__setitem__(name, value, change_userdefine=False, **opts)
             self.system_set.add(name.lower())
+    
+    def MadGraphSet(self, name, value, **opts):
+        """ Sets a card attribute, but only if it is absent or not already
+        user_set."""
+        if name.lower() not in self or name.lower() not in self.user_set:
+            self.__setitem__(name, value, change_userdefine=False, **opts)
+            self.system_set.add(name.lower())            
+    
+    def defaultSet(self, name, value, **opts):
+            self.__setitem__(name, value, change_userdefine=False, **opts)
         
     @staticmethod
     def pythia8_formatting(value, formatv=None):
@@ -1402,9 +1411,15 @@ class PY8Card(ConfigFile):
             return "%s" % value
 
     def write(self, output_file, template, read_subrun=False, 
-                                                      print_only_visible=False):
-        """ Write the card to output_file using a specific template."""
-        
+                           print_only_visible=False, direct_pythia_input=False):
+        """ Write the card to output_file using a specific template.
+        > 'print_only_visible' specifies whether or not the hidden parameters
+            should be written out if they are in the hidden_params_to_always_write
+            list and system_set.
+        > If 'direct_pythia_input' is true, then visible parameters which are not
+          in the self.visible_params_to_always_write list and are not user_set
+          or system_set are commented."""
+
         # First list the visible parameters
         visible_param = [p for p in self if p.lower() not in self.hidden_param
                                                   or p.lower() in self.user_set]        
@@ -1517,7 +1532,10 @@ class PY8Card(ConfigFile):
                         # Remove all of its variables (so that nothing is overwritten)
                         DummySubrun.clear()
                         DummySubrun.write(subruns_to_write[int(value)],
-                                                          tmpl,read_subrun=True)
+                                tmpl, read_subrun=True, 
+                                print_only_visible=print_only_visible, 
+                                direct_pythia_input=direct_pythia_input)
+
                         logger.info('Adding new unknown subrun with ID %d.'%
                                                                      int(value))
                     # Proceed to next line
@@ -1540,9 +1558,23 @@ class PY8Card(ConfigFile):
                 line     = tmpl.readline()
                 continue
             
-            # Substitute the value
-            output.write('%s=%s'%(param_entry,value_entry.replace(value,
-                                                                    new_value)))
+            # Substitute the value. 
+            # If it is directly the pytia input, then don't write the param if it
+            # is not in the list of visible_params_to_always_write and was 
+            # not user_set or system_set
+            if ((not direct_pythia_input) or
+                  (param.lower() in self.visible_params_to_always_write) or
+                  (param.lower() in self.user_set) or
+                  (param.lower() in self.system_set)):
+                template = '%s=%s'
+            else:
+                # These are parameters that the user can edit in AskEditCards
+                # but if neither the user nor the system edited them,
+                # then they shouldn't be passed to Pythia
+                template = '!%s=%s'
+
+            output.write(template%(param_entry,
+                                  value_entry.replace(value,new_value)))
         
             # Proceed to next line
             last_pos = tmpl.tell()
@@ -1617,9 +1649,12 @@ class PY8Card(ConfigFile):
         else:
             output_file.write(output.getvalue())
         
-    def read(self, file_input, read_subrun=False):
+    def read(self, file_input, read_subrun=False, setter='default'):
         """Read the input file, this can be a path to a file, 
-           a file object, a str with the content of the file."""
+           a file object, a str with the content of the file.
+           The setter option choses the authority that sets potential 
+           modified/new parameters. It can be either: 
+             'default' or 'user' or 'system'"""
         if isinstance(file_input, str):
             if "\n" in file_input:
                 finput = StringIO.StringIO(file_input)
@@ -1667,11 +1702,12 @@ class PY8Card(ConfigFile):
                     # Start the reading of this subrun
                     finput.seek(last_pos)
                     if int(value) in self.subruns:
-                        self.subruns[int(value)].read(finput,read_subrun=True)
+                        self.subruns[int(value)].read(finput,read_subrun=True,
+                                                                  setter=setter)
                     else:
                         # Unknow subrun, create a dummy one
                         NewSubrun=PY8SubRun()
-                        NewSubrun.read(finput,read_subrun=True)
+                        NewSubrun.read(finput,read_subrun=True, setter=setter)
                         self.add_subrun(NewSubrun)
 
                     # proceed to next line
@@ -1681,7 +1717,18 @@ class PY8Card(ConfigFile):
             
             # Read parameter. The case of a parameter not defined in the card is
             # handled directly in ConfigFile.
-            self.systemSet(param,value)
+            lname = param.lower()
+            if lname not in self or \
+                         self.format_variable(value, type(self[lname]),
+                                                       name=param)!=self[lname]:
+                # Use the appropriate authority to set the new/changed variable
+                if setter == 'user':
+                    self.userSet(param,value)
+                elif setter == 'system':
+                    self.systemSet(param,value)
+                else:
+                    self.defaultSet(param,value)
+
             # proceed to next line
             last_pos = finput.tell()
             line     = finput.readline()
@@ -1714,6 +1761,7 @@ class PY8SubRun(PY8Card):
         # Make sure they are all hidden
         self.hidden_param = [k.lower() for k in self.keys()]
         self.hidden_params_to_always_write = set()
+        self.visible_params_to_always_write = set()
 
         # Now add Main:subrun and Beams:LHEF. They are not hidden.
         self.add_param("Main:subrun", -1)

@@ -10,13 +10,13 @@ Main:numberOfEvents      = -1
 ! ----------------------------------------------------
 ! Parameters relevant only when performing MLM merging 
 ! ----------------------------------------------------
-!
-JetMatching:qCut         = 10
+! If equal to -1.0, MadGraph5_aMC@NLO will set it automatically based 
+! on the parameter xqcut of the run_card.
+JetMatching:qCut         = -1.0
 ! ------------------------------------------------------
 ! Parameters relevant only when performing CKKWL merging 
 ! ------------------------------------------------------
-!
-Merging:TMS              = 10
+Merging:TMS              = 10.0
 ! This must be set manually, according to Pythia8 directives.
 ! An example of possible value is 'pp>LEPTONS,NEUTRINOS'
 Merging:Process          = <set_by_user>

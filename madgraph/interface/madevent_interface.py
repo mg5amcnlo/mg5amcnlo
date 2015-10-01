@@ -3249,51 +3249,60 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Running Pythia8', 'pythia')
         
         tag = self.run_tag        
-        # Write Pythia8 card
-        PY8_Card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'))
+        # Now write Pythia8 card
+        # Start by reading, starting from the default one so that the 'user_set'
+        # tag are correctly set.
+        PY8_Card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 
+                                                    'pythia8_card_default.dat'))
+        PY8_Card.read(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'),
+                                                                  setter='user')
         ########################################################################
         ### Special setup of the Hidden parameters in the card for each MG type of run
+        # Here we force the Beams:LHEF to have the correct value
         PY8_Card.subruns[0].systemSet('Beams:LHEF',
                          pjoin(self.me_dir,"Events","unweighted_events.lhe.gz"))        
         if int(self.run_card['ickkw'])==1:
-            if 'JetMatching:qCut'.lower() not in PY8_Card.user_set:
-                PY8_Card.systemSet('JetMatching:qCut',1.2*self.run_card['xqcut'])                
+            # MadGraphSet sets the corresponding value (in system mode)
+            # only if it is not already user_set.
+            if PY8_Card['JetMatching:qCut']==-1.0:
+                PY8_Card.MadGraphSet('JetMatching:qCut',1.2*self.run_card['xqcut'])                
             # Specific MLM settings
-            PY8_Card.systemSet('JetMatching:merge',True)
-            PY8_Card.systemSet('JetMatching:scheme',1)
-            PY8_Card.systemSet('JetMatching:setMad',True)
-            PY8_Card.systemSet('JetMatching:coneRadius',self.run_card['drjj'])
-            PY8_Card.systemSet('JetMatching:etaJetMax',self.run_card['etaj'])
+            PY8_Card.MadGraphSet('JetMatching:merge',True)
+            PY8_Card.MadGraphSet('JetMatching:scheme',1)
+            PY8_Card.MadGraphSet('JetMatching:setMad',True)
+            PY8_Card.MadGraphSet('JetMatching:coneRadius',self.run_card['drjj'])
+            PY8_Card.MadGraphSet('JetMatching:etaJetMax',self.run_card['etaj'])
 ################################################################################
             logger.error("MLM automatic 'JetMatching:nJetMax' setting not"+
                                                             " implemented yet!")
             TO_BE_IMPLEMENTED = -1
 ################################################################################
-            PY8_Card.systemSet('JetMatching:nJetMax',TO_BE_IMPLEMENTED)
+            PY8_Card.MadGraphSet('JetMatching:nJetMax',TO_BE_IMPLEMENTED)
         elif int(self.run_card['ickkw'])==2:
             # Specific CKKW settings
             if PY8_Card['Merging:Process']=='<set_by_user>':
                 raise self.InvalidCmd('When running CKKW merging, the user must'+
                     " specifiy the option 'Merging:Process' in pythia8_card.dat")
-            PY8_Card.systemSet('TimeShower:pTmaxMatch',1)
-            PY8_Card.systemSet('SpaceShower:pTmaxMatch',1)
-            PY8_Card.systemSet('SpaceShower:rapidityOrder',False)
+            PY8_Card.MadGraphSet('TimeShower:pTmaxMatch',1)
+            PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch',1)
+            PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
             if self.run_card['fixed_ren_scale']:
-                PY8_Card.systemSet('Merging:muRen',
+                PY8_Card.MadGraphSet('Merging:muRen',
                               self.run_card['scale']*self.run_card['scalefact'])
-                PY8_Card.systemSet('Merging:muRenInME',
+                PY8_Card.MadGraphSet('Merging:muRenInME',
                               self.run_card['scale']*self.run_card['scalefact'])
             if self.run_card['fixed_fac_scale']:
-                PY8_Card.systemSet('Merging:muFac',self.run_card['scalefact']*
+                PY8_Card.MadGraphSet('Merging:muFac',self.run_card['scalefact']*
                    (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
-                PY8_Card.systemSet('Merging:muFacInME',self.run_card['scalefact']*
+                PY8_Card.MadGraphSet('Merging:muFacInME',self.run_card['scalefact']*
                    (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
-            PY8_Card.subruns[0].systemSet('Merging:doPTLundMerging',True)
+            PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
         ########################################################################
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)
         cmd_card = StringIO.StringIO()
-        PY8_Card.write(cmd_card,pjoin(self.me_dir,'Cards','pythia8_card_default.dat'))
+        PY8_Card.write(cmd_card,pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                                                       direct_pythia_input=True)
         open(pythia_cmd_card,'w').write("""!
 ! It is possible to run this card manually with:
 !    %s %s my_hepmc_output_events.hepmc
