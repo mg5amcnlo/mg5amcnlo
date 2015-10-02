@@ -82,12 +82,14 @@ class LoopExporterFortran(object):
                         'fortran_compiler':'gfortran',
                         'SubProc_prefix': 'P',
                         'output_dependencies': 'external',
-                        'compute_color_flows': False}
+                        'compute_color_flows': False,
+                        'mode':''}
 
 
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
+
 
         self.opt = dict(self.default_opt)
         if opt:
@@ -376,11 +378,15 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
         (mandatory for CutTools written in f90) """
-        if not compiler is None and not any([name in compiler for name in \
+        if isinstance(compiler, str):
+            compiler= {'fortran':compiler, 'f2py':''}
+        
+        if not compiler['fortran'] is None and not any([name in compiler['fortran'] for name in \
                                                          ['gfortran','ifort']]):
             logger.info('For loop processes, the compiler must be fortran90'+\
                         'compatible, like gfortran.')
-            self.set_compiler('gfortran',True)
+            compiler['fortran'] = 'gfortran'
+            self.set_compiler(compiler,True)
         else:
             self.set_compiler(compiler)
 
@@ -713,8 +719,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Do not draw the loop diagrams if they are too many.
         # The user can always decide to do it manually, if really needed
         loop_diags = [loop_diag for loop_diag in\
-		  matrix_element.get('base_amplitude').get('loop_diagrams')\
-		     if isinstance(loop_diag,LoopDiagram) and loop_diag.get('type') > 0]
+             matrix_element.get('base_amplitude').get('loop_diagrams')\
+             if isinstance(loop_diag,LoopDiagram) and loop_diag.get('type') > 0]
         if len(loop_diags)>5000:
             logger.info("There are more than 5000 loop diagrams."+\
                                               "Only the first 5000 are drawn.")
@@ -977,9 +983,12 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 replace_dict[key]=''
         if matrix_element.get('processes')[0].get('has_born'):
             file = open(os.path.join(self.template_dir,'check_sa.inc')).read()
+        elif self.opt['mode'] == 'reweight':
+            file = open(os.path.join(self.template_dir,\
+                                          'check_py.f')).read()            
         else:
             file = open(os.path.join(self.template_dir,\
-                                          'check_sa_loop_induced.inc')).read()            
+                                          'check_sa_loop_induced.inc')).read()
         file=file%replace_dict
         writer.writelines(file)
 

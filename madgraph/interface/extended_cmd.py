@@ -575,10 +575,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     # Ask a question with nice options handling
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
-            timeout = True, fct_timeout=None, ask_class=None, alias={},**opt):
+            timeout = True, fct_timeout=None, ask_class=None, alias={},
+            first_cmd=None, **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
+        
         if path_msg:
             path_msg = [path_msg]
         else:
@@ -617,9 +619,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         question_instance = obj(question, allow_arg=choices, default=default, 
                                                    mother_interface=self, **opt)
+        
+        if first_cmd:
+            question_instance.onecmd(first_cmd)
+        
         if not self.haspiping:
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
+        
+
             
             
         answer = self.check_answer_in_input_file(question_instance, default, path_msg)
@@ -633,6 +641,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
+
+
         
         try:
             if value in alias:
@@ -705,7 +715,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return self.check_answer_in_input_file(question_instance, default, path)
         elif path:
             line = os.path.expanduser(os.path.expandvars(line))
-            if os.path.exists(line):
+            if os.path.isfile(line):
                 return line
         # No valid answer provides
         if self.haspiping:

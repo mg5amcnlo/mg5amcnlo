@@ -302,7 +302,8 @@ class TestCmdLoop(unittest.TestCase):
                        'show_plot':'False',
                        'seed':'666',
                        'resonances':'all',
-                       'recompute_width':'first_time'}
+                       'recompute_width':'first_time',
+                       'report':'full'}
             self.do(command+' '.join('--%s=%s'%(opt, value) for opt, value in 
                                                                options.items()))
             self.assertEqual(cwd, os.getcwd())
@@ -319,13 +320,13 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue('Summary: 10/10 passed.' in res)
             self.assertTrue(path.isfile(pjoin(MG5DIR,
                                          'acceptance_test_alm_lmvlvlx_LO.pkl')))
-
+            
             # Now for a reuse run using --analyze
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             self.setup_logFile_for_logger('madgraph.check_cmd')
             os.remove(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.log'))
-            self.do('check cms --analyze=%s --show_plot=False'%pjoin(MG5DIR,
-                                          'acceptance_test_alm_lmvlvlx_LO.pkl'))
+            self.do('check cms --analyze=%s --show_plot=False --report=full'%
+                             pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.pkl'))
             self.assertEqual(cwd, os.getcwd())
             self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
             res = open(self.tmp_path['madgraph.check_cmd']).read()
@@ -396,9 +397,12 @@ class TestCmdLoop(unittest.TestCase):
                        'show_plot':'False',
                        'seed':'666',
                        'resonances':'2',
-                       'recompute_width':'first_time'}
-            self.do(command+' '.join('--%s=%s'%(opt, value) for opt, value in 
-                                                               options.items()))
+                       'recompute_width':'first_time',
+                       'report':'full'}
+            cmd = command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                                options.items())
+            # print "Running first CMS check cmd: ",cmd
+            self.do(cmd)
             self.assertEqual(cwd, os.getcwd())
             for mode in ['NWA','CMS']:
                 self.assertTrue(path.isdir(pjoin(MG5DIR,output_name%mode)))
@@ -426,8 +430,10 @@ class TestCmdLoop(unittest.TestCase):
                         pjoin(MG5DIR,output_name%mode,'Cards','param_card.dat'))
             options['tweak']='allwidths->1.1*allwidths(widths_increased)'
             options['recompute_width']='never'
-            self.do(command+' '.join('--%s=%s'%(opt, value) for opt, value in 
-                                                               options.items()))
+            cmd = command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                                options.items())
+            # print "Running second CMS check cmd: ",cmd
+            self.do(cmd)
             self.assertEqual(cwd, os.getcwd())
             self.assertTrue(path.isfile(pjoin(MG5DIR,
                            'acceptance_test_aem_emvevex_widths_increased.pkl')))
@@ -468,10 +474,15 @@ class TestCmdMatchBox(IOTests.IOTestManager):
     
     def setUp(self):
         """ Initialize the test """
+
         self.interface = MGCmd.MasterCmd()
         # Below the key is the name of the logger and the value is a tuple with
         # first the handlers and second the level.
-        self.logger_saved_info = {}       
+        self.logger_saved_info = {}
+
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
+        misc.activate_dependence('golem', cmd = self.interface, log='stdout')
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -505,11 +516,10 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
         def run_cmd(cmd):
             interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
                                precmd=True, postcmd=True)
-
-        # Make sure the potential TIR are set uniformly across users
-        if interface.options['golem'] in [None,'auto']:
-            interface.run_cmd('install Golem95')
-        interface.options['pjfry']=None
+        
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
+        misc.activate_dependence('golem', cmd = interface, log='stdout')
         
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))

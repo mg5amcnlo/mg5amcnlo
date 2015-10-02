@@ -1,6 +1,26 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.2   
+2.3.3(XX/XX/XX)
+        OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
+	RF: For fixed order NLO runs, when the required accuracy is set rather small, do an extra integration step.
+	RF: Fix for factorisation scale setting in FxFx merging when very large difference in scale in the
+ 	    non-QCD part of a process. 
+	RF: Better discarding of numerical instabilities in the real-emission matrix elements. Only of interested for
+	    processes which have jets at Born level, but do not require generation cut (like t-channel single-top). 
+	RF: Added an option to the run_card to allow for easier variation of the shower starting scale (NLO only).
+	RF: Fixed a problem in the setting of the flavour map used for runs with iAPPL >= 1. 
+
+2.3.2(20/08/15)   
+        OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)
+            New Capabilities: 
+             - allow to reweight by loop-induced processes
+             - allow to change model 
+             - allow to change process definition
+             - allow to unweight the sample to have an idea of the statistical power.
+             - allow to perform some crude reweighting on NLO sample (reweighting by LO matrix element). NLO
+               accuracy is not preserved (in general) for such computation.
+            New dependencies:
+	     - require the f2py module (part of numpy)
 	OM: change the kt-durham cut (at LO) such that particle comming from decay are not impacted if cut_decays
             is on False.
         VH: Fixed the check in helas wavefunction appearance order in an helas diagrams. It failed in cases
@@ -20,8 +40,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             and Gaussian approaches for MSTW/CTEQ and NNPDF, respectively.
         OM: Fixed a small bug in EWdim6 which was removing a coupling in AZHH interaction.
         OM: improve customize_model function to avoid problem with unity coupling.
+	RF: Improved the treatment of the bottom Yukawa. Thanks Marius Wiesemann. 
 
-2.3.0  
+2.3.1  
      OM+VH: Automation of event generation for loop-induced processes.
 		OM: Automatic change of the p/j definition to include the b particle if the model has a massless b.
 	RF: Reduce the collision energy for the soft and collinear tests: for 100TeV collider many were failing

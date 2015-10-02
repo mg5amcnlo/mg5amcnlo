@@ -202,8 +202,8 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
-                   'is_part', 'self_antipart', 'ghost', 'counterterm']
+                  'line', 'propagator',
+                   'is_part', 'self_antipart', 'type', 'counterterm']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -216,18 +216,54 @@ class Particle(PhysicsObject):
         self['mass'] = 'ZERO'
         self['width'] = 'ZERO'
         self['pdg_code'] = 0
-        self['texname'] = 'none'
-        self['antitexname'] = 'none'
+        #self['texname'] = 'none'
+        #self['antitexname'] = 'none'
         self['line'] = 'dashed'
-        self['propagating'] = True
+        #self['propagating'] = True -> removed in favor or 'line' = None
         self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
-        self['ghost'] = False
+        #self['ghost'] = False
+        self['type'] = '' # empty means normal can also be ghost or goldstone 
         # Counterterm defined as a dictionary with format:
         # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
         self['counterterm'] = {}
+
+    def get(self, name):
+        
+        if name == 'ghost':
+            return self['type'] == 'ghost'
+        elif name == 'goldstone':
+            return self['type'] == 'goldstone'
+        elif name == 'propagating':
+            return self['line'] is not None
+        else:
+            return super(Particle, self).get(name)
+
+    def set(self, name, value, force=False):
+        
+        if name in ['texname', 'antitexname']:
+            return True
+        elif name == 'propagating':
+            if not value:
+                return self.set('line', None, force=force)
+            elif not self.get('line'):
+                return self.set('line', 'dashed',force=force)
+            return True
+        elif name  in ['ghost', 'goldstone']:
+            if self.get('type') == name:
+                if value:
+                    return True
+                else:
+                    return self.set('type', '', force=force)
+            else:
+                if value:
+                    return self.set('type', name, force=force)
+                else:
+                    return True
+        return super(Particle, self).set(name, value,force=force)
+        
 
     def filter(self, name, value):
         """Filter for valid particle property values."""
@@ -1213,7 +1249,7 @@ class Model(PhysicsObject):
             if isinstance(id, int):
                 try:
                     return self.get("particle_dict")[id]
-                except Exception:
+                except Exception,error:
                     return None
             else:
                 if not hasattr(self, 'name2part'):

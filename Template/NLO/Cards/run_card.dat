@@ -66,6 +66,8 @@
 # WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   %(parton_shower)s   = parton_shower
+  %(shower_scale_factor)s       = shower_scale_factor ! multiply default shower starting
+                                  ! scale by this factor
 #***********************************************************************
 # Renormalization and factorization scales                             *
 # (Default functional form for the non-fixed scales is the sum of      *

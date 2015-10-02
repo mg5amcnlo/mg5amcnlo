@@ -4154,13 +4154,9 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
 
         particle = evaluator.full_model.get_particle(PDG)
         
-        # If it is a goldstone or a ghost, retur zero as its width should anyway
-        # not be independent. The test for checking if it is a goldstone or not
-        # will be made more general in 2.3.3 when it will be an attribute of the
-        # particle class. Normally the first statement will crash in that verison
-        # because it is not .get('ghost'). This is done in purpose so as to be
-        # sure to fix the goldstone check in due time.
-        if particle['ghost'] or particle.get_name() in ['g0','g+','g-']:
+        # If it is a goldstone or a ghost, return zero as its width should anyway
+        # not be independent.
+        if particle.get('ghost') or particle.get('goldstone'):
             return 0.0
 
         # If its width is analytically set to zero, then return zero right away
@@ -4575,7 +4571,8 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                                                        abs(decay[0])).get_name()
                     new_width = get_width(abs(decay[0]),lambdaCMS,new_param_card)
                     tmp_param_card['decay'].get(decay).value = new_width
-                    if not options['has_FRdecay'] and new_width != 0.0:
+                    if not options['has_FRdecay'] and new_width != 0.0 and \
+                      (abs(decay[0]),lambdaCMS) not in options['cached_widths']:
                         logger.info('Numerically computed width of particle'+\
                                         ' %s for lambda=%.4g : %-9.6gGeV'%
                                             (particle_name,lambdaCMS,new_width))

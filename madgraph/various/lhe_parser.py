@@ -283,6 +283,7 @@ class EventFile(object):
             def weight(event):
                 return event.wgt
             get_wgt  = weight
+            unwgt_name = "central weight"
         elif isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt(event):
@@ -326,11 +327,11 @@ class EventFile(object):
         # need to modify the banner so load it to an object
         if self.banner:
             try:
-                import madgraph
+                import internal
             except:
-                import internal.banner as banner_module
-            else:
                 import madgraph.various.banner as banner_module
+            else:
+                import internal.banner as banner_module
             if not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
@@ -465,7 +466,7 @@ class EventFile(object):
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000}
+        opt= {"print_step": 2000, "maxevent":float("inf")}
         opt.update(opts)
         
         nb_fct = len(fcts)
@@ -483,6 +484,8 @@ class EventFile(object):
                     logger.info("currently at %s event" % nb_event)
             for i in range(nb_fct):
                 out[i].append(fcts[i](event))
+            if nb_event > opt['maxevent']:
+                break
         if nb_fct == 1:
             return out[0]
         else:
@@ -601,7 +604,8 @@ class MultiEventFile(EventFile):
         if run_card["lhe_version"] < 3:
             init_information["generator_info"] = ""
         else:
-            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='2.2.1'>please cite 1405.0301 </generator>\n"
+            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='%s'>please cite 1405.0301 </generator>\n" \
+                % misc.get_pkg_info()['version']
         
         # cross_information:
         cross_info = "%(cross)e %(error)e %(wgt)e %(id)i"
@@ -721,7 +725,8 @@ class MultiEventFile(EventFile):
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
         
-        if opts['event_target']:
+        if 'event_target' in opts and opts['event_target']:
+            misc.sprint(opts['event_target'])
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt
@@ -1198,14 +1203,20 @@ class Event(list):
             if particle.status in [-1,1]:
                 if particle.color1:
                     color_index[particle.color1] +=1
+                    if -7 < particle.pdg < 0:
+                        raise Exception, "anti-quark with color tag"
                 if particle.color2:
                     color_index[particle.color2] +=1     
+                    if 7 > particle.pdg > 0:
+                        raise Exception, "quark with anti-color tag"                
+                
                 
         for key,value in color_index.items():
             if value > 2:
                 print self
                 print key, value
                 raise Exception, 'Wrong color_flow'           
+        
         
         #2. check that each parent present have coherent color-structure
         check = []
@@ -1320,21 +1331,9 @@ class Event(list):
                       'comments': self.comment,
                       'reweight': reweight_str}
         return re.sub('[\n]+', '\n', out)
-    
-    
-    def get_ht_scale(self, prefactor=1):
-        
-        scale = 0 
-        for particle in self:
-            if particle.status != 1:
-                continue 
-            scale += particle.mass**2 + particle.momentum.pt**2
-    
-        return prefactor * scale
-    
-    def get_momenta_str(self, get_order, allow_reversed=True):
-        """return the momenta str in the order asked for"""
-        
+
+    def get_momenta(self, get_order, allow_reversed=True):
+        """return the momenta vector in the order asked for"""
         
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
@@ -1371,10 +1370,31 @@ class Event(list):
                 order[0][ind] = 0
             else: #intermediate
                 continue
-            format = '%.12f'
-            format_line = ' '.join([format]*4) + ' \n'
-            out[position] = format_line % (part.E, part.px, part.py, part.pz)
+
+            out[position] = (part.E, part.px, part.py, part.pz)
             
+        return out
+
+    
+    
+    def get_ht_scale(self, prefactor=1):
+        
+        scale = 0 
+        for particle in self:
+            if particle.status != 1:
+                continue 
+            scale += particle.mass**2 + particle.momentum.pt**2
+    
+        return prefactor * scale
+    
+    def get_momenta_str(self, get_order, allow_reversed=True):
+        """return the momenta str in the order asked for"""
+        
+        out = self.get_momenta(get_order, allow_reversed)
+        #format
+        format = '%.12f'
+        format_line = ' '.join([format]*4) + ' \n'
+        out = [format_line % one for one in out]
         out = ''.join(out).replace('e','d')
         return out    
 

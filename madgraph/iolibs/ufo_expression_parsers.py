@@ -337,8 +337,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | REGLOGM group
                       | TAN group'''
 
-        if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
-        elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
+        if p[1] == 'csc': p[0] = '1d0/sin' + p[2]
+        elif p[1] == 'sec': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
         elif p[1] in ['tan', 'cmath.tan'] : p[0] = 'tan(dble' + p[2]+')'

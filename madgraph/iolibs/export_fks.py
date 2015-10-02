@@ -729,7 +729,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
         
         # Check for compiler
-        fcompiler_chosen = self.set_fortran_compiler(compiler_dict['fortran'])
+        fcompiler_chosen = self.set_fortran_compiler(compiler_dict)
         ccompiler_chosen = self.set_cpp_compiler(compiler_dict['cpp'])
 
         old_pos = os.getcwd()
@@ -1382,9 +1382,9 @@ end
         make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
         make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
         if OLP=='GoSam':
-            # apparently -rpath=../$(LIBDIR) is not necessary.
+            # apparently -rpath=../$(LIBDIR) is necessary on condor
             #make_opts_content=make_opts_content.replace('libOLP=',
-            #                       'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
+            #     'libOLP=-Wl,-rpath='+str(pjoin(export_path,'lib'))+' -lgolem_olp')
             make_opts_content=make_opts_content.replace('libOLP=',
                                                           'libOLP=-Wl,-lgolem_olp')
         make_opts.write(make_opts_content)

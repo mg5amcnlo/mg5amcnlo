@@ -1144,7 +1144,8 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                if mode != self._done_export[1]:
+                
+                if not self._done_export[1].startswith(mode):
                     print mode, self._done_export[1]
                     raise self.InvalidCmd, \
                           '%s not valid directory for launch' % self._done_export[0]
@@ -1226,7 +1227,8 @@ This will take effect only in a NEW terminal
         subproc_path = pjoin(path,'SubProcesses')
         mw_path = pjoin(path,'Source','MadWeight')
 
-        if os.path.isfile(pjoin(include_path, 'Pythia.h')):
+        if os.path.isfile(pjoin(include_path, 'Pythia.h')) or \
+            os.path.isfile(pjoin(include_path, 'Pythia8', 'Pythia.h')):
             return 'pythia8'
         elif not os.path.isdir(os.path.join(path, 'SubProcesses')):
             raise self.InvalidCmd, '%s : Not a valid directory' % path
@@ -1441,14 +1443,14 @@ This will take effect only in a NEW terminal
             raise self.InvalidCmd('No default path for this file')
 
 
-    def check_output(self, args):
+    def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
         else:
-            self._export_format = 'madevent'
+            self._export_format = default
 
         if not self._curr_model:
             text = 'No model found. Please import a model first and then retry.'
@@ -1470,10 +1472,6 @@ This will take effect only in a NEW terminal
         if not self._curr_amps:
             text = 'No processes generated. Please generate a process first.'
             raise self.InvalidCmd(text)
-
-
-
-
 
         if args and args[0][0] != '-':
             # This is a path
@@ -1502,6 +1500,7 @@ This will take effect only in a NEW terminal
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
+                    
             else:
                 if self.options['pythia8_path']:
                     self._export_dir = self.options['pythia8_path']
@@ -1635,7 +1634,7 @@ This will take effect only in a NEW terminal
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
-        elif self._export_format == 'standalone':
+        elif self._export_format.startswith('standalone'):
             name_dir = lambda i: 'PROC_SA_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
@@ -1760,11 +1759,11 @@ class CheckValidForCmdWeb(CheckValidForCmd):
         """ not authorize on web"""
         raise self.WebRestriction('\"open\" command not authorize online')
 
-    def check_output(self, args):
+    def check_output(self, args, default='madevent'):
         """ check the validity of the line"""
 
         # first pass to the default
-        CheckValidForCmd.check_output(self, args)
+        CheckValidForCmd.check_output(self, args, default=default)
         args[:] = ['.', '-f']
 
         self._export_dir = os.path.realpath(os.getcwd())
@@ -2291,6 +2290,10 @@ class CompleteForCmd(cmd.CompleteCmd):
         #name of the run =>proposes old run name
         args = self.split_arg(line[0:begidx])
         if len(args) >= 1:
+            
+            if len(args) > 1 and args[1] == 'pythia8':
+                possible_options_full = list(possible_options_full) + ['--version=8.1','--version=8.2'] 
+            
             if len(args) > 1 and args[1] == 'aloha':
                 try:
                     return self.aloha_complete_output(text, line, begidx, endidx)
@@ -2304,6 +2307,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             # options
             if args[-1][0] == '-' or len(args) > 1 and args[-2] == '-':
                 return self.list_completion(text, possible_options)
+            
             if len(args) > 2:
                 return self.list_completion(text, possible_options_full)
             # Formats
@@ -2315,6 +2319,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             content = [name for name in self.path_completion(text, '.', only_dirs = True) \
                        if name not in forbidden_names]
             content += ['auto']
+            content += possible_options_full
             return self.list_completion(text, content)
 
     def aloha_complete_output(self, text, line, begidx, endidx):
@@ -2613,8 +2618,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc', 'Golem95']
-
+                     'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
+                                                                      'QCDLoop']
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
@@ -2652,6 +2657,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'eps_viewer':None,
                        'text_editor':None,
                        'fortran_compiler':None,
+                       'f2py_compiler':None,
                        'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
@@ -2833,7 +2839,8 @@ This implies that with decay chains:
   > Loop corrections cannot be considered."""
                     raise MadGraph5Error(error_msg)
                 else:
-                    myprocdef, line = self.extract_decay_chain_process(line)
+                    nb_proc = len([l for l in self.history if l.startswith(('generate','add process'))])
+                    myprocdef, line = self.extract_decay_chain_process(line, proc_number=nb_proc)
                     # Redundant with above, but not completely as in the future
                     # one might think of allowing the core process to be 
                     # corrected by loops.
@@ -2850,7 +2857,10 @@ This implies that with decay chains:
                         raise MadGraph5Error("Decay processes cannot include negative"+\
                                                 " coupling orders constraints.")                    
             else:
-                myprocdef = self.extract_process(line)
+                nb_proc = len([l for l in self.history if l.startswith(('generate','add process'))])
+                myprocdef = self.extract_process(line, proc_number=nb_proc)
+
+            
 
             # Check that we have something
             if not myprocdef:
@@ -3438,7 +3448,6 @@ This implies that with decay chains:
         ###### BEGIN do_check
 
         args = self.split_arg(line)
-
         # Check args validity
         param_card = self.check_check(args)
 
@@ -4703,14 +4712,13 @@ This implies that with decay chains:
         pdg_list.sort(key = lambda i: \
                       model.get_particle(i).get('mass').lower() != 'zero')
 
-    def extract_decay_chain_process(self, line, level_down=False):
+    def extract_decay_chain_process(self, line, level_down=False, proc_number=0):
         """Recursively extract a decay chain process definition from a
         string. Returns a ProcessDefinition."""
 
         # Start with process number (identified by "@") and overall orders
         proc_number_pattern = re.compile("^(.+)@\s*(\d+)\s*((\w+\s*=\s*\d+\s*)*)$")
         proc_number_re = proc_number_pattern.match(line)
-        proc_number = 0
         overall_orders = {}
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
@@ -4722,8 +4730,9 @@ This implies that with decay chains:
                 while order_re:
                     overall_orders[order_re.group(2)] = int(order_re.group(3))
                     order_line = order_re.group(1)
-                    order_re = order_pattern.match(order_line)
+                    order_re = order_pattern.match(order_line)                
             logger.info(line)
+            
 
         index_comma = line.find(",")
         index_par = line.find(")")
@@ -4947,12 +4956,17 @@ This implies that with decay chains:
         for amp in self._curr_amps:
             amplitudes.extend(amp.get_amplitudes())
 
+        decay_tables = param_card['decay'].decay_table
         to_remove = []
         for amp in amplitudes:
             mother = [l.get('id') for l in amp['process'].get('legs') \
                                                         if not l.get('state')]
             if 1 == len(mother):
-                decay_table = param_card['decay'].decay_table[abs(mother[0])]
+                try:
+                    decay_table = decay_tables[abs(mother[0])]
+                except KeyError:
+                    logger.warning("No decay table for %s. decay of this particle with MadSpin should be discarded" % abs(mother[0]))
+                    continue # No BR for this particle -> accept all.
                 # create the tuple associate to the decay mode
                 child = [l.get('id') for l in amp['process'].get('legs') \
                                                               if l.get('state')]
@@ -5112,7 +5126,7 @@ This implies that with decay chains:
         line = 'all =' + ' '.join(line)
         self.do_define(line)
 
-    def do_install(self, line):
+    def do_install(self, line, paths=None):
         """Install optional package from the MG suite."""
 
         args = self.split_arg(line)
@@ -5131,26 +5145,34 @@ This implies that with decay chains:
 
         # Load file with path of the different program:
         import urllib
-        path = {}
-
-        data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                     'http://madgraph.hep.uiuc.edu/package_info.dat']
-        r = random.randint(0,1)
-        r = [r, (1-r)]
-        for index in r:
-            cluster_path = data_path[index]
-            try:
-                data = urllib.urlopen(cluster_path)
-            except Exception:
-                continue
-            break
+        if paths:
+            path = paths
         else:
-            raise MadGraph5Error, '''Impossible to connect any of us servers.
-            Please check your internet connection or retry later'''
+            path = {}
+    
+            data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
+                         'http://madgraph.hep.uiuc.edu/package_info.dat']
+            r = random.randint(0,1)
+            r = [r, (1-r)]
+            for index in r:
+                cluster_path = data_path[index]
+                try:
+                    data = urllib.urlopen(cluster_path)
+                except Exception:
+                    continue
+                break
+            else:
+                raise MadGraph5Error, '''Impossible to connect any of us servers.
+                Please check your internet connection or retry later'''
+    
+            for line in data:
+                split = line.split()
+                path[split[0]] = split[1]
 
-        for line in data:
-            split = line.split()
-            path[split[0]] = split[1]
+        if args[0] == 'PJFry' and not os.path.exists(
+                                 pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
+            logger.info("Installing PJFRY's dependence QCDLoop...")
+            self.do_install('QCDLoop', paths=path)
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
@@ -5159,9 +5181,13 @@ This implies that with decay chains:
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'Pythia8':'PY8'}
+                'PJFry':'PJFry','QCDLoop':'QCDLoop'}
         name = name[args[0]]
 
+        #check outdated install
+        if args[0] in ['Delphes2', 'pythia-pgs']:
+            logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
+                           "  You should consider using an up-to-date version of the code.")
 
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
@@ -5185,8 +5211,8 @@ This implies that with decay chains:
 
         # Check that the directory has the correct name
         if not os.path.exists(pjoin(MG5DIR, name)):
-            created_name = [n for n in os.listdir(MG5DIR) if n.startswith(name)
-                                                  and not n.endswith('gz')]
+            created_name = [n for n in os.listdir(MG5DIR) if n.lower().startswith(
+                                         name.lower()) and not n.endswith('gz')]
             if not created_name:
                 raise MadGraph5Error, 'The file was not loaded correctly. Stop'
             else:
@@ -5237,6 +5263,25 @@ This implies that with decay chains:
             '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC']],
             cwd=pjoin(MG5DIR,'golem95'),stdout=subprocess.PIPE).communicate()[0]
 
+        # For PJFry, use autotools.
+        if name == 'PJFry':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),
+            '--enable-golem-mode', '--with-integrals=qcdloop1',
+            'LDFLAGS=-L%s'%str(pjoin(MG5DIR,'QCDLoop','lib')),
+            'FC=%s'%os.environ['FC'],
+            'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
+                                        stdout=subprocess.PIPE).communicate()[0]
+
+        # For QCDLoop, use autotools.
+        if name == 'QCDLoop':
+            # Run the configure script
+            ld_path = misc.Popen(['./configure', 
+            '--prefix=%s'%str(pjoin(MG5DIR, name)),'FC=%s'%os.environ['FC'],
+            'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
+                                        stdout=subprocess.PIPE).communicate()[0]
+
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
             if self.options['lhapdf']:
@@ -5251,7 +5296,7 @@ This implies that with decay chains:
                     os.environ['LD_LIBRARY_PATH'] += ';%s' % ld_path
                 if self.options['lhapdf'] != 'lhapdf-config':
                     if misc.which('lhapdf-config') != os.path.realpath(self.options['lhapdf']):
-                        os.environ['PATH'] = '%s:%s' % os.environ['PATH']
+                        os.environ['PATH'] = '%s:%s' % (os.path.realpath(self.options['lhapdf']),os.environ['PATH']) 
             else:
                 raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
 
@@ -5264,7 +5309,7 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = misc.call(['make'], cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name == 'golem95':
+            if name in ['golem95','QCDLoop','PJFry']:
                 status = misc.call(['make','install'], 
                                                cwd = os.path.join(MG5DIR, name))
             else:
@@ -5277,7 +5322,7 @@ This implies that with decay chains:
             if name == 'pythia-pgs':
                 #SLC6 needs to have this first (don't ask why)
                 status = self.compile(mode='', cwd = pjoin(MG5DIR, name, 'libraries', 'pylib'))
-            if name == 'golem95':
+            if name in ['golem95','QCDLoop','PJFry']:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
@@ -5369,13 +5414,17 @@ This implies that with decay chains:
                            'MadAnalysis': 'madanalysis_path',
                            'SysCalc': 'syscalc_path',
                            'pythia-pgs':'pythia-pgs_path',
-                           'Golem95': 'golem'}
+                           'Golem95': 'golem',
+                           'PJFry': 'pjfry'}
 
         if args[0] in options_name:
             opt = options_name[args[0]]
             if opt=='golem':
-                self.options[opt] = pjoin(MG5DIR,name,'lib') 
+                self.options[opt] = pjoin(MG5DIR,name,'lib')
                 self.exec_cmd('save options')
+            elif opt=='pjfry':
+                self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
+                self.exec_cmd('save options')            
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
                 self.exec_cmd('save options')
@@ -6262,14 +6311,14 @@ This implies that with decay chains:
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that unitary gauge is not allowed for your current model %s' \
-		                                     % self._curr_model.get('name'))
+                                           % self._curr_model.get('name'))
             else:
                 if 1 in self._curr_model.get('gauge'):
                     aloha.unitary_gauge = False
                 else:
                     able_to_mod = False
                     if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
-		                                     % self._curr_model.get('name'))
+                                           % self._curr_model.get('name'))
             self.options[args[0]] = args[1]
 
             if able_to_mod and log and args[0] == 'gauge' and \
@@ -6306,6 +6355,14 @@ This implies that with decay chains:
                 self.options['fortran_compiler'] = args[1]
             else:
                 self.options['fortran_compiler'] = None
+        elif args[0] == 'f2py_compiler':
+            if args[1] != 'None':
+                if log:
+                    logger.info('set f2py compiler to %s' % args[1])
+                self.options['f2py_compiler'] = args[1]
+            else:
+                self.options['f2py_compiler'] = None
+            
         elif args[0] == 'loop_optimized_output':
             if log:
                     logger.info('set loop optimized output to %s' % args[1])
@@ -6460,6 +6517,9 @@ This implies that with decay chains:
         force = '-f' in args
         nojpeg = '-nojpeg' in args
         flaglist = []
+        
+
+            
         if '--postpone_model' in args:
             flaglist.append('store_model')
         
@@ -6624,6 +6684,12 @@ This implies that with decay chains:
                                                                        args=[]):
         """Export a generated amplitude to file."""
 
+        version = [arg[10:] for arg in args if arg.startswith('--version=')]
+        if version:
+            version = version[-1]
+        else:
+            version = ''
+
         def generate_matrix_elements(self, group_processes=True):
             """Helper function to generate the matrix elements before
             exporting. Uses the main function argument 'group_processes' to decide 
@@ -6758,7 +6824,8 @@ This implies that with decay chains:
                     exporter = export_cpp.generate_process_files_pythia8(\
                             me_group.get('matrix_elements'), self._curr_cpp_model,
                             process_string = me_group.get('name'),
-                            process_number = group_number, path = path)
+                            process_number = group_number, path = path,
+                            version = version)
                     process_names.append(exporter.process_name)
             else:
                 exporter = export_cpp.generate_process_files_pythia8(\
@@ -6767,7 +6834,7 @@ This implies that with decay chains:
                 process_names.append(exporter.process_file_name)
 
             # Output the model parameter and ALOHA files
-            model_name, model_path = export_cpp.convert_model_to_pythia8(\
+            model_name, model_path = exporter.convert_model_to_pythia8(\
                             self._curr_model, self._export_dir)
 
             # Generate the main program file
@@ -6865,6 +6932,11 @@ This implies that with decay chains:
     def finalize(self, nojpeg, online = False, flaglist=[]):
         """Make the html output, write proc_card_mg5.dat and create
         madevent.tar.gz for a MadEvent directory"""
+
+        compiler_dict = {'fortran': self.options['fortran_compiler'],
+                             'cpp': self.options['cpp_compiler'],
+                             'f2py': self.options['f2py_compiler']}
+
         
         if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
                                    'standalone_msF', 'standalone_rw', 'NLO', 'madweight',
@@ -6927,8 +6999,7 @@ This implies that with decay chains:
                         ('%s/Cards/amcatnlo_configuration.txt file.\n' % self._export_dir ) + \
                         'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
 
-            compiler_dict = {'fortran': self.options['fortran_compiler'],
-                             'cpp': self.options['cpp_compiler']}
+
 
             self._curr_exporter.finalize_fks_directory( \
                                            self._curr_matrix_elements,
@@ -6936,7 +7007,7 @@ This implies that with decay chains:
                                            not nojpeg,
                                            online,
                                            compiler_dict,
-              output_dependencies = self.options['output_dependencies'],
+                                           output_dependencies = self.options['output_dependencies'],
                                            MG5DIR = MG5DIR)
             
             # Create configuration file [path to executable] for amcatnlo
@@ -6964,7 +7035,7 @@ This implies that with decay chains:
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           self.options['fortran_compiler'])
+                                           compiler_dict)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -7453,6 +7524,10 @@ _launch_parser.add_option("-i", "--interactive", default=False, action='store_tr
                                 help="Use Interactive Console [if available]")
 _launch_parser.add_option("-s", "--laststep", default='',
                                 help="last program run in MadEvent run. [auto|parton|pythia|pgs|delphes]")
+_launch_parser.add_option("-R", "--reweight", default=False, action='store_true',
+                            help="Run the reweight module (reweighting by different model parameter")
+_launch_parser.add_option("-M", "--madspin", default=False, action='store_true',
+                            help="Run the madspin package")
 
 #===============================================================================
 # Interface for customize question.

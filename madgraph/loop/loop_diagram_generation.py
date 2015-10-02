@@ -1486,7 +1486,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         exlegs=[leg for leg in looplegs if leg['depth']==0]
         if(len(exlegs)==2):
             if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
-            	return []
+                return []
 
         # Correctly propagate the loopflow
         loopline=(len(looplegs)==1)    
@@ -1552,7 +1552,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if(len(exlegs)==2):
             if(any([part['mass'].lower()=='zero' for pdg,part in \
               model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
-            	return []
+                return []
 
 
         # Get rid of some wave-function renormalization diagrams already during

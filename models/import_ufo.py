@@ -487,7 +487,7 @@ class UFOMG5Converter(object):
             return
         
         if (aloha.unitary_gauge and 0 in self.model['gauge']) \
-	          or (1 not in self.model['gauge']): 
+                            or (1 not in self.model['gauge']): 
         
             # MG5 doesn't use goldstone boson 
             if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
@@ -497,6 +497,12 @@ class UFOMG5Converter(object):
         # Initialize a particles
         particle = base_objects.Particle()
 
+        # MG5 doesn't use goldstone boson 
+        if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
+            particle.set('type', 'goldstone')
+        elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
+            particle.set('type', 'goldstone')
+        
         nb_property = 0   #basic check that the UFO information is complete
         # Loop over the element defining the UFO particles
         for key,value in particle_info.__dict__.items():
@@ -517,7 +523,15 @@ class UFOMG5Converter(object):
                     # ignore them otherwise
                     particle.set(key,abs(value))
                     if value<0:
-                        particle.set('ghost',True)
+                        particle.set('type','ghost')
+                elif key == 'propagating':
+                    if not value:
+                        particle.set('line', None)
+                elif key == 'line':
+                    if particle.get('line') is None:
+                        pass # This means that propagating is on False 
+                    else:
+                        particle.set('line', value)
                 elif key == 'propagator':
                     if value:
                         if aloha.unitary_gauge:
@@ -533,7 +547,9 @@ class UFOMG5Converter(object):
             elif key == 'counterterm':
                 counterterms = value
             elif key.lower() not in ('ghostnumber','selfconjugate','goldstone',
-                                             'goldstoneboson','partial_widths'):
+                                             'goldstoneboson','partial_widths',
+                                     'texname', 'antitexname', 'propagating', 'ghost'
+                                             ):
                 # add charge -we will check later if those are conserve 
                 self.conservecharge.add(key)
                 particle.set(key,value, force=True)
@@ -545,8 +561,8 @@ class UFOMG5Converter(object):
                     particle.set('propagator', 0) 
                 elif particle.get('spin') == 3 and not aloha.unitary_gauge:
                     particle.set('propagator', 0)
-                
-        assert(13 == nb_property) #basic check that all the information is there         
+               
+        assert(10 == nb_property) #basic check that all the information is there         
         
         # Identify self conjugate particles
         if particle_info.name == particle_info.antiname:

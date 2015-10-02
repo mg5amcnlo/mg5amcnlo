@@ -61,6 +61,9 @@ pjoin = os.path.join
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
 
+default_compiler= {'fortran': 'gfortran',
+                       'f2py': 'f2py'}
+
 #===============================================================================
 # ProcessExporterFortran
 #===============================================================================
@@ -69,7 +72,8 @@ class ProcessExporterFortran(object):
     Fortran (v4) format."""
 
     default_opt = {'clean': False, 'complex_mass':False,
-                        'export_format':'madevent', 'mp': False
+                        'export_format':'madevent', 'mp': False,
+                        'v5_model': True
                         }
 
     def __init__(self, mgme_dir = "", dir_path = "", opt=None):
@@ -279,7 +283,7 @@ class ProcessExporterFortran(object):
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
     def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
-                              online = False, compiler='g77'):
+                              online = False, compiler=default_compiler):
         """Function to finalize v4 directory, for inheritance.
         """
         
@@ -784,7 +788,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         else:
             cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
-	
+
         # Make final link in the Process
         self.make_model_symbolic_link()
     
@@ -1167,19 +1171,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                               ['%s=%i'%order for order in zip(split_order_names,
                                                                 amp_order[0])]))
             if self.opt['export_format'] in ['madloop_matchbox']:
-                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                res_list.extend(self.get_JAMP_lines(col_amps_order,
                                    JAMP_format="JAMP(%s,{0})".format(str(i+1)),
                                    JAMP_formatLC="LNJAMP(%s,{0})".format(str(i+1))))
             else:
-                 res_list.extend(self.get_JAMP_lines(col_amps_order,
+                res_list.extend(self.get_JAMP_lines(col_amps_order,
                                    JAMP_format="JAMP(%s,{0})".format(str(i+1))))         
-	    
-	    
-	    
-	    
-	    
-	    
-
 
         return res_list
 
@@ -1590,26 +1587,52 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Set compiler based on what's available on the system"""
                 
         # Check for compiler
-        if default_compiler and misc.which(default_compiler):
-            compiler = default_compiler
+        if default_compiler['fortran'] and misc.which(default_compiler['fortran']):
+            f77_compiler = default_compiler['fortran']
         elif misc.which('gfortran'):
-            compiler = 'gfortran'
+            f77_compiler = 'gfortran'
         elif misc.which('g77'):
-            compiler = 'g77'
+            f77_compiler = 'g77'
         elif misc.which('f77'):
-            compiler = 'f77'
-        elif default_compiler:
+            f77_compiler = 'f77'
+        elif default_compiler['fortran']:
             logger.warning('No Fortran Compiler detected! Please install one')
-            compiler = default_compiler # maybe misc fail so try with it
+            f77_compiler = default_compiler['fortran'] # maybe misc fail so try with it
         else:
             raise MadGraph5Error, 'No Fortran Compiler detected! Please install one'
-        logger.info('Use Fortran compiler ' + compiler)
-        self.replace_make_opt_f_compiler(compiler)
+        logger.info('Use Fortran compiler ' + f77_compiler)
+        
+        
+        # Check for compiler. 1. set default.
+        if default_compiler['f2py']:
+            f2py_compiler = default_compiler['f2py']
+        else:
+            f2py_compiler = ''
+        # Try to find the correct one.
+        if default_compiler['f2py'] and misc.which(default_compiler['f2py']):
+            f2py_compiler = default_compiler
+        elif misc.which('f2py'):
+            f2py_compiler = 'f2py'
+        elif sys.version_info[1] == 6:
+            if misc.which('f2py-2.6'):
+                f2py_compiler = 'f2py-2.6'
+            elif misc.which('f2py2.6'):
+                f2py_compiler = 'f2py2.6'
+        elif sys.version_info[1] == 7:
+            if misc.which('f2py-2.7'):
+                f2py_compiler = 'f2py-2.7'
+            elif misc.which('f2py2.7'):
+                f2py_compiler = 'f2py2.7'            
+        
+        to_replace = {'fortran': f77_compiler, 'f2py': f2py_compiler}
+        
+        
+        self.replace_make_opt_f_compiler(to_replace)
         # Replace also for Template but not for cluster
         if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
-            self.replace_make_opt_f_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
+            self.replace_make_opt_f_compiler(to_replace, pjoin(MG5DIR, 'Template', 'LO'))
         
-        return compiler
+        return f77_compiler
 
     # an alias for backward compatibility
     set_compiler = set_fortran_compiler
@@ -1641,24 +1664,38 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         return compiler
 
 
-    def replace_make_opt_f_compiler(self, compiler, root_dir = ""):
+    def replace_make_opt_f_compiler(self, compilers, root_dir = ""):
         """Set FC=compiler in Source/make_opts"""
 
+        assert isinstance(compilers, dict)
+        
         mod = False #avoid to rewrite the file if not needed
         if not root_dir:
             root_dir = self.dir_path
-	
+            
+        compiler= compilers['fortran']
+        f2py_compiler = compilers['f2py']
+        if not f2py_compiler:
+            f2py_compiler = 'f2py'
+    
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
-        FC_re = re.compile('^(\s*)FC\s*=\s*(.+)\s*$')
+        FC_re = re.compile('^(\s*)(FC|F2PY)\s*=\s*(.+)\s*$')
         for iline, line in enumerate(lines):
+
             FC_result = FC_re.match(line)
             if FC_result:
-                if compiler != FC_result.group(2):
-                    mod = True
-                lines[iline] = FC_result.group(1) + "FC=" + compiler
+                if 'FC' == FC_result.group(2):
+                    if compiler != FC_result.group(3):
+                        mod = True
+                    lines[iline] = FC_result.group(1) + "FC=" + compiler
+                elif 'F2PY' ==  FC_result.group(2):
+                    if f2py_compiler != FC_result.group(3):
+                        mod = True
+                    lines[iline] = FC_result.group(1) + "F2PY=" + f2py_compiler                    
         if not mod:
             return
+        
         try:
             outfile = open(make_opts, 'w')
         except IOError:
@@ -1765,9 +1802,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             open(pjoin(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
                 "5." + MG5_version['version'])
         
-        # Add file in bin directory
-        #shutil.copy(pjoin(temp_dir, 'bin', 'change_compiler.py'), 
-        #            pjoin(self.dir_path, 'bin'))
         
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
@@ -1775,9 +1809,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         if self.format == 'standalone':
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
-        elif self.format == 'standalone_rw':
-            shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'driver_reweight.f'), 
                     pjoin(self.dir_path, 'SubProcesses', 'check_sa.f'))
                         
         # Add file in Source
@@ -1795,8 +1826,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
         super(ProcessExporterFortranSA,self).export_model_files(model_path)
         # Add the routine update_as_param in v4 model 
-        # This is a function created in the UFO 
-        
+        # This is a function created in the UFO  
+        text="""
+        subroutine update_as_param()
+          call setpara('param_card.dat',.false.)
+          return
+        end
+        """
+        ff = open(os.path.join(self.dir_path, 'Source', 'MODEL', 'couplings.f'),'a')
+        ff.write(text)
+        ff.close()        
         
         text = open(pjoin(self.dir_path,'SubProcesses','check_sa.f')).read()
         text = text.replace('call setpara(\'param_card.dat\')', 'call setpara(\'param_card.dat\', .true.)')
@@ -1824,7 +1863,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler='gfortran'):
+                              online = False, compiler=default_compiler):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         self.compiler_choice(compiler)
@@ -1836,6 +1875,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             history.write(output_file)
         
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        open(pjoin(self.dir_path,'__init__.py'),'w')
+        open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
+
 
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
@@ -2119,7 +2161,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             matrix_template = 'matrix_standalone_msP_v4.inc'
         elif self.opt['export_format']=='standalone_msF':
             matrix_template = 'matrix_standalone_msF_v4.inc'
-	elif self.opt['export_format']=='matchbox':
+        elif self.opt['export_format']=='matchbox':
             replace_dict["proc_prefix"] = 'MG5_%i_' % matrix_element.get('processes')[0].get('id')
             replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
 
@@ -2129,9 +2171,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                   " available for individual ME evaluation of given coupl. orders."+\
                   " Only the total ME will be computed.", self.opt['export_format'])
             elif  self.opt['export_format'] in ['madloop_matchbox']:
-		replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
-		matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
-	    else:
+                replace_dict["color_information"] = self.get_color_string_lines(matrix_element)
+                matrix_template = "matrix_standalone_matchbox_splitOrders_v4.inc"
+            else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
 
         if write:
@@ -2491,7 +2533,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     # Create proc_card_mg5.dat for MadWeight directory
     #===========================================================================
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler='g77'):
+                              online = False, compiler=default_compiler):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         #proc_charac
@@ -3231,7 +3273,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         # Add the driver.f 
         ncomb = matrix_element.get_helicity_combinations()
         filename = pjoin(Ppath,'driver.f')
-        self.write_driver(writers.FortranWriter(filename),ncomb,n_grouped_proc=1)
+        self.write_driver(writers.FortranWriter(filename),ncomb,n_grouped_proc=1,
+                          v5=self.opt['v5_model'])
 
         # Create the matrix.f file, auto_dsig.f file and all inc files
         filename = pjoin(Ppath, 'matrix.f')
@@ -3400,7 +3443,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             ln('../' + file , cwd=Ppath)    
 
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler='gfortran'):
+                              online = False, compiler=default_compiler):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
@@ -4161,7 +4204,7 @@ c           This is dummy particle used in multiparticle vertices
         replace_dict = {'param_card_name':card, 
                         'ncomb':ncomb,
                         'hel_init_points':n_grouped_proc*10*2}
-        if v5:
+        if not v5:
             replace_dict['secondparam']=',.true.'
         else:
             replace_dict['secondparam']=''            
@@ -4479,7 +4522,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
         filename = 'driver.f'
         self.write_driver(writers.FortranWriter(filename),ncomb,
-                                  n_grouped_proc=len(matrix_elements), v5=False)
+                                  n_grouped_proc=len(matrix_elements), v5=self.opt['v5_model'])
 
         for ime, matrix_element in \
                 enumerate(matrix_elements):
@@ -5184,7 +5227,7 @@ class UFO_model_to_mg4(object):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
         elif self.opt['export_format'].startswith('standalone') or self.opt['export_format'] in ['madweight']\
-	        or self.opt['export_format'].startswith('matchbox'):
+                            or self.opt['export_format'].startswith('matchbox'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:
@@ -5742,6 +5785,18 @@ class UFO_model_to_mg4(object):
         """ Create model_functions.inc which contains the various declarations
         of auxiliary functions which might be used in the couplings expressions
         """
+
+        additional_fct = []
+        # check for functions define in the UFO model
+        ufo_fct = self.model.get('functions')
+        if ufo_fct:
+            for fct in ufo_fct:
+                # already handle by default
+                if fct.name not in ["complexconjugate", "re", "im", "sec", 
+                       "csc", "asec", "acsc", "theta_function", "cond", 
+                       "condif", "reglogp", "reglogm", "reglog", "recms", "arg", "cot"]:
+                    additional_fct.append(fct.name)
+
         
         fsock = self.open('model_functions.inc', format='fortran')
         fsock.writelines("""double complex cond
@@ -5750,7 +5805,11 @@ class UFO_model_to_mg4(object):
           double complex reglogp
           double complex reglogm
           double complex recms
-          double complex arg""")
+          double complex arg
+          %s
+          """ % "\n".join(["          double complex %s" % i for i in additional_fct]))
+
+        
         if self.opt['mp']:
             fsock.writelines("""%(complex_mp_format)s mp_cond
           %(complex_mp_format)s mp_condif
@@ -5758,8 +5817,12 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s mp_reglogp
           %(complex_mp_format)s mp_reglogm
           %(complex_mp_format)s mp_recms
-          %(complex_mp_format)s mp_arg"""\
-          %{'complex_mp_format':self.mp_complex_format})
+          %(complex_mp_format)s mp_arg
+          %(additional)s
+          """ %\
+          {"additional": "\n".join(["          %s %s" % (self.mp_complex_format, i) for i in additional_fct]),
+           'complex_mp_format':self.mp_complex_format
+           }) 
 
     def create_model_functions_def(self):
         """ Create model_functions.f which contains the various definitions
@@ -6188,9 +6251,12 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'pjfry_dir':cmd.options["pjfry"],
       'golem_dir':cmd.options["golem"],
       'fortran_compiler':cmd.options['fortran_compiler'],
+      'f2py_compiler':cmd.options['f2py_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],
       'SubProc_prefix':'P',
-      'compute_color_flows':cmd.options['loop_color_flows']}
+      'compute_color_flows':cmd.options['loop_color_flows'],
+      'mode': 'reweight' if cmd._export_format == "standalone_rw" else ''
+      }
 
     if output_type.startswith('madloop'):
         import madgraph.loop.loop_exporters as loop_exporters
@@ -6239,7 +6305,8 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                'export_format':cmd._export_format,
                'mp': False,  
                'sa_symmetry':False, 
-               'model': cmd._curr_model.get('name') })
+               'model': cmd._curr_model.get('name'),
+               'v5_model': False if cmd._model_v4_path else True })
 
         format = cmd._export_format #shortcut
 

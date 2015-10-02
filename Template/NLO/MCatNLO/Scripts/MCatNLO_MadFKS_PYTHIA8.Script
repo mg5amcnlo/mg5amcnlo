@@ -517,6 +517,7 @@ TimeShower:MEcorrections = off     ! No Matrix-element corrections
 TimeShower:MEafterFirst = off      ! No Matrix-element corrections after first emission
 TimeShower:phiPolAsym = on         ! Azimuthal asymmetry induced by gluon polarization
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
+TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
 
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)

@@ -336,7 +336,7 @@ OPEN(1, FILE=HelConfigFN, err=108, status='OLD',                  action='READ')
 109  CONTINUE
 CLOSE(1)
 IF(BOOTANDSTOP) THEN
-  WRITE(*,*) 'Stopped by user request.'
+  WRITE(*,*) '##Stopped by user request.'
   STOP
 ENDIF
 
@@ -622,8 +622,8 @@ C   SET THE LOOP FILTER
   ELSEIF (.NOT.HELDOUBLECHECKED)THEN
     IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.%(proc_prefix)sISZERO(ABS(ANS(1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
 	  write(*,*) '##W15 Helicity filter could not be successfully double checked.'
-	  write(*,*) 'One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
-	  write(*,*) 'MadLoop will try to reset the Helicity filter with the next PS points it receives.'
+	  write(*,*) '##One reason for this is that you have changed sensible parameters which affected what are the zero helicity configurations.'
+	  write(*,*) '##MadLoop will try to reset the Helicity filter with the next PS points it receives.'
 	  NTRY=0
 	  OPEN(30,FILE=HelFilterFN,err=349)
 349   CONTINUE
@@ -721,19 +721,19 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  NEPS=NEPS+1
       CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)	  
       WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
-	  WRITE(*,*) '(DP,QP) accuracies : (',TEMP1,',',ACC,')'
-	  WRITE(*,*) 'Best estimate (fin,1eps,2eps) :',(ANS(I),I=1,3)
+	  WRITE(*,*) '##(DP,QP) accuracies : (',TEMP1,',',ACC,')'
+	  WRITE(*,*) '##Best estimate (fin,1eps,2eps) :',(ANS(I),I=1,3)
 	  IF(NEPS.LE.10) THEN
-	    WRITE(*,*) 'Double precision evaluations :',(DP_RES(1,I),I=1,N_DP_EVAL)
-	    WRITE(*,*) 'Quad   precision evaluations :',(QP_RES(1,I),I=1,N_QP_EVAL)		 
-	    WRITE(*,*) 'PS point specification :'
-	    WRITE(*,*) 'Renormalization scale MU_R=',MU_R	
+	    WRITE(*,*) '##Double precision evaluations :',(DP_RES(1,I),I=1,N_DP_EVAL)
+	    WRITE(*,*) '##Quad   precision evaluations :',(QP_RES(1,I),I=1,N_QP_EVAL)		 
+	    WRITE(*,*) '##PS point specification :'
+	    WRITE(*,*) '##Renormalization scale MU_R=',MU_R	
 	    DO I=1,NEXTERNAL
           WRITE (*,'(i2,1x,4e27.17)') i, P(0,i),P(1,i),P(2,i),P(3,i) 
         ENDDO
 	  ENDIF
 	  IF(NEPS.EQ.10) THEN
-	    WRITE(*,*) 'Further output of the details of these unstable PS points will now be suppressed.'
+	    WRITE(*,*) '##Further output of the details of these unstable PS points will now be suppressed.'
 	  ENDIF
     ENDIF
   ELSE
@@ -883,7 +883,7 @@ C     The following is used instead
 	  ENDIF
 
 	  IF(N_DP_EVALS.GT.20.OR.N_QP_EVALS.GT.20) THEN
-	    WRITE(*,*) 'ERROR:: Increase hardcoded maxstabilitylength.'
+	    WRITE(*,*) '##ERROR:: Increase hardcoded maxstabilitylength.'
 		STOP
 	  ENDIF
 
@@ -927,7 +927,7 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      write(*,*) 'WARNING:: Ignored, the possibility of selecting specific squared order contributions is not available in the default mode.'
+      write(*,*) '##WARNING:: Ignored, the possibility of selecting specific squared order contributions is not available in the default mode.'
 
 	  END
 

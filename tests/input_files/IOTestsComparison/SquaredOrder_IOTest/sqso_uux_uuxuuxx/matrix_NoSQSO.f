@@ -7,6 +7,10 @@ C
       PARAMETER (NEXTERNAL=6)
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=64)
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: HEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+
 C     
 C     ARGUMENTS 
 C     
@@ -54,6 +58,8 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL),ANS
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 C     
 C     LOCAL VARIABLES 
 C     
@@ -141,14 +147,14 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
-      NTRY=NTRY+1
+      IF(USERHEL.EQ.-1) NTRY=NTRY+1
       DO IHEL=1,NEXTERNAL
         JC(IHEL) = +1
       ENDDO
       ANS = 0D0
       DO IHEL=1,NCOMB
         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
-          IF (GOODHEL(IHEL) .OR. NTRY .LT. 20) THEN
+          IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
             T=MATRIX(P ,NHEL(1,IHEL),JC(1))
             ANS=ANS+T
             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
@@ -402,5 +408,47 @@ C     Amplitude(s) for diagram number 42
         MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
       ENDDO
 
+      END
+
+      SUBROUTINE GET_ME(P, ALPHAS, NHEL ,ANS)
+      IMPLICIT NONE
+C     
+C     CONSTANT
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=6)
+C     
+C     ARGUMENTS 
+C     
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER NHEL
+      DOUBLE PRECISION ALPHAS
+      REAL*8 PI
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: NHEL
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
+CF2PY INTENT(IN) :: ALPHAS
+C     ROUTINE FOR F2PY to read the benchmark point.    
+C     the include file with the values of the parameters and masses 
+      INCLUDE 'coupl.inc'
+
+      PI = 3.141592653589793D0
+      G = 2* DSQRT(ALPHAS*PI)
+      CALL UPDATE_AS_PARAM()
+      IF (NHEL.NE.0) THEN
+        CALL SMATRIXHEL(P, NHEL, ANS)
+      ELSE
+        CALL SMATRIX(P, ANS)
+      ENDIF
+      RETURN
+      END
+
+      SUBROUTINE INITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.    
+      IMPLICIT NONE
+      CHARACTER*180 PATH
+CF2PY INTENT(IN) :: PATH
+      CALL SETPARA(PATH)  !first call to setup the paramaters    
+      RETURN
       END
 
