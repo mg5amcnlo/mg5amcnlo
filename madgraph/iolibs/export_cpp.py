@@ -1104,7 +1104,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             self.version = opts['version']
             del opts['version']
         else:
-            misc.sprint(opts)
             self.version='8.2'
         super(ProcessExporterPythia8, self).__init__(*args, **opts)
 
