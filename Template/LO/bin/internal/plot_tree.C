@@ -1,7 +1,11 @@
 #include <string>
 
-bool plot_tree(char* quantity,char* plotdim="(100,0.,3.)",bool log=true)
+bool plot_tree(const char* quantity, const char* plotdim = 0, bool log = true)
 {
+  const char* plotdim_default = "(100,0.,3.)";
+  if(plotdim == 0){
+    plotdim = plotdim_default;
+  }
   char tmp1[250];
   char tmp2[300];
   char tmp3[100];
