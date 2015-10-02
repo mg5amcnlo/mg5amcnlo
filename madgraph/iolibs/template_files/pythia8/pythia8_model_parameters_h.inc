@@ -8,9 +8,9 @@
 
 #include <complex>
 
-#include "Pythia8/ParticleData.h"
-#include "Pythia8/StandardModel.h"
-#include "Pythia8/SusyLesHouches.h"
+#include "%(include_prefix)sParticleData.h"
+#include "%(include_prefix)sStandardModel.h"
+#include "%(include_prefix)sSusyLesHouches.h"
 
 using namespace std;
 

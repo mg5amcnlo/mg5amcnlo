@@ -1131,8 +1131,8 @@ class FeynmanDiagram(object):
             return []
 
         assert self.min_level <= level <= self.max_level , \
-        	'Incorrect value of min/max level: %s <= %s <= %s' % \
-                                        (self.min_level, level, self.max_level)  
+                    'Incorrect value of min/max level: %s <= %s <= %s' % \
+                    (self.min_level, level, self.max_level)  
                 
 
         # At final level we should authorize min=0 and max=1 position    
@@ -1188,7 +1188,7 @@ class FeynmanDiagram(object):
         # Assign position to each vertex
         for i, vertex in enumerate(vertex_at_level):
             vertex.def_position((level - self.min_level) / self.nb_level, 
-            							     min + dist * (begin_gap + i))
+                                min + dist * (begin_gap + i))
 
         return vertex_at_level
 

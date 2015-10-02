@@ -4,7 +4,7 @@
 // File based on main25.cc in Pythia 8.149
 //==========================================================================
 
-#include "Pythia8/Pythia.h"
+#include "Pythia.h"
 %(include_lines)s
 
 using namespace Pythia8; 
@@ -34,7 +34,7 @@ int main() {
   pythia.readString("PartonLevel:all = off");
 
   // Initialization for LHC.
-  pythia.init( 2212, 2212, 14000.);
+  pythia.init(2212,2212, 14.);
 
   // List changes.
   pythia.settings.listChanged();

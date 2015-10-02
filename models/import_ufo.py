@@ -456,7 +456,7 @@ class UFOMG5Converter(object):
             return
         
         if (aloha.unitary_gauge and 0 in self.model['gauge']) \
-	          or (1 not in self.model['gauge']): 
+                            or (1 not in self.model['gauge']): 
         
             # MG5 doesn't use goldstone boson 
             if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:

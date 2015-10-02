@@ -151,11 +151,27 @@ class gensym(object):
             (stdout, _) = p.communicate('')
             
             if os.path.exists(pjoin(self.me_dir,'error')):
+                misc.sprint(open(pjoin(self.me_dir,'error')).read())
                 files.mv(pjoin(self.me_dir,'error'), pjoin(Pdir,'ajob.no_ps.log'))
                 P_zero_result.append(subdir)
                 continue            
             
-            job_list[Pdir] = stdout.split()
+            jobs = stdout.split()
+            job_list[Pdir] = jobs
+            try:
+                # check that all input are valid
+                [float(s) for s in jobs]
+            except Exception:
+                logger.debug("unformated string found in gensym. Please check:\n %s" % stdout)
+                job_list[Pdir] = []
+                for s in jobs:
+                    try:
+                        float(s)
+                    except:
+                        continue
+                    else:
+                        job_list[Pdir].append(s)        
+                
             self.cmd.compile(['madevent'], cwd=Pdir)
             self.submit_to_cluster(job_list)
         return job_list, P_zero_result

@@ -719,8 +719,8 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # Do not draw the loop diagrams if they are too many.
         # The user can always decide to do it manually, if really needed
         loop_diags = [loop_diag for loop_diag in\
-		  matrix_element.get('base_amplitude').get('loop_diagrams')\
-		     if isinstance(loop_diag,LoopDiagram) and loop_diag.get('type') > 0]
+             matrix_element.get('base_amplitude').get('loop_diagrams')\
+             if isinstance(loop_diag,LoopDiagram) and loop_diag.get('type') > 0]
         if len(loop_diags)>5000:
             logger.info("There are more than 5000 loop diagrams."+\
                                               "Only the first 5000 are drawn.")

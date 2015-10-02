@@ -33,9 +33,9 @@ R2MixedFactor = CTParameter(name = 'R2MixedFactor',
 # ============== #
 
 R2SS = CTParameter(name = 'R2SS',
-	type = 'real',
-	value = {0:'ee**2/(16.0*cmath.pi**2*sw**2)'},
-	texname = 'R2SS')
+        type = 'real',
+        value = {0:'ee**2/(16.0*cmath.pi**2*sw**2)'},
+        texname = 'R2SS')
 
 R2VV = CTParameter(name = 'R2VV',
                    type = 'real',

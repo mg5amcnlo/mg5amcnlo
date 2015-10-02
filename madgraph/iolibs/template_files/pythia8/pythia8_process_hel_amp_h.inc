@@ -6,7 +6,7 @@
 #ifndef Pythia8_%(model_name)s_H
 #define Pythia8_%(model_name)s_H
 
-#include "Pythia8/SigmaProcess.h"
+#include "%(include_prefix)sSigmaProcess.h"
 
 using namespace std;
 

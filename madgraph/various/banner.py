@@ -134,8 +134,8 @@ class Banner(dict):
         store = False
         for line in input_path:
             if self.pat_begin.search(line):
-                tag = self.pat_begin.search(line).group('name').lower()
-                if tag in self.tag_to_file:
+                if self.pat_begin.search(line).group('name').lower() in self.tag_to_file:
+                    tag = self.pat_begin.search(line).group('name').lower()
                     store = True
                     continue
             if store and self.pat_end.search(line):
@@ -1100,6 +1100,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('ninitial', 0)
         self.add_param('grouped_matrix', True)
         self.add_param('has_loops', False)
+        self.add_param('max_n_matched_jets', 0)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1259,8 +1260,9 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:setMad", True, hidden=True, always_write_to_card=False,
                                      comment='Specify if from MadGraph origin.') 
         self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False) 
-        self.add_param("JetMatching:etaJetMax", 10.0, hidden=True, always_write_to_card=False) 
-        self.add_param("JetMatching:nJetMax", 2, hidden=True, always_write_to_card=False) 
+        self.add_param("JetMatching:etaJetMax", 10.0, hidden=True, always_write_to_card=False)
+        # -1 means that it is automatically set. 
+        self.add_param("JetMatching:nJetMax", -1, hidden=True, always_write_to_card=False) 
         # for CKKWL merging (common with UMEPS, UNLOPS)
         self.add_param("Merging:nJetMax", 2, hidden=True, always_write_to_card=False)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
@@ -2431,6 +2433,7 @@ class RunCardNLO(RunCard):
         self.add_param('lhaid', 244600)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
+        self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('mur_ref_fixed', 91.118)                       
@@ -2585,7 +2588,7 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "1|4|3|2")
+        self.add_param("MLReductionLib", "1|3|2")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)

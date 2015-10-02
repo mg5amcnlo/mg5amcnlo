@@ -3272,12 +3272,14 @@ Beware that this can be dangerous for local multicore runs.""")
             PY8_Card.MadGraphSet('JetMatching:setMad',True)
             PY8_Card.MadGraphSet('JetMatching:coneRadius',self.run_card['drjj'])
             PY8_Card.MadGraphSet('JetMatching:etaJetMax',self.run_card['etaj'])
-################################################################################
-            logger.error("MLM automatic 'JetMatching:nJetMax' setting not"+
-                                                            " implemented yet!")
-            TO_BE_IMPLEMENTED = -1
-################################################################################
-            PY8_Card.MadGraphSet('JetMatching:nJetMax',TO_BE_IMPLEMENTED)
+            if not hasattr(self,'proc_characteristic'):
+                self.proc_characteristic = self.get_characteristics()
+            nJetMax = self.proc_characteristic['max_n_matched_jets']
+            if PY8_Card['JetMatching:nJetMax'.lower()] == -1 and\
+                                               nJetMax not in PY8_Card.user_set:
+                logger.info("No user-defined value for Pythia8 parameter "+
+            "'JetMatching:nJetMax'. Setting it automatically to to %d."%nJetMax)
+                PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
         elif int(self.run_card['ickkw'])==2:
             # Specific CKKW settings
             if PY8_Card['Merging:Process']=='<set_by_user>':
@@ -3337,23 +3339,15 @@ Beware that this can be dangerous for local multicore runs.""")
             # read the line from the bottom of the file
             pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
                                                         '%s_pythia8.log' % tag))
-            pythiare = re.compile("\s*I\s+0 All included subprocesses\s+I\s+(?P<generated>\d+)\s+(?P<tried>\d+)\s+I\s+(?P<xsec>[\d\.D\-+]+)\s+I")            
-            for line in pythia_log:
-########################################################
-# MUST MODIFY main89 to output this. TO_BE_IMPLEMENTED
-########################################################
-                logger.error('Main89 must be modified so that MG5_aMC can parse its output.')
-                self.results.add_detail('cross_pythia8', 0)
-                self.results.add_detail('nb_event_pythia8', 0)
-                self.results.add_detail('error_pythia8', 0)
-                break
-####################################################    
+            # The main89 driver should be modified so as to allow for easier parsing
+            pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")            
+            for line in pythia_log:  
                 info = pythiare.search(line)
                 if not info:
                     continue
                 try:
                     # Pythia cross section in mb, we want pb
-                    sigma_m = float(info.group('xsec').replace('D','E')) *1e9
+                    sigma_m = float(info.group('xsec')) *1e9
                     Nacc = int(info.group('generated'))
                     Ntry = int(info.group('tried'))
                 except ValueError:
@@ -3392,8 +3386,9 @@ Beware that this can be dangerous for local multicore runs.""")
         # For now, bypass the hep2lhe step as we anyway have hepmc on our hands
         # now. We will see what is the best way to proceed later and how to 
         # link SysCalc to this (i.e. check with Simon).
-        # TO_BE_IMPLEMENTED
-        logger.error('Hep2Lhe and SysCalc not compatible with Pythia8 yet!')
+        if self.run_card['use_syst'] in self.true:
+            logger.error('Hep2Lhe and SysCalc not compatible with Pythia8 yet!'+\
+                                                         ' It will not be run.')
 
         self.update_status('finish', level='pythia', makehtml=False)
         if self.options['delphes_path']:
@@ -3486,8 +3481,11 @@ Beware that this can be dangerous for local multicore runs.""")
                     self.results.add_detail('cross_pythia', sigma_m)
                     self.results.add_detail('nb_event_pythia', Nacc)
                     #compute pythia error
-                    error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
-                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error']
+                    if Nacc:                    
+                        error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    else:
+                        error_m = 10000 * sigma_m
                     # works both for fixed number of generated events and fixed accepted events
                     self.results.add_detail('error_pythia', error_m)
                 break                 
@@ -3980,7 +3978,7 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(cwd,G,'ftn25'))
                         except:
                             pass
-                    
+
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,
@@ -4759,12 +4757,12 @@ Beware that this can be dangerous for local multicore runs.""")
         name['1'] = 'pythia%s'%pythia_suffix
         options = available_mode + [name[val] for val in available_mode]
         question = """Which programs do you want to run?
-    0 / auto    : running existing card"""
+    0 / auto    : running existing cards\n"""
         if pythia_version==6:
-            question += """1 / pythia  : Pythia """
-            question += """2 / pgs     : Pythia + PGS\n"""
+            question += """    1 / pythia  : Pythia\n"""
+            question += """    2 / pgs     : Pythia + PGS\n"""
         else:
-            question += """"1 / pythia8  : Pythia8 """
+            question += """"    1 / pythia8  : Pythia8\n"""
 
         if '3' in available_mode:
             question += """    3 / delphes  : Pythia%s + Delphes.\n"""%pythia_suffix

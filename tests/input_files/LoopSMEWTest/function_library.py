@@ -42,8 +42,8 @@ reglog = Function(name = 'reglog',
                 expression = '(0.0 if z==0.0 else cmath.log(z))')
 
 arg = Function(name = 'arg',
-		arguments = ('z',),
-		expression = '(0.0 if abs(z)==0.0 else (cmath.log(z/abs(z))/1j).real)')
+                arguments = ('z',),
+                expression = '(0.0 if abs(z)==0.0 else (cmath.log(z/abs(z))/1j).real)')
 
 # New functions (trigonometric)
 

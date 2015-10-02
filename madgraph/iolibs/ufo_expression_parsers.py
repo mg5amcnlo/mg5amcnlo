@@ -313,14 +313,14 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | ASEC group
                       | RE group
                       | IM group
-		              | ARG group
+                      | ARG group
                       | SQRT group
                       | CONJ group
                       | REGLOG group
                       | TAN group'''
 
-        if p[1] == 'csc': p[0] = '1d0/cos' + p[2]
-        elif p[1] == 'sec': p[0] = '1d0/sin' + p[2]
+        if p[1] == 'csc': p[0] = '1d0/sin' + p[2]
+        elif p[1] == 'sec': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
         elif p[1] in ['tan', 'cmath.tan'] : p[0] = 'tan(dble' + p[2]+')'
@@ -410,13 +410,13 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                       | ASEC group
                       | RE group
                       | IM group
-	                  | ARG group
+                      | ARG group
                       | SQRT group
                       | CONJ group
                       | TAN group
                       | REGLOG group'''
-        if p[1] == 'csc': p[0] = '1e0_16/cos' + p[2]
-        elif p[1] == 'sec': p[0] = '1e0_16/sin' + p[2]
+        if p[1] == 'csc': p[0] = '1e0_16/sin' + p[2]
+        elif p[1] == 'sec': p[0] = '1e0_16/cos' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1e0_16/' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1e0_16/' + p[2] + ')'
         elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan(real' + p[2]+')'
@@ -514,12 +514,12 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | TAN group
                       | RE group
                       | IM group
-		              | ARG group
+                      | ARG group
                       | SQRT group
                       | CONJ group
                       | REGLOG group '''
-        if p[1] == 'csc': p[0] = '1./cos' + p[2]
-        elif p[1] == 'sec': p[0] = '1./sin' + p[2]
+        if p[1] == 'csc': p[0] = '1./sin' + p[2]
+        elif p[1] == 'sec': p[0] = '1./cos' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
         elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan' +p[2]

@@ -296,7 +296,7 @@ c Print the map to the screen
      1           ((pdgs(i,j,kpdflumi),i=1,2),j=1,nproc(kpdflumi))
 *
             if(kpdflumi.le.0.or.kpdflumi.gt.mxpdflumi) then
-               write(6,*) "In fks_singular.f"
+               write(6,*) "In iproc_map.f"
                write(6,*) "Invalid value of kpdflumi = ",kpdflumi
                stop
             endif
@@ -343,7 +343,7 @@ c Print the map to the screen
          do kpdflumi=1,npdflumi
 *     First, check that the same number of 
 *     parton subprocesses is used
-            if(maxproc_used.ne.nproc(kpdflumi)) continue
+            if(maxproc_used.ne.nproc(kpdflumi)) cycle
             if(flav_map_debug) then
                write(6,*) " "
                write(6,*) " kpdflumi = ",kpdflumi
@@ -391,7 +391,7 @@ c Print the map to the screen
          enddo
          if(flavour_map(nFKSprocess).eq.0) then
             write(6,*) 
-     1           "Problem with setup_flavourmap in fks_singular.f"
+     1           "Problem with setup_flavourmap in iproc_map.f"
             write(6,*) "nFKSprocess = ",nFKSprocess
             write(6,*)" flavour_map(nFKSprocess)= ",
      1           flavour_map(nFKSprocess)
@@ -404,7 +404,7 @@ c Print the map to the screen
 *     write(6,*) " "
       if( nmatch_total.ne.fks_configs) then
          write(6,*) 
-     1        "Problem with setup_flavourmap  in fks_singular.f"
+     1        "Problem with setup_flavourmap  in iproc_map.f"
          write(6,*) "nmatch_total, fks_configs"
          write(6,*) nmatch_total, fks_configs
          stop
