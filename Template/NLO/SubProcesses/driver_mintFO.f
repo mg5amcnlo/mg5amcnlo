@@ -730,8 +730,8 @@ c-----
          elseif(buffer(1:5).eq.'SPLIT') then
             read(buffer(8:),*) i
             write (*,*) 'Splitting channel:',i
-         elseif(buffer(1:7).eq.'RUN_MODE') then
-            read(buffer(10:),*) abrvinput
+         elseif(buffer(1:8).eq.'RUN_MODE') then
+            read(buffer(11:),*) abrvinput
             if(abrvinput(5:5).eq.'0')then
                nbody=.true.
             else
