@@ -2,7 +2,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.3.3(XX/XX/XX)
         OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
-	RF: For fixed order NLO runs, when the required accuracy is set rather small, do an extra integration step.
+	RF: Rewriting of job-control for NLO processes. Better accuracy estimates for FO processes
 	RF: Fix for factorisation scale setting in FxFx merging when very large difference in scale in the
  	    non-QCD part of a process. 
 	RF: Better discarding of numerical instabilities in the real-emission matrix elements. Only of interested for
