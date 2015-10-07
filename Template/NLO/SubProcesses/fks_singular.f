@@ -1230,7 +1230,12 @@ c save also the separate contributions to the PDFs and the corresponding
 c PDG codes
       niproc(ict)=iproc
       do j=1,iproc
-         parton_iproc(j,ict)=pd(j)*conv
+         if (nincoming.eq.2) then
+            parton_iproc(j,ict)=pd(j)*conv
+         else
+c           Keep GeV's for decay processes (no conv. factor needed)
+            parton_iproc(j,ict)=pd(j)
+         endif
          do k=1,nexternal
             parton_pdg(k,j,ict)=idup_d(iFKS,k,j)
             if (k.lt.fks_j_d(iFKS)) then
@@ -2199,9 +2204,15 @@ c iproc_picked:
             do ii=1,iproc_save(nFKS(ict))
                if (eto(ii,nFKS(ict)).ne.ipr) cycle
                n_ctr_found=n_ctr_found+1
-               write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
-     &              (wgt(j,ict)*conv,j=1,3),
-     &              nexternal
+               if (nincoming.eq.2) then
+                  write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
+     &                 (wgt(j,ict)*conv,j=1,3),
+     &                 nexternal
+               else
+                  write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
+     &                 (wgt(j,ict),j=1,3),
+     &                 nexternal
+               endif
                procid=''
                do j=1,nexternal
                   write (str_temp,*) parton_pdg(j,ii,ict)
@@ -2227,9 +2238,15 @@ c iproc_picked:
 c H-event
             ipr=iproc_picked
             n_ctr_found=n_ctr_found+1
-            write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
-     &           (wgt(j,ict)*conv,j=1,3),
-     &           nexternal
+            if (nincoming.eq.2) then
+               write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
+     &              (wgt(j,ict)*conv,j=1,3),
+     &              nexternal
+            else
+               write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
+     &              (wgt(j,ict),j=1,3),
+     &              nexternal
+            endif
             procid=''
             do j=1,nexternal
                write (str_temp,*) parton_pdg(j,ipr,ict)
@@ -2342,7 +2359,7 @@ c
       do i=0,3
         xsum(i)=0.d0
         xsuma(i)=0.d0
-        do j=3,npart
+        do j=nincoming+1,npart
           xsum(i)=xsum(i)+xmom(i,j)
           xsuma(i)=xsuma(i)+abs(xmom(i,j))
         enddo
@@ -2409,9 +2426,14 @@ c
       pass=.true.
       jflag=0
       do i=0,3
-        xsum(i)=-xmom(i,1)-xmom(i,2)
-        xsuma(i)=abs(xmom(i,1))+abs(xmom(i,2))
-        do j=3,npart
+        if (nincoming.eq.2) then
+          xsum(i)=-xmom(i,1)-xmom(i,2)
+          xsuma(i)=abs(xmom(i,1))+abs(xmom(i,2))
+        elseif(nincoming.eq.1) then
+          xsum(i)=-xmom(i,1)
+          xsuma(i)=abs(xmom(i,1))
+        endif
+        do j=nincoming+1,npart
           xsum(i)=xsum(i)+xmom(i,j)
           xsuma(i)=xsuma(i)+abs(xmom(i,j))
         enddo
@@ -2458,7 +2480,11 @@ c
         endif
       enddo
 c
-      ecmtmp=sqrt(2d0*dot(xmom(0,1),xmom(0,2)))
+      if (nincoming.eq.2) then
+         ecmtmp=sqrt(2d0*dot(xmom(0,1),xmom(0,2)))
+      elseif (nincoming.eq.1) then
+         ecmtmp=xmom(0,1)
+      endif
       if(abs(ecm-ecmtmp).gt.vtiny)then
         write(*,*)'Inconsistent shat [nocms]'
         write(*,*)'ecm given=   ',ecm

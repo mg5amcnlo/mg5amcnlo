@@ -170,7 +170,7 @@ c
       else
         flat_grid=.false.
       endif
-      ndim = 3*(nexternal-2)-4
+      ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
