@@ -2446,14 +2446,14 @@ c
           write(*,*)'Momentum is not conserved [nocms]'
           write(*,*)'i=',i
           do j=1,npart
-            write(*,'(4(d14.8,1x))') (xmom(jj,j),jj=0,3)
+            write(*,'(i2,1x,4(d14.8,1x))') j,(xmom(jj,j),jj=0,3)
           enddo
           jflag=1
         endif
       enddo
       if(jflag.eq.1)then
-        write(*,'(4(d14.8,1x))') (xsum(jj),jj=0,3)
-        write(*,'(4(d14.8,1x))') (xrat(jj),jj=0,3)
+        write(*,'(a3,1x,4(d14.8,1x))') 'sum',(xsum(jj),jj=0,3)
+        write(*,'(a3,1x,4(d14.8,1x))') 'rat',(xrat(jj),jj=0,3)
         pass=.false.
         return
       endif

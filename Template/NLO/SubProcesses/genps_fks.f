@@ -1154,7 +1154,11 @@ c boosted along the direction of the mother; start by redefining the
 c mother four momenta
       do i=0,3
          xp_mother(i)=xp(i,i_fks)+xp(i,j_fks)
-         recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
+         if (nincoming.eq.2) then
+            recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
+         else
+            recoil(i)=xp(i,1)-xp_mother(i)
+         endif
       enddo
 c
       sumrec=recoil(0)+rho(recoil)
@@ -1177,7 +1181,7 @@ c
          xdir(j)=xp_mother(j)/x3len_fks_mother
       enddo
 c Boost the momenta
-      do i=3,nexternal
+      do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
      &      call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),xp(0,i))
       enddo
