@@ -5026,8 +5026,13 @@ c 1+4_L
           elseif(abrv.ne.'virt' .and. abrv.ne.'viSC' .and.
      #           abrv.ne.'viLC')then
 c 1+2+3+4
-            tmp=dlog(xicut_used**2*shat/QES2)-
-     #          1/betai*dlog((1+betai)/(1-betai))
+            if (betai.gt.1d-6) then
+               tmp=dlog(xicut_used**2*shat/QES2)-
+     &              1/betai*dlog((1+betai)/(1-betai))
+            else
+               tmp=dlog(xicut_used**2*shat/QES2)-
+     &              2d0*(1d0+betai**2/3d0+betai**4/5d0)
+            endif
           else
              write(*,*)'Error #14 in eikonal_Ireg',abrv
              stop
