@@ -2742,7 +2742,11 @@ c Unphysical kinematics: set matrix elements equal to zero
 
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
-      shattmp=2d0*dot(pp(0,1),pp(0,2))
+      if (nincoming.eq.2) then
+         shattmp=2d0*dot(pp(0,1),pp(0,2))
+      else
+         shattmp=pp(0,1)**2
+      endif
       if(abs(shattmp/shat-1.d0).gt.1.d-5)then
         write(*,*)'Error in sreal: inconsistent shat'
         write(*,*)shattmp,shat
@@ -3503,7 +3507,11 @@ c Unphysical kinematics: set matrix elements equal to zero
 
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
-      shattmp=2d0*dot(p(0,1),p(0,2))
+      if (nincoming.eq.2) then
+         shattmp=2d0*dot(p(0,1),p(0,2))
+      else
+         shattmp=p(0,1)**2
+      endif
       if(abs(shattmp/shat-1.d0).gt.1.d-5)then
         write(*,*)'Error in sreal: inconsistent shat'
         write(*,*)shattmp,shat
@@ -3812,7 +3820,7 @@ c it as the standard, one should think a bit about it
         enddo
       enddo
       do i=0,3
-        if(j_fks.gt.2)then
+        if(j_fks.gt.nincoming)then
           xnum=p1_cnt(i,i_fks,inum)+p1_cnt(i,j_fks,inum)
           xden=p1_cnt(i,i_fks,iden)+p1_cnt(i,j_fks,iden)
         else
@@ -4412,7 +4420,11 @@ c For the MINT folding
 
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
-         shattmp=2d0*dot(p(0,1),p(0,2))
+         if (nincoming.eq.2) then
+            shattmp=2d0*dot(p(0,1),p(0,2))
+         else
+            shattmp=p(0,1)**2
+         endif
          if(abs(shattmp/shat-1.d0).gt.1.d-5)then
            write(*,*)'Error in sreal: inconsistent shat'
            write(*,*)shattmp,shat

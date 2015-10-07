@@ -2366,7 +2366,11 @@ c Kajantie's normalization of phase space (compensated below in flux)
       external dot
       pass=.true.
       do i=0,3
-         recoilbar(i)=p_born(i,1)+p_born(i,2)-p_born(i,imother)
+         if (nincoming.eq.2) then
+            recoilbar(i)=p_born(i,1)+p_born(i,2)-p_born(i,imother)
+         else
+            recoilbar(i)=p_born(i,1)-p_born(i,imother)
+         endif
       enddo
       xmrec2=dot(recoilbar,recoilbar)
       if(xmrec2.lt.0.d0)then

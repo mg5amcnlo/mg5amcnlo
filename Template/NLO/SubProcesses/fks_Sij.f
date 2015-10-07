@@ -90,9 +90,13 @@ c Unphysical kinematics: set S function equal to zero
 
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
-      shattmp=2d0*dot(p(0,1),p(0,2))
+      if (nincoming.eq.2) then
+         shattmp=2d0*dot(p(0,1),p(0,2))
+      else
+         shattmp=p(0,1)**2
+      endif
       if(abs(shattmp/shat-1.d0).gt.1.d-5)then
-        write(*,*)'Error in fks_Sij: inconsistent shat'
+        write(*,*)'Error in fks_Sij: inconsistent shat #1'
         write(*,*)shattmp,shat
         stop
       endif
@@ -567,7 +571,11 @@ c Unphysical kinematics: set H function equal to zero
 
 c Consistency check -- call to set_cms_stuff() must be done prior to
 c entering this function
-      shattmp=2d0*dot(p(0,1),p(0,2))
+      if (nincoming.eq.2) then
+         shattmp=2d0*dot(p(0,1),p(0,2))
+      else
+         shattmp=p(0,1)**2
+      endif
       if(abs(shattmp/shat-1.d0).gt.1.d-5)then
         write(*,*)'Error in fks_Hij: inconsistent shat'
         write(*,*)shattmp,shat
