@@ -383,8 +383,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             text=text+str(i+1)+' '+str(len(e))
             for t in e:
                 text=text+'   '
-                for p in t:
-                    text=text+' '+str(p)
+                try:
+                    for p in t:
+                        text=text+' '+str(p)
+                except TypeError:
+                        text=text+' '+str(t)
             text=text+'\n'
         
         ff = open(file_pos, 'w')

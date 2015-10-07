@@ -542,8 +542,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                         me.get('processes')[0].set('uid', uid)
                         for fksreal in me.real_processes:
                         # Pick out all initial state particles for the two beams
-                            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                            try:
+                                initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
                                                              p in fksreal.matrix_element.get('processes')))))
+                            except IndexError:
+                                initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
+                                                             p in fksreal.matrix_element.get('processes')))))
+                                
                         
                     # remove doubles from the list
                     checked = []
