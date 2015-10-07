@@ -638,12 +638,17 @@ c These should be ignored (but kept for 'historical reasons')
 
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
-      if (i .eq. 0) then
-         mc_hel= 0
-         write(*,*) 'Explicitly summing over helicities for virt'
+      if (nincoming.eq.1) then
+         write (*,*) 'Sum over helicities in the virtuals'/
+     $        /' for decay process'
+         mc_hel=0
+      elseif (i.eq.0) then
+         mc_hel=0
+         write (*,*) 'Explicitly summing over helicities'/
+     $        /' for the virtuals'
       else
-         mc_hel= i
-         write(*,*) 'Summing over',i,' helicities/event for virt'
+         mc_hel=1
+         write(*,*) 'Do MC over helicities for the virtuals'
       endif
       isum_hel = 0
 

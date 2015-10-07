@@ -709,9 +709,14 @@ c-----
             endif
          elseif(buffer(1:12).eq.'SUM_HELICITY') then
             read(buffer(15:),*) i
-            if (i.eq.0) then
+            if (nincoming.eq.1) then
+               write (*,*) 'Sum over helicities in the virtuals'/
+     $              /' for decay process'
                mc_hel=0
-               write (*,*) 'Explicitly summing over helicities'
+            elseif (i.eq.0) then
+               mc_hel=0
+               write (*,*) 'Explicitly summing over helicities'/
+     $              /' for the virtuals'
             else
                mc_hel=1
                write(*,*) 'Do MC over helicities for the virtuals'
