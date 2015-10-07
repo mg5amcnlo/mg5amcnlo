@@ -152,6 +152,7 @@ c         firsttime=.false.
            do j=1,fks_j_from_i(i,0)
             kk = i
             ll = fks_j_from_i(i,j)
+            if (nincoming.ne.2 .and. ll.le.nincoming) cycle
             if     ( ijskip(kk,ll).eq.0 .and. ijskip(ll,kk).eq.0 ) then
                ijskip(kk,ll) = 1
             elseif ( ijskip(kk,ll).eq.0 .and. ijskip(ll,kk).eq.1 ) then
@@ -182,6 +183,7 @@ c         firsttime=.false.
         do j=1,fks_j_from_i(i,0)
          kk = i
          ll = fks_j_from_i(i,j)
+         if (nincoming.ne.2 .and. ll.le.nincoming) cycle
          if(ijskip(kk,ll).ne.1)goto 222
          if(particle_type(ll).eq.8.and.particle_type(kk).ne.8.and.
      #      ll.gt.nincoming)then
