@@ -5259,7 +5259,11 @@ c The factor -2 compensate for that missing in sborn_sf
               elseif(pmass(m).ne.zero.and.pmass(n).ne.zero)then
                 kikj=dot(p(0,n),p(0,m))
                 vij=sqrt(1-(pmass(n)*pmass(m)/kikj)**2)
-                single=single+0.5d0*1/vij*log((1+vij)/(1-vij))*wgt
+                if (vij .gt. 1d-6) then
+                   single=single+0.5d0*1/vij*log((1+vij)/(1-vij))*wgt
+                else
+                   single=single+(1d0+vij**2/3d0+vij**4/5d0)*wgt
+                endif
               else
                 write(*,*)'Error in getpoles',i,j,n,m,pmass(n),pmass(m)
                 stop
