@@ -4501,7 +4501,7 @@ c 1+2+3+4
          enddo
 c
          do i=1,nincoming
-            if (particle_type(i).ne.1)then
+            if (particle_type(i).ne.1 .and. pmass(i).eq.ZERO) then
                if (particle_type(i).eq.8) then
                   aj=0
                elseif(abs(particle_type(i)).eq.3) then
