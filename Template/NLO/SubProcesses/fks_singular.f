@@ -2754,9 +2754,9 @@ c entering this function
       endif
 
       if (1d0-y_ij_fks.lt.tiny)then
-         if (pmass(j_fks).eq.zero.and.j_fks.le.2)then
+         if (pmass(j_fks).eq.zero.and.j_fks.le.nincoming)then
             call sborncol_isr(pp,xi_i_fks,y_ij_fks,wgt)
-         elseif (pmass(j_fks).eq.zero.and.j_fks.ge.3)then
+         elseif (pmass(j_fks).eq.zero.and.j_fks.ge.nincoming+1)then
             call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt)
          else
             wgt=0d0
@@ -2860,7 +2860,7 @@ c Unphysical kinematics: set matrix elements equal to zero
       E_i_fks = p(0,i_fks)
       z = 1d0 - E_i_fks/(E_i_fks+E_j_fks)
       t = z * shat/4d0
-      if(rotategranny .and. nexternal-1.ne.3)then
+      if(rotategranny .and. nexternal-1.ne.3 .and. nincoming.eq.2)then
 c Exclude 2->1 (at the Born level) processes: matrix elements are
 c independent of the PS point, but non-zero helicity configurations
 c might flip when rotating the momenta.
@@ -2980,7 +2980,7 @@ c sreal return {\cal M} of FKS except for the partonic flux 1/(2*s).
 c Thus, an extra factor z (implicit in the flux of the reduced Born
 c in FKS) has to be inserted here
       t = z*shat/4d0
-      if(j_fks.eq.2 .and. nexternal-1.ne.3)then
+      if(j_fks.eq.2 .and. nexternal-1.ne.3 .and. nincoming.eq.2)then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
 c general rotation is needed.
 c Exclude 2->1 (at the Born level) processes: matrix elements are
@@ -3011,7 +3011,7 @@ c Insert <ij>/[ij] which is not included by sborn()
                pi(i)=p_i_fks_ev(i)
                pj(i)=p(i,j_fks)
             enddo
-            if(j_fks.eq.2)then
+            if(j_fks.eq.2 .and. nincoming.eq.2)then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
 c general rotation is needed
                pi(1)=-pi(1)
@@ -3032,7 +3032,7 @@ c general rotation is needed
             azifact=Wij_angle/Wij_recta
          endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
-         if(j_fks.eq.2)then
+         if(j_fks.eq.2 .and. nincoming.eq.2)then
            cphi_mother=-1.d0
            sphi_mother=0.d0
          else
