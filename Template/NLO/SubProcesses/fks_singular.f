@@ -358,6 +358,13 @@ c to the list of weights using the add_wgt subroutine
       common /to_amp_split_deg/amp_split_wgtdegrem_xi,
      $                         amp_split_wgtdegrem_lxi,
      $                         amp_split_wgtdegrem_muF
+      ! amp_split for the DIS scheme
+      double precision amp_split_wgtdis_p(amp_split_size),
+     $                 amp_split_wgtdis_l(amp_split_size),
+     $                 amp_split_wgtdis_d(amp_split_size)
+      common /to_amp_split_dis/amp_split_wgtdis_p,
+     $                         amp_split_wgtdis_l,
+     $                         amp_split_wgtdis_d
       double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
      &     ,wgt3,g22,replace_MC_subt
       external fks_Sij
@@ -396,7 +403,10 @@ c to the list of weights using the add_wgt subroutine
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
-     $      amp_split_wgtdegrem_lxi(iamp).eq.0d0) cycle
+     $      amp_split_wgtdegrem_lxi(iamp).eq.0d0.and.
+     $      amp_split_wgtdis_p(iamp).eq.0d0.and.
+     $      amp_split_wgtdis_l(iamp).eq.0d0.and.
+     $      amp_split_wgtdis_d(iamp).eq.0d0) cycle
 
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
@@ -410,9 +420,10 @@ c to the list of weights using the add_wgt subroutine
         endif
         if (y_ij_fks_ev.gt.1d0-deltaS) then
           wgt1=wgt1-amp_split(iamp)*s_c*f_c/g22
-          wgt1=wgt1+(amp_split_wgtdegrem_xi(iamp)+
-     $             amp_split_wgtdegrem_lxi(iamp)*log(xi_i_fks_cnt(1)))*
-     $       f_dc/g22
+          wgt1=wgt1+
+     $         (amp_split_wgtdegrem_xi(iamp)+amp_split_wgtdis_p(iamp)+
+     $         (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtdis_l(iamp))
+     $           *log(xi_i_fks_cnt(1)))*f_dc/g22
           wgt3=amp_split_wgtdegrem_muF(iamp)*f_dc/g22
         else
           wgt3=0d0
@@ -443,6 +454,13 @@ c value to the list of weights using the add_wgt subroutine
       common /to_amp_split_deg/amp_split_wgtdegrem_xi,
      $                         amp_split_wgtdegrem_lxi,
      $                         amp_split_wgtdegrem_muF
+      ! amp_split for the DIS scheme
+      double precision amp_split_wgtdis_p(amp_split_size),
+     $                 amp_split_wgtdis_l(amp_split_size),
+     $                 amp_split_wgtdis_d(amp_split_size)
+      common /to_amp_split_dis/amp_split_wgtdis_p,
+     $                         amp_split_wgtdis_l,
+     $                         amp_split_wgtdis_d
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
      $     ,deg_lxi_sc,g22,replace_MC_subt
       external fks_Sij
@@ -465,6 +483,9 @@ c value to the list of weights using the add_wgt subroutine
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      ! DIS scheme prefactors
+      double precision f_dis_d,f_dis_p,f_dis_l
+      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
       double precision pmass(nexternal)
       include 'pmass.inc'
       call cpu_time(tBefore)
@@ -484,7 +505,10 @@ c value to the list of weights using the add_wgt subroutine
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0.and.
      $      amp_split_wgtdegrem_xi(iamp).eq.0d0.and.
-     $      amp_split_wgtdegrem_lxi(iamp).eq.0d0) cycle
+     $      amp_split_wgtdegrem_lxi(iamp).eq.0d0.and.
+     $      amp_split_wgtdis_p(iamp).eq.0d0.and.
+     $      amp_split_wgtdis_l(iamp).eq.0d0.and.
+     $      amp_split_wgtdis_d(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         g22=g**(QCD_power)
@@ -498,10 +522,15 @@ c value to the list of weights using the add_wgt subroutine
         if (xi_i_fks_cnt(1).lt.xiScut_used .and. 
      $      y_ij_fks_ev.gt.1d0-deltaS) then
           wgt1=wgt1+amp_split(iamp)*s_sc*f_sc/g22
-          wgt1=wgt1+(-(amp_split_wgtdegrem_xi(iamp)+
-     $               amp_split_wgtdegrem_lxi(iamp)*log(xi_i_fks_cnt(1)))*
-     $       f_dsc(1)-(amp_split_wgtdegrem_xi(iamp)*f_dsc(2)+
-     $                 amp_split_wgtdegrem_lxi(iamp)*f_dsc(3)))/g22
+          wgt1=wgt1+
+     $         (-(amp_split_wgtdegrem_xi(iamp)+amp_split_wgtdis_p(iamp)+
+     $           (amp_split_wgtdegrem_lxi(iamp)+amp_split_wgtdis_l(iamp))
+     $              *log(xi_i_fks_cnt(1)))*f_dsc(1)-
+     $           (amp_split_wgtdegrem_xi(iamp)*f_dsc(2)+
+     $            amp_split_wgtdegrem_lxi(iamp)*f_dsc(3))+
+     $            amp_split_wgtdis_d(iamp)*f_dis_d+
+     $            amp_split_wgtdis_p(iamp)*f_dis_p+
+     $            amp_split_wgtdis_l(iamp)*f_dis_l)/g22
           wgt3=-amp_split_wgtdegrem_muF(iamp)*f_dsc(4)/g22
         else
           wgt3=0d0
@@ -1023,6 +1052,10 @@ c terms.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      ! prefactors for the DIS scheme
+      double precision prefact_dis_d,prefact_dis_p,prefact_dis_l
+      double precision f_dis_d,f_dis_p,f_dis_l
+      common/factor_dis/f_dis_d,f_dis_p,f_dis_l
       double precision pmass(nexternal)
       include 'pmass.inc'
       call cpu_time(tBefore)
@@ -1120,6 +1153,16 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
             f_dsc(4)=( prefact_deg+prefact_deg_sxi )*jac_cnt(2)/(shat
      &           /(32*pi**2))*enhance*unwgtfun*fkssymmetryfactorDeg
      &           *vegas_wgt
+            ! prefactor for the DIS scheme
+            prefact_dis_d=xinorm_cnt(1)/xiScut_used/deltaS
+            f_dis_d=prefact_dis_d*jac_cnt(2)/(shat/(32*pi**2))*enhance
+     &           *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+            prefact_dis_p=xinorm_cnt(1)*dlog(xiScut_used)/xiScut_used/deltaS
+            f_dis_p=prefact_dis_p*jac_cnt(2)/(shat/(32*pi**2))*enhance
+     &           *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
+            prefact_dis_l=xinorm_cnt(1)*dlog(xiScut_used)**2/2d0/xiScut_used/deltaS
+            f_dis_l=prefact_dis_l*jac_cnt(2)/(shat/(32*pi**2))*enhance
+     &           *unwgtfun*fkssymmetryfactorDeg*vegas_wgt
          else
             f_c=0d0
             f_dc=0d0
@@ -3476,6 +3519,137 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
       end
 
 
+      subroutine xkplus(col1, col2, ch1, ch2, x, xkk)
+c This function returns the quantity K^{(+)}_{ab}(x), relevant for
+c the MS --> DIS change in the factorization scheme. Notice that
+c there's NO multiplicative (1-x) factor like in the previous functions.
+C the first entry in xkk is for QCD splittings, the second QED
+      implicit none
+      integer col1, col2
+      double precision ch1, ch2
+      double precision x, xkk(2)
+
+      double precision pi, vcf, vtf, vca, xnc
+      parameter (pi=3.14159265358979312D0)
+      parameter (vcf=4.d0/3.d0)
+      parameter (vtf=1.d0/2.d0)
+      parameter (vca=3.d0)
+      parameter (xnc=3.d0)
+
+      include "coupl.inc"
+c
+      if(col1.eq.8.and.col2.eq.8)then ! gg
+        xkk(1)=-2*nf*vtf*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
+        xkk(2)=0d0
+      elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
+     $       (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
+        xkk(1)=vtf*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
+        xkk(2)=dble(abs(col1))*ch1**2*(1-x)*(-(x**2+(1-x)**2)*log(x)+8*x*(1-x)-1)
+      elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
+     $       (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
+        xkk(1)=-vcf*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+        xkk(2)=-ch2**2*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+      elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $       (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
+        xkk(1)=vcf*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+        xkk(2)=ch1**2*(-3.d0/2.d0-(1+x**2)*log(x)+(1-x)*(3+2*x))
+      else
+        write(6,*)'Error in xkplus: wrong values', col1, col2, ch1, ch2
+        stop
+      endif
+      xkk(1) = xkk(1)*g**2
+      xkk(2) = xkk(2)*dble(gal(1))**2
+      return
+      end
+
+
+      subroutine xklog(col1, col2, ch1, ch2, x, xkk)
+c This function returns the quantity K^{(l)}_{ab}(x), relevant for
+c the MS --> DIS change in the factorization scheme. Notice that
+c there's NO multiplicative (1-x) factor like in the previous functions.
+C the first entry in xkk is for QCD splittings, the second QED
+      implicit none
+      integer col1, col2
+      double precision ch1, ch2
+      double precision x, xkk(2)
+
+      double precision pi, vcf, vtf, vca, xnc
+      parameter (pi=3.14159265358979312D0)
+      parameter (vcf=4.d0/3.d0)
+      parameter (vtf=1.d0/2.d0)
+      parameter (vca=3.d0)
+      parameter (xnc=3.d0)
+
+      include "coupl.inc"
+c
+      if(col1.eq.8.and.col2.eq.8)then ! gg
+        xkk(1)=-2*nf*vtf*(1-x)*(x**2+(1-x)**2)
+        xkk(2)=0d0
+      elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
+     $       (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
+        xkk(1)=vtf*(1-x)*(x**2+(1-x)**2)
+        xkk(2)=dble(abs(col1))*ch1**2*(1-x)*(x**2+(1-x)**2)
+      elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
+     $       (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
+        xkk(1)=-vcf*(1+x**2)
+        xkk(2)=-ch2**2*(1+x**2)
+      elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $       (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
+        xkk(1)=vcf*(1+x**2)
+        xkk(2)=ch1**2*(1+x**2)
+      else
+        write(6,*)'Error in xklog: wrong values', col1, col2, ch1, ch2
+        stop
+      endif
+      xkk(1) = xkk(1)*g**2
+      xkk(2) = xkk(2)*dble(gal(1))**2
+      return
+      end
+
+
+      subroutine xkdelta(col1, col2, ch1, ch2, xkk)
+c This function returns the quantity K^{(d)}_{ab}, relevant for
+c the MS --> DIS change in the factorization scheme. 
+C the first entry in xkk is for QCD splittings, the second QED
+      implicit none
+      integer col1, col2
+      double precision ch1, ch2
+      double precision xkk(2)
+
+      double precision pi, vcf, vtf, vca, xnc
+      parameter (pi=3.14159265358979312D0)
+      parameter (vcf=4.d0/3.d0)
+      parameter (vtf=1.d0/2.d0)
+      parameter (vca=3.d0)
+      parameter (xnc=3.d0)
+
+      include "coupl.inc"
+c
+      if(col1.eq.8.and.col2.eq.8)then ! gg
+        xkk(1)=0.d0
+        xkk(2)=0.d0
+      elseif((abs(col1).eq.3.and.abs(col2).eq.3) .or. 
+     $       (dabs(ch1).gt.0d0.and.dabs(ch2).gt.0d0))then ! qq
+        xkk(1)=0.d0
+        xkk(2)=0.d0
+      elseif((col1.eq.8.and.abs(col2).eq.3) .or. 
+     $       (dabs(ch1).eq.0d0.and.dabs(ch2).gt.0d0))then ! gq
+        xkk(1)=vcf*(9.d0/2.d0+pi**2/3.d0)
+        xkk(2)=ch2**2*(9.d0/2.d0+pi**2/3.d0)
+      elseif((abs(col1).eq.3.and.col2.eq.8) .or. 
+     $       (dabs(ch1).gt.0d0.and.dabs(ch2).eq.0d0))then ! qg
+        xkk(1)=-vcf*(9.d0/2.d0+pi**2/3.d0)
+        xkk(2)=-ch1**2*(9.d0/2.d0+pi**2/3.d0)
+      else
+        write(6,*)'Error in xkdelta: wrong values', col1, col2, ch1, ch2
+        stop
+      endif
+      xkk(1) = xkk(1)*g**2
+      xkk(2) = xkk(2)*dble(gal(1))**2
+      return
+      end
+
+
       subroutine AP_reduced(col1, col2, ch1, ch2, t, z, ap)
 c Returns Altarelli-Parisi splitting function summed/averaged over helicities
 c times prefactors such that |M_n+1|^2 = ap * |M_n|^2. This means
@@ -3961,7 +4135,7 @@ c Calculate the eikonal factor
       common /cdelta_used/delta_used
 
       double precision rwgt,shattmp,dot,born_wgt,oo2pi,z,t,ap(2),
-     # apprime(2),xkkern,xnorm
+     # apprime(2),xkkernp(2),xkkernd(2),xkkernl(2),xnorm
       external dot
 
 c Particle types (=color/charges) of i_fks, j_fks and fks_mother
@@ -3993,10 +4167,20 @@ C keep track of each split orders
       common /to_amp_split_deg/amp_split_wgtdegrem_xi,
      $                         amp_split_wgtdegrem_lxi,
      $                         amp_split_wgtdegrem_muF
+      ! amp_split for the DIS scheme
+      double precision amp_split_wgtdis_p(amp_split_size),
+     $                 amp_split_wgtdis_l(amp_split_size),
+     $                 amp_split_wgtdis_d(amp_split_size)
+      common /to_amp_split_dis/amp_split_wgtdis_p,
+     $                         amp_split_wgtdis_l,
+     $                         amp_split_wgtdis_d
       double precision prefact_xi
 
       double precision iden_comp
       common /c_iden_comp/iden_comp
+      ! PDF scheme (DIS or MSbar)
+      character*2 PDFscheme
+      data PDFscheme /'MS'/ ! DI-> dis, MS-> msbar
 
       do iamp = 1, amp_split_size
         amp_split_collrem_xi(iamp) = 0d0
@@ -4004,6 +4188,9 @@ C keep track of each split orders
         amp_split_wgtdegrem_xi(iamp) = 0d0
         amp_split_wgtdegrem_lxi(iamp) = 0d0
         amp_split_wgtdegrem_muF(iamp) = 0d0
+        amp_split_wgtdis_p(iamp) = 0d0
+        amp_split_wgtdis_l(iamp) = 0d0
+        amp_split_wgtdis_d(iamp) = 0d0
       enddo
 
       if(j_fks.gt.nincoming)then
@@ -4048,6 +4235,13 @@ c A factor gS^2 is included in the Altarelli-Parisi kernels
       call AP_reduced(m_type,i_type,ch_m,ch_i,t,z,ap)
       call AP_reduced_prime(m_type,i_type,ch_m,ch_i,t,z,apprime)
 
+      ! call the DIS kernels here 
+      !   p-> [1/(1-z)]_+  
+      !   l-> [log(1-z)/(1-z)]_+  
+      !   d-> delta(1-z)
+      call xkplus(m_type,i_type,ch_m,ch_i,z,xkkernp)
+      call xkdelta(m_type,i_type,ch_m,ch_i,xkkernd)
+      call xklog(m_type,i_type,ch_m,ch_i,z,xkkernl)
 
       collrem_xi=0.d0
       collrem_lxi=0.d0
@@ -4077,14 +4271,10 @@ C check if any extra_cnt is needed
            wgt1(2) = ans_cnt(2,iord)
         endif
         
-c Insert here proper functions for PDF change of scheme. With xkkern=0.d0
-c one assumes MSbar
-        xkkern=0.d0
-
         if (iord.eq.qcd_pos) iap = 1
         if (iord.eq.qed_pos) iap = 2
         collrem_xi_tmp=ap(iap)*log(shat*delta_used/(2*q2fact(j_fks))) -
-     #           apprime(iap) - xkkern 
+     #           apprime(iap) 
         collrem_lxi_tmp=2*ap(iap)
 
 c The partonic flux 1/(2*s) is inserted in genps. Thus, an extra 
@@ -4104,12 +4294,21 @@ c has to be inserted here
      &     dble(amp_split_cnt(iamp,1,iord))*oo2pi*collrem_lxi_tmp*xnorm
 
           prefact_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
-     &               apprime(iap) - xkkern
+     &               apprime(iap)
           amp_split_wgtdegrem_xi(iamp) = amp_split_wgtdegrem_xi(iamp)+
      &     oo2pi*dble(amp_split_cnt(iamp,1,iord))*prefact_xi*xnorm
           amp_split_wgtdegrem_lxi(iamp) = amp_split_collrem_lxi(iamp)
           amp_split_wgtdegrem_muF(iamp) = amp_split_wgtdegrem_muF(iamp)-
      &     oo2pi*dble(amp_split_cnt(iamp,1,iord))*ap(iap)*xnorm
+          ! amp split for the DIS scheme
+          if (PDFscheme.eq.'DI') then
+            amp_split_wgtdis_p(iamp) = amp_split_wgtdis_p(iamp) - 
+     $       dble(amp_split_cnt(iamp,1,iord))*xkkernp(iap)*oo2pi*xnorm
+            amp_split_wgtdis_l(iamp) = amp_split_wgtdis_l(iamp) - 
+     $       dble(amp_split_cnt(iamp,1,iord))*xkkernl(iap)*oo2pi*xnorm
+            amp_split_wgtdis_d(iamp) = amp_split_wgtdis_d(iamp) - 
+     $       dble(amp_split_cnt(iamp,1,iord))*xkkernd(iap)*oo2pi*xnorm
+          endif
         enddo
 
       enddo
