@@ -294,7 +294,7 @@ class Coupling(UFOBaseClass):
                     #else:
                 def substitution(matchedObj):
                     return matchedObj.group('first')+"("+ctpar.pole(x)+")"+matchedObj.group('second')
-                       pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\(|\s)(?P<name>"+ctpar.name+r")(?P<second>\Z|\*|\+|\-|\)|/|\\|\s)")
+                pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\(|\s)(?P<name>"+ctpar.name+r")(?P<second>\Z|\*|\+|\-|\)|/|\\|\s)")
                 tempvalue2 = tempvalue
                 tempvalue = pattern.sub(substitution,tempvalue)
                 num = numbermatch[i]-1		
