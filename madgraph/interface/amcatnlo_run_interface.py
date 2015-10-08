@@ -1332,6 +1332,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
+            if self.ninitial == 1:
+                raise aMCatNLOError('Decay processes can only be run at fixed order.')
             mode_dict = {'aMC@NLO': 'all', 'aMC@LO': 'born',\
                          'noshower': 'all', 'noshowerLO': 'born'}
             shower = self.run_card['parton_shower'].upper()
@@ -2109,7 +2111,15 @@ RESTART = %(mint_mode)s
         proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
         (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
                 self.run_card['ebeam1'], self.run_card['ebeam2'])
-        
+
+        if self.ninitial == 1:
+            self.cross_sect_dict['unit']='GeV'
+            self.cross_sect_dict['xsec_string']='(Partial) decay width'
+            self.cross_sect_dict['axsec_string']='(Partial) abs(decay width)'
+        else:
+            self.cross_sect_dict['unit']='pb'
+            self.cross_sect_dict['xsec_string']='Total cross-section'
+            self.cross_sect_dict['axsec_string']='Total abs(cross-section)'
         # Gather some basic statistics for the run and extracted from the log files.
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
@@ -2135,13 +2145,13 @@ RESTART = %(mint_mode)s
             if step != 2:
                 message = status[step] + '\n\n      Intermediate results:' + \
                     ('\n      Random seed: %(randinit)d' + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' + \
-                     '\n      Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb \n') \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
+                     '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
                      % self.cross_sect_dict
             else:
         
                 message = '\n      ' + status[step] + proc_info + \
-                          '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
+                          '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                         self.cross_sect_dict
 
                 if self.run_card['nevents']>=10000 and self.run_card['reweight_scale']:
@@ -2170,15 +2180,15 @@ RESTART = %(mint_mode)s
                       'Final results and run summary:']
             if (not done) and (step == 0):
                 message = '\n      ' + status[0] + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                              self.cross_sect_dict
             elif not done:
                 message = '\n      ' + status[1] + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                              self.cross_sect_dict
             elif done:
                 message = '\n      ' + status[2] + proc_info + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                              self.cross_sect_dict
                 if self.run_card['reweight_scale']:
                     if self.run_card['ickkw'] != -1:
