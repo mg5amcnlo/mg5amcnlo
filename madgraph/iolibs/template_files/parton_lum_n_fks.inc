@@ -54,7 +54,7 @@ C ----------
 %(pdf_lines)s
       endif
       do i=1,IPROC
-        if (nexternal.eq.2) then
+        if (nincoming.eq.2) then
            lum = lum + pd(i) * conv 
         else
            lum = lum + pd(i)

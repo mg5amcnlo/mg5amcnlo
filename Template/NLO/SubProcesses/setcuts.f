@@ -91,7 +91,6 @@ c
             lpp(2)=0
             ebeam(1)=pmass(1)/2d0
             ebeam(2)=pmass(1)/2d0
-            fixed_ren_scale=.false.
          endif
 c-check consistency of maxjetflavor in the run_card and with Nf
 c specified in coupl.inc
