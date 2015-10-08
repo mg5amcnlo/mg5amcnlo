@@ -211,7 +211,8 @@ c Print the map to the screen
       include "appl_common.inc"
 *
       character*200 buffer
-      integer procnum,found,i,l,j,ll
+      integer procnum,i,l,j,ll,found_a,found_m
+      logical found_appl(mxpdflumi),found_mg(maxproc)
       integer  nmatch_total
 
 *     npdflumi is the number of pdf luminosities in this particular process
@@ -341,33 +342,29 @@ c Print the map to the screen
 *     Be careful with all possible permutations in initial_parton_map!
 *     Check all possible npdflumi conbinations until a match is found
          do kpdflumi=1,npdflumi
-*     First, check that the same number of 
-*     parton subprocesses is used
-            if(maxproc_used.ne.nproc(kpdflumi)) cycle
-            if(flav_map_debug) then
-               write(6,*) " "
-               write(6,*) " kpdflumi = ",kpdflumi
-               write(6,*) " nproc(kpdflumi) = ",nproc(kpdflumi)
-               do l=1,nproc(kpdflumi)
-                  write(6,*) l,pdgs(1,l,kpdflumi),pdgs(2,l,kpdflumi)
-               enddo
-               write(6,*) " "
-            endif
-            
+
 *     Initialization
-            found = 0
+            do l=1,nproc(kpdflumi)
+               found_appl(l) = .false.
+            enddo
+            do ll=1,maxproc_used
+               found_mg(ll) = .false.
+            enddo
+            found_a=0
+            found_m=0
 
 *     Look for all possible pairs of
 *     a) pdgs(1,l,kpdflumi),pdgs(2,l,kpdflumi) and
 *     b) IDUP(1,ll),  IDUP(2,ll)
 *     with kpdflumi fixed
             do l=1,nproc(kpdflumi)
-               do ll=1,nproc(kpdflumi)
+               do ll=1,maxproc_used
                   if ( ( pdgs(1,l,kpdflumi).eq.
      1                 IDUP(1,ll).and.pdgs(2,l,kpdflumi).
      2                 eq.IDUP(2,ll) ) ) 
      4                 then
-                     found = found + 1
+                     found_appl(l)=.true.
+                     found_mg(ll)=.true.
                      if(flav_map_debug) then
                         write(6,*) "match found!"
                         write(6,*) "pdgs = ",pdgs(1,l,kpdflumi),
@@ -377,8 +374,15 @@ c Print the map to the screen
                   endif
                enddo
             enddo
+            do l=1,nproc(kpdflumi)
+               if (found_appl(l)) found_a=found_a+1
+            enddo
+            do ll=1,maxproc_used
+               if (found_mg(ll)) found_m=found_m+1
+            enddo
 *
-            if (found.eq.nproc(kpdflumi)) then
+            if ( found_a.eq.nproc(kpdflumi) .and.
+     &           found_m.eq.maxproc_used ) then
                if(flav_map_debug) then
                   write(6,*) " ------------------------------- "
                   write(6,*) "         Match found!"
@@ -389,7 +393,7 @@ c Print the map to the screen
                nmatch_total = nmatch_total+1
             endif
          enddo
-         if(flavour_map(nFKSprocess).eq.0) then
+         if (nmatch_total.ne.nFKSprocess) then
             write(6,*) 
      1           "Problem with setup_flavourmap in iproc_map.f"
             write(6,*) "nFKSprocess = ",nFKSprocess
@@ -398,17 +402,6 @@ c Print the map to the screen
             stop
          endif
       enddo
-      
-*     write(6,*) " "
-*     write(6,*) "  nmatch_total = ", nmatch_total
-*     write(6,*) " "
-      if( nmatch_total.ne.fks_configs) then
-         write(6,*) 
-     1        "Problem with setup_flavourmap  in iproc_map.f"
-         write(6,*) "nmatch_total, fks_configs"
-         write(6,*) nmatch_total, fks_configs
-         stop
-      endif
       
 *     Check flavor map properly initialized
 *     All the entries of flavour_map(1:nFKSprocess) must be from

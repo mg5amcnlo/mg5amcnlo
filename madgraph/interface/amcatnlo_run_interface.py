@@ -2033,6 +2033,8 @@ RESTART = %(mint_mode)s
         # If doing the applgrid-stuff, also combine those grids
         # and put those in the Events/run* folder
         if self.run_card['iappl'] != 0:
+            cross=self.cross_sect_dict['xsect']
+            error=self.cross_sect_dict['errt']
             self.applgrid_combine(cross,error)
 
 
