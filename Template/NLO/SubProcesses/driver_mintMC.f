@@ -108,6 +108,11 @@ C-----
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
+      if (nincoming.ne.2) then
+         write (*,*) 'Decay processes not supported for'/
+     &        /' event generation'
+         stop 1
+      endif
 
 c     Read general MadFKS parameters
 c
