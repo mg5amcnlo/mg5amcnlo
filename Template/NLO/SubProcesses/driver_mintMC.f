@@ -774,6 +774,8 @@ c From dsample_fks
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
@@ -832,6 +834,15 @@ c "npNLO".
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+         if (ini_fin_fks.eq.1) then
+            do while (fks_j_d(nFKS_picked).le.nincoming) 
+               call get_MC_integer(1,fks_configs,nFKS_picked,vol1)
+            enddo
+         elseif (ini_fin_fks.eq.2) then
+            do while (fks_j_d(nFKS_picked).gt.nincoming) 
+               call get_MC_integer(1,fks_configs,nFKS_picked,vol1)
+            enddo
+         endif
 
 c The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -846,7 +857,11 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody,iconfig)
-         jac=1d0
+         if (ini_fin_fks.eq.0) then
+            jac=1d0
+         else
+            jac=0.5d0
+         endif
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
