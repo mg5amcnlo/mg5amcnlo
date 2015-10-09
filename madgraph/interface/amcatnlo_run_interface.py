@@ -2108,9 +2108,12 @@ RESTART = %(mint_mode)s
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
         lpp = {0:'l', 1:'p', -1:'pbar'}
-        proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
-                self.run_card['ebeam1'], self.run_card['ebeam2'])
+        if self.ninitial == 1:
+            proc_info = '\n      Process %s' % process[:-3]
+        else:
+            proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
+                (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
+                 self.run_card['ebeam1'], self.run_card['ebeam2'])
 
         if self.ninitial == 1:
             self.cross_sect_dict['unit']='GeV'
