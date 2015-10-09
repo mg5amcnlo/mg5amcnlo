@@ -328,7 +328,7 @@ c common block that is filled by this subroutine
 c     debug stuff
       double precision temp
       logical debug_granny
-      parameter (debug_granny=.true.)
+      parameter (debug_granny=.false.)
       double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
      &     ,y_ij_fks_ev_der_max
       integer ntot_granny,derntot,ncase(0:6)
@@ -1696,7 +1696,7 @@ c
       x3len_i_fks=E_i_fks
       b2m4ac=xi_i_fks**2*cffA2 + xi_i_fks*cffB2 + cffC2
       if(b2m4ac.le.0.d0)then
-         if(abs(b2m4ac).lt.1.d-8)then
+         if(abs(b2m4ac).lt.1.d-3)then
             b2m4ac=0.d0
          else
             write(*,*)'Fatal error #6 in one_tree'
