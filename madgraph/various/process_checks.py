@@ -3536,7 +3536,7 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
          " process involves any resonating particle whose LO decay is "+
          "mediated by one of these orders.")
         logger.warning("You can use the syntax '[virt=all]' to automatically"+
-                                    "include all loops supported by the model.")
+                                 " include all loops supported by the model.")
         logger.warning("------------------------------------------------------")
 
     if len(multiprocess_nwa.get('perturbation_couplings'))>0 and \

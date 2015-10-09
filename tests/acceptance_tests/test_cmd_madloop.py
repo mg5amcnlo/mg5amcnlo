@@ -458,13 +458,16 @@ class TestCmdLoop(unittest.TestCase):
                     pass
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
-        except Exception as e:
+        except KeyError as e:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             for mode in ['NWA','CMS']:
-                shutil.rmtree(pjoin(MG5DIR,output_name%mode))
-            for file in files:
                 try:
-                    os.remove(pjoin(MG5DIR,file))
+                    shutil.rmtree(pjoin(MG5DIR,output_name%mode))
+                except:
+                    pass
+            for f in files:
+                try:
+                    os.remove(pjoin(MG5DIR,f))
                 except:
                     pass
             raise e

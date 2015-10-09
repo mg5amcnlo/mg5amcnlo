@@ -24,9 +24,7 @@ if [[ ! -e events.tree || ! -e xsecs.tree ]];then
     exit
 fi
 
-echo Running root
-root -q -b -l ../bin/internal/read_tree_files.C &> /dev/null
-echo Creating plots
+echo Creating matching plots
 root -q -b -l ../bin/internal/create_matching_plots.C &> /dev/null
 mv pythia.root $1/$2_pythia.root
 
