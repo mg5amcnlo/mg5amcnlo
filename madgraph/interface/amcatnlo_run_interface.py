@@ -4325,7 +4325,8 @@ RESTART = %(mint_mode)s
         answers = list(available_mode) + ['auto', 'done']
         alias = {}
         for id, key in enumerate(switch_order):
-            if switch[key] != void and switch[key] in allowed_switch_value[key]:
+            if switch[key] != void and switch[key] in allowed_switch_value[key] and \
+                len(allowed_switch_value[key]) >1:
                 answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
                 #allow lower case for on/off
                 alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
