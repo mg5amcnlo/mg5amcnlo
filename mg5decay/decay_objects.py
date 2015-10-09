@@ -1990,7 +1990,7 @@ class DecayModel(model_reader.ModelReader):
 
     def running_externals(self, q, loopnum=2):
         """ Recalculate external parameters at the given scale. """
-
+        
         # Raise error for wrong type of q
         if not isinstance(q, int) and not isinstance(q, long) and \
                 not isinstance(q, float):
@@ -2113,7 +2113,8 @@ class DecayModel(model_reader.ModelReader):
             if loopnum == 3:
                 f = b0[nf]*t + f3(a_in) - f3(a_out)
                 fp = 1./(a_out**2 * (1. + c1[nf]*a_out + c2[nf]* a_out**2))
-
+            if fp == 0:
+                return a_in
             a_out = a_out - f/fp
             delta = abs(f/fp/a_out)
 
