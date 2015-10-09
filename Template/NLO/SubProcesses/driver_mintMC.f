@@ -767,6 +767,7 @@ c From dsample_fks
       include 'nFKSconfigs.inc'
       include 'c_weight.inc'
       include 'run.inc'
+      include 'fks_info.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
@@ -835,12 +836,14 @@ c "npNLO".
          call update_vegas_x(xx,x)
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
          if (ini_fin_fks.eq.1) then
-            do while (fks_j_d(nFKS_picked).le.nincoming) 
-               call get_MC_integer(1,fks_configs,nFKS_picked,vol1)
+            do while (fks_j_d(proc_map(proc_map(0,1),1)).le.nincoming) 
+               call get_MC_integer(1,fks_configs,proc_map(proc_map(0,1)
+     $              ,1),vol1)
             enddo
          elseif (ini_fin_fks.eq.2) then
-            do while (fks_j_d(nFKS_picked).gt.nincoming) 
-               call get_MC_integer(1,fks_configs,nFKS_picked,vol1)
+            do while (fks_j_d(proc_map(proc_map(0,1),1)).gt.nincoming) 
+               call get_MC_integer(1,fks_configs,proc_map(proc_map(0,1)
+     $              ,1),vol1)
             enddo
          endif
 
