@@ -574,10 +574,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
-            proc_charac = banner_mod.ProcCharacteristic()
+            proc_charac = self._curr_exporter.proc_characteristic 
             for charac in ['has_isr', 'has_fsr', 'has_loops']:
                 proc_charac[charac] = self._curr_matrix_elements[charac]
-            proc_charac.write(pjoin(path, 'proc_characteristics'))
+
 
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):

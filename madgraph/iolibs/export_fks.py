@@ -539,6 +539,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         self.write_nexternal_file(writers.FortranWriter(filename),
                              nexternal, ninitial)
+        self.proc_characteristic['ninitial'] = ninitial
+        self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
     
         filename = 'pmass.inc'
         try:
@@ -704,7 +706,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
         self.proc_characteristic['grouped_matrix'] = False
-        
+        self.create_proc_charac()
+
         self.create_run_card(matrix_elements, history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
@@ -1223,6 +1226,8 @@ end
 
     def write_real_matrix_elements(self, matrix_element, fortran_model):
         """writes the matrix_i.f files which contain the real matrix elements""" 
+
+
 
         for n, fksreal in enumerate(matrix_element.real_processes):
             filename = 'matrix_%d.f' % (n + 1)
