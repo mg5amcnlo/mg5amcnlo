@@ -121,7 +121,7 @@ class Particle(UFOBaseClass):
         elif spin == 5:
             return 'double'
         elif spin == -1:
-	    return 'dashed' #            return 'dotted' ## not suported yet
+            return 'dashed' #            return 'dotted' ## not suported yet
         else:
             return 'dashed' # not supported yet
 
