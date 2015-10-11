@@ -942,6 +942,11 @@ class ReweightInterface(extended_cmd.Cmd):
         commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
         
+        #multiparticles
+        print self.banner.get('proc_card', 'multiparticles')
+        for name, content in self.banner.get('proc_card', 'multiparticles'):
+            mgcmd.exec_cmd("define %s = %s" % (name, content))
+        
         # 2. compute the production matrix element -----------------------------
         processes = [line[9:].strip() for line in self.banner.proc_card
                      if line.startswith('generate')]

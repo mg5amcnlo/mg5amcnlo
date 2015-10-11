@@ -480,7 +480,7 @@ class LoopDiagram(base_objects.Diagram):
         if(len(self['tag'][0][1])<=1):
             return True
         # massless tadpole
-       	return any([part['mass'].lower()=='zero' for pdg,part in \
+        return any([part['mass'].lower()=='zero' for pdg,part in \
                                          model.get('particle_dict').items() if \
                                              pdg==abs(self['tag'][0][0]['id'])])
 

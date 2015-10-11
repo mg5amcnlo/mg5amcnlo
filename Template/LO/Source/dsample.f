@@ -1608,7 +1608,7 @@ c-----
       if (iteration .eq. cur_it) then
 c        Add the current point to the DiscreteSamplerGrid
          call add_entry_to_discrete_dimensions(wgt)
-         if (kn.eq.0) then
+         if (kn.eq.0.and.(iteration.eq.1.or.use_cut.eq.-2)) then
             ! ensure that all cumulative variable are at zero (usefull for reset)
             twgt1 = 0d0         !
             iavg = 0            !Vars for averging to increase err estimate

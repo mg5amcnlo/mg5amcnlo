@@ -1026,7 +1026,7 @@ class ProcessExporterMatchbox(ProcessExporterCPP):
             ret_lines.append("// Calculate wavefunctions for all processes")
             ret_lines.append(self.get_calculate_wavefunctions(\
                 self.wavefunctions, self.amplitudes))
-	    ret_lines.append(self.get_jamp_lines(color_amplitudes[0]))
+            ret_lines.append(self.get_jamp_lines(color_amplitudes[0]))
             ret_lines.append("}")
         else:
             ret_lines.extend([self.get_sigmaKin_single_process(i, me) \
@@ -1104,7 +1104,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             self.version = opts['version']
             del opts['version']
         else:
-            misc.sprint(opts)
             self.version='8.2'
         super(ProcessExporterPythia8, self).__init__(*args, **opts)
 
@@ -1995,6 +1994,10 @@ class UFOModelConverterCPP(object):
         replace_dict['print_dependent_couplings'] = \
                                self.write_print_parameters(self.coups_dep.values())
 
+        if 'include_prefix' not in replace_dict:
+            replace_dict['include_prefix'] = ''
+
+
         file_h = read_template_file(self.param_template_h) % \
                  replace_dict
         file_cc = read_template_file(self.param_template_cc) % \
@@ -2227,7 +2230,6 @@ def generate_example_file_pythia8(path,
 
     if not main_file_name:
         num = 1
-        misc.sprint(filepath)
         while os.path.exists(os.path.join(filepath,
                                     'main_%s_%i.cc' % (exporter.model_name, num))) or \
               os.path.exists(os.path.join(filepath,
@@ -2410,7 +2412,6 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
         if self.default_replace_dict['version'] == "8.2":
             path = 'pythia8.2_makefile.inc'
         else:
-            misc.sprint(self.default_replace_dict['version'])
             path = 'pythia8_makefile.inc'
         makefile = read_template_file(path) % replace_dict
 

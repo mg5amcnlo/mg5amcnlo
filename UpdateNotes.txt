@@ -4,12 +4,13 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Allow new syntax for the param_card: instead of an entry you can enter scan:[val1, val2,...]
             To perform a scan on this parameter.
         OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
-	RF: For fixed order NLO runs, when the required accuracy is set rather small, do an extra integration step.
+	RF: Rewriting of job-control for NLO processes. Better accuracy estimates for FO processes
 	RF: Fix for factorisation scale setting in FxFx merging when very large difference in scale in the
  	    non-QCD part of a process. 
 	RF: Better discarding of numerical instabilities in the real-emission matrix elements. Only of interested for
 	    processes which have jets at Born level, but do not require generation cut (like t-channel single-top). 
 	RF: Added an option to the run_card to allow for easier variation of the shower starting scale (NLO only).
+	RF: Fixed a problem in the setting of the flavour map used for runs with iAPPL >= 1. 
 
 2.3.2(20/08/15)   
         OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)

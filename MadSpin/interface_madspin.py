@@ -749,7 +749,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # 2. Generate the events requested
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
-            modelpath = self.model.get('modelpath')
+            modelpath = self.model.get('modelpath+restriction')
             mg5.exec_cmd("import model %s" % modelpath)      
             to_event = {}
             for pdg, nb_needed in to_decay.items():

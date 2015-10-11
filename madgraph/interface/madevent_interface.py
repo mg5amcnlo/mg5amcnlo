@@ -3213,8 +3213,11 @@ Beware that this can be dangerous for local multicore runs.""")
                     self.results.add_detail('cross_pythia', sigma_m)
                     self.results.add_detail('nb_event_pythia', Nacc)
                     #compute pythia error
-                    error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
-                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error']
+                    if Nacc:                    
+                        error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    else:
+                        error_m = 10000 * sigma_m
                     # works both for fixed number of generated events and fixed accepted events
                     self.results.add_detail('error_pythia', error_m)
                 break                 
@@ -3514,6 +3517,7 @@ Beware that this can be dangerous for local multicore runs.""")
         logger.info('Calculating systematics for run %s' % self.run_name)
         
         self.ask_edit_cards(['run_card'], args)
+        self.run_card = banner_mod.RunCard(pjoin(self.medir, 'Cards', 'run_card.dat'))
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -3700,7 +3704,7 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(cwd,G,'ftn25'))
                         except:
                             pass
-                    
+
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,

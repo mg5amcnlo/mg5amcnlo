@@ -313,7 +313,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | ASEC group
                       | RE group
                       | IM group
-		              | ARG group
+                      | ARG group
                       | SQRT group
                       | CONJ group
                       | REGLOG group
@@ -410,7 +410,7 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                       | ASEC group
                       | RE group
                       | IM group
-	                  | ARG group
+                      | ARG group
                       | SQRT group
                       | CONJ group
                       | TAN group

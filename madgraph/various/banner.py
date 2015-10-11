@@ -536,7 +536,7 @@ class Banner(dict):
         if len(arg) == 1:
             if tag == 'mg5proccard':
                 try:
-                    return card.info[arg[0]]
+                    return card.get(arg[0])
                 except KeyError, error:
                     if 'default' in opt:
                         return opt['default']
@@ -850,11 +850,18 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
-    def __getattr__(self, tag, default=None):
+    def get(self, tag, default=None):
         if isinstance(tag, int):
             list.__getattr__(self, tag)
         elif tag == 'info' or tag == "__setstate__":
             return default #for pickle
+        elif tag == "multiparticles":
+            out = []
+            for line in self:
+                if line.startswith('define'):
+                    name, content = line[7:].split('=',1)
+                    out.append((name, content))
+            return out 
         else:
             return self.info[tag]
             
@@ -2007,7 +2014,7 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "1|4|3|2")
+        self.add_param("MLReductionLib", "1|3|2")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)
