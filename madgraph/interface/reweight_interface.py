@@ -922,7 +922,6 @@ class ReweightInterface(extended_cmd.Cmd):
         mgcmd.exec_cmd(commandline)
         
         #multiparticles
-        print self.banner.get('proc_card', 'multiparticles')
         for name, content in self.banner.get('proc_card', 'multiparticles'):
             mgcmd.exec_cmd("define %s = %s" % (name, content))
         
