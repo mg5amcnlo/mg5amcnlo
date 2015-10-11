@@ -204,7 +204,7 @@ class MECmdShell(IOTests.IOTestManager):
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         # this check that the value of lpp/beam are change automatically
         self.assertTrue('0   = lpp1' in card)
-        self.assertTrue('500   = ebeam' in card)
+        self.assertTrue('500.0   = ebeam' in card)
         # pass to the object
         card = banner.RunCardNLO(card)
         card['pdlabel'] = "lhapdf"

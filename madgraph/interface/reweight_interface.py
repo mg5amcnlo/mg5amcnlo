@@ -369,22 +369,36 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me_second')
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-            
-        ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
-        ff.write(self.banner['slha'])
-        ff.close()
-        ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
-        ff.write(self.banner['slha'])
-        ff.close()        
-        cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
+        
+        if not '--keep_card' in args:
+            ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
+            ff.write(self.banner['slha'])
+            ff.close()
+            ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
+            ff.write(self.banner['slha'])
+            ff.close()      
+            cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
-        self.stored_line = None
-        #self.define_child_cmd_interface(cmd, interface=False)
-        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()        
+            self.stored_line = None
+        
+        # check for potential scan in the new card 
+        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
+        pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
+        param_card_iterator = []
+        if pattern_scan.search(new_card):
+            if not isinstance(self.mother, cmd.CmdShell): 
+                raise Exception, "scan are not allowed on the Web"
+            # at least one scan parameter found. create an iterator to go trough the cards
+            main_card = check_param_card.ParamCardIterator(new_card)
+
+            param_card_iterator = main_card
+            first_card = param_card_iterator.next(autostart=True)
+            new_card = first_card.write()
+            first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))                
         # check if "Auto" is present for a width parameter
         if "auto" in new_card.lower():            
-            self.mother.check_param_card(pjoin(path_me, 'rw_me', 'Cards', 'param_card.dat'))
-            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read() 
+            self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
 
         # Find new tag in the banner and add information if needed
         if 'initrwgt' in self.banner:
@@ -614,6 +628,13 @@ class ReweightInterface(extended_cmd.Cmd):
         self.terminate_fortran_executables(new_card_only=True)
         #store result
         self.all_cross_section[rewgtid] = (cross, error)
+        
+        # perform the scanning
+        if param_card_iterator:
+            for card in param_card_iterator:
+                card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
+        
     
     def do_set(self, line):
         "Not in help"

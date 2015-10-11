@@ -345,11 +345,6 @@ C     Call DSIGPROC to calculate sigma for process
 C     Reset ALLOW_HELICITY_GRID_ENTRIES
       ALLOW_HELICITY_GRID_ENTRIES = .TRUE.
 
-      IF(GROUPED_MC_GRID_STATUS.GE.1) THEN
-        CALL MAP_3_TO_1(ICONF,IPROC,IMIRROR,MAXSPROC,2,LMAPPED)
-        CALL DS_ADD_ENTRY('grouped_processes',LMAPPED,(DSIG/SELPROC(IMI
-     $   RROR,IPROC,ICONF)))
-      ENDIF
 
       IF(DSIG.GT.0D0)THEN
 C       Update summed weight and number of events

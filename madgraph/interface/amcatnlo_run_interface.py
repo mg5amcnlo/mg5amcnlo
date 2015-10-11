@@ -1155,7 +1155,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         functions, such as generate_events or calculate_xsect
         mode gives the list of switch needed for the computation (usefull for banner_run)
         """
-        
+
         if not argss and not options:
             self.start_time = time.time()
             argss = self.split_arg(line)
@@ -1164,6 +1164,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options = options.__dict__
             self.check_launch(argss, options)
 
+        
         if 'run_name' in options.keys() and options['run_name']:
             self.run_name = options['run_name']
             # if a dir with the given run_name already exists
@@ -1183,6 +1184,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         if not switch:
             mode = argss[0]
+
             if mode in ['LO', 'NLO']:
                 options['parton'] = True
             mode = self.ask_run_configuration(mode, options)
@@ -1229,7 +1231,33 @@ you have to remove some events after showering 'by hand'.
 Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
-
+        #check if the param_card defines a scan.
+        if self.param_card_iterator:
+            param_card_iterator = self.param_card_iterator
+            self.param_card_iterator = [] #avoid to next generate go trough here
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            orig_name = self.run_name
+            #go trough the scal
+            for i,card in enumerate(param_card_iterator):
+                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                if not options['force']:
+                    options['force'] = True
+                if options['run_name']:
+                    options['run_name'] = '%s_%s' % (orig_name, i+1)
+                if not argss:
+                    argss = [mode, "-f"]
+                elif argss[0] == "auto":
+                    argss[0] = mode
+                self.do_launch("", options=options, argss=argss, switch=switch)
+                #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            #restore original param_card
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            param_card_iterator.write_summary(path)
+            
     ############################################################################      
     def do_compile(self, line):
         """Advanced commands: just compile the executables """
@@ -4230,7 +4258,6 @@ RESTART = %(mint_mode)s
             switch = switch_default
         else:
             switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
-
         default_switch = ['ON', 'OFF']
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,
@@ -4329,7 +4356,7 @@ RESTART = %(mint_mode)s
             elif answer in ['0', 'auto', 'done']:
                 return 
             elif answer in special_values:
-                logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                logger.info('Enter mode value: %s. Go to the related mode' % answer, '$MG:color:BLACK')
                 #assign_switch('reweight', 'OFF')
                 #assign_switch('madspin', 'OFF')
                 if answer == 'LO':

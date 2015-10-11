@@ -2026,6 +2026,22 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed    
             self.store_result()
+            
+            if self.param_card_iterator:
+                param_card_iterator = self.param_card_iterator
+                self.param_card_iterator = []
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                #check if the param_card defines a scan.
+                orig_name = self.run_name
+                for card in param_card_iterator:
+                    card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                    self.exec_cmd("generate_events -f ",precmd=True, postcmd=True,errorhandling=False)
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                name = misc.get_scan_name(orig_name, self.run_name)
+                path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+                logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
+                param_card_iterator.write_summary(path)
     
     def do_initMadLoop(self,line):
         """Compile and run MadLoop for a certain number of PS point so as to 
@@ -2322,9 +2338,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode)
         main_name = self.run_name
 
-
-        
-        
+        # check if the param_card requires a scan over parameter.
+        path=pjoin(self.me_dir, 'Cards', 'param_card.dat')
+        self.check_param_card(path, run=False)
+        #store it locally to avoid relaunch
+        param_card_iterator, self.param_card_iterator = self.param_card_iterator, []
         
         crossoversig = 0
         inv_sq_err = 0
@@ -2373,6 +2391,21 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
         
+        if param_card_iterator:
+
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            #check if the param_card defines a scan.
+            orig_name=self.run_name
+            for card in param_card_iterator:
+                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                self.exec_cmd("multi_run %s -f " % nb_run ,precmd=True, postcmd=True,errorhandling=False)
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            scan_name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
+            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            param_card_iterator.write_summary(path)
+    
 
     ############################################################################      
     def do_treatcards(self, line, mode=None, opt=None):
