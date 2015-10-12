@@ -1342,9 +1342,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             # create a list of dictionaries "jobs_to_run" with all the
             # jobs that need to be run
             integration_step=-1
-            jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
+            jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                 req_acc,mode_dict[mode],integration_step,mode,fixed_order=True)
-            jobs_to_collect=copy.copy(jobs_to_run)
             self.prepare_directories(jobs_to_run,mode)
 
             # loop over the integration steps. After every step, check
@@ -1402,9 +1401,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             elif options['only_generation']:
                 logger.info('Generating events starting from existing results')
             
-            jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
+            jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
-            jobs_to_collect=copy.copy(jobs_to_run)
 
             # Make sure to update all the jobs to be ready for the event generation step
             if options['only_generation']:
@@ -1473,6 +1471,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     job['run_mode']=run_mode
                     job['wgt_frac']=1.0
                     jobs_to_run.append(job)
+            jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
         else:
             # if options['only_generation'] is true, we need to loop
             # over all the existing G* directories and create the jobs
@@ -1519,7 +1518,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 integration_step=integration_step-1
             else:
                 self.append_the_results(jobs_to_collect,integration_step)
-        return jobs_to_run,integration_step
+        return jobs_to_run,jobs_to_collect,integration_step
 
     def prepare_directories(self,jobs_to_run,mode,fixed_order=True):
         """Set-up the G* directories for running"""

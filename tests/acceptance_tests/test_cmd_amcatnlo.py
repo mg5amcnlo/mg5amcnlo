@@ -904,7 +904,8 @@ class MECmdShell(IOTests.IOTestManager):
         cross_section = data[i+2]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         try:
-            self.assertAlmostEqual(6011.0, cross_section,delta=50)
+            # By default run to 1% precision: set delta=120 for ~2sigma effect.
+            self.assertAlmostEqual(5933.0, cross_section,delta=120)
         except TypeError:
             self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
