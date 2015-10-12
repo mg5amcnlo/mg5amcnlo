@@ -119,6 +119,11 @@ def compile_dir(*arguments):
             #this can be improved/better written to handle the output
             misc.call(['./%s' % (test)], cwd=this_dir, 
                     stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+            if test == 'check_poles' and os.path.exists(pjoin(this_dir,'MadLoop5_resources')) :
+                tf=tarfile.open(pjoin(this_dir,'MadLoop5_resources.tar.gz'),'w:gz',
+                                                                 dereference=True)
+                tf.add(pjoin(this_dir,'MadLoop5_resources'),arcname='MadLoop5_resources')
+                tf.close()
             
         if not options['reweightonly']:
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
@@ -1400,12 +1405,14 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
             jobs_to_collect=copy.copy(jobs_to_run)
-            self.prepare_directories(jobs_to_run,mode,fixed_order=False)
 
             # Make sure to update all the jobs to be ready for the event generation step
             if options['only_generation']:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,1,mode,mode_dict[mode],fixed_order=False)
+            else:
+                self.prepare_directories(jobs_to_run,mode,fixed_order=False)
+
 
             # Main loop over the three MINT generation steps:
             for mint_step, status in enumerate(mcatnlo_status):
@@ -1413,6 +1420,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     continue
                 self.update_status(status, level='parton')
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
+                if mint_step == 2:
                 self.collect_log_files(jobs_to_run,mint_step)
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
@@ -1689,7 +1697,10 @@ RESTART = %(mint_mode)s
                     jobs_to_collect_new.remove(job)
                 elif nevents > nevt_job:
                     jobs_to_collect_new.remove(job)
-                    nsplit=int(nevents/nevt_job)+1
+                    if nevents % nevt_job != 0 :
+                        nsplit=int(nevents/nevt_job)+1
+                    else:
+                        nsplit=int(nevents/nevt_job)
                     for i in range(1,nsplit+1):
                         job_new=copy.copy(job)
                         left_over=nevents % nsplit
@@ -1771,12 +1782,12 @@ RESTART = %(mint_mode)s
                 req_acc2_inv=nevents
             else:
                 req_acc2_inv=1/(req_acc*req_acc)
-            if step+1 == 1:
+            if step+1 == 1 or step+1 == 2 :
                 # determine the req. accuracy for each of the jobs for Mint-step = 1
                 for job in jobs:
                     accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
                     job['accuracy']=accuracy
-            elif step+1 == 2:
+            if step+1 == 2:
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
                 # number of events each job needs to generate for MINT-step = 2.
                 r=self.get_randinit_seed()
@@ -3817,13 +3828,16 @@ RESTART = %(mint_mode)s
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
 
         # File for the loop (might not be present if MadLoop is not used)
-        if os.path.exists(pjoin(cwd,'MadLoop5_resources')) and \
+        if os.path.exists(pjoin(cwd,'MadLoop5_resources.tar.gz')) and \
                                             cluster.need_transfer(self.options):
             input_files.append(pjoin(cwd, 'MadLoop5_resources.tar.gz'))
+        elif os.path.exists(pjoin(cwd,'MadLoop5_resources')) and \
+                                            cluster.need_transfer(self.options):
             tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar.gz'),'w:gz',
                                                            dereference=True)
             tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
             tf.close()
+            input_files.append(pjoin(cwd, 'MadLoop5_resources.tar.gz'))
                
         if args[1] == 'born' or args[1] == 'all':
             # MADEVENT MINT FO MODE

@@ -219,14 +219,15 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('quit')
 
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
 
         # check the result
-        res = open('%s/Events/run_01_LO/res.txt' % self.path).read()
+        res = open('%s/Events/run_01_LO/res_1.txt' % self.path).read()
 
         pat = re.compile('''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
         \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
@@ -489,7 +490,8 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
 
@@ -508,7 +510,8 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
         
 
     def test_generate_events_shower_scripts(self):
@@ -811,7 +814,8 @@ class MECmdShell(IOTests.IOTestManager):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
@@ -827,7 +831,8 @@ class MECmdShell(IOTests.IOTestManager):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
@@ -863,8 +868,8 @@ class MECmdShell(IOTests.IOTestManager):
         for i,line in enumerate(data):
             if 'Summary:' in line:
                 break
-        #      Run at p-p collider (6500 + 6500 GeV)
-        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+2])
+        #      Run at p-p collider (6500.0 + 6500.0 GeV)
+        self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+2])
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
         cross_section = data[i+3]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
@@ -895,7 +900,7 @@ class MECmdShell(IOTests.IOTestManager):
             if 'Process' in line:
                 break
         #      Run at p-p collider (6500 + 6500 GeV)
-        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+1])
+        self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+1])
         cross_section = data[i+2]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         try:
