@@ -875,8 +875,8 @@ class HwU(Histogram):
             for j, weight in \
                       enumerate(HwU.histo_bin_weight_re.finditer(line_bin)):
                 if j == len(weight_header):
-                    raise ParseError, " There is more bin weights"+\
-                      " specified than expected (%i)"%len(weight_header)
+                    raise HwU.ParseError, "There is more bin weights"+\
+                              " specified than expected (%i)"%len(weight_header)
                 if weight_header[j] == 'boundary_xmin':
                     boundaries[0] = float(weight.group('weight'))
                 elif weight_header[j] == 'boundary_xmax':
