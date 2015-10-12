@@ -450,7 +450,7 @@ class Param_card:
             line=str(card)+'\t'
             param_pos=self.MWparam.CardNb_to_ParameterTag(card)
             for param in range(1,nb_param):
-                    if type(self.MWparam['mw_parameter'][str(param*10+3)])==list:
+                if type(self.MWparam['mw_parameter'][str(param*10+3)])==list:
                     line+=self.MWparam.info['mw_parameter'][str(param*10+3)][param_pos[param-1]]+'\t'
                 else:
                     line+=self.MWparam.info['mw_parameter'][str(param*10+3)]+'\t'
@@ -476,7 +476,7 @@ class Param_card:
         for card in range(start,start+nb_data_by_block[0]):
             line=str(card)+'\t'
             for param in range(1,nb_block+1):
-                    if type(self.MWparam['mw_parameter'][str(param*10+3)])==list:
+                if type(self.MWparam['mw_parameter'][str(param*10+3)])==list:
                     line+=self.MWparam.info['mw_parameter'][str(param*10+3)][card-start]+'\t'
                 else:
                     line+=self.MWparam.info['mw_parameter'][str(param*10+3)]
