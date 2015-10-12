@@ -1737,7 +1737,7 @@ RESTART = %(mint_mode)s
         jobs_new=[]
         if fixed_order:
             if req_acc == -1:
-                if step == 0:
+                if step+1 == 1:
                     npoints = self.run_card['npoints_FO']
                     niters = self.run_card['niters_FO']
                     for job in jobs:
@@ -1745,7 +1745,9 @@ RESTART = %(mint_mode)s
                         job['niters']=niters
                         job['npoints']=npoints
                         jobs_new.append(job)
-                elif step > 0:
+                elif step+1 == 2:
+                    pass
+                elif step+1 > 2:
                     raise aMCatNLOError('Cannot determine number of iterations and PS points '+
                                         'for integration step %i' % step )
             elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or step == 0:
