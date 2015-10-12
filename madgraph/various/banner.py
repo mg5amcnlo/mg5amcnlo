@@ -1627,7 +1627,7 @@ class RunCardLO(RunCard):
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
-        self.add_param("sys_alpsfact", "0.5 1 2", include=False)
+        self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "30 50", include=False)
         self.add_param("sys_pdf", "Ct10nlo.LHgrid", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
@@ -1796,6 +1796,7 @@ class RunCardLO(RunCard):
                 self['use_syst'] = False 
                 self['drjj'] = 0
                 self['drjl'] = 0
+                self['sys_alpsfact'] = "0.5 1 2"
                 
 
     def remove_all_cut(self): 

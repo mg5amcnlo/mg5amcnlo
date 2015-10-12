@@ -4160,6 +4160,12 @@ Beware that this can be dangerous for local multicore runs.""")
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
         self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        
+        if self.run_card['sys_pdf'].lower() in ['', 'f', 'false', 'none', '.false.']:
+            self.run_card['sys_pdf'] = ''
+        if self.run_card['sys_alpsfact'].lower() in ['', 'f', 'false', 'none','.false.']:
+            self.run_card['sys_alpsfact'] = ''
+        
         # check if the scalecorrelation parameter is define:
         if not 'sys_scalecorrelation' in self.run_card:
             self.run_card['sys_scalecorrelation'] = -1
