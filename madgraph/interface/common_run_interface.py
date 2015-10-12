@@ -525,6 +525,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.me_dir = me_dir
         self.options = options
+        
+        self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
 
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
@@ -1592,12 +1594,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
     def check_param_card(self, path, run=True):
-        """Check that all the width are define in the param_card.
-        If some width are set on 'Auto', call the computation tools."""
+        """
+        1) Check that no scan parameter are present
+        2) Check that all the width are define in the param_card.
+        - If a scan parameter is define. create the iterator and recall this fonction 
+          on the first element.
+        - If some width are set on 'Auto', call the computation tools."""
         
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
+        pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg_info = pattern.findall(text)
+               
+        if pattern_scan.search(text):
+            if not isinstance(self, cmd.CmdShell):
+                # we are in web mode => forbid scan due to security risk
+                raise Exception, "Scan are not allowed in web mode"
+            # at least one scan parameter found. create an iterator to go trough the cards
+            main_card = check_param_card.ParamCardIterator(text)
+            self.param_card_iterator = main_card
+            first_card = main_card.next(autostart=True)
+            first_card.write(path)
+            return self.check_param_card(path, run)
+        
+        pdg_info = pattern_width.findall(text)
         if pdg_info:
             if run:
                 logger.info('Computing the width set on auto in the param_card.dat')
@@ -2588,6 +2607,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ edit the value of one parameter in the card"""
         
         args = self.split_arg(line)
+        # fix some formatting problem
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
@@ -2761,6 +2781,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
                                                   and card in ['','param_card']:
+            #special treatment for scan
+            if any(t.startswith('scan') for t in args):
+                index = [i for i,t in enumerate(args) if t.startswith('scan')][0]
+                args = args[:index] + [' '.join(args[index:])]
+                
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 text += ' in the format < set card parameter value>'
@@ -2804,7 +2829,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     text += "You need to match this expression for external program (such pythia)."
                     logger.warning(text)
 
-                if args[-1].lower() in ['default', 'auto', 'auto@nlo']:
+                if args[-1].lower() in ['default', 'auto', 'auto@nlo'] or args[-1].startswith('scan'):
                     self.setP(args[start], key, args[-1])
                 else:
                     try:
@@ -2995,6 +3020,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if block != 'decay':
                     logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
                     return
+            elif value.startswith('scan'):
+                if ':' not in value:
+                    logger.warning('Invalid input: \'scan\' mode requires a \':\' before the definition.')
+                    return
+                tag = value.split(':')[0]
+                tag = tag[4:].strip()
+                if tag and not tag.isdigit():
+                    logger.warning('Invalid input: scan tag need to be integer and not "%s"' % tag)
+                    return
+                
+                
+                pass
             else:
                 try:
                     value = float(value)

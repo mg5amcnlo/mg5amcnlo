@@ -1,7 +1,11 @@
 from __future__ import division
+
+import itertools
 import xml.etree.ElementTree as ET
 import math
+import StringIO
 import os
+import re
 import shutil
 import logging
 
@@ -57,6 +61,9 @@ class Parameter (object):
 
 
         data = data.split()
+        if any(d.startswith('scan') for d in data):
+            position = [i for i,d in enumerate(data) if d.startswith('scan')][0]
+            data = data[:position] + [' '.join(data[position:])] 
         if not len(data):
             return
         try:
@@ -100,7 +107,14 @@ class Parameter (object):
     def __str__(self):
         """ return a SLAH string """
 
+        format = self.format
         if self.format == 'float':
+            try:
+                value = float(self.value)
+            except:
+                format = 'str'
+        
+        if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
@@ -109,11 +123,11 @@ class Parameter (object):
                 return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
-        elif self.format == 'int':
+        elif format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
-        elif self.format == 'str':
+        elif format == 'str':
             if self.lhablock == 'decay':
-                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
+                return 'DECAY %s %s # %s' % (' '.join([str(d) for d in self.lhacode]),self.value, self.comment)
             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
@@ -276,8 +290,8 @@ class ParamCard(dict):
         self.order = []
         
         if isinstance(input_path, ParamCard):
-            self.read(StringIO.StringIO(input_path.write())) 
-            self.input_path = input_path.input_path
+            self.read(input_path.write())
+            self.input_path = input_path.input_path 
         else:
             self.input_path = input_path
             if input_path:
@@ -287,7 +301,10 @@ class ParamCard(dict):
         """ read a card and full this object with the content of the card """
 
         if isinstance(input_path, str):
-            input = open(input_path)
+            if '\n' in input_path:
+                input = StringIO.StringIO(input_path)
+            else:
+                input = open(input_path)
         else:
             input = input_path #Use for banner loading and test
 
@@ -665,6 +682,111 @@ class ParamCardMP(ParamCard):
             fout.writelines(' %s%s = %s_16' % (self.mp_prefix, 
                 variable, ('%e' % value)))
 
+
+
+class ParamCardIterator(ParamCard):
+    """A class keeping track of the scan: flag in the param_card and 
+       having an __iter__() function to scan over all the points of the scan.
+    """
+
+    logging = True
+    def __init__(self, input_path=None):
+        super(ParamCardIterator, self).__init__(input_path=input_path)
+        self.itertag = [] #all the current value use
+        self.cross = []   # keep track of all the cross-section computed 
+        self.param_order = []
+        
+    def __iter__(self):
+        """generate the next param_card (in a abstract way) related to the scan.
+           Technically this generates only the generator."""
+        
+        if hasattr(self, 'iterator'):
+            return self.iterator
+        self.iterator = self.iterate()
+        return self.iterator
+    
+    def next(self, autostart=False):
+        """call the next iteration value"""
+        try:
+            iterator = self.iterator
+        except:
+            if autostart:
+                iterator = self.__iter__()
+            else:
+                raise
+        try:
+            out = iterator.next()
+        except StopIteration:
+            del self.iterator
+            raise
+        return out
+    
+    def iterate(self):
+        """create the actual generator"""
+        all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
+        auto = 'Auto'
+        pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+        # First determine which parameter to change and in which group
+        # so far only explicit value of the scan (no lambda function are allowed)
+        for block in self.order:
+            for param in block:
+                if isinstance(param.value, str) and param.value.strip().lower().startswith('scan'):
+                    try:
+                        key, def_list = pattern.findall(param.value)[0]
+                    except:
+                        raise Exception, "Fail to handle scanning tag: Please check that the syntax is valid"
+                    if key == '': 
+                        key = -1 * len(all_iterators)
+                    if key not in all_iterators:
+                        all_iterators[key] = []
+                    try:
+                        all_iterators[key].append( (param, eval(def_list)))
+                    except SyntaxError:
+                        raise Exception, "Fail to handle your scan definition. Please check your syntax."
+                    
+        keys = all_iterators.keys() # need to fix an order for the scan
+        param_card = ParamCard(self)
+        #store the type of parameter
+        for key in keys:
+            for param, values in all_iterators[key]:
+                self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
+        
+        # do the loop
+        lengths = [range(len(all_iterators[key][0][1])) for key in keys]
+        for positions in itertools.product(*lengths):
+            self.itertag = []
+            if self.logging:
+                logger.info("Create the next param_card in the scan definition", '$MG:color:BLACK')
+            for i, pos in enumerate(positions):
+                key = keys[i]
+                for param, values in all_iterators[key]:
+                    # assign the value in the card.
+                    param_card[param.lhablock].get(param.lhacode).value = values[pos]
+                    self.itertag.append(values[pos])
+                    if self.logging:
+                        logger.info("change parameter %s with code %s to %s", \
+                                   param.lhablock, param.lhacode, values[pos])
+            # retrun the current param_card up to next iteration
+            yield param_card
+        
+    
+    def store_entry(self, run_name, cross):
+        """store the value of the cross-section"""
+        self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross':cross})
+        
+
+    def write_summary(self, path):
+        """ """
+        
+        ff = open(path, 'w')
+        ff.write("#%-19s %-20s %-20s\n" % ('run_name',' '.join(self.param_order), 'cross(pb)'))
+        for info in self.cross:
+            bench = [str(p) for p in info['bench']]
+            cross = info['cross']
+            name = info['run_name']
+            ff.write("%-20s %-20s %-20s \n" % (name,' '.join(bench) ,cross))
+            #ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
+            
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of

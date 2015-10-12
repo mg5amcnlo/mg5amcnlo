@@ -119,6 +119,11 @@ def compile_dir(*arguments):
             #this can be improved/better written to handle the output
             misc.call(['./%s' % (test)], cwd=this_dir, 
                     stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+            if test == 'check_poles' and os.path.exists(pjoin(this_dir,'MadLoop5_resources')) :
+                tf=tarfile.open(pjoin(this_dir,'MadLoop5_resources.tar.gz'),'w:gz',
+                                                                 dereference=True)
+                tf.add(pjoin(this_dir,'MadLoop5_resources'),arcname='MadLoop5_resources')
+                tf.close()
             
         if not options['reweightonly']:
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
@@ -1155,7 +1160,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         functions, such as generate_events or calculate_xsect
         mode gives the list of switch needed for the computation (usefull for banner_run)
         """
-        
+
         if not argss and not options:
             self.start_time = time.time()
             argss = self.split_arg(line)
@@ -1164,6 +1169,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
             options = options.__dict__
             self.check_launch(argss, options)
 
+        
         if 'run_name' in options.keys() and options['run_name']:
             self.run_name = options['run_name']
             # if a dir with the given run_name already exists
@@ -1183,6 +1189,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         if not switch:
             mode = argss[0]
+
             if mode in ['LO', 'NLO']:
                 options['parton'] = True
             mode = self.ask_run_configuration(mode, options)
@@ -1229,7 +1236,33 @@ you have to remove some events after showering 'by hand'.
 Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
 
-
+        #check if the param_card defines a scan.
+        if self.param_card_iterator:
+            param_card_iterator = self.param_card_iterator
+            self.param_card_iterator = [] #avoid to next generate go trough here
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            orig_name = self.run_name
+            #go trough the scal
+            for i,card in enumerate(param_card_iterator):
+                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                if not options['force']:
+                    options['force'] = True
+                if options['run_name']:
+                    options['run_name'] = '%s_%s' % (orig_name, i+1)
+                if not argss:
+                    argss = [mode, "-f"]
+                elif argss[0] == "auto":
+                    argss[0] = mode
+                self.do_launch("", options=options, argss=argss, switch=switch)
+                #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            #restore original param_card
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            param_card_iterator.write_summary(path)
+            
     ############################################################################      
     def do_compile(self, line):
         """Advanced commands: just compile the executables """
@@ -1309,9 +1342,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             # create a list of dictionaries "jobs_to_run" with all the
             # jobs that need to be run
             integration_step=-1
-            jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
+            jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                 req_acc,mode_dict[mode],integration_step,mode,fixed_order=True)
-            jobs_to_collect=copy.copy(jobs_to_run)
             self.prepare_directories(jobs_to_run,mode)
 
             # loop over the integration steps. After every step, check
@@ -1369,15 +1401,16 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             elif options['only_generation']:
                 logger.info('Generating events starting from existing results')
             
-            jobs_to_run,integration_step = self.create_jobs_to_run(options,p_dirs, \
+            jobs_to_run,jobs_to_collect,integration_step = self.create_jobs_to_run(options,p_dirs, \
                                             req_acc,mode_dict[mode],1,mode,fixed_order=False)
-            jobs_to_collect=copy.copy(jobs_to_run)
-            self.prepare_directories(jobs_to_run,mode,fixed_order=False)
 
             # Make sure to update all the jobs to be ready for the event generation step
             if options['only_generation']:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,1,mode,mode_dict[mode],fixed_order=False)
+            else:
+                self.prepare_directories(jobs_to_run,mode,fixed_order=False)
+
 
             # Main loop over the three MINT generation steps:
             for mint_step, status in enumerate(mcatnlo_status):
@@ -1438,6 +1471,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     job['run_mode']=run_mode
                     job['wgt_frac']=1.0
                     jobs_to_run.append(job)
+            jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
         else:
             # if options['only_generation'] is true, we need to loop
             # over all the existing G* directories and create the jobs
@@ -1484,7 +1518,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 integration_step=integration_step-1
             else:
                 self.append_the_results(jobs_to_collect,integration_step)
-        return jobs_to_run,integration_step
+        return jobs_to_run,jobs_to_collect,integration_step
 
     def prepare_directories(self,jobs_to_run,mode,fixed_order=True):
         """Set-up the G* directories for running"""
@@ -1661,7 +1695,10 @@ RESTART = %(mint_mode)s
                     jobs_to_collect_new.remove(job)
                 elif nevents > nevt_job:
                     jobs_to_collect_new.remove(job)
-                    nsplit=int(nevents/nevt_job)+1
+                    if nevents % nevt_job != 0 :
+                        nsplit=int(nevents/nevt_job)+1
+                    else:
+                        nsplit=int(nevents/nevt_job)
                     for i in range(1,nsplit+1):
                         job_new=copy.copy(job)
                         left_over=nevents % nsplit
@@ -1699,7 +1736,7 @@ RESTART = %(mint_mode)s
         jobs_new=[]
         if fixed_order:
             if req_acc == -1:
-                if step == 0:
+                if step+1 == 1:
                     npoints = self.run_card['npoints_FO']
                     niters = self.run_card['niters_FO']
                     for job in jobs:
@@ -1707,7 +1744,9 @@ RESTART = %(mint_mode)s
                         job['niters']=niters
                         job['npoints']=npoints
                         jobs_new.append(job)
-                elif step > 0:
+                elif step+1 == 2:
+                    pass
+                elif step+1 > 2:
                     raise aMCatNLOError('Cannot determine number of iterations and PS points '+
                                         'for integration step %i' % step )
             elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or step == 0:
@@ -1743,12 +1782,12 @@ RESTART = %(mint_mode)s
                 req_acc2_inv=nevents
             else:
                 req_acc2_inv=1/(req_acc*req_acc)
-            if step+1 == 1:
+            if step+1 == 1 or step+1 == 2 :
                 # determine the req. accuracy for each of the jobs for Mint-step = 1
                 for job in jobs:
                     accuracy=min(math.sqrt(totABS/(req_acc2_inv*job['resultABS'])),0.2)
                     job['accuracy']=accuracy
-            elif step+1 == 2:
+            if step+1 == 2:
                 # Randomly (based on the relative ABS Xsec of the job) determine the 
                 # number of events each job needs to generate for MINT-step = 2.
                 r=self.get_randinit_seed()
@@ -3789,13 +3828,16 @@ RESTART = %(mint_mode)s
             input_files.append(pjoin(cwd, 'OLE_order.olc'))
 
         # File for the loop (might not be present if MadLoop is not used)
-        if os.path.exists(pjoin(cwd,'MadLoop5_resources')) and \
+        if os.path.exists(pjoin(cwd,'MadLoop5_resources.tar.gz')) and \
                                             cluster.need_transfer(self.options):
             input_files.append(pjoin(cwd, 'MadLoop5_resources.tar.gz'))
+        elif os.path.exists(pjoin(cwd,'MadLoop5_resources')) and \
+                                            cluster.need_transfer(self.options):
             tf=tarfile.open(pjoin(cwd,'MadLoop5_resources.tar.gz'),'w:gz',
                                                            dereference=True)
             tf.add(pjoin(cwd,'MadLoop5_resources'),arcname='MadLoop5_resources')
             tf.close()
+            input_files.append(pjoin(cwd, 'MadLoop5_resources.tar.gz'))
                
         if args[1] == 'born' or args[1] == 'all':
             # MADEVENT MINT FO MODE
@@ -4230,7 +4272,6 @@ RESTART = %(mint_mode)s
             switch = switch_default
         else:
             switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
-
         default_switch = ['ON', 'OFF']
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,
@@ -4329,7 +4370,7 @@ RESTART = %(mint_mode)s
             elif answer in ['0', 'auto', 'done']:
                 return 
             elif answer in special_values:
-                logger.info('Enter mode value: Go to the related mode', '$MG:color:BLACK')
+                logger.info('Enter mode value: %s. Go to the related mode' % answer, '$MG:color:BLACK')
                 #assign_switch('reweight', 'OFF')
                 #assign_switch('madspin', 'OFF')
                 if answer == 'LO':
