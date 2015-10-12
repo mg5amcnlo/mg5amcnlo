@@ -1420,7 +1420,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     continue
                 self.update_status(status, level='parton')
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
-                if mint_step == 2:
                 self.collect_log_files(jobs_to_run,mint_step)
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
