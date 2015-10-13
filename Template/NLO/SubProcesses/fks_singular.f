@@ -1881,11 +1881,13 @@ c mother and the extra (n+1) parton is given the PDG code of the gluon.
             pdg_uborn(k,ict)=pdg(k,ict)
          elseif(k.eq.fks_j_d(iFKS)) then
             if ( abs(pdg(fks_i_d(iFKS),ict)) .eq.
-     &           abs(pdg(fks_j_d(iFKS),ict)) ) then
-c gluon splitting:  g/a -> XX
+     &           abs(pdg(fks_j_d(iFKS),ict)) .and.
+     &           abs(pdg(fks_i_d(iFKS),ict)).ne.21.and.
+     &           abs(pdg(fks_i_d(iFKS),ict)).ne.22) then
+c gluon splitting:  g/a -> ff
                !!!pdg_uborn(k,ict)=21
                ! check if any extra cnt is needed
-               if (extra_cnt_d(iFKS).eq.0d0) then
+               if (extra_cnt_d(iFKS).eq.0) then
                   ! if not, assign photon/gluon depending on split_type
                   if (split_type_d(iFKS,qcd_pos)) then
                     pdg_uborn(k,ict)=21
