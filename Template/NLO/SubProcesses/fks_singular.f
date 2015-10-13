@@ -1505,9 +1505,11 @@ c PDG codes
                parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k,j)
             elseif(k.eq.fks_j_d(iFKS)) then
                if ( abs(idup_d(iFKS,fks_i_d(iFKS),j)) .eq.
-     &              abs(idup_d(iFKS,fks_j_d(iFKS),j)) ) then
+     &              abs(idup_d(iFKS,fks_j_d(iFKS),j)) .and.
+     &              abs(pdg(fks_i_d(iFKS),ict)).ne.21 .and.
+     &              abs(pdg(fks_i_d(iFKS),ict)).ne.22 ) then
                  ! check if any extra cnt is needed
-                 if (extra_cnt_d(iFKS).eq.0d0) then
+                 if (extra_cnt_d(iFKS).eq.0) then
                    ! if not, assign photon/gluon depending on split_type
                    if (split_type_d(iFKS,qcd_pos)) then
                      parton_pdg_uborn(k,j,ict)=21
