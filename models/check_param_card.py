@@ -17,6 +17,8 @@ try:
 except:
     import internal.file_writers as file_writers
     import internal.misc as misc
+
+import StringIO
     
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -358,6 +360,54 @@ class ParamCard(dict):
                   
         return self
     
+    def analyze_param_card(self):
+        """ Analyzes the comment of the parameter in the param_card and returns
+        a dictionary with parameter names in values and the tuple (lhablock, id)
+        in value as well as a dictionary for restricted values.
+        WARNING: THIS FUNCTION RELIES ON THE FORMATTING OF THE COMMENT IN THE
+        CARD TO FETCH THE PARAMETER NAME. This is mostly ok on the *_default.dat
+        but typically dangerous on the user-defined card."""
+    
+        pname2block = {}
+        restricted_value = {}
+
+        for bname, block in self.items():
+            for lha_id, param in block.param_dict.items():
+                all_var = []
+                comment = param.comment
+                # treat merge parameter
+                if comment.strip().startswith('set of param :'):
+                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
+                # just the variable name as comment
+                elif len(comment.split()) == 1:
+                    all_var = [comment.strip().lower()]
+                # either contraction or not formatted
+                else:
+                    split = comment.split()
+                    if len(split) >2 and split[1] == ':':
+                        # NO VAR associated
+                        restricted_value[(bname, lha_id)] = ' '.join(split[1:])
+                    elif len(split) == 2:
+                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
+                            all_var = [comment.strip().lower()]
+                    elif len(split) >=2 and split[1].startswith('('):
+                        all_var = [split[0].strip().lower()]
+                    else:
+                        if not bname.startswith('qnumbers'):
+                            logger.debug("not recognize information for %s %s : %s",
+                                      bname, lha_id, comment)
+                        # not recognized format
+                        continue
+
+                for var in all_var:
+                    var = var.lower()
+                    if var in pname2block:
+                        pname2block[var].append((bname, lha_id))
+                    else:
+                        pname2block[var] = [(bname, lha_id)]
+        
+        return pname2block, restricted_value
+    
     def write(self, outpath=None):
         """schedular for writing a card"""
   
@@ -388,10 +438,8 @@ class ParamCard(dict):
                     diff += 'set param_card %s %s %s # orig: %s\n' % \
                                        (blockname, lhacode , new_value, value)
         return diff 
-                
-        
-    
-            
+
+
     def write_inc_file(self, outpath, identpath, default, need_mp=False):
         """ write a fortran file which hardcode the param value"""
         
@@ -412,8 +460,7 @@ class ParamCard(dict):
                 except KeyError:
                     value =defaultcard[block].get(tuple(lhaid)).value
                     logger.warning('information about \"%s %s" is missing using default value: %s.' %\
-                                   (block, lhaid, value))
-
+                                                          (block, lhaid, value))
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
                 logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
@@ -422,7 +469,61 @@ class ParamCard(dict):
             fout.writelines(' %s = %s' % (variable, ('%e'%float(value)).replace('e','d')))
             if need_mp:
                 fout.writelines(' mp__%s = %s_16' % (variable, value))
-                
+      
+    def convert_to_complex_mass_scheme(self):
+        """ Convert this param_card to the convention used for the complex mass scheme:
+        This includes, removing the Yukawa block if present and making sure the EW input
+        scheme is (MZ, MW, aewm1). """
+        
+        # The yukawa block is irrelevant for the CMS models, we must remove them
+        if self.has_block('yukawa'):
+            # Notice that the last parameter removed will also remove the block.
+            for lhacode in [param.lhacode for param in self['yukawa']]:
+                self.remove_param('yukawa', lhacode)
+    
+        # Now fix the EW input scheme
+        EW_input = {('sminputs',(1,)):None,
+                    ('sminputs',(2,)):None,
+                    ('mass',(23,)):None,
+                    ('mass',(24,)):None}
+        for block, lhaid in EW_input.keys():
+            try:
+                EW_input[(block,lhaid)] = self[block].get(lhaid).value
+            except:
+                pass
+            
+        # Now specify the missing values. We only support the following EW
+        # input scheme:
+        # (alpha, GF, MZ) input
+        internal_param = [key for key,value in EW_input.items() if value is None]
+        if len(internal_param)==0:
+            # All parameters are already set, no need for modifications
+            return
+        
+        if len(internal_param)!=1:
+            raise InvalidParamCard,' The specified EW inputs has more than one'+\
+                ' unknown: [%s]'%(','.join([str(elem) for elem in internal_param]))
+        
+        
+        if not internal_param[0] in [('mass',(24,)), ('sminputs',(2,)),
+                                                             ('sminputs',(1,))]:
+            raise InvalidParamCard, ' The only EW input scheme currently supported'+\
+                        ' are those with either the W mass or GF left internal.'
+        
+        # Now if the Wmass is internal, then we must change the scheme
+        if internal_param[0] == ('mass',(24,)):
+            aewm1 = EW_input[('sminputs',(1,))]
+            Gf    = EW_input[('sminputs',(2,))]
+            Mz    = EW_input[('mass',(23,))]
+            try:
+                Mw = math.sqrt((Mz**2/2.0)+math.sqrt((Mz**4/4.0)-((
+                              (1.0/aewm1)*math.pi*Mz**2)/(Gf*math.sqrt(2.0)))))
+            except:
+                InvalidParamCard, 'The EW inputs 1/a_ew=%f, Gf=%f, Mz=%f are inconsistent'%\
+                                                                   (aewm1,Gf,Mz)
+            self.remove_param('sminputs', (2,))
+            self.add_param('mass', (24,), Mw, 'MW')
+        
     def append(self, obj):
         """add an object to this"""
         

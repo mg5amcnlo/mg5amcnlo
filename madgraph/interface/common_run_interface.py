@@ -221,19 +221,17 @@ class CheckValidForCmd(object):
             #restrict_file = None
             #if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
             #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            
+            force_CMS = self.mother and self.mother.options['complex_mass_scheme']
             model = import_ufo.import_model(modelname, decay=True, 
-                        restrict=True)
-            if self.mother and self.mother.options['complex_mass_scheme']:
-                model.change_mass_to_complex_scheme()
+                                   restrict=True, complex_mass_scheme=force_CMS)
         else:
-            model = import_ufo.import_model(pjoin(
-                           self.me_dir,'bin','internal', 'ufomodel'),decay=True)
             #pattern for checking complex mass scheme.
             has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
-                                   ).read()):
-                model.change_mass_to_complex_scheme()
-   
+            force_CMS =  has_cms.search(open(pjoin(self.me_dir,'Cards',
+                                                   'proc_card_mg5.dat')).read())
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal',
+                         'ufomodel'), decay=True, complex_mass_scheme=force_CMS)
             
 #        if not hasattr(model.get('particles')[0], 'partial_widths'):
 #            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
@@ -2339,40 +2337,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.
-        for bname, block in default_param.items():
-            for lha_id, param in block.param_dict.items():
-                all_var = []
-                comment = param.comment
-                # treat merge parameter
-                if comment.strip().startswith('set of param :'):
-                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
-                # just the variable name as comment
-                elif len(comment.split()) == 1:
-                    all_var = [comment.strip().lower()]
-                # either contraction or not formatted
-                else:
-                    split = comment.split()
-                    if len(split) >2 and split[1] == ':':
-                        # NO VAR associated
-                        self.restricted_value[(bname, lha_id)] = ' '.join(split[1:])
-                    elif len(split) == 2:
-                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
-                            all_var = [comment.strip().lower()]
-                    elif len(split) >=2 and split[1].startswith('('):
-                        all_var = [split[0].strip().lower()]
-                    else:
-                        if not bname.startswith('qnumbers'):
-                            logger.debug("not recognize information for %s %s : %s",
-                                      bname, lha_id, comment)
-                        # not recognized format
-                        continue
-
-                for var in all_var:
-                    var = var.lower()
-                    if var in self.pname2block:
-                        self.pname2block[var].append((bname, lha_id))
-                    else:
-                        self.pname2block[var] = [(bname, lha_id)]
+        self.pname2block, self.restricted_value = \
+                                              default_param.analyze_param_card()
 
         if run_card_def:
             self.run_set = run_card_def.keys() + self.run_card.hidden_param

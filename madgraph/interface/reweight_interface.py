@@ -760,14 +760,15 @@ class ReweightInterface(extended_cmd.Cmd):
                         dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
                 
                 os.environ['MENUM'] = '2'
-                misc.compile(['matrix2py.so'], cwd=Pdir)
-                
-                self.rename_f2py_lib(Pdir, 2*metag)
+                if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
+                    misc.compile(['matrix2py.so'], cwd=Pdir)
+                    self.rename_f2py_lib(Pdir, 2*metag)
+                    
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
+                S = mymod.SubProcesses
+                P = getattr(S, Pname)
+                mymod = getattr(P, 'matrix%spy' % (2*metag))
                 with misc.chdir(Pdir):
-                    mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
-                    S = mymod.SubProcesses
-                    P = getattr(S, Pname)
-                    mymod = getattr(P, 'matrix%spy' % (2*metag))
                     mymod.initialise('param_card_orig.dat')
                     
             if hypp_id == 1:
@@ -799,7 +800,8 @@ class ReweightInterface(extended_cmd.Cmd):
             assert hypp_id == 1
             Pname = os.path.basename(Pdir)
             os.environ['MENUM'] = '2'
-            misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
+            if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
+                misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
             if (Pdir, 1) not in dir_to_f2py_free_mod:
                 metag = 1
                 dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
@@ -809,20 +811,20 @@ class ReweightInterface(extended_cmd.Cmd):
                     metag += 1
                     dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
             self.rename_f2py_lib(Pdir, metag)
-            with misc.chdir(Pdir):
-                try:
-                    mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
-                except ImportError:
-                    os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
-                    metag = "L%s" % metag
-                    os.environ['MENUM'] = str(metag)
-                    misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
-                    mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
-                    
-                reload(mymod)
-                S = mymod.SubProcesses
-                P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % metag)                
+            
+            try:
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
+            except ImportError:
+                os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
+                metag = "L%s" % metag
+                os.environ['MENUM'] = str(metag)
+                misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
+            reload(mymod)
+            S = mymod.SubProcesses
+            P = getattr(S, Pname)
+            mymod = getattr(P, 'matrix%spy' % metag)                
+            with misc.chdir(Pdir):      
                 mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
             external = space.calculator[run_id]                
@@ -1145,13 +1147,11 @@ class ReweightInterface(extended_cmd.Cmd):
         model_path = name
 
         # Import model
-        base_model = import_ufo.import_model(name, decay=False)
-
-
+        base_model = import_ufo.import_model(name, decay=False,
+                                               complex_mass_scheme=complex_mass)
+    
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()
-        if complex_mass:
-            base_model.change_mass_to_complex_scheme()
         
         self.model = base_model
         self.mg5cmd._curr_model = self.model

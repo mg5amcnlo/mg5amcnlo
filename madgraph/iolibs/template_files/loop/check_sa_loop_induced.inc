@@ -265,6 +265,7 @@ C
       write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)
       write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2,0)
       write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)
+      write (69,'(a6,1x,1e25.15)') 'ASO2PI',AO2PI
       write (69,*) 'Export_Format LoopInduced'
 	  write (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
 	  write (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)

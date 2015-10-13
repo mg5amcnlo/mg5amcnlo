@@ -345,6 +345,17 @@ C     Call DSIGPROC to calculate sigma for process
 C     Reset ALLOW_HELICITY_GRID_ENTRIES
       ALLOW_HELICITY_GRID_ENTRIES = .TRUE.
 
+C     Below is how one would go about adding each point to the
+C      grouped_processes grid
+C     However, keeping only the initialization grid is better becaus'
+C     //'e in that case all grouped ME's
+C     were computed with the same kinematics. For this reason, the
+C      code below remains commented.
+C     IF(grouped_MC_grid_status.ge.1) then
+C     call map_3_to_1(ICONF,IPROC,IMIRROR,MAXSPROC,2,Lmapped)
+C     call DS_add_entry('grouped_processes',Lmapped,(DSIG/SELPROC(IMIRR
+C     OR,IPROC,ICONF)))
+C     ENDIF
 
       IF(DSIG.GT.0D0)THEN
 C       Update summed weight and number of events
