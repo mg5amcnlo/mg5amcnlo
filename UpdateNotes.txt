@@ -12,6 +12,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	RF: Added an option to the run_card to allow for easier variation of the shower starting scale (NLO only).
 	RF: Fixed a problem in the setting of the flavour map used for runs with iAPPL >= 1. 
         OM: (SysCalc interface) Allow to bypass the pdf reweighting/alpsfact reweighting
+        MZ: fixed bug related to slurm clusters
 
 2.3.2(20/08/15)   
         OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)
