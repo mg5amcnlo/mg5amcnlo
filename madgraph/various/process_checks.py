@@ -1410,7 +1410,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             if options['events']:
                 return p
             # For 2>1 process, we don't check the cuts of course
-            while (not pass_isolation_cuts(p) and  len(p)>3):
+            while (not MatrixElementEvaluator.pass_isolation_cuts(p) and  len(p)>3):
                 p, w_rambo = self.get_momenta(proc, options)
                 
             # For a 2>1 process, it would always be the same PS point,
