@@ -903,7 +903,7 @@ class Event(list):
                 
             for i in range(1, len(tmp)+1):
                 self.matched_scale_data.append(tmp[i])
-                
+ 
         return self.matched_scale_data
             
 
@@ -930,7 +930,8 @@ class Event(list):
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
         if old_scales:
-            self.matched_scale_data.pop(position-2)
+            jet_position = sum(1 for i in range(position) if self[i].status==1)
+            self.matched_scale_data.pop(jet_position)
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -939,7 +940,7 @@ class Event(list):
             new_particle.event_id = len(self)
             self.append(new_particle)
             if old_scales:
-                self.matched_scale_data.append(old_scales[position-2])
+                self.matched_scale_data.append(old_scales[jet_position])
             # compute and assign the new four_momenta
             new_momentum = this_4mom.boost(FourMomentum(new_particle))
             new_particle.set_momentum(new_momentum)
