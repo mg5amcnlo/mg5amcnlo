@@ -1689,7 +1689,7 @@ class SLURMCluster(Cluster):
 
         idle, run, fail = 0, 0, 0
         ongoing=[]
-        for line in pstatus.stdout.read().split('\n'):
+        for line in pstatus.stdout:
             if me_dir in line:
                 id, _, _,_ , status,_ = line.split(None,5)
                 ongoing.append(id)
