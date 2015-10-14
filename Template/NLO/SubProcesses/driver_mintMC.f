@@ -769,7 +769,7 @@ c From dsample_fks
       include 'run.inc'
       include 'fks_info.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
-      integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
+      integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
      $     ,iFKS,sum
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
@@ -837,13 +837,11 @@ c "npNLO".
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
          if (ini_fin_fks.eq.1) then
             do while (fks_j_d(proc_map(proc_map(0,1),1)).le.nincoming) 
-               call get_MC_integer(1,fks_configs,proc_map(proc_map(0,1)
-     $              ,1),vol1)
+               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
             enddo
          elseif (ini_fin_fks.eq.2) then
             do while (fks_j_d(proc_map(proc_map(0,1),1)).gt.nincoming) 
-               call get_MC_integer(1,fks_configs,proc_map(proc_map(0,1)
-     $              ,1),vol1)
+               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
             enddo
          endif
 
@@ -1292,7 +1290,7 @@ c     include all quarks (except top quark) and the gluon.
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nFKS_in,nFKS_out,iFKS,nFKSprocessBorn(2)
+      integer nFKS_in,nFKS_out,iFKS,iiFKS,nFKSprocessBorn(fks_configs)
       logical firsttime,foundB(2)
       data firsttime /.true./
       save nFKSprocessBorn,foundB
@@ -1301,37 +1299,48 @@ c     include all quarks (except top quark) and the gluon.
          foundB(1)=.false.
          foundB(2)=.false.
          do iFKS=1,fks_configs
+            nFKSprocessBorn(iFKS)=0
             if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
-               if (fks_j_D(iFKS).le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=iFKS
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=iFKS
-               endif
+               nFKSprocessBorn(iFKS)=iFKS
+            endif
+            if (nFKSprocessBorn(iFKS).eq.0) then
+c     try to find the process that has the same j_fks but with i_fks a
+c     gluon
+               do iiFKS=1,fks_configs
+                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 .and.
+     &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
+                     nFKSprocessBorn(iFKS)=iiFKS
+                     exit
+                  endif
+               enddo
+            endif
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               do iiFKS=1,fks_configs
+                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 ) then
+                     if ( fks_j_D(iiFKS).le.nincoming .and.
+     &                    fks_j_D(iFKS).le.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     elseif ( fks_j_D(iiFKS).gt.nincoming .and.
+     &                        fks_j_D(iFKS).gt.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     endif
+                  endif
+               enddo
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     $        nFKSprocessBorn
+         write (*,*) 'For the Born we use nFKSprocesses:'
+         write (*,*)  nFKSprocessBorn
       endif
-      if (fks_j_D(nFKS_in).le.nincoming) then
-         if (.not.foundB(1)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'initial state j_fks, but there is no '/
-     &           /'configuration with i_fks a gluon and j_fks '/
-     &           /'initial state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(1)
+      if (nFKSprocessBorn(nFKS_in).eq.0) then
+         write(*,*) 'Could not find the correct map to Born '/
+     &        /'FKS configuration for the NLO FKS '/
+     &        /'configuration', nFKS_in
+         stop 1
       else
-         if (.not.foundB(2)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'final state j_fks, but there is no configuration'/
-     &           /' with i_fks a gluon and j_fks final state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(2)
+         nFKS_out=nFKSprocessBorn(nFKS_in)
       endif
       return
       end

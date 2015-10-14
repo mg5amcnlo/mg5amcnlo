@@ -585,7 +585,7 @@ c Finalize PS point
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nFKS_in,nFKS_out,iFKS,nFKSprocessBorn(2)
+      integer nFKS_in,nFKS_out,iFKS,iiFKS,nFKSprocessBorn(fks_configs)
       logical firsttime,foundB(2)
       data firsttime /.true./
       save nFKSprocessBorn,foundB
@@ -594,37 +594,48 @@ c Finalize PS point
          foundB(1)=.false.
          foundB(2)=.false.
          do iFKS=1,fks_configs
+            nFKSprocessBorn(iFKS)=0
             if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
-               if (fks_j_D(iFKS).le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=iFKS
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=iFKS
-               endif
+               nFKSprocessBorn(iFKS)=iFKS
+            endif
+            if (nFKSprocessBorn(iFKS).eq.0) then
+c     try to find the process that has the same j_fks but with i_fks a
+c     gluon
+               do iiFKS=1,fks_configs
+                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 .and.
+     &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
+                     nFKSprocessBorn(iFKS)=iiFKS
+                     exit
+                  endif
+               enddo
+            endif
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               do iiFKS=1,fks_configs
+                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 ) then
+                     if ( fks_j_D(iiFKS).le.nincoming .and.
+     &                    fks_j_D(iFKS).le.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     elseif ( fks_j_D(iiFKS).gt.nincoming .and.
+     &                        fks_j_D(iFKS).gt.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     endif
+                  endif
+               enddo
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     $        nFKSprocessBorn
+         write (*,*) 'For the Born we use nFKSprocesses:'
+         write (*,*)  nFKSprocessBorn
       endif
-      if (fks_j_D(nFKS_in).le.nincoming) then
-         if (.not.foundB(1)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'initial state j_fks, but there is no '/
-     &           /'configuration with i_fks a gluon and j_fks '/
-     &           /'initial state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(1)
+      if (nFKSprocessBorn(nFKS_in).eq.0) then
+         write(*,*) 'Could not find the correct map to Born '/
+     &        /'FKS configuration for the NLO FKS '/
+     &        /'configuration', nFKS_in
+         stop 1
       else
-         if (.not.foundB(2)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'final state j_fks, but there is no configuration'/
-     &           /' with i_fks a gluon and j_fks final state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(2)
+         nFKS_out=nFKSprocessBorn(nFKS_in)
       endif
       return
       end
