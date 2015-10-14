@@ -4,17 +4,19 @@
 
 !     
 #MLReductionLib
-!1|3|2
-! Default :: 1|3|2
+!1|3|2|5
+! Default :: 1|3|2|5
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
 !     2 | PJFry++
 !     3 | IREGI
 !     4 | Golem95
+!     5 | Samurai
 !     One can use the combinations to reduce integral,e.g.
 !     1|2|3 means first use CutTools, if it is not stable, use PJFry++, 
 !     if it is still unstable, use IREGI. If it failed, use QP of CutTools.
-!  
+!     Notice that any reduction tool not avaialble on the system will be automatically
+!     skipped. 
 
 !     =================================================================================
 !     The parameters below set the parameters for IREGI

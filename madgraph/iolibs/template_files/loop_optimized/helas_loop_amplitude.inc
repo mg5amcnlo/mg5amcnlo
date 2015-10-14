@@ -126,16 +126,26 @@ C Determine it uses qp or not
 C Choose the correct loop library
       CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
       IF(MLReductionLib(I_LIB).EQ.1)THEN
-C USE CUTTOOLS
+C CutTools is used
 ## if(not AmplitudeReduction){
 	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+## if(samurai_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.5) THEN
+C Samurai is used
+	CALL %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+##	}
       ELSE
-C USE TIR
+C Tensor Integral Reduction is used 
 	CALL %(proc_prefix)sTIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
 ## }else{
 	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
+## if(samurai_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.5) THEN
+C Samurai is used
+	CALL %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
+##	}
       ELSE
-C USE TIR
+C Tensor Integral Reduction is used 
 	CALL %(proc_prefix)sTIRLOOP(1,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
 ## }
       ENDIF

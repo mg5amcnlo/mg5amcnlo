@@ -139,6 +139,8 @@
                    MLRed=3
                 ELSEIF(MLReductionLib_char.EQ.'4 ')THEN
                    MLRed=4
+                ELSEIF(MLReductionLib_char.EQ.'5 ')THEN
+                   MLRed=5
                 ELSE
                    PRINT *, 'MLReductionLib is wrong: '//
      $                  TRIM(MLReductionLib_str_save)

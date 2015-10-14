@@ -2505,6 +2505,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'fastjet':'fastjet-config',
                        'pjfry':'auto',
                        'golem':'auto',
+                       'samurai':'auto',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
@@ -3376,6 +3377,14 @@ This implies that with decay chains:
                 if 4 in MLoptions["MLReductionLib"]:
                     logger.info('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
+
+        if 'samurai' in self.options and isinstance(self.options['samurai'],str):
+            TIR_dir['golem_dir']=self.options['golem']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 5 in MLoptions["MLReductionLib"]:
+                    logger.info('Samurai not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(5)
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
@@ -5302,7 +5311,7 @@ This implies that with decay chains:
                     else:
                         continue
 
-            elif key in ['pjfry','golem']:
+            elif key in ['pjfry','golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -5312,7 +5321,7 @@ This implies that with decay chains:
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
-                        local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
+                        local_install = {'pjfry':'PJFRY', 'golem':'golem95','samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
@@ -5865,7 +5874,7 @@ This implies that with decay chains:
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ["pjfry","golem"]:
+        elif args[0] in ["pjfry","golem","samurai"]:
             program = misc.which_lib(os.path.join(args[1],"lib%s.a"%args[0]))
             if program!=None:
                 res = 0

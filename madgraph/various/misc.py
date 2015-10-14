@@ -208,7 +208,7 @@ def deactivate_dependence(dependency, cmd=None, log = None):
             log(msg)
     
 
-    if dependency in ['pjfry','golem']:
+    if dependency in ['pjfry','golem','samurai']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
             cmd.options[dependency] = 'None'
@@ -239,6 +239,9 @@ def activate_dependence(dependency, cmd=None, log = None):
          which_lib(pjoin(cmd.options['golem'],'libgolem.a')) is None:
             tell("Installing Golem95...")
             cmd.do_install('Golem95')
+    
+    if dependency=='samurai':
+        raise MadGraph5Error, 'Samurai cannot yet be automatically installed.' 
     
 #===============================================================================
 # find a library

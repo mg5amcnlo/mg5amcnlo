@@ -1,4 +1,7 @@
-	  SUBROUTINE %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
+C     ===========================================
+C     ===== Beginning of CutTools Interface =====
+C     ===========================================
+      SUBROUTINE %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
 C  
 %(info_lines)s
 C 
@@ -30,8 +33,8 @@ C LOCAL VARIABLES
 C
 	  %(complex_dp_format)s R1, ACC
 	  INTEGER I, J, K
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
 C
 C EXTERNAL FUNCTIONS
 C
@@ -109,7 +112,7 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       RES(2)=NORMALIZATION*2.0d0*DBLE(RES(2))
       RES(3)=NORMALIZATION*2.0d0*DBLE(RES(3))
 ## }
-C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     WRITE(*,*) 'CutTools: Loop ID',ID,' =',RES(1),RES(2),RES(3)
       END
 
 	  SUBROUTINE %(proc_prefix)sINITCT()
@@ -147,3 +150,224 @@ C The initialization below is for the older stable CT v1.7, still used for now i
 C      CALL CTSINIT(THRS,LOOPLIB)
 
 	  END
+
+## if(samurai_available){
+
+C     ===========================================
+C     ===== Beginning of Samurai Interface  =====
+C     ===========================================
+
+      SUBROUTINE %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
+C    
+C     Module used
+C
+      use msamurai
+C  
+%(info_lines)s
+C 
+C Interface between MG5 and Samurai.
+C  
+%(process_lines)s
+C  
+C  
+C CONSTANTS 
+C  
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      LOGICAL checkPConservation
+      PARAMETER (checkPConservation=.TRUE.)
+      %(real_dp_format)s NORMALIZATION
+      PARAMETER (NORMALIZATION = 1.D0/(16.D0*3.14159265358979323846D0**2))
+	  INTEGER SAM_REDUCTION_STEPS
+C     This tells Samurai to perform the reduction all the way to tadpoles.
+	  PARAMETER (SAM_REDUCTION_STEPS=1)
+C  
+C ARGUMENTS 
+C
+      INTEGER NLOOPLINE, RANK
+      %(real_dp_format)s PL(0:3,NLOOPLINE)
+      %(real_dp_format)s P_TMP(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s P_SAM(0:NLOOPLINE-1,4)
+      %(mass_dp_format)s M2L(NLOOPLINE)
+      %(complex_dp_format)s M2L_SAM(0:NLOOPLINE-1)	  
+      %(complex_dp_format)s RES(3), SAM_RES(-2:0)
+	  LOGICAL STABLE	  
+C  
+C LOCAL VARIABLES 
+C
+	  %(complex_dp_format)s R1, ACC
+	  INTEGER I, J, K
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
+C
+C EXTERNAL FUNCTIONS
+C
+C     Hook for numerator function for Samurai
+      %(complex_dp_format)s %(proc_prefix)sSAMURAI_LOOPNUM
+      External %(proc_prefix)sSAMURAI_LOOPNUM
+C
+C GLOBAL VARIABLES
+C
+      include 'coupl.inc'
+C     The CTMode is not used for now, but it will be if we interface to Samurai in quadruple precision.
+	  INTEGER CTMODE
+	  %(real_dp_format)s LSCALE
+      common/%(proc_prefix)sCT/LSCALE,CTMODE
+
+      INTEGER ID,SQSOINDEX,R
+      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+
+C ----------
+C BEGIN CODE
+C ----------
+
+C INITIALIZE SAMURAI IF NEEDED
+      IF (SAMURAIINIT) THEN
+	    SAMURAIINIT=.FALSE.
+		CALL %(proc_prefix)sINITSAMURAI()
+      ENDIF
+
+C  CONVERT THE MASSES TO BE COMPLEX
+      do I=1,NLOOPLINE
+	    M2L_SAM(I-1)=M2L(I)
+	  ENDDO
+
+C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO SAMURAI CONVENTIONS
+      do I=0,3
+        do J=0,(NLOOPLINE-1)
+          P_TMP(I,J)=0.D0
+        enddo
+      enddo
+      do I=0,3
+        do J=1,NLOOPLINE
+          P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+        enddo
+      enddo
+      if (checkPConservation) then
+        if (P_TMP(0,0).gt.1.d-6) then
+          write(*,*) 'energy is not conserved ',P_TMP(0,0)
+          stop 'energy is not conserved'
+        elseif (P_TMP(1,0).gt.1.d-6) then
+         write(*,*) 'px is not conserved ',P_TMP(1,0)
+         stop 'px is not conserved'
+        elseif (P_TMP(2,0).gt.1.d-6) then
+         write(*,*) 'py is not conserved ',P_TMP(2,0)
+         stop 'py is not conserved'
+        elseif (P_TMP(3,0).gt.1.d-6) then
+         write(*,*) 'pz is not conserved ',P_TMP(3,0)
+         stop 'pz is not conserved'
+        endif
+      endif
+      do I=0,3
+        do J=1,(NLOOPLINE-1)
+          do K=1,J
+            P_TMP(I,J)=P_TMP(I,J)+PL(I,K)
+          enddo
+        enddo
+      enddo
+
+C     In samurai, the first index is the momentum one (with energy last) and the second one is the leg number
+      DO I=0,NLOOPLINE-1
+        P_SAM(I,1) = P_TMP(1,I)
+        P_SAM(I,2) = P_TMP(2,I)
+        P_SAM(I,3) = P_TMP(3,I)
+        P_SAM(I,4) = P_TMP(0,I)        
+      ENDDO
+
+      CALL samurai(%(proc_prefix)sSAMURAI_LOOPNUM,SAM_RES,R1,P_SAM,M2L_SAM,NLOOPLINE,RANK,SAM_REDUCTION_STEPS,MU_R**2,STABLE)
+## if(AmplitudeReduction) {
+      RES(1)=NORMALIZATION*SAM_RES(0)
+      RES(2)=NORMALIZATION*SAM_RES(-1)
+      RES(3)=NORMALIZATION*SAM_RES(-2)
+## } else {
+      RES(1)=NORMALIZATION*2.0d0*DBLE(SAM_RES(0))
+      RES(2)=NORMALIZATION*2.0d0*DBLE(SAM_RES(-1))
+      RES(3)=NORMALIZATION*2.0d0*DBLE(SAM_RES(-2))
+## }
+C     WRITE(*,*) 'Samurai:  Loop ID',ID,' =',RES(1),RES(2),RES(3)
+      END
+
+C     WRAPPER for the loop numerator function in Samurai.
+C     =====================================================
+      FUNCTION %(proc_prefix)sSAMURAI_LOOPNUM(icut_dummy,Q_IN,mu2_dummy)
+      implicit none
+C     
+C     ARGUMENTS 
+C     
+      %(complex_dp_format)s ML5_0_SAMURAI_LOOPNUM
+      integer icut_dummy
+      %(real_dp_format)s mu2_dummy
+      %(complex_dp_format)s Q_IN(4),Q(0:3)
+      %(complex_dp_format)s RES
+
+      RES=(0.0D0,0.0D0)
+      Q(0)=Q_IN(4)
+      Q(1)=Q_IN(1)
+      Q(2)=Q_IN(2)
+      Q(3)=Q_IN(3)
+      CALL ML5_0_LOOPNUM(Q,RES)
+
+      ML5_0_SAMURAI_LOOPNUM = RES
+
+      END
+
+	  SUBROUTINE %(proc_prefix)sINITSAMURAI()
+C    
+C     Module used
+C
+      use msamurai
+C 
+C INITIALISATION OF SAMURAI 
+C  
+C LOCAL VARIABLES 
+C
+      INTEGER SAM_verbosity
+      INTEGER LOOPLIB, STABILITYTEST
+      character*4 NumeratorForm
+C  
+C GLOBAL VARIABLES 
+C
+	  include 'MadLoopParams.inc'
+C ----------
+C BEGIN CODE
+C ----------
+
+C     DEFAULT PARAMETERS FOR CUTTOOLS
+C     -------------------------------  
+C     LOOPLIB SET WHAT LIBRARY CT USES
+C     1 -> LOOPTOOLS
+C     2 -> AVH
+C     3 -> QCDLOOP
+      IF (CTLOOPLIBRARY.eq.1) THEN
+          write(*,*) "Error in Samurai initialization. LoopTools is not supported by Samurai. Change variable CTLoopLibrary in MadLoopParams.dat."
+          stop 1
+      ELSEIF (CTLOOPLIBRARY.eq.3) THEN
+            LOOPLIB = 1
+      ELSEIF (CTLOOPLIBRARY.eq.2) THEN
+            LOOPLIB = 2
+      ELSE
+          write(*,*) "Error in Samurai initialization. Loop library ID=",CTLOOPLIBRARY," is not supported. Change variable CTLoopLibrary in MadLoopParams.dat."
+          stop 1
+      ENDIF
+C     Stability tests are:
+C      0 : None
+C      1 : Global N=N test
+C      2 : Local N=N test
+C      3 : Power test
+      STABILITYTEST = 0
+C     Verbosity
+C       verbosity=0, no output;
+C       verbosity=1, the coefficients are printed;
+C       verbosity=2, the value of the MI’s are printed as well;
+C       verbosity=3, the outcome of the numerical test appears.
+      SAM_verbosity = 0
+
+C     Tell samurai our loo propagators don't contain denominators (i.e.
+C     otherwise one must specify 'tree')
+      NumeratorForm = 'diag'
+
+C     -------------------------------
+      call initsamurai(NumeratorForm,LOOPLIB,SAM_verbosity,STABILITYTEST)
+
+      END
+## }

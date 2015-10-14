@@ -67,9 +67,9 @@ C ----------
       DATA ML_INIT/.TRUE./
       common/ML_INIT/ML_INIT
 
-      LOGICAL CTINIT,TIRINIT,GOLEMINIT
-      DATA CTINIT,TIRINIT,GOLEMINIT/.TRUE.,.TRUE.,.TRUE./
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
+      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT/.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
 
       character(512) MLPath
       data MLPath/'[[NA]]'/      
@@ -159,6 +159,8 @@ C     U == 3
 C         Stable with IREGI.
 C     U == 4
 C         Stable with Golem95
+C     U == 5
+C         Stable with Samurai
 C     U == 9
 C         Stable with CutTools in quadruple precision.
 C
@@ -192,10 +194,10 @@ C
             STOP 'Only CutTools can use quardruple precision'
          ENDIF
       ENDIF
-      IF(MLRed.GE.1.AND.MLRed.LE.4)THEN
+      IF(MLRed.GE.1.AND.MLRed.LE.5)THEN
          SET_RET_CODE_U=MLRed
       ELSE
-         STOP 'Only CutTools,PJFry++,IREGI,Golem95 are available'
+         STOP 'Only CutTools, PJFry++, IREGI, Golem95 and Samurai are available'
       ENDIF
       END
 
@@ -233,15 +235,18 @@ C IREGI
       ELSEIF(LIBNUM.EQ.4)THEN
 C Golem95
          CALL DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.5)THEN
+C Samurai
+         CALL DETECT_SAMURAI(NLOOPLINE,RANK,complex_mass,LPASS)
       ELSE
-         STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 are provided'
+         STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai are available'
       ENDIF
       RETURN
       END
 
       SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
 C
-C DETECT THE CUTTOOLS CAN BE USED OR NOT
+C DETECT whether CUTTOOLS CAN BE USED OR NOT
 C
       IMPLICIT NONE
 C
@@ -262,13 +267,48 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE+1.LT.RANK)LPASS=.FALSE.
+C     The limit of 10 loop lines is just a parameter hardcoded in Samurai sources.
+C     It can easily be increased if necessary.
+      IF( (NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.gt.10) ) THEN
+	    LPASS=.FALSE.	  
+	  endif
+      RETURN
+      END
+
+      SUBROUTINE DETECT_SAMURAI(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C DETECT whether Samurai CAN BE USED OR NOT
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+      LPASS=.TRUE.
+C     The limit of 8 loop lines is just a parameter hardcoded in Samurai sources.
+C     It can easily be increased if necessary.
+      IF((NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.gt.8)) then
+	    LPASS=.FALSE.
+      endif
       RETURN
       END
 
       SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
 C
-C DETECT THE PJFRY++ CAN BE USED OR NOT
+C DETECT whether PJFRY++ CAN BE USED OR NOT
 C
       IMPLICIT NONE
 C
@@ -297,7 +337,7 @@ C ----------
 
       SUBROUTINE DETECT_IREGI(NLOOPLINE,RANK,complex_mass,LPASS)
 C     
-C DETECT THE IREGI CAN BE USED OR NOT
+C DETECT whether IREGI CAN BE USED OR NOT
 C
       IMPLICIT NONE
 C
@@ -324,7 +364,7 @@ C ----------
 
       SUBROUTINE DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
 C
-C DETECT THE Golem95 CAN BE USED OR NOT
+C DETECT whether Golem95 CAN BE USED OR NOT
 C
             IMPLICIT NONE
 C
