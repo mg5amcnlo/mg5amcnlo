@@ -2002,6 +2002,17 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         else:
             return max(r_list)
 
+    def get_max_spin_connected_to_loop(self):
+        """Returns the maximum spin that any particle either connected to a loop
+        or running in it has, among all the loops contributing to this ME"""
+        
+        return 3
+       
+#        return helas_objects.HelasDiagramList([hd for hd in self['diagrams'] if\
+#                 isinstance(hd,LoopHelasDiagram) and\
+#                 len(hd.get_loop_amplitudes())>=1])
+       
+
     def get_max_loop_particle_spin(self):
         """ Returns the spin of the loop particle with maximum spin among all
         the loop contributing to this ME"""

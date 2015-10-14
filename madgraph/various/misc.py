@@ -1244,8 +1244,11 @@ class ProcessTimer:
       return False
 
     self.t1 = time.time()
+    # I redirect stderr to void, because from MacOX snow leopard onward, this
+    # ps -p command writes a million times the following stupid warning
+    # dyld: DYLD_ environment variables being ignored because main executable (/bin/ps) is setuid or setgid
     flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
-                                              shell=True,stdout=subprocess.PIPE)
+                  shell=True,stdout=subprocess.PIPE,stderr=open(os.devnull,"w"))
     stdout_list = flash.communicate()[0].split('\n')
     rss_memory = int(stdout_list[1])
     # for now we ignore vms

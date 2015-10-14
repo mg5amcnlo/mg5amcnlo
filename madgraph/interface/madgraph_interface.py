@@ -872,7 +872,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                                                       '--reduction':'1|2|3|4'}
+                                                     '--reduction':'1|2|3|4|5'}
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
                 key, value = arg.split('=')
@@ -3377,9 +3377,9 @@ This implies that with decay chains:
                 if 4 in MLoptions["MLReductionLib"]:
                     logger.info('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
-
+        
         if 'samurai' in self.options and isinstance(self.options['samurai'],str):
-            TIR_dir['golem_dir']=self.options['golem']
+            TIR_dir['samurai_dir']=self.options['samurai']
         else:
             if "MLReductionLib" in MLoptions:
                 if 5 in MLoptions["MLReductionLib"]:

@@ -966,8 +966,31 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         self.write_nexternal_file(writers.FortranWriter(filename),
                                                             nexternal, ninitial)
 
+        filename = 'process_info.inc'        
+        self.write_process_info_file(writers.FortranWriter(filename),
+                                                                 matrix_element)
         return calls
 
+    def write_process_info_file(self, writer, matrix_element):
+        """A small structural function to write the include file specifying some
+        process characteristics."""
+
+        process_info = {}
+        # The maximum spin of any particle connected (or directly running in) 
+        # any loop of this matrix element. This is important because there is
+        # some limitation in the stability tests that can be performed when this
+        # maximum spin is above 3 (vectors). Also CutTools has limitations in 
+        # this regard.
+        process_info['max_spin_connected_to_loop']=\
+                                 matrix_element.get_max_spin_connected_to_loop()
+
+        proc_include = \
+"""INTEGER MAXSPINCONNECTEDTOLOOP
+PARAMETER(MAXSPINCONNECTEDTOLOOP=%(max_spin_connected_to_loop)d)
+"""%process_info
+
+        writer.writelines(proc_include)
+                                
     def generate_subprocess_directory_v4(self, matrix_element, fortran_model):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
@@ -1823,6 +1846,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         filename = 'nexternal.inc'
         self.write_nexternal_file(writers.FortranWriter(filename),
                                                             nexternal, ninitial)
+        
+        # Write general process information                        
+        filename = 'process_info.inc'
+        self.write_process_info_file(writers.FortranWriter(filename),
+                                                                 matrix_element)
 
         if self.get_context(matrix_element)['TIRCaching']:
             filename = 'tir_cache_size.inc'

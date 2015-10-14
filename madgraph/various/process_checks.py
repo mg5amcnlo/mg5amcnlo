@@ -1894,6 +1894,7 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
         MLoptions={}
     else:
         MLoptions=MLOptions
+
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
                             param_card, keep_folder=keep_folder,options=options,
                             MLOptions = MLoptions)
@@ -1922,7 +1923,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                                cmd = FakeInterface(), MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
-    
+
     if "reuse" in options:
         reuse=options['reuse']
     else:

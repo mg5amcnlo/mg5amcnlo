@@ -249,6 +249,7 @@ C
 C DETECT whether CUTTOOLS CAN BE USED OR NOT
 C
       IMPLICIT NONE
+
 C
 C CONSTANTS
 C
@@ -260,18 +261,29 @@ C
 C
 C LOCAL VARIABLES
 C
+      INTEGER MAX_RANK
 C
 C GLOBAL VARIABLES
 C
+      include 'process_info.inc'
 C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
 C     The limit of 10 loop lines is just a parameter hardcoded in Samurai sources.
 C     It can easily be increased if necessary.
-      IF( (NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.gt.10) ) THEN
+C     Also in the presence of spin2 particles, RANK=NLOOPLINE+1 is not supported
+
+      IF (MAXSPINCONNECTEDTOLOOP.le.3) THEN
+	    MAX_RANK = NLOOPLINE+1
+	  ELSE
+	    MAX_RANK = NLOOPLINE
+	  ENDIF
+
+      IF( (RANK.GT.MAX_RANK).OR.(NLOOPLINE.gt.10) ) THEN
 	    LPASS=.FALSE.	  
 	  endif
+
       RETURN
       END
 
