@@ -6200,36 +6200,45 @@ class UFO_model_to_mg4(object):
                        'mass': particle.get('mass'),'mp_pref':self.mp_prefix})
 
         fsock.writelines('\n'.join(res_strings))
-        
-    def create_param_card(self):
-        """ create the param_card.dat """
 
+
+    @staticmethod
+    def create_param_card_static(model, output_path, rule_card_path=False,
+                                 mssm_convert=True):
+        """ create the param_card.dat for a givent model --static method-- """
         #1. Check if a default param_card is present:
         done = False
-        if hasattr(self.model, 'restrict_card') and isinstance(self.model.restrict_card, str):
-            restrict_name = os.path.basename(self.model.restrict_card)[9:-4]
-            model_path = self.model.get('modelpath')
+        if hasattr(model, 'restrict_card') and isinstance(model.restrict_card, str):
+            restrict_name = os.path.basename(model.restrict_card)[9:-4]
+            model_path = model.get('modelpath')
             if os.path.exists(pjoin(model_path,'paramcard_%s.dat' % restrict_name)):
                 done = True
                 files.cp(pjoin(model_path,'paramcard_%s.dat' % restrict_name),
-                         pjoin(self.dir_path, 'param_card.dat'))
+                         output_path)
         if not done:
-            out_path = pjoin(self.dir_path, 'param_card.dat')
-            param_writer.ParamCardWriter(self.model, out_path)
-            
-        out_path2 = None
-        if hasattr(self.model, 'rule_card'):
-            out_path2 = pjoin(self.dir_path, 'param_card_rule.dat')
-            self.model.rule_card.write_file(out_path2)
+            param_writer.ParamCardWriter(model, output_path)
+         
+        if rule_card_path:   
+            if hasattr(model, 'rule_card'):
+                model.rule_card.write_file(rule_card_path)
         
-        # IF MSSM convert the card to SLAH1
-        if self.model_name == 'mssm' or self.model_name.startswith('mssm-'):
-            import models.check_param_card as translator
-            
-            # Check the format of the param_card for Pythia and make it correct
-            if out_path2:
-                translator.make_valid_param_card(out_path, out_path2)
-            translator.convert_to_slha1(out_path)
+        if mssm_convert:
+            model_name = model.get('name')
+            # IF MSSM convert the card to SLAH1
+            if model_name == 'mssm' or model_name.startswith('mssm-'):
+                import models.check_param_card as translator    
+                # Check the format of the param_card for Pythia and make it correct
+                if rule_card_path:
+                    translator.make_valid_param_card(output_path, rule_card_path)
+                translator.convert_to_slha1(output_path)        
+    
+    def create_param_card(self):
+        """ create the param_card.dat """
+
+        self.create_param_card_static(self.model, 
+                                      output_path=pjoin(self.dir_path, 'param_card.dat'), 
+                                      rule_card_path=pjoin(self.dir_path, 'param_card_rule.dat'), 
+                                      mssm_convert=True)
         
 def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True):
     """ Determine which Export_v4 class is required. cmd is the command 

@@ -34,6 +34,7 @@ import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.various.misc as misc
 import madgraph.iolibs.files as files
+import madgraph.iolibs.export_v4 as export_v4
 import madgraph.various.banner as banner
 import madgraph.various.lhe_parser as lhe_parser
 
@@ -229,15 +230,24 @@ class MadSpinInterface(extended_cmd.Cmd):
             args.remove('--bypass_check')
             bypass_check = True
             
-        if len(args) != 2:     
+        if len(args) == 1:  
+            logger.warning("""No param_card defined for the new model. We will use the default one but this might completely wrong.""")
+        elif len(args) != 2:
             return self.InvalidCmd, 'import model requires two arguments'
         
         model_name = args[0]
-        card = args[1]
-        if not os.path.exists(card):
-            raise self.InvalidCmd('%s: no such file' % card)
-
         self.load_model(model_name, False, False)
+        
+        if len(args) == 2:
+            card = args[1]
+            if not os.path.exists(card):
+                raise self.InvalidCmd('%s: no such file' % card)
+        else:
+            card = "madspin_param_card.dat"
+            export_v4.UFO_model_to_mg4.create_param_card_static(self.model,
+                                card, rule_card_path=None)
+
+        
 
         #Check the param_card
         if not bypass_check:
@@ -255,11 +265,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             if diff:
                 raise self.InvalidCmd('''Original param_card differs on some parameters:
     %s
-    Due to those preferences, we prefer not to proceed. If you are sure about what you are doing, 
+    Due to those differences, we prefer not to proceed. If you are sure about what you are doing, 
     you can use the command \'import model MODELNAME PARAM_CARD_PATH --bypass_check\''''
     % diff.replace('\n','\n    '))
+   
+   
                 
-        #OK load the new param_card
+        #OK load the new param_card (but back up the old one)
+        if 'slha' in self.banner:
+            self.banner['slha_original'] = self.banner['slha']
         self.banner['slha'] = open(card).read()
         if hasattr(self.banner, 'param_card'):
             del self.banner.param_card

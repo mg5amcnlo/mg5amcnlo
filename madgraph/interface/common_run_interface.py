@@ -3116,7 +3116,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning("invalid command for decay. Line ignored")
             return
         
-        misc.sprint( line, "-add" in line)
         if "-add" in line:
             # just to have to add the line to the end of the file
             particle = line.split('>')[0].strip()
