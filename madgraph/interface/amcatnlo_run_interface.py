@@ -1414,8 +1414,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             npoints = self.run_card['npoints_FO_grid']
             niters = self.run_card['niters_FO_grid']
             for p_dir in p_dirs:
-                with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
-                    channels=chan_file.readline().split()
+                try:
+                    with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
+                        channels=chan_file.readline().split()
+                except IOError:
+                    logger.warning('No integration channels found for contribution %s' % p_dir)
+                    continue
                 for channel in channels:
                     job={}
                     job['p_dir']=p_dir

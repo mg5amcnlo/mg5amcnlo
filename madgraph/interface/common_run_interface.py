@@ -658,7 +658,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
-                pids = self.get_pid_final_states()
+                pids = self.get_pid_final_initial_states()
                 # check those which are charged under qcd
                 if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:
                         sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
@@ -1351,8 +1351,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.update_status('delphes done', level='delphes', makehtml=False)
 
     ############################################################################
-    def get_pid_final_states(self):
-        """Find the pid of all particles in the final states"""
+    def get_pid_final_initial_states(self):
+        """Find the pid of all particles in the final and initial states"""
         pids = set()
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
@@ -1363,7 +1363,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             group = pat.findall(text)
             for particles in group:
                 particles = particles.split(',')
-                pids.update(set(particles[nb_init:]))
+                pids.update(set(particles))
 
         return pids
 
