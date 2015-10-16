@@ -1419,6 +1419,9 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 self.update_status(status, level='parton')
                 self.run_all_jobs(jobs_to_run,mint_step,fixed_order=False)
                 self.collect_log_files(jobs_to_run,mint_step)
+                if mint_step+1==2 and nevents==0:
+                    self.print_summary(options,2,mode)
+                    return
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run, \
                                 jobs_to_collect,mint_step,mode,mode_dict[mode],fixed_order=False)
             # Sanity check on the event files. If error the jobs are resubmitted
@@ -1877,8 +1880,10 @@ RESTART = %(mint_mode)s
             errABS+= math.pow(job['errorABS'],2)
             tot+= job['result']
             err+= math.pow(job['error'],2)
-        content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
-            (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,tot, math.sqrt(err), math.sqrt(err)/tot *100.))
+        if jobs:
+            content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
+                           (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,\
+                            tot, math.sqrt(err), math.sqrt(err)/tot *100.))
         with open(pjoin(self.me_dir,'SubProcesses','res_%s.txt' % integration_step),'w') as res_file:
             res_file.write('\n'.join(content))
         randinit=self.get_randinit_seed()
