@@ -1593,16 +1593,18 @@ RESTART = %(mint_mode)s
                 self.update_status('Refining results, step %i' % integration_step, level=None)
         self.ijob = 0
         name_suffix={'born' :'B', 'all':'F'}
+        if fixed_order:
+            run_type="Fixed order integration step %s" % integration_step
+        else:
+            run_type="MINT step %s" % integration_step
         for job in jobs_to_run:
             executable='ajob1'
             if fixed_order:
                 arguments=[job['channel'],job['run_mode'], \
                                     str(job['split']),str(integration_step)]
-                run_type="Fixed order integration step %s" % integration_step
             else:
                 arguments=[job['channel'],name_suffix[job['run_mode']], \
                                     str(job['split']),str(integration_step)]
-                run_type="MINT step %s" % integration_step
             self.run_exe(executable,arguments,run_type,
                          cwd=pjoin(self.me_dir,'SubProcesses',job['p_dir']))
 
