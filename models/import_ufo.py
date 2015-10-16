@@ -75,7 +75,8 @@ def find_ufo_path(model_name):
 
     return model_path
 
-def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
+def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
+                                                    complex_mass_scheme = None):
     """ a practical and efficient way to import a model"""
     
     # check if this is a valid path or if this include restriction file       
@@ -112,12 +113,16 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
     
     #import the FULL model
     model = import_full_model(model_path, decay, prefix)
-    
+
     if os.path.exists(pjoin(model_path, "README")):
         logger.info("Please read carefully the README of the model file for instructions/restrictions of the model.",'$MG:color:BLACK') 
     # restore the model name
     if restrict_name:
         model["name"] += '-' + restrict_name
+    
+    # Decide whether complex mass scheme is on or not
+    useCMS = (complex_mass_scheme is None and aloha.complex_mass) or \
+                                                      complex_mass_scheme==True
     #restrict it if needed       
     if restrict_file:
         try:
@@ -130,14 +135,40 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_'):
             logger.info('Run \"set stdout_level DEBUG\" before import for more information.')
         # Modify the mother class of the object in order to allow restriction
         model = RestrictModel(model)
+
+        # Change to complex mass scheme if necessary. This must be done BEFORE
+        # the restriction.
+        if useCMS:
+            # We read the param_card a first time so that the function 
+            # change_mass_to_complex_scheme can know if a particle is to
+            # be considered massive or not and with zero width or not.
+            # So we read the restrict card a first time, with the CMS set to
+            # False because we haven't changed the model yet.
+            model.set_parameters_and_couplings(param_card = restrict_file,
+                                                      complex_mass_scheme=False)
+            model.change_mass_to_complex_scheme(toCMS=True)
+        else:
+            # Make sure that the parameter 'CMSParam' of the model is set to 0.0
+            # as it should in order to have the correct NWA renormalization condition.
+            # It might be that the default of the model is CMS.
+            model.change_mass_to_complex_scheme(toCMS=False)
+
         if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
             keep_external=True
         else:
             keep_external=False
         model.restrict_model(restrict_file, rm_parameter=not decay,
-                                            keep_external=keep_external)
+           keep_external=keep_external, complex_mass_scheme=complex_mass_scheme)
         model.path = model_path
+    else:
+        # Change to complex mass scheme if necessary
+        if useCMS:
+            model.change_mass_to_complex_scheme(toCMS=True)
+        else:
+            # It might be that the default of the model (i.e. 'CMSParam') is CMS.
+            model.change_mass_to_complex_scheme(toCMS=False)
 
+        
     return model
     
 
@@ -263,8 +294,8 @@ def import_full_model(model_path, decay=False, prefix=''):
     # save in a pickle files to fasten future usage
     if ReadWrite:
         save_load_object.save_to_file(os.path.join(model_path, pickle_name),
-                                   model, log=False) 
- 
+                                   model, log=False)
+
     #if default and os.path.exists(os.path.join(model_path, 'restrict_default.dat')):
     #    restrict_file = os.path.join(model_path, 'restrict_default.dat') 
     #    model = import_ufo.RestrictModel(model)
@@ -1504,7 +1535,8 @@ class RestrictModel(model_reader.ModelReader):
         self.rule_card = check_param_card.ParamCardRule()
         self.restrict_card = None
      
-    def restrict_model(self, param_card, rm_parameter=True, keep_external=False):
+    def restrict_model(self, param_card, rm_parameter=True, keep_external=False,
+                                                      complex_mass_scheme=None):
         """apply the model restriction following param_card.
         rm_parameter defines if the Zero/one parameter are removed or not from
         the model.
@@ -1518,6 +1550,11 @@ class RestrictModel(model_reader.ModelReader):
         self.set('particles', self.get('particles'))
 
         # compute the value of all parameters
+        # Get the list of definition of model functions, parameter values. 
+        self.set_parameters_and_couplings(param_card, 
+                                        complex_mass_scheme=complex_mass_scheme)
+        
+        
         # Keep the list of definition of model functions, parameter values. 
         model_definitions = self.set_parameters_and_couplings(param_card)
         

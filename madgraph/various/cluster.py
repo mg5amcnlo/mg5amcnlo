@@ -1616,7 +1616,7 @@ class SLURMCluster(Cluster):
     idle_tag = ['Q','PD','S','CF']
     running_tag = ['R', 'CG']
     complete_tag = ['C']
-    identification_length = 8
+    identifier_length = 8
 
     @multiple_try()
     def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
@@ -1683,13 +1683,13 @@ class SLURMCluster(Cluster):
     def control(self, me_dir):
         """ control the status of a single job with it's cluster id """
         cmd = "squeue"
-        status = misc.Popen([cmd], stdout=subprocess.PIPE)
+        pstatus = misc.Popen([cmd], stdout=subprocess.PIPE)
 
         me_dir = self.get_jobs_identifier(me_dir)
 
         idle, run, fail = 0, 0, 0
         ongoing=[]
-        for line in status.stdout:
+        for line in pstatus.stdout:
             if me_dir in line:
                 id, _, _,_ , status,_ = line.split(None,5)
                 ongoing.append(id)

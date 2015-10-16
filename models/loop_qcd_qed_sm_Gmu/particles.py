@@ -339,7 +339,7 @@ G0 = Particle(pdg_code = 250,
               width = Param.WZ,
               texname = 'G0',
               antitexname = 'G0',
-              GoldstoneBoson = True,
+              goldstoneboson = True,
               charge = 0,
               GhostNumber = 0,
               LeptonNumber = 0)
@@ -353,7 +353,7 @@ G__plus__ = Particle(pdg_code = 251,
                      width = Param.WW,
                      texname = 'G+',
                      antitexname = 'G+',
-                     GoldstoneBoson = True,
+                     goldstoneboson = True,
                      charge = 1,
                      GhostNumber = 0,
                      LeptonNumber = 0)
@@ -368,7 +368,7 @@ b.counterterm = {(1,0,0):CTParam.bWcft_UV.value}
 t.loop_particles = [[[6,21]]]
 t.counterterm = {(1,0,0):CTParam.tWcft_UV.value}
 
-G.loop_particles = [[[4]],[[6]]]
+G.loop_particles = [[[5]],[[6]]]
 G.counterterm = {(1,0,0):CTParam.GWcft_UV_b.value,(1,0,1):CTParam.GWcft_UV_t.value}
 
 Param.MB.loop_particles= [[[5,21]]]

@@ -198,6 +198,53 @@ class TestParamCard(unittest.TestCase):
                                              *('polemass', [35], 'width', [24]))
         
     
+    
+    
+class TestParamCardIterator(unittest.TestCase):
+    """ Test the ParamCard Object """
+    
+    def test_paramcard_scan(self):
+        full_card = os.path.join(_file_path, os.path.pardir,
+                                     'input_files', 'param_card_sm.dat')        
+        card = writter.ParamCard(full_card)
+        
+        # create a simple 1D scan
+        card['mass'].get(6).value = "scan:[1,2,3,4,5]"
+        mh = card['mass'].get(25).value # to check that param_card are independant
+        
+        itercard = writter.ParamCardIterator(card)
+        card['mass'].get(25).value = 25.0
+        for i, new_card in enumerate(itercard):
+            self.assertEqual(new_card['mass'].get(6).value, i+1)
+            self.assertEqual(new_card['mass'].get(25).value, mh)
+        self.assertEqual(i, 4)
+        
+        # create a 1D scan with two parameter
+        card['mass'].get(6).value = "scan1:[1,2,3,4,5]"
+        card['mass'].get(25).value = "scan1:[0,10,20,30,40]"
+        itercard = writter.ParamCardIterator(card)
+        for i, new_card in enumerate(itercard):
+            self.assertEqual(new_card['mass'].get(6).value, i+1)
+            self.assertEqual(new_card['mass'].get(25).value, 10*i)
+        self.assertEqual(i, 4)
+        
+        # create a 2D scan with two parameter
+        card['mass'].get(6).value = "scan:[1,2,3]"
+        card['mass'].get(25).value = "scan:[0,10,20,30]"
+        all_possibilities = [(1,0), (1,10),(1,20),(1,30),
+                             (2,0), (2,10),(2,20),(2,30),
+                             (3,0), (3,10),(3,20),(3,30)
+                             ]
+        itercard = writter.ParamCardIterator(card)
+        for i, new_card in enumerate(itercard):
+            choice = (new_card['mass'].get(6).value, new_card['mass'].get(25).value)
+            self.assertIn(choice, all_possibilities)
+            all_possibilities.remove(choice)
+            
+        self.assertEqual(i, 11)                    
+        self.assertFalse(all_possibilities)
+        
+         
 class TestParamCardRule(unittest.TestCase):
     """ Test the ParamCardRule Object"""
     
