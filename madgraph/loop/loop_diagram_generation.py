@@ -1284,7 +1284,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # above.
         CT_interactions = {}
         for inter in self['process']['model']['interactions']:
-            if inter.is_UVmass() or inter.is_UVloop() or inter.is_R2() and \
+             if inter.is_UVmass() or inter.is_UVloop() or inter.is_R2() and \
                 len(inter['particles'])>1 and inter.is_perturbating(\
                                      self['process']['perturbation_couplings']):
                 # This interaction might have several possible loop particles 
