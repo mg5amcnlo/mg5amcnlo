@@ -117,7 +117,7 @@ C ----------
 	  ENDDO
       DO IHEL=1,NCOMB
 	     IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
-           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN
               CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1), T)
 	 	      BUFF=0D0
 			  DO I=1,NSQAMPSO			
@@ -214,7 +214,7 @@ C
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
 	  COMPLEX*16 JAMP(NCOLOR,NAMPSO)
-      COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C
@@ -276,9 +276,9 @@ C     the include file with the values of the parameters and masses
       G = 2* DSQRT(ALPHAS*pi)
       call UPDATE_AS_PARAM()
       if (NHEL.ne.0) then
-        CALL SMATRIXHEL(P, NHEL, ANS)
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
       else
-        CALL SMATRIX(P, ANS)
+        CALL %(proc_prefix)sSMATRIX(P, ANS)
       endif
       return 
       end

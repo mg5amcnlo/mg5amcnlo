@@ -203,7 +203,7 @@ c initialize grids
             enddo
          else
 c to restore grids:
-            open (unit=12, file='preset_mint_grids',status='old')
+            open (unit=12, file='mint_grids',status='old')
             do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
@@ -299,7 +299,7 @@ c write the results.dat file
          close(58)
 
 c to save grids:
-         open (unit=12, file='mint_grids_NLO',status='unknown')
+         open (unit=12, file='mint_grids',status='unknown')
          write (12,*) (xgrid(0,i),i=1,ndim)
          do j=1,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
@@ -314,7 +314,6 @@ c to save grids:
          write (12,*) (unc(i),i=1,nintegrals)
          write (12,*) virtual_fraction,average_virtual
          close (12)
-
 
 c*************************************************************
 c     event generation
@@ -337,7 +336,7 @@ c Mass-shell stuff. This is MC-dependent
          ncall=nevts ! Update ncall with the number found in 'nevts'
 
 c to restore grids:
-         open (unit=12, file='mint_grids_NLO',status='unknown')
+         open (unit=12, file='mint_grids',status='unknown')
          read (12,*) (xgrid(0,i),i=1,ndim)
          do j=1,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)
@@ -494,6 +493,15 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
       write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
+
+      open (unit=12, file='res.dat',status='unknown')
+      if (imode.eq.0) then
+         write (12,*)ans(1),unc(1),ans(2),unc(2),itmax,ncall,tTot
+      else
+         write (12,*)ans(1)+ans(5),sqrt(unc(1)**2+unc(5)**2),ans(2)
+     $        ,unc(2),itmax,ncall,tTot
+      endif
+      close(12)
 
       return
  999  write (*,*) 'nevts file not found'

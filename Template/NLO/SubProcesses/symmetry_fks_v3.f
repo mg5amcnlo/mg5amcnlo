@@ -526,10 +526,10 @@ c
 c
 c     local
 c
-      integer i, j, nbw, ic, icode
+      integer i, j
       integer iarray(imax)
       logical lconflict(-max_branch:nexternal)
-      logical done,j_fks_ini,j_fks_fin,two_jobs,first
+      logical done,j_fks_ini,j_fks_fin,two_jobs
       logical gForceBW(-max_branch:-1,lmaxconfigs)  ! Forced BW
       include 'born_decayBW.inc'
       integer lname
@@ -548,8 +548,9 @@ c-----
       if (j_fks_ini.and.j_fks_fin) two_jobs=.true.
       fname='ajob'
       lname=4
-      call open_bash_file(26,fname,lname)
-      first=.true.
+      call open_bash_file(26,fname,lname,mname)
+      call close_bash_file(26)
+      open(unit=26,file='channels.txt',status='unknown')
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
             if (two_jobs) then
@@ -558,13 +559,6 @@ c-----
                postfix='.0'
             endif
  100        continue
-            if ( .not. first ) then
-               call close_bash_file(26)
-               fname='ajob'
-               lname=4
-               call open_bash_file(26,fname,lname)
-            endif
-            first=.false.
             if (mapconfig(i) .lt. 10) then
                write(26,'(x,i1,a2$)') mapconfig(i),postfix
             elseif (mapconfig(i) .lt. 100) then
@@ -580,7 +574,7 @@ c-----
             endif
          endif
       enddo
-      call close_bash_file(26)
+      close(26)
       if (mapconfig(0) .gt. 9999) then
          write(*,*) 'ERROR Only writing first 9999 jobs',mapconfig(0)
          stop 1

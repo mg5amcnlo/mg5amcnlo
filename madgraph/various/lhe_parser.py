@@ -219,8 +219,7 @@ class EventFile(object):
         self.len = nb_event
         self.seek(init_pos)
         return self.len
-        
-    
+
     def next(self):
         """get next event"""
         text = ''
@@ -328,11 +327,11 @@ class EventFile(object):
         # need to modify the banner so load it to an object
         if self.banner:
             try:
-                import madgraph
+                import internal
             except:
-                import internal.banner as banner_module
-            else:
                 import madgraph.various.banner as banner_module
+            else:
+                import internal.banner as banner_module
             if not isinstance(self.banner, banner_module.Banner):
                 banner = self.get_banner()
                 # 1. modify the cross-section
@@ -467,7 +466,7 @@ class EventFile(object):
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000}
+        opt= {"print_step": 2000, "maxevent":float("inf")}
         opt.update(opts)
         
         nb_fct = len(fcts)
@@ -485,6 +484,8 @@ class EventFile(object):
                     logger.info("currently at %s event" % nb_event)
             for i in range(nb_fct):
                 out[i].append(fcts[i](event))
+            if nb_event > opt['maxevent']:
+                break
         if nb_fct == 1:
             return out[0]
         else:
@@ -603,7 +604,8 @@ class MultiEventFile(EventFile):
         if run_card["lhe_version"] < 3:
             init_information["generator_info"] = ""
         else:
-            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='2.2.1'>please cite 1405.0301 </generator>\n"
+            init_information["generator_info"] = "<generator name='MadGraph5_aMC@NLO' version='%s'>please cite 1405.0301 </generator>\n" \
+                % misc.get_pkg_info()['version']
         
         # cross_information:
         cross_info = "%(cross)e %(error)e %(wgt)e %(id)i"
@@ -723,7 +725,8 @@ class MultiEventFile(EventFile):
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
         
-        if opts['event_target']:
+        if 'event_target' in opts and opts['event_target']:
+            misc.sprint(opts['event_target'])
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt
@@ -900,7 +903,7 @@ class Event(list):
                 
             for i in range(1, len(tmp)+1):
                 self.matched_scale_data.append(tmp[i])
-                
+ 
         return self.matched_scale_data
             
 
@@ -927,7 +930,8 @@ class Event(list):
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
         if old_scales:
-            self.matched_scale_data.pop(position-2)
+            jet_position = sum(1 for i in range(position) if self[i].status==1)
+            self.matched_scale_data.pop(jet_position)
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -936,7 +940,7 @@ class Event(list):
             new_particle.event_id = len(self)
             self.append(new_particle)
             if old_scales:
-                self.matched_scale_data.append(old_scales[position-2])
+                self.matched_scale_data.append(old_scales[jet_position])
             # compute and assign the new four_momenta
             new_momentum = this_4mom.boost(FourMomentum(new_particle))
             new_particle.set_momentum(new_momentum)
@@ -1200,14 +1204,20 @@ class Event(list):
             if particle.status in [-1,1]:
                 if particle.color1:
                     color_index[particle.color1] +=1
+                    if -7 < particle.pdg < 0:
+                        raise Exception, "anti-quark with color tag"
                 if particle.color2:
                     color_index[particle.color2] +=1     
+                    if 7 > particle.pdg > 0:
+                        raise Exception, "quark with anti-color tag"                
+                
                 
         for key,value in color_index.items():
             if value > 2:
                 print self
                 print key, value
                 raise Exception, 'Wrong color_flow'           
+        
         
         #2. check that each parent present have coherent color-structure
         check = []

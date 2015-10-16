@@ -429,7 +429,7 @@ c Should cause the code to crash if used
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+CONV*PD(i_process)*wgtwmcxsec(i)*g**(2*wgtbpower
-     $           +2.d0) * rwgt_muR_dep_fac(scale)
+     $           +2.d0) * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
           endif
         enddo
@@ -479,7 +479,7 @@ c Should cause the code to crash if used
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+CONV*PD(i_process)*wgtwreal(k)*g**(2*wgtbpower
-     $           +2.d0) * rwgt_muR_dep_fac(scale)
+     $           +2.d0) * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
           endif
         enddo
@@ -527,7 +527,7 @@ c Should cause the code to crash if used
           nFKSprocess=nFKSprocess_used
           xlum = dlum()
           xsec=xsec+CONV*PD(i_process)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
-     f         * rwgt_muR_dep_fac(scale)
+     f         * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
         endif
       endif
@@ -663,7 +663,7 @@ c Should cause the code to crash if used
             do j=1,iproc_save(nFKSprocess)
                if (eto(j,nFKSprocess).eq.i_process) then
                   xsec=xsec+CONV*PD(j)*wgtwmcxsec(i)*g**(2*wgtbpower
-     $                 +2.d0) * rwgt_muR_dep_fac(scale)
+     $                 +2.d0) * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                endif
             enddo
@@ -759,7 +759,7 @@ c Should cause the code to crash if used
                if (eto(j,nFKSprocess).eq.i_process) then
                   xsec=xsec+CONV*PD(j)*( wgtwreal(k)+wgtwdeg(k)
      $                 +wgtwdegmuf(k)*xlgmuf )*g**(2*wgtbpower+2.d0)
-     f                 * rwgt_muR_dep_fac(scale)
+     f                 * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                endif
             enddo
@@ -770,16 +770,16 @@ com-- muR-dependent fac is reweighted here
                  if (eto(j,nFKSprocess).eq.i_process) then
                     if(wgtbpower.gt.0)then
                        xsec=xsec+CONV*PD(j)*wgtwborn(k)*g**(2*wgtbpower)
-     f                      * rwgt_muR_dep_fac(scale)
+     f                      * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                     else
                        xsec=xsec+CONV*PD(j)*wgtwborn(k)
-     f                      * rwgt_muR_dep_fac(scale)
+     f                      * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                     endif
                     xsec=xsec+CONV*PD(j)*( wgtwns(k)+ wgtwnsmuf(k)
      $                   *xlgmuf+wgtwnsmur(k)*xlgmur )*g**(2*wgtbpower
-     $                   +2.d0) * rwgt_muR_dep_fac(scale)
+     $                   +2.d0) * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                  endif
               enddo
@@ -832,7 +832,7 @@ c Should cause the code to crash if used
           do j=1,iproc_save(nFKSprocess)
              if (eto(j,nFKSprocess).eq.i_process) then
                 xsec=xsec+CONV*PD(j)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
-     f               * rwgt_muR_dep_fac(scale)
+     f               * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
              endif
           enddo
@@ -965,16 +965,16 @@ c
                   if (eto(j,nFKSprocess).eq.i_process) then
                      if(wgtbpower.gt.0)then
                         xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2
-     $                       *wgtbpower) * rwgt_muR_dep_fac(scale)
+     $                       *wgtbpower) * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                      else
                         xsec=xsec+CONV*PD(j)*wgtwborn_all
-     f                       * rwgt_muR_dep_fac(scale)
+     f                       * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                      endif
                      xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all
      $                    *xlgmuf+wgtwnsmur_all*xlgmur )*g**(2*wgtbpower
-     $                    +2.d0) * rwgt_muR_dep_fac(scale)
+     $                    +2.d0) * rwgt_muR_dep_fac(scale,scale)
 com-- muR-dependent fac is reweighted here
                   endif
                enddo
@@ -1065,7 +1065,7 @@ c     include a muR-dependent pre-factor. Multiply by the muR-dependent
 c     factor and devide by the muR-independent one.
 c Note: This is implemented below for the Bottom Yukawa in the SM.
 c       Change it to the factor you need to reweight.
-      Double precision function rwgt_muR_dep_fac(scale)
+      Double precision function rwgt_muR_dep_fac(scale,central)
       implicit none
       double precision scale,vev,mbmb,apimuR,apimZ,apimb,mbmuR,alphas,pi
       parameter (pi=3.14159265358979323846d0)
@@ -1074,6 +1074,9 @@ c       Change it to the factor you need to reweight.
       include "reweight.inc"
       include "coupl.inc"
       include "../../Source/MODEL/input.inc"
+      integer i
+      double precision central,tootiny,apicentral,mbcentral
+      parameter (tootiny=1d-9)
       rwgt_muR_dep_fac = 1d0
 c     This is relevant for a muR-dependent bottom-mass in Yukawa.
       IF(wgtcpower .ne. 0d0 .and. runfac .eq. 1) THEN
@@ -1081,10 +1084,26 @@ c$$$      vev    = 246.21845813429518469305d0 !vev in aMC@NLO from y_b->m_b
 c$$$      mbmb = MDL_YB*vev/dsqrt(2d0)
 c$$$com-- mbmb input for fixed Yukawa bmass in param_card.dat is used here
 c$$$com-- as start value of running and to remove it from the cross section
-c$$$      apimuR = alphas(scale)/pi
+c$$$c new settings NLO
 c$$$      apimZ  = alphas(MDL_MZ)/pi
-c$$$      CALL runalpha(apimZ,MDL_MZ,mbmb,5d0,2,0,apimb)
-c$$$      CALL runmass(mbmb,apimb,apimuR,5d0,2,mbmuR)
+c$$$
+c$$$      if(dabs(scale/central-1d0).lt.tootiny) then
+c$$$c if scale muR is the same as the central scale of muR, get 
+c$$$c "input value" mb(muR) with highest possible accuracy
+c$$$         CALL runalpha(apimZ,MDL_MZ,central,4d0,4,0,apimuR)
+c$$$         CALL runalpha(apimZ,MDL_MZ,mbmb,4d0,4,0,apimb)
+c$$$         CALL runmass(mbmb,apimb,apimuR,4d0,4,mbmuR)
+c$$$      else
+c$$$c if scale and central are different (muR variations) do two steps:
+c$$$c step 1: get "input value" mb(central scale) from most accurate running
+c$$$         CALL runalpha(apimZ,MDL_MZ,central,4d0,4,0,apicentral)
+c$$$         CALL runalpha(apimZ,MDL_MZ,mbmb,4d0,4,0,apimb)
+c$$$         CALL runmass(mbmb,apimb,apicentral,4d0,4,mbcentral)
+c$$$c step 2: get variation around central value, ie mb(muR), with loop 
+c$$$c         order consistent with computation LO: 1-loop, NLO: 2-loop
+c$$$         CALL runalpha(apicentral,central,scale,4d0,2,0,apimuR)
+c$$$         CALL runmass(mbcentral,apicentral,apimuR,4d0,2,mbmuR)
+c$$$      endif
 c$$$      rwgt_muR_dep_fac = (mbmuR/mbmb)**wgtcpower
       ELSE
          return
@@ -1289,7 +1308,7 @@ C..
 c..   /path/  is for odeint.for:
       COMMON /path/ kmax,kount,dxsav,x(KMAXX),y(NMAX,KMAXX)
       common /bfunc/ beta0,beta1,beta2,beta3
-      COMMON nrhs
+      COMMON /cbnrhs/nrhs 
       data pi/3.14159265358979323846264338328d0/
       EXTERNAL rhs,rkqs
 

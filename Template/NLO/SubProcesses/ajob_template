@@ -26,57 +26,38 @@ if [[ (-e MadLoop5_resources.tar.gz) && (! -e MadLoop5_resources/HelConfigs.dat)
     exit
 fi
 
+channel=$1
+run_mode=$2
+runnumber=$3
+integration_step=$4
+
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
-    runnumber=0
-    if [[ $1 == '0' ]]; then
-        j=$2\_G$i
-        if [[ ! -e $j ]]; then
-            mkdir $j
-        fi
-        cd $j
-        if [[ "$4" != "" ]]; then
-            if [[ -e ../$4\_G$i ]]; then
-                if [[ $1 == '0' ]]; then
-                    cp -f ../$4\_G$i/mint_grids . >/dev/null 2>&1
-                    cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1
-                elif [[ $1 == '1' ]]; then
-                    cp -f ../$4\_G$i/mint_grids . >/dev/null 2>&1
-                    cp -f ../$4\_G$i/grid.MC_integer . >/dev/null 2>&1
-                fi
-            else
-                echo "Cannot find directory ../$4\_G$i/" > log.txt
-                exit
-            fi
-    	fi
-    elif [[ $1 == '2' ]]; then
-        j=G$2$i
-        if [[ ! -e $j ]]; then
-            mkdir $j
-        fi
-        
-        cd $j
-        if [[ "$4" != "" ]]; then
-            if [[ "$4" == "H" ||"$4" == "S" || "$4" == "V" || "$4" == "B" || "$4" == "F" ]]; then
-                if [[ -e ../G$4$i ]]; then
-                    cp -f ../G$4$i/mint_grids ./preset_mint_grids >/dev/null 2>&1
-                    cp -f ../G$4$i/grid.MC_integer . >/dev/null 2>&1
-                else
-                    echo "Cannot find direcotry ../G$4$i/" > log.txt
-                    exit
-                fi
-            else
-                runnumber=$4
-                if [[ ! -e ../${j}_$4 ]]; then
-                    mkdir ../${j}_$4
-                fi
-                cd ../${j}_$4
-                ln -sf ../${j}/mint_grids 
-                ln -sf ../${j}/mint_grids_NLO 
-                ln -sf ../${j}/grid.MC_integer
-                ln -sf ../${j}/res_1
-            fi
-        fi
+    if [[ $run_mode == 'all' || $run_mode == 'born' ]] ; then
+	j=$run_mode\_G$i
+    else
+	if [[ $runnumber == '0' ]] ; then
+	    j=G$run_mode$i
+	else
+	    j=G$run_mode$i\_$runnumber
+	fi
+    fi
+    cd $j
+    
+    if  [[ -e res.dat ]] ; then
+	rm -f res.dat
+    fi
+    if  [[ -e log.txt ]] ; then
+	rm -f log.txt
+    fi
+    if  [[ -e MADatNLO.top ]] ; then
+	rm -f MADatNLO.top
+    fi
+    if  [[ -e MADatNLO.HwU ]] ; then
+	rm -f MADatNLO.HwU
+    fi
+    if  [[ -e MADatNLO.root ]] ; then
+	rm -f MADatNLO.root
     fi
     if  [[ -e randinit ]] ; then
 	rm -f randinit
@@ -97,67 +78,26 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     link1up FKS_params.dat
     link1up configs_and_props_info.dat
     link1up leshouche_info.dat
-#   Not necessary anymore
-#    link1up MadLoop5_resources
     link1up OLE_order.olc
     link1up param_card.dat
     link1up initial_states_map.dat
     
-#   check where is the basic file for the creation of input_app.txt
-#       
-    if [[ $1 == '0' ]]; then
-	if [[ $3 == '-1' && -e ./madinM1 ]] ; then
-	    input_template=./madinM1
-	else
- 	    if  [[  -e ../madin.$2 ]] ; then
- 		input_template=../madin.$2
- 	    else
- 		input_template=../../madin.$2
- 	    fi 
-	fi
-    elif [[ $1 == '2' ]]; then
-    	if [[ $3 == '0' || $3 == '2' ]]; then
-    	    if [[  -e ../madinMMC_$2.2 ]] ; then
- 		input_template=../madinMMC_$2.2
- 	    else
- 		input_template=../../madinMMC_$2.2
- 	    fi
- 	else
-	    input_template=./madinM1
-    	fi
-    fi
     
-    if [[ $1 == '0' ]]; then
-        head -n 5 $input_template >& input_app.txt
-        echo $i >> input_app.txt
-        tail -n 4 $input_template >> input_app.txt
-        T="$(date +%s)"
+    T="$(date +%s)"
+    if [[ $run_mode == 'all' || $run_mode == 'born' ]]; then
         ../madevent_mintFO > log.txt <input_app.txt 2>&1
-        status=$?
-        T="$(($(date +%s)-T))"
-        echo "Time in seconds: ${T}" >>log.txt
-    elif [[ $1 == '2' ]]; then
+    else
         if [[ $runnumber != 0 ]]; then
-            tar --extract --file=../nevents.tar nevts_${j}_$runnumber
-            mv  nevts_${j}_$runnumber nevts
             echo "$runnumber" >& moffset.dat
         fi
-        if [[ $3 == '0' || $3 == '2' ]]; then
-            head -n 6 $input_template > input_app.txt
-            echo $i >> input_app.txt
-            tail -n 3 $input_template >> input_app.txt
-        elif [[ $3 == '1' ]]; then
-            head -n 6 $input_template > input_app.txt
-            echo $i >> input_app.txt
-            tail -n 3 $input_template >> input_app.txt
-        fi
-        T="$(date +%s)"
         ../madevent_mintMC > log.txt <input_app.txt 2>&1
-        status=$?
-        T="$(($(date +%s)-T))"
-        echo "Time in seconds: ${T}" >>log.txt
-        cp -f log.txt log_MINT$3.txt  >/dev/null 2>&1
     fi
+    status=$?
+    T="$(($(date +%s)-T))"
+    echo "Time in seconds: ${T}" >>log.txt
+    cp -f log.txt log_MINT$integration_step.txt  >/dev/null 2>&1
+    cp -f res.dat res_$integration_step.dat  >/dev/null 2>&1
+    exit $status
     cd ..
 done
 exit $status

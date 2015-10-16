@@ -70,7 +70,7 @@ def Clean_event(run_name,mode='short'):
     ls=os.listdir('.')
     for element in ls:
         if os.path.isdir(element) and element[0]=='P':
-	    status,mess=clean.suppress_dir(os.path.join(element,run_name))
+            status,mess=clean.suppress_dir(os.path.join(element,run_name))
             #if not status:
             #    print 'supress ',element,' failed:' 
             #    print mess
@@ -93,7 +93,7 @@ def Clean_weight(run_name,mode='short'):
     ls=os.listdir('.')
     for element in ls:
         if os.path.isdir(element) and len(element)>4 and element[:4]=='MW_P':
-	    status,mess=clean.suppress_dir(os.path.join(element,run_name))
+            status,mess=clean.suppress_dir(os.path.join(element,run_name))
             #if not status:
             #    print 'supress ',element,' failed:' 
             #    print mess

@@ -30,6 +30,7 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.madevent_interface as me_interface
+import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.amcatnlo_run_interface as run_interface
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.loop_interface as Loop_interface
@@ -624,7 +625,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 #            self.options['automatic_html_opening'] = False
 
         if options['interactive']:
-            if hasattr(self, 'do_shell'):
+            if isinstance(self, extended_cmd.CmdShell):
                 ME = run_interface.aMCatNLOCmdShell(me_dir=argss[0], options=self.options)
             else:
                 ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
@@ -636,7 +637,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             stop = self.define_child_cmd_interface(ME)                
             return stop
 
-        ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
+        ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1],
+                                                  shell = isinstance(self, extended_cmd.CmdShell),
+                                                  **options)
         ext_program.run()
         
                     

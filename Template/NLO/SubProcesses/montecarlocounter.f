@@ -2549,8 +2549,9 @@ c Consistency check
       common/to_abrv/abrv
 
       ref_scale=sqrt((1-xi)*shat)
-      xscalemin=max(frac_low*ref_scale,scaleMClow)
-      xscalemax=max(frac_upp*ref_scale,xscalemin+scaleMCdelta)
+      xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
+      xscalemax=max(shower_scale_factor*frac_upp*ref_scale,
+     &              xscalemin+scaleMCdelta)
       xscalemax=min(xscalemax,2d0*sqrt(ebeam(1)*ebeam(2)))
       xscalemin=min(xscalemin,xscalemax)
 c

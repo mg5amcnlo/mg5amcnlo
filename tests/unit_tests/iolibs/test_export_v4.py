@@ -47,9 +47,13 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import tests.unit_tests.iolibs.test_helas_call_writers as \
                                             test_helas_call_writers
 
+from madgraph import MG5DIR
+
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
+
+
 
 pjoin = os.path.join
 
@@ -1993,6 +1997,32 @@ C     Diagram 12
 C     Number of configs
       DATA MAPCONFIG(0)/12/
 """)
+
+
+    def test_replace_make_opt_f_compiler(self):
+        """check that the compiler in the Template is the default one for release"""
+
+        if os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
+            LO_text = open(pjoin(MG5DIR, 'Template','LO','Source','make_opts')).read()
+            self.assertTrue('F2PY=f2py' in LO_text)
+            self.assertTrue('FC=gfortran' in LO_text)
+            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
+            self.assertTrue('F2PY=f2py' in NLO_text)
+            self.assertTrue('FC=gfortran' in NLO_text)            
+            
+            
+            
+            
+            
+        
+        
+        
+        
+        
+        
+        
+        
+
 
     def test_different_order_process_symmetry(self):
         """Test a process where different diagrams have different order props"""

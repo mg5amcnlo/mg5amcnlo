@@ -65,7 +65,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
       REAL*8 T
-      REAL*8 MATRIX
+      REAL*8 ML5_0_MATRIX
       INTEGER IHEL,IDEN, I
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
@@ -206,13 +206,13 @@ C     Amplitude(s) for diagram number 2
       CALL FFV2_0(W(1,1),W(1,6),W(1,7),GC_47,AMP(2))
       JAMP(1)=-AMP(1)-AMP(2)
 
-      MATRIX = 0.D0
+      ML5_0_MATRIX = 0.D0
       DO I = 1, NCOLOR
         ZTEMP = (0.D0,0.D0)
         DO J = 1, NCOLOR
           ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
         ENDDO
-        MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
+        ML5_0_MATRIX = ML5_0_MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)
       ENDDO
 
       END
@@ -243,9 +243,9 @@ C     the include file with the values of the parameters and masses
       G = 2* DSQRT(ALPHAS*PI)
       CALL UPDATE_AS_PARAM()
       IF (NHEL.NE.0) THEN
-        CALL SMATRIXHEL(P, NHEL, ANS)
+        CALL ML5_0_SMATRIXHEL(P, NHEL, ANS)
       ELSE
-        CALL SMATRIX(P, ANS)
+        CALL ML5_0_SMATRIX(P, ANS)
       ENDIF
       RETURN
       END

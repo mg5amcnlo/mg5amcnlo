@@ -2026,6 +2026,22 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
             # pythia launches pgs/delphes if needed    
             self.store_result()
+            
+            if self.param_card_iterator:
+                param_card_iterator = self.param_card_iterator
+                self.param_card_iterator = []
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                #check if the param_card defines a scan.
+                orig_name = self.run_name
+                for card in param_card_iterator:
+                    card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                    self.exec_cmd("generate_events -f ",precmd=True, postcmd=True,errorhandling=False)
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                name = misc.get_scan_name(orig_name, self.run_name)
+                path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+                logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
+                param_card_iterator.write_summary(path)
     
     def do_initMadLoop(self,line):
         """Compile and run MadLoop for a certain number of PS point so as to 
@@ -2322,9 +2338,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode)
         main_name = self.run_name
 
-
-        
-        
+        # check if the param_card requires a scan over parameter.
+        path=pjoin(self.me_dir, 'Cards', 'param_card.dat')
+        self.check_param_card(path, run=False)
+        #store it locally to avoid relaunch
+        param_card_iterator, self.param_card_iterator = self.param_card_iterator, []
         
         crossoversig = 0
         inv_sq_err = 0
@@ -2373,6 +2391,21 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
         
+        if param_card_iterator:
+
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            #check if the param_card defines a scan.
+            orig_name=self.run_name
+            for card in param_card_iterator:
+                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                self.exec_cmd("multi_run %s -f " % nb_run ,precmd=True, postcmd=True,errorhandling=False)
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            scan_name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
+            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            param_card_iterator.write_summary(path)
+    
 
     ############################################################################      
     def do_treatcards(self, line, mode=None, opt=None):
@@ -3180,8 +3213,11 @@ Beware that this can be dangerous for local multicore runs.""")
                     self.results.add_detail('cross_pythia', sigma_m)
                     self.results.add_detail('nb_event_pythia', Nacc)
                     #compute pythia error
-                    error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
-                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error']
+                    if Nacc:                    
+                        error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    else:
+                        error_m = 10000 * sigma_m
                     # works both for fixed number of generated events and fixed accepted events
                     self.results.add_detail('error_pythia', error_m)
                 break                 
@@ -3481,6 +3517,7 @@ Beware that this can be dangerous for local multicore runs.""")
         logger.info('Calculating systematics for run %s' % self.run_name)
         
         self.ask_edit_cards(['run_card'], args)
+        self.run_card = banner_mod.RunCard(pjoin(self.medir, 'Cards', 'run_card.dat'))
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -3667,7 +3704,7 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(cwd,G,'ftn25'))
                         except:
                             pass
-                    
+
                 #submitting
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,
@@ -4114,9 +4151,6 @@ Beware that this can be dangerous for local multicore runs.""")
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
 
-        os.environ['LHAPATH']=''
-
-
         if self.run_card['use_syst'] not in self.true:
             return
         
@@ -4126,6 +4160,12 @@ Beware that this can be dangerous for local multicore runs.""")
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
         self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        
+        if self.run_card['sys_pdf'].lower() in ['', 'f', 'false', 'none', '.false.']:
+            self.run_card['sys_pdf'] = ''
+        if self.run_card['sys_alpsfact'].lower() in ['', 'f', 'false', 'none','.false.']:
+            self.run_card['sys_alpsfact'] = ''
+        
         # check if the scalecorrelation parameter is define:
         if not 'sys_scalecorrelation' in self.run_card:
             self.run_card['sys_scalecorrelation'] = -1
@@ -4244,19 +4284,19 @@ Beware that this can be dangerous for local multicore runs.""")
                 else:
                     switch['reweight'] = 'OFF'
             else: 
-                switch['reweight'] = 'Numpy python package not available.'
+                switch['reweight'] = 'Not available (requires NumPy)'
                  
         if '-R' in args or '--reweight' in args:
             if switch['reweight'] == 'OFF':
                 switch['reweight'] = 'ON'
             elif switch['reweight'] != 'ON':
-                logger.critical("Can not run reweight: %s", switch['reweight'])
+                logger.critical("Cannot run reweight: %s", switch['reweight'])
         if '-M' in args or '--madspin' in args:
             switch['madspin'] = 'ON'
 
         options = list(available_mode) + ['auto', 'done']
         for id, key in enumerate(switch_order):
-            if switch[key] not in [void, 'Numpy python package not available.']:
+            if switch[key] not in [void, 'Not available (requires NumPy)']:
                 options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
                 options.append(key)
         options.append('parton')    
@@ -4915,7 +4955,7 @@ class MadLoopInitializer(object):
                 req_files.remove('HelFilter.dat')
             except ValueError:
                 pass
-
+        
         for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
                                                          '%s*'%subproc_prefix)):        
             # Make sure it is a valid MadLoop directory

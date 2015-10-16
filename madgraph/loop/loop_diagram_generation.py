@@ -74,13 +74,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # subsequent diagram generation runs.
         self.lcutpartemployed=[]
 
-    def __init__(self, argument=None):
+    def __init__(self, argument=None, loop_filter=None):
         """Allow initialization with Process"""
         
         if isinstance(argument, base_objects.Process):
             super(LoopAmplitude, self).__init__()
             self.set('process', argument)
-            self.generate_diagrams()
+            self.generate_diagrams(loop_filter=loop_filter)
         elif argument != None:
             # call the mother routine
             super(LoopAmplitude, self).__init__(argument)
@@ -345,17 +345,49 @@ class LoopAmplitude(diagram_generation.Amplitude):
             logger.debug(("MadLoop discarded %i diagram%s because they appeared"+\
               " to be zero because of Furry theorem.")%(n_discarded,'' if \
                                                        n_discarded<=1 else 's'))
+    
+    @staticmethod   
+    def get_loop_filter(filterdef):
+        """ Returns a function which applies the filter corresponding to the 
+        conditional expression encoded in filterdef."""
         
-    def user_filter(self, model, structs):
+        def filter(diag, structs, model, id):
+            """ The filter function generated '%s'."""%filterdef
+            
+            loop_pdgs   = diag.get_loop_lines_pdgs()
+            struct_pdgs = diag.get_pdgs_attached_to_loop(structs)
+            loop_masses = [model.get_particle(pdg).get('mass') for pdg in loop_pdgs]
+            struct_masses = [model.get_particle(pdg).get('mass') for pdg in struct_pdgs]
+            if not eval(filterdef.lower(),{'n':len(loop_pdgs),
+                                        'loop_pdgs':loop_pdgs,
+                                        'struct_pdgs':struct_pdgs,
+                                        'loop_masses':loop_masses,
+                                        'struct_masses':struct_masses,
+                                        'id':id}):
+                return False
+            else:
+                return True
+        
+        return filter
+        
+    def user_filter(self, model, structs, filter=None):
         """ User-defined user-filter. By default it is not called, but the expert
         user can turn it on and code here is own filter. Some default examples
         are provided here.
         The tagging of the loop diagrams must be performed before using this 
         user loop filter"""
         
-        # By default the user filter does nothing, if you want to turn it on
-        # and edit it then remove the print statement below.
-        return
+        # By default the user filter does nothing if filter is not set, 
+        # if you want to turn it on and edit it by hand, then set the 
+        # variable edit_filter_manually to True
+        edit_filter_manually = False
+        if not edit_filter_manually and filter in [None,'None']:
+            return
+
+        if filter not in [None,'None']:
+            filter_func = LoopAmplitude.get_loop_filter(filter)
+        else:
+            filter_func = None
 
         new_diag_selection = base_objects.DiagramList()
         discarded_diags = base_objects.DiagramList()
@@ -366,6 +398,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                        "make sure that the loop diagrams have been tagged first."
             valid_diag = True
             i=i+1
+    
+            # Apply the custom filter specified if any
+            if filter_func:
+                try:
+                    valid_diag = filter_func(diag, structs, model, i)
+                except Exception as e:
+                    raise InvalidCmd("The user-defined filter '%s' did not"%filter+
+                                 " returned the following error:\n       > %s"%str(e))
 #            if any([abs(i)!=1000021 for i in diag.get_loop_lines_pdgs()]):
 #                valid_diag=False
             
@@ -427,9 +467,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 discarded_diags.append(diag)
                 
         self['loop_diagrams'] = new_diag_selection
-        warn_msg = """
+        if filter in [None,'None']:
+            warn_msg = """
     The user-defined loop diagrams filter is turned on and discarded %d loops."""\
     %len(discarded_diags)
+        else:
+            warn_msg = """
+    The loop diagrams filter '%s' is turned on and discarded %d loops."""\
+                                                  %(filter,len(discarded_diags))
         logger.warning(warn_msg)
 
     def filter_loop_for_perturbative_orders(self):
@@ -531,7 +576,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 res.append('%s=*'%order)
         return ','.join(res)
 
-    def generate_diagrams(self):
+    def generate_diagrams(self, loop_filter=None):
         """ Generates all diagrams relevant to this Loop Process """
 
         # Description of the algorithm to guess the leading contribution.
@@ -808,7 +853,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # For expert only, you can edit your own filter by modifying the
         # user_filter() function which by default does nothing but in which you
         # will find examples of common filters.
-        self.user_filter(model,self['structure_repository'])
+        self.user_filter(model,self['structure_repository'], filter=loop_filter)
 
         # Now revert the squared order. This function typically adds to the 
         # squared order list the target WEIGHTED order which has been detected.
@@ -1441,7 +1486,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         exlegs=[leg for leg in looplegs if leg['depth']==0]
         if(len(exlegs)==2):
             if(any([part['mass'].lower()=='zero' for pdg,part in model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
-            	return []
+                return []
 
         # Correctly propagate the loopflow
         loopline=(len(looplegs)==1)    
@@ -1507,7 +1552,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         if(len(exlegs)==2):
             if(any([part['mass'].lower()=='zero' for pdg,part in \
               model.get('particle_dict').items() if pdg==abs(exlegs[0]['id'])])):
-            	return []
+                return []
 
 
         # Get rid of some wave-function renormalization diagrams already during
