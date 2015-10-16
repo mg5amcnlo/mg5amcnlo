@@ -787,7 +787,7 @@ c-----
                   exit
                endif
             enddo
-            write(*,12) 'Running Configuration Number: ',iconfig
+            write(*,*) 'Running Configuration Number: ',iconfig
      $           ,ini_fin_fks
          elseif(buffer(1:5).eq.'SPLIT') then
             read(buffer(8:),*) i

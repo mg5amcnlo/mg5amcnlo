@@ -548,7 +548,7 @@ c-----
       if (j_fks_ini.and.j_fks_fin) two_jobs=.true.
       fname='ajob'
       lname=4
-      call open_bash_file(26,fname,lname,mname)
+      call open_bash_file(26,fname,lname)
       call close_bash_file(26)
       open(unit=26,file='channels.txt',status='unknown')
       do i=1,mapconfig(0)
