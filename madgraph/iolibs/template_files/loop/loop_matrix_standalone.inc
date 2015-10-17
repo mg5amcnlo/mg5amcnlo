@@ -332,6 +332,19 @@ C Setup the file paths
   CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
   CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
 
+C Make sure that the loop filter is disabled when there is spin-2 particles for 2>1 or 1>2 processes
+  if(MAX_SPIN_EXTERNAL_PARTICLE.gt.3.AND.(NEXTERNAL.LE.3.AND.HelicityFilterLevel.NE.0)) THEN
+    WRITE(*,*) '##INFO: Helicity filter deactivated for 2>1 processes involving spin 2 particles.'
+    HelicityFilterLevel = 0	
+C   We write a dummy filter for structural reasons here
+    OPEN(1, FILE=HelFilterFN, err=6116, status='NEW',action='WRITE')
+    DO I=1,NCOMB
+      WRITE(1,*) 'T' 
+    ENDDO
+6116  CONTINUE
+    CLOSE(1)
+  ENDIF
+
 OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   DO I=1,NLOOPAMPS
     READ(1,*,END=105) (CF_N(I,J),J=1,%(color_matrix_size)s)

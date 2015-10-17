@@ -468,12 +468,6 @@ C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TI
     ENDIF
   ENDIF
 
-C Make sure that the loop filter is disabled when there is spin-2 particles for 2>1 or 1>2 processes
-  if(MAX_SPIN_EXTERNAL_PARTICLE.gt.3.AND.(NEXTERNAL.LE.3.AND.HelicityFilterLevel.NE.0)) THEN
-    WRITE(*,*) '##INFO: Helicity filter deactivated for 2>1 processes involving spin 2 particles.'
-    HelicityFilterLevel = 0	
-  ENDIF
-
 ENDIF
 
 IF (LOCAL_ML_INIT) THEN
@@ -515,6 +509,19 @@ C Setup the file paths
   CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
 
   CALL %(proc_prefix)sSET_N_EVALS(N_DP_EVAL,N_QP_EVAL)  
+
+C Make sure that the loop filter is disabled when there is spin-2 particles for 2>1 or 1>2 processes
+  if(MAX_SPIN_EXTERNAL_PARTICLE.gt.3.AND.(NEXTERNAL.LE.3.AND.HelicityFilterLevel.NE.0)) THEN
+    WRITE(*,*) '##INFO: Helicity filter deactivated for 2>1 processes involving spin 2 particles.'
+    HelicityFilterLevel = 0	
+C   We write a dummy filter for structural reasons here
+    OPEN(1, FILE=HelFilterFN, err=6116, status='NEW',action='WRITE')
+    DO I=1,NCOMB
+      WRITE(1,*) 1  
+    ENDDO
+6116  CONTINUE
+    CLOSE(1)
+  ENDIF
 
 OPEN(1, FILE=ColorNumFN, err=104, status='OLD',           action='READ')
   DO I=1,NCOLORROWS

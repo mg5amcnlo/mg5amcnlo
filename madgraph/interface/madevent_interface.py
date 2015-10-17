@@ -4858,7 +4858,7 @@ class MadLoopInitializer(object):
                 my_req_files.remove('LoopFilter.dat')
             except ValueError:
                 pass
-        
+
         if MLCard['HelicityFilterLevel']==0:
             try:
                 my_req_files.remove('HelFilter.dat')

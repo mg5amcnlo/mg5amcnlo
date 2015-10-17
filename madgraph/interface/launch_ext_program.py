@@ -217,7 +217,6 @@ class MadLoopLauncher(ExtLauncher):
                 try:
                     rFile=open(os.path.join(curr_path,'result.dat'), 'r')
                 except IOError:
-                    rFile.close()
                     raise MadGraph5Error,"Could not find result file %s."%\
                                        str(os.path.join(curr_path,'result.dat'))
                 # The result are returned as a dictionary.
