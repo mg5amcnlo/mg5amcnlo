@@ -124,7 +124,7 @@ C Determine it uses qp or not
       doing_qp=.FALSE.
       IF(CTMODE.GE.4)doing_qp=.TRUE.
 C Choose the correct loop library
-      CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
+      CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,ID,doing_qp,I_LIB)
       IF(MLReductionLib(I_LIB).EQ.1)THEN
 C CutTools is used
 ## if(not AmplitudeReduction){

@@ -228,7 +228,8 @@ C
 ## }
 C  
 C GLOBAL VARIABLES
-C  
+C 
+      include 'process_info.inc'
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'
@@ -268,6 +269,11 @@ C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS AVAILABLE OR NO
 C     PJFry++ and Golem95 do not support direction test
       LOGICAL LOOPLIBS_DIRECTEST(5)
 	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+C     Specifying for which reduction tool quadruple precision is available.
+C     The index 0 is dummy and simply means that the corresponding loop_library is not available
+C     in which case neither is its quadruple precision version.
+      LOGICAL LOOPLIBS_QPAVAILABLE(0:5)
+	  DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
@@ -420,6 +426,10 @@ C     For example, the reading of the filters must be done independently by each
       LOGICAL LOCAL_ML_INIT
 	  data LOCAL_ML_INIT/.TRUE./
 
+      LOGICAL WARNED_LORENTZ_STAB_TEST_OFF
+	  data WARNED_LORENTZ_STAB_TEST_OFF/.FALSE./
+	  INTEGER NROTATIONS_DP_BU,NROTATIONS_QP_BU
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -457,6 +467,13 @@ C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TI
       NROTATIONS_DP=0
     ENDIF
   ENDIF
+
+C Make sure that the loop filter is disabled when there is spin-2 particles for 2>1 or 1>2 processes
+  if(MAX_SPIN_EXTERNAL_PARTICLE.gt.3.AND.(NEXTERNAL.LE.3.AND.HelicityFilterLevel.NE.0)) THEN
+    WRITE(*,*) '##INFO: Helicity filter deactivated for 2>1 processes involving spin 2 particles.'
+    HelicityFilterLevel = 0	
+  ENDIF
+
 ENDIF
 
 IF (LOCAL_ML_INIT) THEN
@@ -468,8 +485,8 @@ C SKIP THE ONES THAT NOT AVAILABLE
   DO I=1,NLOOPLIB
      IF(MLReductionLib(J).EQ.0)EXIT
      IF(.NOT.LOOPLIBS_AVAILABLE(MLReductionLib(J)))THEN
-	MLReductionLib(J:NLOOPLIB-1)=MLReductionLib(J+1:NLOOPLIB)
-	MLReductionLib(NLOOPLIB)=0
+	   MLReductionLib(J:NLOOPLIB-1)=MLReductionLib(J+1:NLOOPLIB)
+	   MLReductionLib(NLOOPLIB)=0
      ELSE
 	J=J+1
      ENDIF
@@ -479,9 +496,11 @@ C SKIP THE ONES THAT NOT AVAILABLE
   ENDIF
   J=0
   DO I=1,NLOOPLIB
-     IF(MLReductionLib(I).EQ.1)THEN
+     IF(LOOPLIBS_QPAVAILABLE(MLReductionLib(I)))THEN
       J=J+1
-      IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
+      IF(.NOT.QP_TOOLS_AVAILABLE) THEN
+	    QP_TOOLS_AVAILABLE=.TRUE.
+      ENDIF
       INDEX_QP_TOOLS(J)=I
      ENDIF	
   ENDDO
@@ -545,6 +564,20 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
     WRITE(*,*) '##Stopped by user request.'
     stop
   ENDIF
+ENDIF
+
+C Make sure that lorentz rotation tests are not used if there is external loop wavefunction of spin 2 and that one specific helicity is asked
+NROTATIONS_DP_BU = NROTATIONS_DP
+NROTATIONS_QP_BU = NROTATIONS_QP
+if(MAX_SPIN_EXTERNAL_PARTICLE.gt.3.AND.USERHEL.NE.-1) THEN
+   if(.NOT.WARNED_LORENTZ_STAB_TEST_OFF) THEN
+     WRITE(*,*) '##WARNING: Evaluation of a specific helicity was asked for this PS point, and there is a spin-2 (or higher) particle in the external states.'
+	 WRITE(*,*) '##WARNING: As a result, MadLoop disabled the Lorentz rotation test for this phase-space point only.'
+	 WRITE(*,*) '##WARNING: Further warning of that type suppressed.'
+     WARNED_LORENTZ_STAB_TEST_OFF = .FALSE. 
+   ENDIF
+   NROTATIONS_QP=0
+   NROTATIONS_DP=0
 ENDIF
 
 IF(NTRY.EQ.0) THEN
@@ -830,7 +863,7 @@ C This we check that we are not in the initialization phase.
 C If we are not in CTModeRun=-1, then we never need to clear the cache since the TIR will always be used for a unique computation (not stab test).
 C Also, it is clear that if we are running OPP when reaching this line, then we shouldn't clear the TIR cache as it might still be useful later.
 C Finally, notice that the conditional statement below should never be true except you have TIR library supporting quadruple precision or when TIR_CACHE_SIZE<2.
-IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).and.CTMODERUN.eq.-1.and.MLReductionLib(I_LIB).ne.1..AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
+IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).and.CTMODERUN.eq.-1.and.(MLReductionLib(I_LIB).ne.1.AND.MLReductionLib(I_LIB).ne.5).AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
   CALL %(proc_prefix)sCLEAR_TIR_CACHE()
 ENDIF
 ## }
@@ -1119,7 +1152,7 @@ C This we check that we are not in the initialization phase.
 C If we are not in CTModeRun=-1, then we never need to clear the cache since the TIR will always be used for a unique computation (not stab test).
 C Also, it is clear that if we are running OPP when reaching this line, then we shouldn't clear the TIR cache as it might still be useful later.
 C Finally, notice that the conditional statement below should never be true except you have TIR library supporting quadruple precision or when TIR_CACHE_SIZE<2.
-IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).AND.CTMODERUN.eq.-1.and.MLReductionLib(I_LIB).ne.1.AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
+IF((.NOT.CHECKPHASE.AND.(HELDOUBLECHECKED)).AND.CTMODERUN.eq.-1.and.(MLReductionLib(I_LIB).ne.1.AND.MLReductionLib(I_LIB).ne.5).AND.(%(proc_prefix)sTIRCACHE_INDEX(CTMODE).eq.(TIR_CACHE_SIZE+1))) THEN
   CALL %(proc_prefix)sCLEAR_TIR_CACHE()
 ENDIF
 ## }
@@ -1447,8 +1480,8 @@ ENDIF
 
 IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.-1)) THEN
   STAB_INDEX=STAB_INDEX+1  
-  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN
-C NOW,ONLY CUTTOOLS PROVIDES QP
+  IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLReductionLib(I_LIB))) THEN
+C   Only run over the reduction algorithms which support quadruple precision
     DO I=0,NSQUAREDSO
 	  DO K=1,3
         QP_RES(K,I,STAB_INDEX)=ANS(K,I)
@@ -1462,7 +1495,7 @@ C NOW,ONLY CUTTOOLS PROVIDES QP
 	ENDDO
   ENDIF
 
-  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN	
+  IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLReductionLib(I_LIB))) THEN	
       BASIC_CT_MODE=4
   ELSE
       BASIC_CT_MODE=1
@@ -1515,7 +1548,7 @@ C     If some TIR library would not support the loop direction test (they all do
 
 C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
-  IF(DOING_QP_EVALS.AND.MLReductionLib(I_LIB).EQ.1) THEN
+  IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLReductionLib(I_LIB))) THEN
     CALL %(proc_prefix)sCOMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
 	DO I=0,NSQUAREDSO
 	  ACCURACY(I)=ACC(I)
@@ -1690,6 +1723,10 @@ IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES=MLSTABTHRES_BU
   CTMODEINIT=CTMODEINIT_BU  
 ENDIF
+
+C Reinitialize the Lorentz test if it had been disabled because spin-2 particles are in the external states.
+NROTATIONS_DP = NROTATIONS_DP_BU
+NROTATIONS_QP = NROTATIONS_QP_BU
 
 C Reinitialize the check phase logicals and the filters if check bypassed
 IF (BYPASS_CHECK) THEN

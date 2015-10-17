@@ -201,7 +201,7 @@ C
       ENDIF
       END
 
-      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
+      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_HEFT_VERTEX,LPASS)
 C
 C DETECT WHICH LOOP LIB PASSED
 C
@@ -213,7 +213,8 @@ C
 C ARGUMENTS
 C
       INTEGER LIBNUM,NLOOPLINE,RANK
-      LOGICAL complex_mass,LPASS
+C     The argument HAS_HEFT_VERTEX is only to implement correctly CutTools limitation
+      LOGICAL complex_mass,LPASS,HAS_HEFT_VERTEX
 C     
 C LOCAL VARIABLES
 C
@@ -225,7 +226,7 @@ C BEGIN CODE
 C ----------
       IF(LIBNUM.EQ.1)THEN
 C CutTools
-         CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
+         CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,HAS_HEFT_VERTEX,LPASS)
       ELSEIF(LIBNUM.EQ.2)THEN
 C PJFry++
          CALL DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
@@ -244,7 +245,7 @@ C Samurai
       RETURN
       END
 
-      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
+      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,HAS_HEFT_VERTEX,LPASS)
 C
 C DETECT whether CUTTOOLS CAN BE USED OR NOT
 C
@@ -257,7 +258,7 @@ C
 C ARGUMENTS
 C
       INTEGER NLOOPLINE,RANK
-      LOGICAL complex_mass,LPASS
+      LOGICAL complex_mass,LPASS,HAS_HEFT_VERTEX
 C
 C LOCAL VARIABLES
 C
@@ -272,9 +273,10 @@ C ----------
       LPASS=.TRUE.
 C     The limit of 10 loop lines is just a parameter hardcoded in Samurai sources.
 C     It can easily be increased if necessary.
-C     Also in the presence of spin2 particles, RANK=NLOOPLINE+1 is not supported
+C     Also in the presence of spin2 particles, RANK=NLOOPLINE+1 is not supported,
+C     or in general whenever the higher rank doesn't come from the Higgs effective vertex.
 
-      IF (MAXSPINCONNECTEDTOLOOP.le.3) THEN
+      IF (MAX_SPIN_CONNECTED_TO_LOOP.le.3.AND.HAS_HEFT_VERTEX) THEN
 	    MAX_RANK = NLOOPLINE+1
 	  ELSE
 	    MAX_RANK = NLOOPLINE

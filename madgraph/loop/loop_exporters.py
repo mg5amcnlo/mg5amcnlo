@@ -975,6 +975,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         """A small structural function to write the include file specifying some
         process characteristics."""
 
+        model = matrix_element.get('processes')[0].get('model')
         process_info = {}
         # The maximum spin of any particle connected (or directly running in) 
         # any loop of this matrix element. This is important because there is
@@ -983,10 +984,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # this regard.
         process_info['max_spin_connected_to_loop']=\
                                  matrix_element.get_max_spin_connected_to_loop()
+        
+        process_info['max_spin_external_particle']= max(
+                model.get_particle(l.get('id')).get('spin') for l in 
+                                 matrix_element.get('processes')[0].get('legs'))
 
         proc_include = \
-"""INTEGER MAXSPINCONNECTEDTOLOOP
-PARAMETER(MAXSPINCONNECTEDTOLOOP=%(max_spin_connected_to_loop)d)
+"""
+INTEGER MAX_SPIN_CONNECTED_TO_LOOP
+PARAMETER(MAX_SPIN_CONNECTED_TO_LOOP=%(max_spin_connected_to_loop)d)
+INTEGER MAX_SPIN_EXTERNAL_PARTICLE
+PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_connected_to_loop)d)
 """%process_info
 
         writer.writelines(proc_include)
@@ -1914,6 +1922,32 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             
         file = open(os.path.join(self.template_dir,'TIR_interface.inc')).read()  
 
+        # Check which loops have an Higgs effective vertex so as to correctly 
+        # implement CutTools limitation
+        loop_groups = matrix_element.get('loop_groups')
+        has_HEFT_vertex = [False]*len(loop_groups)
+        for i, (denom_structure, loop_amp_list) in enumerate(loop_groups):
+            for lamp in loop_amp_list:
+                final_lwf = lamp.get_final_loop_wavefunction()
+                while not final_lwf is None:
+                    ids = set([wf.get_pdg_code() for wf in final_lwf.get('mothers')])
+                    if ids == set([21,25]):
+                        has_HEFT_vertex[i] = True
+                        break
+                    final_lwf = final_lwf.get_loop_mother()
+                else:
+                    continue
+                break
+
+        has_HEFT_list = []
+        chunk_size = 10
+        for k in xrange(0, len(has_HEFT_vertex), chunk_size):
+            has_HEFT_list.append("DATA (HAS_AN_HEFT_VERTEX(I),I=%6r,%6r) /%s/" % \
+                (k + 1, min(k + chunk_size, len(has_HEFT_vertex)),
+                     ','.join(['.TRUE.' if l else '.FALSE.' for l in 
+                                           has_HEFT_vertex[k:k + chunk_size]])))
+        replace_dict['has_HEFT_list'] = '\n'.join(has_HEFT_list)
+
         file = file % replace_dict
         
         FPR = q_polynomial.FortranPolynomialRoutines(
@@ -1923,7 +1957,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             file += '\n\n'+FPR.write_pjfry_mapping()
         if self.tir_available_dict['iregi']:
             file += '\n\n'+FPR.write_iregi_mapping()
-        
+
         if writer:
             writer.writelines(file,context=self.get_context(matrix_element))
         else:

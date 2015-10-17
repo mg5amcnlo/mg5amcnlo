@@ -197,6 +197,7 @@ C LOCAL VARIABLES
 C
 	  %(complex_dp_format)s R1, ACC
 	  INTEGER I, J, K
+      %(real_dp_format)s PDEN_DUMMY(0:3,NLOOPLINE-1)
 	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
 	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
 C
@@ -209,8 +210,7 @@ C
 C GLOBAL VARIABLES
 C
       include 'coupl.inc'
-C     The CTMode is not used for now, but it will be if we interface to Samurai in quadruple precision.
-	  INTEGER CTMODE
+
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
@@ -220,6 +220,9 @@ C     The CTMode is not used for now, but it will be if we interface to Samurai 
 C ----------
 C BEGIN CODE
 C ----------
+
+C     For the direction test, we must switch the direction in which the loop is read for CTMode equal to 2 or 4.
+      CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN_DUMMY,M2L)
 
 C INITIALIZE SAMURAI IF NEEDED
       IF (SAMURAIINIT) THEN

@@ -345,7 +345,7 @@ C      The initialization below is for CT v1.9.2+
 	   ENDIF
 	  END
 
-	  SUBROUTINE %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
+	  SUBROUTINE %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,loop_ID,doing_qp,I_LIB)
 C
 C CHOOSE THE CORRECT LOOP LIB
 C Example:
@@ -360,24 +360,30 @@ C CONSTANTS
 C
             INTEGER NLOOPLIB,QP_NLOOPLIB
             PARAMETER (NLOOPLIB=4,QP_NLOOPLIB=1)
+            INTEGER NLOOPGROUPS
+            PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C
 C ARGUMENTS
 C
-            INTEGER LIBINDEX,NLOOPLINE,RANK,I_LIB
+            INTEGER LIBINDEX,NLOOPLINE,RANK,I_LIB,loop_ID
             LOGICAL complex_mass,doing_qp
 C
 C LOCAL VARIABLES
 C
             INTEGER I,J_LIB,LIBNUM,SELECT_LIBINDEX
-	    LOGICAL LPASS
+	        LOGICAL LPASS
+C           This list specifies what loop involve an Higgs effective vertex so that CutTools limitations can be correctly implemented
+            LOGICAL HAS_AN_HEFT_VERTEX(NLOOPGROUPS)
+            %(has_HEFT_list)s
 C
 C GLOBAL VARIABLES
 C
 	    INCLUDE 'MadLoopParams.inc'
-C TILL NOW, ONLY CUTTOOLS PROVIDE QP
+C Change the list 'LOOPLIBS_QPAVAILABLE' in loop_matrix_standalone.inc to change the list of QPTools availables
             LOGICAL QP_TOOLS_AVAILABLE
             INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
             common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -405,7 +411,7 @@ C  QP EVALUATION, ONLY CUTTOOLS
 		I_LIB=SELECT_LIBINDEX
 		LIBNUM=MLReductionLib(I_LIB)
 		DO
-		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
+		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),LPASS)
 		  IF(LPASS)EXIT
 		  I=I+1
 		  IF(I.GT.QP_NLOOPLIB.AND.INDEX_QP_TOOLS(I).EQ.0)THEN
@@ -422,7 +428,7 @@ C  DP EVALUATION
       		I_LIB=LIBINDEX
 		LIBNUM=MLReductionLib(I_LIB)
 		DO
-		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
+		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),LPASS)
 		  IF(LPASS)EXIT
 		  I_LIB=I_LIB+1
 		  IF(I_LIB.GT.NLOOPLIB.OR.MLReductionLib(I_LIB).EQ.0)THEN

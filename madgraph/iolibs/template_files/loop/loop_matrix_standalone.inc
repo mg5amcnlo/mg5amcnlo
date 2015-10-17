@@ -155,6 +155,8 @@ c     the previous points
 	  DATA NEXTREF/ZERO/
 	  INTEGER NPSPOINTS
 	  DATA NPSPOINTS/0/
+      LOGICAL FOUND_VALID_REDUCTION_METHOD
+      DATA FOUND_VALID_REDUCTION_METHOD/.FALSE./
 
 	  %(real_dp_format)s ACC
 	  %(real_dp_format)s DP_RES(3,MAXSTABILITYLENGTH)
@@ -190,7 +192,8 @@ C
       LOGICAL %(proc_prefix)sISZERO
 C  
 C GLOBAL VARIABLES
-C  
+C 
+      include 'process_info.inc'
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'
@@ -283,6 +286,16 @@ C     This can be accessed with the SET_FORBID_HEL_DOUBLECHECK subroutine of Mad
 	  LOGICAL ML_INIT
 	  common/ML_INIT/ML_INIT
 
+C     This variable controls the *local* initialization of this particular SubProcess.
+C     For example, the reading of the filters must be done independently by each SubProcess.
+      LOGICAL LOCAL_ML_INIT
+	  data LOCAL_ML_INIT/.TRUE./
+
+C     Variables related to turning off the Lorentz rotation test when spin-2 particles are external
+      LOGICAL WARNED_LORENTZ_STAB_TEST_OFF
+	  data WARNED_LORENTZ_STAB_TEST_OFF/.FALSE./
+	  INTEGER NROTATIONS_DP_BU,NROTATIONS_QP_BU
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -297,8 +310,19 @@ IF(ML_INIT) THEN
     DoubleCheckHelicityFilter = .False. 
   ENDIF
   ML_INIT = .FALSE.
+C For now only CutTools is interfaced in the default mode. Samurai could follow.
+  DO I=1,SIZE(MLReductionLib)
+    if (MLReductionLib(I).eq.1) then
+	  FOUND_VALID_REDUCTION_METHOD = .TRUE.
+	endif
+  ENDDO
+  if (.not.FOUND_VALID_REDUCTION_METHOD) THEN
+    WRITE(*,*) 'ERROR:: For now, only CutTools is interfaced to MadLoop in the non-optimized output.'
+    WRITE(*,*) 'ERROR:: Make sure to include 1 in the parameter MLReductionLib of the card MadLoopParams.dat'
+	STOP 1
+  ENDIF
 ENDIF
-
+IF (LOCAL_ML_INIT) THEN
 C Setup the file paths
   CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
   CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
@@ -338,6 +362,22 @@ CLOSE(1)
 IF(BOOTANDSTOP) THEN
   WRITE(*,*) '##Stopped by user request.'
   STOP
+ENDIF
+LOCAL_ML_INIT = .FALSE.
+ENDIF
+
+C Make sure that lorentz rotation tests are not used if there is external loop wavefunction of spin 2 and that one specific helicity is asked
+NROTATIONS_DP_BU = NROTATIONS_DP
+NROTATIONS_QP_BU = NROTATIONS_QP
+if(MAX_SPIN_EXTERNAL_PARTICLE.gt.3.AND.USERHEL.NE.-1) THEN
+   if(.NOT.WARNED_LORENTZ_STAB_TEST_OFF) THEN
+     WRITE(*,*) '##WARNING: Evaluation of a specific helicity was asked for this PS point, and there is a spin-2 (or higher) particle in the external states.'
+	 WRITE(*,*) '##WARNING: As a result, MadLoop disabled the Lorentz rotation test for this phase-space point only.'
+	 WRITE(*,*) '##WARNING: Further warning of that type suppressed.'
+     WARNED_LORENTZ_STAB_TEST_OFF = .FALSE. 
+   ENDIF
+   NROTATIONS_QP=0
+   NROTATIONS_DP=0
 ENDIF
 
 IF(NTRY.EQ.0) THEN
@@ -781,6 +821,10 @@ IF (USER_STAB_PREC.GT.0.0d0) THEN
   MLSTABTHRES=MLSTABTHRES_BU
   CTMODEINIT=CTMODEINIT_BU  
 ENDIF
+
+C Reinitialize the Lorentz test if it had been disabled because spin-2 particles are in the external states.
+NROTATIONS_DP = NROTATIONS_DP_BU
+NROTATIONS_QP = NROTATIONS_QP_BU
 
 C Conform to the returned synthax of split orders even though the default output does not support it (this then done only for compatibility purpose).
 ANSRETURNED(0,0)=ANS(0)
