@@ -100,6 +100,7 @@ import mg5decay.decay_objects as decay_objects
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
+logger_check = logging.getLogger('check') # -> stdout
 logger_mg = logging.getLogger('madgraph') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
@@ -474,6 +475,38 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("o lorentz_invariance:",'$MG:color:GREEN')
         logger.info("   Check that the amplitude is lorentz invariant by")
         logger.info("   comparing the amplitiude in different frames")
+        logger.info("o cms:",'$MG:color:GREEN')
+        logger.info("   Check the complex mass scheme consistency by comparing")
+        logger.info("   it to the narrow width approximation in the off-shell")
+        logger.info("   region of detected resonances and by progressively")
+        logger.info("   decreasing the width. Additional options for this check are:")
+        logger.info("    --offshellness=f : f is a positive or negative float specifying ")
+        logger.info("      the distance from the pole as f*particle_mass. Default is 10.0")
+        logger.info("    --seed=i : to force a specific RNG integer seed i (default is fixed to 0)")
+        logger.info("    --cms=order1&order2;...,p1->f(p,lambdaCMS)&p2->f2(p,lambdaCMS);...")
+        logger.info("      'order_i' specifies the expansion orders considered for the test.")
+        logger.info("      The substitution lists specifies how internal parameter must be modified")
+        logger.info("      with the width scaling 'lambdaCMS'. The default value for this option is:")
+        logger.info("        --cms=QED&QCD,aewm1->10.0/lambdaCMS&as->0.1*lambdaCMS ")
+        logger.info("      The number of order and parameters don't have to be the same.")
+        logger.info("      The scaling must be specified so that one occurrence of the coupling order.")
+        logger.info("      brings in exactly one power of lambdaCMS.")
+        logger.info("    --recompute_width= never|first_time|always|auto")
+        logger.info("      Decides when to use MadWidth to automatically recompute the width")
+        logger.info("      'auto' (default) let MG5 chose the most appropriate behavior.")
+        logger.info("      'never' uses the default width value for lambdaCMS=1.0.")
+        logger.info("      'first_time' uses MadWidth to compute the width for lambdaCMS=1.0.")
+        logger.info("      'first_time' and 'never' assume linear scaling of the widths with lambdaCMS")
+        logger.info("      'always' uses MadWidth to compute the widths for all values of lambdaCMS")
+        logger.info("               the test relies on linear scaling of the width, so 'always' is ")
+        logger.info("               only for double-checks")
+        logger.info("    --lambdaCMS = <python_list> : specifies the list of lambdaCMS values to ")
+        logger.info("      use for the test. For example: '[(1/2.0)**exp\ for\ exp\ in\ range(0,20)]'")
+        logger.info("      In the list expression, you must escape spaces. Also, this option")
+        logger.info("      *must* appear last in the otpion list. Finally, the default value is '1.0e-6'")
+        logger.info("      for which an optimal list of progressive values is picked up to 1.0e-6")
+        logger.info("    --show_plot = True or False: Whether to show plot during analysis (default is True)")
+        logger.info("    --report = concise or full: Whether return a concise or full report.")
         logger.info("Comments",'$MG:color:GREEN')
         logger.info(" > If param_card is given, that param_card is used ")
         logger.info("   instead of the default values for the model.")
@@ -805,7 +838,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 # check that either _curr_amps or _fks_multi_proc exists
         if (args[0] in ['processes', 'diagrams'] and not self._curr_amps and not self._fks_multi_proc):
            raise self.InvalidCmd("No process generated, please generate a process!")
-        if args[0] == 'checks' and not self._comparisons:
+        if args[0] == 'checks' and not self._comparisons and not self._cms_checks:
             raise self.InvalidCmd("No check results to display.")
 
         if args[0] == 'variable' and len(args) !=2:
@@ -828,7 +861,6 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_check(self, args):
         """check the validity of args"""
-        
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
@@ -836,15 +868,17 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd(\
                 "\"check\" not possible for v4 models")
 
-        if len(args) < 2:
+        if len(args) < 2 and not args[0].lower().endswith('options'):
             self.help_check()
             raise self.InvalidCmd("\"check\" requires a process.")
 
-        if args[0] not in self._check_opts:
+        if args[0] not in self._check_opts and \
+                                        not args[0].lower().endswith('options'):
             args.insert(0, 'full')
 
         param_card = None
-        if args[0] not in ['stability','profile','timing'] and os.path.isfile(args[1]):
+        if args[0] not in ['stability','profile','timing'] and \
+                                        len(args)>1 and os.path.isfile(args[1]):
             param_card = args.pop(1)
 
         if len(args)>1:
@@ -853,9 +887,8 @@ class CheckValidForCmd(cmd.CheckCmd):
         else:
             args.append('-no_reuse')
 
-        if args[0] in ['timing'] and os.path.isfile(args[2]):
+        if args[0] in ['timing'] and len(args)>2 and os.path.isfile(args[2]):
             param_card = args.pop(2)
-            misc.sprint(param_card)
         if args[0] in ['stability', 'profile'] and len(args)>1:
             # If the first argument after 'stability' is not the integer
             # specifying the desired statistics (i.e. number of points), then
@@ -867,21 +900,76 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         if args[0] in ['stability', 'profile'] and os.path.isfile(args[3]):
             param_card = args.pop(3)
-
-        if any([',' in elem for elem in args]):
+        if any([',' in elem for elem in args if not elem.startswith('--')]):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                                                     '--reduction':'1|2|3|4|5'}
+                   '--reduction':'1|2|3|4|5','--CTModeRun':'-1','--helicity':'-1'}
+        
+        if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
+            # increase the default energy to 5000
+            user_options['--energy']='5000'
+            # The first argument gives the name of the coupling order in which
+            # the cms expansion is carried, and the expression following the 
+            # comma gives the relation of an external parameter with the
+            # CMS expansions parameter called 'lambdaCMS'.
+            parameters = ['aewm1->10.0/lambdaCMS','as->0.1*lambdaCMS']
+            user_options['--cms']='QED&QCD,'+'&'.join(parameters)
+            # Widths are assumed to scale linearly with lambdaCMS unless
+            # --force_recompute_width='always' or 'first_time' is used.
+            user_options['--recompute_width']='auto'
+            # It can be negative so as to be offshell below the resonant mass
+            user_options['--offshellness']='10.0'
+            # Pick the lambdaCMS values for the test. Instead of a python list
+            # we specify here (low,N) which means that do_check will automatically
+            # pick lambda values up to the value low and with N values uniformly
+            # spread in each interval [1.0e-i,1.0e-(i+1)].
+            # Some points close to each other will be added at the end for the
+            # stability test.
+            user_options['--lambdaCMS']='(1.0e-6,5)'
+            # Set the RNG seed, -1 is default (random).
+            user_options['--seed']=666
+            # The option below can help the user re-analyze existing pickled check
+            user_options['--analyze']='None'
+            # Decides whether to show plot or not during the analysis
+            user_options['--show_plot']='True'
+            # Decides what kind of report 
+            user_options['--report']='concise'
+            # 'secret' option to chose by which lambda power one should divide
+            # the nwa-cms difference. Useful to set to 2 when doing the Born check
+            # to see whether the NLO check will have sensitivity to the CMS
+            # implementation
+            user_options['--diff_lambda_power']='1'
+            # Sets the range of lambda values to plot
+            user_options['--lambda_plot_range']='[-1.0,-1.0]'
+            # Sets a filter to apply at generation. See name of available 
+            # filters in loop_diagram_generations.py, function user_filter 
+            user_options['--loop_filter']='None'
+            # Apply tweaks to the check like multiplying a certain width by a
+            # certain parameters or changing the analytical continuation of the 
+            # logarithms of the UV counterterms
+            user_options['--tweak']='default()'
+            # Give a name to the run for the files to be saved
+            user_options['--name']='auto'
+            # Select what resonances must be run
+            user_options['--resonances']='1'
+        
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
-                key, value = arg.split('=')
+                parsed = arg.split('=')
+                key, value = parsed[0],'='.join(parsed[1:])
                 if key not in user_options:
                     raise self.InvalidCmd, "unknown option %s" % key
                 user_options[key] = value
                 args.remove(arg)
 
-        self.check_process_format(" ".join(args[1:]))
+        # If we are just re-analyzing saved data or displaying options then we 
+        # shouldn't check the process format.
+        if not (args[0]=='cms' and '--analyze' in user_options and \
+                              user_options['--analyze']!='None') and not \
+                                            args[0].lower().endswith('options'):
+            
+            self.check_process_format(" ".join(args[1:]))
 
         for option, value in user_options.items():
             args.append('%s=%s'%(option,value))
@@ -1701,7 +1789,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         nlo_modes = allowed_loop_mode if not allowed_loop_mode is None else \
                                                   self._nlo_modes_for_completion
         if isinstance(self._curr_model,loop_base_objects.LoopModel):
-            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+            pert_couplings_allowed = ['all']+self._curr_model['perturbation_couplings']
         else:
             pert_couplings_allowed = []
         if self._curr_model.get('name').startswith('sm'):
@@ -1775,7 +1863,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         # Automatically allow for QCD perturbation if in the sm because the
         # loop_sm would then automatically be loaded
         if isinstance(self._curr_model,loop_base_objects.LoopModel):
-            pert_couplings_allowed = self._curr_model['perturbation_couplings']
+            pert_couplings_allowed = ['all'] + self._curr_model['perturbation_couplings']
         else:
             pert_couplings_allowed = []
         if self._curr_model.get('name').startswith('sm'):
@@ -1931,6 +2019,18 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 1:
             return self.list_completion(text, self._check_opts)
 
+
+        cms_check_mode = len(args) >= 2 and args[1]=='cms'
+
+        cms_options = ['--name=','--tweak=','--seed=','--offshellness=',
+          '--lambdaCMS=','--show_plot=','--report=','--lambda_plot_range=','--recompute_width=',
+          '--CTModeRun=','--helicity=','--reduction=','--cms=','--diff_lambda_power=',
+          '--loop_filter=','--resonances=']
+
+        options = ['--energy=']
+        if cms_options:
+            options.extend(cms_options)
+
         # Directory continuation
         if args[-1].endswith(os.path.sep):
             return self.path_completion(text, pjoin(*[a for a in args \
@@ -1943,8 +2043,71 @@ class CompleteForCmd(cmd.CompleteCmd):
           {'Process completion': self.model_completion(text, ' '.join(args[2:]),
           line, categories = False, allowed_loop_mode=['virt']),
           'Param_card.dat path completion:':self.path_completion(text),
-          'options': self.list_completion(text, ['--energy='])})
+          'options': self.list_completion(text,options)})
 
+        #Special rules for check cms completion
+        if cms_check_mode:
+            # A couple of useful value completions
+            if line[-1]!=' ' and line[-2]!='\\' and not '--' in line[begidx:endidx] \
+                              and args[-1].startswith('--') and '=' in args[-1]:
+                examples = {
+                  '--tweak=':
+['default','alltweaks',"['default','allwidths->1.1*all_withds&seed333(Increased_widths_and_seed_333)','logp->logm&logm->logp(inverted_logs)']"],
+                  '--lambdaCMS=':
+['(1.0e-2,5)',"[float('1.0e-%d'%exp)\\ for\\ exp\\ in\\ range(8)]","[1.0,0.5,0.001]"],
+                  '--lambda_plot_range=':
+[' [1e-05,1e-02]','[0.01,1.0]'],
+                  '--reduction=':
+['1','1|2|3|4','1|2','3'],
+                  '--cms=':
+['QED&QCD,aewm1->10.0/lambdaCMS&as->0.1*lambdaCMS',
+'NP&QED&QCD,aewm1->10.0/lambdaCMS&as->0.1*lambdaCMS&newExpansionParameter->newExpansionParameter*lambdaCMS'],
+                  '--loop_filter=':
+['None','n>3','n<4 and 6 in loop_pdgs and 3<=id<=7'],
+                  '--resonances=':
+['1','all','(24,(3,4))','[(24,(3,4)),(24,(4,5))]'],
+                  '--analyze=':
+['my_default_run.pkl',
+'default_run.pkl,increased_widths.pkl(Increased_widths),logs_modified.pkl(Inverted_logs),seed_668.pkl(Different_seed)']
+                    }
+                for name, example in examples.items():
+                    if  args[-1].startswith(name):
+                        return self.deal_multiple_categories(
+          {"Examples of completion for option '%s'"%args[-1].split('=')[0]:
+#                    ['%d: %s'%(i+1,ex) for i, ex in enumerate(example)]},
+                    ['%s'%ex for i, ex in enumerate(example)]},
+                                                             forceCategory=True)
+                if args[-1]=='--recompute_width=':
+                    return self.list_completion(text,
+                                         ['never','first_time','always','auto'])
+                elif args[-1]=='--show_plot=':
+                    return self.list_completion(text,['True','False'])
+                elif args[-1]=='--report=':
+                    return self.list_completion(text,['concise','full'])
+                elif args[-1]=='--CTModeRun=':
+                    return self.list_completion(text,['-1','1','2','3','4'])
+                else:
+                    return text
+            if len(args)==2 or len(args)==3 and args[-1]=='-reuse':
+                return self.deal_multiple_categories(
+          {'Process completion': self.model_completion(text, ' '.join(args[2:]),
+                        line, categories = False, allowed_loop_mode=['virt']),
+                   'Param_card.dat path completion:': self.path_completion(text),
+               'reanalyze result on disk / save output:':self.list_completion(
+                                                  text,['-reuse','--analyze='])})
+            elif not any(arg.startswith('--') for arg in args):
+                if '>' in args:
+                    return self.deal_multiple_categories({'Process completion': 
+                        self.model_completion(text, ' '.join(args[2:]),
+                        line, categories = False, allowed_loop_mode=['virt']),
+                        'options': self.list_completion(text,options)})
+                else:
+                    return self.deal_multiple_categories({'Process completion': 
+                        self.model_completion(text, ' '.join(args[2:]),
+                        line, categories = False, allowed_loop_mode=['virt'])})
+            else:
+                return self.list_completion(text,options)
+            
         if len(args) == 2:
             return model_comp_and_path
         elif len(args) == 3:
@@ -2453,7 +2616,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _tutorial_opts = ['aMCatNLO', 'stop', 'MadLoop', 'MadGraph5']
     _switch_opts = ['mg5','aMC@NLO','ML5']
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
-                   'gauge','lorentz', 'brs']
+                   'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
@@ -2588,6 +2751,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         self._cuttools_dir=str(os.path.join(self._mgme_dir,'vendor','CutTools'))
         self._iregi_dir=str(os.path.join(self._mgme_dir,'vendor','IREGI','src'))
         self._comparisons = None
+        self._cms_checks = []
         self._nlo_modes_for_completion = ['all','virt','real','LOonly']
 
         # Load the configuration file,i.e.mg5_configuration.txt
@@ -3072,33 +3236,48 @@ This implies that with decay chains:
                 raise self.InvalidCmd, 'no lorentz %s in current model' % args[1]
 
         elif args[0] == 'checks':
-            comparisons = self._comparisons[0]
-            if len(args) > 1 and args[1] == 'failed':
-                comparisons = [c for c in comparisons if not c['passed']]
-            outstr = "Process check results:"
-            for comp in comparisons:
-                outstr += "\n%s:" % comp['process'].nice_string()
-                outstr += "\n   Phase space point: (px py pz E)"
-                for i, p in enumerate(comp['momenta']):
-                    outstr += "\n%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
-                outstr += "\n   Permutation values:"
-                outstr += "\n   " + str(comp['values'])
-                if comp['passed']:
-                    outstr += "\n   Process passed (rel. difference %.9e)" % \
-                          comp['difference']
-                else:
-                    outstr += "\n   Process failed (rel. difference %.9e)" % \
-                          comp['difference']
+            outstr = ''
+            if self._comparisons:
+                comparisons = self._comparisons[0]
+                if len(args) > 1 and args[1] == 'failed':
+                    comparisons = [c for c in comparisons if not c['passed']]
+                outstr += "Process check results:"
+                for comp in comparisons:
+                    outstr += "\n%s:" % comp['process'].nice_string()
+                    outstr += "\n   Phase space point: (px py pz E)"
+                    for i, p in enumerate(comp['momenta']):
+                        outstr += "\n%2s    %+.9e  %+.9e  %+.9e  %+.9e" % tuple([i] + p)
+                    outstr += "\n   Permutation values:"
+                    outstr += "\n   " + str(comp['values'])
+                    if comp['passed']:
+                        outstr += "\n   Process passed (rel. difference %.9e)" % \
+                              comp['difference']
+                    else:
+                        outstr += "\n   Process failed (rel. difference %.9e)" % \
+                              comp['difference']
 
-            used_aloha = sorted(self._comparisons[1])
-            outstr += "\nChecked ALOHA routines:"
-            for aloha in used_aloha:
-                aloha_str = aloha[0]
-                if aloha[1]:
-                    aloha_str += 'C' + 'C'.join([str(ia) for ia in aloha[1]])
-                aloha_str += "_%d" % aloha[2]
-                outstr += "\n" + aloha_str
-
+                used_aloha = sorted(self._comparisons[1])
+                if used_aloha:
+                    outstr += "\nChecked ALOHA routines:"
+                for aloha in used_aloha:
+                    aloha_str = aloha[0]
+                    if aloha[1]:
+                        aloha_str += 'C' + 'C'.join([str(ia) for ia in aloha[1]])
+                    aloha_str += "_%d" % aloha[2]
+                    outstr += "\n" + aloha_str
+            
+            outstr += '\n'
+            for cms_check in self._cms_checks:
+                outstr += '*'*102+'\n'
+                outstr += 'Complex Mass Scheme check:\n'
+                outstr += '    -> check %s\n'%cms_check['line']
+                outstr += '*'*102+'\n'
+                tmp_options = copy.copy(cms_check['options'])
+                tmp_options['show_plot']=False
+                outstr += process_checks.output_complex_mass_scheme(
+                            cms_check['cms_result'], cms_check['output_path'], 
+                                           tmp_options, self._curr_model) + '\n'
+                outstr += '*'*102+'\n\n'
             pydoc.pager(outstr)
 
         elif args[0] == 'options':
@@ -3246,13 +3425,37 @@ This implies that with decay chains:
     def do_check(self, line):
         """Check a given process or set of processes"""
 
+        def create_lambda_values_list(lower_bound, N):
+            """ Returns a list of values spanning the range [1.0, lower_bound] with
+             lower_bound < 1.0 and with each interval [1e-i, 1e-(i+1)] covered
+             by N values uniformly distributed. For example, lower_bound=1e-2
+             and N=5 returns:
+             [1, 0.8, 0.6, 0.4, 0.2, 0.1, 0.08, 0.06, 0.04, 0.02, 0.01]"""
+            
+            lCMS_values = [1]
+            exp = 0
+            n   = 0
+            while lCMS_values[-1]>=lower_bound:
+                n = (n+1)
+                lCMS_values.append(float('1.0e-%d'%exp)*((N-n%N)/float(N)))
+                if lCMS_values[-1]==lCMS_values[-2]:
+                    lCMS_values.pop()
+                exp = (n+1)//N
+            
+            lCMS_values = lCMS_values[:-1]
+            if lCMS_values[-1]!=lower_bound:
+                lCMS_values.append(lower_bound)
+                
+            return lCMS_values
+        ###### BEGIN do_check
+
         args = self.split_arg(line)
-        
         # Check args validity
         param_card = self.check_check(args)
+
         options= {'events':None} # If the momentum needs to be picked from a event file
         if param_card and 'banner' == madevent_interface.MadEventCmd.detect_card_type(param_card):
-            logger.info("Will use the param_card contained in the banner and  the events associated")
+            logger_check.info("Will use the param_card contained in the banner and  the events associated")
             import madgraph.various.banner as banner
             options['events'] = param_card
             mybanner = banner.Banner(param_card)
@@ -3268,30 +3471,284 @@ This implies that with decay chains:
         if args[0] in ['stability', 'profile']:
             options['npoints'] = int(args[1])
             args = args[:1]+args[2:]
-            
+        
         MLoptions={}
         i=-1
+        CMS_options = {}
         while args[i].startswith('--'):
             option = args[i].split('=')
             if option[0] =='--energy':
                 options['energy']=float(option[1])
             elif option[0]=='--split_orders':
                 options['split_orders']=int(option[1])
+            elif option[0]=='--helicity':
+                try:
+                    options['helicity']=int(option[1])
+                except ValueError:
+                    raise self.InvalidCmd("The value of the 'helicity' option"+\
+                                       " must be an integer, not %s."%option[1])
             elif option[0]=='--reduction':
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
+            elif option[0]=='--CTModeRun':
+                try:
+                    MLoptions['CTModeRun']=int(option[1])  
+                except ValueError:
+                    raise self.InvalidCmd("The value of the 'CTModeRun' option"+\
+                                       " must be an integer, not %s."%option[1])
+            elif option[0]=='--offshellness':
+                CMS_options['offshellness'] = float(option[1])
+                if CMS_options['offshellness']<=-1.0:
+                    raise self.InvalidCmd('Offshellness must be number larger or'+
+                           ' equal to -1.0, not %f'%CMS_options['offshellness'])
+            elif option[0]=='--analyze':
+                options['analyze'] = option[1]
+            elif option[0]=='--show_plot':
+                options['show_plot'] = 'true' in option[1].lower()
+            elif option[0]=='--report':
+                options['report'] = option[1].lower()
+            elif option[0]=='--seed':
+                CMS_options['seed'] = int(option[1])
+            elif option[0]=='--name':
+                if '.' in option[1]:
+                    raise self.InvalidCmd("Do not specify the extension in the"+
+                                                             " name of the run")
+                CMS_options['name'] = option[1]
+            elif option[0]=='--resonances':
+                if option[1]=='all':
+                    CMS_options['resonances']  = 'all'
+                else:
+                    try:
+                        resonances=eval(option[1])
+                    except:
+                        raise self.InvalidCmd("Could not evaluate 'resonances'"+
+                                                       " option '%s'"%option[1])
+                    if isinstance(resonances,int) and resonances>0:
+                        CMS_options['resonances']  = resonances
+                    elif isinstance(resonances,list) and all(len(res)==2 and 
+                        isinstance(res[0],int) and all(isinstance(i, int) for i in 
+                                                     res[1]) for res in resonances):
+                        CMS_options['resonances']  = resonances
+                    else:
+                        raise self.InvalidCmd("The option 'resonances' can only be 'all'"+
+                               " or and integer or a list of tuples of the form "+
+                               "(resPDG,(res_mothers_ID)). You gave '%s'"%option[1])
+            elif option[0]=='--tweak':
+                # Lists the sets of custom and widths modifications to apply
+                value = option[1]
+                # Set a shortcuts for applying all relevant tweaks
+                if value=='alltweaks':
+                    value=str(['default','seed667(seed667)','seed668(seed668)',
+                      'allwidths->0.9*allwidths(widths_x_0.9)',
+                      'allwidths->0.99*allwidths(widths_x_0.99)',
+                      'allwidths->1.01*allwidths(widths_x_1.01)',
+                      'allwidths->1.1*allwidths(widths_x_1.1)',                      
+                      'logp->logm(logp2logm)','logm->logp(logm2logp)'])
+                try:
+                    tweaks = eval(value)
+                    if isinstance(tweaks, str):
+                        tweaks = [value]                         
+                    elif not isinstance(tweaks,list):
+                        tweaks = [value]
+                except:
+                    tweaks = [value]
+                if not all(isinstance(t,str) for t in tweaks):
+                    raise self.InvalidCmd("Invalid specificaiton of tweaks: %s"%value)
+                CMS_options['tweak'] = []
+                for tweakID, tweakset in enumerate(tweaks):
+                    specs =re.match(r'^(?P<tweakset>.*)\((?P<name>.*)\)$', tweakset)
+                    if specs:
+                        tweakset = specs.group('tweakset')
+                        name    = specs.group('name')
+                    else:
+                        if tweakset!='default':
+                            name = 'tweak_%d'%(tweakID+1)
+                        else:
+                            name = ''
+                    new_tweak_set = {'custom':[],'params':{},'name':name}
+                    for tweak in tweakset.split('&'):
+                        if tweak=='default':
+                            continue
+                        if tweak.startswith('seed'):
+                            new_tweak_set['custom'].append(tweak)
+                            continue
+                        try:
+                            param, replacement = tweak.split('->')
+                        except ValueError:
+                            raise self.InvalidCmd("Tweak specification '%s'"%\
+                                    tweak+" is incorrect. It should be of"+\
+                                 " the form a->_any_function_of_(a,lambdaCMS).")
+                        if param in ['logp','logm','log'] and \
+                           replacement in ['logp','logm','log']:
+                            new_tweak_set['custom'].append(tweak)
+                            continue
+                        try:
+                            # for safety prefix parameters, because 'as' for alphas
+                            # is a python reserved name for example
+                            orig_param, orig_replacement = param, replacement
+                            replacement = replacement.replace(param,
+                                                        '__tmpprefix__%s'%param)
+                            param = '__tmpprefix__%s'%param
+                            res = float(eval(replacement.lower(),
+                                         {'lambdacms':1.0,param.lower():98.85}))
+                        except:                    
+                            raise self.InvalidCmd("The substitution expression "+
+                        "'%s' for the tweaked parameter"%orig_replacement+
+                        " '%s' could not be evaluated. It must be an "%orig_param+
+                        "expression of the parameter and 'lambdaCMS'.")
+                        new_tweak_set['params'][param.lower()] = replacement.lower()
+                    CMS_options['tweak'].append(new_tweak_set)
+
+            elif option[0]=='--recompute_width':
+                if option[1].lower() not in ['never','always','first_time','auto']:
+                    raise self.InvalidCmd("The option 'recompute_width' can "+\
+                  "only be 'never','always', 'first_time' or 'auto' (default).")
+                CMS_options['recompute_width'] = option[1]
+            elif option[0]=='--loop_filter':
+                # Specify a loop, filter. See functions get_loop_filter and
+                # user_filter in loop_diagram_generation.LoopAmplitude for
+                # information on usage.
+                CMS_options['loop_filter'] = '='.join(option[1:])
+            elif option[0]=='--diff_lambda_power':
+                #'secret' option to chose by which lambda power one should divide
+                # the nwa-cms difference. Useful to set to 2 when doing the Born check
+                # to see whether the NLO check will have sensitivity to the CMS
+                # implementation
+                try:
+                    CMS_options['diff_lambda_power']=float(option[1])
+                except ValueError:
+                    raise self.InvalidCmd("the '--diff_lambda_power' option"+\
+                            " must be an integer or float, not '%s'."%option[1])
+            elif option[0]=='--lambda_plot_range':
+                try:
+                    plot_range=eval(option[1])
+                except Exception as e:
+                    raise self.InvalidCmd("The plot range specified %s"%option[1]+\
+                                   " is not a valid syntax. Error:\n%s"%str(e))
+                if not isinstance(plot_range,(list,tuple)) or \
+                    len(plot_range)!=2 or any(not isinstance(p,(float,int)) 
+                                                           for p in plot_range):                    
+                    raise self.InvalidCmd("The plot range specified %s"\
+                                                       %option[1]+" is invalid")
+                CMS_options['lambda_plot_range']=list([float(p) for p in plot_range])
+            elif option[0]=='--lambdaCMS':
+                try:
+                    lambda_values = eval(option[1])
+                except SyntaxError:
+                    raise self.InvalidCmd("'%s' is not a correct"%option[1]+
+                                     " python expression for lambdaCMS values.")
+                if isinstance(lambda_values,list):
+                    if lambda_values[0]!=1.0:
+                        raise self.InvalidCmd("The first value of the lambdaCMS values"+
+                                " specified must be 1.0, not %s"%str(lambda_values))
+                    for l in lambda_values:
+                        if not isinstance(l,float):
+                            raise self.InvalidCmd("All lambda CMS values must be"+
+                                                          " float, not '%s'"%str(l))
+                elif isinstance(lambda_values,(tuple,float)):
+                    # Format here is then (lower_bound, N) were lower_bound is
+                    # the minimum lambdaCMS value that must be probed and the
+                    # integer N is the number of such values that must be 
+                    # uniformly distributed in each intervale [1.0e-i,1.0e-(i+1)]
+                    if isinstance(lambda_values, float):
+                        # Use default of 10 for the number of lambda values
+                        lower_bound = lambda_values
+                        N = 10
+                    else:
+                        if isinstance(lambda_values[0],float) and \
+                           isinstance(lambda_values[1],int):
+                            lower_bound = lambda_values[0]
+                            N = lambda_values[1]
+                        else:
+                            raise self.InvalidCmd("'%s' must be a "%option[1]+
+                                               "tuple with types (float, int).")
+                    lambda_values = create_lambda_values_list(lower_bound,N)
+                else:
+                    raise self.InvalidCmd("'%s' must be an expression"%option[1]+
+                                          " for either a float, tuple or list.")
+                lower_bound = lambda_values[-1]
+                # and finally add 5 points for stability test on the last values
+                # Depending on how the stab test will behave at NLO, we can 
+                # consider automatically adding the values below
+#                for stab in range(1,6):
+#                    lambda_values.append((1.0+(stab/100.0))*lower_bound)
+
+                CMS_options['lambdaCMS'] = lambda_values
+            elif option[0]=='--cms':
+                try:
+                    CMS_expansion_orders, CMS_expansion_parameters = \
+                                                            option[1].split(',')
+                except ValueError:
+                    raise self.InvalidCmd("CMS expansion specification '%s'"%\
+                                                       args[i]+" is incorrect.")
+                CMS_options['expansion_orders'] = [expansion_order for 
+                             expansion_order in CMS_expansion_orders.split('&')]
+                CMS_options['expansion_parameters'] = {}
+                for expansion_parameter in CMS_expansion_parameters.split('&'):
+                    try:
+                        param, replacement = expansion_parameter.split('->')
+                    except ValueError:
+                        raise self.InvalidCmd("CMS expansion specification '%s'"%\
+                          expansion_parameter+" is incorrect. It should be of"+\
+                                 " the form a->_any_function_of_(a,lambdaCMS).")
+                    try:
+                        # for safety prefix parameters, because 'as' for alphas
+                        # is a python reserved name for example
+                        orig_param, orig_replacement = param, replacement
+                        replacement = replacement.replace(param,
+                                                        '__tmpprefix__%s'%param)
+                        param = '__tmpprefix__%s'%param
+                        res = float(eval(replacement.lower(),
+                                         {'lambdacms':1.0,param.lower():98.85}))
+                    except:                    
+                        raise self.InvalidCmd("The substitution expression "+
+                        "'%s' for CMS expansion parameter"%orig_replacement+
+                        " '%s' could not be evaluated. It must be an "%orig_param+
+                        "expression of the parameter and 'lambdaCMS'.")
+                    # Put everything lower case as it will be done when
+                    # accessing model variables
+                    CMS_options['expansion_parameters'][param.lower()]=\
+                                                             replacement.lower()
+            else:
+                raise self.InvalidCmd("The option '%s' is not reckognized."%option[0])
+
             i=i-1
         args = args[:i+1]
         
-        proc_line = " ".join(args[1:])
-        myprocdef = self.extract_process(proc_line)
+        if args[0]=='options':
+            # Simple printout of the check command options
+            logger_check.info("Options for the command 'check' are:")
+            logger_check.info("{:<20}     {}".format('  name','default value'))
+            logger_check.info("-"*40)
+            for key, value in options.items():
+                logger_check.info("{:<20} =   {}".format('--%s'%key,str(value)))
+            return
 
+        if args[0].lower()=='cmsoptions':
+            # Simple printout of the special check cms options
+            logger_check.info("Special options for the command 'check cms' are:")
+            logger_check.info("{:<20}     {}".format('  name','default value'))
+            logger_check.info("-"*40)
+            for key, value in CMS_options.items():
+                logger_check.info("{:<20} =   {}".format('--%s'%key,str(value)))
+            return        
+        
+        proc_line = " ".join(args[1:])
+        # Don't try to extract the process if just re-analyzing a saved run
+        if not (args[0]=='cms' and options['analyze']!='None'):
+            myprocdef = self.extract_process(proc_line)
+
+            # Check that we have something
+            if not myprocdef:
+                raise self.InvalidCmd("Empty or wrong format process, please try again.")
+            # For the check command, only the mode 'virt' make sense.
+            if myprocdef.get('NLO_mode')=='all':
+                myprocdef.set('NLO_mode','virt')
+        else:
+            myprocdef = None
+            
         # If the test has to write out on disk, it should do so at the location
         # specified below where the user must be sure to have writing access.
         output_path = os.getcwd()
-
-        # Check that we have something
-        if not myprocdef:
-            raise self.InvalidCmd("Empty or wrong format process, please try again.")
 
         if args[0] in ['timing','stability', 'profile'] and not \
                                         myprocdef.get('perturbation_couplings'):
@@ -3332,8 +3789,9 @@ This implies that with decay chains:
         # So as a temporary fix for the problem that after doing a check at NLO
         # then a check at LO will fail, I make sure I set it to False if the
         # process is a tree-level one
-        if myprocdef.get('perturbation_couplings')==[]:
-            aloha.loop_mode = False
+        if myprocdef:
+            if myprocdef.get('perturbation_couplings')==[]:
+                aloha.loop_mode = False
 
         comparisons = []
         gauge_result = []
@@ -3344,6 +3802,7 @@ This implies that with decay chains:
         stability = []
         profile_time = []
         profile_stab = []
+        cms_results = []
 
         if "_cuttools_dir" in dir(self):
             CT_dir = self._cuttools_dir
@@ -3359,7 +3818,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 3 in MLoptions["MLReductionLib"]:
-                    logger.warning('IREGI not available on your system; it will be skipped.')                    
+                    logger_check.warning('IREGI not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(3)
 
         if 'pjfry' in self.options and isinstance(self.options['pjfry'],str):
@@ -3367,7 +3826,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 2 in MLoptions["MLReductionLib"]:
-                    logger.info('PJFRY not available on your system; it will be skipped.')                    
+                    logger_check.warning('PJFRY not available on your system; it will be skipped.')                    
                     MLoptions["MLReductionLib"].remove(2)
                     
         if 'golem' in self.options and isinstance(self.options['golem'],str):
@@ -3375,7 +3834,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 4 in MLoptions["MLReductionLib"]:
-                    logger.info('GOLEM not available on your system; it will be skipped.')
+                    logger_check.warning('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
         
         if 'samurai' in self.options and isinstance(self.options['samurai'],str):
@@ -3437,7 +3896,7 @@ This implies that with decay chains:
             nb_part_unit = len(myprocdef_unit.get('model').get('particles'))
             nb_part_feyn = len(myprocdef_feyn.get('model').get('particles'))
             if nb_part_feyn == nb_part_unit:
-                logger.error('No Goldstone present for this check!!')
+                logger_check.error('No Goldstone present for this check!!')
             gauge_result_no_brs = process_checks.check_unitary_feynman(
                                                 myprocdef_unit, myprocdef_feyn,
                                                 param_card = param_card,
@@ -3487,15 +3946,84 @@ This implies that with decay chains:
                                           options=options)
             nb_processes += len(gauge_result)
 
-        cpu_time2 = time.time()
-        logger.info("%i checked performed in %0.3f s" \
-                    % (nb_processes,
-                      (cpu_time2 - cpu_time1)))
+        # The CMS check is typically more complicated and slower than others
+        # so we don't run it automatically with 'full'.
+        if args[0] in ['cms']:
+            
+            cms_original_setup = self.options['complex_mass_scheme']
+            process_line = " ".join(args[1:])
+            # Merge in the CMS_options to the options
+            for key, value in CMS_options.items():
+                if key=='tweak':
+                    continue
+                if key not in options:
+                    options[key] = value
+                else:
+                    raise MadGraph5Error,"Option '%s' is both in the option"%key+\
+                                                   " and CMS_option dictionary." 
+            
+            if options['analyze']=='None':
+                cms_results = []
+                for tweak in CMS_options['tweak']:
+                    options['tweak']=tweak
+                    # Try to guess the save path and try to load it before running
+                    guessed_proc = myprocdef.get_process(
+                      [leg.get('ids')[0] for leg in myprocdef.get('legs') 
+                                                       if not leg.get('state')],
+                      [leg.get('ids')[0] for leg in myprocdef.get('legs')
+                                                           if leg.get('state')])
+                    save_path = process_checks.CMS_save_path('pkl',
+                    {'ordered_processes':[guessed_proc.base_string()],
+                     'perturbation_orders':guessed_proc.get('perturbation_couplings')}, 
+                             self._curr_model, options, output_path=output_path)
+                    if os.path.isfile(save_path) and options['reuse']:
+                        cms_result = save_load_object.load_from_file(save_path)
+                        logger_check.info("The cms check for tweak %s is recycled from file:\n %s"%
+                                                      (tweak['name'],save_path))
+                        if cms_result is None:
+                            raise self.InvalidCmd('The complex mass scheme check result'+
+                            " file below could not be read.\n     %s"%save_path)
+                    else:      
+                        cms_result = process_checks.check_complex_mass_scheme(
+                                              process_line,
+                                              param_card = param_card,
+                                              cuttools=CT_dir,
+                                              tir=TIR_dir,
+                                              cmd = self,
+                                              output_path = output_path,
+                                              MLOptions = MLoptions,
+                                              options=options)
+                        # Now set the correct save path
+                        save_path = process_checks.CMS_save_path('pkl', cms_result, 
+                             self._curr_model, options, output_path=output_path)
+                    cms_results.append((cms_result,save_path,tweak['name']))
+            else:
+                cms_result = save_load_object.load_from_file(
+                                               options['analyze'].split(',')[0])
+                cms_results.append((cms_result,options['analyze'].split(',')[0],
+                                               CMS_options['tweak'][0]['name']))
+                if cms_result is None:
+                    raise self.InvalidCmd('The complex mass scheme check result'+
+                       " file below could not be read.\n     %s"
+                                              %options['analyze'].split(',')[0])
 
-        if args[0] not in ['timing','stability', 'profile']:
+            # restore previous settings
+            self.do_set('complex_mass_scheme %s'%str(cms_original_setup),
+                                                                      log=False)
+            # Use here additional key 'ordered_processes'
+            nb_processes += len(cms_result['ordered_processes'])
+
+        cpu_time2 = time.time()
+        logger_check.info("%i check performed in %s"% (nb_processes,
+                                  misc.format_time(int(cpu_time2 - cpu_time1))))
+
+        if args[0] in ['cms']:
+                text = "Note that the complex mass scheme test in principle only\n"
+                text+= "works for stable particles in final states.\n\ns"            
+        if args[0] not in ['timing','stability', 'profile', 'cms']:
             if self.options['complex_mass_scheme']:
                 text = "Note that Complex mass scheme gives gauge/lorentz invariant\n"
-                text+= "results only for stable particles in final states.\n\n"
+                text+= "results only for stable particles in final states.\n\ns"
             elif not myprocdef.get('perturbation_couplings'):
                 text = "Note That all width have been set to zero for those checks\n\n"
             else:
@@ -3527,6 +4055,27 @@ This implies that with decay chains:
         if gauge_result_no_brs:
             text += 'Gauge results (switching between Unitary/Feynman):\n'
             text += process_checks.output_unitary_feynman(gauge_result_no_brs) + '\n'
+        if cms_results:
+            text += 'Complex mass scheme results (varying width in the off-shell regions):\n'
+            cms_result = cms_results[0][0]
+            if len(cms_results)>1:
+                analyze = []
+                for i, (cms_res, save_path, tweakname) in enumerate(cms_results):
+                    save_load_object.save_to_file(save_path, cms_res)
+                    logger_check.info("Pickle file for tweak '%s' saved to disk at:\n ->%s"%
+                                                          (tweakname,save_path))
+                    if i==0:
+                        analyze.append(save_path)
+                    else:
+                        analyze.append('%s(%s)'%(save_path,tweakname))
+                options['analyze']=','.join(analyze)
+                options['tweak']  = CMS_options['tweak'][0]
+            
+            self._cms_checks.append({'line':line, 'cms_result':cms_result,
+                                  'options':options, 'output_path':output_path})
+            text += process_checks.output_complex_mass_scheme(cms_result,
+              output_path, options, self._curr_model,
+              output='concise_text' if options['report']=='concise' else 'text')+'\n'
 
         if comparisons and len(comparisons[0])>0:
             text += 'Process permutation results:\n'
@@ -3793,8 +4342,11 @@ This implies that with decay chains:
                 myleglist.append(base_objects.MultiLeg({'ids':mylegids,
                                                         'state':state}))
             else:
-                raise self.InvalidCmd, \
-                      "No particle %s in model" % part_name
+                raise self.InvalidCmd, "No particle %s in model" % part_name
+
+        # Apply the keyword 'all' for perturbed coupling orders.
+        if perturbation_couplings.lower()=='all':
+            perturbation_couplings=' '.join(self._curr_model['perturbation_couplings'])
 
         if filter(lambda leg: leg.get('state') == True, myleglist):
             # We have a valid process
@@ -4288,7 +4840,7 @@ This implies that with decay chains:
                     args[1].split('/')[-1].startswith('loop_qcd_qed_sm')) and\
                      self.options['gauge']!='Feynman':
                     logger.info('Switching to Feynman gauge because '+\
-                          'it is the only one supported by the model loop_qcd_qed_sm.')
+                          'it is the only one supported by the model %s.'%args[1])
                     self._curr_model = None
                     self.do_set('gauge Feynman',log=False)
                 prefix = not '--noprefix' in args
@@ -4298,7 +4850,8 @@ This implies that with decay chains:
                     aloha.aloha_prefix=''
                 
                 try:
-                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix)
+                    self._curr_model = import_ufo.import_model(args[1], prefix=prefix,
+                        complex_mass_scheme=self.options['complex_mass_scheme'])
                 except import_ufo.UFOImportError, error:
                     if 'not a valid UFO model' in str(error):
                         logger_stderr.warning('WARNING: %s' % error)
@@ -4306,10 +4859,6 @@ This implies that with decay chains:
                          'automatically `import model_v4 %s` instead.'% args[1])
                     self.exec_cmd('import model_v4 %s ' % args[1], precmd=True)
                     return
-                if self.options['complex_mass_scheme']:
-                    self._curr_model.change_mass_to_complex_scheme()
-                    if hasattr(self._curr_model, 'set_parameters_and_couplings'):
-                        self._curr_model.set_parameters_and_couplings()
                 if self.options['gauge']=='unitary':
                     if not force and isinstance(self._curr_model,\
                                               loop_base_objects.LoopModel) and \
@@ -4634,7 +5183,6 @@ This implies that with decay chains:
                                  pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
             logger.info("Installing PJFRY's dependence QCDLoop...")
             self.do_install('QCDLoop', paths=path)
-
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
@@ -5392,7 +5940,8 @@ This implies that with decay chains:
                                                 options=self.options, **options)
         elif args[0] == 'madevent':
             if options['interactive']:
-                if hasattr(self, 'do_shell'):
+                
+                if isinstance(self, cmd.CmdShell):
                     ME = madevent_interface.MadEventCmdShell(me_dir=args[1], options=self.options)
                 else:
                     ME = madevent_interface.MadEventCmd(me_dir=args[1],options=self.options)
@@ -5412,12 +5961,12 @@ This implies that with decay chains:
 
             if len(generate_info.split('>')[0].strip().split())>1:
                 ext_program = launch_ext.MELauncher(args[1], self,
-                                shell = hasattr(self, 'do_shell'),
+                                shell = isinstance(self, cmd.CmdShell),
                                 options=self.options,**options)
             else:
                 # This is a width computation
                 ext_program = launch_ext.MELauncher(args[1], self, unit='GeV',
-                                shell = hasattr(self, 'do_shell'),
+                                shell = isinstance(self, cmd.CmdShell),
                                 options=self.options,**options)
 
         elif args[0] == 'pythia8':
@@ -5425,7 +5974,7 @@ This implies that with decay chains:
 
         elif args[0] == 'aMC@NLO':
             if options['interactive']:
-                if hasattr(self, 'do_shell'):
+                if isinstance(self, cmd.CmdShell):
                     ME = amcatnlo_run.aMCatNLOCmdShell(me_dir=args[1], options=self.options)
                 else:
                     ME = amcatnlo_run.aMCatNLOCmd(me_dir=args[1],options=self.options)
@@ -5436,11 +5985,13 @@ This implies that with decay chains:
                     ME.exec_cmd(line)
                 stop = self.define_child_cmd_interface(ME)
                 return stop
-            ext_program = launch_ext.aMCatNLOLauncher( args[1], self, **options)
+            ext_program = launch_ext.aMCatNLOLauncher( args[1], self,
+                                                       shell = isinstance(self, cmd.CmdShell),
+                                                        **options)
         elif args[0] == 'madweight':
             import madgraph.interface.madweight_interface as madweight_interface
             if options['interactive']:
-                if hasattr(self, 'do_shell'):
+                if isinstance(self, cmd.CmdShell):
                     MW = madweight_interface.MadWeightCmdShell(me_dir=args[1], options=self.options)
                 else:
                     MW = madweight_interface.MadWeightCmd(me_dir=args[1],options=self.options)
@@ -5451,7 +6002,7 @@ This implies that with decay chains:
                 stop = self.define_child_cmd_interface(MW)                
                 return stop
             ext_program = launch_ext.MWLauncher( self, args[1],
-                                                 shell = hasattr(self, 'do_shell'),
+                                                 shell = isinstance(self, cmd.CmdShell),
                                                  options=self.options,**options)            
         else:
             os.chdir(start_cwd) #ensure to go to the initial path
@@ -5676,8 +6227,8 @@ This implies that with decay chains:
             self.write_configuration(filepath, basefile, basedir, to_define)
 
     # Set an option
-    def do_set(self, line, log=True):
-        """Set an option, which will be default for coming generations/outputs
+    def do_set(self, line, log=True, model_reload=True):
+        """Set an option, which will be default for coming generations/outputs.
         """
 
         # Be careful:
@@ -5735,18 +6286,13 @@ This implies that with decay chains:
             self.options[args[0]] = eval(args[1])
             aloha.complex_mass = eval(args[1])
             aloha_lib.KERNEL.clean()
-            if not self._curr_model:
-                pass
-            elif self.options[args[0]]:
+            if self.options[args[0]]:
                 if old:
                     if log:
                         logger.info('Complex mass already activated.')
                     return
                 if log:
                     logger.info('Activate complex mass scheme.')
-                self._curr_model.change_mass_to_complex_scheme()
-                if hasattr(self._curr_model, 'set_parameters_and_couplings'):
-                        self._curr_model.set_parameters_and_couplings()
             else:
                 if not old:
                     if log:
@@ -5754,7 +6300,9 @@ This implies that with decay chains:
                     return
                 if log:
                     logger.info('Desactivate complex mass scheme.')
-                self.exec_cmd('import model %s' % self._curr_model.get('name'))
+            if not self._curr_model:
+                return
+            self.exec_cmd('import model %s' % self._curr_model.get('name'))
 
         elif args[0] == "gauge":
             # Treat the case where they are no model loaded
@@ -6568,8 +7116,7 @@ This implies that with decay chains:
         else:
             self._curr_model = model
             self._curr_fortran_model = \
-                helas_call_writers.FortranUFOHelasCallWriter(\
-                self._curr_model)
+                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         if not isinstance(model, model_reader.ModelReader):
             model = model_reader.ModelReader(model)
 
@@ -6941,7 +7488,7 @@ This implies that with decay chains:
             self._generate_info = process[9:]
             #print self._generate_info
         else:
-            print "No decay is found"
+            logger.info("No decay is found")
 
 class MadGraphCmdWeb(CheckValidForCmdWeb, MadGraphCmd):
     """Temporary parser"""

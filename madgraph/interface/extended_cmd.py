@@ -80,7 +80,7 @@ class BasicCmd(cmd.Cmd):
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
 
-    def deal_multiple_categories(self, dico):
+    def deal_multiple_categories(self, dico, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
         specific readline parser"""
 
@@ -92,7 +92,7 @@ class BasicCmd(cmd.Cmd):
             return out
 
         # check if more than one categories but only one value:
-        if all(len(s) <= 1 for s in dico.values() ):
+        if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
             values = set((s[0] for s in dico.values() if len(s)==1))
             if len(values) == 1:
                 return values
@@ -115,9 +115,9 @@ class BasicCmd(cmd.Cmd):
             opt.sort()
             out += opt
 
-            
-        if valid == 1:
+        if not forceCategory and valid == 1:
             out = out[1:]
+            
         return out
     
     @debug()

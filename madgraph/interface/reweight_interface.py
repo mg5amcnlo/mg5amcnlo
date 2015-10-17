@@ -369,22 +369,36 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me_second')
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-            
-        ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
-        ff.write(self.banner['slha'])
-        ff.close()
-        ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
-        ff.write(self.banner['slha'])
-        ff.close()        
-        cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
+        
+        if not '--keep_card' in args:
+            ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
+            ff.write(self.banner['slha'])
+            ff.close()
+            ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
+            ff.write(self.banner['slha'])
+            ff.close()      
+            cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
-        self.stored_line = None
-        #self.define_child_cmd_interface(cmd, interface=False)
-        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()        
+            self.stored_line = None
+        
+        # check for potential scan in the new card 
+        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
+        pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
+        param_card_iterator = []
+        if pattern_scan.search(new_card):
+            if not isinstance(self.mother, cmd.CmdShell): 
+                raise Exception, "scan are not allowed on the Web"
+            # at least one scan parameter found. create an iterator to go trough the cards
+            main_card = check_param_card.ParamCardIterator(new_card)
+
+            param_card_iterator = main_card
+            first_card = param_card_iterator.next(autostart=True)
+            new_card = first_card.write()
+            first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))                
         # check if "Auto" is present for a width parameter
         if "auto" in new_card.lower():            
-            self.mother.check_param_card(pjoin(path_me, 'rw_me', 'Cards', 'param_card.dat'))
-            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read() 
+            self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
 
         # Find new tag in the banner and add information if needed
         if 'initrwgt' in self.banner:
@@ -614,6 +628,13 @@ class ReweightInterface(extended_cmd.Cmd):
         self.terminate_fortran_executables(new_card_only=True)
         #store result
         self.all_cross_section[rewgtid] = (cross, error)
+        
+        # perform the scanning
+        if param_card_iterator:
+            for card in param_card_iterator:
+                card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
+        
     
     def do_set(self, line):
         "Not in help"
@@ -739,14 +760,15 @@ class ReweightInterface(extended_cmd.Cmd):
                         dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
                 
                 os.environ['MENUM'] = '2'
-                misc.compile(['matrix2py.so'], cwd=Pdir)
-                
-                self.rename_f2py_lib(Pdir, 2*metag)
+                if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
+                    misc.compile(['matrix2py.so'], cwd=Pdir)
+                    self.rename_f2py_lib(Pdir, 2*metag)
+                    
+                mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
+                S = mymod.SubProcesses
+                P = getattr(S, Pname)
+                mymod = getattr(P, 'matrix%spy' % (2*metag))
                 with misc.chdir(Pdir):
-                    mymod = __import__('rw_me.SubProcesses.%s.matrix%spy' % (Pname, 2*metag), globals(), locals(), [],-1)
-                    S = mymod.SubProcesses
-                    P = getattr(S, Pname)
-                    mymod = getattr(P, 'matrix%spy' % (2*metag))
                     mymod.initialise('param_card_orig.dat')
                     
             if hypp_id == 1:
@@ -778,7 +800,8 @@ class ReweightInterface(extended_cmd.Cmd):
             assert hypp_id == 1
             Pname = os.path.basename(Pdir)
             os.environ['MENUM'] = '2'
-            misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
+            if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
+                misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
             if (Pdir, 1) not in dir_to_f2py_free_mod:
                 metag = 1
                 dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
@@ -788,20 +811,20 @@ class ReweightInterface(extended_cmd.Cmd):
                     metag += 1
                     dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
             self.rename_f2py_lib(Pdir, metag)
-            with misc.chdir(Pdir):
-                try:
-                    mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
-                except ImportError:
-                    os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
-                    metag = "L%s" % metag
-                    os.environ['MENUM'] = str(metag)
-                    misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
-                    mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
-                    
-                reload(mymod)
-                S = mymod.SubProcesses
-                P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % metag)                
+            
+            try:
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
+            except ImportError:
+                os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
+                metag = "L%s" % metag
+                os.environ['MENUM'] = str(metag)
+                misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
+                mymod = __import__("rw_me_second.SubProcesses.%s.matrix%spy" % (Pname, metag))
+            reload(mymod)
+            S = mymod.SubProcesses
+            P = getattr(S, Pname)
+            mymod = getattr(P, 'matrix%spy' % metag)                
+            with misc.chdir(Pdir):      
                 mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
             external = space.calculator[run_id]                
@@ -920,6 +943,10 @@ class ReweightInterface(extended_cmd.Cmd):
             
         commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
+        
+        #multiparticles
+        for name, content in self.banner.get('proc_card', 'multiparticles'):
+            mgcmd.exec_cmd("define %s = %s" % (name, content))
         
         # 2. compute the production matrix element -----------------------------
         processes = [line[9:].strip() for line in self.banner.proc_card
@@ -1120,13 +1147,11 @@ class ReweightInterface(extended_cmd.Cmd):
         model_path = name
 
         # Import model
-        base_model = import_ufo.import_model(name, decay=False)
-
-
+        base_model = import_ufo.import_model(name, decay=False,
+                                               complex_mass_scheme=complex_mass)
+    
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()
-        if complex_mass:
-            base_model.change_mass_to_complex_scheme()
         
         self.model = base_model
         self.mg5cmd._curr_model = self.model

@@ -25,6 +25,7 @@ import logging
 import math
 import os
 import re
+import aloha
 
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_base_objects
@@ -54,7 +55,8 @@ class ModelReader(loop_base_objects.LoopModel):
         self['parameter_dict'] = {}
         super(ModelReader, self).default_setup()
 
-    def set_parameters_and_couplings(self, param_card = None, scale=None):
+    def set_parameters_and_couplings(self, param_card = None, scale=None,
+                                                      complex_mass_scheme=None):
         """Read a param_card and calculate all parameters and
         couplings. Set values directly in the parameters and
         couplings, plus add new dictionary coupling_dict from
@@ -80,8 +82,14 @@ class ModelReader(loop_base_objects.LoopModel):
                     raise MadGraph5Error, "No such file %s" % param_card
                 param_card = card_reader.ParamCard(param_card)
             assert isinstance(param_card, card_reader.ParamCard)    
-           
             
+            if complex_mass_scheme is None:
+                if aloha.complex_mass:
+                    param_card.convert_to_complex_mass_scheme()
+            else:
+                if complex_mass_scheme:
+                    param_card.convert_to_complex_mass_scheme()
+    
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
                                             and not k.startswith('decay_table')
                                             and 'info' not in k]
@@ -89,7 +97,6 @@ class ModelReader(loop_base_objects.LoopModel):
             
             if set(key) != set(parameter_dict.keys()):
                 # the two card are different. check if this critical
-                
 
                 fail = True    
                 msg = '''Invalid restriction card (not same block)
@@ -98,7 +105,6 @@ class ModelReader(loop_base_objects.LoopModel):
     Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
                              ','.join(set(parameter_dict.keys()).difference(set(key))),
                              ','.join(set(key).difference(set(parameter_dict.keys()))))
-
                 if msg =="Invalid restriction card (not same block)\n    set(['yu', 'umix', 'ae', 'ad', 'decay', 'nmix', 'ye', 'sbotmix', 'msoft', 'yd', 'vmix', 'au', 'mass', 'alpha', 'modsel', 'sminputs', 'staumix', 'stopmix', 'hmix']) != set(['umix', 'msoft', 'msu2', 'fralpha', 'msd2', 'msl2', 'decay', 'tu', 'selmix', 'td', 'te', 'usqmix', 'dsqmix', 'ye', 'yd', 'sminputs', 'yu', 'mse2', 'nmix', 'vmix', 'msq2', 'mass', 'hmix']).\n    Missing block: te,msl2,dsqmix,tu,selmix,msu2,msq2,usqmix,td,fralpha,mse2,msd2\n    Unknown block : ae,ad,sbotmix,au,alpha,modsel,staumix,stopmix" \
                 or self['name'].startswith('mssm-') or self['name'] == 'mssm':
                     if not set(parameter_dict.keys()).difference(set(key)):
@@ -118,7 +124,7 @@ class ModelReader(loop_base_objects.LoopModel):
                 
                 if fail:
                     raise MadGraph5Error, msg
-                
+
             for block in key:
                 if block not in parameter_dict:
                     continue

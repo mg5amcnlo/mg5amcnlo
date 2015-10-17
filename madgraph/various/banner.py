@@ -536,7 +536,7 @@ class Banner(dict):
         if len(arg) == 1:
             if tag == 'mg5proccard':
                 try:
-                    return card.info[arg[0]]
+                    return card.get(arg[0])
                 except KeyError, error:
                     if 'default' in opt:
                         return opt['default']
@@ -850,11 +850,18 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
-    def __getattr__(self, tag, default=None):
+    def get(self, tag, default=None):
         if isinstance(tag, int):
             list.__getattr__(self, tag)
         elif tag == 'info' or tag == "__setstate__":
             return default #for pickle
+        elif tag == "multiparticles":
+            out = []
+            for line in self:
+                if line.startswith('define'):
+                    name, content = line[7:].split('=',1)
+                    out.append((name, content))
+            return out 
         else:
             return self.info[tag]
             
@@ -1620,7 +1627,7 @@ class RunCardLO(RunCard):
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
-        self.add_param("sys_alpsfact", "0.5 1 2", include=False)
+        self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "30 50", include=False)
         self.add_param("sys_pdf", "Ct10nlo.LHgrid", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
@@ -1789,6 +1796,7 @@ class RunCardLO(RunCard):
                 self['use_syst'] = False 
                 self['drjj'] = 0
                 self['drjl'] = 0
+                self['sys_alpsfact'] = "0.5 1 2"
                 
 
     def remove_all_cut(self): 
