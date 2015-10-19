@@ -1930,8 +1930,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             for lamp in loop_amp_list:
                 final_lwf = lamp.get_final_loop_wavefunction()
                 while not final_lwf is None:
-                    ids = set([wf.get_pdg_code() for wf in final_lwf.get('mothers')])
-                    if ids == set([21,25]):
+                    # We define here an HEFT vertex as any vertex built up from
+                    # only massless vectors and scalars (at least one of each)
+                    scalars = len([1 for wf in final_lwf.get('mothers') if 
+                                                             wf.get('spin')==1])
+                    vectors = len([1 for wf in final_lwf.get('mothers') if 
+                                  wf.get('spin')==3 and wf.get('mass')=='ZERO'])
+                    if scalars>=1 and vectors>=1 and \
+                               scalars+vectors == len(final_lwf.get('mothers')):
                         has_HEFT_vertex[i] = True
                         break
                     final_lwf = final_lwf.get_loop_mother()
