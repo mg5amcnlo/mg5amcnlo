@@ -392,6 +392,8 @@ c physical range of the invariant mass in the event!)
             input_granny_m2=.false.
             call generate_momenta_conf(input_granny_m2,ndim,jac,x
      $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+            if (nint(jac).eq.-222) return ! numerical inaccuracy: not
+                                          ! even Born momenta generated.
             rat_xi_orig=rat_xi
             granny_m2_red_local( 0)=granny_m2_red( 0)
             granny_m2_red_local(-1)=granny_m2_red(-1)
@@ -2754,6 +2756,16 @@ c     update the range for the two daughters of the current s-channel
             if (itree(2,i).lt.0) then
                max_m(itree(2,i))=m(i)-min_m(itree(1,i))
             endif
+c     update the range for the sister
+            do j=-ns_channel,i
+               if (itree(1,j).eq.i .and.
+     &              itree(2,j).lt.0 .and. itree(2,j).gt.i) then
+                  max_m(itree(2,j))=m(j)-m(i)
+               elseif( itree(2,j).eq.i .and. 
+     &              itree(1,j).lt.0 .and. itree(1,j).gt.i) then
+                  max_m(itree(2,j))=m(j)-m(i)
+               endif
+            enddo
 c     update the range for all the other starts of s-channels chains if
 c     the current one is the start of an s-channel chain.
             if (start_s_chan(i)) then

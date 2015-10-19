@@ -402,8 +402,7 @@ c Determine the "minimal" s-channel invariant masses
             enddo
             do i=-1,-(nexternal-3),-1 ! All propagators
                if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
-               s_mass_FKS(iFKS,i)=(sqrt(s_mass_FKS(iFKS,itree(1,i)))
-     $              +sqrt(s_mass_FKS(iFKS,itree(2,i))))**2
+               s_mass_FKS(iFKS,i)=xm(i)**2
             enddo
 
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
