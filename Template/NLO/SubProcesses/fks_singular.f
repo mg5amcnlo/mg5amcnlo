@@ -5347,7 +5347,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       end
 
 
-      subroutine setfksfactor(iconfig)
+      subroutine setfksfactor(iconfig,match_to_shower)
       implicit none
 
       double precision CA,CF, PI
@@ -5364,6 +5364,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       common/sctests/softtest,colltest
 
       integer config_fks,i,j,iconfig,fac1,fac2
+      logical match_to_shower
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
      &     fkssymmetryfactorDeg
@@ -5597,7 +5598,7 @@ c Set color types of i_fks, j_fks and fks_mother.
       m_type=m_type_FKS(nFKSprocess)
 
 c Set matrices used by MC counterterms
-      call set_mc_matrices
+      if (match_to_shower) call set_mc_matrices
 
       fac_i=fac_i_FKS(nFKSprocess)
       fac_j=fac_j_FKS(nFKSprocess)

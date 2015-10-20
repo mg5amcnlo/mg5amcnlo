@@ -1222,7 +1222,7 @@ c     include all quarks (except top quark) and the gluon.
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.true.)
       return
       end
 

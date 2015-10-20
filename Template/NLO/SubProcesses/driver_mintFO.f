@@ -522,7 +522,7 @@ c Finalize PS point
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.false.)
       return
       end
       

@@ -108,7 +108,7 @@ c ie. which is a Born+g real-emission process
       enddo
       call fks_inc_chooser()
       call leshouche_inc_chooser()
-      call setfksfactor(1)
+      call setfksfactor(1,.false.)
 
       nfail = 0
       npointsChecked = 0
