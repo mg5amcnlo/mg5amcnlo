@@ -132,6 +132,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         perturbation = []
         for procdef in self['process_definitions']:
             soft_particles = []
+            # do not warn for decay processes
+            if [ i['state'] for i in procdef['legs']].count(False) == 1:
+                continue
             for pert in procdef['perturbation_couplings']:
                 if pert not in perturbation:
                     perturbation.append(pert)
