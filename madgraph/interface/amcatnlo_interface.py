@@ -541,6 +541,13 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     for me in self._curr_matrix_elements.get_matrix_elements():
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
+                        try:
+                            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                                                  p in me.born_matrix_element.get('processes')))))
+                        except IndexError:
+                            initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
+                                                                  p in me.born_matrix_element.get('processes')))))
+                    
                         for fksreal in me.real_processes:
                         # Pick out all initial state particles for the two beams
                             try:
