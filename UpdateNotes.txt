@@ -11,6 +11,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	    processes which have jets at Born level, but do not require generation cut (like t-channel single-top). 
 	RF: Added an option to the run_card to allow for easier variation of the shower starting scale (NLO only).
 	RF: Fixed a problem in the setting of the flavour map used for runs with iAPPL >= 1. 
+	RF: Allow for decay processes to compute (partial) decay widths at NLO accuracy (fixed order only).
         OM: (SysCalc interface) Allow to bypass the pdf reweighting/alpsfact reweighting
         MZ: fixed bug related to slurm clusters
 	OM: remove the addmasses.py script of running by default on gridpack mode. 

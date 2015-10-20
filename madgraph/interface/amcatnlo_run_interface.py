@@ -1364,6 +1364,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             return
 
         elif mode in ['aMC@NLO','aMC@LO','noshower','noshowerLO']:
+            if self.ninitial == 1:
+                raise aMCatNLOError('Decay processes can only be run at fixed order.')
             mode_dict = {'aMC@NLO': 'all', 'aMC@LO': 'born',\
                          'noshower': 'all', 'noshowerLO': 'born'}
             shower = self.run_card['parton_shower'].upper()
@@ -1448,8 +1450,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             npoints = self.run_card['npoints_FO_grid']
             niters = self.run_card['niters_FO_grid']
             for p_dir in p_dirs:
-                with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
-                    channels=chan_file.readline().split()
+                try:
+                    with open(pjoin(self.me_dir,'SubProcesses',p_dir,'channels.txt')) as chan_file:
+                        channels=chan_file.readline().split()
+                except IOError:
+                    logger.warning('No integration channels found for contribution %s' % p_dir)
+                    continue
                 for channel in channels:
                     job={}
                     job['p_dir']=p_dir
@@ -2152,10 +2158,21 @@ RESTART = %(mint_mode)s
             if line.startswith('generate') or line.startswith('add process'):
                 process = process+(line.replace('generate ', '')).replace('add process ','')+' ; '
         lpp = {0:'l', 1:'p', -1:'pbar'}
-        proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
-        (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
-                self.run_card['ebeam1'], self.run_card['ebeam2'])
-        
+        if self.ninitial == 1:
+            proc_info = '\n      Process %s' % process[:-3]
+        else:
+            proc_info = '\n      Process %s\n      Run at %s-%s collider (%s + %s GeV)' % \
+                (process[:-3], lpp[self.run_card['lpp1']], lpp[self.run_card['lpp2']], 
+                 self.run_card['ebeam1'], self.run_card['ebeam2'])
+
+        if self.ninitial == 1:
+            self.cross_sect_dict['unit']='GeV'
+            self.cross_sect_dict['xsec_string']='(Partial) decay width'
+            self.cross_sect_dict['axsec_string']='(Partial) abs(decay width)'
+        else:
+            self.cross_sect_dict['unit']='pb'
+            self.cross_sect_dict['xsec_string']='Total cross-section'
+            self.cross_sect_dict['axsec_string']='Total abs(cross-section)'
         # Gather some basic statistics for the run and extracted from the log files.
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
@@ -2181,13 +2198,13 @@ RESTART = %(mint_mode)s
             if step != 2:
                 message = status[step] + '\n\n      Intermediate results:' + \
                     ('\n      Random seed: %(randinit)d' + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' + \
-                     '\n      Total abs(cross-section): %(xseca)8.3e +- %(erra)6.1e pb \n') \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
+                     '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
                      % self.cross_sect_dict
             else:
         
                 message = '\n      ' + status[step] + proc_info + \
-                          '\n      Total cross-section: %(xsect)8.3e +- %(errt)6.1e pb' % \
+                          '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                         self.cross_sect_dict
 
                 if self.run_card['nevents']>=10000 and self.run_card['reweight_scale']:
@@ -2216,15 +2233,15 @@ RESTART = %(mint_mode)s
                       'Final results and run summary:']
             if (not done) and (step == 0):
                 message = '\n      ' + status[0] + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                              self.cross_sect_dict
             elif not done:
                 message = '\n      ' + status[1] + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                              self.cross_sect_dict
             elif done:
                 message = '\n      ' + status[2] + proc_info + \
-                     '\n      Total cross-section:      %(xsect)8.3e +- %(errt)6.1e pb' % \
+                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                              self.cross_sect_dict
                 if self.run_card['reweight_scale']:
                     if self.run_card['ickkw'] != -1:
@@ -4280,11 +4297,17 @@ RESTART = %(mint_mode)s
         else:
             switch.update(dict((k,value) for k,v in switch_default.items() if k not in switch))
         default_switch = ['ON', 'OFF']
+        
+
         allowed_switch_value = {'order': ['LO', 'NLO'],
                                 'fixed_order': default_switch,
                                 'shower': default_switch,
                                 'madspin': default_switch,
                                 'reweight': default_switch}
+
+            
+            
+        
         
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
@@ -4300,22 +4323,35 @@ RESTART = %(mint_mode)s
         special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
 
         assign_switch = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
-        
+
+        if self.proc_characteristics['ninitial'] == 1:
+            switch['fixed_order'] = 'ON'
+            switch['shower'] = 'Not available for decay'
+            switch['madspin'] = 'Not available for decay'
+            switch['reweight'] = 'Not available for decay'
+            allowed_switch_value['fixed_order'] = ['ON']
+            allowed_switch_value['shower'] = ['OFF']
+            allowed_switch_value['madspin'] = ['OFF']
+            allowed_switch_value['reweight'] = ['OFF']
+            available_mode = ['0','1']
+            special_values = ['LO', 'NLO']
+        else: 
+            # Init the switch value according to the current status
+            available_mode = ['0', '1', '2','3']
 
         if mode == 'auto': 
             mode = None
         if not mode and (options['parton'] or options['reweightonly']):
             mode = 'noshower'         
         
-        # Init the switch value according to the current status
-        available_mode = ['0', '1', '2']
-        available_mode.append('3')
-        if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
-            switch['shower'] = 'ON'
-        else:
-            switch['shower'] = 'OFF'
+
+        if '3' in available_mode:
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
+                switch['shower'] = 'ON'
+            else:
+                switch['shower'] = 'OFF' 
                 
-        if not aMCatNLO or self.options['mg5_path']:
+        if (not aMCatNLO or self.options['mg5_path']) and '3' in available_mode:
             available_mode.append('4')
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
                 switch['madspin'] = 'ON'
@@ -4330,8 +4366,7 @@ RESTART = %(mint_mode)s
             else:
                 switch['reweight'] = 'Not available (requires NumPy)'
 
-        
-        if 'do_reweight' in options and options['do_reweight']:
+        if 'do_reweight' in options and options['do_reweight'] and '3' in available_mode:
             if switch['reweight'] == "OFF":
                 switch['reweight'] = "ON"
             elif switch['reweight'] != "ON":
@@ -4341,12 +4376,12 @@ RESTART = %(mint_mode)s
                 switch['madspin'] = 'ON'
             elif switch['madspin'] != "ON":
                 logger.critical("Cannot run MadSpin module: %s" % switch['reweight'])
-                    
-                    
+                        
         answers = list(available_mode) + ['auto', 'done']
         alias = {}
         for id, key in enumerate(switch_order):
-            if switch[key] != void and switch[key] in allowed_switch_value[key]:
+            if switch[key] != void and switch[key] in allowed_switch_value[key] and \
+                len(allowed_switch_value[key]) >1:
                 answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
                 #allow lower case for on/off
                 alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
@@ -4407,7 +4442,6 @@ RESTART = %(mint_mode)s
                 if mode:
                     return
             return switch
-
 
         modify_switch(mode, self.last_mode, switch)
         if switch['madspin'] == 'OFF' and  os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
