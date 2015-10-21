@@ -2117,6 +2117,9 @@ c     this subdir has no soft singularities
             charges = [0.] * len(colors) 
 
             fks_i = len(colors)
+            # use the first colored particle if it exists, or 
+            # just the first
+            fks_j=1
             for cpos, col in enumerate(colors[:-1]):
                 if col != 1:
                     fks_j = cpos+1

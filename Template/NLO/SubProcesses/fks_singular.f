@@ -5583,6 +5583,9 @@ c Set color types of i_fks, j_fks and fks_mother.
             else
                m_type=j_type
             endif
+         elseif(i_type.eq.8.and.j_type.eq.1.and.pdg_type(i_fks).eq.-21)then
+         ! dirty trick for LOonly processes without colored legs
+            m_type=j_type
          else
             write(*,*)'Flavour mismatch #2 in setfksfactor',
      &           i_type,j_type,m_type

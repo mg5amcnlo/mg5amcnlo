@@ -32,7 +32,6 @@ c
          pdg_type(i)=pdg_type_D(nFKSprocess,i)
       enddo
       do i=1,nexternal
-
          if (i.lt.min(i_fks,j_fks)) then
             particle_type_born(i)=particle_type(i)
          elseif (i.gt.max(i_fks,j_fks)) then
@@ -63,6 +62,9 @@ c
                else
                   m_type=j_type
                endif
+            elseif(i_type.eq.8.and.j_type.eq.1.and.pdg_type(i_fks).eq.-21)then
+            ! dirty trick for LOonly processes without colored legs
+               m_type=j_type
             else
                write(*,*)'Flavour mismatch #2 in fks_inc_chooser',
      &              i_type,j_type,m_type
