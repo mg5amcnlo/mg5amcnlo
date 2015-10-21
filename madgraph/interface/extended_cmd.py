@@ -463,6 +463,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     history_header = ""
     
     _display_opts = ['options','variable']
+    allow_notification_center = True
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -885,6 +886,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def onecmd(self, line, **opt):
         """catch all error and stop properly command accordingly"""
         
+        me_dir = ''
+        if hasattr(self, 'me_dir'):
+            me_dir = os.path.basename(me_dir) + ' '
+        
         try:
             return self.onecmd_orig(line, **opt)
         except self.InvalidCmd as error:            
@@ -893,12 +898,22 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 self.history.pop()
             else:
                 self.nice_user_error(error, line)
+            if self.allow_notification_center:
+                misc.apple_notify('Run %sfailed' % me_dir,
+                              'Invalid Command: %s' % error.__class__.__name__)
+
         except self.ConfigurationError as error:
             self.nice_config_error(error, line)
+            if self.allow_notification_center:
+                misc.apple_notify('Run %sfailed' % me_dir,
+                              'Configuration error')
         except Exception as error:
             self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
+            if self.allow_notification_center:
+                misc.apple_notify('Run %sfailed' % me_dir,
+                              'Exception: %s' % error.__class__.__name__)
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()
             if __debug__:

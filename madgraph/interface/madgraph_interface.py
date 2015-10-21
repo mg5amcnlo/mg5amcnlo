@@ -2691,7 +2691,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'nb_core': None
+                         'nb_core': None,
+                         'notification_center': True
                          }
 
 
@@ -5871,6 +5872,10 @@ This implies that with decay chains:
                 self.options[key] = int(self.options[key])
             elif key in ['cluster_type','automatic_html_opening']:
                 pass
+            elif key in ['notification_center']:
+                if self.options[key] in ['False', 'True']:
+                   self.allow_notification_center = eval(self.options[key])
+                   self.options[key] = self.allow_notification_center
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:

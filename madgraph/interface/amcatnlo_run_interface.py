@@ -1243,25 +1243,33 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
             orig_name = self.run_name
             #go trough the scal
-            for i,card in enumerate(param_card_iterator):
-                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                if not options['force']:
-                    options['force'] = True
-                if options['run_name']:
-                    options['run_name'] = '%s_%s' % (orig_name, i+1)
-                if not argss:
-                    argss = [mode, "-f"]
-                elif argss[0] == "auto":
-                    argss[0] = mode
-                self.do_launch("", options=options, argss=argss, switch=switch)
-                #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            with misc.TMP_variable(self, 'allow_notification_center', False):
+                for i,card in enumerate(param_card_iterator):
+                    card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                    if not options['force']:
+                        options['force'] = True
+                    if options['run_name']:
+                        options['run_name'] = '%s_%s' % (orig_name, i+1)
+                    if not argss:
+                        argss = [mode, "-f"]
+                    elif argss[0] == "auto":
+                        argss[0] = mode
+                    self.do_launch("", options=options, argss=argss, switch=switch)
+                    #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
             #restore original param_card
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)
             path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
             logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
             param_card_iterator.write_summary(path)
+            
+        if self.allow_notification_center:    
+            misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
+                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+                                                 self.results.current['cross'],
+                                                 self.results.current['error']))
+    
             
     ############################################################################      
     def do_compile(self, line):

@@ -506,6 +506,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madgraph= {'stdout_level':None}
 
     options_madevent = {'automatic_html_opening':True,
+                        'notification_center':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'cluster_time':None,
@@ -1715,7 +1716,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
 
-
     ############################################################################
     def keep_cards(self, need_card=[], ignore=[]):
         """Ask the question when launching generate_events/multi_run"""
@@ -1834,6 +1834,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pass
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
+                    self.options[key] =eval(self.options[key])
+            elif key == "notification_center":
+                if self.options[key] in ['False', 'True']:
+                    self.allow_notification_center =eval(self.options[key])
                     self.options[key] =eval(self.options[key])
             elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
                               'complex_mass_scheme', 'gauge', 'group_subprocesses']:
