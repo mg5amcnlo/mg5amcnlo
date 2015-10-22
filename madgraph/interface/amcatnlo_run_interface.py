@@ -2095,7 +2095,7 @@ RESTART = %(mint_mode)s
         if self.run_card['iappl'] != 0:
             cross=self.cross_sect_dict['xsect']
             error=self.cross_sect_dict['errt']
-            self.applgrid_combine(cross,error)
+            self.applgrid_combine(cross,error,jobs)
 
 
     def setup_cluster_or_multicore(self):
