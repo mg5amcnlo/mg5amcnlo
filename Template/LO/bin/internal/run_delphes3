@@ -27,16 +27,16 @@ if [ ${file: -3} == ".gz" ]
 then
   if [ ${file: -7} == ".hep.gz" ]
   then
-      gunzip --stdout $file | $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes.root      
+      gunzip --stdout $file | $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
   else
-      gunzip --stdout $file | $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes.root      
+      gunzip --stdout $file | $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
   fi
 else
   if [ ${file: -4} == ".hep" ]
   then
-      $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes.root $file
+      $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file
   else
-      $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes.root $file      
+      $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file      
   fi
 fi
 

@@ -349,15 +349,7 @@ class CheckValidForCmd(object):
         filepath = None        
         if not len(arg):
             prev_tag = self.set_run_name(self.run_name, tag, 'delphes')
-            if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hep')
-            elif os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hepmc')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc')
-            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hep.gz')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hep.gz')
-            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hepmc.gz')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc.gz')
-            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):            
+            if os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):            
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
             elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)):
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hepmc.gz' % prev_tag)
@@ -365,6 +357,14 @@ class CheckValidForCmd(object):
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep' % prev_tag)
             elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)):
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hep')
+            elif os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hepmc')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc')
+            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hep.gz')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hep.gz')
+            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hepmc.gz')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc.gz')
             else:            
                 self.help_pgs()
                 raise self.InvalidCmd('''No file file pythia_events.* currently available
