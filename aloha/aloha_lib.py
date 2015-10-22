@@ -1400,6 +1400,17 @@ class LorentzObjectRepresentation(dict):
             zero_rep[tuple(ind)] = 0
         
         for ind in self.listindices():
+            # There is no function split if the element is just a simple number
+            if isinstance(self.get_rep(ind), numbers.Number):
+                if tuple([0]*len(variables_id)) in out:
+                    out[tuple([0]*len(variables_id))][tuple(ind)] += self.get_rep(ind)
+                else:
+                    out[tuple([0]*len(variables_id))] = \
+                                 LorentzObjectRepresentation(dict(zero_rep), 
+                                                         self.lorentz_ind, self.spin_ind)
+                    out[tuple([0]*len(variables_id))][tuple(ind)] += self.get_rep(ind)
+                continue
+
             for key, value in self.get_rep(ind).split(variables_id).items():
                 if key in out:
                     out[key][tuple(ind)] += value
