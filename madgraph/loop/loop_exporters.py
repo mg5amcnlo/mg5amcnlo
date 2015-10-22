@@ -1882,10 +1882,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         matrix_element.rep_dict['nloopwavefuncs']=\
                                matrix_element.get_number_of_loop_wavefunctions()
         max_spin=matrix_element.get_max_loop_particle_spin()
-        if max_spin>3:
-            raise MadGraph5Error, "ML5 can only handle loop particles with"+\
-                                                               " spin 1 at most"
-        matrix_element.rep_dict['max_lwf_size']=4
+
+        matrix_element.rep_dict['max_lwf_size']= 4 if max_spin <=3 else 16
         matrix_element.rep_dict['nloops']=len(\
                         [1 for ldiag in matrix_element.get_loop_diagrams() for \
                                            lamp in ldiag.get_loop_amplitudes()])
