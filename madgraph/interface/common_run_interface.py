@@ -314,6 +314,90 @@ class CheckValidForCmd(object):
 
         return output
 
+    def check_delphes(self, arg):
+        """Check the argument for pythia command
+        syntax: delphes [NAME] 
+        Note that other option are already remove at this point
+        """
+        
+        # If not pythia-pgs path
+        if not self.options['delphes_path']:
+            logger.info('Retry to read configuration file to find delphes path')
+            self.set_configuration()
+      
+        if not self.options['delphes_path']:
+            error_msg = 'No valid Delphes path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            raise self.InvalidCmd(error_msg)  
+
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            arg.remove(tag[0])
+            tag = tag[0][6:]
+            
+                  
+        if len(arg) == 0 and not self.run_name:
+            if self.results.lastrun:
+                arg.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+        
+        if len(arg) == 1 and self.run_name == arg[0]:
+            arg.pop(0)
+
+        filepath = None        
+        if not len(arg):
+            prev_tag = self.set_run_name(self.run_name, tag, 'delphes')
+            if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hep')
+            elif os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hepmc')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc')
+            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hep.gz')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hep.gz')
+            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hepmc.gz')):
+                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc.gz')
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):            
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)):
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hepmc.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep' % prev_tag)):            
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)):
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)
+            else:            
+                self.help_pgs()
+                raise self.InvalidCmd('''No file file pythia_events.* currently available
+            Please specify a valid run_name''')
+        
+        if len(arg) == 1:
+            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
+            misc.sprint(prev_tag)
+            if os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):            
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)):
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep' % prev_tag)):            
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)):
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)
+            else:                
+                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
+                    % (self.run_name, prev_tag, 
+                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'delphes')
+            
+        return filepath               
+
+
+    
+    
+
+
+
     def check_open(self, args):
         """ check the validity of the line """
 
@@ -1282,17 +1366,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             no_default = False
         # Check all arguments
-        # This might launch a gunzip in another thread. After the question
-        # This thread need to be wait for completion. (This allow to have the
-        # question right away and have the computer working in the same time)
-        # if lock is define this a locker for the completion of the thread
-        lock = self.check_delphes(args)
+        filepath = self.check_delphes(args)
         self.update_status('prepare delphes run', level=None)
-
 
         if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
             delphes3 = False
             prog = '../bin/internal/run_delphes'
+            if filepath and '.hepmc' in filepath[:-10]:
+                raise self.InvalidCmd, 'delphes2 do not support hepmc'
         else:
             delphes3 = True
             prog =  '../bin/internal/run_delphes3'
@@ -1315,21 +1396,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 self.ask_edit_cards(['delphes_card.dat', 'delphes_trigger.dat'], args)
 
-###### TEMPORARY STOP AS DELPHES IS NOT YET IMPLEMENTED FOR HEPMC PYTHIA8 OUTPUT
-        if os.path.isfile(pjoin(self.me_dir, 'Events', self.run_name,
-                                "%s_pythia8_events.hepmc"%self.run_tag)) and \
-           not os.path.isfile(pjoin(self.me_dir, 'Events', self.run_name,
-                                             "pythia_events.hep"%self.run_tag)):
-            raise MadGraph5Error, 'Delphes interface to Pythia8 hepmc output'+\
-                                                           ' not available yet.'
-################################################################################
-
         self.update_status('Running Delphes', level=None)
-        # Wait that the gunzip of the files is finished (if any)
-        if lock:
-            lock.wait()
-
-
 
         delphes_dir = self.options['delphes_path']
         tag = self.run_tag
@@ -1343,31 +1410,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
         self.cluster.launch_and_wait(prog,
-                        argument= [delphes_dir, self.run_name, tag, str(cross)],
+                        argument= [delphes_dir, self.run_name, tag, str(cross), filepath],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir, 'Events',
                                 self.run_name, '%s_delphes_events.lhco' % tag)):
-            logger.error('Fail to create LHCO events from DELPHES')
-            return
+            logger.warning('We do not create lhco by default anymore')
 
-        if os.path.exists(pjoin(self.me_dir,'Events','delphes.root')):
-            source = pjoin(self.me_dir,'Events','delphes.root')
-            target = pjoin(self.me_dir,'Events', self.run_name, "%s_delphes_events.root" % tag)
-            files.mv(source, target)
 
         #eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
 
-        # Creating plots
-        self.create_plot('Delphes')
+        if os.path.exists(pjoin(self.me_dir, 'Events',
+                                self.run_name, '%s_delphes_events.lhco' % tag)):
+            # Creating plots
+            self.create_plot('Delphes')
 
         if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,  '%s_delphes_events.lhco' % tag)):
             misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag))
-
-
 
         self.update_status('delphes done', level='delphes', makehtml=False)
 

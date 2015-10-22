@@ -367,11 +367,11 @@ class AllResults(dict):
         else:
             run = self[run].return_tag(tag)
             
-        if name in ['cross_pythia','cross_pythia8']:
+        if name in ['cross_pythia']:
             run[name] = float(value)
-        elif name in ['nb_event','nb_event8']:
+        elif name in ['nb_event']:
             run[name] = int(value)
-        elif name in ['nb_event_pythia','nb_event_pythia8']:
+        elif name in ['nb_event_pythia']:
             run[name] = int(value)
         elif name in ['run_mode','run_statistics']:
             run[name] = value
@@ -830,7 +830,6 @@ class OneTagResults(dict):
             if 'plot' not in self.shower and \
                           exists(pjoin(html_path,"plots_shower_%s.html" % tag)):
                 self.shower.append('plot')                
-
             if glob.glob(pjoin(path,"*.hepmc")) + \
                glob.glob(pjoin(path,"*.hepmc.gz")):
                 self.shower.append('hepmc')
@@ -876,6 +875,39 @@ class OneTagResults(dict):
             if 'log' not in self.pythia and \
                           exists(pjoin(path,"%s_pythia.log" % tag)):
                 self.pythia.append('log')     
+
+        if level in ['pythia8', 'all']:
+            if 'plot' not in self.pythia and \
+                          exists(pjoin(html_path,"plots_pythia_%s.html" % tag)):
+                self.pythia.append('plot')
+            
+            if 'lhe' not in self.pythia and \
+                            (exists(pjoin(path,"%s_pythia_events.lhe.gz" % tag)) or
+                             exists(pjoin(path,"%s_pythia_events.lhe" % tag))):
+                self.pythia.append('lhe')
+
+
+            if 'hepmc' not in self.pythia and \
+                            (exists(pjoin(path,"%s_pythia8_events.hepmc.gz" % tag)) or
+                             exists(pjoin(path,"%s_pythia8_events.hepmc" % tag))):
+                self.pythia.append('hepmc')
+            
+            if 'rwt' not in self.pythia and \
+                            (exists(pjoin(path,"%s_syscalc.dat.gz" % tag)) or
+                             exists(pjoin(path,"%s_syscalc.dat" % tag))):
+                self.pythia.append('rwt')
+            
+            if 'root' not in self.pythia and \
+                              exists(pjoin(path,"%s_pythia_events.root" % tag)):
+                self.pythia.append('root')
+                
+            if 'lheroot' not in self.pythia and \
+                          exists(pjoin(path,"%s_pythia_lhe_events.root" % tag)):
+                self.pythia.append('lheroot')
+            
+            if 'log' not in self.pythia and \
+                          exists(pjoin(path,"%s_pythia8.log" % tag)):
+                self.pythia.append('log')            
 
         if level in ['pgs', 'all']:
             
@@ -984,7 +1016,14 @@ class OneTagResults(dict):
                 link = './Events/%(run_name)s/%(tag)s_pythia_events.hep'
                 level = 'pythia'
                 name = 'STDHEP'
-                out += self.special_link(link, level, name)                 
+                out += self.special_link(link, level, name)  
+            if 'hepmc' in self.pythia:
+                link = './Events/%(run_name)s/%(tag)s_pythia8_events.hepmc'
+                level = 'pythia'
+                name = 'HEPMC'
+                out += self.special_link(link, level, name)                  
+                
+                               
             if 'lhe' in self.pythia:
                 link = './Events/%(run_name)s/%(tag)s_pythia_events.lhe'
                 level = 'pythia'

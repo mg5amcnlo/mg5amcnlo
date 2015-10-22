@@ -1056,14 +1056,12 @@ class CheckValidForCmd(object):
             self.set_run_name(self.run_name, tag, 'pythia')
 
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
-        output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
-        if os.path.exists('%s.gz'%input_file):
-            files.ln('%s.gz'%input_file, os.path.dirname(output_file))
-        else:
+        #output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
+        if not os.path.exists('%s.gz'%input_file):
             if not os.path.exists(input_file):
-                raise self.InvalidCmd('No event file corresponding to %s run. '
+                misc.gzip(input_file, keep=True, stdout=output_file)
+            raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)
-            misc.gzip(input_file, keep=True, stdout=output_file)
         
         args.append(mode)
     
@@ -1247,63 +1245,6 @@ class CheckValidForCmd(object):
             self.set_run_name(self.run_name, tag, 'pgs')
         
         return lock
-
-    def check_delphes(self, arg):
-        """Check the argument for pythia command
-        syntax: delphes [NAME] 
-        Note that other option are already remove at this point
-        """
-        
-        # If not pythia-pgs path
-        if not self.options['delphes_path']:
-            logger.info('Retry to read configuration file to find delphes path')
-            self.set_configuration()
-      
-        if not self.options['delphes_path']:
-            error_msg = 'No valid Delphes path set.\n'
-            error_msg += 'Please use the set command to define the path and retry.\n'
-            error_msg += 'You can also define it in the configuration file.\n'
-            raise self.InvalidCmd(error_msg)  
-
-        tag = [a for a in arg if a.startswith('--tag=')]
-        if tag: 
-            arg.remove(tag[0])
-            tag = tag[0][6:]
-            
-                  
-        if len(arg) == 0 and not self.run_name:
-            if self.results.lastrun:
-                arg.insert(0, self.results.lastrun)
-            else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
-        
-        if len(arg) == 1 and self.run_name == arg[0]:
-            arg.pop(0)
-        
-        if not len(arg) and \
-           not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.help_pgs()
-            raise self.InvalidCmd('''No file file pythia_events.hep currently available
-            Please specify a valid run_name''')
-        
-        lock = None                
-        if len(arg) == 1:
-            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
-            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
-                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
-                    % (self.run_name, prev_tag, 
-                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
-            else:
-                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
-                output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
-        else:
-            if tag:
-                self.run_card['run_tag'] = tag
-            self.set_run_name(self.run_name, tag, 'delphes')
-            
-        return lock               
 
     def check_display(self, args):
         """check the validity of line
@@ -3260,7 +3201,7 @@ Beware that this can be dangerous for local multicore runs.""")
         ### Special setup of the Hidden parameters in the card for each MG type of run
         # Here we force the Beams:LHEF to have the correct value
         PY8_Card.subruns[0].systemSet('Beams:LHEF',
-                         pjoin(self.me_dir,"Events","unweighted_events.lhe.gz"))        
+                         pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz"))        
         if int(self.run_card['ickkw'])==1:
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
@@ -3311,7 +3252,7 @@ Beware that this can be dangerous for local multicore runs.""")
 !
 """%(pythia_main,pythia_cmd_card)+cmd_card.getvalue())
         
-        HepMC_event_output = pjoin(self.me_dir,'Events',
+        HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
         # launch pythia8
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name ,
@@ -3325,7 +3266,6 @@ Beware that this can be dangerous for local multicore runs.""")
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
 
-        os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe.gz"))
 
         if not os.path.isfile(pythia_log) or \
              'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[-20]):
@@ -3352,17 +3292,17 @@ Beware that this can be dangerous for local multicore runs.""")
                     Ntry = int(info.group('tried'))
                 except ValueError:
                     # xsec is not float - this should not happen
-                    self.results.add_detail('cross_pythia8', 0)
-                    self.results.add_detail('nb_event_pythia8', 0)
-                    self.results.add_detail('error_pythia8', 0)
+                    self.results.add_detail('cross_pythia', 0)
+                    self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('error_pythia', 0)
                 else:
-                    self.results.add_detail('cross_pythia8', sigma_m)
-                    self.results.add_detail('nb_event_pythia8', Nacc)
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
                     #compute pythia error
                     error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
                     error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
                     # works both for fixed number of generated events and fixed accepted events
-                    self.results.add_detail('error_pythia8', error_m)
+                    self.results.add_detail('error_pythia', error_m)
                 break                 
 
             pythia_log.close()
@@ -3377,9 +3317,9 @@ Beware that this can be dangerous for local multicore runs.""")
         if int(self.run_card['ickkw']):
             # Add the matched cross-section
             if 'MGGenerationInfo' in self.banner:
-                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia8']
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
             else:
-                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia8']
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
         
@@ -3390,7 +3330,7 @@ Beware that this can be dangerous for local multicore runs.""")
             logger.error('Hep2Lhe and SysCalc not compatible with Pythia8 yet!'+\
                                                          ' It will not be run.')
 
-        self.update_status('finish', level='pythia', makehtml=False)
+        self.update_status('finish', level='pythia8', makehtml=False)
         if self.options['delphes_path']:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         self.print_results_in_shell(self.results.current)
@@ -3843,7 +3783,7 @@ Beware that this can be dangerous for local multicore runs.""")
             n = self.run_name
             t = tag
             misc.gzip(pjoin(p,'pythia_events.hep'), 
-                      stdout=pjoin(p,'%s/%s_pythia_events.hep' % (n,t)))
+                      stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
             self.to_store.remove('pythia')
 
         if 'pythia8' in self.to_store:
@@ -3852,8 +3792,8 @@ Beware that this can be dangerous for local multicore runs.""")
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
-            misc.gzip(pjoin(p,'%s_pythia8_events.hepmc'%t), 
-                      stdout=pjoin(p,'%s/%s_pythia8_events.hepmc' % (n,t)))
+            misc.gzip(pjoin(p, n ,'%s_pythia8_events.hepmc'%t), 
+                      stdout=pjoin(p, n,'%s_pythia8_events.hepmc' % t))
             self.to_store.remove('pythia8')            
             
         self.update_status('Done', level='pythia',makehtml=False,error=True)
@@ -4191,6 +4131,20 @@ Beware that this can be dangerous for local multicore runs.""")
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
                      allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
+    
+        def get_last_tag(self, level):
+            # Return the tag of the previous run having the required data for this
+            # tag/run to working wel.
+            if level == 'parton':
+                return
+            elif level == 'pythia':
+                return self.results[self.run_name][0]['tag']
+            else:
+                for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                    tagRun = self.results[self.run_name][i]
+                    if tagRun.pythia or tagRun.shower:
+                        return tagRun['tag']
+    
         
         # when are we force to change the tag new_run:previous run requiring changes
         upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
@@ -4220,7 +4174,8 @@ Beware that this can be dangerous for local multicore runs.""")
                         self.run_tag = tag
                         self.results.add_run(self.run_name, self.run_card)                        
                         break
-            return # Nothing to do anymore
+            return get_last_tag(self, level)
+
         
         # save/clean previous run
         if self.run_name:
@@ -4269,17 +4224,7 @@ Beware that this can be dangerous for local multicore runs.""")
 
         self.run_tag = self.run_card['run_tag']
 
-        # Return the tag of the previous run having the required data for this
-        # tag/run to working wel.
-        if level == 'parton':
-            return
-        elif level == 'pythia':
-            return self.results[self.run_name][0]['tag']
-        else:
-            for i in range(-1,-len(self.results[self.run_name])-1,-1):
-                tagRun = self.results[self.run_name][i]
-                if tagRun.pythia:
-                    return tagRun['tag']
+        return get_last_tag(self, level)
             
             
         
