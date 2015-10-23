@@ -54,7 +54,11 @@ C ----------
 %(pdf_lines)s
       endif
       do i=1,IPROC
-        lum = lum + pd(i) * conv 
+        if (nincoming.eq.2) then
+           lum = lum + pd(i) * conv 
+        else
+           lum = lum + pd(i)
+        endif
       enddo
       return
       END                                                             

@@ -232,19 +232,17 @@ class CheckValidForCmd(object):
             #restrict_file = None
             #if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
             #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            
+            force_CMS = self.mother and self.mother.options['complex_mass_scheme']
             model = import_ufo.import_model(modelname, decay=True, 
-                        restrict=True)
-            if self.mother and self.mother.options['complex_mass_scheme']:
-                model.change_mass_to_complex_scheme()
+                                   restrict=True, complex_mass_scheme=force_CMS)
         else:
-            model = import_ufo.import_model(pjoin(
-                           self.me_dir,'bin','internal', 'ufomodel'),decay=True)
             #pattern for checking complex mass scheme.
             has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
-                                   ).read()):
-                model.change_mass_to_complex_scheme()
-   
+            force_CMS =  has_cms.search(open(pjoin(self.me_dir,'Cards',
+                                                   'proc_card_mg5.dat')).read())
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal',
+                         'ufomodel'), decay=True, complex_mass_scheme=force_CMS)
             
 #        if not hasattr(model.get('particles')[0], 'partial_widths'):
 #            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
@@ -603,6 +601,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madgraph= {'stdout_level':None}
 
     options_madevent = {'automatic_html_opening':True,
+                        'notification_center':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'cluster_time':None,
@@ -622,6 +621,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.me_dir = me_dir
         self.options = options
+        
+        self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
 
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
@@ -753,7 +754,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
-                pids = self.get_pid_final_states()
+                pids = self.get_pid_final_initial_states()
                 # check those which are charged under qcd
                 if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:
                         sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
@@ -869,17 +870,121 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madspin_card.dat [MS]
            transfer_card.dat [MW]
            madweight_card.dat [MW]
+           
+           Please update the unit-test: test_card_type_recognition when adding
+           cards.
         """
 
         fulltext = open(path).read(50000)
         if fulltext == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|Main:numberOfEvents|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
+        key_to_file = {# banner format: key: ([can_be_present_in],[never_present_in]) (call be 'all' for excluded) 
+                       '<MGVersion>' : (['banner'], ['all']),
+                       '<mg5proccard>': (['banner'], ['all']),
+                       # DETECTOR 
+                       'ParticlePropagator': (['banner','delphes_card.dat'], ['all']),
+                       'ExecutionPath': (['banner','delphes_card.dat'], ['all']),
+                       'Treewriter': (['banner','delphes_card.dat'], ['all']),
+                       'CEN_max_tracker': (['banner','delphes_card.dat'], ['all']),
+                       '#TRIGGER CARD': (['banner','delphes_trigger.dat'], ['all']),
+                       'muon eta coverage': (['pgs_card.dat'], ['all']),
+                       'parameter set name': (['banner', 'pgs_card.dat'], ['all']),
+                       # SHOWER
+                       'Main:numberOfEvents': (['banner', 'pythia8_card.dat'], ['all']),
+                       'MSTP': (['banner', 'pythia_card.dat'], ['^shower_card.dat']),
+                       'b_stable': (['banner', 'shower_card.dat'], ['^pythia8_card.dat']),
+                       # REWEIGHT/MADSPIN
+                       '^\s*launch': (['banner', 'reweight_card.dat', 'madspin_card.dat'], []),
+                       'madspin': (['banner', 'madspin_card.dat'], ['all']),
+                       '^\s*set': (['banner', 'reweight_card.dat', 'madspin_card.dat'], ['^delphes_card.dat']),
+                       # PLOT
+                       'FO_ANALYSIS_FORMAT': (['banner', 'FO_analyse_card.dat'],  ['all']), 
+                       'Begin Minpts': (['banner', 'plot_card.dat'], ['all']), 
+                       # PARAM/RUN
+                       'gridpack': (['banner', 'run_card.dat', 'reweight_card.dat', 'madspin_card.dat'], ['all']),
+                       'ebeam1': (['banner', 'run_card.dat'], ['all']),
+                       'qes_over_ref': (['banner', 'run_card.dat'], ['all']),
+                       '^\s*BLOCK': (['banner', 'param_card.dat', 'madweight_card.dat'], ['all']),
+                       '^\s*DECAY': (['banner', 'param_card.dat', 'madspin_card.dat'],['all']),
+                       #MADWEIGHT
+                       'block\s+mw_run': (['banner', 'madweight_card.dat'],['all']),
+                       'transfer_card\.dat': (['banner', 'transfer_card.dat'], ['all']),
+                       }
+
+        text = re.findall('(%s)' % '|'.join([k for k in key_to_file]), fulltext, re.I+re.M)
+
+        #handle \s+/case problem
+        text = set([re.sub(r'\s+', ' ', t).lower() for t in text])
+        new_key_tofile = {}
+        for key in key_to_file:
+            new_key = key.lower()
+            if '\s+' in new_key:
+                new_key = new_key.replace('\s+',' ' )
+            if '^\s*' in new_key:
+                new_key = new_key.replace('^\s*','')
+                new_key_tofile[new_key] =  key_to_file[key]
+                new_key = ' ' + new_key
+            new_key_tofile[new_key] =  key_to_file[key]
+        key_to_file = new_key_tofile
+
+        # init the search variable to everything is possible
+        allowed = set()
+        favored = set()
+        for vals in key_to_file.values():
+            for val in vals[0]:
+                allowed.add(val)
+                favored.add(val)
+
+
+        # start the restriction in function of what we have found in the file
+        for entry in text:
+            # check the favored
+            for val in set(favored):
+                if val not in key_to_file[entry][0]:
+                    favored.discard(val)
+            # check the remaining possibility
+            allowed_here = set()
+            if not key_to_file[entry][1]:
+                continue
+            for refuse in key_to_file[entry][1]:
+                if refuse == 'all':
+                    # only allowed those of the first list
+                    allowed_here = set(key_to_file[entry][0])
+                elif refuse.startswith('^'):
+                    # only allowed those of the first list  and those of the second
+                    if not allowed_here:
+                        allowed_here = set(key_to_file[entry][0])
+                        allowed_here.add(refuse[1:])
+                    else:
+                        allowed_here.add(refuse[1:])
+                else:
+                    # do not allowed those specify -- remove them directly in the main list
+                    allowed_here = allowed
+                    allowed.discard(refuse)
+            
+            for key in set(allowed):
+                if key not in allowed_here:
+                    allowed.discard(key)
+
+        if len(allowed) == 1:
+            return list(allowed)[0]
+        elif len(allowed) == 2:
+            return [k for k in allowed if k!= 'banner'][0]
+        elif len(favored) == 2:
+            return [k for k in favored if k!= 'banner'][0]
+        
+        # special case for reweight >< madspin_card.dat
+        if favored == set(['banner','reweight_card.dat', 'madspin_card.dat']):
+            return 'reweight_card.dat'
+                            
+        logger.debug("Invalid search for card. please update it!")          
+        # try old method in case if it recover:
+
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
-        elif 'particlepropagator' in text:
+        elif 'particlepropagator' in text or 'executionpath' in text or 'treewriter' in text:
             return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
@@ -1434,8 +1539,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.update_status('delphes done', level='delphes', makehtml=False)
 
     ############################################################################
-    def get_pid_final_states(self):
-        """Find the pid of all particles in the final states"""
+    def get_pid_final_initial_states(self):
+        """Find the pid of all particles in the final and initial states"""
         pids = set()
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
@@ -1446,7 +1551,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             group = pat.findall(text)
             for particles in group:
                 particles = particles.split(',')
-                pids.update(set(particles[nb_init:]))
+                pids.update(set(particles))
 
         return pids
 
@@ -1677,12 +1782,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
     def check_param_card(self, path, run=True):
-        """Check that all the width are define in the param_card.
-        If some width are set on 'Auto', call the computation tools."""
+        """
+        1) Check that no scan parameter are present
+        2) Check that all the width are define in the param_card.
+        - If a scan parameter is define. create the iterator and recall this fonction 
+          on the first element.
+        - If some width are set on 'Auto', call the computation tools."""
         
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
+        pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg_info = pattern.findall(text)
+               
+        if pattern_scan.search(text):
+            if not isinstance(self, cmd.CmdShell):
+                # we are in web mode => forbid scan due to security risk
+                raise Exception, "Scan are not allowed in web mode"
+            # at least one scan parameter found. create an iterator to go trough the cards
+            main_card = check_param_card.ParamCardIterator(text)
+            self.param_card_iterator = main_card
+            first_card = main_card.next(autostart=True)
+            first_card.write(path)
+            return self.check_param_card(path, run)
+        
+        pdg_info = pattern_width.findall(text)
         if pdg_info:
             if run:
                 logger.info('Computing the width set on auto in the param_card.dat')
@@ -1780,7 +1902,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
-
 
     ############################################################################
     def keep_cards(self, need_card=[], ignore=[]):
@@ -1900,6 +2021,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pass
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
+                    self.options[key] =eval(self.options[key])
+            elif key == "notification_center":
+                if self.options[key] in ['False', 'True']:
+                    self.allow_notification_center =eval(self.options[key])
                     self.options[key] =eval(self.options[key])
             elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
                               'complex_mass_scheme', 'gauge', 'group_subprocesses']:
@@ -2403,40 +2528,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.
-        for bname, block in default_param.items():
-            for lha_id, param in block.param_dict.items():
-                all_var = []
-                comment = param.comment
-                # treat merge parameter
-                if comment.strip().startswith('set of param :'):
-                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
-                # just the variable name as comment
-                elif len(comment.split()) == 1:
-                    all_var = [comment.strip().lower()]
-                # either contraction or not formatted
-                else:
-                    split = comment.split()
-                    if len(split) >2 and split[1] == ':':
-                        # NO VAR associated
-                        self.restricted_value[(bname, lha_id)] = ' '.join(split[1:])
-                    elif len(split) == 2:
-                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
-                            all_var = [comment.strip().lower()]
-                    elif len(split) >=2 and split[1].startswith('('):
-                        all_var = [split[0].strip().lower()]
-                    else:
-                        if not bname.startswith('qnumbers'):
-                            logger.debug("not recognize information for %s %s : %s",
-                                      bname, lha_id, comment)
-                        # not recognized format
-                        continue
-
-                for var in all_var:
-                    var = var.lower()
-                    if var in self.pname2block:
-                        self.pname2block[var].append((bname, lha_id))
-                    else:
-                        self.pname2block[var] = [(bname, lha_id)]
+        self.pname2block, self.restricted_value = \
+                                              default_param.analyze_param_card()
 
         if run_card_def:
             self.run_set = run_card_def.keys() + self.run_card.hidden_param
@@ -2741,6 +2834,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ edit the value of one parameter in the card"""
         
         args = self.split_arg(line)
+        # fix some formatting problem
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
@@ -2934,6 +3028,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
                                                   and card in ['','param_card']:
+            #special treatment for scan
+            if any(t.startswith('scan') for t in args):
+                index = [i for i,t in enumerate(args) if t.startswith('scan')][0]
+                args = args[:index] + [' '.join(args[index:])]
+                
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 text += ' in the format < set card parameter value>'
@@ -2977,7 +3076,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     text += "You need to match this expression for external program (such pythia)."
                     logger.warning(text)
 
-                if args[-1].lower() in ['default', 'auto', 'auto@nlo']:
+                if args[-1].lower() in ['default', 'auto', 'auto@nlo'] or args[-1].startswith('scan'):
                     self.setP(args[start], key, args[-1])
                 else:
                     try:
@@ -3198,6 +3297,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if block != 'decay':
                     logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
                     return
+            elif value.startswith('scan'):
+                if ':' not in value:
+                    logger.warning('Invalid input: \'scan\' mode requires a \':\' before the definition.')
+                    return
+                tag = value.split(':')[0]
+                tag = tag[4:].strip()
+                if tag and not tag.isdigit():
+                    logger.warning('Invalid input: scan tag need to be integer and not "%s"' % tag)
+                    return
+                
+                
+                pass
             else:
                 try:
                     value = float(value)
@@ -3282,7 +3393,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning("invalid command for decay. Line ignored")
             return
         
-        misc.sprint( line, "-add" in line)
         if "-add" in line:
             # just to have to add the line to the end of the file
             particle = line.split('>')[0].strip()

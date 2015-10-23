@@ -319,6 +319,33 @@ def multiple_try(nb_try=5, sleep=20):
     return deco_retry
 
 #===============================================================================
+# helper for scan. providing a nice formatted string for the scan name
+#===============================================================================
+def get_scan_name(first, last):
+    """return a name of the type xxxx[A-B]yyy
+        where xxx and yyy are the common part between the two names.
+    """
+    
+    # find the common string at the beginning     
+    base = [first[i] for i in range(len(first)) if first[:i+1] == last[:i+1]]
+    # remove digit even if in common
+    while base[-1].isdigit():
+        base = base[:-1] 
+    # find the common string at the end 
+    end = [first[-(i+1)] for i in range(len(first)) if first[-(i+1):] == last[-(i+1):]]
+    # remove digit even if in common    
+    while end and end[-1].isdigit():
+        end = end[:-1] 
+    end.reverse()
+    #convert to string
+    base, end = ''.join(base), ''.join(end)
+    if end:
+        name = "%s[%s-%s]%s" % (base, first[len(base):-len(end)], last[len(base):-len(end)],end)
+    else:
+        name = "%s[%s-%s]%s" % (base, first[len(base):], last[len(base):],end)
+    return name
+
+#===============================================================================
 # Compiler which returns smart output error in case of trouble
 #===============================================================================
 def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
@@ -839,6 +866,25 @@ class TMP_directory(object):
         
     def __enter__(self):
         return self.path
+    
+class TMP_variable(object):
+    """create a temporary directory and ensure this one to be cleaned.
+    """
+
+    def __init__(self, cls, attribute, value):
+        
+        self.old_value = getattr(cls, attribute)
+        self.cls = cls
+        self.attribute = attribute
+        setattr(self.cls, self.attribute, value)
+    
+    def __exit__(self, ctype, value, traceback ):
+
+        setattr(self.cls, self.attribute, self.old_value)
+        
+    def __enter__(self):
+        return self.old_value 
+    
 #
 # GUNZIP/GZIP
 #
@@ -1313,3 +1359,22 @@ class ProcessTimer:
 #      pass
 
 
+try:
+    import Foundation
+    import objc
+    NSUserNotification = objc.lookUpClass('NSUserNotification')
+    NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+
+    def apple_notify(subtitle, info_text, userInfo={}):
+        try:
+            notification = NSUserNotification.alloc().init()
+            notification.setTitle_('MadGraph5_aMC@NLO')
+            notification.setSubtitle_(subtitle)
+            notification.setInformativeText_(info_text)
+            notification.setUserInfo_(userInfo)
+            NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+        except:
+            pass
+except:
+    def apple_notify(subtitle, info_text, userInfo={}):
+        return

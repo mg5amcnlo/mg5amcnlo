@@ -4,7 +4,7 @@
 
 from object_library import all_couplings, Coupling
 
-from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog
+from function_library import complexconjugate, re, im, csc, sec, acsc, asec, arg, reglog, reglogp, reglogm, recms
 
 ################
 # R2 couplings #
@@ -1754,7 +1754,7 @@ R2_ddA2Cm_t = Coupling(name = 'R2_ddA2Cm_t',
                      order = {'QED':3})
 
 R2_ssA2Cm = Coupling(name = 'R2_ssA2Cm',
-                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)+MS**2/(8*sw**2*MW**2)*(-1./3.))*(1./2.))*(-complex(0,1)*R2SFF)',
+                     value = '((1./4.)*((1+lhv)/(4.*cw**2)*(-1./27.)+MS**2/(8*sw**2*MW**2)*(-1./3.)*(1./2.))*(-complex(0,1)*R2SFF))',
                      order = {'QED':3})
 
 R2_ssA2Cm_u = Coupling(name = 'R2_ssA2Cm_u',

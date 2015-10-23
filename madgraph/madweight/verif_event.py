@@ -306,9 +306,9 @@ class Lhco_filter:
 
     #2 ###############################################################################################################
     def check_valid(self,nb_part):
-            """ check if we have the correct number of input for each type of particle """
+        """ check if we have the correct number of input for each type of particle """
 
-            list_key=self.nb_part.keys()+[key for key in nb_part if key not in self.nb_part.keys()]
+        list_key=self.nb_part.keys()+[key for key in nb_part if key not in self.nb_part.keys()]
         try:
             for key in list_key:
                 if self.nb_part[key]==0:
@@ -328,7 +328,7 @@ class Lhco_filter:
                 elif nb_part[key]!=self.nb_part[key]:
                     return 0
             return 1
-            except KeyError:
+        except KeyError:
             print nb_part
             print self.nb_part
             print key
@@ -338,7 +338,7 @@ class Lhco_filter:
     write_order=['begin','jet','bjet','electron','positron','muon','amuon','tau','atau', 'photon','miss','init']
     #2 ###############################################################################################################
     def write(self,list_part):
-            """ write the output file """
+        """ write the output file """
 
         if hasattr(self, 'f_out') and self.write_events and \
         self.write_events % (self.MWparam['mw_run']['nb_event_by_node'] * self.MWparam['mw_run']['event_packing']) == 0:
@@ -571,7 +571,7 @@ class lhco_all_particles_def(dict):
 
             #print particle.line[:-1],
             for name in ['begin','jet','miss','electron','photon']: #to fastenize the test in most of the case
-                       if self[name].check(particle):
+                if self[name].check(particle):
                     #print name
                     return name
                 

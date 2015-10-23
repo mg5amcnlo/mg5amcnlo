@@ -2068,6 +2068,30 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             
             # shower launches pgs/delphes if needed    
             self.store_result()
+            
+            if self.param_card_iterator:
+                param_card_iterator = self.param_card_iterator
+                self.param_card_iterator = []
+                with misc.TMP_variable(self, 'allow_notification_center', False):
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    #check if the param_card defines a scan.
+                    orig_name = self.run_name
+                    for card in param_card_iterator:
+                        card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        self.exec_cmd("generate_events -f ",precmd=True, postcmd=True,errorhandling=False)
+                        param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                    name = misc.get_scan_name(orig_name, self.run_name)
+                    path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
+                    logger.info("write all cross-section results in %s" % path ,'$MG:color:BLACK')
+                    param_card_iterator.write_summary(path)
+
+            
+            if self.allow_notification_center:    
+                misc.apple_notify('Run %s finished' % os.path.basename(self.me_dir), 
+                              '%s: %s +- %s ' % (self.results.current['run_name'], 
+                                                 self.results.current['cross'],
+                                                 self.results.current['error']))
     
     def do_initMadLoop(self,line):
         """Compile and run MadLoop for a certain number of PS point so as to 
@@ -2364,9 +2388,11 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.ask_run_configuration(mode)
         main_name = self.run_name
 
-
-        
-        
+        # check if the param_card requires a scan over parameter.
+        path=pjoin(self.me_dir, 'Cards', 'param_card.dat')
+        self.check_param_card(path, run=False)
+        #store it locally to avoid relaunch
+        param_card_iterator, self.param_card_iterator = self.param_card_iterator, []
         
         crossoversig = 0
         inv_sq_err = 0
@@ -2415,6 +2441,21 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         self.update_status('', level='parton')
         self.print_results_in_shell(self.results.current)   
         
+        if param_card_iterator:
+
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            #check if the param_card defines a scan.
+            orig_name=self.run_name
+            for card in param_card_iterator:
+                card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                self.exec_cmd("multi_run %s -f " % nb_run ,precmd=True, postcmd=True,errorhandling=False)
+                param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            scan_name = misc.get_scan_name(orig_name, self.run_name)
+            path = pjoin(self.me_dir, 'Events','scan_%s.txt' % scan_name)
+            logger.info("write all cross-section results in %s" % path, '$MG:color:BLACK')
+            param_card_iterator.write_summary(path)
+    
 
     ############################################################################      
     def do_treatcards(self, line, mode=None, opt=None):
@@ -3722,6 +3763,7 @@ Beware that this can be dangerous for local multicore runs.""")
         logger.info('Calculating systematics for run %s' % self.run_name)
         
         self.ask_edit_cards(['run_card'], args)
+        self.run_card = banner_mod.RunCard(pjoin(self.medir, 'Cards', 'run_card.dat'))
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
@@ -4378,6 +4420,12 @@ Beware that this can be dangerous for local multicore runs.""")
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
         self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        
+        if self.run_card['sys_pdf'].lower() in ['', 'f', 'false', 'none', '.false.']:
+            self.run_card['sys_pdf'] = ''
+        if self.run_card['sys_alpsfact'].lower() in ['', 'f', 'false', 'none','.false.']:
+            self.run_card['sys_alpsfact'] = ''
+        
         # check if the scalecorrelation parameter is define:
         if not 'sys_scalecorrelation' in self.run_card:
             self.run_card['sys_scalecorrelation'] = -1
@@ -5247,7 +5295,7 @@ class MadLoopInitializer(object):
                 req_files.remove('HelFilter.dat')
             except ValueError:
                 pass
-
+        
         for v_folder in glob.iglob(pjoin(proc_dir,'SubProcesses',
                                                          '%s*'%subproc_prefix)):        
             # Make sure it is a valid MadLoop directory

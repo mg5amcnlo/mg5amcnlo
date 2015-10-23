@@ -62,6 +62,13 @@ MU_R = Parameter(name = 'MU_R',
               lhablock = 'LOOP',
               lhacode = [ 666 ])
 
+CMSParam = Parameter(name = 'CMSParam',
+                 nature = 'internal',
+                 type = 'real',
+                 # This means that the CMS is turned off by default since real masses are used in the expressions.
+                 value = '0.0',
+                 texname = 'CMSParam')
+
 # User-defined parameters.
 
 aEWM1 = Parameter(name = 'aEWM1',

@@ -177,7 +177,7 @@ c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       call printout
       call run_printout
       iconfig=1
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.false.)
 c
       ndim = 55
       ncall = 10000
@@ -541,6 +541,8 @@ c-----
       lname=4
       mname='mg'
       call open_bash_file(26,fname,lname,mname)
+      call close_bash_file(26)
+      open(unit=26,file='channels.txt',status='unknown')
       ic = 0      
       do i=1,mapconfig(0)
          if (use_config(i) .gt. 0) then
@@ -567,15 +569,6 @@ c            do j=1,2**nbw
             done = .false.
             do while (.not. done)
                call enCode(icode,iarray,ibase,imax)
-               ic=ic+1
-               if (ic .gt. ChanPerJob) then
-                  call close_bash_file(26)
-                  fname='ajob'
-                  lname=4
-                  mname='mg'
-                  call open_bash_file(26,fname,lname,mname)
-                  ic = 1
-               endif
 c               write(*,*) 'mapping',ic,mapconfig(i)
 c$$$               if (r_from_b(mapconfig(i)) .lt. 10) then
 c$$$                  write(26,'(i1$)') r_from_b(mapconfig(i))
@@ -611,7 +604,7 @@ c                 write(26,'($a)') '.000'
             enddo
          endif
       enddo
-      call close_bash_file(26)
+      close(26)
       if (mapconfig(0) .gt. 9999) then
          write(*,*) 'Only writing first 9999 jobs',mapconfig(0)
       endif

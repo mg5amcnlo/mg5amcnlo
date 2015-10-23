@@ -68,6 +68,10 @@ class IOExportFKSTest(IOTests.IOTestManager):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
         self.generate(['p p > t t~ [real=QCD]'], 'sm')
 
+    @IOTests.createIOTest()
+    def testIO_test_tdecay_fksreal(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['t > j j b [real=QCD]'], 'sm')
 
     @IOTests.createIOTest()
     def testIO_test_pptt_fks_loonly(self):

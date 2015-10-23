@@ -30,6 +30,7 @@ from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.madevent_interface as me_interface
+import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.amcatnlo_run_interface as run_interface
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.loop_interface as Loop_interface
@@ -540,10 +541,22 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     for me in self._curr_matrix_elements.get_matrix_elements():
                         uid += 1 # update the identification number
                         me.get('processes')[0].set('uid', uid)
+                        try:
+                            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                                                  p in me.born_matrix_element.get('processes')))))
+                        except IndexError:
+                            initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
+                                                                  p in me.born_matrix_element.get('processes')))))
+                    
                         for fksreal in me.real_processes:
                         # Pick out all initial state particles for the two beams
-                            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                            try:
+                                initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
                                                              p in fksreal.matrix_element.get('processes')))))
+                            except IndexError:
+                                initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
+                                                             p in fksreal.matrix_element.get('processes')))))
+                                
                         
                     # remove doubles from the list
                     checked = []
@@ -569,10 +582,10 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             #_curr_matrix_element is a FKSHelasMultiProcess Object 
             self._fks_directories = []
-            proc_charac = banner_mod.ProcCharacteristic()
+            proc_charac = self._curr_exporter.proc_characteristic 
             for charac in ['has_isr', 'has_fsr', 'has_loops']:
                 proc_charac[charac] = self._curr_matrix_elements[charac]
-            proc_charac.write(pjoin(path, 'proc_characteristics'))
+
 
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
@@ -624,7 +637,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 #            self.options['automatic_html_opening'] = False
 
         if options['interactive']:
-            if hasattr(self, 'do_shell'):
+            if isinstance(self, extended_cmd.CmdShell):
                 ME = run_interface.aMCatNLOCmdShell(me_dir=argss[0], options=self.options)
             else:
                 ME = run_interface.aMCatNLOCmd(me_dir=argss[0],options=self.options)
@@ -636,7 +649,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             stop = self.define_child_cmd_interface(ME)                
             return stop
 
-        ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1], **options)
+        ext_program = launch_ext.aMCatNLOLauncher(argss[0], self, run_mode=argss[1],
+                                                  shell = isinstance(self, extended_cmd.CmdShell),
+                                                  **options)
         ext_program.run()
         
                     

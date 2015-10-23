@@ -219,8 +219,7 @@ class EventFile(object):
         self.len = nb_event
         self.seek(init_pos)
         return self.len
-        
-    
+
     def next(self):
         """get next event"""
         text = ''
@@ -493,6 +492,71 @@ class EventFile(object):
             return out
 
     
+    def create_syscalc_data(self, out_path, pythia_input=None):
+        """take the lhe file and add the matchscale from the pythia_input file"""
+        
+        if pythia_input:
+            def next_data():
+                for line in open(pythia_input):
+                    if line.startswith('#'):
+                        continue
+                    data = line.split()
+                    print (int(data[0]), data[-3], data[-2], data[-1])
+                    yield (int(data[0]), data[-3], data[-2], data[-1])
+        else:
+            def next_data():
+                i=0
+                while 1:
+                    yield [i,0,0,0]
+                    i+=1
+        sys_iterator = next_data()
+        #ensure that we are at the beginning of the file
+        self.seek(0)
+        out = open(out_path,'w')
+        
+        pdf_pattern = re.compile(r'''<init>(.*)</init>''', re.M+re.S)
+        init = pdf_pattern.findall(self.banner)[0].split('\n',2)[1]
+        id1, id2, _, _, _, _, pdf1,pdf2,_,_ = init.split() 
+        id = [int(id1), int(id2)]
+        type = []
+        for i in range(2):
+            if abs(id[i]) == 2212:
+                if i > 0:
+                    type.append(1)
+                else:
+                    type.append(-1)
+            else:
+                type.append(0)           
+        pdf = max(int(pdf1),int(pdf2))
+        
+        out.write("<header>\n" + \
+                  "<orgpdf>%i</orgpdf>\n" % pdf + \
+                  "<beams>  %s  %s</beams>\n" % tuple(type) + \
+                  "</header>\n")
+        
+        
+        nevt, smin, smax, scomp = sys_iterator.next()
+        for i, orig_event in enumerate(self):
+            if i < nevt:
+                continue
+            new_event = Event()
+            sys = orig_event.parse_syscalc_info()
+            new_event.syscalc_data = sys
+            if smin:
+                new_event.syscalc_data['matchscale'] = "%s %s %s" % (smin, scomp, smax)
+            out.write(str(new_event), nevt)
+            try:
+                nevt, smin, smax, scomp = sys_iterator.next()
+            except StopIteration:
+                break
+            
+            
+            
+        
+        
+        
+    
+    
 class EventFileGzip(EventFile, gzip.GzipFile):
     """A way to read/write a gzipped lhef event"""
         
@@ -757,6 +821,7 @@ class Event(list):
         self.comment = ''
         self.reweight_data = {}
         self.matched_scale_data = None
+        self.syscalc_data = {}
         if text:
             self.parse(text)
 
@@ -904,11 +969,37 @@ class Event(list):
                 
             for i in range(1, len(tmp)+1):
                 self.matched_scale_data.append(tmp[i])
-                
+ 
         return self.matched_scale_data
             
-
-
+    def parse_syscalc_info(self):
+        """ parse the flag for syscalc between <mgrwt></mgrwt>
+        <mgrwt>
+<rscale>  3 0.26552898E+03</rscale>
+<asrwt>0</asrwt>
+<pdfrwt beam="1">  1       21 0.14527945E+00 0.26552898E+03</pdfrwt>
+<pdfrwt beam="2">  1       21 0.15249110E-01 0.26552898E+03</pdfrwt>
+<totfact> 0.10344054E+04</totfact>
+</mgrwt>
+        """
+        if self.syscalc_data:
+            return self.syscalc_data
+        
+        pattern  = re.compile("<mgrwt>|</mgrwt>")
+        pattern2 = re.compile("<(?P<tag>[\w]*)(?:\s*(\w*)=[\"'](.*)[\"']\s*|\s*)>(.*)</(?P=tag)>")
+        data = re.split(pattern,self.tag)
+        if len(data) == 1:
+            return []
+        else:
+            tmp = {}
+            start,content, end = data
+            self.tag = "%s%s" % (start, end)
+            for tag, key, keyval, tagval in pattern2.findall(content):
+                if key:
+                    self.syscalc_data[(tag, key, keyval)] = tagval
+                else:
+                    self.syscalc_data[tag] = tagval
+            return self.syscalc_data
 
 
     def add_decay_to_particle(self, position, decay_event):
@@ -931,7 +1022,8 @@ class Event(list):
         self.nexternal += decay_event.nexternal -1
         old_scales = list(self.parse_matching_scale())
         if old_scales:
-            self.matched_scale_data.pop(position-2)
+            jet_position = sum(1 for i in range(position) if self[i].status==1)
+            self.matched_scale_data.pop(jet_position)
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -940,7 +1032,7 @@ class Event(list):
             new_particle.event_id = len(self)
             self.append(new_particle)
             if old_scales:
-                self.matched_scale_data.append(old_scales[position-2])
+                self.matched_scale_data.append(old_scales[jet_position])
             # compute and assign the new four_momenta
             new_momentum = this_4mom.boost(FourMomentum(new_particle))
             new_particle.set_momentum(new_momentum)
@@ -1293,10 +1385,10 @@ class Event(list):
                 logger.critical(self)
                 raise Exception, "Wrong color flow: identical poping-up index, %s" % (popup_index)
                
-    def __str__(self):
+    def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
                 
-        out="""<event>
+        out="""<event%(event_id)s>
 %(scale)s
 %(particles)s
 %(comments)s
@@ -1304,9 +1396,15 @@ class Event(list):
 %(reweight)s
 </event>
 """ 
-
-        scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
+        if event_id not in ['', None]:
+            event_id = ' event=%s' % event_id
+            
+        if self.nexternal:
+            scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
+        else:
+            scale_str = ''
+            
         if self.reweight_data:
             # check that all key have an order if not add them at the end
             if set(self.reweight_data.keys()) != set(self.reweight_order):
@@ -1325,12 +1423,33 @@ class Event(list):
                                     ' '.join(['pt_clust_%i=\"%s\"' % (i,v)
                                    for i,v in enumerate(self.matched_scale_data)]),
                                                   self.tag)
-            
-        out = out % {'scale': scale_str, 
+        if self.syscalc_data:
+            keys= ['rscale', 'asrwt', ('pdfrwt', 'beam', '1'), ('pdfrwt', 'beam', '2'),
+                   'matchscale', 'totfact']
+            sys_str = "<mgrwt>\n"
+            template = """<%(key)s%(opts)s>%(values)s</%(key)s>\n"""
+            for k in keys:
+                if k not in self.syscalc_data:
+                    continue
+                replace = {}
+                replace['values'] = self.syscalc_data[k]
+                if isinstance(k, str):
+                    replace['key'] = k
+                    replace['opts'] = ''
+                else:
+                    replace['key'] = k[0]
+                    replace['opts'] = ' %s=\"%s\"' % (k[1],k[2])                    
+                sys_str += template % replace
+            sys_str += "</mgrwt>\n"
+            reweight_str = sys_str + reweight_str
+        
+        out = out % {'event_id': event_id,
+                     'scale': scale_str, 
                       'particles': '\n'.join([str(p) for p in self]),
                       'tag': tag_str,
                       'comments': self.comment,
                       'reweight': reweight_str}
+        
         return re.sub('[\n]+', '\n', out)
 
     def get_momenta(self, get_order, allow_reversed=True):
@@ -1554,11 +1673,9 @@ if '__main__' == __name__:
             #write this modify event
             output.write(str(event))
         output.write('</LesHouchesEvent>\n')
-    
-
         
     # Example 3: Plotting some variable
-    if True:
+    if False:
         lhe = EventFile('unweighted_events.lhe.gz')
         import matplotlib.pyplot as plt
         import matplotlib.gridspec as gridspec
