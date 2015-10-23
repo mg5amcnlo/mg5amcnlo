@@ -2760,10 +2760,12 @@ c     update the range for the sister
             do j=-ns_channel,i
                if (itree(1,j).eq.i .and.
      &              itree(2,j).lt.0 .and. itree(2,j).gt.i) then
+c                 1st daughter of "j" is "i" --> 2nd is sister
                   max_m(itree(2,j))=m(j)-m(i)
                elseif( itree(2,j).eq.i .and. 
      &              itree(1,j).lt.0 .and. itree(1,j).gt.i) then
-                  max_m(itree(2,j))=m(j)-m(i)
+c                 2nd daughter of "j" is "i" --> 1st is sister
+                  max_m(itree(1,j))=m(j)-m(i)
                endif
             enddo
 c     update the range for all the other starts of s-channels chains if
