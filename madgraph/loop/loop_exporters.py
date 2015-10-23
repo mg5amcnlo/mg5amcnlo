@@ -1944,7 +1944,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 break
 
         has_HEFT_list = []
-        chunk_size = 10
+        chunk_size = 9
         for k in xrange(0, len(has_HEFT_vertex), chunk_size):
             has_HEFT_list.append("DATA (HAS_AN_HEFT_VERTEX(I),I=%6r,%6r) /%s/" % \
                 (k + 1, min(k + chunk_size, len(has_HEFT_vertex)),

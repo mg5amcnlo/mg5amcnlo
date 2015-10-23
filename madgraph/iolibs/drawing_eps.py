@@ -221,9 +221,11 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                 else:
                     if direction not in \
                          [new_direction, (-new_direction[0],-new_direction[1])]:
-                        logger.debug('The case of a five-point vertex'+
-                                          'yielding a tadpole is not supported')            
-            
+                        pass
+#                        logger.debug('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                continue
+
             #add the code in the correct format
             self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
              line.end.pos_x+0.01*direction[0], line.end.pos_y+0.01*direction[1],
@@ -266,9 +268,10 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                 else:
                     if direction not in \
                          [new_direction, (-new_direction[0],-new_direction[1])]:
-                        logger.error('The case of a five-point vertex'+
-                                          'yielding a tadpole is not supported')            
-            
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass
+
             #add the code in the correct format
             x, y = self.rescale(line.begin.pos_x, line.begin.pos_y)
             self.text += '%s %s moveto'%(x, y)
@@ -325,8 +328,9 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                 else:
                     if direction not in \
                          [new_direction, (-new_direction[0],-new_direction[1])]:
-                        logger.error('The case of a five-point vertex'+
-                                          'yielding a tadpole is not supported')            
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass           
             
             #add the code in the correct format
             self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
@@ -382,8 +386,9 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                 else:
                     if direction not in \
                          [new_direction, (-new_direction[0],-new_direction[1])]:
-                        logger.error('The case of a five-point vertex'+
-                                          'yielding a tadpole is not supported')            
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass            
             
             #add the code in the correct format
             self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
@@ -551,8 +556,9 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                 else:
                     if direction not in \
                          [new_direction, (-new_direction[0],-new_direction[1])]:
-                        logger.debug('The case of a five-point vertex'+
-                                          'yielding a tadpole is not supported')            
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass           
             
             # Compute the orthogonal the
             orthogonal = (-direction[1],direction[0])
