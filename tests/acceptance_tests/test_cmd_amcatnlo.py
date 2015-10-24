@@ -89,6 +89,7 @@ class MECmdShell(IOTests.IOTestManager):
             pass
 
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
         
         run_cmd('import model %s' % model)
         for multi in multiparticles:

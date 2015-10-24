@@ -1533,6 +1533,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 first, second = args[1:3]
 
             self.options[args[0]] = (int(first), int(second))
+        elif args[0] == 'notification_center':
+            if args[1] in ['None','True','False']:
+                self.allow_notification_center = eval(args[1])
+                self.options[args[0]] = eval(args[1])
+            else:
+                 raise self.InvalidCmd('Not a valid value for notification_center')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

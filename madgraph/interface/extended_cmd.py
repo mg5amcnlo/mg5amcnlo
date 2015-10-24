@@ -498,7 +498,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if not hasattr(self, 'helporder'):
             self.helporder = ['Documented commands']
         
-        
+    
+    def no_notification(self):
+        """avoid to have html opening / notification"""
+        self.allow_notification_center = False
+        try:
+            self.options['automatic_html_opening'] = False
+            self.options['notification_center'] = False
+            
+        except:
+            pass
+    
+      
     def precmd(self, line):
         """ A suite of additional function needed for in the cmd
         this implement history, line breaking, comment treatment,...

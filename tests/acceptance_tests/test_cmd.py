@@ -162,6 +162,7 @@ class TestCmdShell1(unittest.TestCase):
                     'lhapdf': 'lhapdf-config',  
                     'loop_optimized_output': True,
                     'fastjet': 'fastjet-config',
+                    'notification_center':True,
                     'timeout': 60,
                     'ignore_six_quark_processes': False,
                     'OLP': 'MadLoop',

@@ -149,13 +149,13 @@ if '__main__' == __name__:
     argument = sys.argv
     try:
         if '-h' in argument or '--help' in argument:
-            launch = ME.MadEventCmd(me_dir=root_path)
+            launch = ME.MadEventCmdShell(me_dir=root_path)
             launch.exec_cmd('help generate_events')
             sys.exit()
         elif len(argument) > 1 and argument[1] in ['0', '1', '2']:
             argument = treat_old_argument(argument)
         
-        launch = ME.MadEventCmd(me_dir=root_path)
+        launch = ME.MadEventCmdShell(me_dir=root_path)
         launch.run_cmd('generate_events %s' % ' '.join(argument[1:]))
         launch.run_cmd('quit')
     except KeyboardInterrupt:

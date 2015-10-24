@@ -52,6 +52,7 @@ class TestCmdLoop(unittest.TestCase):
     def setUp(self):
         """ Initialize the test """
         self.interface = MGCmd.MasterCmd()
+        self.interface.no_notification()
         # Below the key is the name of the logger and the value is a tuple with
         # first the handlers and second the level.
         self.logger_saved_info = {}
@@ -479,6 +480,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
         """ Initialize the test """
 
         self.interface = MGCmd.MasterCmd()
+        self.interface.no_notification()
         # Below the key is the name of the logger and the value is a tuple with
         # first the handlers and second the level.
         self.logger_saved_info = {}
@@ -515,6 +517,7 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
         """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
         """
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
 
         def run_cmd(cmd):
             interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
