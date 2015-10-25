@@ -80,7 +80,7 @@ class BasicCmd(cmd.Cmd):
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
 
-    def deal_multiple_categories(self, dico):
+    def deal_multiple_categories(self, dico, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
         specific readline parser"""
 
@@ -92,7 +92,7 @@ class BasicCmd(cmd.Cmd):
             return out
 
         # check if more than one categories but only one value:
-        if all(len(s) <= 1 for s in dico.values() ):
+        if not forceCategory and all(len(s) <= 1 for s in dico.values() ):
             values = set((s[0] for s in dico.values() if len(s)==1))
             if len(values) == 1:
                 return values
@@ -115,9 +115,9 @@ class BasicCmd(cmd.Cmd):
             opt.sort()
             out += opt
 
-            
-        if valid == 1:
+        if not forceCategory and valid == 1:
             out = out[1:]
+            
         return out
     
     @debug()
@@ -463,6 +463,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     history_header = ""
     
     _display_opts = ['options','variable']
+    allow_notification_center = True
     
     class InvalidCmd(Exception):
         """expected error for wrong command"""
@@ -497,7 +498,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if not hasattr(self, 'helporder'):
             self.helporder = ['Documented commands']
         
-        
+    
+    def no_notification(self):
+        """avoid to have html opening / notification"""
+        self.allow_notification_center = False
+        try:
+            self.options['automatic_html_opening'] = False
+            self.options['notification_center'] = False
+            
+        except:
+            pass
+    
+      
     def precmd(self, line):
         """ A suite of additional function needed for in the cmd
         this implement history, line breaking, comment treatment,...
@@ -556,6 +568,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # We are in a file reading mode. So we need to redirect the cmd
         self.child = obj_instance
         self.child.mother = self
+        
+        #ensure that notification are sync:
+        self.child.allow_notification_center = self.allow_notification_center
 
         if self.use_rawinput and interface:
             # We are in interactive mode -> simply call the child
@@ -885,6 +900,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def onecmd(self, line, **opt):
         """catch all error and stop properly command accordingly"""
         
+        me_dir = ''
+        if hasattr(self, 'me_dir'):
+            me_dir = os.path.basename(me_dir) + ' '
+        
         try:
             return self.onecmd_orig(line, **opt)
         except self.InvalidCmd as error:            
@@ -893,12 +912,22 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 self.history.pop()
             else:
                 self.nice_user_error(error, line)
+            if self.allow_notification_center:
+                misc.apple_notify('Run %sfailed' % me_dir,
+                              'Invalid Command: %s' % error.__class__.__name__)
+
         except self.ConfigurationError as error:
             self.nice_config_error(error, line)
+            if self.allow_notification_center:
+                misc.apple_notify('Run %sfailed' % me_dir,
+                              'Configuration error')
         except Exception as error:
             self.nice_error_handling(error, line)
             if self.mother:
                 self.do_quit('')
+            if self.allow_notification_center:
+                misc.apple_notify('Run %sfailed' % me_dir,
+                              'Exception: %s' % error.__class__.__name__)
         except KeyboardInterrupt as error:
             self.stop_on_keyboard_stop()
             if __debug__:

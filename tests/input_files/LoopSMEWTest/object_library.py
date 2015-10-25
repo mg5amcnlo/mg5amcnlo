@@ -121,7 +121,7 @@ class Particle(UFOBaseClass):
         elif spin == 5:
             return 'double'
         elif spin == -1:
-	    return 'dashed' #            return 'dotted' ## not suported yet
+            return 'dashed' #            return 'dotted' ## not suported yet
         else:
             return 'dashed' # not supported yet
 
@@ -259,26 +259,26 @@ class Coupling(UFOBaseClass):
                 return 'ZERO'
 
         CTparam=None
-	numbermatch = None
+        numbermatch = None
         for param in all_CTparameters:
            pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\(|\s)(?P<name>"+param.name+r")(?P<second>\Z|\*|\+|\-|\)|/|\\|\s)")
            numberOfMatches=len(pattern.findall(self.value))
-	   # HSS, 5/11/2012
+           # HSS, 5/11/2012
            if numberOfMatches > 0:
               if not CTparam:
-	           # CTparam = param
+                   # CTparam = param
                    CTparam=[param,]
-		   numbermatch = [numberOfMatches,]
-		   # HSS
+                   numbermatch = [numberOfMatches,]
+                   # HSS
               else:
-		   # HSS, 5/11/2012
-		   CTparam = CTparam + [param,]
-		   numbermatch = numbermatch + [numberOfMatches,]
+                   # HSS, 5/11/2012
+                   CTparam = CTparam + [param,]
+                   numbermatch = numbermatch + [numberOfMatches,]
                    # raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the 			   # couplings values."+param.name+" "+self.name+" "+CTparam.name
-		   # HSS
+                   # HSS
            #elif numberOfMatches>1:
                #raise UFOError, "UFO does not support yet more than one occurence of CTParameters in the #couplings values."+param.name
-	   # HSS
+           # HSS
 
         if not CTparam:
             if x==0:
@@ -286,28 +286,28 @@ class Coupling(UFOBaseClass):
             else:
                 return 'ZERO'
         else:
-	    # HSS, 5/11/2012
-	    tempvalue = self.value
-	    for i,ctpar in enumerate(CTparam):
-            	#if ctpar.pole(x)=='ZERO':
+            # HSS, 5/11/2012
+            tempvalue = self.value
+            for i,ctpar in enumerate(CTparam):
+                    #if ctpar.pole(x)=='ZERO':
                 #   return 'ZERO'
-            	#else:
+                    #else:
                 def substitution(matchedObj):
                     return matchedObj.group('first')+"("+ctpar.pole(x)+")"+matchedObj.group('second')
-               	pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\(|\s)(?P<name>"+ctpar.name+r")(?P<second>\Z|\*|\+|\-|\)|/|\\|\s)")
-		tempvalue2 = tempvalue
-		tempvalue = pattern.sub(substitution,tempvalue)
-		num = numbermatch[i]-1		
-		while tempvalue2 != tempvalue or num > 0:
-		      tempvalue2 = tempvalue
+                pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\(|\s)(?P<name>"+ctpar.name+r")(?P<second>\Z|\*|\+|\-|\)|/|\\|\s)")
+                tempvalue2 = tempvalue
+                tempvalue = pattern.sub(substitution,tempvalue)
+                num = numbermatch[i]-1		
+                while tempvalue2 != tempvalue or num > 0:
+                      tempvalue2 = tempvalue
                       tempvalue = pattern.sub(substitution,tempvalue)
-		      num = num - 1
-	    #for param in CTparam:
+                      num = num - 1
+            #for param in CTparam:
             #	pattern=re.compile(r"(?P<first>\A|\*|\+|\-|\()(?P<name>"+param.name+r")(?P<second>\Z|\*|\+|\-|#\)|/|\\)")
             #	numberOfMatches=len(pattern.findall(tempvalue))
-	    #	if numberOfMatches > 0: raise UFOError,"There is some problem with the substitution of #"+param.name+"."  
-	    return tempvalue
-	    # HSS
+            #	if numberOfMatches > 0: raise UFOError,"There is some problem with the substitution of #"+param.name+"."  
+            return tempvalue
+            # HSS
 
 all_lorentz = []
 

@@ -689,7 +689,7 @@ class ALOHAWriterForFortran(WriteALOHA):
                     if number.imag == 1:
                         out = 'CI'
                     elif number.imag == -1:
-			            out = '-CI'
+                        out = '-CI'
                     else: 
                         out = '%s * CI' % self.change_number_format(number.imag)
             else:

@@ -85,7 +85,7 @@ class DecayParticle(base_objects.Particle):
     """
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating',
+                   'line',
                    'is_part', 'self_antipart', 'is_stable',
                    'decay_vertexlist', 'decay_channels', 'apx_decaywidth',
                    'apx_decaywidth_err', '2body_massdiff',
@@ -159,13 +159,13 @@ class DecayParticle(base_objects.Particle):
             # call the mother routine
             return DecayParticle.__bases__[0].get(self, name)
 
-    def set(self, name, value, *args):
+    def set(self, name, value, *args,**opts):
         """assign a value"""
 
         if name == 'decay_amplitudes':
             self.decay_amplitudes = value
         else:
-            out = super(DecayParticle, self).set(name, value, *args)
+            out = super(DecayParticle, self).set(name, value, *args, **opts)
             return out
     def check_vertex_condition(self, partnum, onshell, 
                               value = base_objects.VertexList(), model = {}):
@@ -909,6 +909,8 @@ class DecayParticle(base_objects.Particle):
 
                 # Add width to total width if onshell
                 if temp_channel.get_onshell(model):
+                    if temp_channel.has_goldstone(model):
+                        continue
                     self['apx_decaywidth'] += temp_channel.get_apx_decaywidth(model)                    
 
                 # Append this channel after all the setups.
@@ -974,6 +976,9 @@ class DecayParticle(base_objects.Particle):
                                                              vert, model)
                         temp_c_o = temp_c.get_onshell(model)
                         
+                        if temp_c_o and temp_c.has_goldstone(model):
+                            continue
+                        
                         # Append this channel if it is new
                         rstart = time.time()
                         status = self.check_repeat(clevel, temp_c_o, temp_c)
@@ -1028,7 +1033,8 @@ class DecayParticle(base_objects.Particle):
                             #to be problematic for 4 body decay (for valid 2-body)
                             #so this should be fine.
                             continue
-                        
+                        elif temp_c.has_goldstone(model):
+                            continue
                         # Append this channel if it is new
                         rstart = time.time()
                         status = self.check_repeat(clevel, temp_c_o, temp_c)
@@ -1984,7 +1990,7 @@ class DecayModel(model_reader.ModelReader):
 
     def running_externals(self, q, loopnum=2):
         """ Recalculate external parameters at the given scale. """
-
+        
         # Raise error for wrong type of q
         if not isinstance(q, int) and not isinstance(q, long) and \
                 not isinstance(q, float):
@@ -2107,7 +2113,8 @@ class DecayModel(model_reader.ModelReader):
             if loopnum == 3:
                 f = b0[nf]*t + f3(a_in) - f3(a_out)
                 fp = 1./(a_out**2 * (1. + c1[nf]*a_out + c2[nf]* a_out**2))
-
+            if fp == 0:
+                return a_in
             a_out = a_out - f/fp
             delta = abs(f/fp/a_out)
 
@@ -3569,6 +3576,15 @@ class Channel(base_objects.Diagram):
             self['onshell'] = ini_mass > sum(self['final_mass_list'])
 
         return self['onshell']
+    
+    def has_goldstone(self, model):
+
+            # Check if model is valid
+            assert isinstance(model, base_objects.Model), "The argument %s must be a model." % str(model)
+                    
+            return any(model.get_particle(l.get('id'))['type'] =='goldstone' \
+                       for l in self.get_final_legs())
+
 
     def get_helas_properties(self, model):
         """ return helastag and std_diagram, construct them if necessary. """

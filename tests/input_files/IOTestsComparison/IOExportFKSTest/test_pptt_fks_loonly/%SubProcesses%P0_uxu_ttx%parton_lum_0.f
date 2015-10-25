@@ -119,7 +119,11 @@ C
         PD(IPROC) = SX1*S2
       ENDIF
       DO I=1,IPROC
-        LUM = LUM + PD(I) * CONV
+        IF (NINCOMING.EQ.2) THEN
+          LUM = LUM + PD(I) * CONV
+        ELSE
+          LUM = LUM + PD(I)
+        ENDIF
       ENDDO
       RETURN
       END

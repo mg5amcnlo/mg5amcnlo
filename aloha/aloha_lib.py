@@ -1073,9 +1073,9 @@ class LorentzObjectRepresentation(dict):
                     self[(0,)] = representation[(0,)]
                 except Exception:
                     if representation:
-		   	            raise LorentzObjectRepresentation.LorentzObjectRepresentationError("There is no key of (0,) in representation.")
+                        raise LorentzObjectRepresentation.LorentzObjectRepresentationError("There is no key of (0,) in representation.")
                     else:
-			            self[(0,)] = 0
+                        self[(0,)] = 0
             else:
                 self[(0,)] = representation
 

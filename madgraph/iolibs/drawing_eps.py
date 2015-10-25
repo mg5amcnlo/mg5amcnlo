@@ -224,14 +224,14 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                          line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fhiggsl'% curvature)
 
     def draw_dotted(self,line):
-	"""ADD the EPS code for the ghost line."""
+        """ADD the EPS code for the ghost line."""
 
-	#add the code in the correct format
-	self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
-			line.end.pos_x, line.end.pos_y, 'Fghost')
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
+                                      line.end.pos_x, line.end.pos_y, 'Fghost')
 
     def draw_curved_dotted(self, line, cercle):
-	"""ADD the EPS code for the ghost line."""
+        """ADD the EPS code for the ghost line."""
         if not cercle:
             curvature = 0.4
         else:
@@ -239,20 +239,20 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
         if (line.begin.pos_x, line.begin.pos_y) == self.curved_part_start:
             curvature *= -1	
-	#add the code in the correct format
-	self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
-			line.end.pos_x, line.end.pos_y, '%s Fghostl'% curvature)
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
+                        line.end.pos_x, line.end.pos_y, '%s Fghostl'% curvature)
 
     def draw_circled_dotted(self, line, cercle):
-	"""ADD the EPS code for the ghost line."""
+        """ADD the EPS code for the ghost line."""
         if not cercle:
             curvature = 4
         else:
             curvature = 5
-	
-	#add the code in the correct format
-	self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
-			line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fghostl'% curvature)
+
+        #add the code in the correct format
+        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
+              line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fghostl'% curvature)
 
     def draw_wavy(self, line, opt=0, type=''):
         """ADD the EPS code for this photon line."""

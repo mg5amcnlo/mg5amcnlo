@@ -127,7 +127,11 @@ c-----
 c      pm=dsqrt(p(1)**2+p(2)**2+p(3)**2)
       
       pm = p(0)
-      rap = .5d0*dlog((pm+p(3))/(pm-p(3)))+cm_rap
+      if (pm.gt.p(3)) then
+        rap = .5d0*dlog((pm+p(3))/(pm-p(3)))+cm_rap
+      else
+        rap = -1d99
+      endif
       end
       DOUBLE PRECISION  FUNCTION rap2(p)
 c************************************************************************
