@@ -112,6 +112,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue('generate' in proc_card or 'add process' in proc_card)
         run_cmd('set automatic_html_opening False --no_save')
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
+        self.cmd_line.no_notification()
         self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
         self.assertFalse(self.cmd_line.options['automatic_html_opening'])
 
@@ -425,7 +426,9 @@ class MECmdShell(IOTests.IOTestManager):
         """test that ./bin/aMCatNLO can be launched with some scripts.
         Check also that two runs run without border effects"""
         self.generate_production()
-        script = "launch -p\n"
+        script = "set notification_center False --no_save\n"
+        script += "set automatic_html_opening False --no_save\n"
+        script += "launch -p\n"
         script += "launch -p\n"
         open(pjoin(self.path, 'script.txt'), 'w').write(script)
 

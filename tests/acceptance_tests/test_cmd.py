@@ -568,7 +568,7 @@ class TestCmdShell2(unittest.TestCase,
         me_groups = me_re.search(log_output)
         
         self.assertTrue(me_groups)
-        self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782)
+        self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782,5)
     
     
     def test_standalone_cpp_output_consistency(self):

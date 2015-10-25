@@ -6473,7 +6473,12 @@ This implies that with decay chains:
 
         elif args[0] =='output_dependencies':
             self.options[args[0]] = args[1]
-        
+        elif args[0] =='notification_center':
+            if args[1] in ['None','True','False']:
+                self.options[args[0]] = eval(args[1])
+                self.allow_notification_center = self.options[args[0]]
+            else:
+                raise self.InvalidCmd('expected bool for notification_center')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

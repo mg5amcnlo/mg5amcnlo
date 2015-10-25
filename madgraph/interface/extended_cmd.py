@@ -568,6 +568,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         # We are in a file reading mode. So we need to redirect the cmd
         self.child = obj_instance
         self.child.mother = self
+        
+        #ensure that notification are sync:
+        self.child.allow_notification_center = self.allow_notification_center
 
         if self.use_rawinput and interface:
             # We are in interactive mode -> simply call the child

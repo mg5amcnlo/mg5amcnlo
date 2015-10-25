@@ -1036,7 +1036,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                                 synchronize=options.synchronize)
 
 
-    if float(options.notification)>=0 and time.time()-start_time > float(options.notification):
+    if 0 < float(options.notification) < time.time()-start_time:
         if isinstance(output, unittest.runner.TextTestResult):
             run = output.testsRun
             failed, errored, skipped = map(len, 

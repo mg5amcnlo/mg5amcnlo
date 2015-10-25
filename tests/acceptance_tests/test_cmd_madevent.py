@@ -56,7 +56,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        debugging = True
+        debugging = False
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -464,6 +464,7 @@ class TestMEfromfile(unittest.TestCase):
         
         cmd = """import model sm
                  set automatic_html_opening False --no_save
+                 set notification_center False --no_save
                  generate p p > w+ z
                  output %s -f -nojpeg
                  launch -i 
@@ -539,6 +540,7 @@ class TestMEfromfile(unittest.TestCase):
         command = open(pjoin(self.path, 'cmd'), 'w')
         command.write("""import model sm
         set automatic_html_opening False --no_save
+        set notification_center False --no_save
         generate p p > w+ 
         add process p p > w-
         output %(path)s
