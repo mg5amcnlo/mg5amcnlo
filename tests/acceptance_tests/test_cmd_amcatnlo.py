@@ -279,6 +279,7 @@ class MECmdShell(IOTests.IOTestManager):
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  pythia8_path None')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
