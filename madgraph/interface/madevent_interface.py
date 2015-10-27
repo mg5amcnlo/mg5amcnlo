@@ -3348,10 +3348,8 @@ Beware that this can be dangerous for local multicore runs.""")
 
             pythia_log.close()
         
-        pydir = pjoin(self.options['pythia-pgs_path'], 'src')
-        eradir = self.options['exrootanalysis_path']
-        madir = self.options['madanalysis_path']
-        td = self.options['td_path']
+#        madir = self.options['madanalysis_path']
+#        td = self.options['td_path']
 
         #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
