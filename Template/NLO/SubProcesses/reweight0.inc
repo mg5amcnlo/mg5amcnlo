@@ -96,6 +96,10 @@ c Power of a given contribution in the amp_split array
       integer QCD_power
       common/cQCDpower/QCD_power
 
+c Integer tag to keep track of all split orders
+      integer orders_tag
+      common/corderstag/orders_tag
+
 c This variable is only used in reweight_xsec.f and only if jwgtinfo.ne.4
 c If jwgtinfo.eq.4 the value in the common block is used
       double precision rwgtbpower

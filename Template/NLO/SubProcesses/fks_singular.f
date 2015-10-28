@@ -21,6 +21,27 @@
       write(*,*) 'SPLIT TYPE USED:', split_type_used
       return
       end
+
+
+      integer function get_orders_tag(ord)
+C a function that assigns to a given order
+C array an integer number
+      implicit none
+      include 'orders.inc'
+      integer ord(nsplitorders)
+      integer i,j
+      integer base, step
+      parameter(base=100)
+
+      get_orders_tag=0
+      step=1
+      do i =1, nsplitorders
+        get_orders_tag=get_orders_tag+step*ord(i)
+        step=step*100
+      enddo
+
+      return 
+      end
       
       
       integer function orders_to_amp_split_pos(ord)
@@ -122,6 +143,7 @@ c to the list of weights using the add_wgt subroutine
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
+      integer get_orders_tag
       call cpu_time(tBefore)
       if (f_b.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
@@ -130,6 +152,7 @@ c to the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        orders_tag=get_orders_tag(orders)
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
         call add_wgt(2,wgt1,0d0,0d0)
       enddo
@@ -177,6 +200,7 @@ c value to the list of weights using the add_wgt subroutine
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
+      integer get_orders_tag
       call cpu_time(tBefore)
       if (f_nb.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
@@ -206,6 +230,7 @@ c value to the list of weights using the add_wgt subroutine
      $      amp_split_wgtwnstmpmuf(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         wgt1=amp_split_wgtnstmp(iamp)*f_nb/g22
         wgt2=amp_split_wgtwnstmpmur(iamp)*f_nb/g22
@@ -221,6 +246,7 @@ c and not be part of the plots nor computation of the cross section.
         if (amp_split_virt(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        orders_tag=get_orders_tag(orders)
         virt_wgt_mint(iamp)=amp_split_virt(iamp)*f_nb
         born_wgt_mint(iamp)=amp_split_born_for_virt(iamp)*f_nb
         wgt1=virt_wgt_mint(iamp)/g**(QCD_power)
@@ -254,6 +280,7 @@ c its value to the list of weights using the add_wgt subroutine
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
+      integer get_orders_tag
       call cpu_time(tBefore)
       if (f_r.eq.0d0) return
       x = abs(2d0*dot(p(0,i_fks),p(0,j_fks))/shat)
@@ -266,6 +293,7 @@ c its value to the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        orders_tag=get_orders_tag(orders)
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
           call add_wgt(1,wgt1*sudakov_damp,0d0,0d0)
@@ -309,6 +337,7 @@ c the list of weights using the add_wgt subroutine
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
+      integer get_orders_tag
       call cpu_time(tBefore)
       if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
       if (xi_i_fks_ev.gt.xiScut_used .and. replace_MC_subt.eq.0d0)
@@ -321,6 +350,7 @@ c the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_s/g22*replace_MC_subt
@@ -386,6 +416,7 @@ c to the list of weights using the add_wgt subroutine
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       double precision pmass(nexternal)
+      integer get_orders_tag
       call cpu_time(tBefore)
       include 'pmass.inc'
       if (f_c.eq.0d0 .and. f_dc.eq.0d0 .and. f_c_MC_S.eq.0d0 .and.
@@ -410,6 +441,7 @@ c to the list of weights using the add_wgt subroutine
 
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=amp_split(iamp)*s_c/g22*replace_MC_subt
@@ -487,6 +519,7 @@ c value to the list of weights using the add_wgt subroutine
       double precision f_dis_d,f_dis_p,f_dis_l
       common/factor_dis/f_dis_d,f_dis_p,f_dis_l
       double precision pmass(nexternal)
+      integer get_orders_tag
       include 'pmass.inc'
       call cpu_time(tBefore)
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
@@ -511,6 +544,7 @@ c value to the list of weights using the add_wgt subroutine
      $      amp_split_wgtdis_d(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
           wgt1=-amp_split(iamp)*s_sc/g22*replace_MC_subt
@@ -587,7 +621,7 @@ c respectively.
       integer orders(nsplitorders)
       double precision amp_split_xmcxsec(amp_split_size,nexternal)
       common /to_amp_split_xmcxsec/amp_split_xmcxsec
-
+      integer get_orders_tag
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
@@ -618,6 +652,7 @@ c respectively.
                 if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
                 call amp_split_pos_to_orders(iamp, orders)
                 QCD_power=orders(qcd_pos)
+                orders_tag=get_orders_tag(orders)
                 g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
      &               amp_split_xmcxsec(iamp,i)/g22
@@ -1313,6 +1348,7 @@ c        the iproc contribution
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
       qcdpower(icontr)=QCD_power
+      orderstag(icontr)=orders_tag
       call set_pdg(icontr,nFKSprocess)
 
       if(type.eq.1 .or. type.eq. 8 .or. type.eq.9 .or. type.eq.10 .or.
@@ -1999,6 +2035,9 @@ c to greatly reduce the calls to the analysis routines.
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       double precision unwgtfun
+      ! stuff for plotting the different splitorders
+      integer orders_tag_plot
+      common /corderstagplot/ orders_tag_plot
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c fill the plots_wgts. Check if we can sum weights together before
@@ -2021,6 +2060,7 @@ c of that contribution and exit the do-loop. This loop extends to 'i',
 c so if the current weight cannot be summed to a previous one, the ii=i
 c contribution makes sure that it is added as a new element.
          do ii=1,i
+            if (orderstag(ii).ne.orderstag(i)) cycle
             if (plot_id(ii).ne.plot_id(i)) cycle
             if (plot_id(i).eq.20 .or. plot_id(i).eq.12) then
                if (.not.pdg_equal(pdg_uborn(1,ii),pdg_uborn(1,i))) cycle
@@ -2046,6 +2086,7 @@ c contribution makes sure that it is added as a new element.
                www(j)=plot_wgts(j,i)/unwgtfun
             enddo
 c call the analysis/histogramming routines
+            orders_tag_plot=orderstag(i)
             call outfun(momenta(0,1,i),y_bst(i),www,pdg(1,i),plot_id(i))
          endif
       enddo
