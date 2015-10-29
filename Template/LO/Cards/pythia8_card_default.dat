@@ -7,19 +7,30 @@
 !
 Main:numberOfEvents      = -1
 !
-! ----------------------------------------------------
-! Parameters relevant only when performing MLM merging 
-! ----------------------------------------------------
+! --------------------------------------------------------------------
+! Parameters relevant only when performing MLM merging
+! For details, see section 'Jet Matching' on the left-hand menu of 
+!    http://home.thep.lu.se/~torbjorn/pythia81html/Welcome.html
+! --------------------------------------------------------------------
 ! If equal to -1.0, MadGraph5_aMC@NLO will set it automatically based 
-! on the parameter xqcut of the run_card.
+! on the parameter xqcut of the run_card. 
 JetMatching:qCut         = -1.0
-! ------------------------------------------------------
-! Parameters relevant only when performing CKKWL merging 
-! ------------------------------------------------------
+! A value of -1 means that it is automatically guessed by MadGraph.
+! It is however always safer to explicitly set it.
+JetMatching:nJetMax      = -1
+!
+! --------------------------------------------------------------------
+! Parameters relevant only when performing CKKWL merging
+! For details, see section 'CKKW-L Merging' on the left-hand menu of 
+!    http://home.thep.lu.se/~torbjorn/pythia81html/Welcome.html
+! --------------------------------------------------------------------
 Merging:TMS              = 10.0
 ! This must be set manually, according to Pythia8 directives.
 ! An example of possible value is 'pp>LEPTONS,NEUTRINOS'
 Merging:Process          = <set_by_user>
+! A value of -1 means that it is automatically guessed by MadGraph.
+! It is however always safer to explicitly set it.
+Merging:nJetMax  		 = -1
 !
 ! ==========================
 ! User customized parameters 

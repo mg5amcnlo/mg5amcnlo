@@ -3258,7 +3258,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.proc_characteristic = self.get_characteristics()
             nJetMax = self.proc_characteristic['max_n_matched_jets']
             if PY8_Card['JetMatching:nJetMax'.lower()] == -1 and\
-                                               nJetMax not in PY8_Card.user_set:
+                         'JetMatching:nJetMax'.lower() not in PY8_Card.user_set:
                 logger.info("No user-defined value for Pythia8 parameter "+
             "'JetMatching:nJetMax'. Setting it automatically to to %d."%nJetMax)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
@@ -3280,6 +3280,12 @@ Beware that this can be dangerous for local multicore runs.""")
                    (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
                 PY8_Card.MadGraphSet('Merging:muFacInME',self.run_card['scalefact']*
                    (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
+            nJetMax = self.proc_characteristic['max_n_matched_jets']
+            if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
+                             'Merging:nJetMax'.lower() not in PY8_Card.user_set:
+                logger.info("No user-defined value for Pythia8 parameter "+
+                "'Merging:nJetMax'. Setting it automatically to to %d."%nJetMax)
+                PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
             PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
         ########################################################################
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
@@ -3347,9 +3353,6 @@ Beware that this can be dangerous for local multicore runs.""")
                 break                 
 
             pythia_log.close()
-        
-#        madir = self.options['madanalysis_path']
-#        td = self.options['td_path']
 
         #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
