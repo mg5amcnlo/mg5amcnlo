@@ -116,6 +116,11 @@ C-----
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
+      if (nincoming.ne.2) then
+         write (*,*) 'Decay processes not supported for'/
+     &        /' event generation'
+         stop 1
+      endif
 
 c     Read general MadFKS parameters
 c
@@ -172,7 +177,7 @@ c Only do the reweighting when actually generating the events
       else
         flat_grid=.false.
       endif
-      ndim = 3*(nexternal-2)-4
+      ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
 c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae
@@ -667,12 +672,17 @@ c These should be ignored (but kept for 'historical reasons')
 
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
-      if (i .eq. 0) then
-         mc_hel= 0
-         write(*,*) 'Explicitly summing over helicities for virt'
+      if (nincoming.eq.1) then
+         write (*,*) 'Sum over helicities in the virtuals'/
+     $        /' for decay process'
+         mc_hel=0
+      elseif (i.eq.0) then
+         mc_hel=0
+         write (*,*) 'Explicitly summing over helicities'/
+     $        /' for the virtuals'
       else
-         mc_hel= i
-         write(*,*) 'Summing over',i,' helicities/event for virt'
+         mc_hel=1
+         write(*,*) 'Do MC over helicities for the virtuals'
       endif
       isum_hel = 0
 
@@ -1257,7 +1267,7 @@ c     include all quarks (except top quark) and the gluon.
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.true.)
       return
       end
 

@@ -506,6 +506,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madgraph= {'stdout_level':None}
 
     options_madevent = {'automatic_html_opening':True,
+                        'notification_center':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'cluster_time':None,
@@ -658,7 +659,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
-                pids = self.get_pid_final_states()
+                pids = self.get_pid_final_initial_states()
                 # check those which are charged under qcd
                 if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:
                         sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
@@ -780,11 +781,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if fulltext == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|ExecutionPath|Treewriter|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
-        elif 'particlepropagator' in text:
+        elif 'particlepropagator' in text or 'executionpath' in text or 'treewriter' in text:
             return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
@@ -1351,8 +1352,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.update_status('delphes done', level='delphes', makehtml=False)
 
     ############################################################################
-    def get_pid_final_states(self):
-        """Find the pid of all particles in the final states"""
+    def get_pid_final_initial_states(self):
+        """Find the pid of all particles in the final and initial states"""
         pids = set()
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
@@ -1363,7 +1364,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             group = pat.findall(text)
             for particles in group:
                 particles = particles.split(',')
-                pids.update(set(particles[nb_init:]))
+                pids.update(set(particles))
 
         return pids
 
@@ -1532,6 +1533,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 first, second = args[1:3]
 
             self.options[args[0]] = (int(first), int(second))
+        elif args[0] == 'notification_center':
+            if args[1] in ['None','True','False']:
+                self.allow_notification_center = eval(args[1])
+                self.options[args[0]] = eval(args[1])
+            else:
+                 raise self.InvalidCmd('Not a valid value for notification_center')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -1715,7 +1722,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
 
-
     ############################################################################
     def keep_cards(self, need_card=[], ignore=[]):
         """Ask the question when launching generate_events/multi_run"""
@@ -1834,6 +1840,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pass
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
+                    self.options[key] =eval(self.options[key])
+            elif key == "notification_center":
+                if self.options[key] in ['False', 'True']:
+                    self.allow_notification_center =eval(self.options[key])
                     self.options[key] =eval(self.options[key])
             elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
                               'complex_mass_scheme', 'gauge', 'group_subprocesses']:

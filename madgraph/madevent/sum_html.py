@@ -664,24 +664,27 @@ def collect_result(cmd, folder_names):
         P_path = pjoin(cmd.me_dir, 'SubProcesses', Pdir)
         G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
                                                 os.path.isdir(pjoin(P_path,G))]
-        
-        for line in open(pjoin(P_path, 'symfact.dat')):
-            name, mfactor = line.split()
-            if float(mfactor) < 0:
-                continue
-            if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
-                continue
-                                  
-            if not folder_names:
-                name = 'G' + name
-                P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
-            else:
-                for folder in folder_names:
-                    if 'G' in folder:
-                        dir = folder.replace('*', name)
-                    else:
-                        dir = folder.replace('*', '_G' + name)
-                    P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
+
+        try:
+            for line in open(pjoin(P_path, 'symfact.dat')):
+                name, mfactor = line.split()
+                if float(mfactor) < 0:
+                    continue
+                if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
+                    continue
+                                      
+                if not folder_names:
+                    name = 'G' + name
+                    P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
+                else:
+                    for folder in folder_names:
+                        if 'G' in folder:
+                            dir = folder.replace('*', name)
+                        else:
+                            dir = folder.replace('*', '_G' + name)
+                        P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
+        except IOError:
+            continue
         P_comb.compute_values()
         all.append(P_comb)
     all.compute_values()

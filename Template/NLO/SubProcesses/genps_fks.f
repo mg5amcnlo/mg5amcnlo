@@ -745,15 +745,19 @@ c Common block with granny information
          endif
       enddo
       if( firsttime .or. iconfig0.ne.iconfigsave ) then
-         stot = 4d0*ebeam(1)*ebeam(2)
+         if (nincoming.eq.2) then
+            stot = 4d0*ebeam(1)*ebeam(2)
+         else
+            stot=pmass(1)**2
+         endif
 c Make sure have enough mass for external particles
          totmassin=0d0
-         do i=3-nincoming,2
+         do i=1,nincoming
             totmassin=totmassin+m(i)
          enddo
          totmass=0d0
          nbranch = nexternal-3 ! nexternal is for n+1-body, while itree uses n-body
-         do i=3,nbranch+2
+         do i=nincoming+1,nexternal-1
             totmass=totmass+m(i)
          enddo
          fksmass=totmass
@@ -857,7 +861,7 @@ c Generate the momenta for the initial state of the Born system
       else
          pb(0,1)=sqrtshat_born
          do i=1,2
-            pb(0,1)=0d0
+            pb(i,1)=0d0
          enddo
          p(3,1)=1e-14           ! For HELAS routine ixxxxx for neg. mass
       endif
@@ -1061,7 +1065,7 @@ c case 3: j_fks is initial state
      &           ,p_born_l(0,imother),shat,sqrtshat,x(ixEi),xmrec2,xp
      &           ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat
      &           ,p_i_fks,xjac,xpswgt,pass)
-      if (.not.pass) goto 112
+            if (.not.pass) goto 112
          elseif(m_j_fks.gt.0d0) then
             call generate_momenta_massive_final(icountevts,isolsign
      &           ,input_granny_m2,rat_xi,i_fks,j_fks,p_born_l(0,imother)
@@ -1073,8 +1077,8 @@ c case 3: j_fks is initial state
       elseif(j_fks.le.nincoming) then
          isolsign=1
          call generate_momenta_initial(icountevts,i_fks,j_fks,xbjrk_born
-     &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp ,x(ixEi)
-     &        ,shat,stot ,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
+     &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x(ixEi)
+     &        ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
      &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac ,pass)
          if (.not.pass) goto 112
       else
@@ -1372,6 +1376,7 @@ c$$$         endif
 c remove the following if no importance sampling towards soft
 c singularity is performed when integrating over xi_i_hat
       xjac=xjac*2d0*x(1)
+
 c Check that xii is in the allowed range
       if( icountevts.eq.-100 .or. abs(icountevts).eq.1 )then
          if(xi_i_fks.gt.(1-xmrec2/shat))then
@@ -1451,7 +1456,11 @@ c boosted along the direction of the mother; start by redefining the
 c mother four momenta
       do i=0,3
          xp_mother(i)=xp(i,i_fks)+xp(i,j_fks)
-         recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
+         if (nincoming.eq.2) then
+            recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
+         else
+            recoil(i)=xp(i,1)-xp_mother(i)
+         endif
       enddo
       sumrec=recoil(0)+rho(recoil)
       sumrec2=sumrec**2
@@ -1465,7 +1474,7 @@ c cosh(y) is very often close to one, so define cosh(y)-1 as well
          xdir(j)=xp_mother(j)/x3len_fks_mother
       enddo
 c Perform the boost here
-      do i=3,nexternal
+      do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
      &      call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),xp(0,i))
       enddo
@@ -1771,7 +1780,11 @@ c boosted along the direction of the mother; start by redefining the
 c mother four momenta
       do i=0,3
          xp_mother(i)=xp(i,i_fks)+xp(i,j_fks)
-         recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
+         if (nincoming.eq.2) then
+            recoil(i)=xp(i,1)+xp(i,2)-xp_mother(i)
+         else
+            recoil(i)=xp(i,1)-xp_mother(i)
+         endif
       enddo
 c
       sumrec=recoil(0)+rho(recoil)
@@ -1794,7 +1807,7 @@ c
          xdir(j)=xp_mother(j)/x3len_fks_mother
       enddo
 c Boost the momenta
-      do i=3,nexternal
+      do i=nincoming+1,nexternal
          if(i.ne.i_fks.and.i.ne.j_fks.and.shybst.ne.0.d0)
      &      call boostwdir2(chybst,shybst,chybstmo,xdir,xp(0,i),xp(0,i))
       enddo
@@ -3180,7 +3193,11 @@ c Kajantie's normalization of phase space (compensated below in flux)
       external dot
       pass=.true.
       do i=0,3
-         recoilbar(i)=p_born(i,1)+p_born(i,2)-p_born(i,imother)
+         if (nincoming.eq.2) then
+            recoilbar(i)=p_born(i,1)+p_born(i,2)-p_born(i,imother)
+         else
+            recoilbar(i)=p_born(i,1)-p_born(i,imother)
+         endif
       enddo
       xmrec2=dot(recoilbar,recoilbar)
       if(xmrec2.lt.0.d0)then
