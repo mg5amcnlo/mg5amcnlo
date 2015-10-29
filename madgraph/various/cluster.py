@@ -1655,7 +1655,7 @@ class SLURMCluster(Cluster):
 
         if not id.isdigit():
             raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
-                    % output
+                    % (output[0] + '\n' + output[1])
 
         self.submitted += 1
         self.submitted_ids.append(id)
