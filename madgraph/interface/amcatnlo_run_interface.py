@@ -1768,15 +1768,17 @@ RESTART = %(mint_mode)s
                 elif step+1 > 2:
                     raise aMCatNLOError('Cannot determine number of iterations and PS points '+
                                         'for integration step %i' % step )
-            elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or step == 0:
+            elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or step <= 0:
                 req_accABS=req_acc*abs(tot)/totABS # overal relative required accuracy on ABS Xsec.
                 for job in jobs:
                     job['mint_mode']=-1
                     # Determine relative required accuracy on the ABS for this job
                     job['accuracy']=req_accABS*math.sqrt(totABS/job['resultABS'])
-                    # If already accurate enough, skip running
-                    if job['accuracy'] > job['errorABS']/job['resultABS'] and step != 0:
-                        continue
+                    # If already accurate enough, skip the job (except when doing the first
+                    # step for the iappl=2 run: we need to fill all the applgrid grids!)
+                    if (job['accuracy'] > job['errorABS']/job['resultABS'] and step != 0) \
+                       and not (step==-1 and self.run_card['iappl'] == 2):
+                            continue
                     # Update the number of PS points based on errorABS, ncall and accuracy
                     itmax_fl=job['niters_done']*math.pow(job['errorABS']/
                                                          (job['accuracy']*job['resultABS']),2)
