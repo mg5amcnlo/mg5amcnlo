@@ -3224,9 +3224,20 @@ Beware that this can be dangerous for local multicore runs.""")
             # Here the level keyword 'pythia' must not be changed to 'pythia8'.
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
         
-        pythia_main = pjoin(self.options['pythia8_path'],'share',
-                                                  'Pythia8','examples','main89')
-        
+        if not self.options['mg5amc_py8_interface_path'] or not \
+             os.path.exists(pjoin(self.options['mg5amc_py8_interface_path'],
+                                                       'MG5aMC_PY8_interface')):
+            raise self.InvalidCmd(
+"""The MG5aMC_PY8_interface tool cannot be found, so that MadEvent cannot steer Pythia8 shower.
+Please install this tool with the following MG5_aMC command:
+  MG5_aMC> install mg5amc_py8_interface_path""")
+        else:
+            pythia_main = pjoin(self.options['mg5amc_py8_interface_path'],
+                                                         'MG5aMC_PY8_interface')
+            warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+            if warnings:
+                logger.warning(warnings)
+
         # Again here 'pythia' is just a keyword for the simulation level.
         self.update_status('Running Pythia8', 'pythia')
         
@@ -3247,20 +3258,21 @@ Beware that this can be dangerous for local multicore runs.""")
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
-                PY8_Card.MadGraphSet('JetMatching:qCut',1.2*self.run_card['xqcut'])                
+                PY8_Card.MadGraphSet('JetMatching:qCut',1.3*self.run_card['xqcut'])                
             # Specific MLM settings
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
             PY8_Card.MadGraphSet('JetMatching:setMad',True)
-            PY8_Card.MadGraphSet('JetMatching:coneRadius',self.run_card['drjj'])
-            PY8_Card.MadGraphSet('JetMatching:etaJetMax',self.run_card['etaj'])
+            # It is not really meaningful to use the same cuts at the ME and shower level.
+            # PY8_Card.MadGraphSet('JetMatching:coneRadius',self.run_card['drjj'])
+            # PY8_Card.MadGraphSet('JetMatching:etaJetMax',self.run_card['etaj'])
             if not hasattr(self,'proc_characteristic'):
                 self.proc_characteristic = self.get_characteristics()
             nJetMax = self.proc_characteristic['max_n_matched_jets']
             if PY8_Card['JetMatching:nJetMax'.lower()] == -1 and\
                          'JetMatching:nJetMax'.lower() not in PY8_Card.user_set:
                 logger.info("No user-defined value for Pythia8 parameter "+
-            "'JetMatching:nJetMax'. Setting it automatically to to %d."%nJetMax)
+            "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
         elif int(self.run_card['ickkw'])==2:
             # Specific CKKW settings
@@ -3284,7 +3296,7 @@ Beware that this can be dangerous for local multicore runs.""")
             if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
                              'Merging:nJetMax'.lower() not in PY8_Card.user_set:
                 logger.info("No user-defined value for Pythia8 parameter "+
-                "'Merging:nJetMax'. Setting it automatically to to %d."%nJetMax)
+                "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
             PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
         ########################################################################
@@ -4756,7 +4768,7 @@ Beware that this can be dangerous for local multicore runs.""")
             question += """    1 / pythia  : Pythia\n"""
             question += """    2 / pgs     : Pythia + PGS\n"""
         else:
-            question += """"    1 / pythia8  : Pythia8\n"""
+            question += """"   1 / pythia8  : Pythia8\n"""
 
         if '3' in available_mode:
             question += """    3 / delphes  : Pythia%s + Delphes.\n"""%pythia_suffix
