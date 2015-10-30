@@ -568,8 +568,8 @@ c compute the derivative numerically (to compute the Jacobian)
                y_ij_fks_ev_der_max=y_ij_fks_ev
             endif
             if (errder.gt.0.1d0) then
-               write (*,*) 'ERROR is large in the computation of the'/
-     $              /' derivative',errder,der
+               write (*,*) 'WARNING: error is large in the computation'/
+     $              /' of the derivative',errder,der
             endif
 c compute the event kinematics using xmbe2inv as mass for the
 c grandmother of the Born (this will give granny_m2_red_local(0) mass to
@@ -1353,13 +1353,6 @@ c Changed in the context of granny stuff
          endif
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        softtest )then
-c$$$         if(xi_i_fks_fix.lt.xiimax)then
-c$$$            xi_i_fks=xi_i_fks_fix
-c$$$         else
-c$$$            xjac=-102
-c$$$            pass=.false.
-c$$$            return
-c$$$         endif
          if(xi_i_fks_fix.lt.1d0)then
             xi_i_fks=xi_i_fks_fix*xiimax
          else
@@ -1617,8 +1610,8 @@ c
       ximax=1-(xmhat+xmjhat)**2
       if(xiBm.lt.(xim-1.d-8).or.xim.lt.0.d0.or.xiBm.lt.0.d0.or.
      &     xiBm.gt.(ximax+1.d-8).or.ximax.gt.1.or.ximax.lt.0.d0)then
-         write(*,*)'Fatal error #4 in one_tree',xim,xiBm,ximax
-         xjac=-1d0
+         write(*,*)'WARNING #4 in one_tree',xim,xiBm,ximax
+         xjac=-104d0
          pass=.false.
          return
       endif
@@ -1724,9 +1717,11 @@ c
      &                (2-xi_i_fks*(1+y_ij_fks))
       x3len_j_fks=sqrtshat*x3len_j_fks_num/x3len_j_fks_den
       if(x3len_j_fks.lt.0.d0)then
-         write(*,*)'Fatal error #7 in one_tree',
+         write(*,*)'WARNING #7 in one_tree',
      &        x3len_j_fks_num,x3len_j_fks_den,xi_i_fks,y_ij_fks
-         stop
+         xjac=-107d0
+         pass=.false.
+         return
       endif
       x3len_fks_mother=sqrt( x3len_i_fks**2+x3len_j_fks**2+
      &                       2*x3len_i_fks*x3len_j_fks*y_ij_fks )
