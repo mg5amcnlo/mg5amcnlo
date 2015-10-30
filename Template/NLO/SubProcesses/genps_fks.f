@@ -1540,6 +1540,7 @@ c local
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
      $     ,sinth_mother_fks
       save xjactmp
+      common /virtgranny_boost/shybst,chybst,chybstmo
 c external
       double precision rho
       external rho
