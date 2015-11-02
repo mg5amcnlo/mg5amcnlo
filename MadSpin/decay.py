@@ -1749,7 +1749,7 @@ class decay_misc:
 
         return finalfound
    
-         
+        
     def reorder_branch(self,branch):
         """ branch is a string with the definition of a decay chain
                 If branch contains " A > B C , B > ... " 
@@ -1764,26 +1764,37 @@ class decay_misc:
             if list_branch[index]==' ' or list_branch[index]=='': del list_branch[index]
         #print list_branch
         for index, item in enumerate(list_branch):
-            if item =="," and list_branch[index+1]!="(": 
-                if list_branch[index-2]==list_branch[index+1]:
-                    # swap the two particles before the comma:
-                    temp=list_branch[index-2]
-                    list_branch[index-2]=list_branch[index-1]
-                    list_branch[index-1]=temp
-            if item =="," and list_branch[index+1]=="(":
-                if list_branch[index-2]==list_branch[index+2]:
-                    # swap the two particles before the comma:
-                    temp=list_branch[index-2]
-                    list_branch[index-2]=list_branch[index-1]
-                    list_branch[index-1]=temp
 
+            if item[-1] =="," and list_branch[index+1]!="(":
+                # search pos of B and C 
+                counter=1
+                while 1:
+                  if list_branch[index-counter].find("=")<0:
+                     break
+                  counter+=1
+                if list_branch[index-counter-1]==list_branch[index+1]:
+                    # swap the two particles before the comma:
+                    temp=list_branch[index-counter-1]
+                    list_branch[index-counter-1]=list_branch[index-counter]
+                    list_branch[index-counter]=temp
+            if item[-1] =="," and list_branch[index+1]=="(":
+                # search pos of B and C 
+                counter=1
+                while 1:
+                  if list_branch[index-counter].find("=")<0:
+                     break
+                  counter+=1
+                if list_branch[index-counter -1]==list_branch[index+2]:
+                    # swap the two particles before the comma:
+                    temp=list_branch[index-counter-1]
+                    list_branch[index-counter-1]=list_branch[index-counter]
+                    list_branch[index-counter]=temp
 
         new_branch=""
         for item in list_branch:
             new_branch+=item+" "
 
         return new_branch, list_branch[0]
-
 
     def set_light_parton_massless(self,topo):
         """ masses of light partons are set to zero for 
