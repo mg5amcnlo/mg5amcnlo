@@ -1561,7 +1561,7 @@ class RestrictModel(model_reader.ModelReader):
         # Simplify conditional statements
         logger.debug('Simplifying conditional expressions')
         modified_params, modified_couplings = \
-           self.detect_conditional_statements_simplifications(model_definitions)
+            self.detect_conditional_statements_simplifications(model_definitions)
         
         # Apply simplifications
         self.apply_conditional_simplifications(modified_params, modified_couplings)
@@ -1879,6 +1879,12 @@ class RestrictModel(model_reader.ModelReader):
                     if coupling in zero_couplings:
                         modify=True
                         del vertex['couplings'][key]
+                    elif coupling.startswith('-'):
+                        coupling = coupling[1:]
+                        if coupling in zero_couplings:
+                            modify=True
+                            del vertex['couplings'][key]                      
+                        
                 if modify:
                     mod_vertex.append(vertex)
             
@@ -1905,7 +1911,7 @@ class RestrictModel(model_reader.ModelReader):
                 self['interactions'].remove(vertex)
             else:
                 logger_mod.debug('modify interactions: %s at order: %s' % \
-                                (' '.join(part_name),', '.join(orders)))       
+                                (' '.join(part_name),', '.join(orders)))
 
         # print useful log and clean the empty counterterm values
         for pct in mod_particle_ct:
@@ -1927,7 +1933,7 @@ class RestrictModel(model_reader.ModelReader):
 
         return
                 
-    def remove_couplings(self, couplings):                
+    def remove_couplings(self, couplings):               
         #clean the coupling list:
         for name, data in self['couplings'].items():
             for coupling in data[:]:
