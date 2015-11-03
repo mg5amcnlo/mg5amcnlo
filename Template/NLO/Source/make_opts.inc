@@ -73,7 +73,7 @@ ifdef lhapdf
   reweight_xsec_events_pdf_dummy=
 else
   alfas_functions=alfas_functions
-  lhapdf=
+  llhapdf=
   reweight_xsec_events_pdf_dummy=reweight_xsec_events_pdf_dummy.o
 endif
 

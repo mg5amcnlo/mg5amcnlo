@@ -75,5 +75,5 @@ ifdef lhapdf
   llhapdf=-lLHAPDF -lstdc++
 else
   alfas_functions=alfas_functions
-  lhapdf=
+  llhapdf=
 endif
