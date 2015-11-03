@@ -35,15 +35,22 @@ C
       include 'pdf.inc'
 C      
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
-     &     ,i_replace,ii
-      double precision xlast(20),xmulast(20),pdflast(-7:7,20)
-      save ihlast,xlast,xmulast,pdflast,imemlast
+     &     ,i_replace,ii,ipartlast(20)
+      double precision xlast(20),xmulast(20),pdflast(20)
+      save ihlast,xlast,xmulast,pdflast,imemlast,ipartlast
       data ihlast/20*-99/
+      data ipartlast/20*-99/
       data xlast/20*-99d9/
       data xmulast/20*-99d9/
-      data pdflast/300*-99d9/
+      data pdflast/20*-99d9/
       data imemlast/20*-99/
       data i_replace/20/
+
+      if (ih.eq.0) then
+c     Lepton collisions (no PDF). 
+         pdg2pdf=1d0
+         return
+      endif
 
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
@@ -85,47 +92,48 @@ c     Determine the iset used in lhapdf
 c     Determine the member of the set (function of lhapdf)
       call getnmem(iset,imem)
 
-c      ireuse = 0
-c      ii=i_replace
-c      do i=1,20
-cc     Check if result can be reused since any of last twenty
-cc     calls. Start checking with the last call and move back in time
-c         if (ih.eq.ihlast(ii)) then
-c            if (x.eq.xlast(ii)) then
-c               if (xmu.eq.xmulast(ii)) then
-c                  if (imem.eq.imemlast(ii)) then
-c                     ireuse = ii
-c                     exit
-c                  endif
-c               endif
-c            endif
-c         endif
-c         ii=ii-1
-c         if (ii.eq.0) ii=ii+20
-c      enddo
+      ireuse = 0
+      ii=i_replace
+      do i=1,20
+c     Check if result can be reused since any of last twenty
+c     calls. Start checking with the last call and move back in time
+         if (ih.eq.ihlast(ii)) then
+            if (ipart.eq.ipartlast(ii)) then
+               if (x.eq.xlast(ii)) then
+                  if (xmu.eq.xmulast(ii)) then
+                     if (imem.eq.imemlast(ii)) then
+                        ireuse = ii
+                        exit
+                     endif
+                  endif
+               endif
+            endif
+         endif
+         ii=ii-1
+         if (ii.eq.0) ii=ii+20
+      enddo
 
 c     Reuse previous result, if possible
-c      if (ireuse.gt.0) then
-c         if (pdflast(iporg,ireuse).ne.-99d9) then
-c            pdg2pdf=pdflast(iporg,ireuse)
-c            return 
-c         endif
-c      endif
+      if (ireuse.gt.0) then
+         if (pdflast(ireuse).ne.-99d9) then
+            pdg2pdf=pdflast(ireuse)
+            return 
+         endif
+      endif
 
 c Calculated a new value: replace the value computed longest ago
-c      i_replace=mod(i_replace,20)+1
+      i_replace=mod(i_replace,20)+1
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
-c      call pftopdglha(ih,x,xmu,pdflast(-7,i_replace))
-c      xlast(i_replace)=x
-c      xmulast(i_replace)=xmu
-c      ihlast(i_replace)=ih
-c      imemlast(i_replace)=imem
-c
-c      pdg2pdf=pdflast(ipart,i_replace)
       call evolvepart(ipart,x,xmu,pdg2pdf)
       pdg2pdf=pdg2pdf/x
+      pdflast(ireuse)=pdg2pdf
+      xlast(i_replace)=x
+      xmulast(i_replace)=xmu
+      ihlast(i_replace)=ih
+      imemlast(i_replace)=imem
+c
       return
       end
 
