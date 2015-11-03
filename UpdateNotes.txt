@@ -1,4 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
+2.3.4(XX/XX/XX)
+        MZ: Faster interface for LHAPDF6
 
 
 2.3.3(25/10/15)
