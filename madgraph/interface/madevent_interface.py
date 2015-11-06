@@ -3178,6 +3178,13 @@ Beware that this can be dangerous for local multicore runs.""")
             pass        
         
         ## LAUNCHING PYTHIA
+        # check that LHAPATH is define.
+        if not re.search(r'^\s*LHAPATH=%s/PDFsets'  % pythia_src,
+                          open(pjoin(self.me_dir,'Cards','pythia_card.dat')).read(), 
+                          re.M):
+            f = open(pjoin(self.me_dir,'Cards','pythia_card.dat'),'a')
+            f.write('\n     LHAPATH=%s/PDFsets' % pythia_src)
+            f.close()
         tag = self.run_tag
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
         self.cluster.launch_and_wait('../bin/internal/run_pythia', 

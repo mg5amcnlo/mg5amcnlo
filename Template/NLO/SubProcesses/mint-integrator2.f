@@ -1091,7 +1091,10 @@ c Recompute the number of calls. Uses the algorithm from VEGAS
       implicit none
       integer ncalls0,ndim,ncalls,i
       integer dim,ng,npg,k
-      common /even_ran/dim,ng,npg,k
+      logical firsttime
+      common /even_ran/dim,ng,npg,k,firsttime
+c Make sure that hypercubes are newly initialized
+      firsttime=.true.
 c Number of dimension of the integral
       dim=ndim
 c Number of elements in which we can split one dimension
@@ -1110,10 +1113,9 @@ c Number of PS points for this iteration
       implicit none
       double precision ran2,dng
       external ran2
-      logical firsttime
-      data firsttime/.true./
       integer dim,ng,npg,k
-      common /even_ran/dim,ng,npg,k
+      logical firsttime
+      common /even_ran/dim,ng,npg,k,firsttime
       integer maxdim
       parameter (maxdim=100)
       integer iii(maxdim),kkk(maxdim),i,iret
