@@ -29,6 +29,8 @@
 #! If None: try to find g77 or gfortran on the system
 #!
 # fortran_compiler = None
+# f2py_compiler = None 
+
 
 #! Prefered C++ Compiler
 #! If None: try to find g++ or clang on the system
@@ -82,6 +84,9 @@
 #! Allow/Forbid the automatic opening of the web browser  (on the status page)
 #!  when launching MadEvent [True/False]
 # automatic_html_opening = True
+#! allow notification of finished job in the notification center (Mac Only)
+# notification_center = True
+
 
 #! Default Running mode 
 #!  0: single machine/ 1: cluster / 2: multicore

@@ -37,8 +37,8 @@ else
 fi
 
 # Check for LHAPDF
-c=`awk '/^[^#].*=.*pdlabel/{print $1}' Cards/run_card.dat`
-if [[ $c == "'lhapdf'" ]]; then
+c=`awk '/^[^#].*=[^#!]*pdlabel/{print $1}' Cards/run_card.dat`
+if [[ $c == "'lhapdf'" || $c == "lhapdf" ]]; then
     echo Using LHAPDF interface!
     export lhapdf=true
 else

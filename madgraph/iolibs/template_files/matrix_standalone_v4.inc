@@ -7,6 +7,10 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
+CF2PY INTENT(OUT) :: ANS                                                                                                                                                                                     
+CF2PY INTENT(IN) :: HEL                                                                                                                                                                                    
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)  
+
 C  
 C ARGUMENTS 
 C  
@@ -52,12 +56,14 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS
+CF2PY INTENT(OUT) :: ANS
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL)
 C  
 C LOCAL VARIABLES 
 C  
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
       REAL*8 T
-      REAL*8 MATRIX
+      REAL*8 %(proc_prefix)sMATRIX
       INTEGER IHEL,IDEN, I
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
@@ -76,15 +82,15 @@ C
 C ----------
 C BEGIN CODE
 C ----------
-      NTRY=NTRY+1
+      IF(USERHEL.EQ.-1) NTRY=NTRY+1
       DO IHEL=1,NEXTERNAL
          JC(IHEL) = +1
       ENDDO
       ANS = 0D0
           DO IHEL=1,NCOMB
 	         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN		  
-                IF (GOODHEL(IHEL) .OR. NTRY .LT. 20) THEN
-                    T=MATRIX(P ,NHEL(1,IHEL),JC(1))            
+                IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
+                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1))            
                     ANS=ANS+T
                     IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
                         GOODHEL(IHEL)=.TRUE.
@@ -99,7 +105,7 @@ C ----------
       END
        
        
-      REAL*8 FUNCTION MATRIX(P,NHEL,IC)
+      REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC)
 C  
 %(info_lines)s
 C
@@ -134,7 +140,7 @@ C
       COMPLEX*16 ZTEMP
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS), JAMP(NCOLOR)
-      COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C  
@@ -152,13 +158,56 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      MATRIX = 0.D0 
+      %(proc_prefix)sMATRIX = 0.D0 
       DO I = 1, NCOLOR
           ZTEMP = (0.D0,0.D0)
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(J,I)*JAMP(J)
           ENDDO
-          MATRIX = MATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
+          %(proc_prefix)sMATRIX = %(proc_prefix)sMATRIX+ZTEMP*DCONJG(JAMP(I))/DENOM(I)   
       ENDDO
 %(amp2_lines)s
       END
+
+      SUBROUTINE %(proc_prefix)sGET_ME(P, ALPHAS, NHEL ,ANS)
+      IMPLICIT NONE   
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER NHEL
+      DOUBLE PRECISION ALPHAS 
+      real*8 pi     
+CF2PY INTENT(OUT) :: ANS  
+CF2PY INTENT(IN) :: NHEL   
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
+CF2PY INTENT(IN) :: ALPHAS
+C     ROUTINE FOR F2PY to read the benchmark point.    
+C     the include file with the values of the parameters and masses 
+      include "coupl.inc"
+      
+      pi = 3.141592653589793d0
+      G = 2* DSQRT(ALPHAS*pi)
+      call UPDATE_AS_PARAM()
+      if (NHEL.ne.0) then
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
+      else
+        CALL %(proc_prefix)sSMATRIX(P, ANS)
+      endif
+      return 
+      end
+
+      SUBROUTINE %(proc_prefix)sINITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.    
+      IMPLICIT NONE   
+      CHARACTER*180 PATH
+CF2PY INTENT(IN) :: PATH 
+      call setpara(PATH)  !first call to setup the paramaters    
+      return 
+      end      
+      

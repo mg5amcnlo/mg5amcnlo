@@ -26,7 +26,8 @@ import logging
 
 import madgraph.core.base_objects as base_objects
 import madgraph.various.misc as misc
-from madgraph import InvalidCmd
+from madgraph import InvalidCmd, MadGraph5Error
+
 logger = logging.getLogger('madgraph.diagram_generation')
 
 
@@ -1588,7 +1589,7 @@ class MultiProcess(base_objects.PhysicsObject):
                         "%s is not a valid ProcessDefinitionList object" % str(value)
 
         if name == 'amplitudes':
-            if not isinstance(value, diagram_generation.AmplitudeList):
+            if not isinstance(value, AmplitudeList):
                 raise self.PhysicsObjectError, \
                         "%s is not a valid AmplitudeList object" % str(value)
 

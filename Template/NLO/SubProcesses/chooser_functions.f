@@ -331,8 +331,8 @@ c born_leshouche.inc file.
                icolup_d(1,1,nexternal,j)=-99999 ! should not be used
                icolup_d(1,2,nexternal,j)=-99999
             enddo
+            return
          endif
-         return
       endif
 
       open(unit=78, file='leshouche_info.dat', status='old')

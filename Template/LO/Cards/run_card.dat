@@ -91,9 +91,9 @@
 #**********************************
   %(bwcutoff)s  = bwcutoff      ! (M+/-bwcutoff*Gamma)
 #**********************************************************
-# Apply pt/E/eta/dr/mij cuts on decay products or not
+# Apply pt/E/eta/dr/mij/kt_durham cuts on decay products or not
 # (note that etmiss/ptll/ptheavy/ht/sorted cuts always apply)
-#**********************************************************
+#*************************************************************
    %(cut_decays)s  = cut_decays    ! Cut decay products 
 #*************************************************************
 # Number of helicities to sum per event (0 = all helicities)

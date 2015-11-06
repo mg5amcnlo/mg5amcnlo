@@ -150,6 +150,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         perturbation = []
         for procdef in self['process_definitions']:
             soft_particles = []
+            # do not warn for decay processes
+            if [ i['state'] for i in procdef['legs']].count(False) == 1:
+                continue
             for pert in procdef['perturbation_couplings']:
                 if pert not in perturbation:
                     perturbation.append(pert)
@@ -710,11 +713,20 @@ class FKSProcess(object):
         leglist = self.get_leglist()
         if range(len(leglist)) != [l['number']-1 for l in leglist]:
             raise fks_common.FKSProcessError('Disordered numbers of leglist')
+
+        if [ i['state'] for i in leglist].count(False) == 1:
+            decay_process=True
+        else:
+            decay_process=False
+
         for i in leglist:
             i_i = i['number'] - 1
             self.reals.append([])
             for pert_order in pert_orders:
-                splittings = fks_common.find_splittings( \
+                if decay_process and not i['state']:
+                    splittings=[]
+                else:
+                    splittings = fks_common.find_splittings( \
                         i, model, {}, pert_order)
                 for split in splittings:
                     # find other 'mother' particles which can end up in the same splitting

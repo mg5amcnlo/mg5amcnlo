@@ -15,6 +15,7 @@
 
 """A set of functions performing routine administrative I/O tasks."""
 
+import contextlib
 import logging
 import os
 import re
@@ -32,15 +33,18 @@ import gzip as ziplib
 try:
     # Use in MadGraph
     import madgraph
-    from madgraph import MadGraph5Error, InvalidCmd
-    import madgraph.iolibs.files as files
 except Exception, error:
-    if __debug__:
-        print error
     # Use in MadEvent
-    import internal as madgraph
+    import internal
     from internal import MadGraph5Error, InvalidCmd
     import internal.files as files
+    MADEVENT = True    
+else:
+    from madgraph import MadGraph5Error, InvalidCmd
+    import madgraph.iolibs.files as files
+    MADEVENT = False
+
+
     
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
@@ -107,14 +111,19 @@ def get_pkg_info(info_str=None):
     string can be passed to be read instead of the file content.
     """
 
-    if info_str is None:
+    if info_str:
+        info_dict = parse_info_str(StringIO.StringIO(info_str))
+
+    elif MADEVENT:
+        info_dict ={}
+        info_dict['version'] = open(pjoin(internal.__path__[0],'..','..','MGMEVersion.txt')).read().strip()
+        info_dict['date'] = '20xx-xx-xx'                        
+    else:
         info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
-    else:
-        info_dict = parse_info_str(StringIO.StringIO(info_str))
-
+        
     return info_dict
 
 #===============================================================================
@@ -169,6 +178,68 @@ def which(program):
                 return exe_file
     return None
 
+def has_f2py():
+    has_f2py = False
+    if which('f2py'):
+        has_f2py = True
+    elif sys.version_info[1] == 6:
+        if which('f2py-2.6'):
+            has_f2py = True
+        elif which('f2py2.6'):
+            has_f2py = True                 
+    else:
+        if which('f2py-2.7'):
+            has_f2py = True 
+        elif which('f2py2.7'):
+            has_f2py = True  
+    return has_f2py       
+        
+#===============================================================================
+#  Activate dependencies if possible. Mainly for tests
+#===============================================================================
+
+def deactivate_dependence(dependency, cmd=None, log = None):
+    """ Make sure to turn off some dependency of MG5aMC. """
+    
+    def tell(msg):
+        if log == 'stdout':
+            print msg
+        elif callable(log):
+            log(msg)
+    
+
+    if dependency in ['pjfry','golem']:
+        if cmd.options[dependency] not in ['None',None,'']:
+            tell("Deactivating MG5_aMC dependency '%s'"%dependency)
+            cmd.options[dependency] = 'None'
+
+def activate_dependence(dependency, cmd=None, log = None):
+    """ Checks whether the specfieid MG dependency can be activated if it was
+    not turned off in MG5 options."""
+    
+    def tell(msg):
+        if log == 'stdout':
+            print msg
+        elif callable(log):
+            log(msg)
+
+    if cmd is None:
+        cmd = MGCmd.MasterCmd()
+
+    if dependency=='pjfry':
+        if cmd.options['pjfry'] in ['None',None,''] or \
+         (cmd.options['pjfry'] == 'auto' and which_lib('libpjfry.a') is None) or\
+          which_lib(pjoin(cmd.options['pjfry'],'libpjfry.a')) is None:
+            tell("Installing PJFry...")
+            cmd.do_install('PJFry')
+
+    if dependency=='golem':
+        if cmd.options['golem'] in ['None',None,''] or\
+         (cmd.options['golem'] == 'auto' and which_lib('libgolem.a') is None) or\
+         which_lib(pjoin(cmd.options['golem'],'libgolem.a')) is None:
+            tell("Installing Golem95...")
+            cmd.do_install('Golem95')
+    
 #===============================================================================
 # find a library
 #===============================================================================
@@ -246,6 +317,33 @@ def multiple_try(nb_try=5, sleep=20):
             raise error.__class__, '[Fail %i times] \n %s ' % (i+1, error)
         return deco_f_retry
     return deco_retry
+
+#===============================================================================
+# helper for scan. providing a nice formatted string for the scan name
+#===============================================================================
+def get_scan_name(first, last):
+    """return a name of the type xxxx[A-B]yyy
+        where xxx and yyy are the common part between the two names.
+    """
+    
+    # find the common string at the beginning     
+    base = [first[i] for i in range(len(first)) if first[:i+1] == last[:i+1]]
+    # remove digit even if in common
+    while base[-1].isdigit():
+        base = base[:-1] 
+    # find the common string at the end 
+    end = [first[-(i+1)] for i in range(len(first)) if first[-(i+1):] == last[-(i+1):]]
+    # remove digit even if in common    
+    while end and end[-1].isdigit():
+        end = end[:-1] 
+    end.reverse()
+    #convert to string
+    base, end = ''.join(base), ''.join(end)
+    if end:
+        name = "%s[%s-%s]%s" % (base, first[len(base):-len(end)], last[len(base):-len(end)],end)
+    else:
+        name = "%s[%s-%s]%s" % (base, first[len(base):], last[len(base):],end)
+    return name
 
 #===============================================================================
 # Compiler which returns smart output error in case of trouble
@@ -447,6 +545,49 @@ class MuteLogger(object):
             #for i, h in enumerate(my_logger.handlers):
             #    h.setLevel(cls.logger_saved_info[logname][2][i])
 
+nb_open =0
+@contextlib.contextmanager
+def stdchannel_redirected(stdchannel, dest_filename):
+    """                                                                                                                                                                                                     
+    A context manager to temporarily redirect stdout or stderr                                                                                                                                              
+                                                                                                                                                                                                            
+    e.g.:                                                                                                                                                                                                   
+                                                                                                                                                                                                            
+                                                                                                                                                                                                            
+    with stdchannel_redirected(sys.stderr, os.devnull):                                                                                                                                                     
+        if compiler.has_function('clock_gettime', libraries=['rt']):                                                                                                                                        
+            libraries.append('rt')                                                                                                                                                                          
+    """
+
+    try:
+        oldstdchannel = os.dup(stdchannel.fileno())
+        dest_file = open(dest_filename, 'w')
+        os.dup2(dest_file.fileno(), stdchannel.fileno())
+        yield
+    finally:
+        if oldstdchannel is not None:
+            os.dup2(oldstdchannel, stdchannel.fileno())
+            os.close(oldstdchannel)
+        if dest_file is not None:
+            dest_file.close()
+        
+def get_open_fds():
+    '''
+    return the number of open file descriptors for current process
+
+    .. warning: will only work on UNIX-like os-es.
+    '''
+    import subprocess
+    import os
+
+    pid = os.getpid()
+    procs = subprocess.check_output( 
+        [ "lsof", '-w', '-Ff', "-p", str( pid ) ] )
+    nprocs = filter( 
+            lambda s: s and s[ 0 ] == 'f' and s[1: ].isdigit(),
+            procs.split( '\n' ) )
+        
+    return nprocs
 
 def detect_current_compiler(path, compiler_type='fortran'):
     """find the current compiler for the current directory"""
@@ -725,6 +866,25 @@ class TMP_directory(object):
         
     def __enter__(self):
         return self.path
+    
+class TMP_variable(object):
+    """create a temporary directory and ensure this one to be cleaned.
+    """
+
+    def __init__(self, cls, attribute, value):
+        
+        self.old_value = getattr(cls, attribute)
+        self.cls = cls
+        self.attribute = attribute
+        setattr(self.cls, self.attribute, value)
+    
+    def __exit__(self, ctype, value, traceback ):
+
+        setattr(self.cls, self.attribute, self.old_value)
+        
+    def __enter__(self):
+        return self.old_value 
+    
 #
 # GUNZIP/GZIP
 #
@@ -1035,6 +1195,29 @@ class chdir:
     def __exit__(self, etype, value, traceback):
         os.chdir(self.savedPath)
 
+################################################################################
+# Timeout FUNCTION
+################################################################################
+
+def timeout(func, args=(), kwargs={}, timeout_duration=1, default=None):
+    '''This function will spwan a thread and run the given function using the args, kwargs and 
+    return the given default value if the timeout_duration is exceeded 
+    ''' 
+    import threading
+    class InterruptableThread(threading.Thread):
+        def __init__(self):
+            threading.Thread.__init__(self)
+            self.result = default
+        def run(self):
+            try:
+                self.result = func(*args, **kwargs)
+            except Exception,error:
+                print error
+                self.result = default
+    it = InterruptableThread()
+    it.start()
+    it.join(timeout_duration)
+    return it.result
 
 
 ################################################################################
@@ -1176,3 +1359,22 @@ class ProcessTimer:
 #      pass
 
 
+try:
+    import Foundation
+    import objc
+    NSUserNotification = objc.lookUpClass('NSUserNotification')
+    NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+
+    def apple_notify(subtitle, info_text, userInfo={}):
+        try:
+            notification = NSUserNotification.alloc().init()
+            notification.setTitle_('MadGraph5_aMC@NLO')
+            notification.setSubtitle_(subtitle)
+            notification.setInformativeText_(info_text)
+            notification.setUserInfo_(userInfo)
+            NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+        except:
+            pass
+except:
+    def apple_notify(subtitle, info_text, userInfo={}):
+        return

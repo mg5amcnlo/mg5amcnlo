@@ -117,7 +117,7 @@ C ----------
 	  ENDDO
       DO IHEL=1,NCOMB
 	     IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
-           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2) THEN
+           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN
               CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1), T)
 	 	      BUFF=0D0
 			  DO I=1,NSQAMPSO			
@@ -214,7 +214,7 @@ C
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
 	  COMPLEX*16 JAMP(NCOLOR,NAMPSO)
-      COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0d0, 0d0), (1d0, 0d0)/
 C
@@ -249,3 +249,45 @@ C ----------
 	  ENDDO
 
       END
+
+      SUBROUTINE %(proc_prefix)sGET_ME(P, ALPHAS, NHEL ,ANS)
+      IMPLICIT NONE   
+C
+C CONSTANT
+C
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+C  
+C ARGUMENTS 
+C  
+      REAL*8 P(0:3,NEXTERNAL),ANS
+      INTEGER NHEL
+      DOUBLE PRECISION ALPHAS 
+      real*8 pi     
+CF2PY INTENT(OUT) :: ANS  
+CF2PY INTENT(IN) :: NHEL   
+CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
+CF2PY INTENT(IN) :: ALPHAS
+C     ROUTINE FOR F2PY to read the benchmark point.    
+C     the include file with the values of the parameters and masses 
+      include "coupl.inc"
+      
+      pi = 3.141592653589793d0
+      G = 2* DSQRT(ALPHAS*pi)
+      call UPDATE_AS_PARAM()
+      if (NHEL.ne.0) then
+        CALL %(proc_prefix)sSMATRIXHEL(P, NHEL, ANS)
+      else
+        CALL %(proc_prefix)sSMATRIX(P, ANS)
+      endif
+      return 
+      end
+
+      SUBROUTINE %(proc_prefix)sINITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.    
+      IMPLICIT NONE   
+      CHARACTER*180 PATH
+CF2PY INTENT(IN) :: PATH 
+      call setpara(PATH)  !first call to setup the paramaters    
+      return 
+      end      

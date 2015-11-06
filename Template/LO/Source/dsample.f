@@ -1608,7 +1608,7 @@ c-----
       if (iteration .eq. cur_it) then
 c        Add the current point to the DiscreteSamplerGrid
          call add_entry_to_discrete_dimensions(wgt)
-         if (kn.eq.0) then
+         if (kn.eq.0.and.(iteration.eq.1.or.use_cut.eq.-2)) then
             ! ensure that all cumulative variable are at zero (usefull for reset)
             twgt1 = 0d0         !
             iavg = 0            !Vars for averging to increase err estimate
@@ -2156,7 +2156,7 @@ c                  open(unit=22,file=result_file,status='old',
 c     $                 access='append',err=129)
 c                  write(22, 80) real(tmean), real(tsigma), real(chi2)
 c 129              close(22)
-                  tsigma = tsigma*sqrt(chi2) !This gives the 68% confidence cross section
+                  tsigma = tsigma*sqrt(max(0d0,chi2)) !This gives the 68% confidence cross section
                   cur_it = itm+20
                   return
                endif

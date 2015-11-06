@@ -155,7 +155,22 @@ class gensym(object):
                 P_zero_result.append(subdir)
                 continue            
             
-            job_list[Pdir] = stdout.split()
+            jobs = stdout.split()
+            job_list[Pdir] = jobs
+            try:
+                # check that all input are valid
+                [float(s) for s in jobs]
+            except Exception:
+                logger.debug("unformated string found in gensym. Please check:\n %s" % stdout)
+                job_list[Pdir] = []
+                for s in jobs:
+                    try:
+                        float(s)
+                    except:
+                        continue
+                    else:
+                        job_list[Pdir].append(s)        
+                
             self.cmd.compile(['madevent'], cwd=Pdir)
             self.submit_to_cluster(job_list)
         return job_list, P_zero_result

@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import string
 import copy
+import platform
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -383,8 +384,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             text=text+str(i+1)+' '+str(len(e))
             for t in e:
                 text=text+'   '
-                for p in t:
-                    text=text+' '+str(p)
+                try:
+                    for p in t:
+                        text=text+' '+str(p)
+                except TypeError:
+                        text=text+' '+str(t)
             text=text+'\n'
         
         ff = open(file_pos, 'w')
@@ -564,6 +568,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_amp_split_orders_file(
                             writers.FortranWriter(filename),
                             amp_split_orders)
+        self.proc_characteristic['ninitial'] = ninitial
+        self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
     
         filename = 'pmass.inc'
         try:
@@ -727,7 +733,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         pages,proc_card_mg5.dat and madevent.tar.gz."""
         
         self.proc_characteristic['grouped_matrix'] = False
-        
+        self.create_proc_charac()
+
         self.create_run_card(matrix_elements, history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
@@ -755,7 +762,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
         
         # Check for compiler
-        fcompiler_chosen = self.set_fortran_compiler(compiler_dict['fortran'])
+        fcompiler_chosen = self.set_fortran_compiler(compiler_dict)
         ccompiler_chosen = self.set_cpp_compiler(compiler_dict['cpp'])
 
         old_pos = os.getcwd()
@@ -1765,11 +1772,23 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         make_opts_content=open(pjoin(export_path,'Source','make_opts')).read()
         make_opts=open(pjoin(export_path,'Source','make_opts'),'w')
         if OLP=='GoSam':
-            # apparently -rpath=../$(LIBDIR) is not necessary.
-            #make_opts_content=make_opts_content.replace('libOLP=',
-            #                       'libOLP=-Wl,-rpath=../$(LIBDIR),-lgolem_olp')
-            make_opts_content=make_opts_content.replace('libOLP=',
+            if platform.system().lower()=='darwin':
+                # On mac the -rpath is not supported and the path of the dynamic
+                # library is automatically wired in the executable
+                make_opts_content=make_opts_content.replace('libOLP=',
                                                           'libOLP=-Wl,-lgolem_olp')
+            else:
+                # On other platforms the option , -rpath= path to libgolem.so is necessary
+                # Using a relative path is not ideal because the file libgolem.so is not
+                # copied on the worker nodes.
+#                make_opts_content=make_opts_content.replace('libOLP=',
+#                                      'libOLP=-Wl,-rpath=../$(LIBDIR) -lgolem_olp')
+                # Using the absolute path is working in the case where the disk of the 
+                # front end machine is mounted on all worker nodes as well.
+                make_opts_content=make_opts_content.replace('libOLP=', 
+                 'libOLP=-Wl,-rpath='+str(pjoin(export_path,'lib'))+' -lgolem_olp')
+            
+            
         make_opts.write(make_opts_content)
         make_opts.close()
 
@@ -2521,7 +2540,8 @@ Parameters              %(params)s\n\
             charges = [l.get('charge') for l in bornproc.get('legs')] + [0.]
 
             fks_i = len(colors)
-            # fist look for a colored legs
+            # fist look for a colored legs (set j to 1 otherwise)
+            fks_j=1
             for cpos, col in enumerate(colors[:-1]):
                 if col != 1:
                     fks_j = cpos+1

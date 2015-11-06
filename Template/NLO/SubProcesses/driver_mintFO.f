@@ -18,7 +18,6 @@ C
 C     LOCAL
 C
       integer i,j,k,l,l1,l2,ndim
-      integer npoints
       character*130 buf
 c
 c     Global
@@ -177,7 +176,7 @@ c
       else
         flat_grid=.false.
       endif
-      ndim = 3*(nexternal-2)-4
+      ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
@@ -227,23 +226,7 @@ c to restore grids:
                   read (12,*) (ave_virt(j,i,k),i=1,ndim)
                enddo
             enddo
-            if (ncall.gt.0 .and. accuracy.ne.0d0) then
-               read (12,*) ans(1),unc(1),ncall,itmax
-c Update the number of PS points based on unc(1), ncall and accuracy
-               itmax_fl=itmax*(unc(1)/accuracy)**2
-               if (itmax_fl.le.4d0) then
-                  itmax=max(nint(itmax_fl),2)
-               elseif (itmax_fl.gt.4d0 .and. itmax_fl.le.16d0) then
-                  ncall=nint(ncall*itmax_fl/4d0)
-                  itmax=4
-               else
-                  itmax=nint(sqrt(itmax_fl))
-                  ncall=nint(ncall*itmax_fl/nint(sqrt(itmax_fl)))
-               endif
-               accuracy=accuracy/ans(1) ! relative accuracy on the ABS X-section
-            else
-               read (12,*) ans(1),unc(1),dummy,dummy
-            endif
+            read (12,*) ans(1),unc(1),dummy,dummy
             read (12,*) virtual_fraction,average_virtual(0)
             close (12)
             write (*,*) "Update iterations and points to",itmax,ncall
@@ -268,10 +251,6 @@ C if restoring grids corresponding to sigma=0, just terminate the run
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2)
          call topout
-         open(unit=58,file='res_0',status='unknown')
-         write(58,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
-         write(58,*)'Final result:',ans(2),' +/-',unc(2)
-         close(58)
          write(*,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
          write(*,*)'Final result:',ans(2),' +/-',unc(2)
          write(*,*)'chi**2 per D.o.F.:',chi2(1)
@@ -353,6 +332,11 @@ c to save grids:
       write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
+
+      open (unit=12, file='res.dat',status='unknown')
+      write (12,*)ans(1),unc(1),ans(2),unc(2),itmax,ncall,tTot
+      close(12)
+
 
       if(i_momcmp_count.ne.0)then
         write(*,*)'     '
@@ -563,7 +547,7 @@ c Finalize PS point
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.false.)
       return
       end
       
@@ -716,8 +700,6 @@ c
       character * 70 idstring
       logical savegrid
 
-      character * 80 runstr
-      common/runstr/runstr
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
       logical unwgt
@@ -728,82 +710,98 @@ c
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
 
-
+      logical done
+      character*100 buffer
 c-----
 c  Begin Code
 c-----
       mint=.true.
       unwgt=.false.
-      write(*,'(a)') 'Enter number of events and iterations: '
-      read(*,*) ncall,itmax
-      write(*,*) 'Number of events and iterations ',ncall,itmax
-      write(*,'(a)') 'Enter desired accuracy: '
-      read(*,*) accuracy
-      write(*,*) 'Desired absolute accuracy: ',accuracy
-
-      write(*,'(a)') 'Enter 0 for fixed, 2 for adjustable grid: '
-      read(*,*) use_cut
-      if (use_cut .lt. 0 .or. use_cut .gt. 2) then
-         write(*,*) 'Bad choice, using 2',use_cut
-         use_cut = 2
-      endif
-
-      write(*,10) 'Suppress amplitude (0 no, 1 yes)? '
-      read(*,*) i
-      if (i .eq. 1) then
-         multi_channel = .true.
-         write(*,*) 'Using suppressed amplitude.'
-      else
-         multi_channel = .false.
-         write(*,*) 'Using full amplitude.'
-      endif
-
-      write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
-      read(*,*) i
-      if (i .eq. 0) then
-         mc_hel = 0
-         write(*,*) 'Explicitly summing over helicities for virt'
-      else
-         mc_hel= i
-         write(*,*) 'Summing over',i,' helicities/event for virt'
-      endif
-      isum_hel=0
-
-      write(*,10) 'Enter Configuration Number: '
-      read(*,*) dconfig
-      iconfig = int(dconfig)
-      do i=1,mapconfig(0)
-         if (iconfig.eq.mapconfig(i)) then
-            iconfig=i
-            exit
+      open (unit=83,file='input_app.txt',status='old')
+      done=.false.
+      do while (.not. done)
+         read(83,'(a)',err=222,end=222) buffer
+         if (buffer(1:7).eq.'NPOINTS') then
+            buffer=buffer(10:100)
+            read(buffer,*) ncall
+            write (*,*) 'Number of phase-space points per iteration:',ncall
+         elseif(buffer(1:11).eq.'NITERATIONS') then
+            read(buffer(14:),*) itmax
+            write (*,*) 'Maximum number of iterations is:',itmax
+         elseif(buffer(1:8).eq.'ACCURACY') then
+            read(buffer(11:),*) accuracy
+            write (*,*) 'Desired accuracy is:',accuracy
+         elseif(buffer(1:10).eq.'ADAPT_GRID') then
+            read(buffer(13:),*) use_cut
+            write (*,*) 'Using adaptive grids:',use_cut
+         elseif(buffer(1:12).eq.'MULTICHANNEL') then
+            read(buffer(15:),*) i
+            if (i.eq.1) then
+               multi_channel=.true.
+               write (*,*) 'Using Multi-channel integration'
+            else
+               multi_channel=.false.
+               write (*,*) 'Not using Multi-channel integration'
+            endif
+         elseif(buffer(1:12).eq.'SUM_HELICITY') then
+            read(buffer(15:),*) i
+            if (nincoming.eq.1) then
+               write (*,*) 'Sum over helicities in the virtuals'/
+     $              /' for decay process'
+               mc_hel=0
+            elseif (i.eq.0) then
+               mc_hel=0
+               write (*,*) 'Explicitly summing over helicities'/
+     $              /' for the virtuals'
+            else
+               mc_hel=1
+               write(*,*) 'Do MC over helicities for the virtuals'
+            endif
+            isum_hel=0
+         elseif(buffer(1:7).eq.'CHANNEL') then
+            read(buffer(10:),*) dconfig
+            iconfig = int(dconfig)
+            do i=1,mapconfig(0)
+               if (iconfig.eq.mapconfig(i)) then
+                  iconfig=i
+                  exit
+               endif
+            enddo
+            write(*,12) 'Running Configuration Number: ',iconfig
+         elseif(buffer(1:5).eq.'SPLIT') then
+            read(buffer(8:),*) i
+            write (*,*) 'Splitting channel:',i
+         elseif(buffer(1:8).eq.'RUN_MODE') then
+            read(buffer(11:),*) abrvinput
+            if(abrvinput(5:5).eq.'0')then
+               nbody=.true.
+            else
+               nbody=.false.
+            endif
+            abrv=abrvinput(1:4)
+            write (*,*) "doing the ",abrv," of this channel"
+            if(nbody)then
+               write (*,*) "integration Born/virtual with Sfunction=1"
+            else
+               write (*,*) "Normal integration (Sfunction != 1)"
+            endif
+         elseif(buffer(1:7).eq.'RESTART') then
+            read(buffer(10:),*) irestart
+            if (irestart.eq.0) then
+               write (*,*) 'RESTART: Fresh run'
+            elseif(irestart.eq.-1) then
+               write (*,*) 'RESTART: Use old grids, but refil plots'
+            elseif(irestart.eq.1) then
+               write (*,*) 'RESTART: continue with existing run'
+            else
+               write (*,*) 'RESTART:',irestart
+            endif
          endif
+         cycle
+ 222     done=.true.
       enddo
-      write(*,12) 'Running Configuration Number: ',iconfig
-c
-c Enter parameters that control Vegas grids
-c
-      write(*,*)'enter id string for this run'
-      read(*,*) idstring
-      runstr=idstring
-      write(*,*)'enter 1 if you want restart files'
-      read (*,*) itmp
-      if(itmp.eq.1) then
-         savegrid = .true.
-      else
-         savegrid = .false.
-      endif
-      write(*,*)'enter 0 to exclude, 1 for new run, 2 to restart'
-      read(5,*)irestart
+      close(83)
 
-      abrvinput='     '
-      write (*,*) "'all ', 'born', 'real', 'virt', 'novi' or 'grid'?"
-      read(5,*) abrvinput
-      if(abrvinput(5:5).eq.'0')then
-        nbody=.true.
-      else
-        nbody=.false.
-      endif
-      abrv=abrvinput(1:4)
       if (fks_configs.eq.1) then
          if (pdg_type_d(1,fks_i_d(1)).eq.-21) then
             write (*,*) 'Process generated with [LOonly=QCD]. '/
@@ -815,24 +813,6 @@ c
                stop 1
             endif
          endif
-      endif
-c Options are way too many: make sure we understand all of them
-      if ( abrv.ne.'all '.and.abrv.ne.'born'.and.abrv.ne.'real'.and.
-     &     abrv.ne.'virt') then
-        write(*,*)'Error in input: abrv is:',abrv
-        stop
-      endif
-      if(nbody.and.abrv.ne.'born'.and.abrv(1:2).ne.'vi'
-     &     .and. abrv.ne.'grid')then
-        write(*,*)'Error in driver: inconsistent input',abrvinput
-        stop
-      endif
-
-      write (*,*) "doing the ",abrv," of this channel"
-      if(nbody)then
-        write (*,*) "integration Born/virtual with Sfunction=1"
-      else
-        write (*,*) "Normal integration (Sfunction != 1)"
       endif
 c
 c

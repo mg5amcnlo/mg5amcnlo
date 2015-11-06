@@ -246,7 +246,7 @@ c x_to_f_arg subroutine
 
       do iconfig=bs_min,bs_max       ! Born configurations
       call setcuts
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.false.)
       wgt=1d0
       ntry=1
 

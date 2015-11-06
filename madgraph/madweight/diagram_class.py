@@ -56,7 +56,7 @@ class MG_diagram(diagram):
         
     def organize_particle_content(self,param_card,tf_file):
         """ define production area and organize all the needed information """
-		
+                
         #Charge Proc_card information+ update information for production part.
         self.import_process(self.directory,self.config)
         process_tag=re.compile(r'''P(?P<tag>\d*)''')
@@ -749,8 +749,8 @@ class MG_diagram(diagram):
 
         return text
        except:
-       	text='not supportted string in not full mode: organize_particle_content is needed fisrt'
-       	return text
+               text='not supportted string in not full mode: organize_particle_content is needed fisrt'
+               return text
        
        
        

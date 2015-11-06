@@ -231,8 +231,9 @@ class Switcher(object):
                 'The NLO mode %s is not valid. Please chose one among: %s' \
                 % (nlo_mode, ' '.join(self._valid_nlo_modes)))
             elif nlo_mode == 'all':
-                self.change_principal_cmd('aMC@NLO')
+                self.change_principal_cmd('MadLoop')
             elif nlo_mode == 'real':
+                raise self.InvalidCMD('Mode [real=...] not valid for checking processes.')
                 self.change_principal_cmd('aMC@NLO')
             elif nlo_mode == 'virt' or nlo_mode == 'sqrvirt':
                 self.change_principal_cmd('MadLoop')
@@ -598,7 +599,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             raise self.InvalidCmd("Invalid switch command or non existing interface %s."\
                             %args[0]+" Valid interfaces are %s"\
                             %','.join(interface_quick_name.keys()))
-
+        
     def change_principal_cmd(self, name):
         old_cmd=self.current_interface
         if name in self.interface_names.keys():

@@ -221,19 +221,17 @@ class CheckValidForCmd(object):
             #restrict_file = None
             #if os.path.exists(pjoin(ufo_path, 'restrict_default.dat')):
             #    restrict_file = pjoin(ufo_path, 'restrict_default.dat')
+            
+            force_CMS = self.mother and self.mother.options['complex_mass_scheme']
             model = import_ufo.import_model(modelname, decay=True, 
-                        restrict=True)
-            if self.mother and self.mother.options['complex_mass_scheme']:
-                model.change_mass_to_complex_scheme()
+                                   restrict=True, complex_mass_scheme=force_CMS)
         else:
-            model = import_ufo.import_model(pjoin(
-                           self.me_dir,'bin','internal', 'ufomodel'),decay=True)
             #pattern for checking complex mass scheme.
             has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-            if has_cms.search(open(pjoin(self.me_dir,'Cards','proc_card_mg5.dat')\
-                                   ).read()):
-                model.change_mass_to_complex_scheme()
-   
+            force_CMS =  has_cms.search(open(pjoin(self.me_dir,'Cards',
+                                                   'proc_card_mg5.dat')).read())
+            model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal',
+                         'ufomodel'), decay=True, complex_mass_scheme=force_CMS)
             
 #        if not hasattr(model.get('particles')[0], 'partial_widths'):
 #            raise self.InvalidCmd, 'The UFO model does not include partial widths information. Impossible to compute widths automatically'
@@ -492,6 +490,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'syscalc_path': './SysCalc',
                        'lhapdf': 'lhapdf-config',
                        'timeout': 60,
+                       'f2py_compiler':None,
                        'web_browser':None,
                        'eps_viewer':None,
                        'text_editor':None,
@@ -507,6 +506,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madgraph= {'stdout_level':None}
 
     options_madevent = {'automatic_html_opening':True,
+                        'notification_center':True,
                          'run_mode':2,
                          'cluster_queue':'madgraph',
                          'cluster_time':None,
@@ -526,6 +526,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.me_dir = me_dir
         self.options = options
+        
+        self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
 
         # usefull shortcut
         self.status = pjoin(self.me_dir, 'status')
@@ -657,7 +659,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             if amcatnlo and not keepwidth:
                 # force particle in final states to have zero width
-                pids = self.get_pid_final_states()
+                pids = self.get_pid_final_initial_states()
                 # check those which are charged under qcd
                 if not MADEVENT and pjoin(self.me_dir,'bin','internal') not in sys.path:
                         sys.path.insert(0,pjoin(self.me_dir,'bin','internal'))
@@ -757,6 +759,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
+            
 
 
     @staticmethod
@@ -777,15 +780,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madweight_card.dat [MW]
         """
 
-        text = open(path).read(50000)
-        if text == '':
+        fulltext = open(path).read(50000)
+        if fulltext == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', text, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|ExecutionPath|Treewriter|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
-        elif 'particlepropagator' in text:
+        elif 'particlepropagator' in text or 'executionpath' in text or 'treewriter' in text:
             return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
@@ -812,12 +815,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'shower_card.dat'
         elif 'fo_analysis_format' in text:
             return 'FO_analyse_card.dat'
-        elif 'decay' in text and 'launch' in text and 'madspin' in text:
-            return 'madspin_card.dat'
-        elif 'launch' in text and 'set' in text:
-            return 'reweight_card.dat'
-        elif 'decay' in text and 'launch' in text:
-            return 'madspin_card.dat'
+        elif 'launch' in text:
+            # need to separate madspin/reweight.
+            # decay/set can be in both...
+            if 'madspin' in text:
+                return 'madspin_card.dat'
+            if 'decay' in text:
+                # need to check if this a line like "decay w+" or "set decay"
+                if re.search("(^|;)\s*decay", fulltext):
+                    return 'madspin_card.dat'
+                else:
+                    return 'reweight_card.dat'
+            else:
+                return 'reweight_card.dat'
         else:
             return 'unknown'
 
@@ -1013,6 +1023,54 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Dummy routine, to be overwritten by daughter classes"""
 
         pass
+    ############################################################################
+    def do_reweight(self, line):
+        """ Allow to reweight the events generated with a new choices of model
+            parameter.
+        """
+        
+        if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
+            return
+        
+        # Check that MG5 directory is present .
+        if MADEVENT and not self.options['mg5_path']:
+            raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
+            You can install it and set its path in ./Cards/me5_configuration.txt'''
+        elif MADEVENT:
+            sys.path.append(self.options['mg5_path'])
+        try:
+            import madgraph.interface.reweight_interface as reweight_interface
+        except ImportError:
+            raise self.ConfigurationError, '''Can\'t load Reweight module.
+            The variable mg5_path might not be correctly configured.'''
+        
+        self.to_store.append('event')
+        if not '-from_cards' in line:
+            self.keep_cards(['reweight_card.dat'])
+            self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
+
+        # forbid this function to create an empty item in results.
+        if self.results.current['cross'] == 0 and self.run_name:
+            self.results.delete_run(self.run_name, self.run_tag)
+
+        # load the name of the event file
+        args = self.split_arg(line) 
+        self.check_decay_events(args) 
+        # args now alway content the path to the valid files
+        reweight_cmd = reweight_interface.ReweightInterface(args[0])
+        reweight_cmd.mother = self
+        self.update_status('Running Reweight', level='madspin')
+        
+        
+        path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        reweight_cmd.me_dir = self.me_dir
+        reweight_cmd.import_command_file(path)
+        
+        # re-define current run
+        try:
+            self.results.def_current(self.run_name, self.run_tag)
+        except Exception:
+            pass
 
     ############################################################################
     def do_pgs(self, line):
@@ -1297,8 +1355,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.update_status('delphes done', level='delphes', makehtml=False)
 
     ############################################################################
-    def get_pid_final_states(self):
-        """Find the pid of all particles in the final states"""
+    def get_pid_final_initial_states(self):
+        """Find the pid of all particles in the final and initial states"""
         pids = set()
         subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses',
                                                                  'subproc.mg'))]
@@ -1309,7 +1367,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             group = pat.findall(text)
             for particles in group:
                 particles = particles.split(',')
-                pids.update(set(particles[nb_init:]))
+                pids.update(set(particles))
 
         return pids
 
@@ -1478,6 +1536,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 first, second = args[1:3]
 
             self.options[args[0]] = (int(first), int(second))
+        elif args[0] == 'notification_center':
+            if args[1] in ['None','True','False']:
+                self.allow_notification_center = eval(args[1])
+                self.options[args[0]] = eval(args[1])
+            else:
+                 raise self.InvalidCmd('Not a valid value for notification_center')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -1540,12 +1604,29 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
     def check_param_card(self, path, run=True):
-        """Check that all the width are define in the param_card.
-        If some width are set on 'Auto', call the computation tools."""
+        """
+        1) Check that no scan parameter are present
+        2) Check that all the width are define in the param_card.
+        - If a scan parameter is define. create the iterator and recall this fonction 
+          on the first element.
+        - If some width are set on 'Auto', call the computation tools."""
         
-        pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
+        pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
-        pdg_info = pattern.findall(text)
+               
+        if pattern_scan.search(text):
+            if not isinstance(self, cmd.CmdShell):
+                # we are in web mode => forbid scan due to security risk
+                raise Exception, "Scan are not allowed in web mode"
+            # at least one scan parameter found. create an iterator to go trough the cards
+            main_card = check_param_card.ParamCardIterator(text)
+            self.param_card_iterator = main_card
+            first_card = main_card.next(autostart=True)
+            first_card.write(path)
+            return self.check_param_card(path, run)
+        
+        pdg_info = pattern_width.findall(text)
         if pdg_info:
             if run:
                 logger.info('Computing the width set on auto in the param_card.dat')
@@ -1643,7 +1724,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
-
 
     ############################################################################
     def keep_cards(self, need_card=[], ignore=[]):
@@ -1763,6 +1843,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pass
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
+                    self.options[key] =eval(self.options[key])
+            elif key == "notification_center":
+                if self.options[key] in ['False', 'True']:
+                    self.allow_notification_center =eval(self.options[key])
                     self.options[key] =eval(self.options[key])
             elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
                               'complex_mass_scheme', 'gauge', 'group_subprocesses']:
@@ -2266,40 +2350,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Read the comment of the param_card_default to find name variable for
         # the param_card also check which value seems to be constrained in the
         # model.
-        for bname, block in default_param.items():
-            for lha_id, param in block.param_dict.items():
-                all_var = []
-                comment = param.comment
-                # treat merge parameter
-                if comment.strip().startswith('set of param :'):
-                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
-                # just the variable name as comment
-                elif len(comment.split()) == 1:
-                    all_var = [comment.strip().lower()]
-                # either contraction or not formatted
-                else:
-                    split = comment.split()
-                    if len(split) >2 and split[1] == ':':
-                        # NO VAR associated
-                        self.restricted_value[(bname, lha_id)] = ' '.join(split[1:])
-                    elif len(split) == 2:
-                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
-                            all_var = [comment.strip().lower()]
-                    elif len(split) >=2 and split[1].startswith('('):
-                        all_var = [split[0].strip().lower()]
-                    else:
-                        if not bname.startswith('qnumbers'):
-                            logger.debug("not recognize information for %s %s : %s",
-                                      bname, lha_id, comment)
-                        # not recognized format
-                        continue
-
-                for var in all_var:
-                    var = var.lower()
-                    if var in self.pname2block:
-                        self.pname2block[var].append((bname, lha_id))
-                    else:
-                        self.pname2block[var] = [(bname, lha_id)]
+        self.pname2block, self.restricted_value = \
+                                              default_param.analyze_param_card()
 
         if run_card_def:
             self.run_set = run_card_def.keys() + self.run_card.hidden_param
@@ -2568,12 +2620,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         """ edit the value of one parameter in the card"""
         
         args = self.split_arg(line)
+        # fix some formatting problem
         if '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=')
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')
-        args[:-1] = [ a.lower() for a in args[:-1]]
+        # do not set lowercase the case-sensitive parameters from the shower_card
+        if args[0].lower() not in ['analyse', 'extralibs', 'extrapaths', 'includepaths']:
+            args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
             if len(args) == 1:
@@ -2739,6 +2794,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
                                                   and card in ['','param_card']:
+            #special treatment for scan
+            if any(t.startswith('scan') for t in args):
+                index = [i for i,t in enumerate(args) if t.startswith('scan')][0]
+                args = args[:index] + [' '.join(args[index:])]
+                
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 text += ' in the format < set card parameter value>'
@@ -2782,7 +2842,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     text += "You need to match this expression for external program (such pythia)."
                     logger.warning(text)
 
-                if args[-1].lower() in ['default', 'auto', 'auto@nlo']:
+                if args[-1].lower() in ['default', 'auto', 'auto@nlo'] or args[-1].startswith('scan'):
                     self.setP(args[start], key, args[-1])
                 else:
                     try:
@@ -2973,6 +3033,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if block != 'decay':
                     logger.warning('Invalid input: \'Auto\' value only valid for DECAY')
                     return
+            elif value.startswith('scan'):
+                if ':' not in value:
+                    logger.warning('Invalid input: \'scan\' mode requires a \':\' before the definition.')
+                    return
+                tag = value.split(':')[0]
+                tag = tag[4:].strip()
+                if tag and not tag.isdigit():
+                    logger.warning('Invalid input: scan tag need to be integer and not "%s"' % tag)
+                    return
+                
+                
+                pass
             else:
                 try:
                     value = float(value)
@@ -3029,7 +3101,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # check if input is a file
         elif hasattr(self, 'do_%s' % args[0]):
             self.do_set(' '.join(args[1:]))
-        elif os.path.exists(line):
+        elif os.path.isfile(line):
             self.copy_file(line)
             self.value = 'repeat'
         elif os.path.exists(pjoin(self.me_dir, line)):
@@ -3057,7 +3129,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning("invalid command for decay. Line ignored")
             return
         
-        misc.sprint( line, "-add" in line)
         if "-add" in line:
             # just to have to add the line to the end of the file
             particle = line.split('>')[0].strip()
@@ -3119,6 +3190,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def complete_compute_widths(self, *args, **opts):
         signal.alarm(0) # avoid timer if any
         return self.mother_interface.complete_compute_widths(*args,**opts)
+
 
 
     def help_asperge(self):
@@ -3198,7 +3270,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
-            files.cp(path, pjoin(self.mother_interface.me_dir, 'Cards', card_name))
+            files.cp(path, pjoin(self.me_dir, 'Cards', card_name))
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')

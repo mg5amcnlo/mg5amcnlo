@@ -111,6 +111,11 @@ C-----
       call cpu_time(tBefore)
       fixed_order=.false.
       nlo_ps=.true.
+      if (nincoming.ne.2) then
+         write (*,*) 'Decay processes not supported for'/
+     &        /' event generation'
+         stop 1
+      endif
 
 c     Read general MadFKS parameters
 c
@@ -164,7 +169,7 @@ c Only do the reweighting when actually generating the events
       else
         flat_grid=.false.
       endif
-      ndim = 3*(nexternal-2)-4
+      ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
 c Don''t proceed if muF1#muF2 (we need to work out the relevant formulae
@@ -195,7 +200,7 @@ c initialize grids
             enddo
          else
 c to restore grids:
-            open (unit=12, file='preset_mint_grids',status='old')
+            open (unit=12, file='mint_grids',status='old')
             do j=0,nintervals
                read (12,*) (xgrid(j,i),i=1,ndim)
             enddo
@@ -297,7 +302,7 @@ c write the results.dat file
          close(58)
 
 c to save grids:
-         open (unit=12, file='mint_grids_NLO',status='unknown')
+         open (unit=12, file='mint_grids',status='unknown')
          write (12,*) (xgrid(0,i),i=1,ndim)
          do j=1,nintervals
             write (12,*) (xgrid(j,i),i=1,ndim)
@@ -314,7 +319,6 @@ c to save grids:
          write (12,*) (unc(i),i=1,nintegrals)
          write (12,*) virtual_fraction,average_virtual(0)
          close (12)
-
 
 c*************************************************************
 c     event generation
@@ -337,7 +341,7 @@ c Mass-shell stuff. This is MC-dependent
          ncall=nevts ! Update ncall with the number found in 'nevts'
 
 c to restore grids:
-         open (unit=12, file='mint_grids_NLO',status='unknown')
+         open (unit=12, file='mint_grids',status='unknown')
          read (12,*) (xgrid(0,i),i=1,ndim)
          do j=1,nintervals
             read (12,*) (xgrid(j,i),i=1,ndim)
@@ -483,6 +487,15 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
       write(*,*) 'Time spent in Write_events : ',t_write
       write(*,*) 'Time spent in Other_tasks : ',tOther
       write(*,*) 'Time spent in Total : ',tTot
+
+      open (unit=12, file='res.dat',status='unknown')
+      if (imode.eq.0) then
+         write (12,*)ans(1),unc(1),ans(2),unc(2),itmax,ncall,tTot
+      else
+         write (12,*)ans(1)+ans(5),sqrt(unc(1)**2+unc(5)**2),ans(2)
+     $        ,unc(2),itmax,ncall,tTot
+      endif
+      close(12)
 
       return
  999  write (*,*) 'nevts file not found'
@@ -642,12 +655,17 @@ c These should be ignored (but kept for 'historical reasons')
 
       write(*,10) 'Exact helicity sum (0 yes, n = number/event)? '
       read(*,*) i
-      if (i .eq. 0) then
-         mc_hel= 0
-         write(*,*) 'Explicitly summing over helicities for virt'
+      if (nincoming.eq.1) then
+         write (*,*) 'Sum over helicities in the virtuals'/
+     $        /' for decay process'
+         mc_hel=0
+      elseif (i.eq.0) then
+         mc_hel=0
+         write (*,*) 'Explicitly summing over helicities'/
+     $        /' for the virtuals'
       else
-         mc_hel= i
-         write(*,*) 'Summing over',i,' helicities/event for virt'
+         mc_hel=1
+         write(*,*) 'Do MC over helicities for the virtuals'
       endif
       isum_hel = 0
 
@@ -970,7 +988,7 @@ c determined which contributions are identical.
          write (*,*) 'Folding not implemented'
          stop 1
       elseif(ifl.eq.2) then
-         call fill_mint_function_NLOPS(f)
+         call fill_mint_function_NLOPS(f,n1body_wgt)
       endif
       return
       end
@@ -1222,7 +1240,7 @@ c     include all quarks (except top quark) and the gluon.
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.true.)
       return
       end
 

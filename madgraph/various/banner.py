@@ -128,8 +128,8 @@ class Banner(dict):
         store = False
         for line in input_path:
             if self.pat_begin.search(line):
-                tag = self.pat_begin.search(line).group('name').lower()
-                if tag in self.tag_to_file:
+                if self.pat_begin.search(line).group('name').lower() in self.tag_to_file:
+                    tag = self.pat_begin.search(line).group('name').lower()
                     store = True
                     continue
             if store and self.pat_end.search(line):
@@ -292,7 +292,62 @@ class Banner(dict):
                 if pid not in pid2label.keys(): 
                     block.remove((pid,))
 
+    def get_lha_strategy(self):
+        """get the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        data = self["init"].split('\n')[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        return int(float(data[-2]))
+        
+    def set_lha_strategy(self, value):
+        """set the lha_strategy: how the weight have to be handle by the shower"""
+        
+        if not (-4 <= int(value) <= 4):
+            raise Exception, "wrong value for lha_strategy", value
+        if not self["init"]:
+            raise Exception, "No init block define"
+        
+        all_lines = self["init"].split('\n')
+        data = all_lines[0].split()
+        if len(data) != 10:
+            misc.sprint(len(data), self['init'])
+            raise Exception, "init block has a wrong format"
+        data[-2] = '%s' % value
+        all_lines[0] = ' '.join(data)
+        self['init'] = '\n'.join(all_lines)
 
+    def modify_init_cross(self, cross):
+        """modify the init information with the associate cross-section"""
+
+        assert isinstance(cross, dict)
+#        assert "all" in cross
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        new_data = []
+        new_data.append(all_lines[0])
+        for i in range(1, len(all_lines)):
+            line = all_lines[i]
+            split = line.split()
+            if len(split) == 4:
+                xsec, xerr, xmax, pid = split 
+            else:
+                new_data += all_lines[i:]
+                break
+            if int(pid) not in cross:
+                raise Exception
+            pid = int(pid)
+            ratio = cross[pid]/float(xsec)
+            line = "   %+13.7e %+13.7e %+13.7e %i" % \
+                (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
+            new_data.append(line)
+        self['init'] = '\n'.join(new_data)
+                
     ############################################################################
     #  WRITE BANNER
     ############################################################################
@@ -374,6 +429,8 @@ class Banner(dict):
                 tag = 'madspin'
             elif 'FO_analyse_card' in card_name:
                 tag = 'foanalyse'
+            elif 'reweight_card' in card_name:
+                tag='reweight_card'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -479,7 +536,7 @@ class Banner(dict):
         if len(arg) == 1:
             if tag == 'mg5proccard':
                 try:
-                    return card.info[arg[0]]
+                    return card.get(arg[0])
                 except KeyError, error:
                     if 'default' in opt:
                         return opt['default']
@@ -793,11 +850,18 @@ class ProcCard(list):
             # update the counter to pass to the next element
             nline -= 1
         
-    def __getattr__(self, tag, default=None):
+    def get(self, tag, default=None):
         if isinstance(tag, int):
             list.__getattr__(self, tag)
         elif tag == 'info' or tag == "__setstate__":
             return default #for pickle
+        elif tag == "multiparticles":
+            out = []
+            for line in self:
+                if line.startswith('define'):
+                    name, content = line[7:].split('=',1)
+                    out.append((name, content))
+            return out 
         else:
             return self.info[tag]
             
@@ -1055,7 +1119,7 @@ class ProcCharacteristic(ConfigFile):
          
     def write(self, outputpath):
         """write the file"""
-        
+
         template ="#    Information about the process      #\n"
         template +="#########################################\n"
         
@@ -1217,7 +1281,12 @@ class RunCard(ConfigFile):
             if len(line) != 2:
                 continue
             value, name = line
-            self.set( name, value, user=True)
+            name = name.lower().strip()
+            if name not in self and ('min' in name or 'max' in name):
+                #looks like an entry added by one user -> add it nicely
+                self.add_param(name, float(value), hidden=True, cut=True)
+            else:
+                self.set( name, value, user=True)
                 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -1361,6 +1430,7 @@ class RunCard(ConfigFile):
             fsock.writelines(line)
         fsock.close()   
 
+
     def get_banner_init_information(self):
         """return a dictionary with the information needed to write
         the first line of the <init> block of the lhe file."""
@@ -1399,17 +1469,32 @@ class RunCard(ConfigFile):
         output["pdfsup1"] = get_pdf_id(self["pdlabel"])
         output["pdfsup2"] = get_pdf_id(self["pdlabel"])
         return output
-        
+
+    def remove_all_cut(self): 
+        """remove all the cut"""
+
+        for name in self.cuts_parameter:
+            targettype = type(self[name])
+            if targettype == bool:
+                self[name] = False
+            elif 'min' in name:
+                self[name] = 0
+            elif 'max' in name:
+                self[name] = -1
+            elif 'eta' in name:
+                self[name] = -1
+            else:
+                self[name] = 0       
 
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card infomration"""
     
     def default_setup(self):
         """default value for the run_card.dat"""
-
+        
         self.add_param("run_tag", "tag_1", include=False)
         self.add_param("gridpack", False)
-        self.add_param("time_of_flight", -1.0, include=False)
+        self.add_param("time_of_flight", -1.0, include=False, hidden=True)
         self.add_param("nevents", 10000)        
         self.add_param("iseed", 0)
         self.add_param("lpp1", 1, fortran_name="lpp(1)")
@@ -1432,7 +1517,7 @@ class RunCardLO(RunCard):
         self.add_param("ickkw", 0)
         self.add_param("highestmult", 1, fortran_name="nhmult")
         self.add_param("ktscheme", 1)
-        self.add_param("alpsfact", 1)
+        self.add_param("alpsfact", 1.0)
         self.add_param("chcluster", False)
         self.add_param("pdfwgt", True)
         self.add_param("asrwgtflavor", 5)
@@ -1558,7 +1643,7 @@ class RunCardLO(RunCard):
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
-        self.add_param("sys_alpsfact", "0.5 1 2", include=False)
+        self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "30 50", include=False)
         self.add_param("sys_pdf", "Ct10nlo.LHgrid", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
@@ -1610,7 +1695,7 @@ class RunCardLO(RunCard):
             if self['scalefact'] != 1.0:
                 logger.warning('Since use_syst=T, We change the value of \'scalefact\' to 1')
                 self['scalefact'] = 1.0
-    
+     
         # CKKW Treatment
         if self['ickkw'] > 0:
             if self['use_syst']:
@@ -1620,6 +1705,11 @@ class RunCardLO(RunCard):
                     self['alpsfact'] =1.0
             if self['maxjetflavor'] == 6:
                 raise InvalidRunCard, 'maxjetflavor at 6 is NOT supported for matching!'
+            if self['ickkw'] == 2:
+                # add warning if ckkw selected but the associate parameter are empty
+                self.get_default('highestmult', log_level=20)                   
+                self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
+        if self['xqcut'] > 0:
             if self['drjj'] != 0:
                 logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
                 self['drjj'] = 0
@@ -1630,10 +1720,7 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
-            if self['ickkw'] == 2:
-                # add warning if ckkw selected but the associate parameter are empty
-                self.get_default('highestmult', log_level=20)                   
-                self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
+
 
         # check validity of the pdf set
         possible_set = ['lhapdf','mrs02nl','mrs02nn', 'mrs0119','mrs0117','mrs0121','mrs01_j', 'mrs99_1','mrs99_2','mrs99_3','mrs99_4','mrs99_5','mrs99_6', 'mrs99_7','mrs99_8','mrs99_9','mrs9910','mrs9911','mrs9912', 'mrs98z1','mrs98z2','mrs98z3','mrs98z4','mrs98z5','mrs98ht', 'mrs98l1','mrs98l2','mrs98l3','mrs98l4','mrs98l5', 'cteq3_m','cteq3_l','cteq3_d', 'cteq4_m','cteq4_d','cteq4_l','cteq4a1','cteq4a2', 'cteq4a3','cteq4a4','cteq4a5','cteq4hj','cteq4lq', 'cteq5_m','cteq5_d','cteq5_l','cteq5hj','cteq5hq', 'cteq5f3','cteq5f4','cteq5m1','ctq5hq1','cteq5l1', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo']
@@ -1725,23 +1812,8 @@ class RunCardLO(RunCard):
                 self['use_syst'] = False 
                 self['drjj'] = 0
                 self['drjl'] = 0
+                self['sys_alpsfact'] = "0.5 1 2"
                 
-
-    def remove_all_cut(self): 
-        """remove all the cut"""
-
-        for name in self.cuts_parameter:
-            targettype = type(self[name])
-            if targettype == bool:
-                self[name] = False
-            elif 'min' in name:
-                self[name] = 0
-            elif 'max' in name:
-                self[name] = -1
-            elif 'eta' in name:
-                self[name] = -1
-            else:
-                self[name] = 0
             
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -1782,12 +1854,13 @@ class RunCardNLO(RunCard):
         self.add_param('iseed', 0)
         self.add_param('lpp1', 1, fortran_name='lpp(1)')        
         self.add_param('lpp2', 1, fortran_name='lpp(2)')                        
-        self.add_param('ebeam1', 6500, fortran_name='ebeam(1)')
-        self.add_param('ebeam2', 6500, fortran_name='ebeam(2)')        
+        self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
+        self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo')                
         self.add_param('lhaid', 244600)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
+        self.add_param('shower_scale_factor',1.0)
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('mur_ref_fixed', 91.118)                       
@@ -1879,9 +1952,17 @@ class RunCardNLO(RunCard):
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
     
-        # check that we use lhapdf if reweighting is ON
-        if self['reweight_pdf'] and self['pdlabel'] != "lhapdf":
-            raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
+
+        # PDF reweighting check
+        if self['reweight_pdf']:
+            # check that we use lhapdf if reweighting is ON
+            if self['pdlabel'] != "lhapdf":
+                raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
+            
+            # check that the number of pdf set is coherent for the reweigting:    
+            if (self['pdf_set_max'] - self['pdf_set_min'] + 1) % 2:
+                raise InvalidRunCard, "The number of PDF error sets must be even" 
+        
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -1904,7 +1985,7 @@ class RunCardNLO(RunCard):
         """Rules
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
-         """
+        """
 
         # check for beam_id
         beam_id = set()
@@ -1924,6 +2005,10 @@ class RunCardNLO(RunCard):
         else:
             self['lpp1'] = 0
             self['lpp2'] = 0  
+            
+        if proc_characteristic['ninitial'] == 1:
+            #remove all cut
+            self.remove_all_cut()
         
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat
@@ -1935,7 +2020,7 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "1|4|3|2")
+        self.add_param("MLReductionLib", "1|3|2")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)

@@ -412,9 +412,9 @@ C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
 C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
         IF(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
           IF(NROTATIONS_DP.NE.0.OR.NROTATIONS_QP.NE.0) THEN
-            WRITE(*,*) 'INFO: AUTOMATIC_TIR_CACHE_CLEARING is disable'
-     $       //'d, so MadLoop automatically resets NROTATIONS_DP an'
-     $       //'d NROTATIONS_QP to 0.'
+            WRITE(*,*) '##INFO: AUTOMATIC_TIR_CACHE_CLEARING i'
+     $       //'s disabled, so MadLoop automatically resets NROTATIONS'
+     $       //'_DP and NROTATIONS_QP to 0.'
             NROTATIONS_QP=0
             NROTATIONS_DP=0
           ENDIF
@@ -511,7 +511,7 @@ C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
           ENDDO
         ENDDO
         IF(BOOTANDSTOP) THEN
-          WRITE(*,*) 'Stopped by user request.'
+          WRITE(*,*) '##Stopped by user request.'
           STOP
         ENDIF
       ENDIF
@@ -1681,10 +1681,10 @@ C         DOUBLE CHECK THE HELICITY FILTER
      $       ,REF/DBLE(NCOMB),-1,-1)) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successfu'
      $         //'lly double checked.'
-              WRITE(*,*) 'One reason for this is that you might hav'
+              WRITE(*,*) '##One reason for this is that you might hav'
      $         //'e changed sensible parameters which affected wha'
      $         //'t are the zero helicity configurations.'
-              WRITE(*,*) 'MadLoop will try to reset the Helicit'
+              WRITE(*,*) '##MadLoop will try to reset the Helicit'
      $         //'y filter with the next PS points it receives.'
               NTRY=0
               OPEN(29,FILE=HELFILTERFN,ERR=348)
@@ -1697,10 +1697,10 @@ C         DOUBLE CHECK THE HELICITY FILTER
      $       L(HELPICKED)+HELOFFSET)),REF,.TRUE.).EQ.0) THEN
               WRITE(*,*) '##W15 Helicity filter could not be successfu'
      $         //'lly double checked.'
-              WRITE(*,*) 'One reason for this is that you might hav'
+              WRITE(*,*) '##One reason for this is that you might hav'
      $         //'e changed sensible parameters which affected th'
      $         //'e helicity dependance relations.'
-              WRITE(*,*) 'MadLoop will try to reset the Helicit'
+              WRITE(*,*) '##MadLoop will try to reset the Helicit'
      $         //'y filter with the next PS points it receives.'
               NTRY=0
               OPEN(30,FILE=HELFILTERFN,ERR=349)
@@ -1853,15 +1853,15 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
                 WRITE(*,*) '##W03 WARNING An unstable PS point was'
      $           ,       ' detected.'
                 IF (NSQUAREDSO.NE.1) THEN
-                  WRITE(*,*) 'Accuracies for each split orde'
+                  WRITE(*,*) '##Accuracies for each split orde'
      $             //'r, starting with the summed case'
-                  WRITE(*,*) 'DP accuracies (for each split order): '
-     $             ,(TEMP1(I),I=0,NSQUAREDSO)
-                  WRITE(*,*) 'QP accuracies (for each split order): '
-     $             ,(ACC(I),I=0,NSQUAREDSO)
+                  WRITE(*,*) '##DP accuracies (for each split orde'
+     $             //'r): ',(TEMP1(I),I=0,NSQUAREDSO)
+                  WRITE(*,*) '##QP accuracies (for each split orde'
+     $             //'r): ',(ACC(I),I=0,NSQUAREDSO)
                 ELSE
-                  WRITE(*,*) 'DP accuracy: ',TEMP1(1)
-                  WRITE(*,*) 'QP accuracy: ',ACC(1)
+                  WRITE(*,*) '##DP accuracy: ',TEMP1(1)
+                  WRITE(*,*) '##QP accuracy: ',ACC(1)
                 ENDIF
                 DO J=0,NSQUAREDSO
                   IF (NSQUAREDSO.NE.1.OR.J.NE.0) THEN
@@ -2369,47 +2369,6 @@ C
      $ //'ED_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
-
-      END
-
-      INTEGER FUNCTION ML5_0_GETORDPOWFROMINDEX_ML5(IORDER, INDX)
-C     
-C     Return the power of the IORDER-th order appearing at position
-C      INDX
-C     in the split-orders output
-C     
-C     []
-C     
-C     CONSTANTS
-C     
-      INTEGER    NSO, NSQSO
-      PARAMETER (NSO=0, NSQSO=0)
-C     
-C     ARGUMENTS
-C     
-      INTEGER ORDERS(NSO)
-C     
-C     LOCAL VARIABLES
-C     
-      INTEGER I,J
-      INTEGER SQPLITORDERS(NSQSO,NSO)
-
-C     
-C     BEGIN CODE
-C     
-      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
-        WRITE(*,*) 'INVALID IORDER ML5', IORDER
-        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
-        STOP
-      ENDIF
-
-      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
-        WRITE(*,*) 'INVALID INDX ML5', INDX
-        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
-        STOP
-      ENDIF
-
-      ML5_0_GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
 
       END
 

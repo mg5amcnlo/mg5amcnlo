@@ -49,9 +49,11 @@ end module
 
 module avh_olo_units
   implicit none
-  integer :: eunit=6
-  integer :: wunit=6
-  integer :: munit=6
+! By default these values are set to 6. However, they can potentially clog
+! the logs so we want to force them off, unless explicitely turned on 
+  integer :: eunit=0
+  integer :: wunit=0
+  integer :: munit=0
   integer :: punit=0 ! print all
 contains
   subroutine set_unit( message ,val )
@@ -12242,7 +12244,7 @@ contains
   character(ndecim(prcpar)+nxtr+novh+1) :: cc
   character(10) :: aa,bb
   integer :: ndec
-  real(kindr2) :: xx     
+  double precision :: xx     
   xx = xx_in
   if (present(ndec_in)) then ;ndec=ndec_in
                         else ;ndec=ndecim(prcpar)+nxtr

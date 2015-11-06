@@ -160,11 +160,8 @@ C     NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       SELECT CASE(MLREDUCTIONLIB(I_LIB))
       CASE(2)
 C     PJFry++
-      CALL MG5_1_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
-      CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,PJCOEFS(0:NLOOPCOEFS
-     $ -1,1:3),STABLE)
-C     CONVERT TO MADLOOP CONVENTION
-      CALL MG5_1_CONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+      WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
+      STOP
       CASE(3)
 C     IREGI
       CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,RANK,PDEN
@@ -381,48 +378,6 @@ C      kept as it might be called by the MC).
       END SUBROUTINE
 
 
-
-      SUBROUTINE MG5_1_CONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
-C     GLOABLE VARIABLES
-      INCLUDE 'coef_specs.inc'
-C     ARGUMENTS
-      INTEGER RANK
-      COMPLEX*16 PJCOEFS(0:LOOP_MAXCOEFS-1,3)
-      COMPLEX*16 TIRCOEFS(0:LOOP_MAXCOEFS-1,3)
-C     Reduction Coefficient 1
-      TIRCOEFS(0,1:3)=PJCOEFS(0,1:3)
-      IF(RANK.LE.0)RETURN
-C     Reduction Coefficient q(0)
-      TIRCOEFS(1,1:3)=PJCOEFS(1,1:3)
-C     Reduction Coefficient q(1)
-      TIRCOEFS(2,1:3)=PJCOEFS(2,1:3)
-C     Reduction Coefficient q(2)
-      TIRCOEFS(3,1:3)=PJCOEFS(3,1:3)
-C     Reduction Coefficient q(3)
-      TIRCOEFS(4,1:3)=PJCOEFS(4,1:3)
-      IF(RANK.LE.1)RETURN
-C     Reduction Coefficient q(0)^2
-      TIRCOEFS(5,1:3)=PJCOEFS(5,1:3)
-C     Reduction Coefficient q(0)*q(1)
-      TIRCOEFS(6,1:3)=PJCOEFS(6,1:3)
-C     Reduction Coefficient q(1)^2
-      TIRCOEFS(7,1:3)=PJCOEFS(7,1:3)
-C     Reduction Coefficient q(0)*q(2)
-      TIRCOEFS(8,1:3)=PJCOEFS(8,1:3)
-C     Reduction Coefficient q(1)*q(2)
-      TIRCOEFS(9,1:3)=PJCOEFS(9,1:3)
-C     Reduction Coefficient q(2)^2
-      TIRCOEFS(10,1:3)=PJCOEFS(10,1:3)
-C     Reduction Coefficient q(0)*q(3)
-      TIRCOEFS(11,1:3)=PJCOEFS(11,1:3)
-C     Reduction Coefficient q(1)*q(3)
-      TIRCOEFS(12,1:3)=PJCOEFS(12,1:3)
-C     Reduction Coefficient q(2)*q(3)
-      TIRCOEFS(13,1:3)=PJCOEFS(13,1:3)
-C     Reduction Coefficient q(3)^2
-      TIRCOEFS(14,1:3)=PJCOEFS(14,1:3)
-      IF(RANK.LE.2)RETURN
-      END
 
       SUBROUTINE MG5_1_CONVERT_IREGI_COEFFS(RANK,IREGICOEFS,TIRCOEFS)
 C     GLOABLE VARIABLES

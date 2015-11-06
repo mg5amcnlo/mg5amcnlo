@@ -434,12 +434,12 @@ class L_Spin2(aloha_lib.LorentzObject):
         self.sub11 = aloha_lib.Variable('T%s_6' % self.particle)
         self.sub12 = aloha_lib.Variable('T%s_7' % self.particle)
         self.sub13 = aloha_lib.Variable('T%s_8' % self.particle)
-	
+
         self.sub20 = aloha_lib.Variable('T%s_9' % self.particle)
         self.sub21 = aloha_lib.Variable('T%s_10' % self.particle)
         self.sub22 = aloha_lib.Variable('T%s_11' % self.particle)
         self.sub23 = aloha_lib.Variable('T%s_12' % self.particle)
-	
+
         self.sub30 = aloha_lib.Variable('T%s_13' % self.particle)
         self.sub31 = aloha_lib.Variable('T%s_14' % self.particle)
         self.sub32 = aloha_lib.Variable('T%s_15' % self.particle)

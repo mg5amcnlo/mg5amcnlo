@@ -276,7 +276,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                            'perturbation_couplings':pert_orders,
                                            'sqorders_types':sq_orders_type,
                                            'split_orders':split_orders})
-
+                
             myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
             matrix_element=loop_helas_objects.LoopHelasMatrixElement(\
                                                 myloopamp,optimized_output=True)

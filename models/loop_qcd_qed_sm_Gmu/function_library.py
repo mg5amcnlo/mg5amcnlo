@@ -41,9 +41,17 @@ reglog = Function(name = 'reglog',
                 arguments = ('z'),
                 expression = '(0.0 if z==0.0 else cmath.log(z))')
 
+reglogp = Function(name = 'reglogp',
+                   arguments = ('z'),
+                   expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) + 2*cmath.pi*1j if (z.real < 0.0 and z.imag < 0.0) else cmath.log(z) ) )')
+
+reglogm = Function(name = 'reglogm',
+                arguments = ('z'),
+                expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) - 2*cmath.pi*1j if (z.real < 0.0 and z.imag > 0.0) else cmath.log(z) ) )')
+
 arg = Function(name = 'arg',
-		arguments = ('z',),
-		expression = '(0.0 if abs(z)==0.0 else (cmath.log(z/abs(z))/1j).real)')
+                arguments = ('z',),
+                expression = '(0.0 if abs(z)==0.0 else (cmath.log(z/abs(z))/1j).real)')
 
 # New functions (trigonometric)
 
@@ -64,5 +72,12 @@ acsc = Function(name = 'acsc',
              expression = 'cmath.asin(1./z)')
 
 
+recms = Function(name= 'recms',
+                 arguments = ('cms','z'),
+                 expression = '(z if cms else z.real)')
 
 
+# Overwriting of original definition of reglog for the CMS
+reglog = Function(name = 'reglog',
+                arguments = ('z'),
+                expression = '(0.0 if z.imag==0.0 and z.real==0.0 else ( cmath.log(z) - 2*math.pi*1j if (z.real < 0.0 and z.imag > 0.0) else cmath.log(z) ) )')
