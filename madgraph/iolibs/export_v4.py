@@ -6260,6 +6260,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'pjfry_dir':cmd.options['pjfry'],
       'golem_dir':cmd.options['golem'],
       'samurai_dir':cmd.options['samurai'],
+      'ninja_dir':cmd.options['ninja'],
       'fortran_compiler':cmd.options['fortran_compiler'],
       'f2py_compiler':cmd.options['f2py_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],

@@ -1101,7 +1101,7 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_connected_to_loop)d)
     def write_CT_interface(self, writer, matrix_element, optimized_output=False):
         """ Create the file CT_interface.f which contains the subroutine defining
          the loop HELAS-like calls along with the general interfacing subroutine.
-         It is used to interface against any OPP tool, including Samurai."""
+         It is used to interface against any OPP tool, including Samurai and Ninja."""
 
         files=[]
 
@@ -1529,8 +1529,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # CutTools/TIR call the loops with same denominator structure
     forbid_loop_grouping = False
     
-    # List of potential TIR library one wants to link to
-    all_tir=['pjfry','iregi','golem','samurai']
+    # List of potential TIR library one wants to link to.
+    # Golem and Samurai will typically get obtained from gosam_contrib
+    # which might also contain a version of ninja. We must therefore
+    # make sure that ninja appears first in the list of -L because 
+    # it is the tool for which the user is most susceptible of 
+    # using a standalone verison independent of gosam_contrib
+    all_tir=['pjfry','iregi','ninja','golem','samurai']
     
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
@@ -1542,7 +1547,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         # TIR available ones
         self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True,
-                                 'samurai':True}
+                                 'samurai':True,'ninja':True}
 
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
@@ -1570,7 +1575,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         for tir in self.all_tir:
             context['%s_available'%tir]=self.tir_available_dict[tir]
             # safety check
-            if tir not in ['golem','pjfry','iregi','samurai']:
+            if tir not in ['golem','pjfry','iregi','samurai','ninja']:
                 raise MadGraph5Error,"%s was not a TIR currently interfaced."%tir_name
 
         return context
@@ -1592,12 +1597,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                               libpath,libname,tir_name=tir_name)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir in ['pjfry','golem','samurai']:
+                if tir in ['ninja','pjfry','golem','samurai']:
                     # We should link dynamically when possible, so we use the original
                     # location of these libraries.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
-                    if tir in ['golem', 'samurai']:
+                    if tir in ['golem', 'samurai','ninja']:
                         trgt_path = pjoin(os.path.dirname(libpath),'include')
                         to_include = misc.find_includes_path(trgt_path,'.mod')
                         if to_include is None:
@@ -1610,7 +1615,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         # makefiles built outside of the MG5_aMC framework
                         # (such as what is done with the Sherpa interface), we
                         # place here an easy handle on the golem includes
-                        name_map = {'golem':'golem95','samurai':'samurai'}
+                        name_map = {'golem':'golem95','samurai':'samurai',
+                                    'ninja':'ninja'}
                         ln(to_include, starting_dir=pjoin(self.dir_path,'lib'),
                                    name='%s_include'%name_map[tir],abspath=True)
                         ln(libpath, starting_dir=pjoin(self.dir_path,'lib'),
@@ -1644,7 +1650,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """Link the TIR source directory inside the target path given
         in argument"""
         
-        if tir_name in ['pjfry','golem','samurai']:
+        if tir_name in ['pjfry','golem','samurai','ninja']:
             # not self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
             or (not os.path.isfile(pjoin(libpath,libname))):
@@ -1667,7 +1673,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 return ""
        
         if self.dependencies=='internal':
-            if tir_name in ['pjfry','golem','samurai']:
+            if tir_name in ['pjfry','golem','samurai','ninja']:
                 self.tir_available_dict[tir_name]=False
                 logger.info("When using the 'output_dependencies=internal' "+\
 " MG5_aMC option, the (optional) tensor integral library %s cannot be employed because"%tir_name+\
@@ -1718,7 +1724,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     self.tir_available_dict[tir_name]=False
                     return ""
             # We link the tools below directly to directly where the library is detected
-            if not tir_name in ['pjfry','golem','samurai']:
+            if not tir_name in ['pjfry','golem','samurai','ninja']:
                 ln(os.path.join(libpath,libname),targetPath,abspath=True)
 
         elif self.dependencies=='environment_paths':
@@ -1729,7 +1735,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 logger.info('MG5_aMC is using %s installation found at %s.'%\
                                                           (tir_name,newlibpath)) 
                 # We link the tools below directly to directly where the library is detected
-                if not tir_name in ['pjfry','golem','samurai']:
+                if not tir_name in ['pjfry','golem','samurai','ninja']:
                     ln(newlibpath,targetPath,abspath=True)
                 self.tir_available_dict[tir_name]=True
                 return os.path.dirname(newlibpath)
@@ -2447,8 +2453,9 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         # We then go to the TIR setup
         # The first entry is the CutTools, we make sure it is available
         looplibs_av=['.TRUE.']
-        # one should be careful about the order in the following
-        for tir_lib in ['pjfry','iregi','golem','samurai']:
+        # one should be careful about the order in the following as it must match
+        # the ordering in MadLoopParamsCard.
+        for tir_lib in ['pjfry','iregi','ninja','golem','samurai']:
             looplibs_av.append('.TRUE.' if tir_lib in self.all_tir and \
                                 self.tir_available_dict[tir_lib] else '.FALSE.')
         replace_dict['data_looplibs_av']=','.join(looplibs_av)

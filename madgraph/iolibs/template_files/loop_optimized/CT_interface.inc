@@ -154,7 +154,7 @@ C      CALL CTSINIT(THRS,LOOPLIB)
 ## if(samurai_available){
 
 C     ===========================================
-C     ===== Beginning of Samurai Interface  =====
+C     ===== Beginning of Samurai interface  =====
 C     ===========================================
 
       SUBROUTINE %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
@@ -198,8 +198,8 @@ C
 	  %(complex_dp_format)s R1, ACC
 	  INTEGER I, J, K
       %(real_dp_format)s PDEN_DUMMY(0:3,NLOOPLINE-1)
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 C
 C EXTERNAL FUNCTIONS
 C
@@ -335,19 +335,19 @@ C ----------
 C BEGIN CODE
 C ----------
 
-C     DEFAULT PARAMETERS FOR CUTTOOLS
+C     DEFAULT PARAMETERS FOR SAMURAI 
 C     -------------------------------  
-C     LOOPLIB SET WHAT LIBRARY CT USES
+C     LOOPLIB SET WHAT LIBRARY SAMURAI USES
 C     1 -> LOOPTOOLS
 C     2 -> AVH
 C     3 -> QCDLOOP
       IF (CTLOOPLIBRARY.eq.1) THEN
-          write(*,*) "Error in Samurai initialization. LoopTools is not supported by Samurai. Change variable CTLoopLibrary in MadLoopParams.dat."
-          stop 1
+          write(*,*) "Warning in Samurai initialization. LoopTools is not supported by the Samurai interface. It will use OneLOop instead."
+          LOOPLIB = 2
       ELSEIF (CTLOOPLIBRARY.eq.3) THEN
-            LOOPLIB = 1
+          LOOPLIB = 1
       ELSEIF (CTLOOPLIBRARY.eq.2) THEN
-            LOOPLIB = 2
+          LOOPLIB = 2
       ELSE
           write(*,*) "Error in Samurai initialization. Loop library ID=",CTLOOPLIBRARY," is not supported. Change variable CTLoopLibrary in MadLoopParams.dat."
           stop 1
@@ -361,7 +361,7 @@ C      3 : Power test
 C     Verbosity
 C       verbosity=0, no output;
 C       verbosity=1, the coefficients are printed;
-C       verbosity=2, the value of the MI’s are printed as well;
+C       verbosity=2, the value of the MIs are printed as well;
 C       verbosity=3, the outcome of the numerical test appears.
       SAM_verbosity = 0
 
@@ -371,6 +371,217 @@ C     otherwise one must specify 'tree')
 
 C     -------------------------------
       call initsamurai(NumeratorForm,LOOPLIB,SAM_verbosity,STABILITYTEST)
+
+      END
+## }
+
+## if(ninja_available){
+
+C     ===========================================
+C     ===== Beginning of Ninja interface  =====
+C     ===========================================
+
+      SUBROUTINE %(proc_prefix)sNINJA_LOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
+C    
+C     Module used
+C
+      use mninja
+C  
+%(info_lines)s
+C 
+C Interface between MG5 and Ninja.
+C  
+%(process_lines)s
+C  
+C  
+C CONSTANTS 
+C  
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      LOGICAL checkPConservation
+      PARAMETER (checkPConservation=.TRUE.)
+      %(real_dp_format)s NORMALIZATION
+      PARAMETER (NORMALIZATION = 1.D0/(16.D0*3.14159265358979323846D0**2))
+      INTEGER NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+C     These are constants related to the split orders
+      INTEGER NSQUAREDSO
+      PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      INTEGER LOOPMAXCOEFS
+      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+C  
+C ARGUMENTS 
+C
+      INTEGER NLOOPLINE, RANK
+      %(real_dp_format)s PL(0:3,NLOOPLINE)
+      %(mass_dp_format)s M2L(NLOOPLINE)
+      %(complex_dp_format)s RES(3)
+	  LOGICAL STABLE	  
+C  
+C LOCAL VARIABLES 
+C
+      %(real_dp_format)s P_TMP(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s P_NINJA(0:3,NLOOPLINE)
+      %(mass_dp_format)s M2L_NINJA(NLOOPLINE)
+      %(complex_dp_format)s NINJA_RES(0:2)
+	  %(complex_dp_format)s R1
+	  INTEGER I, J, K
+      %(real_dp_format)s PDEN_DUMMY(0:3,NLOOPLINE-1)
+
+      INTEGER CURR_MAXCOEF	  
+	  COMPLEX*16, ALLOCATABLE :: TENSORCOEFS(:)
+C
+C GLOBAL VARIABLES
+C
+      include 'coupl.inc'
+
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+
+	  %(real_dp_format)s LSCALE
+      common/%(proc_prefix)sCT/LSCALE,CTMODE
+
+      INTEGER ID,SQSOINDEX,R
+      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+## if(not AmplitudeReduction){
+       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## }else{
+       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
+       COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
+
+C ----------
+C BEGIN CODE
+C ----------
+
+C     For the direction test, we must switch the direction in which the loop is read for CTMode equal to 2 or 4.
+      CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN_DUMMY,M2L)
+
+C INITIALIZE NINJA IF NEEDED
+      IF (NINJAINIT) THEN
+	    NINJAINIT=.FALSE.
+		CALL %(proc_prefix)sINITNINJA()
+      ENDIF
+
+C  CONVERT THE MASSES TO BE COMPLEX
+      do I=1,NLOOPLINE
+	    M2L_NINJA(I)=M2L(I)
+	  ENDDO
+
+C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
+      do I=0,3
+        do J=0,(NLOOPLINE-1)
+          P_TMP(I,J)=0.D0
+        enddo
+      enddo
+      do I=0,3
+        do J=1,NLOOPLINE
+          P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+        enddo
+      enddo
+      if (checkPConservation) then
+        if (P_TMP(0,0).gt.1.d-6) then
+          write(*,*) 'energy is not conserved ',P_TMP(0,0)
+          stop 'energy is not conserved'
+        elseif (P_TMP(1,0).gt.1.d-6) then
+         write(*,*) 'px is not conserved ',P_TMP(1,0)
+         stop 'px is not conserved'
+        elseif (P_TMP(2,0).gt.1.d-6) then
+         write(*,*) 'py is not conserved ',P_TMP(2,0)
+         stop 'py is not conserved'
+        elseif (P_TMP(3,0).gt.1.d-6) then
+         write(*,*) 'pz is not conserved ',P_TMP(3,0)
+         stop 'pz is not conserved'
+        endif
+      endif
+      do I=0,3
+        do J=1,(NLOOPLINE-1)
+          do K=1,J
+            P_TMP(I,J)=P_TMP(I,J)+PL(I,K)
+          enddo
+        enddo
+      enddo
+C     In Ninja, the loop line index starts at 1
+      DO I=0,NLOOPLINE-1
+        P_NINJA(0,I+1) = P_TMP(0,I)
+        P_NINJA(1,I+1) = P_TMP(1,I)
+        P_NINJA(2,I+1) = P_TMP(2,I)
+        P_NINJA(3,I+1) = P_TMP(3,I)
+      ENDDO
+
+C     Number of coefficients for the current rank
+      CURR_MAXCOEF = 0
+      DO I=0,RANK
+        CURR_MAXCOEF=CURR_MAXCOEF+(3+I)*(2+I)*(1+I)/6
+      ENDDO
+C     Now write the tensor coefficients for Ninja
+C     It should never be allocated at this stage
+      IF (.NOT. ALLOCATED(TENSORCOEFS)) THEN
+        ALLOCATE(TENSORCOEFS(0:CURR_MAXCOEF-1))
+      ENDIF
+      DO I=0,CURR_MAXCOEF-1
+## if(AmplitudeReduction) {
+        TENSORCOEFS(I) = LOOPCOEFS(I,ID)
+## } else {
+        TENSORCOEFS(I) = LOOPCOEFS(I,SQSOINDEX,ID)
+## }
+      ENDDO
+
+      call ninja_tensor_evaluate_cm(TENSORCOEFS,NLOOPLINE,RANK,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
+
+C     Make sure to deallocate the tensor of coefficients
+      IF (ALLOCATED(TENSORCOEFS)) THEN
+        DEALLOCATE(TENSORCOEFS)
+      ENDIF
+
+## if(AmplitudeReduction) {
+      RES(1)=NORMALIZATION*NINJA_RES(0)
+      RES(2)=NORMALIZATION*NINJA_RES(1)
+      RES(3)=NORMALIZATION*NINJA_RES(2)
+## } else {
+      RES(1)=NORMALIZATION*2.0d0*DBLE(NINJA_RES(0))
+      RES(2)=NORMALIZATION*2.0d0*DBLE(NINJA_RES(1))
+      RES(3)=NORMALIZATION*2.0d0*DBLE(NINJA_RES(2))
+## }
+C     WRITE(*,*) 'Ninja:  Loop ID',ID,' =',RES(1),RES(2),RES(3)
+      END
+
+	  SUBROUTINE %(proc_prefix)sINITNINJA()
+C    
+C     Module used
+C
+      use mninja 
+C 
+C INITIALISATION OF SAMURAI 
+C  
+C LOCAL VARIABLES 
+C
+      INTEGER LOOPLIB
+C  
+C GLOBAL VARIABLES 
+C
+	  include 'MadLoopParams.inc'
+C ----------
+C BEGIN CODE
+C ----------
+
+C     LOOPLIB SET WHAT LIBRARY NINJA USES
+C     1 -> LOOPTOOLS
+C     2 -> AVH
+C     3 -> QCDLOOP
+      IF (CTLOOPLIBRARY.eq.1) THEN
+          write(*,*) "Warning in Ninja initialization. LoopTools is not supported by the Ninja interface. It will use OneLOop instead."
+          LOOPLIB = 1
+      ELSEIF (CTLOOPLIBRARY.eq.3) THEN
+          write(*,*) "Warning in Ninja initialization. LoopTools is not supported by the Ninja interface. It will use OneLOop instead."
+          LOOPLIB = 1
+      ELSEIF (CTLOOPLIBRARY.eq.2) THEN
+          LOOPLIB = 1
+      ELSE
+          write(*,*) "Error in Ninja initialization. Loop library ID=",CTLOOPLIBRARY," is not supported. Change variable CTLoopLibrary in MadLoopParams.dat."
+          stop 1
+      ENDIF
+      call ninja_set_integral_library(LOOPLIB)
 
       END
 ## }

@@ -43,8 +43,8 @@ C LOCAL VARIABLES
 C
 	  INTEGER I, J, K
 	  INTEGER NLOOPCOEFS
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 
 c This variable will be used to detect changes in the TIR library used so as to force the reset of the TIR filter.
 	  INTEGER LAST_LIB_USED
@@ -71,6 +71,10 @@ C
 	  INTEGER CTMODE
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
+
+C     The variables below are just for monitoring purposes. 
+      INTEGER ID,SQSOINDEX,R
+      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
 
 c The argument ILIB is the TIR library to be used for that specific library.
       INTEGER LIBINDEX
@@ -247,7 +251,11 @@ C The zero index is dummy and means no caching at all since TIR_CACHE_SIZE=0.
       RES(2)=NORMALIZATION*2.0d0*DBLE(RES(2))
       RES(3)=NORMALIZATION*2.0d0*DBLE(RES(3))
 ## }
-C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     IF(MLReductionLib(I_LIB).EQ.2) THEN
+C       WRITE(*,*) 'PJFry: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ELSEIF(MLReductionLib(I_LIB).EQ.3) THEN
+C       WRITE(*,*) 'Iregi: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ENDIF
       END
 
       SUBROUTINE %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
@@ -316,8 +324,8 @@ C
 C GLOBAL VARIABLES 
 C
 	  include 'MadLoopParams.inc'
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT, SAMURAIINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 	  
 C ----------
 C BEGIN CODE
@@ -465,6 +473,11 @@ C  DP EVALUATION
 ## } else {
 C No TIR caching implemented, this is dummy. (The subroutine is kept as it might be called by the MC).
 	    CONTINUE
+## }
+
+C       General cache clearing for other reduction methods:
+## if(ninja_available){
+        call ninja_clear_integral_cache()
 ## }
 	  END SUBROUTINE
 

@@ -1435,8 +1435,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             tools=MLOptions["MLReductionLib"]
             tools=list(set(tools)) # remove the duplication ones
         # not self-contained tir libraries
-        tool_var={'pjfry':2,'golem':4,'samurai':5}
-        for tool in ['pjfry','golem','samurai']:
+        tool_var={'pjfry':2,'golem':4,'samurai':5,'ninja':6}
+        for tool in ['pjfry','golem','samurai','ninja']:
             tool_dir='%s_dir'%tool
             if not tool_dir in self.tir_dir:
                 continue
@@ -1457,7 +1457,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         export_dir=pjoin(self.mg_root,("SAVED" if keep_folder else "")+\
                                                 temp_dir_prefix+"_%s"%proc_name)
         
-        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95',5:'Samurai'}
+        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95',5:'Samurai',
+                    6:'Ninja'}
         return_dict={}
         return_dict['Stability']={}
         infos_save={'Process_output': None,
@@ -2121,6 +2122,8 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                 MLoptions["MLReductionLib"].extend([4])
             if "samurai_dir" in tir:
                 MLoptions["MLReductionLib"].extend([5])
+            if "ninja_dir" in tir:
+                MLoptions["MLReductionLib"].extend([6])
 
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 

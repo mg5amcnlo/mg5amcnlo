@@ -134,6 +134,11 @@ C CutTools is used
 C Samurai is used
 	CALL %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
 ##	}
+## if(ninja_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.6) THEN
+C Samurai is used
+	CALL %(proc_prefix)sNINJA_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+##	}
       ELSE
 C Tensor Integral Reduction is used 
 	CALL %(proc_prefix)sTIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
@@ -141,8 +146,11 @@ C Tensor Integral Reduction is used
 	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
 ## if(samurai_available){
 	  ELSEIF (MLReductionLib(I_LIB).EQ.5) THEN
-C Samurai is used
 	CALL %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
+##	}
+## if(samurai_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.6) THEN
+	CALL %(proc_prefix)sNINJA_LOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
 ##	}
       ELSE
 C Tensor Integral Reduction is used 

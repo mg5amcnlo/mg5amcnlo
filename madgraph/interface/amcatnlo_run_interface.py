@@ -2324,6 +2324,7 @@ RESTART = %(mint_mode)s
                               3 : 'IREGI',
                               4 : 'Golem95',
                               5 : 'Samurai',
+                              6 : 'Ninja',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(
                            r"#Unit\s*(?P<unit>\d+)\s*=\s*(?P<n_occurences>\d+)")

@@ -153,7 +153,9 @@ def find_includes_path(start_path, extension):
             if os.path.basename(subdir).endswith(extension):
                 return start_path
         elif os.path.isdir(subdir):
-            return find_includes_path(subdir, extension)
+            path = find_includes_path(subdir, extension)
+            if path:
+                return path
     return None
 
 #===============================================================================
@@ -208,7 +210,7 @@ def deactivate_dependence(dependency, cmd=None, log = None):
             log(msg)
     
 
-    if dependency in ['pjfry','golem','samurai']:
+    if dependency in ['pjfry','golem','samurai','ninja']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
             cmd.options[dependency] = 'None'
@@ -242,6 +244,9 @@ def activate_dependence(dependency, cmd=None, log = None):
     
     if dependency=='samurai':
         raise MadGraph5Error, 'Samurai cannot yet be automatically installed.' 
+
+    if dependency=='ninja':
+        raise MadGraph5Error, 'Ninja cannot yet be automatically installed.' 
     
 #===============================================================================
 # find a library

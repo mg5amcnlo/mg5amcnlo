@@ -67,9 +67,9 @@ C ----------
       DATA ML_INIT/.TRUE./
       common/ML_INIT/ML_INIT
 
-      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
-      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT/.TRUE.,.TRUE.,.TRUE.,.TRUE./
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT/.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
 
       character(512) MLPath
       data MLPath/'[[NA]]'/      
@@ -161,6 +161,8 @@ C     U == 4
 C         Stable with Golem95
 C     U == 5
 C         Stable with Samurai
+C     U == 6
+C         Stable with Ninja
 C     U == 9
 C         Stable with CutTools in quadruple precision.
 C
@@ -194,10 +196,10 @@ C
             STOP 'Only CutTools can use quardruple precision'
          ENDIF
       ENDIF
-      IF(MLRed.GE.1.AND.MLRed.LE.5)THEN
+      IF(MLRed.GE.1.AND.MLRed.LE.6)THEN
          SET_RET_CODE_U=MLRed
       ELSE
-         STOP 'Only CutTools, PJFry++, IREGI, Golem95 and Samurai are available'
+         STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai and Ninja are available'
       ENDIF
       END
 
@@ -239,6 +241,9 @@ C Golem95
       ELSEIF(LIBNUM.EQ.5)THEN
 C Samurai
          CALL DETECT_SAMURAI(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.6)THEN
+C Ninja 
+         CALL DETECT_NINJA(NLOOPLINE,RANK,complex_mass,LPASS)
       ELSE
          STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai are available'
       ENDIF
@@ -271,7 +276,7 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-C     The limit of 10 loop lines is just a parameter hardcoded in Samurai sources.
+C     The limit of 10 loop lines is just a parameter hardcoded in CutTools sources.
 C     It can easily be increased if necessary.
 C     Also in the presence of spin2 particles, RANK=NLOOPLINE+1 is not supported,
 C     or in general whenever the higher rank doesn't come from the Higgs effective vertex.
@@ -314,6 +319,35 @@ C ----------
       LPASS=.TRUE.
 C     The limit of 8 loop lines is just a parameter hardcoded in Samurai sources.
 C     It can easily be increased if necessary.
+      IF((NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.gt.8)) then
+	    LPASS=.FALSE.
+      endif
+      RETURN
+      END
+
+      SUBROUTINE DETECT_NINJA(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C Detect whether Ninja can be used or not
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+      LPASS=.TRUE.
       IF((NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.gt.8)) then
 	    LPASS=.FALSE.
       endif

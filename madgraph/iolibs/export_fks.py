@@ -3061,13 +3061,14 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                               libpath,"lib%s.a"%tir,tir_name=tir)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir in ['pjfry','golem', 'samurai']:
+                if tir in ['pjfry','ninja','golem', 'samurai']:
                     # We should link dynamically when possible, so we use the original
                     # location of these libraries.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
-                    # We must add the corresponding includes for golem and samurai
-                    if tir in ['golem','samurai']:
+                    # We must add the corresponding includes for golem, samurai
+                    # and ninja
+                    if tir in ['golem','samurai','ninja']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
                         to_include = misc.find_includes_path(trg_path,'.mod')
                         if to_include is None:
