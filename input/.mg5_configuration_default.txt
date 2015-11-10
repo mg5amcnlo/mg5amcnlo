@@ -180,7 +180,7 @@
 #! Set the samurai directory containing ninja's library
 #! if auto: try to find it automatically on the system (default)
 #! if '' or None: disabling ninja 
-#! if samurai=/PATH/TO/ninja/lib: use that specific installation path for ninja 
+#! if ninja=/PATH/TO/ninja/lib: use that specific installation path for ninja 
 # ninja = auto
 
 #! Set how MadLoop dependencies (such as CutTools) should be handled

@@ -296,6 +296,12 @@ C ----------
 C     For the direction test, we must switch the direction in which the loop is read for CTMode equal to 2 or 4.
       CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN_DUMMY,M2L)
 
+C The CT initialization is also performed here if not done already because it calls MPINIT of OneLOop which is necessary on some system
+      IF (CTINIT) THEN
+	    CTINIT=.FALSE.
+		CALL %(proc_prefix)sINITCT()
+      ENDIF
+
 C INITIALIZE SAMURAI IF NEEDED
       IF (SAMURAIINIT) THEN
 	    SAMURAIINIT=.FALSE.
@@ -573,6 +579,12 @@ C ----------
 
 C     For the direction test, we must switch the direction in which the loop is read for CTMode equal to 2 or 4.
       CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN_DUMMY,M2L)
+
+C The CT initialization is also performed here if not done already because it calls MPINIT of OneLOop which is necessary on some system
+      IF (CTINIT) THEN
+	    CTINIT=.FALSE.
+		CALL %(proc_prefix)sINITCT()
+      ENDIF
 
 C INITIALIZE NINJA IF NEEDED
       IF (NINJAINIT) THEN
