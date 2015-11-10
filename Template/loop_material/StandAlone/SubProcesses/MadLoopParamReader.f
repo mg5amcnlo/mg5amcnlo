@@ -3,7 +3,7 @@
       implicit none
 
       CHARACTER(512) fileName, buff, buff2, mode
-      CHARACTER*10 MLReductionLib_str,MLReductionLib_str_save
+      CHARACTER*20 MLReductionLib_str,MLReductionLib_str_save
       CHARACTER*2  MLReductionLib_char
       INTEGER MLRed,i,j,k
 
