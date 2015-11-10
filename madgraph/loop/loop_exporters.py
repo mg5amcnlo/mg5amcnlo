@@ -2023,6 +2023,18 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Start from the routine in the template
         replace_dict = copy.copy(matrix_element.rep_dict)
+        
+        # Write the definition of the coef_to_rank_map
+        coef_to_rank_map_definition = []
+        for rank in range(replace_dict['maxrank']+1):
+            start = q_polynomial.get_number_of_coefs_for_rank(rank-1)
+            end   = q_polynomial.get_number_of_coefs_for_rank(rank)-1
+            coef_to_rank_map_definition.append(
+'DATA (COEFTORANK_MAP(I),I=%(start)d,%(end)d)/%(n_entries)d*%(rank)d/'%
+{'start': start,'end': end,'n_entries': end-start+1,'rank': rank})
+        replace_dict['coef_to_rank_map_definition']=\
+                                          '\n'.join(coef_to_rank_map_definition)
+        
         dp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
         mp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
         # The double precision version of the basic polynomial routines, such as

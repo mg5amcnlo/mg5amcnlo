@@ -348,7 +348,9 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF((NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.gt.8)) then
+C     The limit of rank 20 is just a parameter hardcoded in Ninja sources.
+C     It can easily be increased if necessary.
+      IF((NLOOPLINE+1.LT.RANK).OR.(RANK.GE.20)) then
 	    LPASS=.FALSE.
       endif
       RETURN

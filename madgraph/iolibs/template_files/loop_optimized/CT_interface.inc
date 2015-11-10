@@ -151,6 +151,78 @@ C      CALL CTSINIT(THRS,LOOPLIB)
 
 	  END
 
+	  SUBROUTINE %(proc_prefix)sBUILD_KINEMATIC_MATRIX(NLOOPLINE,P_LOOP,M2L,S_MAT) 
+C
+C       Helper function that compute the loop kinematic matrix with proper thresholds
+C       NLOOPLINE : Number of loop lines
+C       P_LOOP    : List of external momenta running in the loop, i.e. q_i in the denominator (l_i+q_i)**2-m_i**2
+C       M2L       : List of complex-valued masses running in the loop.
+C       S_MAT(N,N): Kinematic matrix output.
+C
+C    	ARGUMENTS
+C
+		INTEGER NLOOPLINE
+    	%(real_dp_format)s P_LOOP(NLOOPLINE,0:3)
+    	%(complex_dp_format)s M2L(NLOOPLINE)
+    	%(complex_dp_format)s S_MAT(NLOOPLINE,NLOOPLINE)
+C    
+C    	GLOBAL VARIABLES
+C
+     	include 'MadLoopParams.inc'
+C
+C    	LOCAL VARIABLES
+C
+     	INTEGER I,J,K
+     	%(complex_dp_format)s DIFFSQ
+     	%(real_dp_format)s REF_NORMALIZATION
+
+C     	----------
+C     	BEGIN CODE
+C     	----------
+
+     	do i=1,NLOOPLINE
+       	  do j=1,NLOOPLINE
+            
+		    if(i.eq.j)then
+	          s_mat(i,j)=-(M2L(i)+M2L(j))
+	        else
+	          DIFFSQ = (DCMPLX(P_LOOP(i,0),0.0d0)-DCMPLX(P_LOOP(j,0),0.0d0))**2
+	          do k=1,3
+	            DIFFSQ = DIFFSQ - (DCMPLX(P_LOOP(i,k),0.0d0)-DCMPLX(P_LOOP(j,k),0.0d0))**2
+	          enddo
+C             Default value of the kinematic matrix
+	          s_mat(i,j)=DIFFSQ-M2L(i)-M2L(j)
+C             And we now test various thresholds. Normaly, at most one applies.
+	          IF(ABS(M2L(i)).NE.0.0D0)THEN
+	            IF(ABS((DIFFSQ-M2L(i))/M2L(i)).LT.OSThres)THEN
+	              s_mat(i,j)=-M2L(j)
+ 	            ENDIF
+	          ENDIF
+		      IF(ABS(M2L(j)).NE.0.0D0)THEN
+	            IF(ABS((DIFFSQ-M2L(j))/M2L(j)).LT.OSThres)THEN
+	              s_mat(i,j)=-M2L(i)
+	            ENDIF
+		      ENDIF
+C             Choose what seems the most appropriate way to compare
+C             massless onshellness.
+              REF_NORMALIZATION=0.0d0
+C             Here, we chose to base the threshold only on the energy component
+	          do k=0,0
+		        REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(i,k)) + ABS(P_LOOP(J,k))
+		      ENDDO
+			  REF_NORMALIZATION = (REF_NORMALIZATION/2.0d0)**2
+	          IF(REF_NORMALIZATION.NE.0.0D0)THEN
+                IF(ABS(DIFFSQ/REF_NORMALIZATION).LT.OSThres)THEN
+	              s_mat(i,j)=-(M2L(i)+M2L(j))
+			    ENDIF
+	          ENDIF
+            ENDIF
+
+          ENDDO
+        ENDDO
+
+	  END
+
 ## if(samurai_available){
 
 C     ===========================================
@@ -277,6 +349,9 @@ C     In samurai, the first index is the momentum one (with energy last) and the
         P_SAM(I,4) = P_TMP(0,I)        
       ENDDO
 
+C     Optionally one can set the kinematic matrix fo samurai
+      CALL %(proc_prefix)sSET_SAMURAI_S_MAT(NLOOPLINE,P_TMP,M2L)
+
       CALL samurai(%(proc_prefix)sSAMURAI_LOOPNUM,SAM_RES,R1,P_SAM,M2L_SAM,NLOOPLINE,RANK,SAM_REDUCTION_STEPS,MU_R**2,STABLE)
 ## if(AmplitudeReduction) {
       RES(1)=NORMALIZATION*SAM_RES(0)
@@ -297,7 +372,7 @@ C     =====================================================
 C     
 C     ARGUMENTS 
 C     
-      %(complex_dp_format)s ML5_0_SAMURAI_LOOPNUM
+      %(complex_dp_format)s %(proc_prefix)sSAMURAI_LOOPNUM
       integer icut_dummy
       %(real_dp_format)s mu2_dummy
       %(complex_dp_format)s Q_IN(4),Q(0:3)
@@ -308,11 +383,50 @@ C
       Q(1)=Q_IN(1)
       Q(2)=Q_IN(2)
       Q(3)=Q_IN(3)
-      CALL ML5_0_LOOPNUM(Q,RES)
+      CALL %(proc_prefix)sLOOPNUM(Q,RES)
 
-      ML5_0_SAMURAI_LOOPNUM = RES
+      %(proc_prefix)sSAMURAI_LOOPNUM = RES
 
       END
+
+
+	  SUBROUTINE %(proc_prefix)sSET_SAMURAI_S_MAT(NLOOPLINE,P_LOOP_IN,M2L)
+C    
+C     Module used
+C
+      use mgetkin, only: s_mat
+C
+C ARGUMENTS
+C
+	  integer NLOOPLINE
+	  %(complex_dp_format)s M2L(NLOOPLINE)
+      %(real_dp_format)s P_LOOP_IN(0:3,0:NLOOPLINE-1)
+C
+C LOCAL VARIABLES 
+C
+      INTEGER I,J,K
+	  %(real_dp_format)s P_LOOP(NLOOPLINE,0:3)
+	  %(complex_dp_format)s S_MAT_OUT(NLOOPLINE,NLOOPLINE)	  
+C
+C BEGIN CODE
+C 
+      DO I=1,NLOOPLINE
+	    DO J=0,3
+		  P_LOOP(I,J)=P_LOOP_IN(J,I-1)
+		ENDDO
+      ENDDO
+	  CALL %(proc_prefix)sBUILD_KINEMATIC_MATRIX(NLOOPLINE,P_LOOP,M2L,S_MAT_OUT)
+	  IF(ALLOCATED(s_mat)) THEN
+	    DEALLOCATE(s_mat)
+	  ENDIF
+	  ALLOCATE(S_MAT(NLOOPLINE,NLOOPLINE))
+	  DO I=1,NLOOPLINE
+	    DO J=1,NLOOPLINE
+		  S_MAT(I,J) = S_MAT_OUT(I,J)
+		ENDDO
+	  ENDDO
+	  
+	  END
 
 	  SUBROUTINE %(proc_prefix)sINITSAMURAI()
 C    
@@ -422,14 +536,17 @@ C LOCAL VARIABLES
 C
       %(real_dp_format)s P_TMP(0:3,0:NLOOPLINE-1)
       %(real_dp_format)s P_NINJA(0:3,NLOOPLINE)
+      %(real_dp_format)s P_S_MAT(NLOOPLINE,0:3)	  
       %(mass_dp_format)s M2L_NINJA(NLOOPLINE)
       %(complex_dp_format)s NINJA_RES(0:2)
 	  %(complex_dp_format)s R1
 	  INTEGER I, J, K
       %(real_dp_format)s PDEN_DUMMY(0:3,NLOOPLINE-1)
 
+      %(complex_dp_format)s S_MAT(NLOOPLINE,NLOOPLINE)
+
       INTEGER CURR_MAXCOEF	  
-	  COMPLEX*16, ALLOCATABLE :: TENSORCOEFS(:)
+	  %(complex_dp_format)s, ALLOCATABLE :: TENSORCOEFS(:)
 C
 C GLOBAL VARIABLES
 C
@@ -526,8 +643,22 @@ C     It should never be allocated at this stage
         TENSORCOEFS(I) = LOOPCOEFS(I,SQSOINDEX,ID)
 ## }
       ENDDO
+C     The loop momentum is in fact q_loop -> -q_loop, so that the
+C     coefficients must be changed accordingly
+      CALL %(proc_prefix)sINVERT_MOMENTA_IN_POLYNOMIAL(CURR_MAXCOEF,TENSORCOEFS)
 
-      call ninja_tensor_evaluate_cm(TENSORCOEFS,NLOOPLINE,RANK,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
+C     Compute the kinematic matrix
+      DO J=1,NLOOPLINE
+        DO I=0,3
+          P_S_MAT(J,I)=P_NINJA(I,J)
+        ENDDO
+      ENDDO
+      CALL ML5_0_BUILD_KINEMATIC_MATRIX(NLOOPLINE,P_S_MAT,M2L,S_MAT)
+
+C     Below is the call specifying the kinematic matrix
+C	  call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,S_MAT,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
+C     Below is the call without specification of the kinematic matrix
+      call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
 
 C     Make sure to deallocate the tensor of coefficients
       IF (ALLOCATED(TENSORCOEFS)) THEN
@@ -552,7 +683,7 @@ C     Module used
 C
       use mninja 
 C 
-C INITIALISATION OF SAMURAI 
+C     Initialization of Ninja 
 C  
 C LOCAL VARIABLES 
 C
