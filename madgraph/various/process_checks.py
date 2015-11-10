@@ -1171,8 +1171,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 
         # First Initialize filters (in later versions where this will hopefully
         # be done at generation time, then it will be able to skip it)
-        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
-                                                   read_ps = False, npoints = 4)
+        MadLoopInitializer.fix_PSPoint_in_check(
+                 pjoin(export_dir,'SubProcesses'), read_ps = False, npoints = 4)
+
         self.fix_MadLoopParamCard(pjoin(export_dir,'Cards'),
                             mp = False, loop_filter = True,MLOptions=MLOptions)
         
@@ -1183,6 +1184,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name = pjoin(export_dir, 'SubProcesses', shell_name)
         infos['dir_path']=dir_name
 
+        # Do not refresh the filter automatically as this is very often a waste
+        # of time
+        if not MadLoopInitializer.need_MadLoopInit(
+                                                export_dir, subproc_prefix='P'):
+            return infos
+
         attempts = [3,15]
         # remove check and check_sa.o for running initialization again
         try:
@@ -1190,7 +1197,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             os.remove(pjoin(dir_name,'check_sa.o'))
         except OSError:
             pass
-        
+
         nPS_necessary = MadLoopInitializer.run_initialization(dir_name,
                                 pjoin(export_dir,'SubProcesses'),infos,\
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
@@ -1483,7 +1490,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
             MLoptions={}
             MLoptions["MLReductionLib"]=tool
-            clean=(tool==tools[0])
+            clean = (tool==tools[0]) and not nPoints==0
             if infos_IN==None or (tool_name not in infos_IN):
                 infos=infos_IN
             else:
@@ -1802,16 +1809,41 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         try:
             while True:
-                output = StabChecker.stdout.readline()  
+                output = StabChecker.stdout.readline()
+                if output != '':
+                    last_non_empty = output
                 if output==' ##TAG#RESULT_START#TAG##\n':
                     break
+                # Break if the checker has crashed for some reason.
+                ret_code = StabChecker.poll()
+                if not ret_code is None:
+                    output = StabChecker.stdout.readline()
+                    if output != '':
+                        last_non_empty = output
+                    error = StabChecker.stderr.readline()
+                    raise MadGraph5Error, \
+ "The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
+                                               (ret_code, last_non_empty, error)
+                    
             res = ""
             while True:
                 output = StabChecker.stdout.readline()
+                if output != '':
+                    last_non_empty = output
                 if output==' ##TAG#RESULT_STOP#TAG##\n':
                     break
                 else:
                     res += output
+                ret_code = StabChecker.poll()                
+                if not ret_code is None:
+                    output = StabChecker.stdout.readline()
+                    if output != '':
+                        last_non_empty = output
+                    error = StabChecker.stderr.readline()
+                    raise MadGraph5Error, \
+ "The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
+                                               (ret_code, last_non_empty, error)
+
             return cls.parse_check_output(res,format='tuple')[0][0]
         except IOError as e:
             logging.warning("Error while running MadLoop. Exception = %s"%str(e))
