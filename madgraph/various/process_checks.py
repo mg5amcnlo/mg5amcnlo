@@ -2743,7 +2743,7 @@ The loop direction test power P is computed as follow:
 
     try:
         import matplotlib.pyplot as plt
-        colorlist=['b','r','g','y']
+        colorlist=['b','r','g','y','m','c']
         for i,key in enumerate(data_plot_dict.keys()):
             color=colorlist[i]
             data_plot=data_plot_dict[key]

@@ -904,7 +904,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4|5','--CTModeRun':'-1','--helicity':'-1'}
+                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1','--helicity':'-1'}
         
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
