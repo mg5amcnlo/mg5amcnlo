@@ -665,7 +665,7 @@ C     Compute the kinematic matrix
           P_S_MAT(J,I)=P_NINJA(I,J)
         ENDDO
       ENDDO
-      CALL ML5_0_BUILD_KINEMATIC_MATRIX(NLOOPLINE,P_S_MAT,M2L,S_MAT)
+      CALL %(proc_prefix)sBUILD_KINEMATIC_MATRIX(NLOOPLINE,P_S_MAT,M2L,S_MAT)
 
 C     Below is the call specifying the kinematic matrix
 C	  call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,S_MAT,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
