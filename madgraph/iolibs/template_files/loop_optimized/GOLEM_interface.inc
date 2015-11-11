@@ -122,7 +122,13 @@ C ----------
 C BEGIN CODE
 C ----------
 
-C INITIALIZE CUTTOOLS IF NEEDED
+C The CT initialization is also performed here if not done already because it calls MPINIT of OneLOop which is necessary on some system
+      IF (CTINIT) THEN
+	    CTINIT=.FALSE.
+		CALL %(proc_prefix)sINITCT()
+      ENDIF
+
+C INITIALIZE GOLEM IF NEEDED
       IF (GOLEMINIT) THEN
 	    GOLEMINIT=.FALSE.
 	    CALL %(proc_prefix)sINITGOLEM()
