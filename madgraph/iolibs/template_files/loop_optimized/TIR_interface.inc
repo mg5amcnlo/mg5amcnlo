@@ -386,7 +386,8 @@ C           This list specifies what loop involve an Higgs effective vertex so t
 C
 C GLOBAL VARIABLES
 C
-	    INCLUDE 'MadLoopParams.inc'
+	        INCLUDE 'MadLoopParams.inc'
+			INCLUDE 'process_info.inc'
 C Change the list 'LOOPLIBS_QPAVAILABLE' in loop_matrix_standalone.inc to change the list of QPTools availables
             LOGICAL QP_TOOLS_AVAILABLE
             INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
@@ -419,7 +420,7 @@ C  QP EVALUATION, ONLY CUTTOOLS
 		I_LIB=SELECT_LIBINDEX
 		LIBNUM=MLReductionLib(I_LIB)
 		DO
-		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),LPASS)
+		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 		  IF(LPASS)EXIT
 		  I=I+1
 		  IF(I.GT.QP_NLOOPLIB.AND.INDEX_QP_TOOLS(I).EQ.0)THEN
@@ -436,7 +437,7 @@ C  DP EVALUATION
       		I_LIB=LIBINDEX
 		LIBNUM=MLReductionLib(I_LIB)
 		DO
-		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),LPASS)
+		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 		  IF(LPASS)EXIT
 		  I_LIB=I_LIB+1
 		  IF(I_LIB.GT.NLOOPLIB.OR.MLReductionLib(I_LIB).EQ.0)THEN
