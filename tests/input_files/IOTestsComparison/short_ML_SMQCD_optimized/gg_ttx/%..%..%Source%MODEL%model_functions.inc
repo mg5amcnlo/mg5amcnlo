@@ -9,6 +9,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       DOUBLE COMPLEX REGLOGM
       DOUBLE COMPLEX RECMS
       DOUBLE COMPLEX ARG
+
+
       COMPLEX*32 MP_COND
       COMPLEX*32 MP_CONDIF
       COMPLEX*32 MP_REGLOG
@@ -16,3 +18,5 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       COMPLEX*32 MP_REGLOGM
       COMPLEX*32 MP_RECMS
       COMPLEX*32 MP_ARG
+
+

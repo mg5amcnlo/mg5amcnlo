@@ -1119,7 +1119,7 @@ class ProcCharacteristic(ConfigFile):
          
     def write(self, outputpath):
         """write the file"""
-        
+
         template ="#    Information about the process      #\n"
         template +="#########################################\n"
         
@@ -1430,6 +1430,7 @@ class RunCard(ConfigFile):
             fsock.writelines(line)
         fsock.close()   
 
+
     def get_banner_init_information(self):
         """return a dictionary with the information needed to write
         the first line of the <init> block of the lhe file."""
@@ -1468,7 +1469,22 @@ class RunCard(ConfigFile):
         output["pdfsup1"] = get_pdf_id(self["pdlabel"])
         output["pdfsup2"] = get_pdf_id(self["pdlabel"])
         return output
-        
+
+    def remove_all_cut(self): 
+        """remove all the cut"""
+
+        for name in self.cuts_parameter:
+            targettype = type(self[name])
+            if targettype == bool:
+                self[name] = False
+            elif 'min' in name:
+                self[name] = 0
+            elif 'max' in name:
+                self[name] = -1
+            elif 'eta' in name:
+                self[name] = -1
+            else:
+                self[name] = 0       
 
 class RunCardLO(RunCard):
     """an object to handle in a nice way the run_card infomration"""
@@ -1798,22 +1814,6 @@ class RunCardLO(RunCard):
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
                 
-
-    def remove_all_cut(self): 
-        """remove all the cut"""
-
-        for name in self.cuts_parameter:
-            targettype = type(self[name])
-            if targettype == bool:
-                self[name] = False
-            elif 'min' in name:
-                self[name] = 0
-            elif 'max' in name:
-                self[name] = -1
-            elif 'eta' in name:
-                self[name] = -1
-            else:
-                self[name] = 0
             
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -1984,7 +1984,7 @@ class RunCardNLO(RunCard):
         """Rules
           e+ e- beam -> lpp:0 ebeam:500  
           p p beam -> set maxjetflavor automatically
-         """
+        """
 
         # check for beam_id
         beam_id = set()
@@ -2004,6 +2004,10 @@ class RunCardNLO(RunCard):
         else:
             self['lpp1'] = 0
             self['lpp2'] = 0  
+            
+        if proc_characteristic['ninitial'] == 1:
+            #remove all cut
+            self.remove_all_cut()
         
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat

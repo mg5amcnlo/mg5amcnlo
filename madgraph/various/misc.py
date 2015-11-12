@@ -874,6 +874,25 @@ class TMP_directory(object):
         
     def __enter__(self):
         return self.path
+    
+class TMP_variable(object):
+    """create a temporary directory and ensure this one to be cleaned.
+    """
+
+    def __init__(self, cls, attribute, value):
+        
+        self.old_value = getattr(cls, attribute)
+        self.cls = cls
+        self.attribute = attribute
+        setattr(self.cls, self.attribute, value)
+    
+    def __exit__(self, ctype, value, traceback ):
+
+        setattr(self.cls, self.attribute, self.old_value)
+        
+    def __enter__(self):
+        return self.old_value 
+    
 #
 # GUNZIP/GZIP
 #
@@ -1351,3 +1370,22 @@ class ProcessTimer:
 #      pass
 
 
+try:
+    import Foundation
+    import objc
+    NSUserNotification = objc.lookUpClass('NSUserNotification')
+    NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+
+    def apple_notify(subtitle, info_text, userInfo={}):
+        try:
+            notification = NSUserNotification.alloc().init()
+            notification.setTitle_('MadGraph5_aMC@NLO')
+            notification.setSubtitle_(subtitle)
+            notification.setInformativeText_(info_text)
+            notification.setUserInfo_(userInfo)
+            NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+        except:
+            pass
+except:
+    def apple_notify(subtitle, info_text, userInfo={}):
+        return

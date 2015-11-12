@@ -177,7 +177,7 @@ c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       call printout
       call run_printout
       iconfig=1
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.false.)
 c
       ndim = 55
       ncall = 10000

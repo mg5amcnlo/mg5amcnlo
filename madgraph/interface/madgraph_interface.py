@@ -465,9 +465,9 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   by generating permutations of the process and checking")
         logger.info("   that the resulting matrix elements give the same value.")
         logger.info("o gauge:",'$MG:color:GREEN')
-        logger.info("   Check that processes with massless gauge bosons are")
-        logger.info("   gauge invariant (comparing Feynman and unitary gauges)")
-        logger.info("   This check if for now not available for loop processes.")
+        logger.info("   Check that processes are gauge invariant by ")
+        logger.info("   comparing Feynman and unitary gauges.")
+        logger.info("   This check is, for now, not available for loop processes.")
         logger.info("o brs:",'$MG:color:GREEN')
         logger.info("   Check that the Ward identities are satisfied if the ")
         logger.info("   process has at least one massless gauge boson as an")
@@ -2695,7 +2695,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madevent = {'automatic_html_opening':True,
                          'run_mode':2,
-                         'nb_core': None
+                         'nb_core': None,
+                         'notification_center': True
                          }
 
 
@@ -5892,6 +5893,10 @@ This implies that with decay chains:
                 self.options[key] = int(self.options[key])
             elif key in ['cluster_type','automatic_html_opening']:
                 pass
+            elif key in ['notification_center']:
+                if self.options[key] in ['False', 'True']:
+                   self.allow_notification_center = eval(self.options[key])
+                   self.options[key] = self.allow_notification_center
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
@@ -6489,7 +6494,12 @@ This implies that with decay chains:
 
         elif args[0] =='output_dependencies':
             self.options[args[0]] = args[1]
-        
+        elif args[0] =='notification_center':
+            if args[1] in ['None','True','False']:
+                self.options[args[0]] = eval(args[1])
+                self.allow_notification_center = self.options[args[0]]
+            else:
+                raise self.InvalidCmd('expected bool for notification_center')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

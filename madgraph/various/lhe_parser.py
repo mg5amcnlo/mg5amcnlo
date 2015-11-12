@@ -529,12 +529,10 @@ class EventFile(object):
                 type.append(0)           
         pdf = max(int(pdf1),int(pdf2))
         
-        print init
-        
         out.write("<header>\n" + \
                   "<orgpdf>%i</orgpdf>\n" % pdf + \
                   "<beams>  %s  %s</beams>\n" % tuple(type) + \
-                  "</header>")
+                  "</header>\n")
         
         
         nevt, smin, smax, scomp = sys_iterator.next()
@@ -546,7 +544,7 @@ class EventFile(object):
             new_event.syscalc_data = sys
             if smin:
                 new_event.syscalc_data['matchscale'] = "%s %s %s" % (smin, scomp, smax)
-            out.write(str(new_event))
+            out.write(str(new_event), nevt)
             try:
                 nevt, smin, smax, scomp = sys_iterator.next()
             except StopIteration:
@@ -1398,8 +1396,8 @@ class Event(list):
 %(reweight)s
 </event>
 """ 
-        if event_id:
-            event_id = 'event=%s' % event_id
+        if event_id not in ['', None]:
+            event_id = ' event=%s' % event_id
             
         if self.nexternal:
             scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
@@ -1428,7 +1426,7 @@ class Event(list):
         if self.syscalc_data:
             keys= ['rscale', 'asrwt', ('pdfrwt', 'beam', '1'), ('pdfrwt', 'beam', '2'),
                    'matchscale', 'totfact']
-            sys_str = "<mgwrt>\n"
+            sys_str = "<mgrwt>\n"
             template = """<%(key)s%(opts)s>%(values)s</%(key)s>\n"""
             for k in keys:
                 if k not in self.syscalc_data:

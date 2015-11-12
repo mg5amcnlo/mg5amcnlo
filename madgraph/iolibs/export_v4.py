@@ -1645,7 +1645,14 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if default_compiler and misc.which(default_compiler):
             compiler = default_compiler
         elif misc.which('g++'):
-            compiler = 'g++'
+            #check if clang version
+            p = misc.Popen(['g++', '--version'], stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE) 
+            out, _ = p.communicate()
+            if 'clang' in out and  misc.which('clang'):
+                compiler = 'clang'
+            else:
+                compiler = 'g++'
         elif misc.which('c++'):
             compiler = 'c++'
         elif misc.which('clang'):

@@ -35,20 +35,37 @@ im = Function(name = 'im',
 
 sec = Function(name = 'sec',
              arguments = ('z',),
-             expression = '1./cmath.cos(z)')
+             expression = '1./cmath.cos(z.real)')
 
 asec = Function(name = 'asec',
              arguments = ('z',),
-             expression = 'cmath.acos(1./z)')
+             expression = 'cmath.acos(1./(z.real))')
 
 csc = Function(name = 'csc',
              arguments = ('z',),
-             expression = '1./cmath.sin(z)')
+             expression = '1./cmath.sin(z.real)')
 
 acsc = Function(name = 'acsc',
              arguments = ('z',),
-             expression = 'cmath.asin(1./z)')
+             expression = 'cmath.asin(1./(z.real))')
 
+cot = Function(name = 'cot',
+               arguments = ('z',),
+               expression = '1./cmath.tan(z.real)')
 
+# Heaviside theta function
 
+theta_function = Function(name = 'theta_function',
+             arguments = ('x','y','z'),
+             expression = 'y if x else z')
+
+# Auxiliary functions for NLO
+
+cond = Function(name = 'cond',
+                arguments = ('condition','ExprTrue','ExprFalse'),
+                expression = '(ExprTrue if condition==0.0 else ExprFalse)')
+
+reglog = Function(name = 'reglog',
+                arguments = ('z'),
+                expression = '(0.0 if z==0.0 else cmath.log(z.real))')
 

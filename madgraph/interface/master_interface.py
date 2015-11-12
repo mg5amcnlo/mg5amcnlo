@@ -599,7 +599,7 @@ class MasterCmd(Switcher, LoopCmd.LoopInterface, amcatnloCmd.aMCatNLOInterface, 
             raise self.InvalidCmd("Invalid switch command or non existing interface %s."\
                             %args[0]+" Valid interfaces are %s"\
                             %','.join(interface_quick_name.keys()))
-
+        
     def change_principal_cmd(self, name):
         old_cmd=self.current_interface
         if name in self.interface_names.keys():

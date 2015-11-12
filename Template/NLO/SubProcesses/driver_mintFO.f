@@ -170,7 +170,7 @@ c
       else
         flat_grid=.false.
       endif
-      ndim = 3*(nexternal-2)-4
+      ndim = 3*(nexternal-nincoming)-4
       if (abs(lpp(1)) .ge. 1) ndim=ndim+1
       if (abs(lpp(2)) .ge. 1) ndim=ndim+1
 c Don't proceed if muF1#muF2 (we need to work out the relevant formulae
@@ -522,7 +522,7 @@ c Finalize PS point
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig)
+      call setfksfactor(iconfig,.false.)
       return
       end
       
@@ -709,9 +709,14 @@ c-----
             endif
          elseif(buffer(1:12).eq.'SUM_HELICITY') then
             read(buffer(15:),*) i
-            if (i.eq.0) then
+            if (nincoming.eq.1) then
+               write (*,*) 'Sum over helicities in the virtuals'/
+     $              /' for decay process'
                mc_hel=0
-               write (*,*) 'Explicitly summing over helicities'
+            elseif (i.eq.0) then
+               mc_hel=0
+               write (*,*) 'Explicitly summing over helicities'/
+     $              /' for the virtuals'
             else
                mc_hel=1
                write(*,*) 'Do MC over helicities for the virtuals'
