@@ -1662,16 +1662,31 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 if isinstance(libpath,str) and libpath != '' and \
                 (not os.path.isfile(pjoin(libpath,libname))):
                     # WARNING ONLY appears when the libpath is a wrong specific path.
-                    logger.warning("The %s tensor integration library could not be found"%tir_name\
+                    logger.warning("The %s reduction library could not be found"%tir_name\
                                    +" with PATH:%s specified in mg5_configuration.txt."%libpath\
                                    +" It will not be available.")
                 self.tir_available_dict[tir_name]=False
                 return ""
+            # Check the version of the tool, if the library was found
+            if tir_name in ['ninja','samurai'] and self.tir_available_dict[tir_name]:
+                # Make sure the librry was indeed installed in the source directory
+                # of the tool, of course this check doesn't make sense.
+                if os.path.isfile(pjoin(libpath,os.pardir,'AUTHORS')):
+                    try:
+                        version = open(pjoin(libpath,os.pardir,'VERSION'),'r').read()
+                    except IOError:
+                        version = None
+                    if version is None :
+                        logger.warning(
+"Your version of '%s' in \n  %s\nseems too old %sto be compatible with MG5_aMC."
+%(tir_name, libpath ,'' if not version else '(v%s) '%version)+
+"\nConsider updating it by hand or using the 'install' function of MG5_aMC.")
+
         else:
             # self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
                 # WARNING ONLY appears when the libpath is a wrong specific path.
-                logger.warning("The %s tensor integration library could not be found"%tir_name\
+                logger.warning("The %s reduction library could not be found"%tir_name\
                                    +" with PATH:%s specified in mg5_configuration.txt."%libpath\
                                    +" It will not be available.")
                 self.tir_available_dict[tir_name]=False
@@ -1681,7 +1696,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             if tir_name in ['pjfry','golem','samurai','ninja']:
                 self.tir_available_dict[tir_name]=False
                 logger.info("When using the 'output_dependencies=internal' "+\
-" MG5_aMC option, the (optional) tensor integral library %s cannot be employed because"%tir_name+\
+" MG5_aMC option, the (optional) reduction library %s cannot be employed because"%tir_name+\
 " it is not distributed with the MG5_aMC code so that it cannot be copied locally.")
                 return ""
             elif tir_name == "iregi":
