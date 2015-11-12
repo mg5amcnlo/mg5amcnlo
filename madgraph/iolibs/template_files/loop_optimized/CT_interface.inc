@@ -550,6 +550,7 @@ C
       %(real_dp_format)s PDEN_DUMMY(0:3,NLOOPLINE-1)
 
       %(complex_dp_format)s S_MAT(NLOOPLINE,NLOOPLINE)
+      %(real_dp_format)s REAL_S_MAT(NLOOPLINE,NLOOPLINE)
 
       INTEGER CURR_MAXCOEF	  
 	  %(complex_dp_format)s, ALLOCATABLE :: TENSORCOEFS(:)
@@ -667,10 +668,16 @@ C     Compute the kinematic matrix
       ENDDO
       CALL %(proc_prefix)sBUILD_KINEMATIC_MATRIX(NLOOPLINE,P_S_MAT,M2L,S_MAT)
 
+	  DO I=1,NLOOPLINE
+	    DO J=1,NLOOPLINE
+		  REAL_S_MAT(I,J) = DBLE(S_MAT(I,J)+M2L(i)+M2L(j))
+		ENDDO
+	  ENDDO
+
 C     Below is the call specifying the kinematic matrix
-C	  call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,S_MAT,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
+	  call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,REAL_S_MAT,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
 C     Below is the call without specification of the kinematic matrix
-      call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
+c      call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
 
 C     Make sure to deallocate the tensor of coefficients
       IF (ALLOCATED(TENSORCOEFS)) THEN

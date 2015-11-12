@@ -85,6 +85,9 @@ class LoopExporterFortran(object):
                         'compute_color_flows': False,
                         'mode':''}
 
+    include_names    = {'ninja' : 'mninja.mod',
+                        'golem' : 'generic_function_1p.mod',
+                        'samurai':'msamurai.mod'}
 
     def __init__(self, mgme_dir="", dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
@@ -1588,6 +1591,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         link_tir_libs=[]
         tir_libs=[]
         tir_include=[]
+        
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
             libpath=getattr(self,tir_dir)
@@ -1602,9 +1606,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     # location of these libraries.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
-                    if tir in ['golem', 'samurai','ninja']:
+                    if tir in ['ninja','golem', 'samurai']:
                         trgt_path = pjoin(os.path.dirname(libpath),'include')
-                        to_include = misc.find_includes_path(trgt_path,'.mod')
+                        to_include = misc.find_includes_path(trgt_path,
+                                                        self.include_names[tir])
                         if to_include is None:
                             logger.error(
 'Could not find the include directory for %s, looking in %s.\n' % (tir, str(trgt_path))+

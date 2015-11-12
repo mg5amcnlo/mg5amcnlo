@@ -861,6 +861,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_check(self, args):
         """check the validity of args"""
+
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 

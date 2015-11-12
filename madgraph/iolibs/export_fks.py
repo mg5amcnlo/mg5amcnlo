@@ -3070,7 +3070,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                     # and ninja
                     if tir in ['golem','samurai','ninja']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
-                        to_include = misc.find_includes_path(trg_path,'.mod')
+                        to_include = misc.find_includes_path(trg_path,
+                                                        self.include_names[tir])
                         if to_include is None:
                             logger.error(
 'Could not find the include directory for %s, looking in %s.\n' % (tir ,str(trg_path))+
