@@ -11,6 +11,7 @@ C
 C CONSTANTS                                                           
 C                                                                     
       include 'genps.inc'                                            
+      include "nexternal.inc"
       DOUBLE PRECISION       CONV                                     
       PARAMETER (CONV=389379660D0)  !CONV TO PICOBARNS             
 C                                                                     

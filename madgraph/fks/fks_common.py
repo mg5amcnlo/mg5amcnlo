@@ -228,8 +228,12 @@ def find_splittings(leg, model, dict, pert='QCD'): #test written
             parts = copy.deepcopy(ii['particles'])
             nsoft = 0
             if part in parts:
-                #pops the ANTI-particle of part from the interaction
-                parts.pop(parts.index(antipart))
+                #try to pop the ANTI-particle of part from the interaction
+                #if not there, pop part
+                try:
+                    parts.pop(parts.index(antipart))
+                except ValueError:
+                    parts.pop(parts.index(part))
                 for p in parts:
                     if p.get_pdg_code() in dict['soft_particles']:
                         nsoft += 1
