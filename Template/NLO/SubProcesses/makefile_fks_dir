@@ -34,7 +34,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) 			\
 	 $(patsubst %.f,%.o,$(wildcard born_cnt_*.f))			\
 	 fks_Sij.o trapfpe.o $(fastjetfortran_madfks) fks_singular.o	\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
-	 initcluster.o cluster.o 					\
+	 initcluster.o cluster.o splitorders_stuff.o 					\
 	 reweight.o get_color.o FKSParamReader.o iproc_map.o		\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(applgrid_interface)
@@ -74,7 +74,7 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	cuts.o $(fastjetfortran_madfks) boostwdir2.o veto_xsec.o	\
 	$(reweight_xsec_events_pdf_dummy) fill_MC_mshell.o cluster.o	\
 	reweight.o get_color.o iproc_map.o chooser_functions.o 		\
-	pythia_unlops.o recluster.o
+	pythia_unlops.o recluster.o splitorders_stuff.o
 
 %.o: %.f
 	$(FC) $(FFLAGS) -c -I. $<
