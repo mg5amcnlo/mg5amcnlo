@@ -1431,6 +1431,7 @@ c wgts() array to include the weights.
       integer n,izero,i
       parameter (izero=0)
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac,g
+     &     ,alphas
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas

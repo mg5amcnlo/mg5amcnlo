@@ -1152,7 +1152,7 @@ c Got random numbers for all dimensions, update kkk() for the next call
      $     ,ndimmax)
       double precision ave_virt(nintervals_virt,ndimmax)
      $     ,ave_virt_acc(nintervals_virt,ndimmax)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax)
+     $     ,ave_born_acc(nintervals_virt,ndimmax)
       common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
      $     ,nvirt_acc
 c need to solve for k_new = (virt+k_old*born)/born
