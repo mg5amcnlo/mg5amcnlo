@@ -1379,10 +1379,18 @@ c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
-            virt_wgt_mint=virt_wgt_mint*xlum*g_strong(i)**QCDpower(i)
-     &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
-            born_wgt_mint=born_wgt_mint*xlum*g_strong(i)**QCDpower(i)
-     &           /(8d0*Pi**2)*rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+            virt_wgt_mint(0)=virt_wgt_mint(0)*xlum
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r))
+            born_wgt_mint(0)=born_wgt_mint(0)*xlum
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r))
+            do iamp=1,amp_split_size
+               call amp_split_pos_to_orders(iamp, orders)
+               QCD_power=orders(qcd_pos)
+               virt_wgt_mint(iamp)=virt_wgt_mint(iamp)*xlum
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r))
+               born_wgt_mint(iamp)=born_wgt_mint(iamp)*xlum
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r))
+            enddo
          endif
       enddo
       call cpu_time(tAfter)
