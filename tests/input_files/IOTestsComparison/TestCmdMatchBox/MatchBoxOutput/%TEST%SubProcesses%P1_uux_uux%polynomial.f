@@ -97,6 +97,31 @@ C
 
       END
 
+      SUBROUTINE MG5_1_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
+C     Just a handy subroutine to modify the coefficients for the
+C     tranformation q_loop -> -q_loop
+C     It is only used for the NINJA interface
+      IMPLICIT NONE
+
+      INTEGER LOOPMAXCOEFS
+      PARAMETER (LOOPMAXCOEFS=15)
+      INTEGER I, NCOEFS
+
+      COMPLEX*16 POLYNOMIAL(0:NCOEFS-1)
+
+      INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)
+      DATA (COEFTORANK_MAP(I),I=0,0)/1*0/
+      DATA (COEFTORANK_MAP(I),I=1,4)/4*1/
+      DATA (COEFTORANK_MAP(I),I=5,14)/10*2/
+
+      DO I=0,NCOEFS-1
+        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
+          POLYNOMIAL(I)=-POLYNOMIAL(I)
+        ENDIF
+      ENDDO
+
+      END
+
 
 C     THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
 C     MULTIPLY BY THE BORN
@@ -192,6 +217,32 @@ C
           CALL MP_MG5_1_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,MG5_1_ML5SQSOINDEX(I,MG5_1_ML5SOINDEX_FOR_LOOP_
      $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+        ENDIF
+      ENDDO
+
+      END
+
+      SUBROUTINE MP_MG5_1_INVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS
+     $ ,POLYNOMIAL)
+C     Just a handy subroutine to modify the coefficients for the
+C     tranformation q_loop -> -q_loop
+C     It is only used for the NINJA interface
+      IMPLICIT NONE
+
+      INTEGER LOOPMAXCOEFS
+      PARAMETER (LOOPMAXCOEFS=15)
+      INTEGER I, NCOEFS
+
+      COMPLEX*32 POLYNOMIAL(0:NCOEFS-1)
+
+      INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)
+      DATA (COEFTORANK_MAP(I),I=0,0)/1*0/
+      DATA (COEFTORANK_MAP(I),I=1,4)/4*1/
+      DATA (COEFTORANK_MAP(I),I=5,14)/10*2/
+
+      DO I=0,NCOEFS-1
+        IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
+          POLYNOMIAL(I)=-POLYNOMIAL(I)
         ENDIF
       ENDDO
 

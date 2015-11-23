@@ -693,24 +693,56 @@ class MadSpinInterface(extended_cmd.Cmd):
                     else:
                         mg5.exec_cmd("generate %s" % proc)
                         mg5.exec_cmd("output %s -f" % decay_dir)
-                options = dict(mg5.options)
-                import madgraph.interface.madevent_interface as madevent_interface
-                me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                    
+                    import madgraph.interface.madevent_interface as madevent_interface
+                    options = dict(mg5.options)
+                    if self.options['ms_dir']:
+                        misc.sprint("start gridpack!")
+                        # we are in gridpack mode -> create it
+                        me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                                 decay_dir), options=options)
-                me5_cmd.options["automatic_html_opening"] = False
-                if self.options["run_card"]:
-                    run_card = self.options["run_card"]
+                        me5_cmd.options["automatic_html_opening"] = False
+                        if self.options["run_card"]:
+                            run_card = self.options["run_card"]
+                        else:
+                            run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))                        
+                        
+                        run_card["iseed"] = self.seed
+                        run_card['gridpack'] = True
+                        run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                        param_card = self.banner['slha']
+                        open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
+                        self.seed += 1
+                        # actually creation
+                        me5_cmd.exec_cmd("generate_events run_01 -f")
+                        me5_cmd.exec_cmd("exit")                        
+                        #remove pointless informat
+                        misc.call(["rm", "Cards", "bin", 'Source', 'SubProcesses'], cwd=decay_dir)
+                        misc.call(['tar', '-xzpvf', 'run_01_gridpack.tar.gz'], cwd=decay_dir)
+                
+                # Now generate the events
+
+                
+                if not self.options['ms_dir']:
+                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                                    decay_dir), options=options)
+                    me5_cmd.options["automatic_html_opening"] = False
+                    if self.options["run_card"]:
+                        run_card = self.options["run_card"]
+                    else:
+                        run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    run_card["nevents"] = int(1.2*nb_event)
+                    run_card["iseed"] = self.seed
+                    run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    param_card = self.banner['slha']
+                    open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
+                    self.seed += 1
+                    me5_cmd.exec_cmd("generate_events run_01 -f")
+                    me5_cmd.exec_cmd("exit")
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
                 else:
-                    run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
-                run_card["nevents"] = int(1.2*nb_event)
-                run_card["iseed"] = self.seed
-                run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
-                param_card = self.banner['slha']
-                open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
-                self.seed += 1
-                me5_cmd.exec_cmd("generate_events run_01 -f")
-                me5_cmd.exec_cmd("exit")     
-                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
+                    misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed)], cwd=decay_dir)     
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))            
                 if cumul:
                     break
             

@@ -3,7 +3,7 @@
       implicit none
 
       CHARACTER(512) fileName, buff, buff2, mode
-      CHARACTER*10 MLReductionLib_str,MLReductionLib_str_save
+      CHARACTER*20 MLReductionLib_str,MLReductionLib_str_save
       CHARACTER*2  MLReductionLib_char
       INTEGER MLRed,i,j,k
 
@@ -121,7 +121,7 @@
 
           else if (buff .eq. '#MLReductionLib') then
              read(666,*,end=999) MLReductionLib_str
-             MLReductionLib(1:5)=0
+             MLReductionLib(1:6)=0
              MLReductionLib_str_save=MLReductionLib_str
              j=0
              DO
@@ -139,6 +139,10 @@
                    MLRed=3
                 ELSEIF(MLReductionLib_char.EQ.'4 ')THEN
                    MLRed=4
+                ELSEIF(MLReductionLib_char.EQ.'5 ')THEN
+                   MLRed=5
+                ELSEIF(MLReductionLib_char.EQ.'6 ')THEN
+                   MLRed=6
                 ELSE
                    PRINT *, 'MLReductionLib is wrong: '//
      $                  TRIM(MLReductionLib_str_save)
@@ -245,7 +249,7 @@ C     a non existing or malformed parameter file
       include "MadLoopParams.inc"
 
       MLReductionLib(1)=1
-      MLReductionLib(2:5)=0
+      MLReductionLib(2:6)=0
       IREGIMODE=2
       IREGIRECY=.TRUE.
       CTModeInit=0

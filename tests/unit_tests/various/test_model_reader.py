@@ -62,7 +62,7 @@ class TestModelReader(unittest.TestCase):
 
             self.assertTrue(isinstance(self.model_reader.get('coupling_dict')[\
                 coupl.name], complex))
-            
+
 
 if __name__ == '__main__':
     unittest.unittest.main()

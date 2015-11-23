@@ -202,6 +202,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+      INCLUDE 'process_info.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'mp_coupl.inc'
       INCLUDE 'MadLoopParams.inc'
@@ -231,14 +232,24 @@ C
       COMMON/ML5_0_MP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
-      LOGICAL LOOPLIBS_AVAILABLE(4)
-      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.FALSE.,.FALSE./
+      LOGICAL LOOPLIBS_AVAILABLE(6)
+      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.
+     $ ,.FALSE./
       COMMON/ML5_0_LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
 C     PJFry++ and Golem95 do not support direction test
-      LOGICAL LOOPLIBS_DIRECTEST(4)
-      DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      LOGICAL LOOPLIBS_DIRECTEST(6)
+      DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.
+     $ ,.TRUE./
+C     Specifying for which reduction tool quadruple precision is
+C      available.
+C     The index 0 is dummy and simply means that the corresponding
+C      loop_library is not available
+C     in which case neither is its quadruple precision version.
+      LOGICAL LOOPLIBS_QPAVAILABLE(0:6)
+      DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
+     $ ,.FALSE.,.FALSE.,.FALSE./
 
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
@@ -393,6 +404,10 @@ C     y by each SubProcess.
       LOGICAL LOCAL_ML_INIT
       DATA LOCAL_ML_INIT/.TRUE./
 
+      LOGICAL WARNED_LORENTZ_STAB_TEST_OFF
+      DATA WARNED_LORENTZ_STAB_TEST_OFF/.FALSE./
+      INTEGER NROTATIONS_DP_BU,NROTATIONS_QP_BU
+
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -419,6 +434,7 @@ C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
             NROTATIONS_DP=0
           ENDIF
         ENDIF
+
       ENDIF
 
       IF (LOCAL_ML_INIT) THEN
@@ -442,9 +458,11 @@ C       SKIP THE ONES THAT NOT AVAILABLE
         ENDIF
         J=0
         DO I=1,NLOOPLIB
-          IF(MLREDUCTIONLIB(I).EQ.1)THEN
+          IF(LOOPLIBS_QPAVAILABLE(MLREDUCTIONLIB(I)))THEN
             J=J+1
-            IF(.NOT.QP_TOOLS_AVAILABLE)QP_TOOLS_AVAILABLE=.TRUE.
+            IF(.NOT.QP_TOOLS_AVAILABLE) THEN
+              QP_TOOLS_AVAILABLE=.TRUE.
+            ENDIF
             INDEX_QP_TOOLS(J)=I
           ENDIF
         ENDDO
@@ -459,6 +477,23 @@ C       Setup the file paths
         CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
 
         CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
+
+C       Make sure that the loop filter is disabled when there is
+C        spin-2 particles for 2>1 or 1>2 processes
+        IF(MAX_SPIN_EXTERNAL_PARTICLE.GT.3.AND.(NEXTERNAL.LE.3.AND.HELI
+     $   CITYFILTERLEVEL.NE.0)) THEN
+          WRITE(*,*) '##INFO: Helicity filter deactivated for 2>'
+     $     //'1 processes involving spin 2 particles.'
+          HELICITYFILTERLEVEL = 0
+C         We write a dummy filter for structural reasons here
+          OPEN(1, FILE=HELFILTERFN, ERR=6116, STATUS='NEW',ACTION='WRI'
+     $     //'TE')
+          DO I=1,NCOMB
+            WRITE(1,*) 1
+          ENDDO
+ 6116     CONTINUE
+          CLOSE(1)
+        ENDIF
 
         OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
      $    ACTION='READ')
@@ -514,6 +549,26 @@ C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
           WRITE(*,*) '##Stopped by user request.'
           STOP
         ENDIF
+      ENDIF
+
+C     Make sure that lorentz rotation tests are not used if there is
+C      external loop wavefunction of spin 2 and that one specific
+C      helicity is asked
+      NROTATIONS_DP_BU = NROTATIONS_DP
+      NROTATIONS_QP_BU = NROTATIONS_QP
+      IF(MAX_SPIN_EXTERNAL_PARTICLE.GT.3.AND.USERHEL.NE.-1) THEN
+        IF(.NOT.WARNED_LORENTZ_STAB_TEST_OFF) THEN
+          WRITE(*,*) '##WARNING: Evaluation of a specific helicity wa'
+     $     //'s asked for this PS point, and there is a spin-2 (o'
+     $     //'r higher) particle in the external states.'
+          WRITE(*,*) '##WARNING: As a result, MadLoop disabled th'
+     $     //'e Lorentz rotation test for this phase-space point only.'
+          WRITE(*,*) '##WARNING: Further warning of that typ'
+     $     //'e suppressed.'
+          WARNED_LORENTZ_STAB_TEST_OFF = .FALSE.
+        ENDIF
+        NROTATIONS_QP=0
+        NROTATIONS_DP=0
       ENDIF
 
       IF(NTRY.EQ.0) THEN
@@ -1307,8 +1362,10 @@ C         ENDDO
       IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.EQ.
      $ -1)) THEN
         STAB_INDEX=STAB_INDEX+1
-        IF(DOING_QP_EVALS.AND.MLREDUCTIONLIB(I_LIB).EQ.1) THEN
-C         NOW,ONLY CUTTOOLS PROVIDES QP
+        IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLREDUCTIONLIB(I_LIB
+     $   ))) THEN
+C         Only run over the reduction algorithms which support
+C          quadruple precision
           DO I=0,NSQUAREDSO
             DO K=1,3
               QP_RES(K,I,STAB_INDEX)=ANS(K,I)
@@ -1322,7 +1379,8 @@ C         NOW,ONLY CUTTOOLS PROVIDES QP
           ENDDO
         ENDIF
 
-        IF(DOING_QP_EVALS.AND.MLREDUCTIONLIB(I_LIB).EQ.1) THEN
+        IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLREDUCTIONLIB(I_LIB
+     $   ))) THEN
           BASIC_CT_MODE=4
         ELSE
           BASIC_CT_MODE=1
@@ -1380,7 +1438,8 @@ C            answer from mode 1 and carry on.
 
 C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
-        IF(DOING_QP_EVALS.AND.MLREDUCTIONLIB(I_LIB).EQ.1) THEN
+        IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLREDUCTIONLIB(I_LIB
+     $   ))) THEN
           CALL ML5_0_COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
           DO I=0,NSQUAREDSO
             ACCURACY(I)=ACC(I)
@@ -1584,6 +1643,11 @@ C      user
         MLSTABTHRES=MLSTABTHRES_BU
         CTMODEINIT=CTMODEINIT_BU
       ENDIF
+
+C     Reinitialize the Lorentz test if it had been disabled because
+C      spin-2 particles are in the external states.
+      NROTATIONS_DP = NROTATIONS_DP_BU
+      NROTATIONS_QP = NROTATIONS_QP_BU
 
 C     Reinitialize the check phase logicals and the filters if check
 C      bypassed

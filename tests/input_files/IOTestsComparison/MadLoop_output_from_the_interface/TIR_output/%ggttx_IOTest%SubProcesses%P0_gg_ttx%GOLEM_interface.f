@@ -105,8 +105,9 @@ C
       INTEGER ID,SQSOINDEX,R
       COMMON/ML5_0_LOOP/ID,SQSOINDEX,R
 
-      LOGICAL CTINIT, TIRINIT, GOLEMINIT
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT
+      LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT,SAMURAIINIT
+     $ ,NINJAINIT
 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=26)
@@ -121,7 +122,15 @@ C     ----------
 C     BEGIN CODE
 C     ----------
 
-C     INITIALIZE CUTTOOLS IF NEEDED
+C     The CT initialization is also performed here if not done already
+C      because it calls MPINIT of OneLOop which is necessary on some
+C      system
+      IF (CTINIT) THEN
+        CTINIT=.FALSE.
+        CALL ML5_0_INITCT()
+      ENDIF
+
+C     INITIALIZE GOLEM IF NEEDED
       IF (GOLEMINIT) THEN
         GOLEMINIT=.FALSE.
         CALL ML5_0_INITGOLEM()
@@ -460,55 +469,21 @@ C
       INTEGER NLOOPLINE
       REAL(KI) PGOLEM(NLOOPLINE,0:3)
       COMPLEX(KI) M2L(NLOOPLINE)
-
-C     
-C     GLOBAL VARIABLES
-C     
-      INCLUDE 'MadLoopParams.inc'
-      INTEGER CTMODE
-      REAL*8 LSCALE
-      COMMON/ML5_0_CT/LSCALE,CTMODE
-      REAL*8 REF_NORMALIZATION
 C     
 C     LOCAL VARIABLES
 C     
-      INTEGER I,J,K
-      COMPLEX(KI) DIFFSQ
+      INTEGER I,J
+      COMPLEX*16 S_MAT_FROM_MG(NLOOPLINE,NLOOPLINE)
 C     ----------
 C     BEGIN CODE
 C     ----------
 
+      CALL ML5_0_BUILD_KINEMATIC_MATRIX(NLOOPLINE,PGOLEM,M2L,S_MAT_FROM
+     $ _MG)
+
       DO I=1,NLOOPLINE
         DO J=1,NLOOPLINE
-          IF(I.EQ.J)THEN
-            S_MAT(I,J)=-(M2L(I)+M2L(J))
-          ELSE
-            DIFFSQ = (CMPLX(PGOLEM(I,0),0.0_KI,KIND=KI)-CMPLX(PGOLEM(J
-     $       ,0),0.0_KI,KIND=KI))**2
-            DO K=1,3
-              DIFFSQ = DIFFSQ-(CMPLX(PGOLEM(I,K),0.0_KI,KIND=KI)
-     $         -CMPLX(PGOLEM(J,K),0.0_KI,KIND=KI))**2
-            ENDDO
-            S_MAT(I,J)=DIFFSQ-M2L(I)-M2L(J)
-            IF(M2L(I).NE.0.0D0)THEN
-              IF(ABS((DIFFSQ-M2L(I))/M2L(I)).LT.OSTHRES)THEN
-                S_MAT(I,J)=-M2L(J)
-              ENDIF
-            ENDIF
-            IF(M2L(J).NE.0.0D0)THEN
-              IF(ABS((DIFFSQ-M2L(J))/M2L(J)).LT.OSTHRES)THEN
-                S_MAT(I,J)=-M2L(I)
-              ENDIF
-            ENDIF
-C           Chose what seems the most appropriate way to compare
-C           massless onshellness. (here we pick the energy component)
-            REF_NORMALIZATION=(PGOLEM(I,0)+PGOLEM(J,0))**2
-            IF(REF_NORMALIZATION.NE.0.0D0)THEN
-              IF(ABS(DIFFSQ/REF_NORMALIZATION).LT.OSTHRES)THEN
-                S_MAT(I,J)=-(M2L(I)+M2L(J))
-              ENDIF
-            ENDIF
-          ENDIF
+          S_MAT(I,J)=S_MAT_FROM_MG(I,J)
         ENDDO
       ENDDO
 
