@@ -105,6 +105,20 @@ class TestImportUFONoSideEffect(unittest.TestCase):
         self.assertEqual(original_all_parameters,ufo_model.all_parameters)
         self.assertEqual(original_all_orders,ufo_model.all_orders)
         self.assertEqual(original_all_functions,ufo_model.all_functions)
+
+    def test_ImportUFOcheckgoldstone(self):
+        """Check goldstone is correct in NLO UFO"""
+        ufo_model = ufomodels.load_model(import_ufo.find_ufo_path('loop_qcd_qed_sm'),False)
+        original_all_particles = copy.copy(ufo_model.all_particles)
+        for part in original_all_particles:
+            if part.name.lower() in ['g0','g+']:
+                if hasattr(part,"GoldstoneBoson"):
+                    self.assertEqual(part.GoldstoneBoson,True)
+                elif hasattr(part,"goldstoneboson"):
+                    self.assertEqual(part.goldstoneboson,True)
+                else:
+                    raise import_ufo.UFOImportError, "Goldstone %s has no attribute of goldstnoneboson in loop_qcd_qed_sm"%part.name
+                    
         
     def test_ImportUFONoSideEffectNLO(self):
         """Checks that there are no side effects of the import of the NLO UFO sm"""

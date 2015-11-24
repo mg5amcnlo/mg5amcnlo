@@ -683,8 +683,6 @@ c Do next iteration
       real * 8 xn(nintervals),r,tiny,xl,xu,nl,nu
       parameter ( tiny=1d-8 )
       integer kint,jint
-      logical plot_grid
-      parameter (plot_grid=.false.)
 c Use the same smoothing as in VEGAS uses for the grids (i.e. use the
 c average of the central and the two neighbouring grid points):
       xl=xacc(1)
@@ -719,49 +717,26 @@ c Thus the integral of rho is performed by summing up
       do kint=1,ninter
          xacc(kint)=xacc(kint)/xacc(ninter)
       enddo
-cRF: Check that we have a reasonable result and update the accumulated
+c Check that we have a reasonable result and update the accumulated
 c results if need be
       do kint=1,ninter
          if (xacc(kint).lt.(xacc(kint-1)+tiny)) then
-c            write (*,*) 'Accumulated results need adaptation #1:'
-c            write (*,*) xacc(kint),xacc(kint-1),' become'
             xacc(kint)=xacc(kint-1)+tiny
-c            write (*,*) xacc(kint),xacc(kint-1)
          endif
       enddo
 c it could happen that the change above yielded xacc() values greater
-c than 1; should be fixed once more.
+c than 1: one more update needed
       xacc(ninter)=1d0
       do kint=1,ninter
          if (xacc(ninter-kint).gt.(xacc(ninter-kint+1)-tiny)) then
-c            write (*,*) 'Accumulated results need adaptation #2:'
-c            write (*,*) xacc(ninter-kint),xacc(ninter-kint+1),' become'
             xacc(ninter-kint)=1d0-dble(kint)*tiny
-c            write (*,*) xacc(ninter-kint),xacc(ninter-kint+1)
          else
             exit
          endif
       enddo
-cend RF
-
-      if (plot_grid) then
-         write(11,*) 'set limits x 0 1 y 0 1'
-         write(11,*) 0, 0
-         do kint=1,ninter
-            write(11,*) xgrid(kint),xacc(kint)
-         enddo
-         write(11,*) 'join 1'
-      endif
 
       do kint=1,ninter
          r=dble(kint)/dble(ninter)
-
-         if (plot_grid) then
-            write(11,*) 0, r
-            write(11,*) 1, r
-            write(11,*) ' join'
-         endif
-
          do jint=1,ninter
             if(r.lt.xacc(jint)) then
                xn(kint)=xgrid(jint-1)+(r-xacc(jint-1))
@@ -778,13 +753,7 @@ cend RF
       enddo
       do kint=1,ninter
          xgrid(kint)=xn(kint)
-         if (plot_grid) then
-            write(11,*) xgrid(kint), 0
-            write(11,*) xgrid(kint), 1
-            write(11,*) ' join'
-         endif
       enddo
-      if (plot_grid) write(11,*) ' newplot'
       end
 
       subroutine nextlexi(ndim,iii,kkk,iret)

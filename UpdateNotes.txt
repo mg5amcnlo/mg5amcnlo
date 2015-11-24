@@ -1,5 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.3.4(XX/XX/XX)
+        RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
 
 2.3.3(25/10/15)
         OM: Allow new syntax for the param_card: instead of an entry you can enter "scan:[val1, val2,...]"

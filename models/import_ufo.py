@@ -501,7 +501,8 @@ class UFOMG5Converter(object):
         particle = base_objects.Particle()
 
         # MG5 doesn't use goldstone boson 
-        if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
+        if (hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson) \
+                or (hasattr(particle_info, 'goldstoneboson') and particle_info.goldstoneboson):
             particle.set('type', 'goldstone')
         elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
             particle.set('type', 'goldstone')

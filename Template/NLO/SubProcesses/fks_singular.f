@@ -1641,7 +1641,8 @@ c wgts() array to include the weights.
       include 'timing_variables.inc'
       integer n,izero,i
       parameter (izero=0)
-      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
+      double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac,g
+     &     ,alphas
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas
@@ -1669,10 +1670,13 @@ c allows for better caching of the PDFs
             mu2_f=scales2(3,i)
             q2fact(1)=mu2_f
             q2fact(2)=mu2_f
+c Compute the luminosity
             xlum = dlum()
+c Recompute the strong coupling: alpha_s in the PDF might change
+            g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c add the weights to the array
             wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
-     &           wgt(3,i)*log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
+     &           wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
             wgts(iwgt,i)=wgts(iwgt,i)*
      &                       rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
          enddo
