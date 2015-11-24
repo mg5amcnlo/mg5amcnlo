@@ -508,18 +508,16 @@ TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
 TimeShower:nPartonsInBorn = -1      ! Number of Born QCD final-state partons (to treat H and S differently)
 TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
-TimeShower:QCDshower = off          ! QCD final-state shower
+TimeShower:QCDshower = on          ! QCD final-state shower
 TimeShower:nGluonToQuark = 5       ! Number if flavors allowed in g->qqbar
-TimeShower:QEDshowerByQ = on      ! Prevent quarks from radiating photons
-TimeShower:QEDshowerByL = on      ! Prevent leptons from radiating photons
-TimeShower:QEDshowerByGamma = on  ! Prevent photons from branching
+TimeShower:QEDshowerByQ = off      ! Prevent quarks from radiating photons
+TimeShower:QEDshowerByL = off      ! Prevent leptons from radiating photons
+TimeShower:QEDshowerByGamma = off  ! Prevent photons from branching
 TimeShower:MEcorrections = off     ! No Matrix-element corrections
 TimeShower:MEafterFirst = off      ! No Matrix-element corrections after first emission
 TimeShower:phiPolAsym = on         ! Azimuthal asymmetry induced by gluon polarization
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
-TimeShower:pTminChgQ = 0.01
-TimeShower:pTminChgL = 0.00001
 
 ! 6) Initial-state shower.
 SpaceShower:pTmaxMatch = 1         ! Use scalup (re-check)
@@ -527,17 +525,15 @@ SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
 SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
 SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
-SpaceShower:QCDshower = off         ! QCD final-state shower
-SpaceShower:QEDshowerByQ = on     ! Prevent quarks from radiating photons
-SpaceShower:QEDshowerByL = on     ! Prevent leptons from radiating photons
+SpaceShower:QCDshower = on         ! QCD final-state shower
+SpaceShower:QEDshowerByQ = off     ! Prevent quarks from radiating photons
+SpaceShower:QEDshowerByL = off     ! Prevent leptons from radiating photons
 SpaceShower:MEcorrections = off    ! No Matrix-element corrections
 SpaceShower:MEafterFirst = off     ! No Matrix-element corrections after first emission
 SpaceShower:phiPolAsym = on        ! Azimuthal asymmetry induced by gluon polarization
 SpaceShower:nQuarkIn = 5           ! Number of flavors in g->qqbar and also in incoming beams
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
-SpaceShower:pTminChgQ = 0.01
-SpaceShower:pTminChgL = 0.00001
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = off    ! No primordial kT
