@@ -5172,6 +5172,7 @@ This implies that with decay chains:
             # Untar the file
             returncode = misc.call(['tar', '-xzpf', 'HEPToolsInstallers.tar.gz'],
                      cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
+            
             # Remove the tarball
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
@@ -5352,10 +5353,10 @@ This implies that with decay chains:
             else:
                 raise MadGraph5Error, '''Impossible to connect any of us servers.
                 Please check your internet connection or retry later'''
-    
             for line in data:
                 split = line.split()
                 path[split[0]] = split[1]
+
 ################################################################################
 # TEMPORARY HACK WHERE WE ADD ENTRIES TO WHAT WILL BE EVENTUALLY ON THE WEB
 ################################################################################
@@ -5365,7 +5366,10 @@ This implies that with decay chains:
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
-            # the installers if necessary.                
+            # the installers if necessary.
+            # Specify the path of the MG5_aMC_interface
+            additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
+                                                   path['MG5aMC_PY8_interface'])
             return self.advanced_install(args[0], path['HEPToolsInstaller'],
                                         additional_options = additional_options)
 
@@ -5382,7 +5386,8 @@ This implies that with decay chains:
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop'}
+                'PJFry':'PJFry','QCDLoop':'QCDLoop',
+                }
             name = name[args[0]]
         except:
             pass
