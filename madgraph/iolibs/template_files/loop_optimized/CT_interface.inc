@@ -305,7 +305,7 @@ C The CT initialization is also performed here if not done already because it ca
 C INITIALIZE SAMURAI IF NEEDED
       IF (SAMURAIINIT) THEN
 	    SAMURAIINIT=.FALSE.
-		CALL %(proc_prefix)sINITSAMURAI()
+		CALL %(proc_prefix)sINITIALIZESAMURAI()
       ENDIF
 
 C  CONVERT THE MASSES TO BE COMPLEX
@@ -434,7 +434,7 @@ C
 	  
 	  END
 
-	  SUBROUTINE %(proc_prefix)sINITSAMURAI()
+	  SUBROUTINE %(proc_prefix)sINITIALIZESAMURAI()
 C    
 C     Module used
 C
