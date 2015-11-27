@@ -163,6 +163,8 @@ class UFOModel(object):
         elif isinstance(param, int) or isinstance(param, float) or \
                                                        isinstance(param, complex):
             return "%s" % param
+        elif isinstance(param, long):
+            return ("%s" % param).replace('L','')
         elif isinstance(param, list):
             return '[%s]' % ', '.join(self.format_param(p) for p in param)
         elif isinstance(param, tuple):

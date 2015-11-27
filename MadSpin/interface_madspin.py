@@ -440,7 +440,11 @@ class MadSpinInterface(extended_cmd.Cmd):
     
     def do_define(self, line):
         """ """
-        return self.mg5cmd.do_define(line)
+        self.mg5cmd.do_define(line)
+        print( self.mg5cmd._multiparticles)
+        self.multiparticles_ms = dict([(k,list(pdgs)) for k, pdgs in \
+                                        self.mg5cmd._multiparticles.items()])
+    
     
     def update_status(self, *args, **opts):
         """ """
