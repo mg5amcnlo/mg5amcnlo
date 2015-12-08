@@ -301,6 +301,8 @@ class Alphas_Runner(object):
                 FP=1/(AS**2*(1+c1*AS))
             elif nloop == 3:
                 FP=1/(AS**2*(1+c1*AS + c2 * AS**2))
+            if FP == 0:
+               return AS
             a_out = AS - F/FP
             delta = abs(F/FP/AS)
             if delta < tol:

@@ -114,6 +114,7 @@ class Parameter (object):
             except:
                 format = 'str'
         
+        self.comment = self.comment.strip()
         if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
