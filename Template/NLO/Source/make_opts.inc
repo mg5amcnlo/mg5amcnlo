@@ -67,12 +67,13 @@ endif
 # Option lhapdf
 
 ifdef lhapdf
+  CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  lhapdf=-lLHAPDF -lstdc++
+  llhapdf=-lLHAPDF -lstdc++
   reweight_xsec_events_pdf_dummy=
 else
   alfas_functions=alfas_functions
-  lhapdf=
+  llhapdf=
   reweight_xsec_events_pdf_dummy=reweight_xsec_events_pdf_dummy.o
 endif
 

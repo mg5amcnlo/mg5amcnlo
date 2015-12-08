@@ -4003,6 +4003,7 @@ RESTART = %(mint_mode)s
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
             try:
                 del os.environ['lhapdf']
+                del os.environ['lhapdfversion']
             except KeyError:
                 pass
 

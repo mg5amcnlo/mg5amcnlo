@@ -1,4 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
+2.3.4(XX/XX/XX)
+        MZ: Faster interface for LHAPDF6
 
 2.3.4(XX/XX/XX)
         RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.

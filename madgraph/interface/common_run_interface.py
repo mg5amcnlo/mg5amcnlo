@@ -2083,7 +2083,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
+        os.environ['lhapdf'] = self.options['lhapdf']
+        os.environ['lhapdfversion'] = lhapdf_version[0]
         os.environ['lhapdf_config'] = self.options['lhapdf']
 
 
