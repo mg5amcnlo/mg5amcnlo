@@ -1,35 +1,9 @@
 SHELL = /bin/sh
 
 -include $(PYTHIA8LOCATION)/config.mk
-ifeq ($(shell uname),AIX)
-F77=xlf -qextname -qflttrap=overflow:zerodivide:invalid:enable -O3 -qstrict \
-#       -qautodbl=dblpad
-SYSOBJ=
-AUTODBL=-qautodbl=dblpad
-endif
-ifeq ($(shell uname),SunOS)
-F77= f77 -fnonstd
-SYSOBJ=
-endif
-ifeq ($(shell uname),Linux)
-F77=gfortran -w -fno-automatic -ffixed-line-length-132
-CXX= g++
-SYSOBJ=trapfpe.o
-endif
-ifeq ($(shell uname),HP-UX)
-F77=gfortran -w -fno-automatic -ffixed-line-length-132
-SYSOBJ=
-endif
-ifeq ($(shell uname),OSF1)
-F77= f77 
-CXX= g++
-SYSOBJ=
-endif
-ifeq ($(shell uname),Darwin)
-F77=gfortran -w -fno-automatic -ffixed-line-length-132
-CXX= g++
-endif
+-include ../Source/make_opts
 
+F77=$(FC)
 DEBUG=
 FF=$(F77) $(DEBUG)
 
@@ -73,9 +47,9 @@ Pythia8: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIRARCH)/libpythia8.a \
 
 Pythia82: $(FORFILE) $(PYTHIA8LOCATION)/$(LIBDIR)/libpythia8.a
 	  $(CXX) $(CXXFLAGS) -I$(PYTHIA8LOCATION)/$(INCDIR) \
-	  $(HEPMCINCLIB) -I$(TOPDIR)/$(INCDIR) \
-	  $(EXTRAPATHS) $(EXTRALIBS) $(INCLOPTION) $@.cc -o Pythia8.exe $(FORFILE) \
-	  -L$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP)
+	  -I$(TOPDIR)/$(INCDIR) $(INCLOPTION) $@.cc -o Pythia8.exe $(FORFILE) \
+	  -L$(PYTHIA8LOCATION)/$(LIBDIR) -lpythia8 $(LIBGZIP) \
+	  $(HEPMCINCLIB) $(EXTRAPATHS) $(EXTRALIBS)  \
 
 .PHONY: clean
 clean:
