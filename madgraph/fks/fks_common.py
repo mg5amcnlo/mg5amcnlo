@@ -761,7 +761,7 @@ class FKSLegList(MG.LegList):
                     other_legs.sort(key = itemgetter('id'), reverse=True)
                     sorted_leglist.extend(FKSLegList(other_legs))
                 else:
-                    llist.sort(key = itemgetter('id'), reverse=True)
+                    #llist.sort(key = itemgetter('id'), reverse=True)
                     sorted_leglist.extend(FKSLegList(spin_legs))
 
         for i, l in enumerate(sorted_leglist):
