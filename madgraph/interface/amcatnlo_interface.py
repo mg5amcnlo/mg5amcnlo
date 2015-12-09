@@ -477,12 +477,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes,
-                                   OLP=self.options['OLP']))
+                                   OLP=self.options['OLP'],
+                                   init_lep_split=self.options['include_initial_leptons_split']))
         except AttributeError: 
             self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes,
-                                   OLP=self.options['OLP'])
+                                   OLP=self.options['OLP'],
+                                   init_lep_split=self.options['include_initial_leptons_split'])
 
 
     def do_output(self, line):

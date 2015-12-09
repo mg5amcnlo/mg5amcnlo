@@ -127,6 +127,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         for processes which feature g/a > qqbar splitting.
         Check if the extra countertersm are found when needed"""
 
+        self.interface.do_set('include_initial_leptons_split True')
         self.interface.do_define('p p a')
         self.interface.do_generate('p p > t t~ QED=2 QCD=2 [real=QCD QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
@@ -177,6 +178,8 @@ class TestAMCatNLOEW(unittest.TestCase):
                 self.assertEqual(len(proc.extra_cnt_amp_list), 0)
                 for real in proc.real_amps:
                     self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+        # avoid border effects
+        self.interface.do_set('include_initial_leptons_split False')
 
 
     def test_generate_fks_ew_extra_cnts_ttx_qed2qcd1(self):
@@ -186,6 +189,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         In this case the extra counterterms/splittings should not be 
         included in the gg since it is only needed for counterterms"""
 
+        self.interface.do_set('include_initial_leptons_split True')
         self.interface.do_define('p p a')
         self.interface.do_generate('p p > t t~ QED=2 QCD=1 [real=QCD QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
@@ -232,6 +236,8 @@ class TestAMCatNLOEW(unittest.TestCase):
                 self.assertEqual(len(proc.extra_cnt_amp_list), 0)
                 for real in proc.real_amps:
                     self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+        # avoid border effects
+        self.interface.do_set('include_initial_leptons_split False')
 
 
     def test_combine_equal_processes_qcd_qed(self):
@@ -387,3 +393,34 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertEqual(len(fksme1.born_me['processes']), 2)
         for real in fksme1.real_processes:
             self.assertEqual(len(real.matrix_element['processes']), 2)
+
+
+    def test_include_lep_split(self):
+        """test that the include_initial_leptons_split options works as expected"""
+        interface = mgcmd.MasterCmd()
+        leptons=[11,13,15]
+        quarks=[1,2,3,4,5]
+        # default should be set to false
+        # initial state leptons
+        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QCD]')
+        fksproc = self.interface._fks_multi_proc['born_processes'][0]
+        reals=fksproc.reals
+        for real in reals[0]+reals[1]:
+            self.assertTrue(all([lep not in [abs(l['id']) for l in real['leglist']] for lep in leptons]))
+
+        # chack that this does not affect final state photons
+        self.interface.do_generate('u u~ > g a QED=1 QCD=1 [real=QCD]')
+        fksproc = self.interface._fks_multi_proc['born_processes'][0]
+        reals=fksproc.reals
+        self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[2]]))
+
+        # now set it to true
+        self.interface.do_set('include_initial_leptons_split True')
+        # initial state leptons
+        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QCD]')
+        fksproc = self.interface._fks_multi_proc['born_processes'][0]
+        reals=fksproc.reals
+        self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[0]]))
+        self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[1]]))
+        # avoid border effects
+        self.interface.do_set('include_initial_leptons_split False')

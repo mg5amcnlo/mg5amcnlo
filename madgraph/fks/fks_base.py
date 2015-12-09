@@ -125,11 +125,15 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         
         self['real_amplitudes'] = diagram_generation.AmplitudeList()
         self['pdgs'] = []
-        
+
         if 'OLP' in options.keys():
             self['OLP']=options['OLP']
             del options['OLP']
 
+        self['init_lep_split']=False
+        if 'init_lep_split' in options.keys():
+            self['init_lep_split']=options['init_lep_split']
+            del options['init_lep_split']
 
         try:
             # Now generating the borns for the first time.
@@ -181,7 +185,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                                                  'Process', ''),
                  i + 1, len(amps)))
 
-            born = FKSProcess(amp)
+            born = FKSProcess(amp, init_lep_split=self['init_lep_split'])
             self['born_processes'].append(born)
 
             born.generate_reals(self['pdgs'], self['real_amplitudes'], combine = False)
@@ -473,7 +477,7 @@ class FKSProcess(object):
 
 ###############################################################################
     
-    def __init__(self, start_proc = None, remove_reals = True):
+    def __init__(self, start_proc = None, remove_reals = True, init_lep_split = False):
         """initialization: starts either from an amplitude or a process,
         then init the needed variables.
         remove_borns tells if the borns not needed for integration will be removed
@@ -483,6 +487,7 @@ class FKSProcess(object):
         self.myorders = {}
         self.real_amps = []
         self.remove_reals = remove_reals
+        self.init_lep_split = init_lep_split
         self.nincoming = 0
         self.virt_amp = None
         self.perturbation = 'QCD'
@@ -727,7 +732,8 @@ class FKSProcess(object):
                     splittings=[]
                 else:
                     splittings = fks_common.find_splittings( \
-                        i, model, {}, pert_order)
+                        i, model, {}, pert_order, \
+                        include_leptons=self.init_lep_split or i['state'])
                 for split in splittings:
                     # find other 'mother' particles which can end up in the same splitting
                     extra_mothers = {}

@@ -220,9 +220,12 @@ def find_orders(amp): #test_written
     return orders
 
 
-def find_splittings(leg, model, dict, pert='QCD'): #test written
+def find_splittings(leg, model, dict, pert='QCD', include_leptons=True): #test written
     """Finds the possible splittings corresponding to leg
     """
+
+    leptons = [11,13,15]
+
     if dict == {}:
         dict = find_pert_particles_interactions(model, pert)
     splittings = []
@@ -243,7 +246,8 @@ def find_splittings(leg, model, dict, pert='QCD'): #test written
                 except ValueError:
                     parts.pop(parts.index(part))
                 for p in parts:
-                    if p.get_pdg_code() in dict['soft_particles']:
+                    if p.get_pdg_code() in dict['soft_particles'] and \
+                     (include_leptons or abs(p.get_pdg_code()) not in leptons):
                         nsoft += 1
                 if nsoft >= 1:
                     splittings.extend(split_leg(leg, parts, model))
