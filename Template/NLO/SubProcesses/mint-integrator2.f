@@ -1290,7 +1290,7 @@ c to save grids:
         write (12,*) (0d0,i=1,ndim) ! xgrid(j,i)
       enddo
       do j=1,nintervals_virt
-         do k=1,n_ord_virt
+         do k=0,n_ord_virt
             write (12,*) (0d0,i=1,ndim) !ave_virt(j,i)
          enddo
       enddo
