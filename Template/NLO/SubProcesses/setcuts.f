@@ -60,9 +60,9 @@ c
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
+     &     icolup(2,nexternal,maxflow),niprocs
 c      include 'leshouche.inc'
-      common /c_leshouche_inc/idup,mothup,icolup
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
 C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
@@ -190,8 +190,8 @@ c Les Houches common block
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
 c
       real*8         emass(nexternal)
       common/to_mass/emass

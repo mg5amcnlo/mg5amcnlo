@@ -1588,8 +1588,8 @@ c mother and the extra (n+1) parton is given the PDG code of the gluon.
       integer    maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     $     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
+     $     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
       do k=1,nexternal
          pdg(k,ict)=idup(k,1)
       enddo
