@@ -2644,11 +2644,11 @@ class decay_all_events(object):
         mgcmd.exec_cmd(commandline)
         # Handle the multiparticle of the banner        
         #for name, definition in self.mscmd.multiparticles:
-        for name, pdgs in  self.mscmd.multiparticles_ms.items():
-            print name, pdgs
-            #self.banner.get('proc_card').get('multiparticles'):
-            mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
-        
+        if hasattr(self.mscmd, 'multiparticles_ms'):
+            for name, pdgs in  self.mscmd.multiparticles_ms.items():
+                #self.banner.get('proc_card').get('multiparticles'):
+                mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
+            
 
         mgcmd.exec_cmd("set group_subprocesses False")
 
