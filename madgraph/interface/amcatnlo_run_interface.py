@@ -1771,6 +1771,9 @@ RESTART = %(mint_mode)s
             elif ( req_acc > 0 and err/tot > req_acc*1.2 ) or step <= 0:
                 req_accABS=req_acc*abs(tot)/totABS # overal relative required accuracy on ABS Xsec.
                 for job in jobs:
+                    # skip jobs with 0 xsec
+                    if job['resultABS'] == 0.:
+                        continue
                     job['mint_mode']=-1
                     # Determine relative required accuracy on the ABS for this job
                     job['accuracy']=req_accABS*math.sqrt(totABS/job['resultABS'])
@@ -1868,8 +1871,12 @@ RESTART = %(mint_mode)s
             job['niters_done']=int(results[4])
             job['npoints_done']=int(results[5])
             job['time_spend']=float(results[6])
-            job['err_percABS'] = job['errorABS']/job['resultABS']*100.
-            job['err_perc'] = job['error']/job['result']*100.
+            if job['resultABS'] != 0:
+                job['err_percABS'] = job['errorABS']/job['resultABS']*100.
+                job['err_perc'] = job['error']/job['result']*100.
+            else:
+                job['err_percABS'] = 0.
+                job['err_perc'] = 0.
         if error_found:
             raise aMCatNLOError('An error occurred during the collection of results.\n' + 
                    'Please check the .log files inside the directories which failed:\n' +

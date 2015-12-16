@@ -1283,6 +1283,11 @@ c reset the acc values
       open(unit=58,file='results.dat',status='unknown')
       write(58,*) 0d0,0d0,0d0,0,0,0,0,0d0,0d0,0d0
       close(58)
+
+      open (unit=12, file='res.dat',status='unknown')
+      write (12,*)0d0,0d0,0d0,0d0,nitmax,ncalls,0d0
+      close(12)
+
       call topout()
 c to save grids:
       open (unit=12, file='mint_grids',status='unknown')
