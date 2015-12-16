@@ -646,5 +646,5 @@ class MultiEpsDiagramDrawer(EpsDiagramDrawer):
         self.text += ' 525         770  moveto\n'
         self.text += ' (page %s/%s) show\n' % (self.curr_page + 1, self.npage)
         self.text += ' 260         40  moveto\n'
-        self.text += ' (Diagrams made by MadGraph5) show\n'
+        self.text += ' (Diagrams made by MadGraph5_aMC@NLO) show\n'
         

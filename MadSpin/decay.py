@@ -2595,7 +2595,7 @@ class decay_all_events(object):
         return decay_mapping
     
 
-    @misc.mute_logger()
+    #@misc.mute_logger()
     @test_aloha.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
@@ -2642,6 +2642,14 @@ class decay_all_events(object):
             
         commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
+        # Handle the multiparticle of the banner        
+        #for name, definition in self.mscmd.multiparticles:
+        if hasattr(self.mscmd, 'multiparticles_ms'):
+            for name, pdgs in  self.mscmd.multiparticles_ms.items():
+                #self.banner.get('proc_card').get('multiparticles'):
+                mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
+            
+
         mgcmd.exec_cmd("set group_subprocesses False")
 
         logger.info('generating the production square matrix element')

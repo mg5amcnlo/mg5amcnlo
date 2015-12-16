@@ -101,6 +101,7 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
     good_diags = []
 
     # find the real diagrams that have i and j attached to the same vertex
+    # check that the order of the interaction is QCD
     # cehck also that the id of the third leg is id_ij
     real_confs_new = copy.deepcopy(real_confs)
     for diag in real_confs_new:
@@ -165,13 +166,20 @@ def link_rb_configs(born_amp, real_amp, i, j, ij):
     real_tags = [FKSDiagramTag(d['diagram'], 
                                real_amp.get('process').get('model')) \
                                for d in good_diags ]
+    real_tags = []
+    for d in good_diags:
+        tag = FKSDiagramTag(d['diagram'], real_amp.get('process').get('model'))
+        if not tag in real_tags:
+            real_tags.append(tag)
 
     # and compare them
     if len(born_tags) != len(real_tags):
+        print '\n'.join([str(r) for r in real_tags]) + '\n'
         raise FKSProcessError('Cannot map born/real configurations between \
-                %s and %s: not same number of configurations: %d %d' % \
+                %s and %s (i,j=%d,%d): not same number of configurations: %d %d' % \
                 (born_amp.get('process').nice_string().replace('Process:',''), 
                  real_amp.get('process').nice_string().replace('Process:',''),
+                               i,j,
                                len(born_tags),
                                len(real_tags)))
     

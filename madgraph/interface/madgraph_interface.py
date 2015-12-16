@@ -6479,6 +6479,8 @@ This implies that with decay chains:
                 self.allow_notification_center = self.options[args[0]]
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
+        elif args[0] in ['cluster_queue']:
+            self.options[args[0]] = args[1].strip()
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

@@ -1892,10 +1892,10 @@ RESTART = %(mint_mode)s
         tot=0
         err=0
         for job in jobs:
-            totABS+= job['resultABS']
-            errABS+= math.pow(job['errorABS'],2)
-            tot+= job['result']
-            err+= math.pow(job['error'],2)
+            totABS+= job['resultABS']*job['wgt_frac']
+            errABS+= math.pow(job['errorABS'],2)*job['wgt_frac']
+            tot+= job['result']*job['wgt_frac']
+            err+= math.pow(job['error'],2)*job['wgt_frac']
         if jobs:
             content.append('\nTotal ABS and \nTotal: \n                      %10.8e +- %6.4e  (%6.4e%%)\n                      %10.8e +- %6.4e  (%6.4e%%) \n' %\
                            (totABS, math.sqrt(errABS), math.sqrt(errABS)/totABS *100.,\
