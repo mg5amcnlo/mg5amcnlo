@@ -1,7 +1,13 @@
       SUBROUTINE SB_SF_%(ilink)3.3d(P,ANS_SUMMED)
+C  
+%(info_lines)s
+C
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
+C
+C  
+%(process_lines)s
 C
 C  
 C CONSTANTS

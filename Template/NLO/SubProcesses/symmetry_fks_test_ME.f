@@ -285,7 +285,7 @@ c x_to_f_arg subroutine
       softtest=.true.
       colltest=.false.
       nerr=0
-      imax=15
+      imax=12
       do j=1,nsofttests
       call get_helicity(i_fks,j_fks)
          do iamp=1,amp_split_size
@@ -462,7 +462,7 @@ c in genps_fks_test.f
       rotategranny=.false.
 
       nerr=0
-      imax=15
+      imax=12
       do j=1,ncolltests
          call get_helicity(i_fks,j_fks)
          do iamp=1,amp_split_size

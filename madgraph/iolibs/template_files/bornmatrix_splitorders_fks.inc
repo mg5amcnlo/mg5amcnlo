@@ -1,8 +1,14 @@
       SUBROUTINE SBORN(P,ANS_SUMMED)
+C  
+%(info_lines)s
+C
 C
 C     Return the sum of the split orders which are required in orders.inc (BORN_ORDERS)
 C     Also the values needed for the counterterms are stored in the C_BORN_CNT common block
 C  
+C  
+%(process_lines)s
+C
 C  
 C CONSTANTS
 C 
@@ -235,6 +241,7 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      logical cond_ij
 C ----------
 C BEGIN CODE
 C ----------
@@ -242,7 +249,7 @@ C ----------
       glu_ij = ij_values(nfksprocess)
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
-       if (glu_ij.eq.0d0) then
+       if (glu_ij.eq.0) then
          skip(nfksprocess)=0
        else
          skip(nFKSprocess)=1			 
@@ -286,7 +293,11 @@ C ----------
       ENDDO
       hel_fac=1d0
       DO IHEL=1,NCOMB
-        if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        ! the following lines are to avoid segfaults when glu_ij=0
+        cond_ij=skip(nfksprocess).eq.0
+        if (.not.cond_ij) cond_ij=cond_ij.or.nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)
+        !if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1).or.skip(nfksprocess).eq.0) then
+        if (cond_ij) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
             
             CALL BORN(P1,NHEL(1,IHEL),IHEL,T,borns)
@@ -369,6 +380,7 @@ C
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
       integer step_hel
+      logical cond_ij
 
 C
 C FUNCTION
@@ -404,7 +416,12 @@ C ----------
         step_hel=1
       endif
       DO IHEL=back_hel,-back_hel,step_hel
-         IF (IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0) THEN
+        if (glu_ij.ne.0) then
+          cond_ij=IHEL.EQ.back_hel.OR.NHEL(GLU_IJ).NE.0
+        else
+          cond_ij=IHEL.EQ.back_hel 
+        endif
+        IF (cond_ij) THEN
         if (glu_ij.ne.0) then
           if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         endif

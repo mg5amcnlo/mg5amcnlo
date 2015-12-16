@@ -260,8 +260,10 @@ c MadLoop initialization PS points.
          ! contribution
          do iamp=0,amp_split_size
           ! skip 0 contributions in the amp_split array
-          if (iamp.ne.0.and.amp_split_poles_FKS(iamp,1).eq.0d0.and.
-     $     amp_split_poles_FKS(iamp,1).eq.0d0) cycle
+          if (iamp.ne.0) then
+              if (amp_split_poles_FKS(iamp,1).eq.0d0.and.
+     $          amp_split_poles_FKS(iamp,1).eq.0d0) cycle
+          endif
           if (iamp.eq.0) then
             if (firsttime) then
               write(*,*) ''

@@ -1,7 +1,14 @@
       SUBROUTINE SMATRIX%(proc_prefix)s(P,ANS_SUMMED)
+C  
+%(info_lines)s
+C
 C
 C     Return the sum of the split orders which are required in orders.inc (NLO_ORDERS)
 C  
+C  
+%(process_lines)s
+C
+C
 C CONSTANTS
 C 
       implicit none
@@ -111,7 +118,7 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER IHEL,IDEN,I,J,T_IDENT(NCOMB)
-      REAL*8 T(NSQAMPSO),T_SAVE(NCOMB,NSQAMPSO)
+      REAL*8 T(0:NSQAMPSO),T_SAVE(NCOMB,0:NSQAMPSO)
       SAVE T_SAVE,T_IDENT
       INTEGER NHEL(NEXTERNAL,NCOMB)
 %(helicity_lines)s
@@ -133,14 +140,14 @@ C ----------
 C for the first ps-point, check for helicities that give
 C identical matrix elements
             call MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
-            DO I=1,NSQAMPSO
+            DO I=0,NSQAMPSO
                 T_SAVE(IHEL,I)=T(I)
             ENDDO
             T_IDENT(IHEL)=-1
             DO I=1,IHEL-1
-               IF (T(1).EQ.0D0) EXIT
-               IF (T_SAVE(I,1).EQ.0D0) CYCLE
-                do j = 1, nsqampso
+               IF (T(0).EQ.0D0) EXIT
+               IF (T_SAVE(I,0).EQ.0D0) CYCLE
+                do j = 0, nsqampso
                   IF (ABS(T(j)/T_SAVE(I,j)-1D0) .GT. 1D-12) goto 444
                 enddo
                 T_IDENT(IHEL) = I
@@ -149,22 +156,22 @@ C identical matrix elements
           ELSE
             IF (T_IDENT(IHEL).GT.0) THEN
 C if two helicity states are identical, dont recompute
-            DO I=1,NSQAMPSO
+            DO I=0,NSQAMPSO
               T(I)=T_SAVE(T_IDENT(IHEL),I)
               T_SAVE(IHEL,I)=T(I)
             ENDDO
             ELSE
               CALL MATRIX_%(proc_prefix)s(P ,NHEL(1,IHEL),T)            
-              DO I=1,NSQAMPSO
+              DO I=0,NSQAMPSO
                 T_SAVE(IHEL,I)=T(I)
               ENDDO
             ENDIF
           ENDIF
 C add to the sum of helicities
-	  DO I=1,NSQAMPSO			
+	  DO I=1,NSQAMPSO !keep loop from 1!!
              ANS(I)=ANS(I)+T(I)
 	  ENDDO
-          IF (T(1) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
+          IF (T(0) .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
             GOODHEL(IHEL)=.TRUE.
           ENDIF
         ENDIF
@@ -206,7 +213,7 @@ C ARGUMENTS
 C  
       REAL*8 P(0:3,NEXTERNAL)
       INTEGER NHEL(NEXTERNAL)
-      REAL*8 RES(NSQAMPSO)
+      REAL*8 RES(0:NSQAMPSO)
 C  
 C LOCAL VARIABLES 
 C  
@@ -229,7 +236,7 @@ C ----------
 %(helas_calls)s
 %(jamp_lines)s
 
-      DO I=1,NSQAMPSO
+      DO I=0,NSQAMPSO
          RES(I)=0d0
       ENDDO
       DO M = 1, NAMPSO
@@ -242,6 +249,10 @@ C ----------
             RES(SQSOINDEX%(proc_prefix)s(M,N)) = RES(SQSOINDEX%(proc_prefix)s(M,N)) + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
           ENDDO
       ENDDO
+      ENDDO
+
+      DO I=1,NSQAMPSO
+         RES(0)=RES(0)+RES(I)
       ENDDO
 
       END
