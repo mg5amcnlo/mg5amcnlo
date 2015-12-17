@@ -295,7 +295,7 @@ C read the various information from the configs_and_props_info.dat file
       end
 
 
-      subroutine read_leshouche_info(idup_d,mothup_d,icolup_d)
+      subroutine read_leshouche_info(idup_d,mothup_d,icolup_d,niprocs_d)
 C read the various information from the configs_and_props_info.dat file
       implicit none
       include "nexternal.inc"
