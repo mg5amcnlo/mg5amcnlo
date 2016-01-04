@@ -1008,6 +1008,7 @@ class HwU(Histogram):
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:
                             pdf_stdev += (pdf - cntrl_val)**2
+                        pdf_stdev = math.sqrt(pdf_stdev)
                         pdf_up   = cntrl_val+pdf_stdev
                         pdf_down = cntrl_val-pdf_stdev
                     else:
