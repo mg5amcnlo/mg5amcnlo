@@ -36,6 +36,8 @@ class ShowerCard(dict):
     string_vars = ['extralibs', 'extrapaths', 'includepaths', 'analyse']
     for i in range(1,100):
         string_vars.append('dm_'+str(i))
+        string_vars.append('py8_'+str(i))
+        string_vars.append('hwpp_'+str(i))
     int_vars = ['nsplit_jobs', 'maxprint', 'nevents', 'pdfcode', 'rnd_seed', 'rnd_seed2', 'njmax']
     float_vars = ['maxerrs', 'lambda_5', 'b_mass', 'qcut']
 
@@ -91,6 +93,8 @@ class ShowerCard(dict):
             content = card_path
         lines = content.split('\n')
         list_dm = []
+        list_py8 = []
+        list_hwpp = []
         for l in lines:
           if '#' in l:
              l = l.split('#',1)[0]
@@ -102,10 +106,18 @@ class ShowerCard(dict):
           self.set_param(key, value)
           if str(key).upper().startswith('DM'):
               list_dm.append(int(key.split('_',1)[1]))
-          #special case for DM_*
+          if str(key).upper().startswith('PY8'):
+              list_py8.append(int(key.split('_',1)[1]))
+          if str(key).upper().startswith('HWPP'):
+              list_hwpp.append(int(key.split('_',1)[1]))
+          #special case for DM_*, PY8_*, HWPP_*
           for i in range(1,100):
               if not i in list_dm: 
                   self['dm_'+str(i)] = ''
+              if not i in list_py8: 
+                  self['py8_'+str(i)] = ''
+              if not i in list_hwpp: 
+                  self['hwpp_'+str(i)] = ''
 
         self.text=content
 
@@ -152,7 +164,9 @@ class ShowerCard(dict):
             newlines = []
             for line in self.text.split('\n'):
                 key_match = key_re.match(line)
-                if key_match and not str(key).upper().startswith('DM'):
+                if key_match and not ( str(key).upper().startswith('DM') or \
+                                       str(key).upper().startswith('PY8') or \
+                                       str(key).upper().startswith('HWPP') ):
                     try:
                         comment = line.split('#')[1]
                     except:
@@ -164,14 +178,22 @@ class ShowerCard(dict):
                             newlines.append('%s = %s #%s' % (key, 'T', comment))
                         else:
                             newlines.append('%s = %s #%s' % (key, 'F', comment))
-                elif key_match and str(key).upper().startswith('DM'):
+                elif key_match and ( str(key).upper().startswith('DM') or \
+                                     str(key).upper().startswith('PY8') or \
+                                     str(key).upper().startswith('HWPP') ):
                     pass
                 else:
                     newlines.append(line)
 
             if str(key).upper().startswith('DM') and not value.lower() in ['','none','default']:
                 newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
-                logger.info('please specify a decay through set dm_1 M > D1 D2 @ BR @ ME; see shower_card.dat for details')
+                logger.info('please specify a decay through set DM_1 decay; see shower_card.dat for details')
+            if str(key).upper().startswith('PY8') and not value.lower() in ['','none','default']:
+                newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
+                logger.info('please specify a PY8 command through set PY8_1 command; see shower_card.dat for details')
+            if str(key).upper().startswith('HWPP') and not value.lower() in ['','none','default']:
+                newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
+                logger.info('please specify a HWPP command through set HWPP_1 command; see shower_card.dat for details')
                 
             self.text = '\n'.join(newlines) + '\n'
 

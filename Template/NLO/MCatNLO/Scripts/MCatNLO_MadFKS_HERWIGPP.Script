@@ -543,6 +543,7 @@ cat <<EOF >> ./$ifile
 # prevent a lot of warnings
 #set /Herwig/EventHandlers/LHEHandler:DecayHandler NULL
 #set /Herwig/Analysis/Basics:CheckQuark 0
+
 EOF
 
 arr=()
@@ -822,9 +823,34 @@ set /Herwig/Analysis/HepMCFile:Units GeV_mm
 EOF
 fi
 
+
+cat <<EOF >> $ifile
+! 11) Expert mode.
+EOF
+
+arr=()
+numHWPP=0
+iHWPP=0
+for i in {1..99}
+do
+ eval arr_elem='$'HWPP_$i
+ if [ "$arr_elem" != "" ]
+ then
+  arr=("${arr[@]}" "$arr_elem")
+ fi
+done
+for HWPP in "${arr[@]}"
+do
+cat <<EOF >> ./$ifile
+$HWPP  ! expert-mode command
+EOF
+done
+
+
 cat <<EOF >> ./$ifile
 saverun $runfile /Herwig/Generators/LHCGenerator
 EOF
+
 
 ( cd . ;\
      $exefile )
