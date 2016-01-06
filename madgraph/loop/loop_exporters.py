@@ -2487,7 +2487,7 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         looplibs_av=['.TRUE.']
         # one should be careful about the order in the following as it must match
         # the ordering in MadLoopParamsCard.
-        for tir_lib in ['pjfry','iregi','ninja','golem','samurai']:
+        for tir_lib in ['pjfry','iregi','golem','samurai','ninja']:
             looplibs_av.append('.TRUE.' if tir_lib in self.all_tir and \
                                 self.tir_available_dict[tir_lib] else '.FALSE.')
         replace_dict['data_looplibs_av']=','.join(looplibs_av)
