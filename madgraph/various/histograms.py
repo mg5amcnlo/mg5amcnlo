@@ -1003,7 +1003,14 @@ class HwU(Histogram):
                         else:
                             pdf_up   = bin.wgts[pdfs[0]]
                             pdf_down = bin.wgts[pdfs[0]]
-                    elif wgts_to_consider[0] in [90200, 90400, 90700, 90900]:
+                    elif wgts_to_consider[0] in range(90200, 103) or \
+                         wgts_to_consider[0] in range(90400, 33) or \
+                         wgts_to_consider[0] in range(90700, 101) or \
+                         wgts_to_consider[0] in range(90900, 31) or \
+                         wgts_to_consider[0] in range(91200, 103) or \
+                         wgts_to_consider[0] in range(91400, 33) or \
+                         wgts_to_consider[0] in range(91700, 101) or \
+                         wgts_to_consider[0] in range(91900, 31):
                         # PDF4LHC15 Hessian sets
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:
