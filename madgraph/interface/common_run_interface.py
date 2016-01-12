@@ -1062,7 +1062,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.import_command_file(path)
-        
+        reweight_cmd.do_quit('')
         # re-define current run
         try:
             self.results.def_current(self.run_name, self.run_tag)
