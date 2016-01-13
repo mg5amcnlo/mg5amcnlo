@@ -2416,7 +2416,13 @@ class decay_all_events(object):
                     self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[prod2full[part-1]-1]
                     self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[prod2full[part-1]-1]
                     if not use_mc_masses or abs(pid) not in self.MC_masses:
-                        self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
+                        try:
+                            self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
+                        except KeyError:
+                            if self.model.get_particle(abs(pid)).get('mass').lower() == 'zero':
+                                self.curr_event.particle[part_for_curr_evt]['mass'] = 0
+                            else:
+                                raise
                     else:
                         self.curr_event.particle[part_for_curr_evt]['mass']=self.MC_masses[abs(pid)]
 
@@ -2657,6 +2663,8 @@ class decay_all_events(object):
         #for name, definition in self.mscmd.multiparticles:
         if hasattr(self.mscmd, 'multiparticles_ms'):
             for name, pdgs in  self.mscmd.multiparticles_ms.items():
+                if name == 'all':
+                    continue
                 #self.banner.get('proc_card').get('multiparticles'):
                 mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
             
