@@ -5855,8 +5855,8 @@ This implies that with decay chains:
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
                     if program != None:
-                        fpath, fname = os.path.split(program)
-                        logger.info('Using %s library in %s'%(key,fpath))
+                        fpath, _ = os.path.split(program)
+                        logger.info('Using %s library in %s' % (key,fpath))
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
@@ -5874,8 +5874,8 @@ This implies that with decay chains:
                 pass
             elif key in ['notification_center']:
                 if self.options[key] in ['False', 'True']:
-                   self.allow_notification_center = eval(self.options[key])
-                   self.options[key] = self.allow_notification_center
+                    self.allow_notification_center = eval(self.options[key])
+                    self.options[key] = self.allow_notification_center
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
