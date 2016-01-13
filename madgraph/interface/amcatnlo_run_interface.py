@@ -1614,6 +1614,7 @@ RESTART = %(mint_mode)s
             run_type="Fixed order integration step %s" % integration_step
         else:
             run_type="MINT step %s" % integration_step
+        self.njobs=len(jobs_to_run)            
         for job in jobs_to_run:
             executable='ajob1'
             if fixed_order:
@@ -1627,7 +1628,6 @@ RESTART = %(mint_mode)s
 
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
-        self.njobs=len(jobs_to_run)
         self.wait_for_complete(run_type)
 
 
