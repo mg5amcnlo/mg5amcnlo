@@ -175,9 +175,13 @@ class CheckValidForCmd(object):
     def check_set(self, args):
         """ check the validity of the line"""
 
+
         if len(args) < 2:
-            self.help_set()
-            raise self.InvalidCmd('set needs an option and an argument')
+            if len(args)==1 and "=" in args[0]:
+                args[:] = args[0].split("=",1)
+            else:
+                self.help_set()
+                raise self.InvalidCmd('set needs an option and an argument')
 
         if args[0] not in self._set_options + self.options.keys():
             self.help_set()

@@ -2979,6 +2979,7 @@ This implies that with decay chains:
         self.avoid_history_duplicate('define %s' % line, ['define'])
         if not self._curr_model:
             self.do_import('model sm')
+            self.history.append('define %s' % line)
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()

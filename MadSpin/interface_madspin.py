@@ -177,6 +177,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("process: %s" % process)
         logger.info("options: %s" % option)
 
+        if not hasattr(self,'multiparticles_ms'):
+            for key, value in self.banner.get_detail('proc_card','multiparticles'):
+                self.do_define('%s = %s' % (key, value))
 
         # Read the final state of the production process:
         #     "_full" means with the complete decay chain syntax 
@@ -441,7 +444,6 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_define(self, line):
         """ """
         self.mg5cmd.do_define(line)
-        print( self.mg5cmd._multiparticles)
         self.multiparticles_ms = dict([(k,list(pdgs)) for k, pdgs in \
                                         self.mg5cmd._multiparticles.items()])
     
@@ -960,6 +962,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
         
+        
         loop = False
         #if (name.startswith('loop_')):
         #    logger.info("The model in the banner is %s" % name)
@@ -982,7 +985,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.model = base_model
         self.mg5cmd._curr_model = self.model
         self.mg5cmd.process_model()
-        
 
 if __name__ == '__main__':
     

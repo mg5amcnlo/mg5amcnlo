@@ -785,6 +785,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
+        elif any(line.lower()==opt.lower() for opt in options): 
+            possibility = [opt for opt in options if line.lower()==opt.lower()]
+            if len (possibility)==1:
+                return possibility[0]
+            
         # No valid answer provides
         if self.haspiping:
             self.store_line(line)
