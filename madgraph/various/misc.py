@@ -329,8 +329,8 @@ def get_scan_name(first, last):
     # find the common string at the beginning     
     base = [first[i] for i in range(len(first)) if first[:i+1] == last[:i+1]]
     # remove digit even if in common
-    while base[-1].isdigit():
-        base = base[:-1] 
+    while base and base[0].isdigit():
+        base = base[1:] 
     # find the common string at the end 
     end = [first[-(i+1)] for i in range(len(first)) if first[-(i+1):] == last[-(i+1):]]
     # remove digit even if in common    
