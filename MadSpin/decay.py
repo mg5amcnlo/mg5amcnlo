@@ -2686,6 +2686,10 @@ class decay_all_events(object):
             else:
                 proc_nb = ''
             
+            if ',' in proc:
+                raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
+                        '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
+            
             if '[' not in proc:
                 commandline+="add process %s  --no_warning=duplicate;" % proc
             else:
