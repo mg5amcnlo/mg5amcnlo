@@ -29,6 +29,8 @@ c to the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
         call add_wgt(2,wgt1,0d0,0d0)
@@ -107,6 +109,8 @@ c value to the list of weights using the add_wgt subroutine
      $      amp_split_wgtwnstmpmuf(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         wgt1=amp_split_wgtnstmp(iamp)*f_nb/g22
@@ -123,6 +127,8 @@ c and not be part of the plots nor computation of the cross section.
         if (amp_split_virt(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         virt_wgt_mint(iamp)=amp_split_virt(iamp)*f_nb
         born_wgt_mint(iamp)=amp_split_born_for_virt(iamp)*f_nb
@@ -170,6 +176,8 @@ c its value to the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         wgt1=amp_split(iamp)*s_ev*f_r/g**(qcd_power)
         if (sudakov_damp.gt.0d0) then
@@ -227,6 +235,8 @@ c the list of weights using the add_wgt subroutine
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
@@ -318,6 +328,8 @@ c to the list of weights using the add_wgt subroutine
 
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
@@ -421,6 +433,8 @@ c value to the list of weights using the add_wgt subroutine
      $      amp_split_wgtdis_d(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
         orders_tag=get_orders_tag(orders)
         g22=g**(QCD_power)
         if (replace_MC_subt.gt.0d0) then
@@ -529,6 +543,8 @@ c respectively.
                 if (amp_split_xmcxsec(iamp,i).eq.0d0) cycle
                 call amp_split_pos_to_orders(iamp, orders)
                 QCD_power=orders(qcd_pos)
+                wgtcpower=0d0
+                if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                 orders_tag=get_orders_tag(orders)
                 g22=g**(QCD_power)
                 wgt1=sevmc*f_MC_S*xlum_mc_fact*
@@ -1229,6 +1245,7 @@ c Check for NaN's and INF's. Simply skip the contribution
       nFKS(icontr)=nFKSprocess
       y_bst(icontr)=ybst_til_tolab
       qcdpower(icontr)=QCD_power
+      cpower(icontr)=wgtcpower
       orderstag(icontr)=orders_tag
       call set_pdg(icontr,nFKSprocess)
 
@@ -1369,7 +1386,7 @@ c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
          iwgt=1
          wgt_wo_pdf=(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) + wgt(3,i)
      &        *log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
-     &        *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+     &        *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
          wgts(iwgt,i)=xlum * wgt_wo_pdf
          do j=1,iproc
             parton_iproc(j,i)=parton_iproc(j,i) * wgt_wo_pdf
@@ -1380,16 +1397,18 @@ c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
             virt_wgt_mint(0)=virt_wgt_mint(0)*xlum
-     &           *rwgt_muR_dep_fac(sqrt(mu2_r))
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
             born_wgt_mint(0)=born_wgt_mint(0)*xlum
-     &           *rwgt_muR_dep_fac(sqrt(mu2_r))
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
             do iamp=1,amp_split_size
                call amp_split_pos_to_orders(iamp, orders)
                QCD_power=orders(qcd_pos)
+               wgtcpower=0d0
+               if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
                virt_wgt_mint(iamp)=virt_wgt_mint(iamp)*xlum
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r))
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),wgtcpower)
                born_wgt_mint(iamp)=born_wgt_mint(iamp)*xlum
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r))
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),wgtcpower)
             enddo
          endif
       enddo
@@ -1534,7 +1553,7 @@ c add the weights to the array
      &              /mu2_q)+wgt(3,i)*log(mu2_f(kf)/mu2_q))*g(kr)
      &              **QCDpower(i)
                wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)))
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)),cpower(i))
             enddo
          enddo
       enddo
@@ -1565,6 +1584,8 @@ c computations (ickkw.eq.-1).
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       call cpu_time(tBefore)
+      write(*,*) 'FIX NLLL'
+      stop 1
       if (icontr.eq.0) return
 c currently we have 'iwgt' weights in the wgts() array.
       iwgt_save=iwgt
@@ -1678,7 +1699,7 @@ c add the weights to the array
             wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &           wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
             wgts(iwgt,i)=wgts(iwgt,i)*
-     &                       rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+     &         rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r),cpower(i))
          enddo
       enddo
       call InitPDF(izero)
@@ -5488,6 +5509,8 @@ c eq.(MadFKS.C.13)
          do iamp=1,amp_split_size
             if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
             call amp_split_pos_to_orders(iamp, orders)
+            wgtcpower=0d0
+            if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
             contr_mufoqes=2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0+ren_group_coeff*wgtcpower) 
      e        *log(q2fact(1)/QES2)*aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
             amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufoqes
@@ -5502,6 +5525,8 @@ c  eq.(MadFKS.C.14)
         do iamp=1,amp_split_size
           if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
           call amp_split_pos_to_orders(iamp, orders)
+          wgtcpower=0d0
+          if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
           contr_mufomur=-2*pi*(beta0*dble(orders(qcd_pos)-2)/2d0+ren_group_coeff*wgtcpower)
      #      *log(q2fact(1)/scale**2)*aso2pi*dble(amp_split_cnt(iamp,1,qcd_pos))
           amp_split_bsv(iamp) = amp_split_bsv(iamp)+contr_mufomur
@@ -5574,11 +5599,9 @@ C               set charge factors
             enddo !end loop iord=1,2
             do iamp=1,amp_split_size
               if (dble(amp_split_cnt(iamp,1,qcd_pos)).eq.0d0) cycle
-              if (wgtcpower.ne.0d0) then
-                write(*,*) 'FIX CPOWER'
-                stop
-              endif
               call amp_split_pos_to_orders(iamp, orders)
+              wgtcpower=0d0
+              if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
               amp_split_wgtwnstmpmur(iamp)=dble(amp_split_cnt(iamp,1,qcd_pos))*
      #          2d0*pi*(beta0*dble(orders(qcd_pos)-2)/2d0+ 
      #          ren_group_coeff*wgtcpower)*aso2pi

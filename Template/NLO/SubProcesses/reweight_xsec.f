@@ -368,6 +368,10 @@ c FxFx merging
       double precision rewgt
       external setclscales,rewgt
       double precision rwgt_muR_dep_fac
+      double precision cpower_dum
+      cpower_dum=0
+      write(*,*) 'FIX CPOWER EVTGEN'
+      stop 1
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -431,7 +435,7 @@ c Should cause the code to crash if used
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+CONV*PD(i_process)*wgtwmcxsec(i)*g**(2*wgtbpower
-     $           +2.d0) * rwgt_muR_dep_fac(scale,scale)
+     $           +2.d0) * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
           endif
         enddo
@@ -481,7 +485,7 @@ c Should cause the code to crash if used
             nFKSprocess=nFKSprocess_used
             xlum = dlum()
             xsec=xsec+CONV*PD(i_process)*wgtwreal(k)*g**(2*wgtbpower
-     $           +2.d0) * rwgt_muR_dep_fac(scale,scale)
+     $           +2.d0) * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
           endif
         enddo
@@ -529,7 +533,7 @@ c Should cause the code to crash if used
           nFKSprocess=nFKSprocess_used
           xlum = dlum()
           xsec=xsec+CONV*PD(i_process)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
-     f         * rwgt_muR_dep_fac(scale,scale)
+     f         * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
         endif
       endif
@@ -599,6 +603,11 @@ c FxFx merging
       double precision rewgt
       external setclscales,rewgt
       double precision rwgt_muR_dep_fac
+
+      double precision cpower_dum
+      cpower_dum=0
+      write(*,*) 'FIX CPOWER EVTGEN'
+      stop 1
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -665,7 +674,7 @@ c Should cause the code to crash if used
             do j=1,iproc_save(nFKSprocess)
                if (eto(j,nFKSprocess).eq.i_process) then
                   xsec=xsec+CONV*PD(j)*wgtwmcxsec(i)*g**(2*wgtbpower
-     $                 +2.d0) * rwgt_muR_dep_fac(scale,scale)
+     $                 +2.d0) * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                endif
             enddo
@@ -761,7 +770,7 @@ c Should cause the code to crash if used
                if (eto(j,nFKSprocess).eq.i_process) then
                   xsec=xsec+CONV*PD(j)*( wgtwreal(k)+wgtwdeg(k)
      $                 +wgtwdegmuf(k)*xlgmuf )*g**(2*wgtbpower+2.d0)
-     f                 * rwgt_muR_dep_fac(scale,scale)
+     f                 * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                endif
             enddo
@@ -772,16 +781,16 @@ com-- muR-dependent fac is reweighted here
                  if (eto(j,nFKSprocess).eq.i_process) then
                     if(wgtbpower.gt.0)then
                        xsec=xsec+CONV*PD(j)*wgtwborn(k)*g**(2*wgtbpower)
-     f                      * rwgt_muR_dep_fac(scale,scale)
+     f                      * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                     else
                        xsec=xsec+CONV*PD(j)*wgtwborn(k)
-     f                      * rwgt_muR_dep_fac(scale,scale)
+     f                      * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                     endif
                     xsec=xsec+CONV*PD(j)*( wgtwns(k)+ wgtwnsmuf(k)
      $                   *xlgmuf+wgtwnsmur(k)*xlgmur )*g**(2*wgtbpower
-     $                   +2.d0) * rwgt_muR_dep_fac(scale,scale)
+     $                   +2.d0) * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                  endif
               enddo
@@ -834,7 +843,7 @@ c Should cause the code to crash if used
           do j=1,iproc_save(nFKSprocess)
              if (eto(j,nFKSprocess).eq.i_process) then
                 xsec=xsec+CONV*PD(j)*wgtwreal(1)*g**(2*wgtbpower+2.d0)
-     f               * rwgt_muR_dep_fac(scale,scale)
+     f               * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
              endif
           enddo
@@ -904,6 +913,10 @@ c FxFx merging
       double precision rewgt
       external setclscales,rewgt
       double precision rwgt_muR_dep_fac
+      double precision cpower_dum
+      cpower_dum=0
+      write(*,*) 'FIX CPOWER EVTGEN'
+      stop 1
 c
       save_murrat=muR_over_ref
       save_muf1rat=muF1_over_ref
@@ -967,16 +980,16 @@ c
                   if (eto(j,nFKSprocess).eq.i_process) then
                      if(wgtbpower.gt.0)then
                         xsec=xsec+CONV*PD(j)*wgtwborn_all*g**(2
-     $                       *wgtbpower) * rwgt_muR_dep_fac(scale,scale)
+     $                       *wgtbpower) * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                      else
                         xsec=xsec+CONV*PD(j)*wgtwborn_all
-     f                       * rwgt_muR_dep_fac(scale,scale)
+     f                       * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                      endif
                      xsec=xsec+CONV*PD(j)*( wgtwns_all+ wgtwnsmuf_all
      $                    *xlgmuf+wgtwnsmur_all*xlgmur )*g**(2*wgtbpower
-     $                    +2.d0) * rwgt_muR_dep_fac(scale,scale)
+     $                    +2.d0) * rwgt_muR_dep_fac(scale,scale,cpower_dum)
 com-- muR-dependent fac is reweighted here
                   endif
                enddo
@@ -1067,8 +1080,9 @@ c     include a muR-dependent pre-factor. Multiply by the muR-dependent
 c     factor and devide by the muR-independent one.
 c Note: This is implemented below for the Bottom Yukawa in the SM.
 c       Change it to the factor you need to reweight.
-      Double precision function rwgt_muR_dep_fac(scale,central)
+      Double precision function rwgt_muR_dep_fac(scale,central,cpower_in)
       implicit none
+      double precision cpower_in
       double precision scale,vev,mbmb,apimuR,apimZ,apimb,mbmuR,alphas,pi
       parameter (pi=3.14159265358979323846d0)
       include "nexternal.inc"
@@ -1081,7 +1095,7 @@ c       Change it to the factor you need to reweight.
       parameter (tootiny=1d-9)
       rwgt_muR_dep_fac = 1d0
 c     This is relevant for a muR-dependent bottom-mass in Yukawa.
-      IF(wgtcpower .ne. 0d0 .and. runfac .eq. 1) THEN
+      IF(cpower_in .ne. 0d0 .and. runfac .eq. 1) THEN
 c$$$      vev    = 246.21845813429518469305d0 !vev in aMC@NLO from y_b->m_b
 c$$$      mbmb = MDL_YB*vev/dsqrt(2d0)
 c$$$com-- mbmb input for fixed Yukawa bmass in param_card.dat is used here
@@ -1106,7 +1120,7 @@ c$$$c         order consistent with computation LO: 1-loop, NLO: 2-loop
 c$$$         CALL runalpha(apicentral,central,scale,4d0,2,0,apimuR)
 c$$$         CALL runmass(mbcentral,apicentral,apimuR,4d0,2,mbmuR)
 c$$$      endif
-c$$$      rwgt_muR_dep_fac = (mbmuR/mbmb)**wgtcpower
+c$$$      rwgt_muR_dep_fac = (mbmuR/mbmb)**cpower_in
       ELSE
          return
       ENDIF

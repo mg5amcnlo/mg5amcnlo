@@ -117,6 +117,9 @@ c input of cpower (checked against calculated value)
       double precision cpowerinput
       parameter (cpowerinput=0.d0)
 
+      integer cpower_pos
+      parameter (cpower_pos=0)
+
 c switch for running muR-dependent factor runfac=1(running)/0(fixed)
       integer runfac
       parameter (runfac=0)
