@@ -281,8 +281,8 @@ c Common
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
 c External
       logical filgrp
       external filgrp
@@ -344,8 +344,8 @@ c**************************************************************************
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       double precision dot

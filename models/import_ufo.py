@@ -498,7 +498,8 @@ class UFOMG5Converter(object):
         particle = base_objects.Particle()
 
         # MG5 doesn't use goldstone boson 
-        if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
+        if (hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson) \
+                or (hasattr(particle_info, 'goldstoneboson') and particle_info.goldstoneboson):
             particle.set('type', 'goldstone')
         elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
             particle.set('type', 'goldstone')
@@ -808,51 +809,67 @@ class UFOMG5Converter(object):
 
         # Now we create a couplings dictionary for each element of the loop_particles list
         # and for each expansion order of the laurent serie in the coupling.
+        # and for each coupling order
         # Format is new_couplings[loop_particles][laurent_order] and each element
         # is a couplings dictionary.
-        new_couplings=[[{} for j in range(0,3)] for i in \
-                       range(0,max(1,len(interaction_info.loop_particles)))]
+        order_to_interactions= {}
+        # will contains the new coupling of form
+        #new_couplings=[[{} for j in range(0,3)] for i in \
+        #               range(0,max(1,len(interaction_info.loop_particles)))]
         # So sort all entries in the couplings dictionary to put them a the
         # correct place in new_couplings.
-        for key, coupling in interaction_info.couplings.items():
-            for poleOrder in range(0,3):
-                expression = coupling.pole(poleOrder)
-                if expression!='ZERO':
-                    if poleOrder==2:
-                        raise InvalidModel, """
-The CT coupling %s was found with a contribution to the double pole. 
-This is either an error in the model or a parsing error in the function 'is_value_zero'.
-The expression of the non-zero double pole coupling is:
-%s
-"""%(coupling.name,str(coupling.value))
-                    # It is actually safer that the new coupling associated to
-                    # the interaction added is not a reference to an original 
-                    # coupling in the ufo model. So copy.copy is right here.   
-                    newCoupling = copy.copy(coupling)
-                    if poleOrder!=0:
-                        newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
-                    newCoupling.value = expression
-                    # assign the CT parameter dependences
-                    #if hasattr(coupling,'CTparam_dependence') and \
-                    #        (-poleOrder in coupling.CTparam_dependence) and \
-                    #        coupling.CTparam_dependence[-poleOrder]:
-                    #    newCoupling.CTparam_dependence = coupling.CTparam_dependence[-poleOrder]
-                    #elif hasattr(newCoupling,'CTparam_dependence'):
-                    #    delattr(newCoupling,"CTparam_dependence")
-                    new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling  
-              
-        # Now we can add an interaction for each.         
-        for i, all_couplings in enumerate(new_couplings):
-            loop_particles=[[]]
-            if len(interaction_info.loop_particles)>0:
-                loop_particles=[[part.pdg_code for part in loop_parts] \
-                    for loop_parts in interaction_info.loop_particles[i]]
-            for poleOrder in range(0,3):
-                if all_couplings[poleOrder]!={}:
-                    interaction_info.couplings=all_couplings[poleOrder]
-                    self.add_interaction(interaction_info, color_info,\
-                      (intType if poleOrder==0 else (intType+str(poleOrder)+\
-                                                         'eps')),loop_particles)
+        for key, couplings in interaction_info.couplings.items():
+            if not isinstance(couplings, list):
+                couplings = [couplings]
+            for coupling in couplings:
+                order = tuple(coupling.order.items())
+                if order not in order_to_interactions:
+                    order_to_interactions[order] = [
+                           [{} for j in range(0,3)] for i in \
+                           range(0,max(1,len(interaction_info.loop_particles)))]
+                    new_couplings = order_to_interactions[order]
+                else:
+                    new_couplings = order_to_interactions[order]
+                    
+                for poleOrder in range(0,3):
+                    expression = coupling.pole(poleOrder)
+                    if expression!='ZERO':
+                        if poleOrder==2:
+                            raise InvalidModel, """
+    The CT coupling %s was found with a contribution to the double pole. 
+    This is either an error in the model or a parsing error in the function 'is_value_zero'.
+    The expression of the non-zero double pole coupling is:
+    %s
+    """%(coupling.name,str(coupling.value))
+                        # It is actually safer that the new coupling associated to
+                        # the interaction added is not a reference to an original 
+                        # coupling in the ufo model. So copy.copy is right here.   
+                        newCoupling = copy.copy(coupling)
+                        if poleOrder!=0:
+                            newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
+                        newCoupling.value = expression
+                        # assign the CT parameter dependences
+                        #if hasattr(coupling,'CTparam_dependence') and \
+                        #        (-poleOrder in coupling.CTparam_dependence) and \
+                        #        coupling.CTparam_dependence[-poleOrder]:
+                        #    newCoupling.CTparam_dependence = coupling.CTparam_dependence[-poleOrder]
+                        #elif hasattr(newCoupling,'CTparam_dependence'):
+                        #    delattr(newCoupling,"CTparam_dependence")
+                        new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling  
+            
+        for new_couplings in order_to_interactions.values():
+            # Now we can add an interaction for each.         
+            for i, all_couplings in enumerate(new_couplings):
+                loop_particles=[[]]
+                if len(interaction_info.loop_particles)>0:
+                    loop_particles=[[part.pdg_code for part in loop_parts] \
+                        for loop_parts in interaction_info.loop_particles[i]]
+                for poleOrder in range(0,3):
+                    if all_couplings[poleOrder]!={}:
+                        interaction_info.couplings=all_couplings[poleOrder]
+                        self.add_interaction(interaction_info, color_info,\
+                          (intType if poleOrder==0 else (intType+str(poleOrder)+\
+                                                             'eps')),loop_particles)
 
 
     def find_color_anti_color_rep(self, output=None):

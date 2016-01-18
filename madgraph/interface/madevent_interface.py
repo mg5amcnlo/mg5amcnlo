@@ -2036,7 +2036,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     orig_name = self.run_name
                     for card in param_card_iterator:
                         card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                        self.exec_cmd("generate_events -f ",precmd=True, postcmd=True,errorhandling=False)
+                        next_name = param_card_iterator.get_next_name(self.run_name)
+                        self.exec_cmd("generate_events -f %s" % next_name,
+                                      precmd=True, postcmd=True,errorhandling=False)
                         param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
                     param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                     name = misc.get_scan_name(orig_name, self.run_name)

@@ -1090,6 +1090,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         lines.append('integer idup_d(%d,%d,maxproc_used)' % (nfksconfs, nexternal))
         lines.append('integer mothup_d(%d,%d,%d,maxproc_used)' % (nfksconfs, 2, nexternal))
         lines.append('integer icolup_d(%d,%d,%d,maxflow_used)' % (nfksconfs, 2, nexternal))
+        lines.append('integer niprocs_d(%d)' % (nfksconfs))
 
         writer.writelines(lines)
 
