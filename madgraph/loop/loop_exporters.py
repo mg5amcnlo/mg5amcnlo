@@ -997,7 +997,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 INTEGER MAX_SPIN_CONNECTED_TO_LOOP
 PARAMETER(MAX_SPIN_CONNECTED_TO_LOOP=%(max_spin_connected_to_loop)d)
 INTEGER MAX_SPIN_EXTERNAL_PARTICLE
-PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_connected_to_loop)d)
+PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 """%process_info
 
         writer.writelines(proc_include)

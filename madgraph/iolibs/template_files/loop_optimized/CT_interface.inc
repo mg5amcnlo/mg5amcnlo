@@ -284,6 +284,7 @@ C
       include 'coupl.inc'
 
 	  %(real_dp_format)s LSCALE
+	  INTEGER CTMODE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
       INTEGER ID,SQSOINDEX,R
@@ -563,6 +564,7 @@ C
 	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 
 	  %(real_dp_format)s LSCALE
+	  INTEGER CTMODE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
       INTEGER ID,SQSOINDEX,R

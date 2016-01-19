@@ -37,7 +37,7 @@ import traceback
 import time
 import inspect
 import urllib
-
+import random
 
 #useful shortcut
 pjoin = os.path.join
@@ -905,7 +905,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1','--helicity':'-1'}
+                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
+                   '--helicity':'-1','--seed':'-1'}
         
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -3450,6 +3451,7 @@ This implies that with decay chains:
                 lCMS_values.append(lower_bound)
                 
             return lCMS_values
+        
         ###### BEGIN do_check
 
         args = self.split_arg(line)
@@ -3510,6 +3512,7 @@ This implies that with decay chains:
             elif option[0]=='--report':
                 options['report'] = option[1].lower()
             elif option[0]=='--seed':
+                options['seed'] = int(option[1])
                 CMS_options['seed'] = int(option[1])
             elif option[0]=='--name':
                 if '.' in option[1]:
@@ -3734,6 +3737,14 @@ This implies that with decay chains:
             for key, value in CMS_options.items():
                 logger_check.info("{:<20} =   {}".format('--%s'%key,str(value)))
             return        
+        
+        # Set the seed here if not in cms check and if specified
+        if args[0]!='cms' and options['seed']!=-1:
+            # Not necessarily optimal as there could be additional call to
+            # random() as the code develops, but at least it will encompass
+            # everything in this way.
+            logger_check.info('Setting random seed to %d.'%options['seed'])
+            random.seed(options['seed'])
         
         proc_line = " ".join(args[1:])
         # Don't try to extract the process if just re-analyzing a saved run

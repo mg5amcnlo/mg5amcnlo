@@ -2647,7 +2647,10 @@ The loop direction test power P is computed as follow:
         EPS_stability_DP = [DP_stability[E[0]] for E in EPS]
         EPS_stability_QP = [QP_stability[E[0]] for E in EPS]
         res_str_i = ""
-        
+        # Use nicer name for the XML tag in the log file
+        xml_toolname = {'GOLEM95':'GOLEM','IREGI':'IREGI',
+                        'CUTTOOLS':'CUTTOOLS','PJFRY++':'PJFRY',
+                        'NINJA':'NINJA','SAMURAI':'SAMURAI'}[toolname.upper()]
         if len(UPS)>0:
             res_str_i = "\nDetails of the %d/%d UPS encountered by %s\n"\
                                                         %(len(UPS),nPS,toolname)
@@ -2715,25 +2718,30 @@ The loop direction test power P is computed as follow:
         if len(EPS)>0:
             logFile.write('\nFull details of the %i EPS encountered by %s.\n'\
                                                            %(len(EPS),toolname))
+            logFile.write('<EPS_data reduction=%s>\n'%xml_toolname.upper())
             for i, eps in enumerate(EPS):
                 logFile.write('\nEPS #%i\n'%(i+1))
                 logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
                                                               for p in eps[1]]))
-                logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[eps[0]])
-                logFile.write('  QP accuracy :  %.3e\n'%QP_stability[eps[0]])
+                logFile.write('\n  DP accuracy :  %.4e\n'%DP_stability[eps[0]])
+                logFile.write('  QP accuracy :  %.4e\n'%QP_stability[eps[0]])
+            logFile.write('</EPS_data>\n')
         if len(UPS)>0:
             logFile.write('\nFull details of the %i UPS encountered by %s.\n'\
                                                            %(len(UPS),toolname))
+            logFile.write('<UPS_data reduction=%s>\n'%xml_toolname.upper())
             for i, ups in enumerate(UPS):
                 logFile.write('\nUPS #%i\n'%(i+1))
                 logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
                                                               for p in ups[1]]))
-                logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[ups[0]])
-                logFile.write('  QP accuracy :  %.3e\n'%QP_stability[ups[0]])
+                logFile.write('\n  DP accuracy :  %.4e\n'%DP_stability[ups[0]])
+                logFile.write('  QP accuracy :  %.4e\n'%QP_stability[ups[0]])
+            logFile.write('</UPS_data>\n')
 
         logFile.write('\nData entries for the stability plot.\n')
         logFile.write('First row is a maximal accuracy delta, second is the '+\
-                  'fraction of events with DP accuracy worse than delta.\n\n')
+                  'fraction of events with DP accuracy worse than delta.\n')
+        logFile.write('<plot_data reduction=%s>\n'%xml_toolname.upper())
     # Set the x-range so that it spans [10**-17,10**(min_digit_accuracy)]
         if max(DP_stability)>0.0:
             min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
@@ -2741,6 +2749,9 @@ The loop direction test power P is computed as follow:
                 min_digit_acc = min_digit_acc+1
             accuracies=[10**(-17+(i/5.0)) for i in range(5*(17+min_digit_acc)+1)]
         else:
+            logFile.writelines('%.4e  %.4e\n'%(accuracies[i], 0.0) for i in \
+                                                         range(len(accuracies)))      
+            logFile.write('</plot_data>\n')
             res_str_i += '\nPerfect accuracy over all the trial PS points. No plot'+\
                                                               ' is output then.'
             logFile.write('Perfect accuracy over all the trial PS points.')
@@ -2756,13 +2767,16 @@ The loop direction test power P is computed as follow:
                                                       /float(len(DP_stability)))
         data_plot_dict[toolname]=data_plot
         
-        logFile.writelines('%.3e  %.3e\n'%(accuracies[i], data_plot[i]) for i in \
+        logFile.writelines('%.4e  %.4e\n'%(accuracies[i], data_plot[i]) for i in \
                                                          range(len(accuracies)))
+        logFile.write('</plot_data>\n')
         logFile.write('\nList of accuracies recorded for the %i evaluations with %s\n'\
                                                                 %(nPS,toolname))
         logFile.write('First row is DP, second is QP (if available).\n\n')
-        logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
-                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
+        logFile.write('<accuracies reduction=%s>\n'%xml_toolname.upper())
+        logFile.writelines('%.4e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
+                             else '%.4e\n'%QP_stability[i]) for i in range(nPS))
+        logFile.write('</accuracies>\n')
         res_str+=res_str_i
     logFile.close()
     res_str += "\n= Stability details of the run are output to the file"+\
@@ -4777,6 +4791,7 @@ def output_lorentz_inv_loop(comparison_results, output='text'):
     if len(transfo_name_header) + 1 > transfo_col_size:
         transfo_col_size = len(transfo_name_header) + 1
     
+    misc.sprint(results)
     for transfo_name, value in results:
         if len(transfo_name) + 1 > transfo_col_size:
             transfo_col_size = len(transfo_name) + 1
@@ -5254,6 +5269,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     def check_stability(ME_values, lambda_values, lambda_scaling, values_name):
         """ Checks if the values passed in argument are stable and return the 
         stability check outcome warning if it is not precise enough. """
+
         values = sorted([
             abs(val*(lambda_values[0]/lambda_values[i])**lambda_scaling) for \
                                                 i, val in enumerate(ME_values)])
