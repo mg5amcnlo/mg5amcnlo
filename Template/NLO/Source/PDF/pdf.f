@@ -293,7 +293,7 @@ C
             fx(-2)=Ctq6Pdf(-1,x,xmu)
 
 C                  
-      elseif (pdlabel(1:7) .eq. 'cteqqed') then
+      elseif (pdlabel(1:5) .eq. 'ct14q') then
 C      
          fx(-5)=CT14Pdf(-5,x,xmu)
          fx(-4)=CT14Pdf(-4,x,xmu)

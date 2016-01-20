@@ -239,10 +239,19 @@ c------------------------------------------------------------------
 
 c CT14QED i put only the option for QED
  
-      elseif (pdlabel .eq. 'cteqqed') then
+      elseif (pdlabel .eq. 'ct14q00') then
       asmz=0.118d0 !!!! to be checked !!!!!!
       Call SetCT14('ph0.00_Proton.pds                       ')
-c      Call SetCT14('ph0.00_Proton.dat                       ')
+      elseif (pdlabel .eq. 'ct14q07') then
+      asmz=0.118d0 !!!! to be checked !!!!!!
+      Call SetCT14('ph0.07_Proton.pds                       ')
+      elseif (pdlabel .eq. 'ct14q14') then
+      asmz=0.118d0 !!!! to be checked !!!!!!
+      Call SetCT14('ph0.14_Proton.pds                       ')
+      elseif (pdlabel .eq. 'ct14q21') then
+      asmz=0.118d0 !!!! to be checked !!!!!!
+      Call SetCT14('ph0.21_Proton.pds                       ')
+
 c---------------------------------------------------------------
 
 C

@@ -68,8 +68,10 @@
  CTEQ3L            cteq3_l     ---------          0.112          1
  CTEQ3D            cteq3_d     ---------          0.112          2
 
- CTEQ14QED         ctqed     ph0.00_Proton.pds         0.118          2 
-
+ CTEQ14QED-00      ct14q00    ph0.00_Proton.pds         0.118          2 
+ CTEQ14QED-07      ct14q07    ph0.07_Proton.pds         0.118          2 
+ CTEQ14QED-14      ct14q14    ph0.14_Proton.pds         0.118          2
+ CTEQ14QED-21      ct14q21    ph0.21_Proton.pds         0.118          2  
 ---------------------------------------------------------------------
           
  NNPDF23NLO        nn23nlo     NNPDF23nlo_as_0119_qed_mem0.grid  0.119  2
