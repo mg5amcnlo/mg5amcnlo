@@ -958,9 +958,12 @@ class ConfigFile(dict):
                 targettype = type(self[name]) #should not happen but ok
                 
             if isinstance(value, str):
-                value = value.split(',')
-            elif not isinstance(value, list):
+                # split for each comma/space
+                value = re.split('\s*,\s*|\s+', value) 
+            elif not hasattr(value, '__iter__'):
                 value = [value]
+            elif isinstance(value, dict):
+                raise Exception, "not being able to handle dictionary in card entry"
             #format each entry    
             values =[self.format_variable(v, targettype, name=name) 
                                                                  for v in value]
