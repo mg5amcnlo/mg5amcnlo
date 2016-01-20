@@ -430,7 +430,7 @@ c reweighting
                  wgtxsecmu(i,j)=wgtxsecmu(i,j)*evwgt_sign/XWGTUP
               enddo
            enddo
-           do i=1,numPDFpairs*2
+           do i=1,numPDFs
               wgtxsecPDF(i)=wgtxsecPDF(i)*evwgt_sign/XWGTUP
           enddo
         endif

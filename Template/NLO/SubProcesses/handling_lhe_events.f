@@ -162,7 +162,7 @@ c Update the number of events
      $        /' found in the run_card.',pdf_set_min,pdf_set_max
          stop
       endif
-      if (.not.rwgt_skip_pdf) numPDFpairs=(pdf_set_max-pdf_set_min+1)/2
+      if (.not.rwgt_skip_pdf) numPDFs=(pdf_set_max-pdf_set_min+1)
       write(ifile,'(a)') '  </MGRunCard>'
 c Functional form of the scales
       write(ifile,'(a)') '  <scalesfunctionalform>'
@@ -214,7 +214,7 @@ c Write here the reweight information if need be
      $           ,rw_Rscale_down," muF=",rw_Fscale_down," </weight>"
             write(ifile,'(a)') "    </weightgroup>"
          endif
-         if (numPDFpairs.ne.0) then
+         if (numPDFs.ne.0) then
             if (pdf_set_min.lt.90000) then    ! MSTW & CTEQ
                write(ifile,'(a)') "    <weightgroup "/
      &              /"type='PDF_variation' combine='hessian'>"
@@ -222,7 +222,7 @@ c Write here the reweight information if need be
                write(ifile,'(a)') "    <weightgroup "/
      &              /"type='PDF_variation' combine='gaussian'>"
             endif
-            do i=1,numPDFpairs*2
+            do i=1,numPDFs
                idwgt=2000+i
                write(ifile,'(a,i4,a,i6,a)') "      <weight id='",idwgt,
      $              "'> pdfset=",pdf_set_min+(i-1)," </weight>"
@@ -687,11 +687,11 @@ c
            write(ifile,'(a)')'  </unlops>'
         elseif(jwgtinfo.eq.8)then
            write(ifile,'(a)') '  <rwgt>'
-          write(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
+          write(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFs
           do i=1,numscales
             write(ifile,404)(wgtxsecmu(i,j),j=1,numscales)
           enddo
-          do i=1,numPDFpairs
+          do i=1,numPDFs/2
             nps=2*i-1
             nng=2*i
             write(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
@@ -707,7 +707,7 @@ c
      $                ,j)," </wgt>"
               enddo
            enddo
-           do i=1,2*numPDFpairs
+           do i=1,numPDFs
               idwgt=2000+i
               write(ifile,601) "   <wgt id='",idwgt,"'>",wgtxsecPDF(i)
      $             ," </wgt>"
@@ -928,11 +928,11 @@ c
            read(ifile,'(a)') string
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
-          read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
+          read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFs
           do i=1,numscales
             read(ifile,404)(wgtxsecmu(i,j),j=1,numscales)
           enddo
-          do i=1,numPDFpairs
+          do i=1,numPDFs/2
             nps=2*i-1
             nng=2*i
             read(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
@@ -946,10 +946,10 @@ c
                  call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
-           do i=1,2*numPDFpairs
+           do i=1,numPDFs
               call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
-           if (numscales.eq.0 .and. numPDFpairs.ne.0) then
+           if (numscales.eq.0 .and. numPDFs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
            endif
            read(ifile,'(a)')string
@@ -1180,11 +1180,11 @@ c
            read(ifile,'(a)') string
         elseif(jwgtinfo.eq.8)then
           read(ifile,'(a)')string
-          read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
+          read(ifile,406)wgtref,wgtxsecmu(1,1),numscales,numPDFs
           do i=1,numscales
             read(ifile,404)(wgtxsecmu(i,j),j=1,numscales)
           enddo
-          do i=1,numPDFpairs
+          do i=1,numPDFs/2
             nps=2*i-1
             nng=2*i
             read(ifile,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
@@ -1198,10 +1198,10 @@ c
                 call read_rwgt_line(ifile,idwgt,wgtxsecmu(i,j))
               enddo
            enddo
-           do i=1,2*numPDFpairs
+           do i=1,numPDFs
              call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i))
            enddo
-           if (numscales.eq.0 .and. numPDFpairs.ne.0) then
+           if (numscales.eq.0 .and. numPDFs.ne.0) then
               wgtxsecmu(1,1)=XWGTUP
            endif
            read(ifile,'(a)')string

@@ -6,53 +6,39 @@ c information on the maximum and minimum weights due to scale
 c and PDF variations
 c Compile with makefile_rwgt
       implicit none
-      include "nexternal.inc"
-      include "genps.inc"
-      include "nFKSconfigs.inc"
-      include "reweight_all.inc"
       include "run.inc"
-      character*7 pdlabel,epa_label
-      integer lhaid
+      include "reweight_all.inc"
+      integer i,ii,jj,isave,idpdf(0:maxPDFs),itmp,lef,ifile,maxevt
+     $     ,iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
+     $     ,kwgtinfo,kexternal,jwgtnumpartn,ofile,kf,kr,n
+      double precision yfactR(maxscales),yfactF(maxscales),value(20)
+     $     ,scale1_lhe,scale2_lhe,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $     ,wgtpdfmax,saved_weight,xsecPDFr_acc(0:maxPDFs)
+     $     ,xsecScale_acc(maxscales,maxscales)
+      logical AddInfoLHE,unweighted
+      character*9 ch1
+      character*10 MonteCarlo
+      character*20 parm(20)
+      character*80 event_file,fname1
+      character*140 buff
+c Parameters
+      integer    izero
+      parameter (izero=0)
+c Common blocks
+      character*7         pdlabel,epa_label
+      integer       lhaid
       common/to_pdf/lhaid,pdlabel,epa_label
-      integer maxevt,ifile,ofile,i,jj,isave,ii
-      double precision saved_weight
-      logical unweighted
+c Les Houches Event File info:
       integer IDBMUP(2),PDFGUP(2),PDFSUP(2),IDWTUP,NPRUP,LPRUP
       double precision EBMUP(2),XSECUP,XERRUP,XMAXUP
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
-      INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
-     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
-      DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
-      integer isorh_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-      double precision scale1_lhe,scale2_lhe,percentage
-      integer kwgtinfo,kexternal,jwgtnumpartn
-      double precision wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-      double precision xmuR_over_ref,xmuF1_over_ref,xmuF2_over_ref,
-     # xQES_over_ref,pr_muR_over_ref,pr_muF1_over_ref,pr_muF2_over_ref,
-     # tmp,yfactR(maxscales),yfactF(maxscales),xsecPDFr(0:maxPDFs)
-      double precision xsecPDFr_acc(0:maxPDFs),xsecScale_acc(maxscales
-     $     ,maxscales)
-      double precision compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
-     &     ,compute_rwgt_wgt_Hev
-      integer kr,kf,n,nng,nps,npairs,nsets,izero,itmp,idpdf(0:maxPDFs)
-      parameter (izero=0)
-      integer lef
-      character*80 event_file,fname1
-      character*140 buff
-      character*10 MonteCarlo
-      character*9 ch1
-      character*20 parm(20)
-      double precision value(20)
-      logical AddInfoLHE
-      external compute_rwgt_wgt_Sev,compute_rwgt_wgt_Sev_nbody
-     &     ,compute_rwgt_wgt_Hev
-      integer i_process
-      common/c_i_process/i_process
+      INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),MOTHUP(2,MAXNUP)
+     $     ,ICOLUP(2,MAXNUP)
+      DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,PUP(5,MAXNUP)
+     $     ,VTIMUP(MAXNUP),SPINUP(MAXNUP)
 c
       call setrun                !Sets up run parameters
-
 
       write(*,*) 'Enter event file name'
       read(*,*) event_file
@@ -66,23 +52,6 @@ c
         isave=0
       endif
 
-
-      xQES_over_ref=QES_over_ref
-      xmuR_over_ref=muR_over_ref
-      xmuF1_over_ref=muF1_over_ref
-      xmuF2_over_ref=muF2_over_ref
-      write(*,*) 'Using:'  
-      write(*,*) 'QES_over_ref: ', xQES_over_ref
-      write(*,*) 'muR_over_ref: ', xmuR_over_ref
-      write(*,*) 'muF1_over_ref: ', xmuF1_over_ref
-      write(*,*) 'muF2_over_ref: ', xmuF2_over_ref
-      if (xmuF1_over_ref .ne. xmuF2_over_ref) then
-          write(*,*) "The variables muF1_over_ref and muF2_over_ref" //
-     1     " have to be set equal in the run_card.dat." //
-     1     " Run cannot continue, quitting..."
-          stop
-      endif
-
       if(do_rwgt_scale)then
         yfactR(1)=1.d0
         yfactR(2)=rw_Rscale_up
@@ -94,6 +63,11 @@ c
         write(*,*) rw_Fscale_down, ' < mu_F < ', rw_Fscale_up
         write(*,*) rw_Rscale_down, ' < mu_R < ', rw_Rscale_up
         numscales=3
+        if(numscales.gt.maxscales)then
+           write(*,*)'Too many scales: '/
+     $          /'increase maxscales in reweight0.inc'
+           stop
+        endif
       else
         numscales=0
       endif
@@ -101,39 +75,28 @@ c
 c Note: when ipdf#0, the central PDF set will be used also as a reference
 c for the scale uncertainty
       if(do_rwgt_pdf)then
-
-        idpdf(0)=lhaid
-        idpdf(1)=pdf_set_min
-        itmp=pdf_set_max
-        nsets=itmp-idpdf(1)+1
-        write(*,*) 'Doing PDF reweight:'
-        write(*,*) 'Central set id: ', idpdf(0)
-        write(*,*) 'Min error set id: ', idpdf(1)
-        write(*,*) 'Max error set id: ', itmp
-        if(mod(nsets,2).ne.0)then
-          write(*,*)'The number of error sets must be even',nsets
-          stop
-        else
-          npairs=nsets/2
-        endif
-        do i=2,nsets
-          idpdf(i)=idpdf(1)+i-1
-        enddo
-        if(nsets.gt.maxPDFs)then
-          write(*,*)'Too many PDFs: increase maxPDFs in reweight0.inc'
-          stop
-        endif
-c
-        value(1)=idpdf(0)
-        parm(1)='DEFAULT'
-        call pdfset(parm,value)
-c
-        numPDFpairs=npairs
+         idpdf(0)=lhaid
+         idpdf(1)=pdf_set_min
+         itmp=pdf_set_max
+         numPDFs=itmp-idpdf(1)+1
+         if(numPDFs.gt.maxPDFs)then
+            write(*,*)'Too many PDFs: increase maxPDFs in reweight0.inc'
+            stop
+         endif
+         write(*,*) 'Doing PDF reweight:'
+         write(*,*) 'Central set id: ', idpdf(0)
+         write(*,*) 'Min error set id: ', idpdf(1)
+         write(*,*) 'Max error set id: ', itmp
+         do i=2,numPDFs
+            idpdf(i)=idpdf(1)+i-1
+         enddo
+         value(1)=idpdf(0)
+         parm(1)='DEFAULT'
+         call pdfset(parm,value)
       else
-        numPDFpairs=0
+         numPDFs=0
       endif
 
-c$$$      call fk88strcat(event_file,'.rwgt',fname1)
       lef=index(event_file,' ')-1
       fname1=event_file(1:lef)//'.rwgt'
 
@@ -147,23 +110,21 @@ c$$$      call fk88strcat(event_file,'.rwgt',fname1)
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
 
       do i=1,min(10,maxevt)
-        call read_lhef_event(ifile,
-     &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
-        if(buff(1:1).ne.'#')then
-          write(*,*)'This event file cannot be reweighted [1]',i
-          stop
-        endif
-        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                    fksfather_lhe,ipartner_lhe,
-     #                    scale1_lhe,scale2_lhe,
-     #                    kwgtinfo,kexternal,jwgtnumpartn,
-     #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if((kwgtinfo.lt.1.or.kwgtinfo.gt.5) .and. kwgtinfo.ne.-5)then
-          write(*,*)'This event file cannot be reweighted [2]',i
-          write(*,*)kwgtinfo
-          stop 1
+         call read_lhef_event(ifile,
+     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+         if(buff(1:1).ne.'#')then
+            write (*,*) 'This event file cannot be reweighted [1]',i
+            stop
+         endif
+         read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe
+     $        ,ipartner_lhe,scale1_lhe,scale2_lhe,kwgtinfo,kexternal
+     $        ,jwgtnumpartn,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $        ,wgtpdfmax
+        if(kwgtinfo.ne.-5)then
+           write (*,*) 'This event file cannot be reweighted [2]',i
+           write (*,*) kwgtinfo
+           stop 1
         endif
         if(i.eq.1)then
           saved_weight=abs(XWGTUP)
@@ -203,7 +164,7 @@ c To keep track of the accumulated results:
             xsecScale_acc(jj,ii)=0d0
          enddo
       enddo
-      do n=0,nsets
+      do n=0,numPDFs
          xsecPDFr_acc(n)=0d0
       enddo
 
@@ -211,16 +172,10 @@ c To keep track of the accumulated results:
 
 c Determine the flavor map between the NLO and Born
       call find_iproc_map()
-
-      
-
       do i=1,maxevt
-
-         
          call read_lhef_event(ifile,
      &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
          if(buff(1:1).ne.'#')then
             write(*,*)'This event file cannot be reweighted [3]',i
             stop
@@ -230,246 +185,52 @@ c Determine the flavor map between the NLO and Born
      $        ,jwgtnumpartn,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $        ,wgtpdfmax
 
-         if (kwgtinfo.ne.-5) then
-         call reweight_fill_extra_inverse()
+c Do the actual reweighting.
+         call fill_wgt_info_from_rwgt_lines
+         if (do_rwgt_scale)call reweight_scale_ext(yfactR,yfactF)
+         if (do_rwgt_pdf)  call reweight_pdf_ext
+         call fill_rwgt_arrays
 
-        if(kwgtinfo.lt.1.or.kwgtinfo.gt.5)then
-          write(*,*)'This event file cannot be reweighted [4]',i
-          write(*,*)kwgtinfo
-          stop
-        endif
-        if(wgtcentral.ne.0.d0.or.wgtmumin.ne.0.d0.or.
-     #     wgtmumax.ne.0.d0.or.wgtpdfmin.ne.0.d0.or.
-     #     wgtpdfmax.ne.0.d0)then
-          write(*,*)'This event file was already reweighted',i
-          write(*,*)wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-          stop
-        endif
-
-        if (kwgtinfo.eq.5) call reweight_settozero()
-
-        if(do_rwgt_scale)then
-
-          wgtmumin=1.d40
-          wgtmumax=-1.d40
-
-          do kr=1,3
-            do kf=1,3
-              wgtref=0d0
-              pr_muR_over_ref=xmuR_over_ref*yfactR(kr)
-              pr_muF1_over_ref=xmuF1_over_ref*yfactF(kf)
-              pr_muF2_over_ref=pr_muF1_over_ref
-              wgtxsecmu(kr,kf)=0d0
-              if(iSorH_lhe.eq.1)then
-c The nbody contributions
-                 if (kwgtinfo.eq.5) then
-                    call fill_reweight0inc_nbody(i_process)
-                    wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)
-     &                   +compute_rwgt_wgt_Sev_nbody(pr_muR_over_ref
-     &                   ,pr_muF1_over_ref, pr_muF2_over_ref
-     &                   ,xQES_over_ref, kwgtinfo)
-                    call reweight_settozero()
-                 endif
-                 do ii=1,nScontributions
-                    nFKSprocess_used=nFKSprocess_reweight(ii)
-                    if (kwgtinfo.eq.5)
-     &                   call fill_reweight0inc(nFKSprocess_used*2-1
-     $                   ,i_process)
-                    wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+
-     &                   compute_rwgt_wgt_Sev(pr_muR_over_ref
-     &                   ,pr_muF1_over_ref, pr_muF2_over_ref
-     &                   ,xQES_over_ref, kwgtinfo)
-                    if (kwgtinfo.eq.5) call reweight_settozero()
-                 enddo
-              elseif(iSorH_lhe.eq.2)then
-                 if (kwgtinfo.eq.5)
-     &                call fill_reweight0inc(nFKSprocess_used*2,
-     &                i_process)
-                 wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+
-     &                compute_rwgt_wgt_Hev(pr_muR_over_ref
-     &                ,pr_muF1_over_ref, pr_muF2_over_ref
-     &                ,xQES_over_ref, kwgtinfo)
-                 if (kwgtinfo.eq.5) call reweight_settozero()
-              else
-                 write(*,*)'Invalid value of iSorH_lhe',iSorH_lhe
-                 stop
-              endif
-c
-              tmp=wgtxsecmu(kr,kf)
-              if(tmp.lt.wgtmumin)wgtmumin=tmp
-              if(tmp.gt.wgtmumax)wgtmumax=tmp
-            enddo
-          enddo
-
-          if (kwgtinfo.eq.5) then
-             if (iSorH_lhe.eq.1) then
-                wgtref=wgtref_nbody_all(i_process)
-                do ii=1,nScontributions
-                   wgtref=wgtref+ wgtref_all(nFKSprocess_reweight(ii)*2
-     $                  -1,i_process)
-                enddo
-             else
-                wgtref=wgtref_all(nFKSprocess_used*2,i_process)
-             endif
-          endif
-
-          if(unweighted)then
-            wgtcentral=wgtxsecmu(1,1)/wgtref
-            wgtmumin=wgtmumin/wgtref
-            wgtmumax=wgtmumax/wgtref
-          else
-            wgtcentral=wgtxsecmu(1,1)
-          endif
-
-        endif
-
-        if(do_rwgt_pdf)then
-
-          do n=0,nsets
-             wgtref=0d0
-             call InitPDF(n)
-             wgtxsecPDF(n)=0d0
-
-             if(iSorH_lhe.eq.1)then
-c The nbody contributions
-                if (kwgtinfo.eq.5) then
-                   call fill_reweight0inc_nbody(i_process)
-                   wgtxsecPDF(n)=wgtxsecPDF(n)
-     $                  +compute_rwgt_wgt_Sev_nbody(xmuR_over_ref
-     $                  ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
-     $                  kwgtinfo)
-                   call reweight_settozero()
-                endif
-                do ii=1,nScontributions
-                   nFKSprocess_used=nFKSprocess_reweight(ii)
-                   if (kwgtinfo.eq.5)
-     &                  call fill_reweight0inc(nFKSprocess_used*2-1
-     $                   ,i_process)
-                   wgtxsecPDF(n)=wgtxsecPDF(n)+
-     &                  compute_rwgt_wgt_Sev(xmuR_over_ref
-     &                  ,xmuF1_over_ref, xmuF2_over_ref ,xQES_over_ref,
-     &                  kwgtinfo)
-                   if (kwgtinfo.eq.5) call reweight_settozero()
-                enddo
-             elseif(iSorH_lhe.eq.2)then
-                if (kwgtinfo.eq.5)
-     &               call fill_reweight0inc(nFKSprocess_used*2,
-     &               i_process)
-                wgtxsecPDF(n)=wgtxsecPDF(n)+
-     &               compute_rwgt_wgt_Hev(xmuR_over_ref ,xmuF1_over_ref,
-     &               xmuF2_over_ref ,xQES_over_ref, kwgtinfo)
-                if (kwgtinfo.eq.5) call reweight_settozero()
-             else
-                write(*,*)'Invalid value of iSorH_lhe',iSorH_lhe
-                stop
-             endif
-c
-             if (kwgtinfo.eq.5) then
-                if (iSorH_lhe.eq.1) then
-                   wgtref=wgtref_nbody_all(i_process)
-                   do ii=1,nScontributions
-                      wgtref=wgtref+wgtref_all(nFKSprocess_reweight(ii)
-     $                     *2-1,i_process)
-                   enddo
-                else
-                   wgtref=wgtref_all(nFKSprocess_used*2,i_process)
-                endif
-             endif
-             
-             if(unweighted)then
-                xsecPDFr(n)=wgtxsecPDF(n)/wgtref
-             else
-                xsecPDFr(n)=wgtxsecPDF(n)
-             endif
-          enddo
-
-          if(do_rwgt_scale)then
-            if(abs(xsecPDFr(0)/wgtcentral-1.d0).gt.1.d-6)then
-              write(*,*)'Central valued computed with mu and PDF differ'
-              write(*,*)xsecPDFr(0),wgtcentral
-              stop
-            endif
-          else
-            wgtcentral=xsecPDFr(0)
-c The following serves to write on tape the reference cross section
-c computed with the new parameters
-            wgtxsecmu(1,1)=wgtxsecPDF(0)
-          endif
-
-          wgtpdfmin=0.d0
-          wgtpdfmax=0.d0
-
-          do n=1,npairs
-            nps=2*n-1
-            nng=2*n
-
-            wgtpdfmin=wgtpdfmin+
-     #                ( max(0.d0,
-     #                      xsecPDFr(0)-xsecPDFr(nps),
-     #                      xsecPDFr(0)-xsecPDFr(nng)) )**2
-            wgtpdfmax=wgtpdfmax+
-     #                ( max(0.d0,
-     #                      xsecPDFr(nps)-xsecPDFr(0),
-     #                      xsecPDFr(nng)-xsecPDFr(0)) )**2
-          enddo
-          wgtpdfmin=wgtcentral-sqrt(wgtpdfmin)
-          wgtpdfmax=wgtcentral+sqrt(wgtpdfmax)
-
-c Restore default PDFs
-          call InitPDF(izero)
-
-        endif
-
-        else                      ! kwgtinfo.eq.-5
-         
-        call fill_wgt_info_from_rwgt_lines
-        if (do_rwgt_scale)call reweight_scale_ext(yfactR,yfactF)
-        if (do_rwgt_pdf)  call reweight_pdf_ext
-        call fill_rwgt_arrays
-
-        endif
-
-        write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe,jfks_lhe,
-     $       fksfather_lhe,ipartner_lhe, scale1_lhe,scale2_lhe, isave
-     $       ,izero,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
-     $       ,wgtpdfmax
-
+         write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe,jfks_lhe,
+     $        fksfather_lhe,ipartner_lhe, scale1_lhe,scale2_lhe, isave
+     $        ,izero,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $        ,wgtpdfmax
 
 c renormalize all the scale & PDF weights to have the same normalization
 c as XWGTUP
-        if(do_rwgt_scale)then
-           do kr=1,3
-              do kf=1,3
-                 wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)/wgtref*XWGTUP
-              enddo
-           enddo
-        endif
-        if(do_rwgt_pdf)then
-           do n=0,nsets
-              wgtxsecPDF(n)=wgtxsecPDF(n)/wgtref*XWGTUP
-           enddo
-        endif
+         if(do_rwgt_scale)then
+            do kr=1,numscales
+               do kf=1,numscales
+                  wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)/wgtref*XWGTUP
+               enddo
+            enddo
+         endif
+         if(do_rwgt_pdf)then
+            do n=0,numPDFs
+               wgtxsecPDF(n)=wgtxsecPDF(n)/wgtref*XWGTUP
+            enddo
+         endif
 
 c Keep track of the accumulated results:
-        if (numscales.gt.0) then
-           do ii=1,numscales
-              do jj=1,numscales
-                 xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
-     $                ,jj)
-              enddo
-           enddo
-        endif
-        if (nsets.gt.0) then
-           do n=0,nsets
-              xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)
-           enddo
-        endif
+         if (numscales.gt.0) then
+            do ii=1,numscales
+               do jj=1,numscales
+                  xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
+     $                 ,jj)
+               enddo
+            enddo
+         endif
+         if (numPDFs.gt.0) then
+            do n=0,numPDFs
+               xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)
+            enddo
+         endif
 
 c Write event to disk:
-        call write_lhef_event(ofile,
-     &       NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
-     &       IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
-
+         call write_lhef_event(ofile,
+     &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
+     &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+         
       enddo
 
       write(ofile,'(a)')'</LesHouchesEvents>'
@@ -485,11 +246,11 @@ c Write the accumulated results to a file
       else
          write (34,*) ''
       endif
-      if (nsets.gt.0) then
-         write (34,*) nsets + 1
-         write (34,*) (xsecPDFr_acc(n),n=0,nsets)
+      if (numPDFs.gt.0) then
+         write (34,*) numPDFs + 1
+         write (34,*) (xsecPDFr_acc(n),n=0,numPDFs)
       else
-         write(34,*) nsets
+         write(34,*) numPDFs
          write (34,*) ''
       endif
       close(34)
@@ -497,7 +258,6 @@ c Write the accumulated results to a file
  201  format(a9,1x,i1,4(1x,i2),2(1x,e14.8),1x,i1,2(1x,i2),5(1x,e14.8))
 
       end
-
 
 c Dummy subroutine (normally used with vegas/mint when resuming plots)
       subroutine resume()
@@ -564,10 +324,6 @@ c do the same as above for the counterevents
 
 
 
-
-
-
-
       
       subroutine fill_wgt_info_from_rwgt_lines
       implicit none
@@ -594,21 +350,23 @@ c do the same as above for the counterevents
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'run.inc'
+      include 'reweight0.inc'
       integer i,pd,lp,iwgt_save,kr,kf
-      double precision yfactR(3),yfactF(3),mu2_f(3),mu2_r(3),xlum(3)
-     &     ,pdg2pdf,mu2_q,rwgt_muR_dep_fac,g(3),alphas,pi
+      double precision yfactR(maxscales),yfactF(maxscales)
+     $     ,mu2_f(maxscales),mu2_r(maxscales),xlum(maxscales),pdg2pdf
+     $     ,mu2_q,rwgt_muR_dep_fac,g(maxscales),alphas,pi
       parameter (pi=3.14159265358979323846d0)
       external pdg2pdf,rwgt_muR_dep_fac,alphas
       iwgt_save=iwgt
       do i=1,icontr
          iwgt=iwgt_save
          mu2_q=scales2(1,i)
-         do kr=1,3
+         do kr=1,numscales
             mu2_r(kr)=scales2(2,i)*yfactR(kr)**2
 c Update the strong coupling
             g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
          enddo
-         do kf=1,3
+         do kf=1,numscales
             mu2_f(kf)=scales2(3,i)*yfactF(kf)**2
 c call the PDFs
             xlum(kf)=1d0
@@ -623,8 +381,8 @@ c call the PDFs
             xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
      &           ,DSQRT(mu2_f(kf)))
          enddo
-         do kr=1,3
-            do kf=1,3
+         do kr=1,numscales
+            do kf=1,numscales
                iwgt=iwgt+1 ! increment the iwgt for the wgts() array
                if (iwgt.gt.max_wgt) then
                   write (*,*) 'ERROR too many weights in reweight_scale'
@@ -656,7 +414,7 @@ c add the weights to the array
      &     ,xlum,alphas,g,pi
       parameter (pi=3.14159265358979323846d0)
       external pdg2pdf,rwgt_muR_dep_fac,alphas
-      do n=0,numPDFpairs*2
+      do n=0,numPDFs
          iwgt=iwgt+1
          if (iwgt.gt.max_wgt) then
             write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
@@ -703,7 +461,7 @@ c add the weights to the array
             wgtxsecmu(kr,kf)=0d0
          enddo
       enddo
-      do n=0,numPDFpairs*2
+      do n=0,numPDFs
          wgtxsecPDF(n)=0d0
       enddo
       do i=1,icontr
@@ -714,7 +472,7 @@ c add the weights to the array
                iw=iw+1
             enddo
          enddo
-         do n=0,numPDFpairs*2
+         do n=0,numPDFs
             wgtxsecPDF(n)=wgtxsecPDF(n)+wgts(iw,i)
             iw=iw+1
          enddo

@@ -65,12 +65,12 @@ c
 c Cross sections after variations of scales and PDFs
 c
       integer maxscales,maxPDFs
-      parameter (maxscales=3)
+      parameter (maxscales=9)
       parameter (maxPDFs=200)
 
 c Number of scale factors (for each scale) and PDF error pairs
-      integer numscales,numPDFpairs
-      common/cwgxsec1/numscales,numPDFpairs
+      integer numscales,numPDFpairs,numPDFs
+      common/cwgxsec1/numscales,numPDFpairs,numPDFs
 
 c Cross sections at different scales and PDFs
       double precision wgtxsecmu(maxscales,maxscales),
