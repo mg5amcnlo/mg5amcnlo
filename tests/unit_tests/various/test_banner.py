@@ -142,7 +142,7 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertEqual(self.config['list'],[1,2,3,40])
         
         #check that space + command format works as well
-        self.config['list'] = "1 2, 3, 5d1"
+        self.config['list'] = " 1 2, 3, 5d1 "
         self.assertEqual(self.config['list'],[1,2,3,50])        
         
         self.config['list'] = (1,2,3,'4')

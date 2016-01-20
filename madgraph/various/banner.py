@@ -959,7 +959,7 @@ class ConfigFile(dict):
                 
             if isinstance(value, str):
                 # split for each comma/space
-                value = re.split('\s*,\s*|\s+', value) 
+                value = filter(None, re.split('\s|,', value)) 
             elif not hasattr(value, '__iter__'):
                 value = [value]
             elif isinstance(value, dict):
