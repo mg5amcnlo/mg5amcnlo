@@ -109,13 +109,17 @@ def async_generate_born(args):
     myproc['orders'] = loop_orders
     myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
     myamp = loop_diagram_generation.LoopAmplitude(myproc)
+    has_loops = False
     if myamp.get('diagrams'):
+        has_loops = True
         born.virt_amp = myamp
         
     helasfull = FKSHelasProcess(born, helasreal_list,
                                 loop_optimized = loop_optimized,
                                 decay_ids=[],
                                 gen_color=False)
+
+    processes = helasfull.born_matrix_element.get('processes')
     
     metag = helas_objects.IdentifyMETag.create_tag(helasfull.born_matrix_element.get('base_amplitude'))
     
@@ -125,7 +129,7 @@ def async_generate_born(args):
     cPickle.dump(outdata,output,protocol=2)
     output.close()
     
-    return [output.name,metag]
+    return [output.name,metag,has_loops,processes]
 
 
 def async_finalize_matrix_elements(args):
@@ -194,7 +198,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
         keys += ['real_matrix_elements', ['has_isr'], ['has_fsr'], 
-                 'used_lorentz', 'used_couplings', 'max_configs', 'max_particles']
+                 'used_lorentz', 'used_couplings', 'max_configs', 'max_particles', 'processes']
         return keys
 
     def filter(self, name, value):
@@ -219,6 +223,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         self['used_lorentz'] = []
         self['used_couplings'] = []
+        self['processes'] = []
 
         self['max_particles'] = -1
         self['max_configs'] = -1
@@ -237,8 +242,10 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                                     fksmulti, 
                                     gen_color, decay_ids)
             self['initial_states']=[]
+            self['has_loops'] = len(self.get_virt_matrix_elements()) > 0 
 
         else: 
+            self['has_loops'] = False
             #more efficient generation
             born_procs = fksmulti.get('born_processes')
             born_pdg_list = [[l['id'] for l in born.born_proc['legs']] \
@@ -286,6 +293,10 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             for bornout in bornmapout:
                 mefile = bornout[0]
                 metag = bornout[1]
+                has_loops = bornout[2]
+                self['has_loops'] = self['has_loops'] or has_loops
+                processes = bornout[3]
+                self['processes'].extend(processes)
                 unique = True
                 for ime2,bornout2 in enumerate(unique_me_list):
                     mefile2 = bornout2[0]
@@ -368,7 +379,6 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         self['has_isr'] = fksmulti['has_isr']
         self['has_fsr'] = fksmulti['has_fsr']
-        self['has_loops'] = len(self.get_virt_matrix_elements()) > 0 
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
@@ -394,9 +404,22 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             coupling_list = []
             for me in self.get('matrix_elements'):
                 coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-            self_used_couplings = list(set(coupling_list))
+            self['used_couplings'] = list(set(coupling_list))
 
         return self['used_couplings']
+
+
+    def get_processes(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        if not self['processes']:
+            process_list = []
+            for me in self.get('matrix_elements'):
+                process_list.extend(me.born_matrix_element.get('processes'))
+            self['processes'] = process_list
+
+        return self['processes']
 
 
     def get_max_configs(self):
@@ -762,7 +785,7 @@ class FKSHelasRealProcess(object): #test written
 
             elif type(real_me_list) == helas_objects.HelasMatrixElement: 
                 #new NLO generation mode
-                self.matrix_element = real_me
+                self.matrix_element = real_me_list
 
             else:
                 logger.info('generating matrix element...')

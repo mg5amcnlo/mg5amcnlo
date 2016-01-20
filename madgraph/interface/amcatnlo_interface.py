@@ -609,6 +609,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                         #new NLO generation
                         if self._curr_matrix_elements['has_loops']:
                             self._curr_exporter.opt['mp'] = True
+                        self._curr_exporter.model = self._curr_model
                         ndiags = 0
 
             cpu_time2 = time.time()

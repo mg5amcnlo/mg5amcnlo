@@ -44,6 +44,8 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
     def default_setup(self):
         """Default values for all properties"""
         super(FKSMultiProcess, self).default_setup()
+        self['real_amplitudes'] = diagram_generation.AmplitudeList()
+        self['pdgs'] = []
         self['born_processes'] = FKSProcessList()
         if not 'OLP' in self.keys():
             self['OLP'] = 'MadLoop'
@@ -100,22 +102,22 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         for logg in loggers_off:
             logg.setLevel(logging.WARNING)
         
-        self['real_amplitudes'] = diagram_generation.AmplitudeList()
-        self['pdgs'] = []
-        
         # OLP option
+        olp='MadLoop'
         if 'OLP' in options.keys():
-            self['OLP']=options['OLP']
+            olp = options['OLP']
             del options['OLP']
 
+        new_nlo_generation = False
         # new (less-memory intensive and more optimal) generation mode
         if 'new_nlo_generation' in options.keys():
-            self['new_nlo_generation']=options['new_nlo_generation']
+            new_nlo_generation = options['new_nlo_generation']
             del options['new_nlo_generation']
 
         try:
             # Now generating the borns for the first time.
             super(FKSMultiProcess, self).__init__(*arguments,**options)
+
         except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
             raise NoBornException, "Born diagrams could not be generated for the "+\
@@ -124,7 +126,10 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                " processes yet, but you can still use MadLoop if you want to "+\
                "only generate them."+\
                " For this, use the 'virt=' mode, without multiparticle labels."
-        
+
+        self['OLP'] = olp
+        self['new_nlo_generation'] = new_nlo_generation
+
         #check limitation of FKS
         if arguments and isinstance(arguments, MG.Process):
             myprocdef = arguments[0]
@@ -188,7 +193,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
             for born in self['born_processes']:
                 for real in born.real_amps:
                     real.find_fks_j_from_i(born_pdg_list)
-
             if amps:
                 if self['process_definitions'][0].get('NLO_mode') == 'all':
                     self.generate_virtuals()
@@ -232,6 +236,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         self['has_isr'] = self['has_isr'] or other['has_isr']
         self['has_fsr'] = self['has_fsr'] or other['has_fsr']
         self['OLP'] = other['OLP']
+        self['new_nlo_generation'] = other['new_nlo_generation']
 
     def get_born_amplitudes(self):
         """return an amplitudelist with the born amplitudes"""

@@ -688,13 +688,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===========================================================================
     #  create the run_card 
     #===========================================================================
-    def create_run_card(self, matrix_elements, history):
+    def create_run_card(self, processes, history):
         """ """
  
         run_card = banner_mod.RunCardNLO()
-        
-        processes = [me.get('processes') 
-                                 for me in matrix_elements['matrix_elements']]
         
         run_card.create_default_for_process(self.proc_characteristic, 
                                             history,
@@ -714,7 +711,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.proc_characteristic['grouped_matrix'] = False
         self.create_proc_charac()
 
-        self.create_run_card(matrix_elements, history)
+        self.create_run_card(matrix_elements.get_processes(), history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
@@ -729,15 +726,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
 
 #        # Write maxconfigs.inc based on max of ME's/subprocess groups
 
-        try:
-            maxconfigs = matrix_elements['max_configs']
-        except (AttributeError, KeyError):
-            try:
-                maxconfigs = max([me.get_num_configs() \
-                                  for me in matrix_elements['real_matrix_elements']])
-            except ValueError:
-                maxconfigs = max([me.born_matrix_element.get_num_configs() \
-                                  for me in matrix_elements['matrix_elements']])
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
                                    matrix_elements.get_max_configs())
