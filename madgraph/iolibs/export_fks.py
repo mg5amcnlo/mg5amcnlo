@@ -24,6 +24,7 @@ import subprocess
 import string
 import copy
 import platform
+import multiprocessing
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
@@ -54,6 +55,20 @@ pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
+
+
+def make_jpeg_async(args):
+    Pdir = args[0]
+    old_pos = args[1]
+    dir_path = args[2]
+  
+    devnull = os.open(os.devnull, os.O_RDWR)
+  
+    os.chdir(Pdir)
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                    stdout = devnull)
+    os.chdir(os.path.pardir)  
+
 
 #=================================================================================
 # Class for used of the (non-optimized) Loop process
@@ -294,11 +309,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===========================================================================
     # write_maxparticles_file
     #===========================================================================
-    def write_maxparticles_file(self, writer, matrix_elements):
+    def write_maxparticles_file(self, writer, maxparticles):
         """Write the maxparticles.inc file for MadEvent"""
-
-        maxparticles = max([me.get_nexternal_ninitial()[0] \
-                              for me in matrix_elements['matrix_elements']])
 
         lines = "integer max_particles, max_branch\n"
         lines += "parameter (max_particles=%d) \n" % maxparticles
@@ -313,15 +325,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===========================================================================
     # write_maxconfigs_file
     #===========================================================================
-    def write_maxconfigs_file(self, writer, matrix_elements):
+    def write_maxconfigs_file(self, writer, maxconfigs):
         """Write the maxconfigs.inc file for MadEvent"""
-
-        try:
-            maxconfigs = max([me.get_num_configs() \
-                            for me in matrix_elements['real_matrix_elements']])
-        except ValueError:
-            maxconfigs = max([me.born_matrix_element.get_num_configs() \
-                            for me in matrix_elements['matrix_elements']])
 
         lines = "integer lmaxconfigs\n"
         lines += "parameter (lmaxconfigs=%d)" % maxconfigs
@@ -723,14 +728,24 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_get_mass_width_file(writers.FortranWriter(filename), makeinc, self.model)
 
 #        # Write maxconfigs.inc based on max of ME's/subprocess groups
+
+        try:
+            maxconfigs = matrix_elements['max_configs']
+        except (AttributeError, KeyError):
+            try:
+                maxconfigs = max([me.get_num_configs() \
+                                  for me in matrix_elements['real_matrix_elements']])
+            except ValueError:
+                maxconfigs = max([me.born_matrix_element.get_num_configs() \
+                                  for me in matrix_elements['matrix_elements']])
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
-                                   matrix_elements)
+                                   matrix_elements.get_max_configs())
         
 #        # Write maxparticles.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
         self.write_maxparticles_file(writers.FortranWriter(filename),
-                                     matrix_elements)
+                                     matrix_elements.get_max_particles())
 
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
@@ -3298,7 +3313,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     #===============================================================================
     # write_coef_specs
     #===============================================================================
-    def write_coef_specs_file(self, virt_me_list):
+    def write_coef_specs_file(self, max_loop_vertex_ranks):
         """ writes the coef_specs.inc in the DHELAS folder. Should not be called in the 
         non-optimized mode"""
         filename = os.path.join(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc')
@@ -3306,7 +3321,6 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         replace_dict = {}
         replace_dict['max_lwf_size'] = 4 
 
-        max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for me in virt_me_list]
         replace_dict['vertex_max_coefs'] = max(\
                 [q_polynomial.get_number_of_coefs_for_rank(n) 
                     for n in max_loop_vertex_ranks])
