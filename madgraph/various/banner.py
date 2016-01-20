@@ -898,6 +898,7 @@ class ConfigFile(dict):
         # Initialize it with all the default value
         self.user_set = set()
         self.lower_to_case = {}
+        self.list_parameter = set()
         self.default_setup()
 
         
@@ -947,13 +948,29 @@ class ConfigFile(dict):
             #Should never happen but when deepcopy/pickle
             self.__init__()
             
-        name = name.strip() 
+        name = name.strip()
+        lower_name = name.lower() 
         # 1. Find the type of the attribute that we want
-        if name in self:
-            lower_name = name.lower()
+        if name in self.list_parameter:
+            if isinstance(self[name], list):
+                targettype = type(self[name][0])
+            else:
+                targettype = type(self[name]) #should not happen but ok
+                
+            if isinstance(value, str):
+                value = value.split(',')
+            elif not isinstance(value, list):
+                value = [value]
+            #format each entry    
+            values =[self.format_variable(v, targettype, name=name) 
+                                                                 for v in value]
+            dict.__setitem__(self, lower_name, values)
+            if change_userdefine:
+                self.user_set.add(lower_name)
+            return  
+        elif name in self:            
             targettype = type(self[name])
         else:
-            lower_name = name.lower()          
             logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
                         'This argument is not defined by default. Please consider to add it.')
             logger.debug("Did you mean %s", [k for k in self.keys() if k.startswith(name[0].lower())])
@@ -978,6 +995,12 @@ class ConfigFile(dict):
             
         dict.__setitem__(self, lower_name, value)
         self.lower_to_case[lower_name] = name
+        if isinstance(value, list):
+            if isinstance(value[0], str):
+                raise Exception, """A string cannot be allowed to be seen as a list"""
+            if any([type(value[0]) != type(v) for v in value]):
+                raise Exception, "All entry should have the same type"
+            self.list_parameter.add(lower_name)
 
     @staticmethod
     def format_variable(value, targettype, name="unknown"):
@@ -1235,7 +1258,7 @@ class RunCard(ConfigFile):
         super(RunCard, self).__init__(*args, **opts)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
-                  hidden=False, legacy=False, cut=False):
+                  hidden=False, legacy=False, cut=False, **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
         fortran_name defines what is the associate name in the f77 code
@@ -1245,7 +1268,7 @@ class RunCard(ConfigFile):
         cut: defines the list of cut parameter to allow to set them all to off.
         """
 
-        super(RunCard, self).add_param(name, value)
+        super(RunCard, self).add_param(name, value, **opts)
         name = name.lower()
         if fortran_name:
             self.fortran_name[name] = fortran_name
@@ -1297,7 +1320,13 @@ class RunCard(ConfigFile):
             raise Exception
 
         if python_template and not to_write:
-            text = file(template,'r').read() % self
+            if not self.list_parameter:
+                text = file(template,'r').read() % self
+            else:
+                data = dict(self)
+                for name in self.list_parameter:
+                    data[name] = ', '.join(str(v) for v in data[name])
+                text = file(template,'r').read() % data
         else:
             text = ""
             for line in file(template,'r'):                  
@@ -1308,14 +1337,22 @@ class RunCard(ConfigFile):
                 if len(nline) != 2:
                     text += line
                 elif nline[1].strip() in self:
+                    name = nline[1].strip()
+                    value = self[name]
+                    if name in self.list_parameter:
+                        misc.sprint(name, value)
+                        value = ', '.join([str(v) for v in value])
+                        misc.sprint(name, value)
+                        
                     if python_template:
-                        text += line % {nline[1].strip().lower(): self[nline[1].strip()]}
+                        text += line % {name:value}
                     else:
-                        text += '  %s\t= %s %s' % (self[nline[1].strip()],nline[1], comment)        
-                    if nline[1].strip().lower() in to_write:
+                        text += '  %s\t= %s %s' % (value, name, comment)                         
+                        
+                    if name.lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
                 else:
-                    logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
+                    logger.info('Adding missing parameter %s to current run_card (with default value)' % name)
                     text += line 
 
         if to_write:
@@ -1425,7 +1462,9 @@ class RunCard(ConfigFile):
                 
             #get the value with warning if the user didn't set it
             value = self.get_default(key) 
-            
+            if isinstance(value, list):
+                value = value[0]
+                
             line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
             fsock.writelines(line)
         fsock.close()   
@@ -1866,7 +1905,7 @@ class RunCardNLO(RunCard):
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', 91.118)
         self.add_param('muf2_ref_fixed', 91.118)
-        self.add_param("dynamical_scale_choice", -1)
+        self.add_param("dynamical_scale_choice", [-1])
         self.add_param('fixed_qes_scale', False)
         self.add_param('qes_ref_fixed', 91.118)
         self.add_param('mur_over_ref', 1.0)
