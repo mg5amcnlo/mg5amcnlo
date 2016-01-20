@@ -198,7 +198,7 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=16)
+      parameter (npdfs=17)
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',
@@ -216,7 +216,8 @@ C-------------------------------------------------
      $   'cteq6l1',     
      $   'nn23lo',
      $   'nn23lo1',
-     $   'nn23nlo'/
+     $   'nn23nlo',
+     $   'cteqqed'/
       integer numspdf(npdfs)
       data numspdf/
      $   00000,
@@ -234,7 +235,13 @@ C-------------------------------------------------
      $   10042,
      $   246800,
      $   247000,
-     $   244600/
+     $   244600,
+     $   666666/
+
+
+c      if(pdfin.eq."cteqqed") then
+c        return
+c      endif
 
 
       if(pdfin.eq."lhapdf") then

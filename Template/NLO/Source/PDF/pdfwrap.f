@@ -235,7 +235,14 @@ C
       nloop=1
       Call SetCtq6(4)
 
+c------------------------------------------------------------------
 
+c CT14QED i put only the option for QED
+ 
+      elseif (pdlabel .eq. 'cteqqed') then
+      asmz=0.118d0 !!!! to be checked !!!!!!
+      Call SetCT14('ph0.00_Proton.pds                       ')
+c      Call SetCT14('ph0.00_Proton.dat                       ')
 c---------------------------------------------------------------
 
 C

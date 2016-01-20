@@ -26,7 +26,7 @@ C***********************************************************************
       integer ih,i
       double precision fx(-7:7),x,xmu,nnfx(-6:7)
       double precision u_val,d_val,u_sea,d_sea,s_sea,c_sea,b_sea,gluon
-      double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L
+      double precision Ctq3df,Ctq4Fn,Ctq5Pdf,Ctq6Pdf,Ctq5L,CT14Pdf
       double precision q2max
       double precision epa_electron,epa_proton
       include 'pdf.inc'
@@ -291,6 +291,32 @@ C
             fx(2)=Ctq6Pdf(+1,x,xmu)
             fx(-1)=Ctq6Pdf(-2,x,xmu)
             fx(-2)=Ctq6Pdf(-1,x,xmu)
+
+C                  
+      elseif (pdlabel(1:7) .eq. 'cteqqed') then
+C      
+         fx(-5)=CT14Pdf(-5,x,xmu)
+         fx(-4)=CT14Pdf(-4,x,xmu)
+         fx(-3)=CT14Pdf(-3,x,xmu)
+
+         fx(0)=CT14Pdf(0,x,xmu)
+
+         fx(+3)=CT14Pdf(+3,x,xmu)
+         fx(+4)=CT14Pdf(+4,x,xmu)
+         fx(+5)=CT14Pdf(+5,x,xmu)
+
+            fx(1)=CT14Pdf(+2,x,xmu)
+            fx(2)=CT14Pdf(+1,x,xmu)
+            fx(-1)=CT14Pdf(-2,x,xmu)
+            fx(-2)=CT14Pdf(-1,x,xmu)
+
+            fx(7)=CT14Pdf(10,x,xmu)
+      
+      else
+
+      print*, "PDFs are not wrapped for real in pdf.f"
+
+
       endif      
 c
 c  a "diffractive" photon
