@@ -2775,12 +2775,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
-            elif  args[start+1].lower() in ['t','.true.','true']:
-                self.setR(args[start], '.true.')
-            elif  args[start+1].lower() in ['f','.false.','false']:
-                self.setR(args[start], '.false.')
             else:
-                if args[0].startswith('sys_'):
+                if args[0].startswith('sys_') or args[0] in self.run_card.list_parameter:
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:

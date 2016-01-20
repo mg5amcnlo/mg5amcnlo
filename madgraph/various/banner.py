@@ -1340,15 +1340,19 @@ class RunCard(ConfigFile):
                     name = nline[1].strip()
                     value = self[name]
                     if name in self.list_parameter:
-                        misc.sprint(name, value)
                         value = ', '.join([str(v) for v in value])
-                        misc.sprint(name, value)
                         
                     if python_template:
+                        if 'parton' in line:
+                            misc.sprint(line)
                         text += line % {name:value}
                     else:
-                        text += '  %s\t= %s %s' % (value, name, comment)                         
-                        
+                        if not comment or comment[-1]!='\n':
+                            endline = '\n'
+                        else:
+                            endline = ''
+                        text += '  %s\t= %s %s%s' % (value, name, comment, endline)                        
+
                     if name.lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
                 else:
