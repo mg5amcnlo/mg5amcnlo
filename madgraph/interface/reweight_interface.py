@@ -311,7 +311,7 @@ class ReweightInterface(extended_cmd.Cmd):
         elif args[0] == "helicity":
             self.helicity_reweighting = banner.ConfigFile.format_variable(args[1], bool, "helicity")
         elif args[0] == "mode":
-            self.nlo_mode = args[1]
+            self.rwgt_mode = args[1]
         elif args[0] == "rwgt_dir":
             self.rwgt_dir = args[1]
             if not os.path.exists(self.rwgt_dir):
@@ -367,6 +367,8 @@ class ReweightInterface(extended_cmd.Cmd):
         ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
         ff.write(self.banner['slha'])
         ff.close()
+        if self.has_nlo and self.rwgt_mode != "LO":
+            files.ln(ff.name, starting_dir=pjoin(self.me_dir, 'rw_mevirt','Cards'))
         ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
         ff.write(self.banner['slha'])
         ff.close()
@@ -669,51 +671,100 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_weight(self, event, space=None):
         """space defines where to find the calculator (in multicore)"""
         
+        if self.has_nlo and self.rwgt_mode != "LO":
+            return self.calculate_nlo_weight(event, space)
+        
         if not space: 
             space = self
         event.parse_reweight()                    
-        if self.has_nlo and self.rwgt_mode != "LO":
-            event.parse_nlo_weight()
-            
-            for cevent in event.nloweight.cevents:
-                #check if we need to compute the virtual for that cevent
-                need_V = False # the real is nothing else than the born for a N+1 config
-                all_ctype = [w.type for w in cevent.wgts]
-                if any(c in all_ctype for c in [2,14,15]):
-                    need_V =True    
-                w_orig = self.calculate_matrix_element(cevent, 0, space)
-                w_new =  self.calculate_matrix_element(cevent, 1, space)
-                ratio_T = w_new/w_orig
-                if need_V:
-                    w_origV = self.calculate_matrix_element(cevent, 'V0', space)
-                    w_newV =  self.calculate_matrix_element(cevent, 'V1', space)                    
-                    ratio_V = (w_newV + w_new) / (w_origV + w_orig)  
-                    return ratio_V
-                   
-            return ratio_T
-#                if need_V:
-                                    
+           
+        # LO reweighting    
+        w_orig = self.calculate_matrix_element(event, 0, space)
+        w_new =  self.calculate_matrix_element(event, 1, space)
+        if w_orig == 0:
+            tag, order = event.get_tag_and_order()
+            orig_order, Pdir, hel_dict = self.id_to_path[tag]
+            misc.sprint(w_orig, w_new)
+            misc.sprint(event)
+            raise Exception, "Invalid matrix element for original computation (weight=0)"
+        return w_new/w_orig*event.wgt
+     
+    def calculate_nlo_weight(self, event, space=None):
 
+        if not space: 
+            space = self
+        event.parse_reweight()
+        event.parse_nlo_weight() 
 
-
+        #initialise the input to the function which recompute the weight
+        scales2 = []
+        pdg = []
+        bjx = []
+        wgt= []
+        gs=[]
+        qcdpower = []
+        ref_wgts = [] #for debugging
+        
+        orig_wgt = 0
+        for cevent in event.nloweight.cevents:
+            #check if we need to compute the virtual for that cevent
+            need_V = False # the real is nothing else than the born for a N+1 config
+            all_ctype = [w.type for w in cevent.wgts]
+            if any(c in all_ctype for c in [2,14,15]):
+                need_V =True
                 
+            w_orig = self.calculate_matrix_element(cevent, 0, space)
+            w_new =  self.calculate_matrix_element(cevent, 1, space)
+            ratio_T = w_new/w_orig
+            if need_V:
+                w_origV = self.calculate_matrix_element(cevent, 'V0', space)
+                w_newV =  self.calculate_matrix_element(cevent, 'V1', space)                    
+                ratio_V = (w_newV + w_new) / (w_origV + w_orig)
+            else:
+                ratio_V = "should not be used"
             
+            for c_wgt in cevent.wgts:
+                orig_wgt += c_wgt.ref_wgt
+                #add the information to the input
+                scales2.append(c_wgt.scales2)
+                pdg.append(c_wgt.pdgs[:2])
 
-
-
-            
-            
-        else:    
-            # LO reweighting    
-            w_orig = self.calculate_matrix_element(event, 0, space)
-            w_new =  self.calculate_matrix_element(event, 1, space)
-            if w_orig == 0:
-                tag, order = event.get_tag_and_order()
-                orig_order, Pdir, hel_dict = self.id_to_path[tag]
-                misc.sprint(w_orig, w_new)
-                misc.sprint(event)
-                raise Exception, "Invalid matrix element for original computation (weight=0)"
-            return w_new/w_orig*event.wgt
+                bjx.append(c_wgt.bjks)
+                qcdpower.append(c_wgt.qcdpower)
+                gs.append(c_wgt.gs)
+                ref_wgts.append(c_wgt.ref_wgt)
+                
+                if c_wgt.type in  [2,14,15]:
+                    R = ratio_V
+                else:
+                    R = ratio_T
+                
+                new_wgt = [c_wgt.pwgt[0] * R,
+                           c_wgt.pwgt[1] * ratio_T,
+                           c_wgt.pwgt[2] * ratio_T]
+                
+                wgt.append(new_wgt)
+        
+        #change the ordering to the fortran one:
+        scales2 = self.invert_momenta(scales2)
+        pdg = self.invert_momenta(pdg)
+        bjx = self.invert_momenta(bjx)
+        wgt = self.invert_momenta(wgt)
+        out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+        
+        #if True and __debug__: #this is only for trivial reweighting
+        #    if not misc.equal(out, orig_wgt,1):
+        #        misc.sprint(event)
+        #        for i, computed in enumerate(partial):
+        #            if not misc.equal(computed, ref_wgts[i], 3):
+        #                misc.sprint("fail since %s != %s for wgt %s " % (computed, ref_wgts[i], i))
+        #                misc.sprint(need_V, R, ratio_T)
+        #        misc.sprint("fail since %s != %s for the sum." % (out, orig_wgt))
+        #        misc.sprint( need_V, R, ratio_T)
+        #        raw_input()
+        
+        return out/orig_wgt*event.wgt
+        
      
     @staticmethod   
     def invert_momenta(p):
@@ -749,15 +800,22 @@ class ReweightInterface(extended_cmd.Cmd):
         if (not self.second_model and not self.second_process) or hypp_id==0:
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
         else:
-            orig_order, Pdir, hel_dict = self.id_to_path_second[tag]
+            orig_order, Pdir, hel_dict = self.id_to_path_second[tag] 
+            
 
         run_id = (tag, hypp_id)
-
 
         assert space == self
         start = False
         if run_id in space.calculator:
             external = space.calculator[run_id]
+            #if 'V' in tag:
+            #    mod = space.calculator[(run_id,'module')]
+            #    #with misc.chdir(Pdir):
+            #    #    if hypp_id==0:
+            #    #        mod.initialise('param_card_orig.dat')
+            #    #    else:
+            #    #        mod.initialise('param_card.dat')
         elif (not self.second_model and not self.second_process) or hypp_id==0:
             # create the executable for this param_card  
             subdir = pjoin(self.me_dir,base, 'SubProcesses')
@@ -781,7 +839,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 
                 self.rename_f2py_lib(Pdir, 2*metag)
                 with misc.chdir(Pdir):
-                    mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
+                    try:
+                        mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
+                    except:
+                        os.system('install_name_tool -change libMadLoop.dylib %s/libMadLoop.dylib matrix%spy.so' % (Pdir,2*metag))
+                        mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
                 mymod = getattr(P, 'matrix%spy' % (2*metag))
@@ -806,7 +868,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 mymod = getattr(P, 'matrix%spy' % newtag)
                 with misc.chdir(Pdir):
                     mymod.initialise('param_card.dat') 
+                    
             space.calculator[run_id] = mymod.get_me
+            space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                      
         else:
             subdir = pjoin(self.me_dir,'%_second' % base, 'SubProcesses')
@@ -842,10 +906,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 mymod = getattr(P, 'matrix%spy' % metag)
                 mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
+            space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                
         
         
         p = self.invert_momenta(event.get_momenta(orig_order))
+
         # add helicity information
         
         hel_order = event.get_helicity(orig_order)
@@ -1007,7 +1073,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     order = (initial, list(decay_finals))
                     decay_finals.sort()
                     tag = (tag[0], tuple(decay_finals))
-                misc.sprint(tag)
                 Pdir = pjoin(path_me, 'rw_me', 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
                 assert os.path.exists(Pdir), "Pdir %s do not exists" % Pdir                        
@@ -1077,6 +1142,20 @@ class ReweightInterface(extended_cmd.Cmd):
                         hel_dict[tuple(helicities)] = hel_nb
     
                     self.id_to_path[(tag,'V')] = [order, Pdir, hel_dict] 
+                
+            #compile the module to combine the weight
+            misc.compile(cwd=pjoin(path_me,'rw_mevirt', 'Source'))
+            #link it 
+            with misc.chdir(pjoin(path_me)):
+                if path_me not in sys.path:
+                    sys.path.insert(0, path_me)
+                mymod = __import__('rw_mevirt.Source.rwgt2py', globals(), locals(), [],-1)
+                mymod =  mymod.Source.rwgt2py
+                misc.sprint(self.banner.run_card.get_lhapdf_id())
+                mymod.initialise([self.banner.run_card['lpp1'], 
+                                  self.banner.run_card['lpp2']],
+                                 self.banner.run_card.get_lhapdf_id())
+                self.combine_wgt = mymod.get_wgt
             
         # 4. If we need a new model/process-------------------------------------
         if self.second_model or self.second_process:

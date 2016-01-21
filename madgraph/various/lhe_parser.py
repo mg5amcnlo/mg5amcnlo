@@ -1565,7 +1565,9 @@ class OneNLOWeight(object):
         # below comment are from Rik description email
         
         data = text.split()
-        # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this contribution, and the ones multiplying the log[mu_R/QES] and the log[mu_F/QES], stripped of alpha_s and the PDFs.
+        # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this
+        # contribution, and the ones multiplying the log[mu_R/QES] and the log[mu_F/QES]
+        # stripped of alpha_s and the PDFs.
         self.pwgt = [float(f) for f in data[:3]]
         # 2. The next two doubles are the values of the (corresponding) Born and 
         #    real-emission matrix elements. You can either use these values to check 
@@ -1628,7 +1630,10 @@ class OneNLOWeight(object):
         self.to_merge_pdg = [int (f) for f in data[flag+11:flag+13]]
         # 13. 1 integer: the PDG code of the particle that is created after merging the two particles at point 12.
         self.merge_new_pdg = int(data[flag+13])
-        # 14. 1 double: the reference number that one should be able to reconstruct form the weights (point 1 above) and the rest of the information of this line. This is really the contribution to this event as computed by the code (and is passed to the integrator). It contains everything. 
+        # 14. 1 double: the reference number that one should be able to reconstruct 
+        #     form the weights (point 1 above) and the rest of the information of this line. 
+        #     This is really the contribution to this event as computed by the code 
+        #     (and is passed to the integrator). It contains everything. 
         self.ref_wgt = float(data[flag+14])
 
         #check the momenta configuration linked to the event
@@ -1647,6 +1652,7 @@ class NLO_PARTIALWEIGHT(object):
             
             assert self
             self.wgts = wgts
+            self.pdgs = list(wgts[0].pdgs)
             self.event = event
             
             if wgts[0].momenta_config == wgts[0].born_related:
@@ -1658,23 +1664,15 @@ class NLO_PARTIALWEIGHT(object):
                 self.pop(ind1) #-1 due to fortran convention
                 self.insert(ind1, new_p)
                 self.pop(ind2) #-1 due to fortran convention
-                #update the pdgs
-                wgts[0].pdgs.pop(ind1)
-                wgts[0].pdgs.insert(ind1, wgts[0].merge_new_pdg)
-                wgts[0].pdgs.pop(ind2) #-1 due to fortran convention                
+                self.pdgs.pop(ind1) #-1 due to fortran convention
+                self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
+                self.pdgs.pop(ind2) #-1 due to fortran convention                
+                # DO NOT update the pdgs of the partial weight!
 
-                
-            
-            #check if the last momenta is zero if so drop it
-            if self[-1].E == 0:
-                self.pop(-1)
-                for wgt in self.wgts:
-                    wgt.nexternal -=1
-                    pdg = wgt.pdgs.pop(-1)
 
                     
         def get_pdg_code(self):
-            return self.wgts[0].pdgs
+            return self.pdgs
         
         def get_tag_and_order(self):
             """ return the tag and order for this basic event""" 

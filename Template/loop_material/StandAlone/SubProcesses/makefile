@@ -88,11 +88,15 @@ clean:
 	rm -f libMadLoop.dylib
 	ln -s ../libMadLoop.dylib
 
+../$(OLP)_static: $(OLP_PROCESS)
+	cd ..; make $(OLP)_static; cd -
+	ln -s $(MADLOOP_LIB)
+
 libMadLoop.dylib: ../$(OLP)
 
 ifeq ($(origin MENUM),undefined)
   MENUM=2
 endif
-matrix$(MENUM)py.so: ../$(OLP)
+matrix$(MENUM)py.so: ../$(OLP)_static  libMadLoop.$(libext) 
 	touch __init__.py
-	$(F2PY) -L. -lMadLoop -m matrix$(MENUM)py -c check_sa.f --fcompiler=$(FC)
+	$(F2PY) libMadLoop.$(libext) -m matrix$(MENUM)py -c check_sa.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel -L../../lib/ -lcts -liregi
