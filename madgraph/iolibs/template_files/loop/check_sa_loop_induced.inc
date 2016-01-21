@@ -258,14 +258,14 @@ C
 
       open(69, file="result.dat", err=976, action='WRITE')
       do i=1,nexternal      
-          write (69,'(a2,1x,5e25.15)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
+          write (69,'(a2,1x,5ES30.15E3)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
       enddo
       write (69,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
-      write (69,'(a4,1x,1e25.15)') 'BORN',0.0d0
-      write (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)
-      write (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2,0)
-      write (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)
-      write (69,'(a6,1x,1e25.15)') 'ASO2PI',AO2PI
+      write (69,'(a4,1x,1ES30.15E3)') 'BORN',0.0d0
+      write (69,'(a3,1x,1ES30.15E3)') 'FIN',MATELEM(1,0)
+      write (69,'(a4,1x,1ES30.15E3)') '1EPS',MATELEM(2,0)
+      write (69,'(a4,1x,1ES30.15E3)') '2EPS',MATELEM(3,0)
+      write (69,'(a6,1x,1ES30.15E3)') 'ASO2PI',AO2PI
       write (69,*) 'Export_Format LoopInduced'
 	  write (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
 	  write (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)
