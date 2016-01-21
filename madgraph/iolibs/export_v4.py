@@ -312,7 +312,6 @@ class ProcessExporterFortran(object):
         """ modify the pdf opendata file, to allow direct access to cluster node
         repository if configure"""
         
-        misc.sprint(self.opt)
         if not self.opt["cluster_local_path"]:
             changer = {"pdf_systemwide": ""}
         else: 

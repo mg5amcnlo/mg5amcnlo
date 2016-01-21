@@ -168,8 +168,11 @@ class ReweightInterface(extended_cmd.Cmd):
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
         if '[' in process:
-            logger.warning("Remember that the reweighting is performed at Leading Order. NLO precision is not guarantee.")
-
+            if not self.banner.get_detail('run_card', 'keep_rwgt_info'):
+                logger.warning("The information to perform a proper NLO reweighting is not present in the event file.\n" +\
+                               "       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
+                self.rwgt_mode = 'LO'
+                
         if not process:
             msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
             raise Exception, msg
@@ -1151,7 +1154,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     sys.path.insert(0, path_me)
                 mymod = __import__('rw_mevirt.Source.rwgt2py', globals(), locals(), [],-1)
                 mymod =  mymod.Source.rwgt2py
-                misc.sprint(self.banner.run_card.get_lhapdf_id())
                 mymod.initialise([self.banner.run_card['lpp1'], 
                                   self.banner.run_card['lpp2']],
                                  self.banner.run_card.get_lhapdf_id())

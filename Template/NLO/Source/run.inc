@@ -70,9 +70,10 @@ c
 c
 c     Reweight info
 c
-      logical do_rwgt_scale, do_rwgt_pdf
+      logical do_rwgt_scale, do_rwgt_pdf, keep_rwgt_info
       integer pdf_set_min, pdf_set_max
       double precision rw_Fscale_down, rw_Fscale_up, rw_Rscale_down, rw_Rscale_up
       common/to_rwgt/ do_rwgt_scale, rw_Fscale_down, rw_Fscale_up, rw_Rscale_down, rw_Rscale_up,
-     # do_rwgt_pdf, pdf_set_min, pdf_set_max 
+     # do_rwgt_pdf, pdf_set_min, pdf_set_max,
+     # keep_rwgt_info 
 
