@@ -462,7 +462,7 @@ c in genps_fks_test.f
       rotategranny=.false.
 
       nerr=0
-      imax=12
+      imax=14
       do j=1,ncolltests
          call get_helicity(i_fks,j_fks)
          do iamp=1,amp_split_size
