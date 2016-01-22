@@ -25,6 +25,7 @@ c
       include 'run.inc'
       include 'alfas.inc'
       include 'MODEL/coupl.inc'
+      include '../SubProcesses/reweight0.inc'
 
       double precision D
       common/to_dj/D
@@ -80,6 +81,27 @@ c----------
 c MZ add the possibility to have shower_MC input lowercase
       call to_upper(shower_MC)
 C
+
+c Temporary until Fortran writer for arrays works correctly
+      lhaPDFid(0)=1
+      lhaPDFid(1)=lhaid
+      LHAPDFsetname(1)='NNPDF23_nlo_as_0118_qed'
+      if (do_rwgt_pdf) then
+         nmemPDF(1)=pdf_set_max-pdf_set_min+1
+      else
+         nmemPDF(1)=1
+      endif
+      dyn_scale(0)=1
+      dyn_scale(1)=dynamical_scale_choice
+      lscalevar(1)=do_rwgt_scale
+      scalevarR(0)=3d0
+      scalevarR(1)=1.0d0
+      scalevarR(2)=2.0d0
+      scalevarR(3)=0.5d0
+      scalevarF(0)=3d0
+      scalevarF(1)=1.0d0
+      scalevarF(2)=2.0d0
+      scalevarF(3)=0.5d0
 
 c merging cuts
       xqcut=0d0

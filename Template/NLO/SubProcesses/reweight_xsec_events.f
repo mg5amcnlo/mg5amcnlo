@@ -10,7 +10,7 @@ c Compile with makefile_rwgt
       include "reweight_all.inc"
       integer i,ii,jj,isave,idpdf(0:maxPDFs),itmp,lef,ifile,maxevt
      $     ,iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-     $     ,kwgtinfo,kexternal,jwgtnumpartn,ofile,kf,kr,n
+     $     ,kwgtinfo,kexternal,jwgtnumpartn,ofile,kf,kr,n,nn
       double precision yfactR(maxscales),yfactF(maxscales),value(20)
      $     ,scale1_lhe,scale2_lhe,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $     ,wgtpdfmax,saved_weight,xsecPDFr_acc(0:maxPDFs)
@@ -90,9 +90,15 @@ c for the scale uncertainty
          do i=2,numPDFs
             idpdf(i)=idpdf(1)+i-1
          enddo
-         value(1)=idpdf(0)
-         parm(1)='DEFAULT'
-         call pdfset(parm,value)
+         if (lhaPDFid(0).gt.1) then
+c Load all the PDF sets (the 1st one has already by loaded by the call
+c to "setrun"). Can only load multiple PDF sets by name...
+            do nn=2,lhaPDFid(0)
+               call initpdfsetbynamem(nn,lhaPDFsetname(nn))
+            enddo
+         endif
+c start with central member of the first set
+         call InitPDFm(1,0)
       else
          numPDFs=0
       endif
@@ -187,7 +193,7 @@ c Determine the flavor map between the NLO and Born
 
 c Do the actual reweighting.
          call fill_wgt_info_from_rwgt_lines
-         if (do_rwgt_scale)call reweight_scale_ext(yfactR,yfactF)
+         if (do_rwgt_scale)call reweight_scale_ext
          if (do_rwgt_pdf)  call reweight_pdf_ext
          call fill_rwgt_arrays
 
@@ -345,56 +351,60 @@ c do the same as above for the counterevents
       enddo
       end
       
-      subroutine reweight_scale_ext(yfactR,yfactF)
+      subroutine reweight_scale_ext
       implicit none
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'run.inc'
       include 'reweight0.inc'
-      integer i,pd,lp,iwgt_save,kr,kf
-      double precision yfactR(maxscales),yfactF(maxscales)
-     $     ,mu2_f(maxscales),mu2_r(maxscales),xlum(maxscales),pdg2pdf
-     $     ,mu2_q,rwgt_muR_dep_fac,g(maxscales),alphas,pi
+      integer i,pd,lp,iwgt_save,kr,kf,dd
+      double precision mu2_f(maxscales),mu2_r(maxscales),xlum(maxscales)
+     $     ,pdg2pdf,mu2_q,rwgt_muR_dep_fac,g(maxscales),alphas,pi
+     $     ,c_mu2_r,c_mu2_f
       parameter (pi=3.14159265358979323846d0)
       external pdg2pdf,rwgt_muR_dep_fac,alphas
       iwgt_save=iwgt
       do i=1,icontr
          iwgt=iwgt_save
          mu2_q=scales2(1,i)
-         do kr=1,numscales
-            mu2_r(kr)=scales2(2,i)*yfactR(kr)**2
+         do dd=1,dyn_scale(0)
+            call set_mu_central(i,dd,c_mu2_r,c_mu2_f)
+            do kr=1,nint(scalevarR(0))
+               mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
 c Update the strong coupling
-            g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
-         enddo
-         do kf=1,numscales
-            mu2_f(kf)=scales2(3,i)*yfactF(kf)**2
+               g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
+            enddo
+            do kf=1,nint(scalevarF(0))
+               mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
 c call the PDFs
-            xlum(kf)=1d0
-            LP=SIGN(1,LPP(1))
-            pd=pdg(1,i)
-            if (pd.eq.21) pd=0
-            xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i)
-     &           ,DSQRT(mu2_f(kf)))
-            LP=SIGN(1,LPP(2))
-            pd=pdg(2,i)
-            if (pd.eq.21) pd=0
-            xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
-     &           ,DSQRT(mu2_f(kf)))
-         enddo
-         do kr=1,numscales
-            do kf=1,numscales
-               iwgt=iwgt+1 ! increment the iwgt for the wgts() array
-               if (iwgt.gt.max_wgt) then
-                  write (*,*) 'ERROR too many weights in reweight_scale'
-     &                 ,iwgt,max_wgt
-                  stop 1
-               endif
+               xlum(kf)=1d0
+               LP=SIGN(1,LPP(1))
+               pd=pdg(1,i)
+               if (pd.eq.21) pd=0
+               xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i)
+     &              ,DSQRT(mu2_f(kf)))
+               LP=SIGN(1,LPP(2))
+               pd=pdg(2,i)
+               if (pd.eq.21) pd=0
+               xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
+     &              ,DSQRT(mu2_f(kf)))
+            enddo
+            do kr=1,nint(scalevarR(0))
+               do kf=1,nint(scalevarF(0))
+                  iwgt=iwgt+1   ! increment the iwgt for the wgts() array
+                  if (iwgt.gt.max_wgt) then
+                     write (*,*) 'ERROR too many weights in '/
+     $                    /'reweight_scale',iwgt,max_wgt
+                     stop 1
+                  endif
 c add the weights to the array
-               wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)*log(mu2_r(kr)
-     &              /mu2_q)+wgt(3,i)*log(mu2_f(kf)/mu2_q))*g(kr)
-     &              **QCDpower(i)
-               wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)))
+                  wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
+     $                 *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
+     $                 /mu2_q))*g(kr)**QCDpower(i)
+c IS THIS FACTOR STILL CORRECT? --> PROBABLY NEED TO CHANGE 2ND ARGUMENT!
+                  wgts(iwgt,i)=wgts(iwgt,i)
+     $                 *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)))
+               enddo
             enddo
          enddo
       enddo
@@ -408,44 +418,49 @@ c add the weights to the array
       include 'c_weight.inc'
       include 'run.inc'
       include 'reweight0.inc'
-      integer i,pd,lp,iwgt_save,izero,n
+      integer i,pd,lp,iwgt_save,izero,n,nn
       parameter (izero=0)
       double precision mu2_f,mu2_r,pdg2pdf,mu2_q,rwgt_muR_dep_fac
      &     ,xlum,alphas,g,pi
       parameter (pi=3.14159265358979323846d0)
       external pdg2pdf,rwgt_muR_dep_fac,alphas
-      do n=0,numPDFs
-         iwgt=iwgt+1
-         if (iwgt.gt.max_wgt) then
-            write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
-     &           ,max_wgt
-            stop 1
-         endif
-         call InitPDF(n)
-         do i=1,icontr
-            mu2_q=scales2(1,i)
-            mu2_r=scales2(2,i)
-            mu2_f=scales2(3,i)
+      do nn=1,lhaPDFid(0)
+         do n=0,nmemPDF(nn)
+            iwgt=iwgt+1
+            if (iwgt.gt.max_wgt) then
+               write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
+     &              ,max_wgt
+               stop 1
+            endif
+            call InitPDFm(nn,n)
+            do i=1,icontr
+               mu2_q=scales2(1,i)
+               mu2_r=scales2(2,i)
+               mu2_f=scales2(3,i)
 c alpha_s
-            g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
+               g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c call the PDFs
-            xlum=1d0
-            LP=SIGN(1,LPP(1))
-            pd=pdg(1,i)
-            if (pd.eq.21) pd=0
-            xlum=xlum*PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i),DSQRT(mu2_f))
-            LP=SIGN(1,LPP(2))
-            pd=pdg(2,i)
-            if (pd.eq.21) pd=0
-            xlum=xlum*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i),DSQRT(mu2_f))
+               xlum=1d0
+               LP=SIGN(1,LPP(1))
+               pd=pdg(1,i)
+               if (pd.eq.21) pd=0
+               xlum=xlum*
+     &            PDG2PDF(ABS(LPP(1)),pd*LP,bjx(1,i),DSQRT(mu2_f))
+               LP=SIGN(1,LPP(2))
+               pd=pdg(2,i)
+               if (pd.eq.21) pd=0
+               xlum=xlum*
+     &             PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i),DSQRT(mu2_f))
 c add the weights to the array
-            wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
-     &           wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
-            wgts(iwgt,i)=wgts(iwgt,i)
-     &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+               wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+     &              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+               wgts(iwgt,i)=wgts(iwgt,i)
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+            enddo
          enddo
       enddo
-      call InitPDF(izero)
+c reset to the 0th member of the 1st set
+      call InitPDFm(1,0)
       return
       end
       
@@ -484,3 +499,23 @@ c add the weights to the array
       end
 
       
+      subroutine set_mu_central(ic,dd,c_mu2_r,c_mu2_f)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'reweight0.inc'
+      integer ic,dd
+      double precision c_mu2_r,c_mu2_f
+      if (dd.eq.1) then
+         c_mu2_r=scales2(2,ic)
+         c_mu2_f=scales2(3,ic)
+      else
+c need to recompute the scales using the momenta!         
+         write (*,*) 'Need to recompute the scale from the'/
+     &        /' momenta. Not yet implemented!'
+         c_mu2_r=0d0
+         c_mu2_f=0d0
+         stop
+      endif
+      return
+      end
