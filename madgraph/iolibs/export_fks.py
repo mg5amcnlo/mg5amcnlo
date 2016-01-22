@@ -2999,22 +2999,28 @@ Parameters              %(params)s\n\
         of the identical particle factors in the various real emissions
         If born_me is procided, it is used instead of fksborn.born_me"""
         
+        compensate = True
         if not born_me:
             born_me = fks_born.born_me
+            compensate = False
     
         lines = []
         info_list = fks_born.get_fks_info_list()
         if info_list:
             # if the reals have been generated, fill with the corresponding average factor
             lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
-            lines.append('DATA IDEN_VALUES /' + \
-                         ', '.join(['%d' % ( 
-#                         born_me.get_denominator_factor() / \
-#                         born_me['identical_particle_factor'] * \
-#                         fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
-#                         for info in info_list]) + '/')
-                         born_me.get_denominator_factor()) \
-                         for info in info_list]) + '/')
+            if not compensate:
+                lines.append('DATA IDEN_VALUES /' + \
+                             ', '.join(['%d' % ( 
+                             born_me.get_denominator_factor()) \
+                             for info in info_list]) + '/')
+            else:
+                lines.append('DATA IDEN_VALUES /' + \
+                             ', '.join(['%d' % ( 
+                             born_me.get_denominator_factor() / \
+                                     born_me['identical_particle_factor'] * \
+                                     fks_born.born_me['identical_particle_factor']) \
+                             for info in info_list]) + '/')
         else:
             # otherwise use the born
             lines.append('INTEGER IDEN_VALUES(1)')
