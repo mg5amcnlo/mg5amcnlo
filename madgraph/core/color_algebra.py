@@ -20,6 +20,7 @@ import array
 import copy
 import fractions
 import itertools
+import madgraph.various.misc as misc
 
 #===============================================================================
 # ColorObject
@@ -349,6 +350,40 @@ class Epsilon(ColorObject):
 
         super(Epsilon, self).__init__()
         assert len(args) == 3, "Epsilon objects must have three indices!"
+
+    @staticmethod
+    def perm_parity(lst, order=None):
+        '''\                                                                                                                                                                                                 
+        Given a permutation of the digits 0..N in order as a list,                                                                                                                                           
+        returns its parity (or sign): +1 for even parity; -1 for odd.                                                                                                                                        
+        '''
+        lst = lst[:]
+        sort =lst[:]
+        if not order:
+            order = lst[:]
+            order.sort()
+        parity = 1
+        for i in range(0,len(lst)-1):
+            if lst[i] != order[i]:
+                parity *= -1
+                mn = lst.index(order[i])
+                lst[i],lst[mn] = lst[mn],lst[i]
+        return parity
+
+    def simplify(self):
+        """Implement epsilon(i,k,j) = -epsilon(i,j,k) i<j<k"""
+        
+        
+        
+        # epsilon(i,k,j) = -epsilon(i,j,k) i<j<k
+        order_list = list(self[:])
+        order_list.sort()
+        
+        if list(self[:]) != order_list:
+            col_str1 = ColorString([Epsilon(*order_list)])
+            col_str1.coeff = self.perm_parity(self[:], order_list)
+            misc.sprint(self,col_str1)
+            return ColorFactor([col_str1])
 
     def pair_simplify(self, col_obj):
         """Implement e_ijk ae_ilm = T(j,l)T(k,m) - T(j,m)T(k,l) and
