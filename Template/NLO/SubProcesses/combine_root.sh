@@ -65,7 +65,7 @@ fi
 echo ".x combine_root.C" >> rootinput.txt
 echo ".q" >> rootinput.txt
 
-root < rootinput.txt
+root -b < rootinput.txt
 
 rm -f rootinput.txt
 }

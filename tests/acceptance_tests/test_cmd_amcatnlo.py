@@ -89,6 +89,7 @@ class MECmdShell(IOTests.IOTestManager):
             pass
 
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
         
         run_cmd('import model %s' % model)
         for multi in multiparticles:
@@ -111,6 +112,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue('generate' in proc_card or 'add process' in proc_card)
         run_cmd('set automatic_html_opening False --no_save')
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
+        self.cmd_line.no_notification()
         self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
         self.assertFalse(self.cmd_line.options['automatic_html_opening'])
 
@@ -204,7 +206,7 @@ class MECmdShell(IOTests.IOTestManager):
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         # this check that the value of lpp/beam are change automatically
         self.assertTrue('0   = lpp1' in card)
-        self.assertTrue('500   = ebeam' in card)
+        self.assertTrue('500.0   = ebeam' in card)
         # pass to the object
         card = banner.RunCardNLO(card)
         card['pdlabel'] = "lhapdf"
@@ -219,14 +221,15 @@ class MECmdShell(IOTests.IOTestManager):
         self.do('quit')
 
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
 
         # check the result
-        res = open('%s/Events/run_01_LO/res.txt' % self.path).read()
+        res = open('%s/Events/run_01_LO/res_1.txt' % self.path).read()
 
         pat = re.compile('''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
         \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
@@ -276,6 +279,7 @@ class MECmdShell(IOTests.IOTestManager):
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  pythia8_path None')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -423,7 +427,9 @@ class MECmdShell(IOTests.IOTestManager):
         """test that ./bin/aMCatNLO can be launched with some scripts.
         Check also that two runs run without border effects"""
         self.generate_production()
-        script = "launch -p\n"
+        script = "set notification_center False --no_save\n"
+        script += "set automatic_html_opening False --no_save\n"
+        script += "launch -p\n"
         script += "launch -p\n"
         open(pjoin(self.path, 'script.txt'), 'w').write(script)
 
@@ -489,7 +495,8 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
 
@@ -508,7 +515,8 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
         
 
     def test_generate_events_shower_scripts(self):
@@ -811,7 +819,8 @@ class MECmdShell(IOTests.IOTestManager):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
@@ -827,7 +836,8 @@ class MECmdShell(IOTests.IOTestManager):
         
         # test the plot file exists
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
@@ -863,8 +873,8 @@ class MECmdShell(IOTests.IOTestManager):
         for i,line in enumerate(data):
             if 'Summary:' in line:
                 break
-        #      Run at p-p collider (6500 + 6500 GeV)
-        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+2])
+        #      Run at p-p collider (6500.0 + 6500.0 GeV)
+        self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+2])
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
         cross_section = data[i+3]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
@@ -895,11 +905,12 @@ class MECmdShell(IOTests.IOTestManager):
             if 'Process' in line:
                 break
         #      Run at p-p collider (6500 + 6500 GeV)
-        self.assertTrue('Run at p-p collider (6500 + 6500 GeV)' in data[i+1])
+        self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+1])
         cross_section = data[i+2]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         try:
-            self.assertAlmostEqual(6011.0, cross_section,delta=50)
+            # By default run to 1% precision: set delta=120 for ~2sigma effect.
+            self.assertAlmostEqual(5933.0, cross_section,delta=120)
         except TypeError:
             self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 

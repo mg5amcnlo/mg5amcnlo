@@ -132,6 +132,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
         perturbation = []
         for procdef in self['process_definitions']:
             soft_particles = []
+            # do not warn for decay processes
+            if [ i['state'] for i in procdef['legs']].count(False) == 1:
+                continue
             for pert in procdef['perturbation_couplings']:
                 if pert not in perturbation:
                     perturbation.append(pert)
@@ -550,10 +553,19 @@ class FKSProcess(object):
         """finds the FKS real configurations for a given process"""
         if range(len(self.leglist)) != [l['number']-1 for l in self.leglist]:
             raise fks_common.FKSProcessError('Disordered numbers of leglist')
+
+        if [ i['state'] for i in self.leglist].count(False) == 1:
+            decay_process=True
+        else:
+            decay_process=False
+
         for i in self.leglist:
             i_i = i['number'] - 1
             self.reals.append([])
-            self.splittings[i_i] = fks_common.find_splittings(i, self.born_proc['model'], {}, pert_order)
+            if decay_process and not i['state']:
+                self.splittings[i_i]=[]
+            else:
+                self.splittings[i_i] = fks_common.find_splittings(i, self.born_proc['model'], {}, pert_order)
             for split in self.splittings[i_i]:
                 self.reals[i_i].append(
                             fks_common.insert_legs(self.leglist, i, split,pert=pert_order))

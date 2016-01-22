@@ -47,7 +47,11 @@ C
       data pdlabellast/20*'abcdefg'/
       data ihlast/20*-99/
       data i_replace/20/
-
+      if (ih.eq.0) then
+c     Lepton collisions (no PDF). 
+         pdg2pdf=1d0
+         return
+      endif
 c     Make sure we have a reasonable Bjorken x. Note that even though
 c     x=0 is not reasonable, we prefer to simply return pdg2pdf=0
 c     instead of stopping the code, as this might accidentally happen.

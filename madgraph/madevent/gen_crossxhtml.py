@@ -177,13 +177,12 @@ class AllResults(dict):
         
         event_path = pjoin(self.path, "Events", run_name, "unweighted_events.lhe")
         
-
         try:
-            import madgraph
+            import internal
         except ImportError:
-            import internal.banner as bannerlib
-        else:
             import madgraph.various.banner as bannerlib
+        else:
+            import internal.banner as bannerlib
         
         if os.path.exists("%s.gz" % event_path):
             misc.gunzip(event_path, keep=True)

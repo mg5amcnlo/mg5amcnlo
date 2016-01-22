@@ -18,6 +18,7 @@ import unittest
 import os
 import re
 import shutil
+import tempfile
 import copy
 import sys
 import logging
@@ -51,6 +52,7 @@ class TestCmdLoop(unittest.TestCase):
     def setUp(self):
         """ Initialize the test """
         self.interface = MGCmd.MasterCmd()
+        self.interface.no_notification()
         # Below the key is the name of the logger and the value is a tuple with
         # first the handlers and second the level.
         self.logger_saved_info = {}
@@ -81,19 +83,25 @@ class TestCmdLoop(unittest.TestCase):
         logs = full_logname.split('.')
         lognames = [ '.'.join(logs[:(len(logs)-i)]) for i in\
                                             range(len(full_logname.split('.')))]
+        if not hasattr(cls, 'tmp_path'):
+            # To store the path of the log files of each logger treated
+            cls.tmp_path = {}
+
         for logname in lognames:
-            try:
-                os.remove('/tmp/%s.log'%logname)
-            except Exception, error:
-                pass
-            my_logger = logging.getLogger(logname)
-            hdlr = logging.FileHandler('/tmp/%s.log'%logname)            
+            my_logger = logging.getLogger(logname)       
             if restore:
+                try:
+                    if hasattr(cls, tmp_path) and logname in cls.tmp_path:
+                        os.remove(cls.tmp_path[logname])
+                except:
+                    pass
                 my_logger.removeHandler(cls.logger_saved_info[logname][0])
                 my_logger.setLevel(cls.logger_saved_info[logname][1])
                 for i, h in enumerate(my_logger.handlers):
                     h.setLevel(cls.logger_saved_info[logname][2][i])
             else:
+                cls.tmp_path[logname] = tempfile.mktemp('', 'tmp', None)
+                hdlr = logging.FileHandler(cls.tmp_path[logname])     
                 # I assume below that the orders of the handlers in my_logger.handlers
                 # remains the same after having added/removed the FileHandler
                 cls.logger_saved_info[logname] = [hdlr,my_logger.level,\
@@ -147,8 +155,8 @@ class TestCmdLoop(unittest.TestCase):
                                                'SubProcesses/P0_gd_gd/result.dat')))
             shutil.rmtree(pjoin(MG5DIR,'TMP_CHECK'))
             self.assertEqual(cmd, os.getcwd())
-            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
             self.assertTrue('Process [virt=QCD]' in res)
             self.assertTrue('Summary: 1/1 passed, 0/1 failed' in res)
             self.assertTrue('BRS' in res)
@@ -170,8 +178,8 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue(path.isfile(pjoin(MG5DIR,'TMP_CHECK',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
             shutil.rmtree(pjoin(MG5DIR,'TMP_CHECK'))
-            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
             # Needs the loop_sm feynman model to successfully run the gauge check.
             # self.assertTrue('Gauge results' in res)
             self.assertTrue('Lorentz invariance results' in res)
@@ -202,8 +210,8 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
-            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue(not 'NA' in res)
@@ -217,8 +225,8 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
             shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
-            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue(res.count('NA')<=8)
@@ -245,8 +253,8 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue(path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')))
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
-            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue('Tool (DoublePrec for CT)' in res)
@@ -262,8 +270,8 @@ class TestCmdLoop(unittest.TestCase):
             self.assertTrue(path.isfile(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx',\
                                             'SubProcesses/P0_epem_ttx/result.dat')))
             shutil.rmtree(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx'))
-            self.assertTrue(path.isfile('/tmp/madgraph.check_cmd.log'))
-            res = open('/tmp/madgraph.check_cmd.log').read()
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
             self.assertTrue('Tool (DoublePrec for CT)' in res)
@@ -276,14 +284,210 @@ class TestCmdLoop(unittest.TestCase):
             raise
         self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
 
+    def test_ML_check_cms_al_lvlvlx_LO(self):
+        """ Test that check cms a l- > l- vl vl~ passes at leading order."""
+
+        try:
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            cwd = os.getcwd()
+            # Change this when we will make the CMS-ready EW model the default
+            self.do('import model sm')
+            self.do('define l- = e- mu-')
+            self.do('define l+ = e+ mu+')
+            self.do('define vl = ve vm vt')   
+            self.do('define vl~ = ve~ vm~ vt~')       
+            # Make sure it works for an initial run
+            command = 'check cms -reuse a l- > l- vl vl~ '
+            options = {'name':'acceptance_test_alm_lmvlvlx_LO',
+                       'lambdaCMS':'(1.0e-5,2)',
+                       'show_plot':'False',
+                       'seed':'666',
+                       'resonances':'all',
+                       'recompute_width':'first_time',
+                       'report':'full'}
+            self.do(command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                               options.items()))
+            self.assertEqual(cwd, os.getcwd())
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
+            self.assertTrue(res.count('=== FAILED ===')==0)
+            self.assertTrue(res.count('=== PASSED ===')==10)
+            self.assertTrue('Summary: 10/10 passed.' in res)
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                            'acceptance_test_alm_lmvlvlx_LO.log')))
+            res = open(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.log')).read()
+            self.assertTrue(res.count('=== FAILED ===')==0)
+            self.assertTrue(res.count('=== PASSED ===')==10)
+            self.assertTrue('Summary: 10/10 passed.' in res)
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                         'acceptance_test_alm_lmvlvlx_LO.pkl')))
+            
+            # Now for a reuse run using --analyze
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            os.remove(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.log'))
+            self.do('check cms --analyze=%s --show_plot=False --report=full'%
+                             pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.pkl'))
+            self.assertEqual(cwd, os.getcwd())
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
+            self.assertTrue(res.count('=== FAILED ===')==0)
+            self.assertTrue(res.count('=== PASSED ===')==10)
+            self.assertTrue('Summary: 10/10 passed.' in res)
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                         'acceptance_test_alm_lmvlvlx_LO.pkl')))
+            
+            # Finally rerun it but this time using lambda_diff_power = 2
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            os.remove(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.pkl'))
+            options['diff_lambda_power']='2'
+            self.do(command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                               options.items()))
+            self.assertEqual(cwd, os.getcwd())
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
+            self.assertTrue(res.count('=== FAILED ===')==6)
+            self.assertTrue(res.count('=== PASSED ===')==4)
+            self.assertTrue('Summary: 4/10 passed, failed checks are for:' in res)
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                         'acceptance_test_alm_lmvlvlx_LO.log')))
+            res = open(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.log')).read()
+            self.assertTrue(res.count('=== FAILED ===')==6)
+            self.assertTrue(res.count('=== PASSED ===')==4)
+            self.assertTrue('Summary: 4/10 passed, failed checks are for:' in res)
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                         'acceptance_test_alm_lmvlvlx_LO.pkl')))
+
+            # Clean up duties
+            os.remove(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.log'))
+            os.remove(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.pkl'))
+        except Exception as e:
+            try:
+                self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+                os.remove(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.log'))
+                os.remove(pjoin(MG5DIR,'acceptance_test_alm_lmvlvlx_LO.pkl'))
+            except:
+                pass
+            raise e
+        self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+    def test_ML_check_cms_aem_emvevex(self):
+        """ Test that check cms a e- > e- ve ve~ [virt=QCD QED] works fine """
+
+        self.setup_logFile_for_logger('madgraph.check_cmd')
+        files = ['acceptance_test_aem_emvevex.pkl',
+                 'acceptance_test_aem_emvevex.log',
+                 'acceptance_test_aem_emvevex_widths_increased.pkl',
+                 'acceptance_test_aem_emvevex_widths_increased.log']
+        output_name = 'SAVEDTMP_CHECK_acceptance_test_aem_emvevex__%s__'
+        
+        try:
+            cwd = os.getcwd()
+            
+            # Change this when we will make the CMS-ready EW model the default
+            self.do('import model loop_qcd_qed_sm')
+            for mode in ['NWA','CMS']:
+                if path.isdir(pjoin(MG5DIR,output_name%mode)):
+                    shutil.rmtree(pjoin(MG5DIR,output_name%mode))
+            
+            # Make sure it works for an initial run
+            command = 'check cms -reuse a e- > e- ve ve~ [virt=QCD QED] '
+            options = {'name':'acceptance_test_aem_emvevex',
+                       'lambdaCMS':'(1.0e-6,2)',
+                       'show_plot':'False',
+                       'seed':'666',
+                       'resonances':'2',
+                       'recompute_width':'first_time',
+                       'report':'full'}
+            cmd = command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                                options.items())
+            # print "Running first CMS check cmd: ",cmd
+            self.do(cmd)
+            self.assertEqual(cwd, os.getcwd())
+            for mode in ['NWA','CMS']:
+                self.assertTrue(path.isdir(pjoin(MG5DIR,output_name%mode)))
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                            'acceptance_test_aem_emvevex.pkl')))
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
+            self.assertTrue(res.count('=== FAILED ===')==0)
+            self.assertTrue(res.count('=== PASSED ===')==2)
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                                            'acceptance_test_aem_emvevex.log')))
+            res = open(pjoin(MG5DIR,'acceptance_test_aem_emvevex.log')).read()
+            self.assertTrue(res.count('=== FAILED ===')==0)
+            self.assertTrue(res.count('=== PASSED ===')==2)
+                        
+            # Now for a Reuse-run with the widths modified by 1%
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            self.setup_logFile_for_logger('madgraph.check_cmd')
+            # Now copy the card with recomputed widths in it
+            for mode in ['NWA','CMS']:
+                self.assertTrue(path.isfile(pjoin(MG5DIR,output_name%mode,
+                                   'Cards','param_card.dat_recomputed_widths')))
+                shutil.copy(pjoin(MG5DIR,output_name%mode,'Cards',
+                                     'param_card.dat_recomputed_widths'),
+                        pjoin(MG5DIR,output_name%mode,'Cards','param_card.dat'))
+            options['tweak']='allwidths->1.1*allwidths(widths_increased)'
+            options['recompute_width']='never'
+            cmd = command+' '.join('--%s=%s'%(opt, value) for opt, value in 
+                                                                options.items())
+            # print "Running second CMS check cmd: ",cmd
+            self.do(cmd)
+            self.assertEqual(cwd, os.getcwd())
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                           'acceptance_test_aem_emvevex_widths_increased.pkl')))
+            self.assertTrue(path.isfile(self.tmp_path['madgraph.check_cmd']))
+            res = open(self.tmp_path['madgraph.check_cmd']).read()
+            self.assertTrue(res.count('=== FAILED ===')==2)
+            self.assertTrue(res.count('=== PASSED ===')==0)
+            self.assertTrue(path.isfile(pjoin(MG5DIR,
+                           'acceptance_test_aem_emvevex_widths_increased.log')))
+            res = open(pjoin(MG5DIR,
+                     'acceptance_test_aem_emvevex_widths_increased.log')).read()
+            self.assertTrue(res.count('=== FAILED ===')==2)
+            self.assertTrue(res.count('=== PASSED ===')==0)
+        
+            # Clean up duties
+            for mode in ['NWA','CMS']:
+                shutil.rmtree(pjoin(MG5DIR,output_name%mode))
+            for file in files:
+                try:
+                    os.remove(pjoin(MG5DIR,file))
+                except:
+                    pass
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
+        except KeyError as e:
+            self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+            for mode in ['NWA','CMS']:
+                try:
+                    shutil.rmtree(pjoin(MG5DIR,output_name%mode))
+                except:
+                    pass
+            for f in files:
+                try:
+                    os.remove(pjoin(MG5DIR,f))
+                except:
+                    pass
+            raise e
+        self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
+
 class TestCmdMatchBox(IOTests.IOTestManager):
     
     def setUp(self):
         """ Initialize the test """
+
         self.interface = MGCmd.MasterCmd()
+        self.interface.no_notification()
         # Below the key is the name of the logger and the value is a tuple with
         # first the handlers and second the level.
-        self.logger_saved_info = {}       
+        self.logger_saved_info = {}
+
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
+        misc.activate_dependence('golem', cmd = self.interface, log='stdout')
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -313,15 +517,15 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
         """ target: [ggttx_IOTest/SubProcesses/(.*)\.f]
         """
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
 
         def run_cmd(cmd):
             interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
                                precmd=True, postcmd=True)
-
-        # Make sure the potential TIR are set uniformly across users
-        if interface.options['golem'] in [None,'auto']:
-            interface.run_cmd('install Golem95')
-        interface.options['pjfry']=None
+        
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
+        misc.activate_dependence('golem', cmd = interface, log='stdout')
         
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))

@@ -237,7 +237,10 @@ c FxFx
      $     ,FxFx_fac_scale
 c
       tmp=0
-      if(ickkw.eq.3)then
+      if (nincoming.eq.1) then
+         tmp=pp(0,1) ! mass of the decaying particle
+         temp_scale_id='Mass of decaying particle'
+      elseif(ickkw.eq.3)then
 c FxFx merging scale:
 c     Note that nFxFx_ren_scales includes the one scale that corresponds
 c     to the real-emission one (and is zero for the n-body conf.). Skip
@@ -411,7 +414,7 @@ c
       tmp=0
       if(ickkw.eq.3)then
 c FxFx merging scale:
-        tmp=min(FxFx_fac_scale(1),FxFx_fac_scale(2))
+        tmp=(FxFx_fac_scale(1)+FxFx_fac_scale(2))/2d0
         temp_scale_id='FxFx merging scale'
       elseif(imuftype.eq.1)then
         tmp=scale_global_reference(pp)
@@ -490,7 +493,10 @@ c a scale to be used as a reference for Ellis-Sexton scale
       parameter (iQEStype=1)
 c
       tmp=0
-      if(iQEStype.eq.1)then
+      if (nincoming.eq.1) then
+         tmp=pp(0,1) ! mass of the decaying particle
+         temp_scale_id='Mass of decaying particle'
+      elseif(iQEStype.eq.1)then
         tmp=scale_global_reference(pp)
       elseif(iQEStype.eq.2)then
         do i=nincoming+1,nexternal

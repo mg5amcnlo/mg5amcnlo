@@ -34,6 +34,7 @@ import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.various.misc as misc
 import madgraph.iolibs.files as files
+import madgraph.iolibs.export_v4 as export_v4
 import madgraph.various.banner as banner
 import madgraph.various.lhe_parser as lhe_parser
 
@@ -176,6 +177,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("process: %s" % process)
         logger.info("options: %s" % option)
 
+        if not hasattr(self,'multiparticles_ms'):
+            for key, value in self.banner.get_detail('proc_card','multiparticles'):
+                self.do_define('%s = %s' % (key, value))
 
         # Read the final state of the production process:
         #     "_full" means with the complete decay chain syntax 
@@ -229,15 +233,24 @@ class MadSpinInterface(extended_cmd.Cmd):
             args.remove('--bypass_check')
             bypass_check = True
             
-        if len(args) != 2:     
+        if len(args) == 1:  
+            logger.warning("""No param_card defined for the new model. We will use the default one but this might completely wrong.""")
+        elif len(args) != 2:
             return self.InvalidCmd, 'import model requires two arguments'
         
         model_name = args[0]
-        card = args[1]
-        if not os.path.exists(card):
-            raise self.InvalidCmd('%s: no such file' % card)
-
         self.load_model(model_name, False, False)
+        
+        if len(args) == 2:
+            card = args[1]
+            if not os.path.exists(card):
+                raise self.InvalidCmd('%s: no such file' % card)
+        else:
+            card = "madspin_param_card.dat"
+            export_v4.UFO_model_to_mg4.create_param_card_static(self.model,
+                                card, rule_card_path=None)
+
+        
 
         #Check the param_card
         if not bypass_check:
@@ -255,11 +268,15 @@ class MadSpinInterface(extended_cmd.Cmd):
             if diff:
                 raise self.InvalidCmd('''Original param_card differs on some parameters:
     %s
-    Due to those preferences, we prefer not to proceed. If you are sure about what you are doing, 
+    Due to those differences, we prefer not to proceed. If you are sure about what you are doing, 
     you can use the command \'import model MODELNAME PARAM_CARD_PATH --bypass_check\''''
     % diff.replace('\n','\n    '))
+   
+   
                 
-        #OK load the new param_card
+        #OK load the new param_card (but back up the old one)
+        if 'slha' in self.banner:
+            self.banner['slha_original'] = self.banner['slha']
         self.banner['slha'] = open(card).read()
         if hasattr(self.banner, 'param_card'):
             del self.banner.param_card
@@ -426,7 +443,10 @@ class MadSpinInterface(extended_cmd.Cmd):
     
     def do_define(self, line):
         """ """
-        return self.mg5cmd.do_define(line)
+        self.mg5cmd.do_define(line)
+        self.multiparticles_ms = dict([(k,list(pdgs)) for k, pdgs in \
+                                        self.mg5cmd._multiparticles.items()])
+    
     
     def update_status(self, *args, **opts):
         """ """
@@ -679,24 +699,56 @@ class MadSpinInterface(extended_cmd.Cmd):
                     else:
                         mg5.exec_cmd("generate %s" % proc)
                         mg5.exec_cmd("output %s -f" % decay_dir)
-                options = dict(mg5.options)
-                import madgraph.interface.madevent_interface as madevent_interface
-                me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                    
+                    import madgraph.interface.madevent_interface as madevent_interface
+                    options = dict(mg5.options)
+                    if self.options['ms_dir']:
+                        misc.sprint("start gridpack!")
+                        # we are in gridpack mode -> create it
+                        me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                                 decay_dir), options=options)
-                me5_cmd.options["automatic_html_opening"] = False
-                if self.options["run_card"]:
-                    run_card = self.options["run_card"]
+                        me5_cmd.options["automatic_html_opening"] = False
+                        if self.options["run_card"]:
+                            run_card = self.options["run_card"]
+                        else:
+                            run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))                        
+                        
+                        run_card["iseed"] = self.seed
+                        run_card['gridpack'] = True
+                        run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                        param_card = self.banner['slha']
+                        open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
+                        self.seed += 1
+                        # actually creation
+                        me5_cmd.exec_cmd("generate_events run_01 -f")
+                        me5_cmd.exec_cmd("exit")                        
+                        #remove pointless informat
+                        misc.call(["rm", "Cards", "bin", 'Source', 'SubProcesses'], cwd=decay_dir)
+                        misc.call(['tar', '-xzpvf', 'run_01_gridpack.tar.gz'], cwd=decay_dir)
+                
+                # Now generate the events
+
+                
+                if not self.options['ms_dir']:
+                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                                    decay_dir), options=options)
+                    me5_cmd.options["automatic_html_opening"] = False
+                    if self.options["run_card"]:
+                        run_card = self.options["run_card"]
+                    else:
+                        run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    run_card["nevents"] = int(1.2*nb_event)
+                    run_card["iseed"] = self.seed
+                    run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    param_card = self.banner['slha']
+                    open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
+                    self.seed += 1
+                    me5_cmd.exec_cmd("generate_events run_01 -f")
+                    me5_cmd.exec_cmd("exit")
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
                 else:
-                    run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
-                run_card["nevents"] = int(1.2*nb_event)
-                run_card["iseed"] = self.seed
-                run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
-                param_card = self.banner['slha']
-                open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
-                self.seed += 1
-                me5_cmd.exec_cmd("generate_events run_01 -f")
-                me5_cmd.exec_cmd("exit")     
-                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
+                    misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed)], cwd=decay_dir)     
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))            
                 if cumul:
                     break
             
@@ -749,7 +801,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         # 2. Generate the events requested
         with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
-            modelpath = self.model.get('modelpath')
+            modelpath = self.model.get('modelpath+restriction')
             mg5.exec_cmd("import model %s" % modelpath)      
             to_event = {}
             for pdg, nb_needed in to_decay.items():
@@ -910,6 +962,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
         
+        
         loop = False
         #if (name.startswith('loop_')):
         #    logger.info("The model in the banner is %s" % name)
@@ -923,17 +976,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         #base_model = import_ufo.import_model(model_path)
 
         # Import model
-        base_model = import_ufo.import_model(name, decay=True)
+        base_model = import_ufo.import_model(name, decay=True,
+                                               complex_mass_scheme=complex_mass)
 
         if use_mg_default:
             base_model.pass_particles_name_in_mg_default()
-        if complex_mass:
-            base_model.change_mass_to_complex_scheme()
         
         self.model = base_model
         self.mg5cmd._curr_model = self.model
         self.mg5cmd.process_model()
-        
 
 if __name__ == '__main__':
     

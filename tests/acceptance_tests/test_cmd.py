@@ -162,6 +162,7 @@ class TestCmdShell1(unittest.TestCase):
                     'lhapdf': 'lhapdf-config',  
                     'loop_optimized_output': True,
                     'fastjet': 'fastjet-config',
+                    'notification_center':True,
                     'timeout': 60,
                     'ignore_six_quark_processes': False,
                     'OLP': 'MadLoop',
@@ -567,7 +568,7 @@ class TestCmdShell2(unittest.TestCase,
         me_groups = me_re.search(log_output)
         
         self.assertTrue(me_groups)
-        self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782)
+        self.assertAlmostEqual(float(me_groups.group('value')), 5.8183784340260782,5)
     
     
     def test_standalone_cpp_output_consistency(self):

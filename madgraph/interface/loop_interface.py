@@ -223,17 +223,20 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if self._curr_amps and self._curr_amps[0].get_ninitial() != \
             proc.get_ninitial():
             raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
-            
+
+#        It is partially supported for now if the initial state is not charged
+#        under the gauge group perturbed.
 #        if proc.get_ninitial()==1 and tool=='aMC@NLO':            
 #            raise self.InvalidCmd("At this stage %s cannot handle decay process."%tool+\
 #                                  "\nIt is however a straight-forward extension which "+\
 #                                  "will come out with the next release.")                           
 
-        if isinstance(proc, base_objects.ProcessDefinition) and mode.startswith('ML5'):
-            if proc.has_multiparticle_label():        
-                raise self.InvalidCmd, \
+#        Now all checks should support multi-particle label for loops as well.
+        if isinstance(proc, base_objects.ProcessDefinition) and mode=='ML5':
+            if proc.has_multiparticle_label():
+                raise self.InvalidCmd(
                   "When running ML5 standalone, multiparticle labels cannot be"+\
-                  " employed."
+                  " employed.")
         
         if proc['decay_chains']:
             raise self.InvalidCmd(
@@ -303,7 +306,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                 model_path = self._curr_model.get('modelpath')
                 model_name = self._curr_model.get('name')
                 if model_name.split('-')[0]=='loop_sm':
-		           model_name = model_name[5:]
+                    model_name = model_name[5:]
                 if model_name.split('-')[0]=='sm':
                     # So that we don't load the model twice
                     if not self.options['gauge']=='Feynman' and 'QED' in coupling_type:
@@ -316,7 +319,7 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
                     elif coupling_type in [['QED'],['QCD','QED']]:
                         add_on = 'qcd_qed_'
                     else:
-			            raise MadGraph5Error(
+                        raise MadGraph5Error(
                           "The pertubation coupling cannot be '%s'"\
                                     %str(coupling_type)+" in SM loop processes")
 
@@ -655,7 +658,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if QED_found:
             self.validate_model(coupling_type='QED')
         else:
-       	    self.validate_model()
+            self.validate_model()
         
         param_card = self.check_check(argss)
         reuse = argss[1]=="-reuse"   
@@ -672,7 +675,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Now make sure the process is acceptable
         proc = " ".join(argss[1:i+1])
         myprocdef = self.extract_process(proc)
-        self.proc_validity(myprocdef,'ML5_check')
+        self.proc_validity(myprocdef,'ML5_check_cms' if argss[0]=='cms' else \
+                                                                    'ML5_check')
         
         return mg_interface.MadGraphCmd.do_check(self, line, *args,**opt)
     

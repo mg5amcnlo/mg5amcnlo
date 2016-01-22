@@ -60,9 +60,9 @@ c
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
+     &     icolup(2,nexternal,maxflow),niprocs
 c      include 'leshouche.inc'
-      common /c_leshouche_inc/idup,mothup,icolup
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
 C
       LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
       LOGICAL  IS_A_PH(NEXTERNAL)
@@ -91,8 +91,6 @@ c
             lpp(2)=0
             ebeam(1)=pmass(1)/2d0
             ebeam(2)=pmass(1)/2d0
-            scale=pmass(1)
-            fixed_ren_scale=.true.
          endif
 c-check consistency of maxjetflavor in the run_card and with Nf
 c specified in coupl.inc
@@ -192,8 +190,8 @@ c Les Houches common block
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
 c
       real*8         emass(nexternal)
       common/to_mass/emass

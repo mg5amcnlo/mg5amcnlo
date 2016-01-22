@@ -162,7 +162,7 @@ class Lhco_filter:
         data['miss']=[0,1]
         data['unknow']=range(0,10)
         self.nb_part=data
-	return data
+        return data
 
     #2 ###############################################################################################################
     def extract_file_info(self,dir=''):
@@ -306,9 +306,9 @@ class Lhco_filter:
 
     #2 ###############################################################################################################
     def check_valid(self,nb_part):
-    	""" check if we have the correct number of input for each type of particle """
+        """ check if we have the correct number of input for each type of particle """
 
-    	list_key=self.nb_part.keys()+[key for key in nb_part if key not in self.nb_part.keys()]
+        list_key=self.nb_part.keys()+[key for key in nb_part if key not in self.nb_part.keys()]
         try:
             for key in list_key:
                 if self.nb_part[key]==0:
@@ -328,7 +328,7 @@ class Lhco_filter:
                 elif nb_part[key]!=self.nb_part[key]:
                     return 0
             return 1
-    	except KeyError:
+        except KeyError:
             print nb_part
             print self.nb_part
             print key
@@ -338,7 +338,7 @@ class Lhco_filter:
     write_order=['begin','jet','bjet','electron','positron','muon','amuon','tau','atau', 'photon','miss','init']
     #2 ###############################################################################################################
     def write(self,list_part):
-    	""" write the output file """
+        """ write the output file """
 
         if hasattr(self, 'f_out') and self.write_events and \
         self.write_events % (self.MWparam['mw_run']['nb_event_by_node'] * self.MWparam['mw_run']['event_packing']) == 0:
@@ -371,57 +371,57 @@ class Lhco_filter:
 
 #1 ########################################################################	
 class lhco_all_particles_def(dict):
-	"""
-		a class containing all the particles definition
-	"""
-	
-	#2 ########################################################################	
-	class lhco_id:
-		""" a class containing the LHCO definition-restriction of on each lhco particles
-			this defines rules to know of wich type a particle is	
-		"""
-		eta_max=1e2
-		pt_max=1e6
-		ntrk_max=1e3
-		
-		#3 ########################################################################	
-		class bound_limit:
-			""" set a minimum and a maximum value for a parameter """
-			#4 ########################################################################	
-			def __init__(self,vmin,vmax):
-				self.vmin=vmin
-				self.vmax=vmax
-				
-			#4 ########################################################################	
-			def redefine(self,min,max):
-				self.__init__(min,max)		
-				
+        """
+                a class containing all the particles definition
+        """
+        
+        #2 ########################################################################	
+        class lhco_id:
+                """ a class containing the LHCO definition-restriction of on each lhco particles
+                        this defines rules to know of wich type a particle is	
+                """
+                eta_max=1e2
+                pt_max=1e6
+                ntrk_max=1e3
+                
+                #3 ########################################################################	
+                class bound_limit:
+                        """ set a minimum and a maximum value for a parameter """
                         #4 ########################################################################	
-			def inlimit(self,value):
-				""" check if value is between min and max """
+                        def __init__(self,vmin,vmax):
+                                self.vmin=vmin
+                                self.vmax=vmax
+                                
+                        #4 ########################################################################	
+                        def redefine(self,min,max):
+                                self.__init__(min,max)		
+                                
+                        #4 ########################################################################	
+                        def inlimit(self,value):
+                                """ check if value is between min and max """
                                 value=float(value)
-				if value>=self.vmin and value<=self.vmax:
+                                if value>=self.vmin and value<=self.vmax:
                                     return 1
-				else:
+                                else:
 #                                    print 'failed check',value,self.vmin ,self.vmax
                                     return 0
-				
-		#3 ########################################################################	
-		def __init__(self,name,type,pid):
-			""" initialize the object. 
-					name is the name of the particle described
-					type is the type value in the lhco file
-			"""
-					
-			self.name=name
-			self.lhcoid=str(type)
-			self.init_default()
-			self.pid=pid
-		
-		#3 ########################################################################		
-		def init_default(self):
+                                
+                #3 ########################################################################	
+                def __init__(self,name,type,pid):
+                        """ initialize the object. 
+                                        name is the name of the particle described
+                                        type is the type value in the lhco file
+                        """
+                                        
+                        self.name=name
+                        self.lhcoid=str(type)
+                        self.init_default()
+                        self.pid=pid
+                
+                #3 ########################################################################		
+                def init_default(self):
                     """ put the zero cut on the particle """
-			
+                        
                     self.eta=self.bound_limit(-self.eta_max,self.eta_max)
                     self.phi=self.bound_limit(-math.pi,2*math.pi)
                     self.pt=self.bound_limit(0,self.pt_max)		
@@ -434,17 +434,17 @@ class lhco_all_particles_def(dict):
                     #special variable (not line of the lhco file)
                     self.E=self.bound_limit(0,1e99)
                     
-		#3 ########################################################################		
-		def restrict(self,tag,min_val,max_val):
-			""" add a restriction on a parameter """
-			
-			eval('self.'+tag+'.redefine('+str(min_val)+','+str(max_val)+')')
-			
-		#3 ########################################################################		
-		def check(self,particle):
-			""" check if a particle is of this type or not """
+                #3 ########################################################################		
+                def restrict(self,tag,min_val,max_val):
+                        """ add a restriction on a parameter """
+                        
+                        eval('self.'+tag+'.redefine('+str(min_val)+','+str(max_val)+')')
+                        
+                #3 ########################################################################		
+                def check(self,particle):
+                        """ check if a particle is of this type or not """
 
-			if (particle.lhcoid!=self.lhcoid):
+                        if (particle.lhcoid!=self.lhcoid):
                             self.failed_reason='lhcoid'
                             return 0
                         elif(not self.ntrk.inlimit(particle.ntrk)):
@@ -484,75 +484,75 @@ class lhco_all_particles_def(dict):
 
 
 
-			if (particle.lhcoid==self.lhcoid and
-			   self.ntrk.inlimit(particle.ntrk) and
-			   self.btag.inlimit(particle.btag) and
-			   self.hadem.inlimit(particle.hadem) and
-			   self.eta.inlimit(particle.eta) and
-			   self.phi.inlimit(particle.phi) and
-			   self.pt.inlimit(particle.pt) and
-			   self.jmass.inlimit(particle.jmass) and
-			   self.dum1.inlimit(particle.dum1) and
-			   self.dum2.inlimit(particle.dum2) and
+                        if (particle.lhcoid==self.lhcoid and
+                           self.ntrk.inlimit(particle.ntrk) and
+                           self.btag.inlimit(particle.btag) and
+                           self.hadem.inlimit(particle.hadem) and
+                           self.eta.inlimit(particle.eta) and
+                           self.phi.inlimit(particle.phi) and
+                           self.pt.inlimit(particle.pt) and
+                           self.jmass.inlimit(particle.jmass) and
+                           self.dum1.inlimit(particle.dum1) and
+                           self.dum2.inlimit(particle.dum2) and
                            self.E.inlimit(particle.E)):
-				return 1
-			else: 
-				return 0
-				
-		
-		
-	#2 ########################################################################		
-	def __init__(self):
-	
-		#lepton definition
-		self['electron']=self.lhco_id('electron',1,11)
+                                return 1
+                        else: 
+                                return 0
+                                
+                
+                
+        #2 ########################################################################		
+        def __init__(self):
+        
+                #lepton definition
+                self['electron']=self.lhco_id('electron',1,11)
                 self.electron=self['electron']
-		self.electron.restrict('ntrk',-1,-1)
-		self['positron']=self.lhco_id('positron',1,-11)
+                self.electron.restrict('ntrk',-1,-1)
+                self['positron']=self.lhco_id('positron',1,-11)
                 self.positron=self['positron']
-		self.positron.restrict('ntrk',1,1)
-		self['muon']=self.lhco_id('muon',2,13)
+                self.positron.restrict('ntrk',1,1)
+                self['muon']=self.lhco_id('muon',2,13)
                 self.muon=self['muon']
-		self.muon.restrict('ntrk',-1,-1)
-		self['amuon']=self.lhco_id('amuon',2,-13)
+                self.muon.restrict('ntrk',-1,-1)
+                self['amuon']=self.lhco_id('amuon',2,-13)
                 self.amuon=self['amuon']
-		self.amuon.restrict('ntrk',1,1)
-		self['tau']=self.lhco_id('tau',3,15)
+                self.amuon.restrict('ntrk',1,1)
+                self['tau']=self.lhco_id('tau',3,15)
                 self.tau=self['tau']
-		self.tau.restrict('ntrk',-3,-1)
-		self['atau']=self.lhco_id('atau',3,15)
+                self.tau.restrict('ntrk',-3,-1)
+                self['atau']=self.lhco_id('atau',3,15)
                 self.atau=self['atau']
-		self.atau.restrict('ntrk',1,3)
+                self.atau.restrict('ntrk',1,3)
 
                 #photon definition
                 self['photon']=self.lhco_id('photon',0,22)
                 self.photon=self['photon']
                 
-		#hadronic definition
-		#default no distinction between jet and b jet
-		self['jet']=self.lhco_id('light_jet',4,1)
-		self.jet=self['jet']
-		#missing-et
-		self['miss']=self.lhco_id('miss',6,0)
+                #hadronic definition
+                #default no distinction between jet and b jet
+                self['jet']=self.lhco_id('light_jet',4,1)
+                self.jet=self['jet']
+                #missing-et
+                self['miss']=self.lhco_id('miss',6,0)
                 self.miss=self['miss']
-		#parton
-		self['init']=self.lhco_id('init',7,0)
+                #parton
+                self['init']=self.lhco_id('init',7,0)
                 self.init=self['init']
-		#begin
-		self['begin']=self.lhco_id('begin',99,0)
+                #begin
+                self['begin']=self.lhco_id('begin',99,0)
                 self.begin=self['begin']
 
                 #avoid to many warning
                 self.nb_warning = 0
-	
-	#2 ########################################################################		
-	def use_bjet(self):
-		""" separate the class jet between jet and bjet """
-		self['jet'].restrict('btag',0,0)
-		self['bjet']=self.lhco_id('bjet',4,5)
-		self['bjet'].restrict('btag',1,4)
-		self.bjet=self['bjet']
-		
+        
+        #2 ########################################################################		
+        def use_bjet(self):
+                """ separate the class jet between jet and bjet """
+                self['jet'].restrict('btag',0,0)
+                self['bjet']=self.lhco_id('bjet',4,5)
+                self['bjet'].restrict('btag',1,4)
+                self.bjet=self['bjet']
+                
         #2 ########################################################################
         def update_hlt_cut(self,hltcut):
             """ take the hlt cut from the Madweight card """
@@ -566,15 +566,15 @@ class lhco_all_particles_def(dict):
                     self[name].restrict(param,hltcut[key],9e99)
 
 #2 ########################################################################				
-	def identify_particle(self,particle):
+        def identify_particle(self,particle):
             """ find in wich category the particles belongs """
 
             #print particle.line[:-1],
             for name in ['begin','jet','miss','electron','photon']: #to fastenize the test in most of the case
-	       	if self[name].check(particle):
+                if self[name].check(particle):
                     #print name
                     return name
-		
+                
             for name in [name for name in self.keys() if name not in ['begin','jet','miss','electron','photon']]:
                 if self[name].check(particle):
                     #print name
@@ -614,14 +614,14 @@ pat_new_block=re.compile(r'''^\s*0\s+               #cardinal
     
 
 
-				
+                                
 #1 ########################################################################		
 class lhco_part(dict):
     """ a class for a particle from the lhco line """
-	
+        
     class ErrorNotLHCOformat(Exception): pass
 
-	
+        
     #2 ########################################################################
     def __init__(self,line):
         """ charge a particle """
@@ -652,11 +652,11 @@ class lhco_part(dict):
     #2 ########################################################################
     def beginblok(self,line):
         """ charge a particle """
-		
+                
         reobj=pat_new_block.search(line)	
         if not reobj:
             return 0
-			
+                        
         self.card=0
         self.lhcoid='99'
         self.eta='0'
@@ -717,8 +717,8 @@ if(__name__=="__main__"):
     from MW_param import go_to_main_dir
     opt=sys.argv
     if len(opt)==1:
-    	go_to_main_dir()
-    	Lhco_filter('proc_card.dat')
+            go_to_main_dir()
+            Lhco_filter('proc_card.dat')
     else:
         pos='/'.join(opt[0].split('/')[:-1])
         print pos

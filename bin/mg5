@@ -28,6 +28,6 @@ print '\033[91mWarning: The script ./bin/mg5 will be removed in future versions;
 
 sys.argv.pop(0)
 if __debug__:
-    os.system('%s %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
+    os.system('%s -tt %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
 else:
     os.system('%s -O %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))

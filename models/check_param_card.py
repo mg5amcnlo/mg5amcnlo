@@ -1,7 +1,11 @@
 from __future__ import division
+
+import itertools
 import xml.etree.ElementTree as ET
 import math
+import StringIO
 import os
+import re
 import shutil
 import logging
 
@@ -13,6 +17,8 @@ try:
 except:
     import internal.file_writers as file_writers
     import internal.misc as misc
+
+import StringIO
     
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -55,6 +61,9 @@ class Parameter (object):
 
 
         data = data.split()
+        if any(d.startswith('scan') for d in data):
+            position = [i for i,d in enumerate(data) if d.startswith('scan')][0]
+            data = data[:position] + [' '.join(data[position:])] 
         if not len(data):
             return
         try:
@@ -98,7 +107,15 @@ class Parameter (object):
     def __str__(self):
         """ return a SLAH string """
 
+        format = self.format
         if self.format == 'float':
+            try:
+                value = float(self.value)
+            except:
+                format = 'str'
+        
+        self.comment = self.comment.strip()
+        if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
@@ -107,11 +124,11 @@ class Parameter (object):
                 return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
                 return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
-        elif self.format == 'int':
+        elif format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
-        elif self.format == 'str':
+        elif format == 'str':
             if self.lhablock == 'decay':
-                return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
+                return 'DECAY %s %s # %s' % (' '.join([str(d) for d in self.lhacode]),self.value, self.comment)
             return '      %s %s # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif self.format == 'decay_table':
             return '      %e %s # %s' % ( self.value,' '.join([str(d) for d in self.lhacode]), self.comment)
@@ -274,8 +291,7 @@ class ParamCard(dict):
         self.order = []
         
         if isinstance(input_path, ParamCard):
-            self.order = list(input_path.order)
-            self.update(input_path)
+            self.read(input_path.write())
             self.input_path = input_path.input_path 
         else:
             self.input_path = input_path
@@ -286,7 +302,10 @@ class ParamCard(dict):
         """ read a card and full this object with the content of the card """
 
         if isinstance(input_path, str):
-            input = open(input_path)
+            if '\n' in input_path:
+                input = StringIO.StringIO(input_path)
+            else:
+                input = open(input_path)
         else:
             input = input_path #Use for banner loading and test
 
@@ -342,7 +361,55 @@ class ParamCard(dict):
                   
         return self
     
-    def write(self, outpath):
+    def analyze_param_card(self):
+        """ Analyzes the comment of the parameter in the param_card and returns
+        a dictionary with parameter names in values and the tuple (lhablock, id)
+        in value as well as a dictionary for restricted values.
+        WARNING: THIS FUNCTION RELIES ON THE FORMATTING OF THE COMMENT IN THE
+        CARD TO FETCH THE PARAMETER NAME. This is mostly ok on the *_default.dat
+        but typically dangerous on the user-defined card."""
+    
+        pname2block = {}
+        restricted_value = {}
+
+        for bname, block in self.items():
+            for lha_id, param in block.param_dict.items():
+                all_var = []
+                comment = param.comment
+                # treat merge parameter
+                if comment.strip().startswith('set of param :'):
+                    all_var = list(re.findall(r'''[^-]1\*(\w*)\b''', comment))
+                # just the variable name as comment
+                elif len(comment.split()) == 1:
+                    all_var = [comment.strip().lower()]
+                # either contraction or not formatted
+                else:
+                    split = comment.split()
+                    if len(split) >2 and split[1] == ':':
+                        # NO VAR associated
+                        restricted_value[(bname, lha_id)] = ' '.join(split[1:])
+                    elif len(split) == 2:
+                        if re.search(r'''\[[A-Z]\]eV\^''', split[1]):
+                            all_var = [comment.strip().lower()]
+                    elif len(split) >=2 and split[1].startswith('('):
+                        all_var = [split[0].strip().lower()]
+                    else:
+                        if not bname.startswith('qnumbers'):
+                            logger.debug("not recognize information for %s %s : %s",
+                                      bname, lha_id, comment)
+                        # not recognized format
+                        continue
+
+                for var in all_var:
+                    var = var.lower()
+                    if var in pname2block:
+                        pname2block[var].append((bname, lha_id))
+                    else:
+                        pname2block[var] = [(bname, lha_id)]
+        
+        return pname2block, restricted_value
+    
+    def write(self, outpath=None):
         """schedular for writing a card"""
   
         # order the block in a smart way
@@ -372,10 +439,8 @@ class ParamCard(dict):
                     diff += 'set param_card %s %s %s # orig: %s\n' % \
                                        (blockname, lhacode , new_value, value)
         return diff 
-                
-        
-    
-            
+
+
     def write_inc_file(self, outpath, identpath, default, need_mp=False):
         """ write a fortran file which hardcode the param value"""
         
@@ -396,17 +461,70 @@ class ParamCard(dict):
                 except KeyError:
                     value =defaultcard[block].get(tuple(lhaid)).value
                     logger.warning('information about \"%s %s" is missing using default value: %s.' %\
-                                   (block, lhaid, value))
-
+                                                          (block, lhaid, value))
             else:
                 value =defaultcard[block].get(tuple(lhaid)).value
                 logger.warning('information about \"%s %s" is missing (full block missing) using default value: %s.' %\
                                    (block, lhaid, value))
             value = str(value).lower()
-            fout.writelines(' %s = %s' % (variable, str(value).replace('e','d')))
+            fout.writelines(' %s = %s' % (variable, ('%e'%float(value)).replace('e','d')))
             if need_mp:
                 fout.writelines(' mp__%s = %s_16' % (variable, value))
-                
+      
+    def convert_to_complex_mass_scheme(self):
+        """ Convert this param_card to the convention used for the complex mass scheme:
+        This includes, removing the Yukawa block if present and making sure the EW input
+        scheme is (MZ, MW, aewm1). """
+        
+        # The yukawa block is irrelevant for the CMS models, we must remove them
+        if self.has_block('yukawa'):
+            # Notice that the last parameter removed will also remove the block.
+            for lhacode in [param.lhacode for param in self['yukawa']]:
+                self.remove_param('yukawa', lhacode)
+    
+        # Now fix the EW input scheme
+        EW_input = {('sminputs',(1,)):None,
+                    ('sminputs',(2,)):None,
+                    ('mass',(23,)):None,
+                    ('mass',(24,)):None}
+        for block, lhaid in EW_input.keys():
+            try:
+                EW_input[(block,lhaid)] = self[block].get(lhaid).value
+            except:
+                pass
+            
+        # Now specify the missing values. We only support the following EW
+        # input scheme:
+        # (alpha, GF, MZ) input
+        internal_param = [key for key,value in EW_input.items() if value is None]
+        if len(internal_param)==0:
+            # All parameters are already set, no need for modifications
+            return
+        
+        if len(internal_param)!=1:
+            raise InvalidParamCard,' The specified EW inputs has more than one'+\
+                ' unknown: [%s]'%(','.join([str(elem) for elem in internal_param]))
+        
+        
+        if not internal_param[0] in [('mass',(24,)), ('sminputs',(2,)),
+                                                             ('sminputs',(1,))]:
+            raise InvalidParamCard, ' The only EW input scheme currently supported'+\
+                        ' are those with either the W mass or GF left internal.'
+        
+        # Now if the Wmass is internal, then we must change the scheme
+        if internal_param[0] == ('mass',(24,)):
+            aewm1 = EW_input[('sminputs',(1,))]
+            Gf    = EW_input[('sminputs',(2,))]
+            Mz    = EW_input[('mass',(23,))]
+            try:
+                Mw = math.sqrt((Mz**2/2.0)+math.sqrt((Mz**4/4.0)-((
+                              (1.0/aewm1)*math.pi*Mz**2)/(Gf*math.sqrt(2.0)))))
+            except:
+                InvalidParamCard, 'The EW inputs 1/a_ew=%f, Gf=%f, Mz=%f are inconsistent'%\
+                                                                   (aewm1,Gf,Mz)
+            self.remove_param('sminputs', (2,))
+            self.add_param('mass', (24,), Mw, 'MW')
+        
     def append(self, obj):
         """add an object to this"""
         
@@ -565,6 +683,121 @@ class ParamCardMP(ParamCard):
             fout.writelines(' %s%s = %s_16' % (self.mp_prefix, 
                 variable, ('%e' % value)))
 
+
+
+class ParamCardIterator(ParamCard):
+    """A class keeping track of the scan: flag in the param_card and 
+       having an __iter__() function to scan over all the points of the scan.
+    """
+
+    logging = True
+    def __init__(self, input_path=None):
+        super(ParamCardIterator, self).__init__(input_path=input_path)
+        self.itertag = [] #all the current value use
+        self.cross = []   # keep track of all the cross-section computed 
+        self.param_order = []
+        
+    def __iter__(self):
+        """generate the next param_card (in a abstract way) related to the scan.
+           Technically this generates only the generator."""
+        
+        if hasattr(self, 'iterator'):
+            return self.iterator
+        self.iterator = self.iterate()
+        return self.iterator
+    
+    def next(self, autostart=False):
+        """call the next iteration value"""
+        try:
+            iterator = self.iterator
+        except:
+            if autostart:
+                iterator = self.__iter__()
+            else:
+                raise
+        try:
+            out = iterator.next()
+        except StopIteration:
+            del self.iterator
+            raise
+        return out
+    
+    def iterate(self):
+        """create the actual generator"""
+        all_iterators = {} # dictionary of key -> block of object to scan [([param, [values]), ...]
+        auto = 'Auto'
+        pattern = re.compile(r'''scan\s*(?P<id>\d*)\s*:\s*(?P<value>[^#]*)''', re.I)
+        # First determine which parameter to change and in which group
+        # so far only explicit value of the scan (no lambda function are allowed)
+        for block in self.order:
+            for param in block:
+                if isinstance(param.value, str) and param.value.strip().lower().startswith('scan'):
+                    try:
+                        key, def_list = pattern.findall(param.value)[0]
+                    except:
+                        raise Exception, "Fail to handle scanning tag: Please check that the syntax is valid"
+                    if key == '': 
+                        key = -1 * len(all_iterators)
+                    if key not in all_iterators:
+                        all_iterators[key] = []
+                    try:
+                        all_iterators[key].append( (param, eval(def_list)))
+                    except SyntaxError:
+                        raise Exception, "Fail to handle your scan definition. Please check your syntax."
+                    
+        keys = all_iterators.keys() # need to fix an order for the scan
+        param_card = ParamCard(self)
+        #store the type of parameter
+        for key in keys:
+            for param, values in all_iterators[key]:
+                self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
+        
+        # do the loop
+        lengths = [range(len(all_iterators[key][0][1])) for key in keys]
+        for positions in itertools.product(*lengths):
+            self.itertag = []
+            if self.logging:
+                logger.info("Create the next param_card in the scan definition", '$MG:color:BLACK')
+            for i, pos in enumerate(positions):
+                key = keys[i]
+                for param, values in all_iterators[key]:
+                    # assign the value in the card.
+                    param_card[param.lhablock].get(param.lhacode).value = values[pos]
+                    self.itertag.append(values[pos])
+                    if self.logging:
+                        logger.info("change parameter %s with code %s to %s", \
+                                   param.lhablock, param.lhacode, values[pos])
+            # retrun the current param_card up to next iteration
+            yield param_card
+        
+    
+    def store_entry(self, run_name, cross):
+        """store the value of the cross-section"""
+        self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross':cross})
+        
+
+    def write_summary(self, path):
+        """ """
+        
+        ff = open(path, 'w')
+        ff.write("#%-19s %-20s %-20s\n" % ('run_name',' '.join(self.param_order), 'cross(pb)'))
+        for info in self.cross:
+            bench = [str(p) for p in info['bench']]
+            cross = info['cross']
+            name = info['run_name']
+            ff.write("%-20s %-20s %-20s \n" % (name,' '.join(bench) ,cross))
+            #ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
+    
+    def get_next_name(self, run_name):
+        """returns a smart name for the next run"""
+    
+        if '_' in run_name:
+            name, value = run_name.rsplit('_',1)
+            if value.isdigit():
+                return '%s_%02i' % (name, float(value)+1)
+        # no valid '_' in the name
+        return '%s_scan_02' % run_name
+    
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of

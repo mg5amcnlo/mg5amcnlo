@@ -465,6 +465,7 @@ class MG5Runner(MadEventRunner):
         #proc_card = open(proc_card_location, 'r').read()
         new_proc_list = []
         cmd = cmd_interface.MasterCmd()
+        cmd.no_notification()
         cmd.exec_cmd('import command %s' %proc_card_location)
         #for line in proc_card.split('\n'):
         #    cmd.exec_cmd(line, errorhandling=False)

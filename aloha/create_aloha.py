@@ -106,8 +106,7 @@ class AbstractRoutine(object):
             assert isinstance(self.expr, aloha_lib.SplitCoefficient)
             rank= 1
             for coeff in self.expr:
-                if max(sum(coeff), rank):
-                    rank = sum(coeff)
+                rank = max(sum(coeff), rank)
             return rank -1 # due to the coefficient associate to the wavefunctions
         else:
             raise ALOHAERROR, '%s is not a valid information that can be computed' % info
@@ -854,7 +853,7 @@ class AbstractALOHAModel(dict):
         # reorganize the data (in order to use optimization for a given lorentz
         #structure
         aloha.loop_mode = False
-	    # self.explicit_combine = False
+        # self.explicit_combine = False
         request = {}
 
         for list_l_name, tag, outgoing in data:

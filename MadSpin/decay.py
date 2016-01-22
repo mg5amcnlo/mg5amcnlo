@@ -111,16 +111,16 @@ class Event:
             # change the wgt associate to the additional weight
             start, stop = self.rwgt.find('<rwgt>'), self.rwgt.find('</rwgt>')
             if start != -1 != stop :
-                pattern = re.compile(r'''<\s*wgt id=\'(?P<id>[^\']+)\'\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
+                pattern = re.compile(r'''<\s*wgt id=[\'\"](?P<id>[^\'\"]+)[\'\"]\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
                 data = pattern.findall(self.rwgt)
+                if len(data)==0:
+                    print self.rwgt
                 try:
                     text = ''.join('   <wgt id=\'%s\'> %+15.7e </wgt>\n' % (pid, float(value) * factor)
                                      for (pid,value) in data) 
                 except ValueError, error:
                     raise Exception, 'Event File has unvalid weight. %s' % error
-                self.rwgt = self.rwgt[:start] + '<rwgt>\n'+ text + self.rwgt[stop:]
-            
-            
+                self.rwgt = self.rwgt[:start] + '<rwgt>\n'+ text + self.rwgt[stop:]          
 
     def string_event_compact(self):
         """ return a string with the momenta of the event written 
@@ -906,7 +906,7 @@ class AllMatrixElement(dict):
             if init[0] in self.banner.param_card['decay'].decay_table:
                 br *= self.banner.param_card['decay'].decay_table[init[0]].get(lhaid).value
                 br *= self.get_br(decay)
-            else:
+            elif -init[0] in self.banner.param_card['decay'].decay_table:
                 init = -init[0]
                 lhaid=[x if self.model.get_particle(x)['self_antipart'] else -x
                        for x in final]
@@ -914,6 +914,13 @@ class AllMatrixElement(dict):
                 lhaid = tuple([len(final)] + lhaid)
                 br *= self.banner.param_card['decay'].decay_table[init].get(lhaid).value
                 br *= self.get_br(decay)
+            elif init[0] not in self.decay_ids and -init[0] not in self.decay_ids:
+                logger.warning("No Branching ratio applied for %s. Please check if this is expected" % init[0])
+                br *= self.get_br(decay)
+            else:
+                raise MadGraph5Error,"No valid decay for %s. No 2 body decay for that particle. (three body are not supported by MadSpin)" % init[0]
+
+                
 
         for decays in ids.values():
             if len(decays) == 1:
@@ -929,7 +936,7 @@ class AllMatrixElement(dict):
                     except ValueError:
                         break
                 br /= math.factorial(nb)
-
+                
         return br
 
             
@@ -1013,7 +1020,7 @@ class AllMatrixElement(dict):
         self[tag]['decaying'] = tuple(decaying)
                 
         # sanity check
-        assert self[tag]['total_br'] <= 1.01, self[tag]['total_br']
+        assert self[tag]['total_br'] <= 1.01, "wrong BR for %s: %s " % (tag,self[tag]['total_br'])
 
 
         
@@ -1742,7 +1749,7 @@ class decay_misc:
 
         return finalfound
    
-         
+        
     def reorder_branch(self,branch):
         """ branch is a string with the definition of a decay chain
                 If branch contains " A > B C , B > ... " 
@@ -1757,26 +1764,37 @@ class decay_misc:
             if list_branch[index]==' ' or list_branch[index]=='': del list_branch[index]
         #print list_branch
         for index, item in enumerate(list_branch):
-            if item =="," and list_branch[index+1]!="(": 
-                if list_branch[index-2]==list_branch[index+1]:
-                    # swap the two particles before the comma:
-                    temp=list_branch[index-2]
-                    list_branch[index-2]=list_branch[index-1]
-                    list_branch[index-1]=temp
-            if item =="," and list_branch[index+1]=="(":
-                if list_branch[index-2]==list_branch[index+2]:
-                    # swap the two particles before the comma:
-                    temp=list_branch[index-2]
-                    list_branch[index-2]=list_branch[index-1]
-                    list_branch[index-1]=temp
 
+            if item[-1] =="," and list_branch[index+1]!="(":
+                # search pos of B and C 
+                counter=1
+                while 1:
+                  if list_branch[index-counter].find("=")<0:
+                     break
+                  counter+=1
+                if list_branch[index-counter-1]==list_branch[index+1]:
+                    # swap the two particles before the comma:
+                    temp=list_branch[index-counter-1]
+                    list_branch[index-counter-1]=list_branch[index-counter]
+                    list_branch[index-counter]=temp
+            if item[-1] =="," and list_branch[index+1]=="(":
+                # search pos of B and C 
+                counter=1
+                while 1:
+                  if list_branch[index-counter].find("=")<0:
+                     break
+                  counter+=1
+                if list_branch[index-counter -1]==list_branch[index+2]:
+                    # swap the two particles before the comma:
+                    temp=list_branch[index-counter-1]
+                    list_branch[index-counter-1]=list_branch[index-counter]
+                    list_branch[index-counter]=temp
 
         new_branch=""
         for item in list_branch:
             new_branch+=item+" "
 
         return new_branch, list_branch[0]
-
 
     def set_light_parton_massless(self,topo):
         """ masses of light partons are set to zero for 
@@ -2398,7 +2416,13 @@ class decay_all_events(object):
                     self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[prod2full[part-1]-1]
                     self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[prod2full[part-1]-1]
                     if not use_mc_masses or abs(pid) not in self.MC_masses:
-                        self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
+                        try:
+                            self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
+                        except KeyError:
+                            if self.model.get_particle(abs(pid)).get('mass').lower() == 'zero':
+                                self.curr_event.particle[part_for_curr_evt]['mass'] = 0
+                            else:
+                                raise
                     else:
                         self.curr_event.particle[part_for_curr_evt]['mass']=self.MC_masses[abs(pid)]
 
@@ -2588,7 +2612,7 @@ class decay_all_events(object):
         return decay_mapping
     
 
-    @misc.mute_logger()
+    #@misc.mute_logger()
     @test_aloha.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
@@ -2635,6 +2659,16 @@ class decay_all_events(object):
             
         commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
+        # Handle the multiparticle of the banner        
+        #for name, definition in self.mscmd.multiparticles:
+        if hasattr(self.mscmd, 'multiparticles_ms'):
+            for name, pdgs in  self.mscmd.multiparticles_ms.items():
+                if name == 'all':
+                    continue
+                #self.banner.get('proc_card').get('multiparticles'):
+                mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
+            
+
         mgcmd.exec_cmd("set group_subprocesses False")
 
         logger.info('generating the production square matrix element')
@@ -2651,6 +2685,10 @@ class decay_all_events(object):
                 proc_nb = '@ %i' % proc_nb 
             else:
                 proc_nb = ''
+            
+            if ',' in proc:
+                raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
+                        '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
             
             if '[' not in proc:
                 commandline+="add process %s  --no_warning=duplicate;" % proc

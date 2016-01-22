@@ -202,8 +202,8 @@ class Particle(PhysicsObject):
 
     sorted_keys = ['name', 'antiname', 'spin', 'color',
                    'charge', 'mass', 'width', 'pdg_code',
-                   'texname', 'antitexname', 'line', 'propagating', 'propagator',
-                   'is_part', 'self_antipart', 'ghost', 'counterterm']
+                  'line', 'propagator',
+                   'is_part', 'self_antipart', 'type', 'counterterm']
 
     def default_setup(self):
         """Default values for all properties"""
@@ -216,18 +216,54 @@ class Particle(PhysicsObject):
         self['mass'] = 'ZERO'
         self['width'] = 'ZERO'
         self['pdg_code'] = 0
-        self['texname'] = 'none'
-        self['antitexname'] = 'none'
+        #self['texname'] = 'none'
+        #self['antitexname'] = 'none'
         self['line'] = 'dashed'
-        self['propagating'] = True
+        #self['propagating'] = True -> removed in favor or 'line' = None
         self['propagator'] = ''
         self['is_part'] = True
         self['self_antipart'] = False
         # True if ghost, False otherwise
-        self['ghost'] = False
+        #self['ghost'] = False
+        self['type'] = '' # empty means normal can also be ghost or goldstone 
         # Counterterm defined as a dictionary with format:
         # ('ORDER_OF_COUNTERTERM',((Particle_list_PDG))):{laurent_order:CTCouplingName}
         self['counterterm'] = {}
+
+    def get(self, name):
+        
+        if name == 'ghost':
+            return self['type'] == 'ghost'
+        elif name == 'goldstone':
+            return self['type'] == 'goldstone'
+        elif name == 'propagating':
+            return self['line'] is not None
+        else:
+            return super(Particle, self).get(name)
+
+    def set(self, name, value, force=False):
+        
+        if name in ['texname', 'antitexname']:
+            return True
+        elif name == 'propagating':
+            if not value:
+                return self.set('line', None, force=force)
+            elif not self.get('line'):
+                return self.set('line', 'dashed',force=force)
+            return True
+        elif name  in ['ghost', 'goldstone']:
+            if self.get('type') == name:
+                if value:
+                    return True
+                else:
+                    return self.set('type', '', force=force)
+            else:
+                if value:
+                    return self.set('type', name, force=force)
+                else:
+                    return True
+        return super(Particle, self).set(name, value,force=force)
+        
 
     def filter(self, name, value):
         """Filter for valid particle property values."""
@@ -1213,7 +1249,7 @@ class Model(PhysicsObject):
             if isinstance(id, int):
                 try:
                     return self.get("particle_dict")[id]
-                except Exception:
+                except Exception,error:
                     return None
             else:
                 if not hasattr(self, 'name2part'):
@@ -1547,9 +1583,9 @@ class Model(PhysicsObject):
     def write_param_card(self):
         """Write out the param_card, and return as string."""
         
-        import models.write_param_card as writter
+        import models.write_param_card as writer
         out = StringIO.StringIO() # it's suppose to be written in a file
-        param = writter.ParamCardWriter(self)
+        param = writer.ParamCardWriter(self)
         param.define_output_file(out)
         param.write_card()
         return out.getvalue()
@@ -1577,55 +1613,118 @@ class Model(PhysicsObject):
     def change_electroweak_mode(self, mode):
         """Change the electroweak mode. The only valid mode now is external.
         Where in top of the default MW and sw2 are external parameters."""
-        
-        assert mode == "external"
+
+        assert mode in ["external",set(['mz','mw','alpha'])]
         
         try:
             W = self.get('particle_dict')[24]
         except KeyError:
-            raise InvalidCmd('No W particle in the model impossible to change the EW scheme!')
+            raise InvalidCmd('No W particle in the model impossible to '+
+                                                        'change the EW scheme!')
         
-        MW = self.get_parameter(W.get('mass'))
-        if not isinstance(MW, ParamCardVariable):
-            newMW = ParamCardVariable(MW.name, MW.value, 'MASS', [24])
-            if not newMW.value:
-                newMW.value = 80.385
-            #remove the old definition
-            self.get('parameters')[MW.depend].remove(MW)
-            # add the new one
-            self.add_param(newMW, ['external'])
-            
-        # Now check for sw2. if not define bypass this
-        try:
-            sw2 = self.get_parameter('sw2')
-        except KeyError:
+        if mode=='external':
+            MW = self.get_parameter(W.get('mass'))
+            if not isinstance(MW, ParamCardVariable):
+                newMW = ParamCardVariable(MW.name, MW.value, 'MASS', [24])
+                if not newMW.value:
+                    newMW.value = 80.385
+                #remove the old definition
+                self.get('parameters')[MW.depend].remove(MW)
+                # add the new one
+                self.add_param(newMW, ['external'])
+                
+            # Now check for sw2. if not define bypass this
             try:
-                sw2 = self.get_parameter('mdl_sw2')
+                sw2 = self.get_parameter('sw2')
             except KeyError:
-                sw2=None
-        
-        if sw2:
-            newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
-            if not newsw2.value:
-                newsw2.value = 0.222246485786
-            #remove the old definition
-            self.get('parameters')[sw2.depend].remove(sw2)
-            # add the new one
-            self.add_param(newsw2, ['external'])            
+                try:
+                    sw2 = self.get_parameter('mdl_sw2')
+                except KeyError:
+                    sw2=None
+    
+            if sw2:
+                newsw2 = ParamCardVariable(sw2.name,sw2.value, 'SMINPUTS', [4])
+                if not newsw2.value:
+                    newsw2.value = 0.222246485786
+                #remove the old definition
+                self.get('parameters')[sw2.depend].remove(sw2)
+                # add the new one
+                self.add_param(newsw2, ['external'])
+            # Force a refresh of the parameter dictionary
+            self.parameters_dict = None
+            return true
 
-    def change_mass_to_complex_scheme(self):
+        elif mode==set(['mz','mw','alpha']):
+            # For now, all we support is to go from mz, Gf, alpha to mz, mw, alpha
+            W = self.get('particle_dict')[24]
+            mass = self.get_parameter(W.get('mass'))
+            mass_expr = 'cmath.sqrt(%(prefix)sMZ__exp__2/2. + cmath.sqrt('+\
+              '%(prefix)sMZ__exp__4/4. - (%(prefix)saEW*cmath.pi*%(prefix)s'+\
+              'MZ__exp__2)/(%(prefix)sGf*%(prefix)ssqrt__2)))'
+            if 'external' in mass.depend:
+                # Nothing to be done
+                return True
+            match = False
+            if mass.expr == mass_expr%{'prefix':''}:
+                prefix = ''
+                match = True
+            elif mass.expr == mass_expr%{'prefix':'mdl_'}:
+                prefix = 'mdl_'
+                match = True
+            if match:
+                MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
+                if not MW.value:
+                    MW.value = 80.385                
+                self.get('parameters')[('external',)].append(MW)
+                self.get('parameters')[mass.depend].remove(mass)
+                # Make Gf an internal parameter
+                new_param = ModelVariable('Gf',
+                '-%(prefix)saEW*%(prefix)sMZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - %(prefix)sMZ**2))' %\
+                {'MW': mass.name,'prefix':prefix}, 'complex', mass.depend)
+                Gf = self.get_parameter('%sGf'%prefix)
+                self.get('parameters')[('external',)].remove(Gf)
+                self.add_param(new_param, ['%saEW'%prefix])
+                # Force a refresh of the parameter dictionary
+                self.parameters_dict = None
+                return True
+            else:
+                return False
+
+    def change_mass_to_complex_scheme(self, toCMS=True):
         """modify the expression changing the mass to complex mass scheme"""
         
-        # 1) Find All input parameter mass and width associated
+        # 1) Change the 'CMSParam' of loop_qcd_qed model to 1.0 so as to remove
+        #    the 'real' prefix fromall UVCT wf renormalization expressions.
+        #    If toCMS is False, then it makes sure CMSParam is 0.0 and returns
+        #    immediatly.
+        # 2) Find All input parameter mass and width associated
         #   Add a internal parameter and replace mass with that param
-        # 2) Find All mass fixed by the model and width associated
+        # 3) Find All mass fixed by the model and width associated
         #   -> Both need to be fixed with a real() /Imag()
-        # 3) Find All width fixed by the model
-        #   -> Need to be fixed with a real()
-        # 4) Fix the Yukawa mass to the value of the complex mass/ real mass
-        # 5) Loop through all expression and modify those accordingly
+        # 4) Find All width set by the model
+        #   -> Need to be set with a real()
+        # 5) Fix the Yukawa mass to the value of the complex mass/ real mass
+        # 6) Loop through all expression and modify those accordingly
         #    Including all parameter expression as complex
-
+        
+        try:
+            CMSParam = self.get_parameter('CMSParam')
+        except KeyError:
+            try:
+                CMSParam = self.get_parameter('mdl_CMSParam')
+            except KeyError:
+                CMSParam = None
+                
+        # Handle the case where we want to make sure the CMS is turned off
+        if not toCMS:
+            if CMSParam:
+                CMSParam.expr = '0.0'
+            return            
+        
+        # Now handle the case where we want to turn to CMS.    
+        if CMSParam:
+            CMSParam.expr = '1.0'
+        
         to_change = {}
         mass_widths = [] # parameter which should stay real
         for particle in self.get('particles'):
@@ -1634,52 +1733,29 @@ class Model(PhysicsObject):
                 continue
             mass_widths.append(particle.get('width'))
             mass_widths.append(particle.get('mass'))
-            if particle.get('width') == 'ZERO':
+            width = self.get_parameter(particle.get('width'))
+            if (isinstance(width.value, (complex,float)) and abs(width.value)==0.0) or \
+                                                    width.name.lower() =='zero':
                 #everything is fine since the width is zero
                 continue
-            width = self.get_parameter(particle.get('width'))
             if not isinstance(width, ParamCardVariable):
                 width.expr = 're(%s)' % width.expr
-            if particle.get('mass') != 'ZERO':
-                mass = self.get_parameter(particle.get('mass'))
+            mass = self.get_parameter(particle.get('mass'))
+            if (isinstance(width.value, (complex,float)) and abs(width.value)!=0.0) or \
+                                                    mass.name.lower() != 'zero':
                 # special SM treatment to change the gauge scheme automatically.
-                if particle.get('pdg_code') == 24:
-                    if hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(MZ__exp__2/2. + cmath.sqrt(MZ__exp__4/4. - (aEW*cmath.pi*MZ__exp__2)/(Gf*sqrt__2)))':
-                        # Make MW an external parameter
-                        MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
-                        if not MW.value:
-                            MW.value = 80.385
-                        self.get('parameters')[('external',)].append(MW)
-                        self.get('parameters')[mass.depend].remove(mass)
-                        # Make Gf an internal parameter
-                        new_param = ModelVariable('Gf',
-                        '-aEW*MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - MZ**2))' %\
-                        {'MW': mass.name}, 'complex', mass.depend)
-                        Gf = self.get_parameter('Gf')
-                        self.get('parameters')[('external',)].remove(Gf)
-                        self.add_param(new_param, ['aEW'])
-                        # Use the new mass for the future modification
-                        mass = MW
-                    #option with prefixing
-                    elif hasattr(mass, 'expr') and mass.expr == 'cmath.sqrt(mdl_MZ__exp__2/2. + cmath.sqrt(mdl_MZ__exp__4/4. - (mdl_aEW*cmath.pi*mdl_MZ__exp__2)/(mdl_Gf*mdl_sqrt__2)))':
-                        # Make MW an external parameter
-                        MW = ParamCardVariable(mass.name, mass.value, 'MASS', [24])
-                        if not MW.value:
-                            MW.value = 80.385
-                        self.get('parameters')[('external',)].append(MW)
-                        self.get('parameters')[mass.depend].remove(mass)
-                        # Make Gf an internal parameter
-                        new_param = ModelVariable('mdl_Gf',
-                        '-mdl_aEW*mdl_MZ**2*cmath.pi/(cmath.sqrt(2)*%(MW)s**2*(%(MW)s**2 - mdl_MZ**2))' %\
-                        {'MW': mass.name}, 'complex', mass.depend)
-                        Gf = self.get_parameter('mdl_Gf')
-                        self.get('parameters')[('external',)].remove(Gf)
-                        self.add_param(new_param, ['mdl_aEW'])
-                        # Use the new mass for the future modification
-                        mass = MW
-                    elif isinstance(mass, ModelVariable):
-                        logger.warning('W mass is not an external parameter. This is not adviced for the complex mass scheme.')
-                
+                if particle.get('pdg_code') == 24 and isinstance(mass, 
+                                                                 ModelVariable):
+                    status = self.change_electroweak_mode(
+                                                   set(['mz','mw','alpha']))
+                    # Use the newly defined parameter for the W mass
+                    mass = self.get_parameter(particle.get('mass'))
+                    if not status:
+                        logger.warning('The W mass is not an external '+
+                        'parameter in this model and the automatic change of'+
+                        ' electroweak scheme changed. This is not advised for '+
+                                            'applying the complex mass scheme.')
+
                 # Add A new parameter CMASS
                 #first compute the dependencies (as,...)
                 depend = list(set(mass.depend + width.depend))
@@ -3672,7 +3748,7 @@ class ProcessDefinition(Process):
         my_isids = [leg.get('ids') for leg in self.get('legs') \
               if not leg.get('state')]
         my_fsids = [leg.get('ids') for leg in self.get('legs') \
-             if leg.get('state')]
+             if leg.get('state')]            
         for i, is_id in enumerate(initial_state_ids):
             assert is_id in my_isids[i]
         for i, fs_id in enumerate(final_state_ids):

@@ -33,7 +33,7 @@ import madgraph.iolibs.files as files
 
 import tests.unit_tests as unittest
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
-
+_model = None
 
 def define_model():
     global _model
@@ -60,7 +60,8 @@ class TestFeynmanLine(unittest.TestCase):
 
     def setUp(self):
         """ basic building of the class to test """
-
+        if not _model:
+            define_model()
         self.my_line = drawing.FeynmanLine({'id':11})
         myleglist = base_objects.LegList([base_objects.Leg({'id':3,
                                       'number':5,
@@ -792,7 +793,8 @@ class TestFeynmanDiagram(unittest.TestCase):
         
         if not hasattr(self, 'store_diagram'):
             self.class_init()
-        
+        if not _model:
+            define_model()
             
             
         opt = drawing.DrawOption({'external':1, 'horizontal':1, 'max_size':0})

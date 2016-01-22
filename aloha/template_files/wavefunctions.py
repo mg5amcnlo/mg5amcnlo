@@ -207,11 +207,19 @@ def vxxxxx(p,vmass,nhel,nsv):
 
 def sign(x,y):
     """Fortran's sign transfer function"""
-    if (y < 0.):
-        return -abs(x) 
-    else:
-        return abs(x) 
-    
+    try:
+        cmp = (y < 0.)
+    except TypeError:
+        # y should be complex
+        if abs(y.imag) < 1e-6 * abs(y.real):
+            y = y.real
+        else:
+            raise
+    finally:
+        if (y < 0.):
+            return -abs(x) 
+        else:
+            return abs(x) 
 
 def sxxxxx(p,nss):
     """initialize a scalar wavefunction"""
@@ -316,7 +324,7 @@ def txxxxx(p, tmass, nhel, nst):
     elif nhel == 1:
         for j in range(4):
             for i in range(4): 
-                 ft[(i,j)] = sqh*( ep[i]*e0[j] + e0[i]*ep[j] )
+                ft[(i,j)] = sqh*( ep[i]*e0[j] + e0[i]*ep[j] )
     elif nhel == 0:
         for j in range(4):
             for i in range(4):       
@@ -324,10 +332,10 @@ def txxxxx(p, tmass, nhel, nst):
     elif nhel == -1:
         for j in range(4):
             for i in range(4): 
-            	ft[(i,j)] = sqh*( em[i]*e0[j] + e0[i]*em[j] )
+                ft[(i,j)] = sqh*( em[i]*e0[j] + e0[i]*em[j] )
 
     else:
-    	raise Exception, 'invalid helicity TXXXXXX' 
+        raise Exception, 'invalid helicity TXXXXXX' 
 
 
 

@@ -66,11 +66,14 @@
 # WARNING: PYTHIA6PT works only for processes without FSR!!!!          *
 #***********************************************************************
   %(parton_shower)s   = parton_shower
+  %(shower_scale_factor)s       = shower_scale_factor ! multiply default shower starting
+                                  ! scale by this factor
 #***********************************************************************
 # Renormalization and factorization scales                             *
 # (Default functional form for the non-fixed scales is the sum of      *
-# the transverse masses of all final state particles and partons. This *
-# can be changed in SubProcesses/set_scales.f)                         *
+# the transverse masses divided by two of all final state particles    * 
+# and partons. This can be changed in SubProcesses/set_scales.f or via *
+# dynamical_scale_choice options)                                      *
 #***********************************************************************
  %(fixed_ren_scale)s        = fixed_ren_scale  ! if .true. use fixed ren scale
  %(fixed_fac_scale)s        = fixed_fac_scale  ! if .true. use fixed fac scale

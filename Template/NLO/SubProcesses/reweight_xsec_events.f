@@ -648,7 +648,7 @@ c add the weights to the array
      &              /mu2_q)+wgt(3,i)*log(mu2_f(kf)/mu2_q))*g(kr)
      &              **QCDpower(i)
                wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)))
+     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)))
             enddo
          enddo
       enddo
@@ -695,7 +695,8 @@ c call the PDFs
 c add the weights to the array
             wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
      &           wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
-            wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(sqrt(mu2_r))
+            wgts(iwgt,i)=wgts(iwgt,i)
+     &           *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
          enddo
       enddo
       call InitPDF(izero)

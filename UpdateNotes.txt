@@ -1,6 +1,31 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.2(xx/xx/xx)   
+2.3.4(XX/XX/XX)
+        RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
+
+2.3.3(25/10/15)
+        OM: Allow new syntax for the param_card: instead of an entry you can enter "scan:[val1, val2,...]"
+            To perform a scan on this parameter.
+        OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
+	RF: Rewriting of job-control for NLO processes. Better accuracy estimates for FO processes
+	RF: Fix for factorisation scale setting in FxFx merging when very large difference in scale in the
+ 	    non-QCD part of a process. 
+	RF: Better discarding of numerical instabilities in the real-emission matrix elements. Only of interested for
+	    processes which have jets at Born level, but do not require generation cut (like t-channel single-top). 
+	RF: Added an option to the run_card to allow for easier variation of the shower starting scale (NLO only).
+	RF: Fixed a problem in the setting of the flavour map used for runs with iAPPL >= 1. 
+	RF: Allow for decay processes to compute (partial) decay widths at NLO accuracy (fixed order only).
+        OM: (SysCalc interface) Allow to bypass the pdf reweighting/alpsfact reweighting
+        MZ: fixed bug related to slurm clusters
+	OM: remove the addmasses.py script of running by default on gridpack mode. 
+            if you want to have it running, you just have to rename the file madevent/bin/internal/addmasses_optional.py to
+ 	    madevent/bin/internal/addmasses_optional.py and it will work as before. (Do not work with SysCalc tag)
+        OM: make the code compatible with "python -tt" option
+
+2.3.2.2 (06/09/15)
+        VH: Finalized the MG5aMC-GoSam interface
+
+2.3.2(20/08/15)   
         OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)
             New Capabilities: 
              - allow to reweight by loop-induced processes
@@ -30,6 +55,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             and Gaussian approaches for MSTW/CTEQ and NNPDF, respectively.
         OM: Fixed a small bug in EWdim6 which was removing a coupling in AZHH interaction.
         OM: improve customize_model function to avoid problem with unity coupling.
+	RF: Improved the treatment of the bottom Yukawa. Thanks Marius Wiesemann. 
 
 2.3.1  
      OM+VH: Automation of event generation for loop-induced processes.
@@ -102,15 +128,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 		    leading to NAN.
                 RF: For fNLO runs the virtuals were included twice in the setting of the integration grids. 
                     This was not leading to any bias in previous version of the code.
-
-2.2.3(XX/XX/XX) RF: If a NAN is found, the code now skips that PS point and continues.
-                OM: Fix a bug in MadWeight (correlated param_card was not creating the correct input file)
-                RF: For fNLO runs the virtuals were included twice in the setting of the integration grids. 
-		RF: When requiring more than 1M events for (N)LO+PS runs, do not go to higher precision than 0.001
-                    for the grids and cross section (can be overwritten with the req_acc run_card parameter).
-		RF: Make sure that reweight info (for PDF and scale uncertainties) also works for UNLOPS events.
-
-
 
 2.2.2(06/11/14) OM: Correct a bug in the integration grid (introduces in 2.1.2). This was biasing the cross-section of 
                     processes like a a > mu+ mu- in the Effective Photon Approximation by three order of magnitude.
