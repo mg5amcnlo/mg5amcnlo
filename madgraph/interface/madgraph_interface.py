@@ -5104,7 +5104,11 @@ This implies that with decay chains:
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
                     defined_multiparticles.remove(container)
-
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' ' .join([`i` for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
                 
         
         if defined_multiparticles:

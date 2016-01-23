@@ -938,6 +938,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """
         if '~/' in line and os.environ.has_key('HOME'):
             line = line.replace('~/', '%s/' % os.environ['HOME'])
+        if '#' in line:
+            line = line.split('#')[0]
+             
         line = os.path.expandvars(line)
         cmd, arg, line = self.parseline(line)
         if not line:

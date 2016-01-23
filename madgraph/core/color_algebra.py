@@ -382,7 +382,6 @@ class Epsilon(ColorObject):
         if list(self[:]) != order_list:
             col_str1 = ColorString([Epsilon(*order_list)])
             col_str1.coeff = self.perm_parity(self[:], order_list)
-            misc.sprint(self,col_str1)
             return ColorFactor([col_str1])
 
     def pair_simplify(self, col_obj):
@@ -451,6 +450,17 @@ class EpsilonBar(ColorObject):
 
             return ColorFactor([ColorString([new_self])])
 
+    def simplify(self):
+        """Implement epsilon(i,k,j) = -epsilon(i,j,k) i<j<k"""
+        
+        # epsilon(i,k,j) = -epsilon(i,j,k) i<j<k
+        order_list = list(self[:])
+        order_list.sort()
+        
+        if list(self[:]) != order_list:
+            col_str1 = ColorString([EpsilonBar(*order_list)])
+            col_str1.coeff = Epsilon.perm_parity(self[:], order_list)
+            return ColorFactor([col_str1])
 
     def complex_conjugate(self):
         """Complex conjugation. Overwritten here because complex conjugation
