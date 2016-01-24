@@ -29,6 +29,7 @@ C
 C     
 C     CONSTANTS 
 C     
+      INCLUDE 'polynomial_specs.inc'
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       LOGICAL CHECKPCONSERVATION
@@ -110,8 +111,6 @@ C
 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=26)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=35)
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
 
@@ -670,7 +669,8 @@ C           massless onshellness. (here we pick the energy component)
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_0(ML_COEFS,GOLEM_COEFS)
       USE PRECISION_GOLEM, ONLY: KI
       INCLUDE 'coef_specs.inc'
-      COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
+      INCLUDE 'polynomial_specs.inc'
+      COMPLEX*16 ML_COEFS(0:LOOPMAXCOEFS-1)
       COMPLEX(KI) GOLEM_COEFS
       GOLEM_COEFS=ML_COEFS(0)
       END
@@ -678,7 +678,8 @@ C           massless onshellness. (here we pick the energy component)
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_1(ML_COEFS,GOLEM_COEFS)
       USE TENS_REC, ONLY: COEFF_TYPE_1
       INCLUDE 'coef_specs.inc'
-      COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
+      INCLUDE 'polynomial_specs.inc'
+      COMPLEX*16 ML_COEFS(0:LOOPMAXCOEFS-1)
       TYPE(COEFF_TYPE_1) GOLEM_COEFS
 C     Constant coefficient 
       GOLEM_COEFS%%C0=ML_COEFS(0)
@@ -695,7 +696,8 @@ C     Coefficient q(3)
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_2(ML_COEFS,GOLEM_COEFS)
       USE TENS_REC, ONLY: COEFF_TYPE_2
       INCLUDE 'coef_specs.inc'
-      COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
+      INCLUDE 'polynomial_specs.inc'
+      COMPLEX*16 ML_COEFS(0:LOOPMAXCOEFS-1)
       TYPE(COEFF_TYPE_2) GOLEM_COEFS
 C     Constant coefficient 
       GOLEM_COEFS%%C0=ML_COEFS(0)
@@ -732,7 +734,8 @@ C     Coefficient q(2)*q(3)
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_3(ML_COEFS,GOLEM_COEFS)
       USE TENS_REC, ONLY: COEFF_TYPE_3
       INCLUDE 'coef_specs.inc'
-      COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
+      INCLUDE 'polynomial_specs.inc'
+      COMPLEX*16 ML_COEFS(0:LOOPMAXCOEFS-1)
       TYPE(COEFF_TYPE_3) GOLEM_COEFS
 C     Constant coefficient 
       GOLEM_COEFS%%C0=ML_COEFS(0)
@@ -809,7 +812,8 @@ C     Coefficient q(1)*q(2)*q(3)
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_4(ML_COEFS,GOLEM_COEFS)
       USE TENS_REC, ONLY: COEFF_TYPE_4
       INCLUDE 'coef_specs.inc'
-      COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
+      INCLUDE 'polynomial_specs.inc'
+      COMPLEX*16 ML_COEFS(0:LOOPMAXCOEFS-1)
       TYPE(COEFF_TYPE_4) GOLEM_COEFS
 C     Dummy routine for ML5_0_FILL_GOLEM_COEFS_4
       STOP 'ERROR: 4 > 3'
@@ -818,7 +822,8 @@ C     Dummy routine for ML5_0_FILL_GOLEM_COEFS_4
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_5(ML_COEFS,GOLEM_COEFS)
       USE TENS_REC, ONLY: COEFF_TYPE_5
       INCLUDE 'coef_specs.inc'
-      COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
+      INCLUDE 'polynomial_specs.inc'
+      COMPLEX*16 ML_COEFS(0:LOOPMAXCOEFS-1)
       TYPE(COEFF_TYPE_5) GOLEM_COEFS
 C     Dummy routine for ML5_0_FILL_GOLEM_COEFS_5
       STOP 'ERROR: 5 > 3'
@@ -827,7 +832,8 @@ C     Dummy routine for ML5_0_FILL_GOLEM_COEFS_5
       SUBROUTINE ML5_0_FILL_GOLEM_COEFFS_6(ML_COEFS,GOLEM_COEFS)
       USE TENS_REC, ONLY: COEFF_TYPE_6
       INCLUDE 'coef_specs.inc'
-      COMPLEX*16 ML_COEFS(0:LOOP_MAXCOEFS-1)
+      INCLUDE 'polynomial_specs.inc'
+      COMPLEX*16 ML_COEFS(0:LOOPMAXCOEFS-1)
       TYPE(COEFF_TYPE_6) GOLEM_COEFS
 C     Dummy routine for ML5_0_FILL_GOLEM_COEFS_6
       STOP 'ERROR: 6 > 3'

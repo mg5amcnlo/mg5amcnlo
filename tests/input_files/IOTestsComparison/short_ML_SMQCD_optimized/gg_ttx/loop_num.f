@@ -5,10 +5,9 @@ C      CALLS BUILDING THE LOOP
 C     
 C     CONSTANTS 
 C     
+      INCLUDE 'polynomial_specs.inc'
       INTEGER    NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=26)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=35)
 C     These are constants related to the split orders
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=0)
@@ -36,6 +35,7 @@ C
 C     MODULE
 C     
       INCLUDE 'cts_mprec.h'
+      INCLUDE 'polynomial_specs.inc'
 C     
 C     CONSTANTS 
 C     
@@ -43,8 +43,6 @@ C
       PARAMETER (NLOOPGROUPS=26)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=35)
 C     These are constants related to the split orders
       INTEGER    NSQUAREDSO
       PARAMETER (NSQUAREDSO=0)
