@@ -264,8 +264,6 @@ C MZ uncomment and change these lines if we'll decide to
 C use also the amp from the counterterms for the multichannelling
 C      double precision amp2(maxamps), jamp2(0:maxamps,nampso)
 C      common/to_amps/  amp2,       jamp2
-      double complex saveamp(ngraphs,max_bhel)
-      common/to_saveamp/saveamp
       double precision hel_fac
       integer get_hel,skip
       common/cBorn_CNT%(proc_prefix)s/hel_fac,get_hel,skip
@@ -303,27 +301,8 @@ C don't chache for extra counterterms
         if (nhel(glu_ij).ne.0) nhel(glu_ij) = ihel
         if (.not. calculatedBorn) then
 %(helas_calls)s
-        do i=1,ngraphs
-          if(ihel.eq.-1)then
-            saveamp(i,hell)=amp(i)
-          elseif(ihel.eq.1)then
-            saveamp(i,hell+skip)=amp(i)
-          else
-            write(*,*) "ERROR #1 in born_cnt_%(proc_prefix)s.f"
-            stop
-          endif
-        enddo
         elseif (calculatedBorn) then
-        do i=1,ngraphs
-          if(ihel.eq.-1)then
-            amp(i)=saveamp(i,hell)
-          elseif(ihel.eq.1)then
-            amp(i)=saveamp(i,hell+skip)
-          else
-            write(*,*) "ERROR #1 in born_cnt_%(proc_prefix)s.f"
-            stop
-          endif
-        enddo
+        write(*,*) 'ERROR: EXTRA CNT should be called with calculated_born=false'
         endif
 %(jamp_lines)s
 	DO M = 1, NAMPSO
