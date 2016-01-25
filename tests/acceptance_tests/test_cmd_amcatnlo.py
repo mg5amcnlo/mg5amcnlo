@@ -880,7 +880,7 @@ class MECmdShell(IOTests.IOTestManager):
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
         try:
-            self.assertAlmostEqual(6754.0, cross_section,delta=50)
+            self.assertAlmostEqual(6700.0, cross_section,delta=50)
         except TypeError:
             self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
