@@ -2246,7 +2246,8 @@ c iproc_picked:
                n_ctr_str(n_ctr_found) =
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(procid))
-               write (str_temp,'(i2,6(1x,d14.8),7(1x,i2),1x,d18.12)')
+
+               write (str_temp,'(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
@@ -2286,7 +2287,8 @@ c H-event
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(procid))
-            write (str_temp,'(i2,6(1x,d14.8),7(1x,i2),1x,d18.12)')
+
+            write (str_temp,'(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
@@ -2301,6 +2303,8 @@ c H-event
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(str_temp))
+
+
          endif
          if (n_ctr_found.ge.max_n_ctr) then
             write (*,*) 'ERROR: too many contributions in <rwgt>'
