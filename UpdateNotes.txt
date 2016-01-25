@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.4.0 (XX/XX/XX)
+        OM: Allowing the proper NLO reweighting for NLO sample
+        OM: Allow to keep the reweight information in the final lhe file for future computation 
+
 2.3.4(XX/XX/XX)
         RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
 
