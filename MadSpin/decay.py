@@ -3687,6 +3687,45 @@ class decay_all_events(object):
                             d1colup1=maxcol
                             d2colup2=maxcol
                             d2colup1=0
+                        elif colord1==-3 and colord2==-3 and colormother == 3:
+                            maxcol+=2
+                            d1colup1=0
+                            d1colup2=maxcol
+                            d2colup1=0
+                            d2colup2=maxcol-1
+                        elif (colord1==-3 and colord2==3 and colormother == 3) or\
+                             (colord1==-3 and colord2==3 and colormother == -3):
+                            maxcol+=2
+                            d1colup1 = 0
+                            d1colup2 = maxcol
+                            d2colup1 = maxcol-1
+                            d2colup2 = 0
+                        elif (colord1==3 and colord2==-3 and colormother == 3) or\
+                            (colord1==3 and colord2==-3 and colormother == -3):
+                            maxcol+=2
+                            d1colup1=maxcol
+                            d1colup2=0
+                            d2colup1=0
+                            d2colup2=maxcol-1
+                        elif colord1==3 and colord2==3 and colormother == -3:
+                            maxcol+=2
+                            d1colup1=maxcol
+                            d1colup2=0
+                            d2colup1=maxcol-1
+                            d2colup2=0    
+                        elif colord2==8 and colord1==8 and colormother ==8:
+                            maxcol+=1
+                            ran = random.random()
+                            if ran> 0.5:
+                                d1colup2=colup2
+                                d1colup1=maxcol
+                                d2colup2=maxcol
+                                d2colup1=colup1
+                            else:                            
+                                d1colup2=maxcol
+                                d1colup1=colup1
+                                d2colup2=colup2
+                                d2colup1=maxcol                        
                         else:
                             raise Exception, 'color combination not treated by MadSpin (yet). (%s,%s,%s)' \
                                 % (colord1,colord2,colormother)
