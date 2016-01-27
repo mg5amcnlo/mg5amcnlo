@@ -14,10 +14,11 @@ ifeq ($(origin F2PY), undefined)
    F2PY=f2py
 endif
 
-ifeq ($(origin LDFLAGS), undefined)
-   LDFLAGS=-lc++ -mmacosx-version-min=10.7
+ifeq ($(UNAME), Darwin)
+   ifeq ($(origin LDFLAGS), undefined)
+      LDFLAGS=-lc++ -mmacosx-version-min=10.7
+   endif
 endif
-
 
 # Options: dynamic, lhapdf
 

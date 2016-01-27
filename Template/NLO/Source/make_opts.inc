@@ -34,10 +34,11 @@ ifeq ($(origin CXX),default)
   CXX=g++
 endif
 
-ifeq ($(origin LDFLAGS), undefined)
-   LDFLAGS=-lc++
+ifeq ($(UNAME), Darwin)
+   ifeq ($(origin LDFLAGS), undefined)
+      LDFLAGS=-lc++
+   endif
 endif
-
 # Options: dynamic, lhapdf
 
 UNAME := $(shell uname)
