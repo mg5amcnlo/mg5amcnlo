@@ -2947,6 +2947,7 @@ RESTART = %(mint_mode)s
         if shower == 'HERWIGPP':
             try:
                 files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
+					 files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
