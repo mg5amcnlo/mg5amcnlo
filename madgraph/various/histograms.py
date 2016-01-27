@@ -1022,8 +1022,8 @@ class HwU(Histogram):
                             pdf_up   = cntrl_val + math.sqrt(pdf_up)
                             pdf_down = cntrl_val - math.sqrt(pdf_down)
                         else:
-                            pdf_up   = bin.wgts[pdfs[0]]
-                            pdf_down = bin.wgts[pdfs[0]]
+                            pdf_up   = max(pdfs)
+                            pdf_down = min(pdfs)
                     else:
                         # use Gaussian method (NNPDF)
                         pdf_stdev = 0.0
@@ -1527,18 +1527,18 @@ class HwUList(histograms_PhysicsObjectList):
                          'Not all defined weights were found in the XML source.\n'+\
                          '%d found / %d expected.'%(len(bin_weights),len(weight_label_list)-2)
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
-                    
-                    if bin_weights['central']!=0.0:
-                        print '---------'
-                        print 'multiplicity =',multiplicity
-                        print 'central =', bin_weights['central']
-                        print 'PDF     = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,int)]
-                        print 'PDF min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,int)),max(bin_weights[key] for key in bin_weights if isinstance(key,int))
-                        print 'scale   = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,tuple)]
-                        print 'scale min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,tuple)),max(bin_weights[key] for key in bin_weights if isinstance(key,tuple))
-                        print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,float)] 
-                        print 'merging min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,float)),max(bin_weights[key] for key in bin_weights if isinstance(key,float))
-                        print '---------'
+
+#VAL#                     if bin_weights['central']!=0.0:
+#                         print '---------'
+#                         print 'multiplicity =',multiplicity
+#                         print 'central =', bin_weights['central']
+#                         print 'PDF     = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,int)]
+#                         print 'PDF min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,int)),max(bin_weights[key] for key in bin_weights if isinstance(key,int))
+#                         print 'scale   = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,tuple)]
+#                         print 'scale min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,tuple)),max(bin_weights[key] for key in bin_weights if isinstance(key,tuple))
+#                         print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,float)] 
+#                         print 'merging min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,float)),max(bin_weights[key] for key in bin_weights if isinstance(key,float))
+#                         print '---------'
 
                 # Finally remove auxiliary weights
                 new_histo.trim_auxiliary_weights()
