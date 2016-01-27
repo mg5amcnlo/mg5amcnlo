@@ -186,7 +186,7 @@ class CheckValidForCmd(object):
         if args[0] not in self._set_options + self.options.keys():
             self.help_set()
             raise self.InvalidCmd('Possible options for set are %s' % \
-                                  self._set_options)
+                                  (self._set_options+self.options.keys()))
 
         if args[0] in ['stdout_level']:
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] \
