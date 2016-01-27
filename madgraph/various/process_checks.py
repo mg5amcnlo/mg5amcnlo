@@ -1557,7 +1557,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                              savefile%'_0'),return_dict['Stability'][tool_name])
                     continue
                 else:
-                    logger.info("ERROR: Not reusing a directory and the number"+\
+                    logger.info("ERROR: Not reusing a directory or any pickled"+
+                                " result for tool %s and the number"%tool_name+\
                                              " of point for the check is zero.")
                     return None
 
