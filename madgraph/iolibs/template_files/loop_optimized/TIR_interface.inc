@@ -390,7 +390,7 @@ C
 			INCLUDE 'process_info.inc'
 C Change the list 'LOOPLIBS_QPAVAILABLE' in loop_matrix_standalone.inc to change the list of QPTools availables
             LOGICAL QP_TOOLS_AVAILABLE
-            INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
+            INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
             common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
 C ----------
