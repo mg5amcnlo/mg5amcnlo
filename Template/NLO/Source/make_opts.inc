@@ -34,6 +34,10 @@ ifeq ($(origin CXX),default)
   CXX=g++
 endif
 
+ifeq ($(origin LDFLAGS), undefined)
+   LDFLAGS=-lc++
+endif
+
 # Options: dynamic, lhapdf
 
 UNAME := $(shell uname)
