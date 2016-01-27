@@ -1032,6 +1032,7 @@ class HwU(Histogram):
                         pdf_stdev = math.sqrt(pdf_stdev/float(len(pdfs)-2))
                         pdf_up   = cntrl_val+pdf_stdev
                         pdf_down = cntrl_val-pdf_stdev
+
                     # Finally add them to the corresponding new weight
                     bin.wgts[new_wgt_labels[0]] = pdf_down
                     bin.wgts[new_wgt_labels[1]] = pdf_up
@@ -1050,7 +1051,7 @@ class HwU(Histogram):
         elif n_rebin==1:
             return
         
-        if 'NOREBIN' in self.type.upper():
+        if self.type and 'NOREBIN' in self.type.upper():
             return
 
         rebinning_list = list(range(0,len(self.bins),n_rebin))+[len(self.bins),]
@@ -1295,96 +1296,164 @@ class HwUList(histograms_PhysicsObjectList):
                     "Histogram with run_id '%d' was not found in the "%run_id+\
                                                          "specified XML source."
  
-        # Now retrieve the header
-        all_weights = [wgt.strip() for wgt in 
-                 selected_run_node.getAttribute('header').split(';') if wgt!='']
+        # Now retrieve the header and save all weight labels as dictionaries
+        # with key being properties and their values as value. If the property
+        # does not defined a value, then put None as a value
+        all_weights = []
+        for wgt_position, wgt_label in \
+            enumerate(str(selected_run_node.getAttribute('header')).split(';')):
+             if not re.match('^\s*$',wgt_label) is None:
+                 continue
+             all_weights.append({'POSITION':wgt_position})
+             for wgt_item in wgt_label.strip().split('_'):
+                 property = wgt_item.strip().split('=')
+                 if len(property) == 2:
+                     all_weights[-1][property[0].strip()] = property[1].strip()
+                 elif len(property)==1:
+                     all_weights[-1][property[0].strip()] = None
+                 else:
+                     raise MadGraph5Error, \
+                         "The weight label property %s could not be parsed."%wgt_item
         
+        # Now make sure that for all weights, there is 'PDF', 'MUF' and 'MUR' 
+        # and 'MERGING' defined. If absent we specify '-1' which implies that
+        # the 'default' value was used (whatever it was).
+        # Also cast them in the proper type
+        for wgt_label in all_weights:
+            for mandatory_attribute in ['PDF','MUR','MUF','MERGING']:
+                if mandatory_attribute not in wgt_label:
+                    wgt_label[mandatory_attribute] = '-1'
+                if mandatory_attribute=='PDF':
+                    wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
+                elif mandatory_attribute in ['MUR','MUF','MERGING']:
+                    wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                
 
         # If merging cut is negative, then pick only the one of the central scale
         # If not specified, then take them all but use the PDF and scale weight
         # of the central merging_scale for the variation.
         if merging_scale is None or merging_scale < 0.0:
-            merging_scale_chosen = float(all_weights[2].split(' ')[-1])
+            merging_scale_chosen = all_weights[2]['MERGING']
         else:
             merging_scale_chosen = merging_scale
 
+        # Central weight parameters are enforced to be those of the third weight
+        central_PDF = all_weights[2]['PDF']
+        # Assume central scale is one, unless specified.
+        central_MUR = all_weights[2]['MUR'] if all_weights[2]['MUR']!=-1.0 else 1.0
+        central_MUF = all_weights[2]['MUF'] if all_weights[2]['MUF']!=-1.0 else 1.0
+        
         # Dictionary of selected weights with their position as key and the
         # list of weight labels they correspond to.
         selected_weights = {}
         # Treat the first four weights in a special way:
-        if all_weights[0].split(' ')[0] != 'xmin' or \
-           all_weights[1].split(' ')[0] != 'xmax' or \
-           all_weights[2].split(' ')[0] != 'sigma_central' or \
-           all_weights[3].split(' ')[0] != 'error_central':
+        if 'xmin' not in all_weights[0] or \
+           'xmax' not in all_weights[1] or \
+           'Weight' not in all_weights[2] or \
+           'WeightError' not in all_weights[3]:
             raise MadGraph5Error, 'The first weight entries in the XML HwU '+\
-              ' source are not the standard expected ones  (xmin, xmax, sigma_central, error_central)'
+              ' source are not the standard expected ones  (xmin, xmax, sigmaCentral, errorCentral)'
         selected_weights[0] = ['xmin']
         selected_weights[1] = ['xmax']
+        
         # The central value is not necessarily the 3rd one if a different merging
         # cut was selected.
-        if float(all_weights[2].split(' ')[-1]) != merging_scale_chosen:
+        if float(all_weights[2]['MERGING']) == merging_scale_chosen:
+            selected_weights[2]=['central value']
+        else:
             for weight_position, weight in enumerate(all_weights):
                 wgt_label_elements = weight.split(' ')
                 scale_weight = HwU.weight_label_scale.match(' '.join(
                                                        wgt_label_elements[:-2]))
-                # Check if that weight corresponds to a central weight
-                if wgt_label_elements[0]=='sigma_central' or \
-                   (scale_weight and \
-                   float(scale_weight.group('mur_fact'))==1.0 and \
-                   float(scale_weight.group('muf_fact'))==1.0):
-                    # Check if the merging scale matches
+                # Check if that weight corresponds to a central weight 
+                # (conventional label for central weight is 'Weight'
+                if ('Weight' in weight) or \
+                   (weight['PDF']==central_PDF and weight['MUR'] in [central_MUR, -1.0] \
+                    and weight['MUF'] in [central_MUF, -1.0]): 
+                    # Check if the merging scale matches this time
                     if float(wgt_label_elements[-1])==merging_scale_chosen:
                         selected_weights[weight_position] = ['central value']
                         break
             # Make sure a central value was found, throw a warning if found
-            if ['central_value'] not in sum(selected_weights.values(),[]):
-                central_merging_scale = float(all_weights[2].split(' ')[-1])
+            if ['central value'] not in sum(selected_weights.values(),[]):
+                central_merging_scale = all_weights[2]['MERGING']
                 logger.warning('Could not find the central weight for the'+\
                 ' chosen merging scale (%f).\n'%merging_scale_chosen+\
                 'MG5aMC will chose the original central scale provided which '+\
                 'correspond to a merging scale of %s'%("'inclusive'" if 
-                   central_merging_scale == 0.0 else '%f'%central_merging_scale))
+                   central_merging_scale in [0.0,-1.0] else '%f'%central_merging_scale))
                 selected_weights[2]=['central value']
-        else:
-            selected_weights[2]=['central value']
+
+        # The error is always the third entry for now.
         selected_weights[3]=['dy']
-        
+
+# ===========        
+        def format_weight_label(weight):
+            """ Print the weight attributes in a nice order."""
+            
+            all_properties = weight.keys()
+            all_properties.pop(all_properties.index('POSITION'))
+            ordered_properties = []
+            # First add the attributes without value
+            for property in all_properties:
+                if weight[property] is None:
+                    ordered_properties.append(property)
+            
+            ordered_properties.sort()
+            all_properties = [property for property in all_properties if 
+                                                   not weight[property] is None]
+            
+            # then add PDF, MUR, MUF and MERGING if present
+            for property in ['PDF','MUR','MUF','MERGING']:
+                all_properties.pop(all_properties.index(property))
+                if weight[property]!=-1:
+                    ordered_properties.append(property)
+
+            ordered_properties.extend(sorted(all_properties))
+            
+            return '_'.join('%s%s'\
+                    %(key,'' if weight[key] is None else '=%s'%str(weight[key])) for 
+                                                      key in ordered_properties)
+# ===========
+
         # Now process all other weights  
         for weight_position, weight in enumerate(all_weights[4:]):
-            wgt = weight.split(' ')
             # Apply special transformation for the weight label:
             # scale variation are stored as tuple and PDF ones as integer
-            scale_wgt = HwU.weight_label_scale.match(' '.join(wgt[:-2]))
-            PDF_wgt   = HwU.weight_label_PDF_XML.match(' '.join(wgt[:-2]))            
-            if scale_wgt:
-                wgt_label =  (float(scale_wgt.group('mur_fact')),
-                                    float(scale_wgt.group('muf_fact')))
-            elif PDF_wgt:
-                wgt_label = int(PDF_wgt.group('PDF_set'))
+            if ('Weight' not in weight) and \
+               (weight['MUR'] not in [central_MUR, -1.0] or \
+                weight['MUF'] not in [central_MUF, -1.0]):
+                wgt_label = (weight['MUR'],weight['MUF'])
+            elif ('Weight' not in weight) and (weight['PDF'] not in [central_PDF,-1]) and \
+                  (weight['MUR'] in [central_MUR, -1.0] or \
+                   weight['MUF'] in [central_MUF, -1.0]):
+                wgt_label = weight['PDF']
             else:
-                wgt_label = ' '.join(wgt[:-2])
-                # Enforce string type, and not unicode
-                wgt_label = str(wgt_label)
-            
+                wgt_label = format_weight_label(weight)
+
             # Make sure the merging scale matches the chosen one
-            active_merging_scale = float(wgt[-1])
-            if active_merging_scale != merging_scale_chosen:
+            if weight['MERGING'] != merging_scale_chosen:
                 # If a merging_scale was specified, then ignore all other weights
                 if merging_scale:
                     continue
                 # Otherwise consider them also, but for now only if it is for
                 # the central value parameter (central PDF, central mu_R and mu_F)
-                if wgt_label == 'sigma_central' or \
-                                             scale_wgt and wgt_label==(1.0,1.0):
-                    # Chose to store the merging variation weight labels as floats
-                    wgt_label = active_merging_scale
+                if ('Weight' in weight) or (weight['PDF'] in [central_PDF,-1] and \
+                      weight['MUR'] in [central_MUR, -1.0] and
+                      weight['MUF'] in [central_MUF,-1.0]):
+                    # We choose to store the merging variation weight labels as floats
+                    wgt_label = weight['MERGING']
+
+            # Make sure that the weight label does not already exist. If it does,
+            # this means that the source has redundant information and that
+            # there is no need to specify it again.
+            if wgt_label in sum(selected_weights.values(),[]):
+                continue
 
             # Now register the selected weight
             try:
                 selected_weights[weight_position+4].append(wgt_label)
             except KeyError:
-                selected_weights[weight_position+4]=[wgt_label,]                      
-                    
+                selected_weights[weight_position+4]=[wgt_label,]
 
         if merging_scale and merging_scale > 0.0 and \
                                        len(sum(selected_weights.values(),[]))==4:
@@ -1401,6 +1470,17 @@ class HwUList(histograms_PhysicsObjectList):
         
         # Cache the list of selected weights to be defined at each line
         weight_label_list = sum(selected_weights.values(),[])
+        # The weight_label list to set to self.bins 
+        ordered_weight_label_list = ['central','stat_error']
+        for weight_label in weight_label_list:
+            if not isinstance(weight_label, str):
+                ordered_weight_label_list.append(weight_label)
+        for weight_label in weight_label_list:
+            if weight_label in ['central','stat_error','boundary_xmin','boundary_xmax']:
+                continue
+            if isinstance(weight_label, str):
+                ordered_weight_label_list.append(weight_label)
+        
         # We now start scanning all the plots
         for multiplicity_node in \
                         selected_run_node.getElementsByTagName("jethistograms"):
@@ -1419,9 +1499,8 @@ class HwUList(histograms_PhysicsObjectList):
                      continue
                 # Make sure to exclude the boundaries from the weight
                 # specification
-                new_histo.bins = BinList(weight_labels = [ wgt_label for
-                    wgt_label in weight_label_list if wgt_label not in
-                                             ['boundary_xmin','boundary_xmax']])
+                # Order the weights so that the unreckognized ones go last
+                new_histo.bins = BinList(weight_labels = ordered_weight_label_list)
                 hist_data = str(histogram.childNodes[0].data)
                 for line in hist_data.split('\n'):
                     if line.strip()=='':
@@ -1445,8 +1524,21 @@ class HwUList(histograms_PhysicsObjectList):
                     # For this check, we subtract two because of the bin boundaries                
                     if len(bin_weights)!=len(weight_label_list)-2:
                         raise MadGraph5Error, \
-                         'Not all defined weights were found in the XML source.'
+                         'Not all defined weights were found in the XML source.\n'+\
+                         '%d found / %d expected.'%(len(bin_weights),len(weight_label_list)-2)
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
+                    
+                    if bin_weights['central']!=0.0:
+                        print '---------'
+                        print 'multiplicity =',multiplicity
+                        print 'central =', bin_weights['central']
+                        print 'PDF     = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,int)]
+                        print 'PDF min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,int)),max(bin_weights[key] for key in bin_weights if isinstance(key,int))
+                        print 'scale   = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,tuple)]
+                        print 'scale min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,tuple)),max(bin_weights[key] for key in bin_weights if isinstance(key,tuple))
+                        print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,float)] 
+                        print 'merging min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,float)),max(bin_weights[key] for key in bin_weights if isinstance(key,float))
+                        print '---------'
 
                 # Finally remove auxiliary weights
                 new_histo.trim_auxiliary_weights()
@@ -2376,7 +2468,7 @@ if __name__ == "__main__":
         new_histo_list = HwUList(filename, accepted_types_order=accepted_types, 
                                                                   **file_options)
         for histo in new_histo_list:
-            if no_suffix:
+            if no_suffix or n_files==1:
                 continue
             if not histo.type is None:
                 histo.type += '|'
