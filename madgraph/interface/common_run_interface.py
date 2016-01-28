@@ -2058,6 +2058,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.deal_multiple_categories(completion)
         
 
+    def update_make_opts(self):
+        """update the make_opts file writing the environmental variables
+        stored in make_opts_var"""
+        make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
+        tag = '#end_of_make_opts_variables\n'
+        content = open(make_opts).read()
+
+        # if this is not the first time that the file is updated, there
+        # should be a line #end_of_make_opts_variables
+        if tag in content:
+            content = content.split(tag)[1]
+
+        variables = '\n'.join('%s=%s' % (k,v) for k, v in self.make_opts_var.items())
+        variables += '\n%s' % tag
+
+        open(make_opts, 'w').write(variables + content)
+        return
+
+
+
 # lhapdf-related functions
     def link_lhapdf(self, libdir, extra_dirs = []):
         """links lhapdf into libdir"""
@@ -2084,8 +2104,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
-        os.environ['lhapdf_config'] = self.options['lhapdf']
+        self.make_opts_var['lhapdf'] = self.options['lhapdf']
+        self.make_opts_var['lhapdfversion'] = lhapdf_version[0]
+        self.make_opts_var['lhapdf_config'] = self.options['lhapdf']
 
 
     def get_characteristics(self, path=None):
