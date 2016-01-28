@@ -3814,6 +3814,9 @@ Beware that this can be dangerous for local multicore runs.""")
 
         # Basic check
         assert os.path.exists(pjoin(self.me_dir,'SubProcesses'))
+
+        # environmental variables to be included in make_opts
+        self.make_opts_var = {}
         
         #see when the last file was modified
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
@@ -3845,15 +3848,13 @@ Beware that this can be dangerous for local multicore runs.""")
         # lhapdf
         misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
         
-        # set environment variable for lhapdf.
+        # set  lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
-            os.environ['lhapdf'] = 'True'
+            self.make_opts_var['lhapdf'] = 'True'
             self.link_lhapdf(pjoin(self.me_dir,'lib'))
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
-        elif 'lhapdf' in os.environ.keys():
-            del os.environ['lhapdf']
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
             
@@ -3876,6 +3877,9 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_CKKW_matching()
+
+        # add the make_opts_var to make_opts
+        self.update_make_opts()
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
