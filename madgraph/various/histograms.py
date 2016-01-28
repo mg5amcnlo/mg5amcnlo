@@ -277,11 +277,16 @@ class BinList(histograms_PhysicsObjectList):
                                  %(str(value),name)+' must be a string, an '+\
                                         'integer, a float or a tuple of float.'
                     if isinstance(label, tuple):
-                        for elem in label:
+                        if len(label)>=1:
+                            if not isinstance(label[0], (float, str)):
+                                    raise MadGraph5Error, "Argument "+\
+                            "'%s' for BinList property '%s'"%(str(value),name)+\
+           ' can be a tuple, but its first element must be a float or string.'
+                        for elem in label[1:]:
                             if not isinstance(elem, float):
                                 raise MadGraph5Error, "Argument "+\
                             "'%s' for BinList property '%s'"%(str(value),name)+\
-                           ' can be a tuple, but it must be filled with floats.'
+           ' can be a tuple, but its elements pas the first one must be floats.'
                                 
    
         super(BinList, self).__setattr__(name, value)    
@@ -641,9 +646,31 @@ class HwU(Histogram):
     weight_label_PDF = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
     weight_label_PDF_XML = re.compile('^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
     weight_label_TMS = re.compile('^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
+    weight_label_alpsfact = re.compile('^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re)
     
     class ParseError(MadGraph5Error):
         """a class for histogram data parsing errors"""
+    
+    @classmethod
+    def get_HwU_wgt_label_type(cls, wgt_label):
+        """ From the format of the weight label given in argument, it returns
+        a string identifying the type of standard weight it is."""
+        if isinstance(wgt_label,str):
+            return 'UNKNOWN_TYPE'
+        if isinstance(wgt_label,tuple):
+            if len(wgt_label)==0:
+                return 'UNKNOWN_TYPE'
+            if isinstance(wgt_label[0],float):
+                return 'murmuf_scales'
+            if isinstance(wgt_label[0],str):
+                return wgt_label[0]
+        if isinstance(wgt_label,float):
+            return 'merging_scale'
+        if isinstance(wgt_label,int):
+            return 'pdfset'
+        # No clue otherwise
+        return 'UNKNOWN_TYPE'
+    
     
     def __init__(self, file_path=None, weight_header=None, **opts):
         """ Read one plot from a file_path or a stream. Notice that this
@@ -696,15 +723,18 @@ class HwU(Histogram):
         for label in self.bins.weight_labels:
             if label in ['central', 'stat_error']:
                 continue
-            if isinstance(label, str):
+            label_type = HwU.get_HwU_wgt_label_type(label)
+            if label_type == 'UNKNOWN_TYPE':
                 others.append(label)
-            elif isinstance(label, tuple):
+            elif label_type == 'murmuf_scales':
                 others.append('muR=%4.2f muF=%4.2f'%(label[0],label[1]))
-            elif isinstance(label, float):
+            elif label_type == 'merging_scale':
                 others.append('TMS=%4.2f'%label)
-            elif isinstance(label, int):
-                others.append('PDF= %d'%label)
-        
+            elif label_type == 'pdfset':
+                others.append('PDF=%d'%label)
+            elif label_type == 'alpsfact':
+                others.append('alpsfact=%d'%label[1])
+
         return res+' & '.join(others)
 
     def get_HwU_source(self, print_header=True):
@@ -794,6 +824,7 @@ class HwU(Histogram):
                     scale_wgt   = HwU.weight_label_scale.match(h)
                     PDF_wgt     = HwU.weight_label_PDF.match(h)
                     Merging_wgt = HwU.weight_label_TMS.match(h)
+                    alpsfact_wgt = HwU.weight_label_alpsfact.match(h)
                     if scale_wgt:
                         header[i] = (float(scale_wgt.group('mur_fact')),
                                      float(scale_wgt.group('muf_fact')))
@@ -801,6 +832,8 @@ class HwU(Histogram):
                         header[i] = int(PDF_wgt.group('PDF_set'))
                     elif Merging_wgt:
                         header[i] = float(Merging_wgt.group('Merging_scale'))
+                    elif alpsfact_wgt:
+                        header[i] = ('alpsfact_wgt',float(Merging_wgt.group('alpsfact_wgt')))                      
 
                 return header
             
@@ -966,23 +999,30 @@ class HwU(Histogram):
             new_wgt_label = 'delta_pdf'
         elif type.upper()=='MERGING':
             new_wgt_label = 'delta_merging'
+        elif type.upper()=='ALPSFACT':
+            new_wgt_label = 'delta_alpsfact'
         else:
             raise MadGraph5Error, ' The function set_uncertainty can'+\
-              " only handle the scales 'mur', 'muf', 'all_scale' or 'pdf'."       
+              " only handle the scales 'mur', 'muf', 'all_scale', 'pdf',"+\
+              "'merging' or 'alpsfact'."       
         
         if type.upper() in ['MUR','MUF','ALL_SCALE']:
             wgts_to_consider = [ label for label in self.bins.weight_labels if \
-                                                      isinstance(label, tuple) ]
+                            HwU.get_HwU_wgt_label_type(label)=='murmuf_scales' ]
             if scale_position > -1:
                 wgts_to_consider = [ lab for lab in wgts_to_consider if \
                     (lab[scale_position]!=1.0 and all(k==1.0 for k in \
                                 lab[:scale_position]+lab[scale_position+1:]) ) ]
         elif type.upper() == 'PDF':
             wgts_to_consider = [ label for label in self.bins.weight_labels if \
-                                                      isinstance(label, int) ]            
+                            HwU.get_HwU_wgt_label_type(label)=='pdfset' ]            
         elif type.upper() == 'MERGING':
             wgts_to_consider = [ label for label in self.bins.weight_labels if \
-                                                      isinstance(label, float) ]
+                            HwU.get_HwU_wgt_label_type(label)=='merging_scale' ]
+        elif type.upper() == 'ALPSFACT':
+            wgts_to_consider = [ label for label in self.bins.weight_labels if \
+                            HwU.get_HwU_wgt_label_type(label)=='alpsfact' ]
+            
         if len(wgts_to_consider)==0:
             # No envelope can be constructed, it is not worth adding the weights
             return None
@@ -1320,12 +1360,12 @@ class HwUList(histograms_PhysicsObjectList):
         # the 'default' value was used (whatever it was).
         # Also cast them in the proper type
         for wgt_label in all_weights:
-            for mandatory_attribute in ['PDF','MUR','MUF','MERGING']:
+            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','alpsfact']:
                 if mandatory_attribute not in wgt_label:
                     wgt_label[mandatory_attribute] = '-1'
                 if mandatory_attribute=='PDF':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
-                elif mandatory_attribute in ['MUR','MUF','MERGING']:
+                elif mandatory_attribute in ['MUR','MUF','MERGING','alpsfact']:
                     wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                
 
         # If merging cut is negative, then pick only the one of the central scale
@@ -1337,10 +1377,11 @@ class HwUList(histograms_PhysicsObjectList):
             merging_scale_chosen = merging_scale
 
         # Central weight parameters are enforced to be those of the third weight
-        central_PDF = all_weights[2]['PDF']
+        central_PDF  = all_weights[2]['PDF']
         # Assume central scale is one, unless specified.
-        central_MUR = all_weights[2]['MUR'] if all_weights[2]['MUR']!=-1.0 else 1.0
-        central_MUF = all_weights[2]['MUF'] if all_weights[2]['MUF']!=-1.0 else 1.0
+        central_MUR   = all_weights[2]['MUR'] if all_weights[2]['MUR']!=-1.0 else 1.0
+        central_MUF   = all_weights[2]['MUF'] if all_weights[2]['MUF']!=-1.0 else 1.0
+        central_alpsfact = all_weights[2]['alpsfact'] if all_weights[2]['alpsfact']!=-1.0 else 1.0
         
         # Dictionary of selected weights with their position as key and the
         # list of weight labels they correspond to.
@@ -1403,7 +1444,7 @@ class HwUList(histograms_PhysicsObjectList):
                                                    not weight[property] is None]
             
             # then add PDF, MUR, MUF and MERGING if present
-            for property in ['PDF','MUR','MUF','MERGING']:
+            for property in ['PDF','MUR','MUF','alpsfact','MERGING']:
                 all_properties.pop(all_properties.index(property))
                 if weight[property]!=-1:
                     ordered_properties.append(property)
@@ -1414,20 +1455,51 @@ class HwUList(histograms_PhysicsObjectList):
                     %(key,'' if weight[key] is None else '=%s'%str(weight[key])) for 
                                                       key in ordered_properties)
 # ===========
+        
+        def get_difference_to_central(weight):
+            """ Return the list of properties which differ from the central weight.
+            This disregards the merging scale value for which any central value
+            can be picked anyway."""
+            
+            differences = []
+            # If the tag 'Weight' is in the weight label, then this is 
+            # automatically considered as the Event weight (central) for which
+            # only the merging scale can be different
+            if 'Weight' in weight:
+                return set([])
+            if weight['MUR'] not in [central_MUR, -1.0] or \
+               weight['MUF'] not in [central_MUF, -1.0]:
+                differences.append('mur_muf_scale')
+            if weight['PDF'] not in [central_PDF,-1]:
+                differences.append('pdf')
+            if weight['alpsfact'] not in [central_alpsfact, -1]:
+                differences.append('alpsfact')
+            return set(differences)            
 
         # Now process all other weights  
         for weight_position, weight in enumerate(all_weights[4:]):
             # Apply special transformation for the weight label:
-            # scale variation are stored as tuple and PDF ones as integer
-            if ('Weight' not in weight) and \
-               (weight['MUR'] not in [central_MUR, -1.0] or \
-                weight['MUF'] not in [central_MUF, -1.0]):
+            # scale variation are stored as:
+            #   tuple          for (mu_r, mu_f) scale variation
+            #   int            for PDF
+            #   float          for merging scale
+            #   ('type',value) for all others (e.g. alpsfact)
+            variations = get_difference_to_central(weight)
+            
+            # We know select the 'diagonal' variations where each parameter
+            # is varied one at a time.
+            
+            # Accept also if both pdf and mur_muf_scale differ because
+            # the PDF used for the Event weight is often unknown but the
+            # mu_r and mu_f variational weight specify it
+            if variations in [set(['mur_muf_scale']),set(['pdf','mur_muf_scale'])]:
                 wgt_label = (weight['MUR'],weight['MUF'])
-            elif ('Weight' not in weight) and (weight['PDF'] not in [central_PDF,-1]) and \
-                  (weight['MUR'] in [central_MUR, -1.0] or \
-                   weight['MUF'] in [central_MUF, -1.0]):
+            if variations == set(['pdf']):
                 wgt_label = weight['PDF']
-            else:
+            if variations == set(['alpsfact']):
+                wgt_label = ('alpsfact',weight['alpsfact'])                
+            if variations == set([]):
+                # Unknown weight (might turn out to be taken as a merging variation weight below)
                 wgt_label = format_weight_label(weight)
 
             # Make sure the merging scale matches the chosen one
@@ -1437,9 +1509,7 @@ class HwUList(histograms_PhysicsObjectList):
                     continue
                 # Otherwise consider them also, but for now only if it is for
                 # the central value parameter (central PDF, central mu_R and mu_F)
-                if ('Weight' in weight) or (weight['PDF'] in [central_PDF,-1] and \
-                      weight['MUR'] in [central_MUR, -1.0] and
-                      weight['MUF'] in [central_MUF,-1.0]):
+                if variations == set([]):
                     # We choose to store the merging variation weight labels as floats
                     wgt_label = weight['MERGING']
 
@@ -1528,7 +1598,7 @@ class HwUList(histograms_PhysicsObjectList):
                          '%d found / %d expected.'%(len(bin_weights),len(weight_label_list)-2)
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
 
-#VAL#                     if bin_weights['central']!=0.0:
+#Val#                    if bin_weights['central']!=0.0:
 #                         print '---------'
 #                         print 'multiplicity =',multiplicity
 #                         print 'central =', bin_weights['central']
@@ -1538,6 +1608,8 @@ class HwUList(histograms_PhysicsObjectList):
 #                         print 'scale min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,tuple)),max(bin_weights[key] for key in bin_weights if isinstance(key,tuple))
 #                         print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,float)] 
 #                         print 'merging min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,float)),max(bin_weights[key] for key in bin_weights if isinstance(key,float))
+#                         print 'alpsfact = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'] 
+#                         print 'alpsfact min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact')
 #                         print '---------'
 
                 # Finally remove auxiliary weights
@@ -1547,7 +1619,8 @@ class HwUList(histograms_PhysicsObjectList):
                 self.append(new_histo)
         
     def output(self, path, format='gnuplot',number_of_ratios = -1, 
-          uncertainties=['scale','pdf','statitistical','merging'],
+          uncertainties=['scale','pdf','statitistical','merging','alpsfact'],
+          use_band = None,
           ratio_correlations=True, arg_string='', 
           jet_samples_to_keep=None):
         """ Ouput this histogram to a file, stream or string if path is kept to
@@ -1618,6 +1691,8 @@ reset
 set lmargin 10
 set rmargin 0
 set terminal postscript portrait enhanced mono dashed lw 1.0 "Helvetica" 9 
+# The pdf terminal offers transparency support, but you will have to adapt things a bit
+#set terminal pdf enhanced font "Helvetica 12" lw 1.0 dashed size 29.7cm, 21cm
 set key font ",9"
 set key samplen "2"
 set output "%s.ps"
@@ -1631,41 +1706,49 @@ set style line  1 lt 1 lc rgb "#009e73" lw 2.5
 set style line 11 lt 2 lc rgb "#009e73" lw 2.5
 set style line 21 lt 4 lc rgb "#009e73" lw 2.5
 set style line 31 lt 6 lc rgb "#009e73" lw 2.5
+set style line 41 lt 8 lc rgb "#009e73" lw 2.5
 
 set style line  2 lt 1 lc rgb "#0072b2" lw 2.5
 set style line 12 lt 2 lc rgb "#0072b2" lw 2.5
 set style line 22 lt 4 lc rgb "#0072b2" lw 2.5
 set style line 32 lt 6 lc rgb "#0072b2" lw 2.5
+set style line 42 lt 8 lc rgb "#0072b2" lw 2.5
 
 set style line  3 lt 1 lc rgb "#d55e00" lw 2.5
 set style line 13 lt 2 lc rgb "#d55e00" lw 2.5
 set style line 23 lt 4 lc rgb "#d55e00" lw 2.5
 set style line 33 lt 6 lc rgb "#d55e00" lw 2.5
+set style line 43 lt 8 lc rgb "#d55e00" lw 2.5
 
 set style line  4 lt 1 lc rgb "#f0e442" lw 2.5
 set style line 14 lt 2 lc rgb "#f0e442" lw 2.5
 set style line 24 lt 4 lc rgb "#f0e442" lw 2.5
 set style line 34 lt 6 lc rgb "#f0e442" lw 2.5
+set style line 44 lt 8 lc rgb "#f0e442" lw 2.5
 
 set style line  5 lt 1 lc rgb "#56b4e9" lw 2.5
 set style line 15 lt 2 lc rgb "#56b4e9" lw 2.5
 set style line 25 lt 4 lc rgb "#56b4e9" lw 2.5
 set style line 35 lt 6 lc rgb "#56b4e9" lw 2.5
+set style line 45 lt 8 lc rgb "#56b4e9" lw 2.5
 
 set style line  6 lt 1 lc rgb "#cc79a7" lw 2.5
 set style line 16 lt 2 lc rgb "#cc79a7" lw 2.5
 set style line 26 lt 4 lc rgb "#cc79a7" lw 2.5
 set style line 36 lt 6 lc rgb "#cc79a7" lw 2.5
+set style line 46 lt 8 lc rgb "#cc79a7" lw 2.5
 
 set style line  7 lt 1 lc rgb "#e69f00" lw 2.5
 set style line 17 lt 2 lc rgb "#e69f00" lw 2.5
 set style line 27 lt 4 lc rgb "#e69f00" lw 2.5
 set style line 37 lt 6 lc rgb "#e69f00" lw 2.5
+set style line 47 lt 8 lc rgb "#e69f00" lw 2.5
 
 set style line  8 lt 1 lc rgb "black" lw 2.5
 set style line 18 lt 2 lc rgb "black" lw 2.5
 set style line 28 lt 4 lc rgb "black" lw 2.5
 set style line 38 lt 6 lc rgb "black" lw 2.5
+set style line 48 lt 7 lc rgb "black" lw 2.5
 
 
 set style line 999 lt 1 lc rgb "gray" lw 2.5
@@ -1695,6 +1778,8 @@ reset
 set lmargin 10
 set rmargin 0
 set terminal postscript portrait enhanced color "Helvetica" 9 
+# The pdf terminal offers transparency support, but you will have to adapt things a bit
+#set terminal pdf enhanced font "Helvetica 12" lw 1.0 dashed size 29.7cm, 21cm
 set key font ",9"
 set key samplen "2"
 set output "%s.ps"
@@ -1707,42 +1792,51 @@ set output "%s.ps"
 set style line  1 lt 1 lc rgb "#009e73" lw 1.3
 set style line 11 lt 2 lc rgb "#009e73" lw 1.3 dt (6,3)
 set style line 21 lt 4 lc rgb "#009e73" lw 1.3 dt (3,2)
-set style line 31 lt 4 lc rgb "#009e73" lw 1.3 dt (2,1)
+set style line 31 lt 6 lc rgb "#009e73" lw 1.3 dt (2,1)
+set style line 41 lt 8 lc rgb "#009e73" lw 1.3 dt (4,3)
 
 set style line  2 lt 1 lc rgb "#0072b2" lw 1.3
 set style line 12 lt 2 lc rgb "#0072b2" lw 1.3 dt (6,3)
 set style line 22 lt 4 lc rgb "#0072b2" lw 1.3 dt (3,2)
-set style line 22 lt 4 lc rgb "#0072b2" lw 1.3 dt (2,1)
+set style line 32 lt 6 lc rgb "#0072b2" lw 1.3 dt (2,1)
+set style line 42 lt 8 lc rgb "#0072b2" lw 1.3 dt (4,3)
+
 
 set style line  3 lt 1 lc rgb "#d55e00" lw 1.3
 set style line 13 lt 2 lc rgb "#d55e00" lw 1.3 dt (6,3)
 set style line 23 lt 4 lc rgb "#d55e00" lw 1.3 dt (3,2)
-set style line 23 lt 4 lc rgb "#d55e00" lw 1.3 dt (2,1)
+set style line 33 lt 6 lc rgb "#d55e00" lw 1.3 dt (2,1)
+set style line 43 lt 8 lc rgb "#d55e00" lw 1.3 dt (4,3)
 
 set style line  4 lt 1 lc rgb "#f0e442" lw 1.3
 set style line 14 lt 2 lc rgb "#f0e442" lw 1.3 dt (6,3)
 set style line 24 lt 4 lc rgb "#f0e442" lw 1.3 dt (3,2)
-set style line 24 lt 4 lc rgb "#f0e442" lw 1.3 dt (2,1)
+set style line 34 lt 6 lc rgb "#f0e442" lw 1.3 dt (2,1)
+set style line 44 lt 8 lc rgb "#f0e442" lw 1.3 dt (4,3)
 
 set style line  5 lt 1 lc rgb "#56b4e9" lw 1.3
 set style line 15 lt 2 lc rgb "#56b4e9" lw 1.3 dt (6,3)
 set style line 25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (3,2)
-set style line 25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (2,1)
+set style line 35 lt 6 lc rgb "#56b4e9" lw 1.3 dt (2,1)
+set style line 45 lt 8 lc rgb "#56b4e9" lw 1.3 dt (4,3)
 
 set style line  6 lt 1 lc rgb "#cc79a7" lw 1.3
 set style line 16 lt 2 lc rgb "#cc79a7" lw 1.3 dt (6,3)
 set style line 26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (3,2)
-set style line 26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (2,1)
+set style line 36 lt 6 lc rgb "#cc79a7" lw 1.3 dt (2,1)
+set style line 46 lt 8 lc rgb "#cc79a7" lw 1.3 dt (4,3)
 
 set style line  7 lt 1 lc rgb "#e69f00" lw 1.3
 set style line 17 lt 2 lc rgb "#e69f00" lw 1.3 dt (6,3)
 set style line 27 lt 4 lc rgb "#e69f00" lw 1.3 dt (3,2)
-set style line 27 lt 4 lc rgb "#e69f00" lw 1.3 dt (2,1)
+set style line 37 lt 6 lc rgb "#e69f00" lw 1.3 dt (2,1)
+set style line 47 lt 8 lc rgb "#e69f00" lw 1.3 dt (4,3)
 
 set style line  8 lt 1 lc rgb "black" lw 1.3
 set style line 18 lt 2 lc rgb "black" lw 1.3 dt (6,3)
 set style line 28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
-set style line 28 lt 4 lc rgb "black" lw 1.3 dt (2,1)
+set style line 38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
+set style line 48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
 
 
 set style line 999 lt 1 lc rgb "gray" lw 1.3
@@ -1780,6 +1874,7 @@ set style data histeps
                     gnuplot_output_list, block_position,output_base_name+'.HwU',
                     number_of_ratios=number_of_ratios, 
                     uncertainties = uncertainties,
+                    use_band = use_band,
                     ratio_correlations = ratio_correlations,
                     jet_samples_to_keep=jet_samples_to_keep)
 
@@ -1800,11 +1895,59 @@ set style data histeps
                                          "now be rendered by invoking gnuplot.")
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
-          number_of_ratios = -1, uncertainties =['scale','pdf','statitistical','merging'],
+          number_of_ratios = -1, 
+          uncertainties = ['scale','pdf','statitistical','merging','alpsfact'],
+          use_band = None,
           ratio_correlations = True, jet_samples_to_keep=None):
         """ This functions output a single group of histograms with either one
         histograms untyped (i.e. type=None) or two of type 'NLO' and 'LO' 
         respectively."""
+        
+        # This bool can be modified later to decide whether to use uncertainty
+        # bands or not
+        # ========
+        def get_uncertainty_lines(HwU_name, block_position, 
+                           var_pos, color_index,title, ratio=False, band=False):
+            """ Return a string line corresponding to the plotting of the
+            uncertainty. Band is to chose wether to display uncertainty with
+            a band or two lines."""
+
+            # This perl substitution regular expression copies each line of the
+            # HwU source and swap the x1 and x2 coordinate of the second copy.
+            # So if input is:
+            #
+            #  blabla
+            #  +0.01e+01 0.3 4 5 6
+            #  +0.03e+01 0.5 7 8 9
+            #  ...
+            # 
+            # The output will be
+            #
+            #  blabla
+            #  +0.01e+01 0.3 4 5 6
+            #  0.3 +0.01e+01 4 5 6
+            #  +0.03e+01 0.5 7 8 9
+            #  0.5 +0.03e+01 7 8 9
+            #  ...
+            #
+            copy_swap_re = r"perl -pe 's/^\s*(?<x1>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)\s*(?<x2>[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?)(?<rest>.*)\n/ $+{x1} $+{x2} $+{rest}\n$+{x2} $+{x1} $+{rest}\n/g'"
+            # Gnuplot escapes the antislash, so we must esacape then once more O_o.
+            # Gnuplot doesn't have raw strings, what a shame...
+            copy_swap_re = copy_swap_re.replace('\\','\\\\')
+            # For the ratio, we must divide by the central value
+            position = '(safe($%d,$3,1.0)-1.0)' if ratio else '%d'
+            if not band:
+                return ["'%s' index %d using (($1+$2)/2):%s ls %d title '%s'"\
+                 %(HwU_name,block_position, position%(var_pos),color_index,title),
+                        "'%s' index %d using (($1+$2)/2):%s ls %d title ''"\
+                 %(HwU_name,block_position, position%(var_pos+1),color_index)]
+            else:
+                return [' "<%s %s" index %d using 1:%s:%s with filledcurve ls %d fs transparent solid 0.2 title \'%s\''%\
+            (copy_swap_re,HwU_name,block_position,
+                       position%var_pos,position%(var_pos+1),color_index,title)]
+        # ========
+                
+        
         layout_geometry = [(0.0, 0.5,  1.0, 0.4 ),
                            (0.0, 0.35, 1.0, 0.15),
                            (0.0, 0.2,  1.0, 0.15)]
@@ -1907,21 +2050,44 @@ set style data histeps
             mu_var_pos  = self[0].set_uncertainty(type='all_scale')
         else:
             mu_var_pos = None
-        
         if 'pdf' in uncertainties: 
             PDF_var_pos = self[0].set_uncertainty(type='PDF')
         else:
             PDF_var_pos = None
-
         if 'merging' in uncertainties: 
             merging_var_pos = self[0].set_uncertainty(type='merging')
         else:
             merging_var_pos = None
+        if 'alpsfact' in uncertainties: 
+            alpsfact_var_pos = self[0].set_uncertainty(type='alpsfact')
+        else:
+            alpsfact_var_pos = None
 
-        no_uncertainties =  (PDF_var_pos is None or 'PDF' not in uncertainties) \
-                     and (mu_var_pos is None or 'scale' not in uncertainties) and \
-                                           'statistical' not in uncertainties and \
-                     (merging_var_pos is None or 'merging' not in uncertainties)
+        uncertainties_present =  list(uncertainties)
+        if PDF_var_pos is None:
+            uncertainties_present.remove('pdf')
+        if mu_var_pos is None:
+            uncertainties_present.remove('scale')
+        if merging_var_pos is None:
+            uncertainties_present.remove('merging')
+        if alpsfact_var_pos is None:
+            uncertainties_present.remove('alpsfact')
+        no_uncertainties = len(uncertainties_present)==0
+        
+        # If the 'use_band' option is None we should adopt a default which is
+        try:
+            uncertainties_present.remove('statistical')
+        except:
+            pass
+        if use_band is None:
+            # For clarity, it is better to only use bands only for one source
+            # of uncertainty
+            if len(uncertainties_present)==1:
+                use_band = uncertainties_present
+            elif 'scale' in uncertainties_present:
+                use_band = ['scale']
+            else:
+                use_band = [uncertainties_present[0]]
 
         for histo in self[1:]:
             if (not mu_var_pos is None) and \
@@ -1939,6 +2105,12 @@ set style data histeps
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' merging uncertainties. It is required to be able to output them'+\
                  ' together.'
+            if (not alpsfact_var_pos is None) and\
+                            alpsfact_var_pos != histo.set_uncertainty(type='alpsfact'):
+               raise MadGraph5Error, 'Not all histograms in this group specify'+\
+                 ' alpsfact uncertainties. It is required to be able to output them'+\
+                 ' together.'
+
 
         # Now output the corresponding HwU histogram data
         for i, histo in enumerate(self):
@@ -1997,6 +2169,9 @@ plot \\"""
         if not merging_var_pos is None:
             wgts_to_consider.append(self[0].bins.weight_labels[merging_var_pos])
             wgts_to_consider.append(self[0].bins.weight_labels[merging_var_pos+1])
+        if not alpsfact_var_pos is None:
+            wgts_to_consider.append(self[0].bins.weight_labels[alpsfact_var_pos])
+            wgts_to_consider.append(self[0].bins.weight_labels[alpsfact_var_pos+1])
 
         (xmin, xmax) = HwU.get_x_optimal_range(self[:2],\
                                                weight_labels = wgts_to_consider)
@@ -2048,6 +2223,7 @@ plot \\"""
         
         # Now add the main layout
         plot_lines = []
+        uncertainty_plot_lines = []
         for i, histo in enumerate(self[:n_histograms]):
             color_index = i%self.number_line_colors_defined+1
             # Label to appear for the lower curves 
@@ -2081,6 +2257,34 @@ plot \\"""
                         else:
                             major_title.append('all jet samples')
                     major_title = ', '.join(major_title)                    
+
+            # Do not show uncertainties for individual jet samples (unless first
+            # or specified explicitely and uniquely)
+            if not (i!=0 and hasattr(histo,'jetsample') and histo.jetsample!=-1 and \
+               not (jet_samples_to_keep and len(jet_samples_to_keep)==1 and 
+                    jet_samples_to_keep[0] == histo.jetsample)):
+                
+                uncertainty_plot_lines.append({})
+                # Show scale variation if available
+                if not mu_var_pos is None:
+                    uncertainty_plot_lines[-1]['scale'] = get_uncertainty_lines(
+                        HwU_name, block_position+i, mu_var_pos+3, color_index+10,
+                        '%s, scale variation'%title, band='scale' in use_band)
+                # And now PDF_variation if available
+                if not PDF_var_pos is None:
+                    uncertainty_plot_lines[-1]['pdf'] = get_uncertainty_lines(
+                     HwU_name,block_position+i, PDF_var_pos+3, color_index+20,
+                             '%s, PDF variation'%title, band='pdf' in use_band)
+                # And now merging variation if available
+                if not merging_var_pos is None:
+                    uncertainty_plot_lines[-1]['merging'] = get_uncertainty_lines(
+                     HwU_name,block_position+i, merging_var_pos+3, color_index+30,
+                '%s, merging scale variation'%title, band='merging' in use_band)
+                # And now alpsfact variation if available
+                if not alpsfact_var_pos is None:
+                    uncertainty_plot_lines[-1]['alpsfact'] = get_uncertainty_lines(
+                     HwU_name,block_position+i, alpsfact_var_pos+3, color_index+40,
+                    '%s, alpsfact variation'%title, band='alpsfact' in use_band)
                         
             plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
@@ -2089,41 +2293,22 @@ plot \\"""
                 plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
 %(HwU_name,block_position+i,color_index))
-            
-            # Do not show uncertainties for individual jet samples (unless first
-            # or specified explicitely and uniquely)
-            if i!=0 and hasattr(histo,'jetsample') and histo.jetsample!=-1 and \
-               not (jet_samples_to_keep and len(jet_samples_to_keep)==1 and 
-                    jet_samples_to_keep[0] == histo.jetsample):
-                continue
 
-            # And show scale variation if available
-            if not mu_var_pos is None:
-                plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,mu_var_pos+3,color_index+10,'%s, scale variation'\
-%title),
-"'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-%(HwU_name,block_position+i,mu_var_pos+4,color_index+10),
-                ])
-            # And now PDF_variation if available
-            if not PDF_var_pos is None:
-                plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,PDF_var_pos+3,color_index+20,'%s, PDF variation'\
-%title),
-"'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var_pos+4,color_index+20),
-                ])
-            # And now merging variation if available
-            if not merging_var_pos is None:
-                plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,merging_var_pos+3,color_index+30,'%s, merging scale variation'\
-%title),
-"'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-%(HwU_name,block_position+i,merging_var_pos+4,color_index+30),
-                ])
+        # Now add the uncertainty lines, those not using a band so that they
+        # are not covered by those using a band after we reverse plo_lines
+        for one_plot in uncertainty_plot_lines:
+            for uncertainty_type, lines in one_plot.items():
+                if not uncertainty_type in use_band:
+                    plot_lines.extend(lines)
+        # then those using a band
+        for one_plot in uncertainty_plot_lines:
+            for uncertainty_type, lines in one_plot.items():
+                if uncertainty_type in use_band:
+                    plot_lines.extend(lines)
+    
+        # Reverse so that bands appear first
+        plot_lines.reverse()
+
 
         # Add the plot lines
         gnuplot_out.append(',\\\n'.join(plot_lines))
@@ -2191,42 +2376,55 @@ plot \\"""
             gnuplot_out.append(subhistogram_header%replacement_dic)
         
         # Now add the first subhistogram
-        plot_lines = ["0.0 ls 999 title ''"]
+        plot_lines = []
+        uncertainty_plot_lines = []
         for i, histo in enumerate(self[:n_histograms]):
             # Do not show uncertainties for individual jet samples (unless first
             # or specified explicitely and uniquely)
-            if i!=0 and hasattr(histo,'jetsample') and histo.jetsample!=-1 and \
+            if not (i!=0 and hasattr(histo,'jetsample') and histo.jetsample!=-1 and \
                not (jet_samples_to_keep and len(jet_samples_to_keep)==1 and 
-                    jet_samples_to_keep[0] == histo.jetsample):
-                continue
-            color_index = i%self.number_line_colors_defined+1
-            if 'statistical' in uncertainties:
-               plot_lines.append(
-"'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls %d title ''"%\
-(HwU_name,block_position+i,color_index))
-        # Then the scale variations
-            if not mu_var_pos is None:
-                plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,mu_var_pos+3,color_index+10),
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,mu_var_pos+4,color_index+10)
-                ])
-            if not PDF_var_pos is None:
-                plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var_pos+3,color_index+20),
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var_pos+4,color_index+20)
-                ])
-            if not merging_var_pos is None:
-                plot_lines.extend([
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,merging_var_pos+3,color_index+30),
-"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,merging_var_pos+4,color_index+30)
-                ])
+                    jet_samples_to_keep[0] == histo.jetsample)):
+                color_index = i%self.number_line_colors_defined+1
+                uncertainty_plot_lines.append({})
+                # Plot uncertainties
+                if not mu_var_pos is None:
+                    uncertainty_plot_lines[-1]['scale'] = get_uncertainty_lines(
+                   HwU_name, block_position+i, mu_var_pos+3, color_index+10,'',
+                                           ratio=True, band='scale' in use_band)
+                if not PDF_var_pos is None:
+                    uncertainty_plot_lines[-1]['pdf'] = get_uncertainty_lines(
+                        HwU_name, block_position+i, PDF_var_pos+3, color_index+20,'',
+                                            ratio=True, band='pdf' in use_band)
+                if not merging_var_pos is None:
+                    uncertainty_plot_lines[-1]['merging'] = get_uncertainty_lines(
+                   HwU_name, block_position+i, merging_var_pos+3, color_index+30,'',
+                                        ratio=True, band='merging' in use_band)
+                if not alpsfact_var_pos is None:
+                    uncertainty_plot_lines[-1]['alpsfact'] = get_uncertainty_lines(
+                    HwU_name, block_position+i, alpsfact_var_pos+3, color_index+40,'',
+                                       ratio=True, band='alpsfact' in use_band)
+                    
+                if 'statistical' in uncertainties:
+                   plot_lines.append(
+    "'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls %d title ''"%\
+    (HwU_name,block_position+i,color_index))
+
+        plot_lines.append("0.0 ls 999 title ''")
         
+        # Now add the uncertainty lines, those not using a band so that they
+        # are not covered by those using a band after we reverse plo_lines
+        for one_plot in uncertainty_plot_lines:
+            for uncertainty_type, lines in one_plot.items():
+                if not uncertainty_type in use_band:
+                    plot_lines.extend(lines)
+        # then those using a band
+        for one_plot in uncertainty_plot_lines:
+            for uncertainty_type, lines in one_plot.items():
+                if uncertainty_type in use_band:
+                    plot_lines.extend(lines)
+    
+        # Reverse so that bands appear first
+        plot_lines.reverse()
         # Add the plot lines
         if not no_uncertainties:
             gnuplot_out.append(',\\\n'.join(plot_lines))
@@ -2274,42 +2472,54 @@ plot \\"""
 #        'set label "NLO/LO (K-factor)" font ",9" at graph 0.82, graph 0.13'
         gnuplot_out.append(subhistogram_header%replacement_dic)
 
-        plot_lines = []
+        plot_lines = ["1.0 ls 999 title ''"]
+        uncertainty_plot_lines = []
         for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
             block_ratio_pos = block_position+n_histograms+i_histo_ratio
             color_index     = color_index = (i_histo_ratio+1)%\
                                                self.number_line_colors_defined+1
             # Now add the subhistograms
-            plot_lines.extend(["1.0 ls 999 title ''",
+            plot_lines.append(
     "'%s' index %d using (($1+$2)/2):3 ls %d title ''"%\
-    (HwU_name,block_ratio_pos,color_index)])
+    (HwU_name,block_ratio_pos,color_index))
             if 'statistical' in uncertainties:
                 plot_lines.append(
     "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"%\
     (HwU_name,block_ratio_pos,color_index))
+
+            uncertainty_plot_lines.append({})
             # Then the scale variations
             if not mu_var_pos is None:
-                plot_lines.extend([
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,mu_var_pos+3,10+color_index),
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,mu_var_pos+4,10+color_index)
-                ])
+                uncertainty_plot_lines[-1]['scale'] = get_uncertainty_lines(
+                    HwU_name, block_ratio_pos, mu_var_pos+3, color_index+10,'',
+                                                       band='scale' in use_band)
             if not PDF_var_pos is None:
-                plot_lines.extend([
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDF_var_pos+3,20+color_index),
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDF_var_pos+4,20+color_index)
-                ])
+                uncertainty_plot_lines[-1]['pdf'] = get_uncertainty_lines(
+                    HwU_name, block_ratio_pos, PDF_var_pos+3, color_index+20,'',
+                                                       band='pdf' in use_band)
             if not merging_var_pos is None:
-                plot_lines.extend([
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,merging_var_pos+3,30+color_index),
-    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,merging_var_pos+4,30+color_index)
-                ])
-                
+                uncertainty_plot_lines[-1]['merging'] = get_uncertainty_lines(
+                    HwU_name, block_ratio_pos, merging_var_pos+3, color_index+30,'',
+                                                     band='merging' in use_band)
+            if not alpsfact_var_pos is None:
+                uncertainty_plot_lines[-1]['alpsfact'] = get_uncertainty_lines(
+                    HwU_name, block_ratio_pos, alpsfact_var_pos+3, color_index+40,'',
+                                                     band='alpsfact' in use_band)             
+
+        # Now add the uncertainty lines, those not using a band so that they
+        # are not covered by those using a band after we reverse plo_lines
+        for one_plot in uncertainty_plot_lines:
+            for uncertainty_type, lines in one_plot.items():
+                if not uncertainty_type in use_band:
+                    plot_lines.extend(lines)
+        # then those using a band
+        for one_plot in uncertainty_plot_lines:
+            for uncertainty_type, lines in one_plot.items():
+                if uncertainty_type in use_band:
+                    plot_lines.extend(lines)
+        
+        # Reverse so that bands appear first
+        plot_lines.reverse()
         # Add the plot lines
         gnuplot_out.append(',\\\n'.join(plot_lines))
         
@@ -2330,10 +2540,6 @@ if __name__ == "__main__":
            '--HwU'           to output the histograms read to the raw HwU source.
            '--types=<type1>,<type2>,...' to keep only the type<i> when importing histograms.
            '--n_ratios=<integer>' Specifies how many curves must be considerd for the ratios.
-           '--no_scale'      Turn off the plotting of scale uncertainties
-           '--no_pdf'        Turn off the plotting of PDF uncertainties
-           '--no_merging'    Turn off the plotting of merging uncertainties (if available)        
-           '--no_stat'       Turn off the plotting of all statistical uncertainties
            '--no_open'       Turn off the automatic processing of the gnuplot output.
            '--show_full'     to show the complete output of what was read.
            '--show_short'    to show a summary of what was read.
@@ -2346,6 +2552,13 @@ if __name__ == "__main__":
            '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
            '--jet_samples=[int1,int2]' Specifies what jet samples to keep. 'None' is the default and keeps them all.
     
+        For chosing what kind of variation you want to see on your plot, you can use the following options
+           '--no_<type>'                   Turn off the plotting of variations of the chosen type
+           '--only_<type>'                 Turn on only the plotting of variations of the chosen type
+           '--variations=['<type1>',...]'  Turn on only the plotting of the variations of the list of chosen types
+           '--band=['<type1>',...]'        Chose for which variations one should use uncertainty bands as opposed to lines
+        The types can be: pdf, scale, stat, merging or alpsfact 
+        
         When parsing an XML-formatted plot source output by the Pythia8 driver, the file names can be appended 
         options as suffixes separated by '|', as follows:
            python histograms.py <XML_source_file_name>@<option1>@<option2>@etc..
@@ -2358,11 +2571,16 @@ if __name__ == "__main__":
                                    By default, all weights are considered.
     """
 
-    possible_options=['--help', '--gnuplot', '--HwU', '--types','--n_ratios','--no_scale','--no_pdf','--no_stat',\
+    possible_options=['--help', '--gnuplot', '--HwU', '--types','--n_ratios',\
                       '--no_open','--show_full','--show_short','--simple_ratios','--sum','--average','--rebin',  \
-                      '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', '--no_merging']
+                      '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', 
+        '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
+        '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
+        '--variations','--band']
     n_ratios   = -1
-    uncertainties = ['scale','pdf','statistical','merging']
+    uncertainties = ['scale','pdf','statistical','merging','alpsfact']
+    # The list of type of uncertainties for which to use bands. None is a 'smart' default
+    use_band      = None
     auto_open = True
     ratio_correlations = True
     
@@ -2410,6 +2628,9 @@ if __name__ == "__main__":
     if '--no_open' in sys.argv:
         auto_open = False
 
+    variation_type_map={'scale':'scale','merging':'merging','pdf':'pdf',
+                        'stat':'statistical','alpsfact':'alpsfact'}
+
     for arg in sys.argv:
         try:
             opt, value = arg.split('=')
@@ -2417,21 +2638,22 @@ if __name__ == "__main__":
             continue
         if opt=='--jet_samples':
             jet_samples_to_keep = eval(value)
+        if opt=='--variations':
+            uncertainties=[variation_type_map[type] for type in eval(value,
+                         dict((key,key) for key in variation_type_map.keys()))]
+        if opt=='--band':
+            use_band=[variation_type_map[type] for type in eval(value,
+                         dict((key,key) for key in variation_type_map.keys()))]
 
     if '--simple_ratios' in sys.argv:
         ratio_correlations = False
-
-    if '--no_scale' in sys.argv:
-        uncertainties.remove('scale')
-
-    if '--no_merging' in sys.argv:
-        uncertainties.remove('merging')
-
-    if '--no_pdf' in sys.argv:
-        uncertainties.remove('pdf')
-        
-    if '--no_stat' in sys.argv:
-        uncertainties.remove('statistical')        
+    
+    for arg in sys.argv:
+        if arg.startswith('--no_'):
+            uncertainties.remove(variation_type_map[arg[5:]])
+        if arg.startswith('--only_'):
+            uncertainties= [variation_type_map[arg[7:]]]
+            break         
 
     n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
     histo_norm = [1.0]*n_files
@@ -2521,7 +2743,8 @@ if __name__ == "__main__":
             uncertainties=uncertainties, 
             ratio_correlations=ratio_correlations,
             arg_string=arg_string, 
-            jet_samples_to_keep=jet_samples_to_keep)
+            jet_samples_to_keep=jet_samples_to_keep,
+            use_band=use_band)
         # Tell the user that everything went for the best
         log("%d histograms have been output in " % len(histo_list)+\
                 "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
@@ -2529,8 +2752,8 @@ if __name__ == "__main__":
             command = 'gnuplot %s.gnuplot'%OutName
             try:
                 import subprocess
-                subprocess.call(command,shell=True)
-            except:
+                subprocess.call(command,shell=True,stderr=subprocess.PIPE)
+            except KeyError:
                 log("Automatic processing of the gnuplot card failed. Try the"+\
                     " command by hand:\n%s"%command)
             else:
