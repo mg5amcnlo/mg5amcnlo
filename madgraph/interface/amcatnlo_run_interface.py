@@ -4057,7 +4057,7 @@ RESTART = %(mint_mode)s
                 text_out.append(line)
             open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
 
-        if self.options['fastjet']:
+        if 'fastjet' in self.options.keys() and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
         
         # add the make_opts_var to make_opts
