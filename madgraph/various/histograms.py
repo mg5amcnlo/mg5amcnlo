@@ -2064,13 +2064,13 @@ set style data histeps
             alpsfact_var_pos = None
 
         uncertainties_present =  list(uncertainties)
-        if PDF_var_pos is None:
+        if PDF_var_pos is None and 'pdf' in uncertainties_present:
             uncertainties_present.remove('pdf')
-        if mu_var_pos is None:
+        if mu_var_pos is None and 'scale' in uncertainties_present:
             uncertainties_present.remove('scale')
-        if merging_var_pos is None:
+        if merging_var_pos is None and 'merging' in uncertainties_present:
             uncertainties_present.remove('merging')
-        if alpsfact_var_pos is None:
+        if alpsfact_var_pos is None and 'alpsfact' in uncertainties_present:
             uncertainties_present.remove('alpsfact')
         no_uncertainties = len(uncertainties_present)==0
         
@@ -2557,7 +2557,8 @@ if __name__ == "__main__":
            '--only_<type>'                 Turn on only the plotting of variations of the chosen type
            '--variations=['<type1>',...]'  Turn on only the plotting of the variations of the list of chosen types
            '--band=['<type1>',...]'        Chose for which variations one should use uncertainty bands as opposed to lines
-        The types can be: pdf, scale, stat, merging or alpsfact 
+        The types can be: pdf, scale, stat, merging or alpsfact
+        For the last two options one can use ...=all to automatically select all types.
         
         When parsing an XML-formatted plot source output by the Pythia8 driver, the file names can be appended 
         options as suffixes separated by '|', as follows:
@@ -2640,10 +2641,12 @@ if __name__ == "__main__":
             jet_samples_to_keep = eval(value)
         if opt=='--variations':
             uncertainties=[variation_type_map[type] for type in eval(value,
-                         dict((key,key) for key in variation_type_map.keys()))]
+                         dict([(key,key) for key in variation_type_map.keys()]+
+                                          [('all',variation_type_map.keys())]))]
         if opt=='--band':
             use_band=[variation_type_map[type] for type in eval(value,
-                         dict((key,key) for key in variation_type_map.keys()))]
+                         dict([(key,key) for key in variation_type_map.keys()]+
+        [('all',[type for type in variation_type_map.keys() if type!='stat'])]))]
 
     if '--simple_ratios' in sys.argv:
         ratio_correlations = False
