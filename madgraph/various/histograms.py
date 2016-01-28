@@ -1244,7 +1244,8 @@ class HwUList(histograms_PhysicsObjectList):
         return isinstance(obj, HwU) or isinstance(obj, HwUList)
 
     def __init__(self, file_path, weight_header=None, run_id=None,
-                           merging_scale=None, accepted_types_order=[], **opts):
+            merging_scale=None, accepted_types_order=[], consider_reweights=True, 
+                                                                        **opts):
         """ Read one plot from a file_path or a stream. 
         This constructor reads all plots specified in target file.
         File_path can be a path or a stream in the argument.
@@ -1252,7 +1253,8 @@ class HwUList(histograms_PhysicsObjectList):
         to appear in the file or stream specified. It accepted_types_order is 
         empty, no filter is applied, otherwise only histograms of the specified  
         types will be kept, and in this specified order for a given identical 
-        title.
+        title. The option 'consider_reweights' selects whether one wants to 
+        include all the extra scale/pdf/merging variation weights
         """
         
         if isinstance(file_path, str):
@@ -1265,7 +1267,8 @@ class HwUList(histograms_PhysicsObjectList):
         try:
             # Try to read it in XML format
             self.parse_histos_from_PY8_XML_stream(stream, run_id, 
-                                            merging_scale, accepted_types_order)
+                                merging_scale, accepted_types_order,
+                                          consider_reweights=consider_reweights)
         except XMLParsingError:
             # Rewing the stream
             stream.seek(0)
@@ -1311,11 +1314,13 @@ class HwUList(histograms_PhysicsObjectList):
             stream.close()
 
     def parse_histos_from_PY8_XML_stream(self, stream, run_id=None, 
-                                     merging_scale=None, accepted_types_order=[]):
+            merging_scale=None, accepted_types_order=[], 
+                                                   consider_reweights=True):
         """Initialize the HwU histograms from an XML stream. Only one run is 
         used: the first one if run_id is None or the specified run otherwise.
         Accepted type order is a filter to select histograms of only a certain
-        type."""
+        type. The option 'consider_reweights' selects whether one wants to 
+        include all the extra scale/pdf/merging variation weights."""
         
         run_nodes = minidom.parse(stream).getElementsByTagName("run")
         
@@ -1536,7 +1541,19 @@ class HwUList(histograms_PhysicsObjectList):
                     selected_weights[wgt_pos][i] = HwU.mandatory_weights[weight_label]
                 except KeyError:
                     pass
-        
+                
+        # Keep only central weight if asked for
+        if not consider_reweights:
+            new_selected_weights = {}
+            for wgt_position, wgt_labels in selected_weights.items():
+                for wgt_label in wgt_labels:
+                    if wgt_label in ['central','stat_error','boundary_xmin','boundary_xmax']:
+                        try:
+                            new_selected_weights[wgt_position].append(wgt_label)
+                        except KeyError:
+                            new_selected_weights[wgt_position] = [wgt_label]
+            selected_weights = new_selected_weights                         
+
         # Cache the list of selected weights to be defined at each line
         weight_label_list = sum(selected_weights.values(),[])
         # The weight_label list to set to self.bins 
@@ -2082,7 +2099,9 @@ set style data histeps
         if use_band is None:
             # For clarity, it is better to only use bands only for one source
             # of uncertainty
-            if len(uncertainties_present)==1:
+            if len(uncertainties_present)==0:
+                use_band = []                
+            elif len(uncertainties_present)==1:
                 use_band = uncertainties_present
             elif 'scale' in uncertainties_present:
                 use_band = ['scale']
@@ -2551,7 +2570,8 @@ if __name__ == "__main__":
            '--multiply=<fact1>,<fact2>,...' to multiply all histograms of the first, second, etc... files by the fact1, fact2, etc...
            '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
            '--jet_samples=[int1,int2]' Specifies what jet samples to keep. 'None' is the default and keeps them all.
-    
+           '--central_only'  This option specifies to disregard all extra weights, so as to make it possible
+                             to take the ratio of plots with different extra weights specified.   
         For chosing what kind of variation you want to see on your plot, you can use the following options
            '--no_<type>'                   Turn off the plotting of variations of the chosen type
            '--only_<type>'                 Turn on only the plotting of variations of the chosen type
@@ -2577,13 +2597,14 @@ if __name__ == "__main__":
                       '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', 
         '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
         '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
-        '--variations','--band']
+        '--variations','--band','--central_only']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical','merging','alpsfact']
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
     use_band      = None
     auto_open = True
     ratio_correlations = True
+    consider_reweights = True
     
     def log(msg):
         print "histograms.py :: %s"%str(msg)
@@ -2621,6 +2642,9 @@ if __name__ == "__main__":
     no_suffix = False
     if '--no_suffix' in sys.argv:
         no_suffix = True
+    
+    if '--central_only' in sys.argv:
+        consider_reweights = False
 
     for arg in sys.argv[1:]:
         if arg.startswith('--n_ratios='):
@@ -2690,8 +2714,8 @@ if __name__ == "__main__":
             else:
                 log("Unreckognize file option '%s'."%option)
                 sys.exit(1)
-        new_histo_list = HwUList(filename, accepted_types_order=accepted_types, 
-                                                                  **file_options)
+        new_histo_list = HwUList(filename, accepted_types_order=accepted_types,
+                          consider_reweights=consider_reweights, **file_options)
         for histo in new_histo_list:
             if no_suffix or n_files==1:
                 continue
