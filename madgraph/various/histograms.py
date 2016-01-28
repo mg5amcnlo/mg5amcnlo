@@ -780,14 +780,16 @@ class HwU(Histogram):
         # Successful writeout
         return True
 
-    def test_plot_compability(self, other, consider_type=True):
+    def test_plot_compability(self, other, consider_type=True,
+                                                   consider_weight_labels=True):
         """ Test whether the defining attributes of self are identical to histo,
         typically to make sure that they are the same plots but from different
         runs, and they can be summed safely. We however don't want to 
         overload the __eq__ because it is still a more superficial check."""
         
         if self.title != other.title or \
-           self.bins.weight_labels != other.bins.weight_labels or \
+           (self.bins.weight_labels != other.bins.weight_labels and\
+                                          consider_weight_labels) or \
            (self.type != other.type and consider_type) or \
            self.x_axis_mode != self.x_axis_mode or \
            self.y_axis_mode != self.y_axis_mode or \
@@ -1402,20 +1404,17 @@ class HwUList(histograms_PhysicsObjectList):
             selected_weights[2]=['central value']
         else:
             for weight_position, weight in enumerate(all_weights):
-                wgt_label_elements = weight.split(' ')
-                scale_weight = HwU.weight_label_scale.match(' '.join(
-                                                       wgt_label_elements[:-2]))
                 # Check if that weight corresponds to a central weight 
                 # (conventional label for central weight is 'Weight'
                 if ('Weight' in weight) or \
                    (weight['PDF']==central_PDF and weight['MUR'] in [central_MUR, -1.0] \
                     and weight['MUF'] in [central_MUF, -1.0]): 
                     # Check if the merging scale matches this time
-                    if float(wgt_label_elements[-1])==merging_scale_chosen:
+                    if weight['MERGING']==merging_scale_chosen:
                         selected_weights[weight_position] = ['central value']
                         break
             # Make sure a central value was found, throw a warning if found
-            if ['central value'] not in sum(selected_weights.values(),[]):
+            if 'central value' not in sum(selected_weights.values(),[]):
                 central_merging_scale = all_weights[2]['MERGING']
                 logger.warning('Could not find the central weight for the'+\
                 ' chosen merging scale (%f).\n'%merging_scale_chosen+\
@@ -1423,7 +1422,7 @@ class HwUList(histograms_PhysicsObjectList):
                 'correspond to a merging scale of %s'%("'inclusive'" if 
                    central_merging_scale in [0.0,-1.0] else '%f'%central_merging_scale))
                 selected_weights[2]=['central value']
-
+    
         # The error is always the third entry for now.
         selected_weights[3]=['dy']
 
@@ -1591,7 +1590,7 @@ class HwUList(histograms_PhysicsObjectList):
                                                    float(weight.group('weight'))
                         except KeyError:
                             continue
-                    # For this check, we subtract two because of the bin boundaries                
+                    # For this check, we subtract two because of the bin boundaries
                     if len(bin_weights)!=len(weight_label_list)-2:
                         raise MadGraph5Error, \
                          'Not all defined weights were found in the XML source.\n'+\
@@ -1663,7 +1662,8 @@ class HwUList(histograms_PhysicsObjectList):
         for histo in self[1:]:
             matched = False
             for histo_list in matching_histo_lists:
-                if histo.test_plot_compability(histo_list[0],consider_type=False):
+                if histo.test_plot_compability(histo_list[0],
+                              consider_type=False, consider_weight_labels=True):
                     histo_list.append(histo)
                     matched = True
                     break
@@ -2686,7 +2686,7 @@ if __name__ == "__main__":
             if opt=='run_id':
                 file_options[opt]=int(value)
             if opt=='merging_scale':
-                file_options[opt]=int(value)
+                file_options[opt]=float(value)
             else:
                 log("Unreckognize file option '%s'."%option)
                 sys.exit(1)
