@@ -26,9 +26,10 @@ ifeq ($(origin F2PY), undefined)
    F2PY=f2py
 endif
 
-# Set CXX unless it's defined by an environment variable
-ifeq ($(origin CXX),default)
-  CXX=g++
+ifeq ($(UNAME), Darwin)
+   ifeq ($(origin LDFLAGS), undefined)
+      LDFLAGS=-lc++ 
+   endif
 endif
 
 # Options: dynamic, lhapdf

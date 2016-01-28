@@ -2979,6 +2979,7 @@ This implies that with decay chains:
         self.avoid_history_duplicate('define %s' % line, ['define'])
         if not self._curr_model:
             self.do_import('model sm')
+            self.history.append('define %s' % line)
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -5103,7 +5104,11 @@ This implies that with decay chains:
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
                     defined_multiparticles.remove(container)
-
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' ' .join([`i` for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
                 
         
         if defined_multiparticles:
@@ -5221,7 +5226,7 @@ This implies that with decay chains:
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
 
 
-        logger.info('compile %s. This might takes a while.' % name)
+        logger.info('compile %s. This might take a while.' % name)
 
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
@@ -5855,8 +5860,8 @@ This implies that with decay chains:
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
                     if program != None:
-                        fpath, fname = os.path.split(program)
-                        logger.info('Using %s library in %s'%(key,fpath))
+                        fpath, _ = os.path.split(program)
+                        logger.info('Using %s library in %s' % (key,fpath))
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
@@ -5874,8 +5879,8 @@ This implies that with decay chains:
                 pass
             elif key in ['notification_center']:
                 if self.options[key] in ['False', 'True']:
-                   self.allow_notification_center = eval(self.options[key])
-                   self.options[key] = self.allow_notification_center
+                    self.allow_notification_center = eval(self.options[key])
+                    self.options[key] = self.allow_notification_center
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
