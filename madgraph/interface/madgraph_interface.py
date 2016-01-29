@@ -5343,6 +5343,10 @@ This implies that with decay chains:
                          'http://madgraph.hep.uiuc.edu/package_info.dat']
             r = random.randint(0,1)
             r = [r, (1-r)]
+################################################################################
+#           Force her to choose one particular server
+            r = 0
+################################################################################
             for index in r:
                 cluster_path = data_path[index]
                 try:
