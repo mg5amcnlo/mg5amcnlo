@@ -1,25 +1,25 @@
--include ../Source/make_opts
+-include ../../Source/make_opts
 
 DEBUG=
-FF=$(FC)   $(FFLAGS)   $(DEBUG)
-CPP=$(CXX) $(CXXFLAGS) $(DEBUG)
-CC=$(CXX)  $(CFLAGS)   $(DEBUG)
+FF=$(FC) $(FFLAGS) $(DEBUG)
+CPP=$(CXX) $(CXXFLAGS) $(DEBUG) $(INCLOPTION)
+CC=$(CXX) $(CFLAGS) $(DEBUG) $(INCLOPTION)
 
 $(OBJDIR)/%.o: $(HWSDIR)/%.f
-	$(FC) -I$(INCDIR) $(AUTODBL) -c $< -o $@
+	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
 $(OBJDIR)/%.o: $(PYSDIR)/%.f
-	$(FC) -I$(INCDIR) $(AUTODBL) -c $< -o $@
+	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
 $(OBJDIR)/%.o: $(SRCDIR)/%.f
-	$(FC) -I$(INCDIR) $(AUTODBL) -c $< -o $@
+	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
 $(OBJDIR)/%.o: $(COMSRC)/%.f
-	$(FC) -I$(INCDIR) $(AUTODBL) -c $< -o $@
+	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
 $(OBJDIR)/%.o: $(ANADIR)/%.f
-	$(FC) -I$(INCDIR) $(AUTODBL) -c $< -o $@
+	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.for
-	$(FC) -I$(INCDIR) $(AUTODBL) -c $< -o $@
+	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
 $(OBJDIR)/%.o: $(COMSRC)/%.for
-	$(FC) -I$(INCDIR) $(AUTODBL) -c $< -o $@
+	$(FF) -I$(INCDIR) $(AUTODBL) -c $< -o $@
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cc
 	$(CPP) -I$(INCDIR) -c $< -o $@
@@ -57,6 +57,7 @@ HW_EXE_PDFLIB : $(HWFILES) $(CPDFFILES)
 
 HW_EXE_LHAPDF : $(HWFILES) $(LPDFFILES)  
 	$(FC) $^ $(LHALIB) $(EXTRAPATHS) $(EXTRALIBS) -o $@
+
 
 PY_EXE_DEFAULT : $(PYFILES) $(PDFFILES)
 	$(FC) $^ $(EXTRAPATHS) $(EXTRALIBS) -o $@
