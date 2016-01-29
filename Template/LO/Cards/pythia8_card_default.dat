@@ -15,6 +15,9 @@ Main:numberOfEvents      = -1
 ! If equal to -1.0, MadGraph5_aMC@NLO will set it automatically based 
 ! on the parameter xqcut of the run_card. 
 JetMatching:qCut         = -1.0
+! Extra qCut values for which you want to output the weights
+! The value 'auto' will let MadGraph5_aMC@NLO automatically set it.
+SysCalc:qCutList         = auto
 ! A value of -1 means that it is automatically guessed by MadGraph.
 ! It is however always safer to explicitly set it.
 JetMatching:nJetMax      = -1
@@ -24,13 +27,21 @@ JetMatching:nJetMax      = -1
 ! For details, see section 'CKKW-L Merging' on the left-hand menu of 
 !    http://home.thep.lu.se/~torbjorn/pythia81html/Welcome.html
 ! --------------------------------------------------------------------
+! Central merging scale values you want to be used 
 Merging:TMS              = 10.0
+! Extra merging scale values for which you want to output the weights 
+SysCalc:tmsList          = 5.0,15.0,20.0
 ! This must be set manually, according to Pythia8 directives.
 ! An example of possible value is 'pp>LEPTONS,NEUTRINOS'
 Merging:Process          = <set_by_user>
 ! A value of -1 means that it is automatically guessed by MadGraph.
 ! It is however always safer to explicitly set it.
 Merging:nJetMax  		 = -1
+!
+! For all merging schemes, decide wehter you want the merging scale
+! variation computed for only the central weights or all other 
+! PDF and scale variation weights as well
+SysCalc:fullCutVariation = off
 !
 ! ==========================
 ! User customized parameters 

@@ -3258,8 +3258,14 @@ Please install this tool with the following MG5_aMC command:
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
-                PY8_Card.MadGraphSet('JetMatching:qCut',1.3*self.run_card['xqcut'])                
+                PY8_Card.MadGraphSet('JetMatching:qCut',1.3*self.run_card['xqcut'])
+            if PY8_Card['SysCalc:qCutList']=='auto':
+                PY8_Card.MadGraphSet('SysCalc:qCutList',\
+                     ','.join('%.4f'%(factor*self.run_card['xqcut']) for \
+                                                   factor in [1.1,1.5,1.7,2.0]))
             # Specific MLM settings
+            # PY8 should not implement the MLM veto since the driver should do it.
+            PY8_Card.MadGraphSet('JetMatching:doVeto',False)            
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
             PY8_Card.MadGraphSet('JetMatching:setMad',True)
@@ -3282,23 +3288,34 @@ Please install this tool with the following MG5_aMC command:
             PY8_Card.MadGraphSet('TimeShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
-            if self.run_card['fixed_ren_scale']:
-                PY8_Card.MadGraphSet('Merging:muRen',
-                              self.run_card['scale']*self.run_card['scalefact'])
-                PY8_Card.MadGraphSet('Merging:muRenInME',
-                              self.run_card['scale']*self.run_card['scalefact'])
-            if self.run_card['fixed_fac_scale']:
-                PY8_Card.MadGraphSet('Merging:muFac',self.run_card['scalefact']*
-                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
-                PY8_Card.MadGraphSet('Merging:muFacInME',self.run_card['scalefact']*
-                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
+            # PY8 should not implement the CKKW veto since the driver should do it.
+            PY8_Card.MadGraphSet('Merging:applyVeto',False)
+            # It is actually safer to let PY8 assign it automatically from the 
+            # scale specified for each event in the .lhe file.
+#            if self.run_card['fixed_ren_scale']:
+#                PY8_Card.MadGraphSet('Merging:muRen',
+#                              self.run_card['scale']*self.run_card['scalefact'])
+#                PY8_Card.MadGraphSet('Merging:muRenInME',
+#                              self.run_card['scale']*self.run_card['scalefact'])
+#            if self.run_card['fixed_fac_scale']:
+#                PY8_Card.MadGraphSet('Merging:muFac',self.run_card['scalefact']*
+#                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
+#                PY8_Card.MadGraphSet('Merging:muFacInME',self.run_card['scalefact']*
+#                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
             nJetMax = self.proc_characteristic['max_n_matched_jets']
             if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
                              'Merging:nJetMax'.lower() not in PY8_Card.user_set:
                 logger.info("No user-defined value for Pythia8 parameter "+
                 "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
-            PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
+            if PY8_Card['SysCalc:tmsList']=='auto':
+                PY8_Card.MadGraphSet('SysCalc:tmsList',\
+                     ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
+                                              for factor in [0.5,0.75,1.5,2.0]))        
+        
+            PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
+            PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
+                                                         run_card['dparameter'])
         ########################################################################
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)

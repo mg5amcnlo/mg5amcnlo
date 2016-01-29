@@ -1239,13 +1239,18 @@ class PY8Card(ConfigFile):
         # for MLM merging
         # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
         self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
+        self.add_param("SysCalc:qCutList", 'auto', always_write_to_card=False)
         # -1 means that it is automatically set. 
         self.add_param("JetMatching:nJetMax", -1, always_write_to_card=False) 
         # for CKKWL merging
-        self.add_param("Merging:TMS", 10.0, always_write_to_card=False)  
+        self.add_param("Merging:TMS", 10.0, always_write_to_card=False)
+        self.add_param("SysCalc:tmsList", 'auto', always_write_to_card=False)
         self.add_param("Merging:Process", '<set_by_user>', always_write_to_card=False)
         # -1 means that it is automatically set.   
         self.add_param("Merging:nJetMax", -1, always_write_to_card=False)
+        # for both merging, chose whether to also consider different merging
+        # scale values for the extra weights related to scale and PDF variations.
+        self.add_param("SysCalc:fullCutVariation", False)
 
         # Hidden parameters always written out
         # ====================================
@@ -1267,6 +1272,8 @@ class PY8Card(ConfigFile):
         # for MLM merging
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
+        self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
+          comment='Do veto externally (e.g. in SysCalc).')
         self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
         self.add_param("JetMatching:setMad", True, hidden=True, always_write_to_card=False,
                                      comment='Specify if from MadGraph origin.') 
@@ -1277,6 +1284,8 @@ class PY8Card(ConfigFile):
         self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
         self.add_param("Merging:muFac", 91.188, hidden=True, always_write_to_card=False,
                         comment='Set factorisation scales of the 2->2 process.')
+        self.add_param("Merging:applyVeto", False, hidden=True, always_write_to_card=False,
+          comment='Do veto externally (e.g. in SysCalc).')
         self.add_param("Merging:muRen", 91.188, hidden=True, always_write_to_card=False,
                       comment='Set renormalization scales of the 2->2 process.')
         self.add_param("Merging:muFacInME", 91.188, hidden=True, always_write_to_card=False,
@@ -1285,6 +1294,8 @@ class PY8Card(ConfigFile):
                comment='Set renormalization scales of the 2->2 Matrix Element.')
         self.add_param("SpaceShower:rapidityOrder", False, hidden=True, always_write_to_card=False)
         # To be added in subruns for CKKWL
+        self.add_param("Merging:doKTMerging", False, hidden=True, always_write_to_card=False)
+        self.add_param("Merging:Dparameter", False, hidden=True, always_write_to_card=False)        
         self.add_param("Merging:doPTLundMerging", False, hidden=True, always_write_to_card=False)
 
         # Add parameters controlling the subruns execution flow.
