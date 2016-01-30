@@ -5144,7 +5144,7 @@ This implies that with decay chains:
         # Make sure additional_options contains the option '--force' at most once
         # and placed last.
         additional_options = [opt for opt in additional_options if opt!='--force']+\
-                          ['--force'] if '--force' in additional_options else []
+                        (['--force'] if '--force' in additional_options else [])
         
         # Always refresh the installer if already present
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
@@ -5345,7 +5345,7 @@ This implies that with decay chains:
             r = [r, (1-r)]
 ################################################################################
 #           Force her to choose one particular server
-            r = 0
+            r = [0]
 ################################################################################
             for index in r:
                 cluster_path = data_path[index]
