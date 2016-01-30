@@ -1076,7 +1076,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     def do_pgs(self, line):
         """launch pgs"""
-
+        
         args = self.split_arg(line)
         # Check argument's validity
         if '--no_default' in args:
@@ -1085,19 +1085,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             no_default = False
 
+        if no_default and not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+            logger.info('No pgs_card detected, so not run pgs')
+            return
+
         # Check all arguments
         # This might launch a gunzip in another thread. After the question
         # This thread need to be wait for completion. (This allow to have the
         # question right away and have the computer working in the same time)
         # if lock is define this a locker for the completion of the thread
-        lock = self.check_pgs(args)
+        lock = self.check_pgs(args,  no_default=no_default)
 
         # Check that the pgs_card exists. If not copy the default
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-            if no_default:
-                logger.info('No pgs_card detected, so not run pgs')
-                return
-
             files.cp(pjoin(self.me_dir, 'Cards', 'pgs_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
             logger.info('No pgs card found. Take the default one.')
@@ -1273,6 +1273,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             args.remove('--no_default')
         else:
             no_default = False
+            
+        if no_default and  not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+            logger.info('No delphes_card detected, so not run Delphes')
+            return
+            
         # Check all arguments
         # This might launch a gunzip in another thread. After the question
         # This thread need to be wait for completion. (This allow to have the

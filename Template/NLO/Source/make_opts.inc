@@ -34,6 +34,7 @@ ifeq ($(origin CXX),default)
   CXX=g++
 endif
 
+UNAME := $(shell uname -s)
 ifeq ($(UNAME), Darwin)
    ifeq ($(origin LDFLAGS), undefined)
       LDFLAGS=-lc++

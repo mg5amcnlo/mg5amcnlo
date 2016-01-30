@@ -1,9 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
-2.3.4(XX/XX/XX)
-        MZ: Faster interface for LHAPDF6
 
 2.3.4(XX/XX/XX)
         RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
+        OM: Fixing the problem of using lhapdf6 on Mac
+        MZ: Faster interface for LHAPDF6
+        OM: Add support of epsilon_ijk in MadSpin
+        OM: Fix multiple problem with multiparticles in MadSpin
+        OM: Improve spinmode=None in MadSpin
+        OM: Update the TopEffTh model
+        MZ: Fix problem with slurm cluster
+        OM: Improve scan functionalities
 
 2.3.3(25/10/15)
         OM: Allow new syntax for the param_card: instead of an entry you can enter "scan:[val1, val2,...]"

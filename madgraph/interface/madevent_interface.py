@@ -1122,7 +1122,7 @@ class CheckValidForCmd(object):
                                   'systematics information needed for syscalc.')
         
     
-    def check_pgs(self, arg):
+    def check_pgs(self, arg, no_default=False):
         """Check the argument for pythia command
         syntax: pgs [NAME] 
         Note that other option are already remove at this point
@@ -1157,7 +1157,8 @@ class CheckValidForCmd(object):
         
         if not len(arg) and \
            not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.help_pgs()
+            if not no_default:
+                self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
         
@@ -3272,16 +3273,17 @@ Beware that this can be dangerous for local multicore runs.""")
             except SysCalcError, error:
                 logger.error(str(error))
             else:
-                # Store syst.dat
-                misc.gzip(pjoin(self.me_dir,'Events', 'syst.dat'),
-                          stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
-                         
-                # Store syscalc.dat
-                if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
-                    filename = pjoin(self.me_dir, 'Events' ,self.run_name,
-                                              '%s_syscalc.dat' % self.run_tag)
-                    misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
-                              stdout = "%s.gz" % filename)
+                if os.path.exists(pjoin(self.me_dir,'Events', 'syst.dat')):
+                    # Store syst.dat
+                    misc.gzip(pjoin(self.me_dir,'Events', 'syst.dat'),
+                              stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
+                             
+                    # Store syscalc.dat
+                    if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
+                        filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                                  '%s_syscalc.dat' % self.run_tag)
+                        misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
+                                  stdout = "%s.gz" % filename)
 
         # Plot for pythia
         self.create_plot('Pythia')
@@ -4240,10 +4242,11 @@ Beware that this can be dangerous for local multicore runs.""")
         except OSError, error:
             logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
         else:
-            if mode == 'parton' and os.path.exists(output):
-                files.mv(output, event_path)
-            else:
+            if not os.path.exists(output):
                 logger.warning('SysCalc Failed. Please read the associate log to see the reason. Did you install the associate PDF set?')
+            elif mode == 'parton':
+                files.mv(output, event_path)
+                
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         

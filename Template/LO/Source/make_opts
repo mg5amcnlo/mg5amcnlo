@@ -26,6 +26,7 @@ ifeq ($(origin F2PY), undefined)
    F2PY=f2py
 endif
 
+UNAME := $(shell uname -s)
 ifeq ($(UNAME), Darwin)
    ifeq ($(origin LDFLAGS), undefined)
       LDFLAGS=-lc++ 
@@ -33,9 +34,6 @@ ifeq ($(UNAME), Darwin)
 endif
 
 # Options: dynamic, lhapdf
-
-UNAME := $(shell uname)
-
 # Option dynamic
 
 ifeq ($(UNAME), Darwin)
