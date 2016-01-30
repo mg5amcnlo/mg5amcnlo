@@ -1575,6 +1575,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         context = LoopProcessExporterFortranSA.get_context(self, matrix_element, 
                                                                          **opts)
 
+        # For now assume Ninja always supports quadruple precision
+        try:
+            context['ninja_supports_quad_prec'] = \
+                     misc.get_ninja_quad_prec_support(getattr(self,'ninja_dir'))
+        except AttributeError:
+            context['ninja_supports_quad_prec'] = False
+
         for tir in self.all_tir:
             context['%s_available'%tir]=self.tir_available_dict[tir]
             # safety check

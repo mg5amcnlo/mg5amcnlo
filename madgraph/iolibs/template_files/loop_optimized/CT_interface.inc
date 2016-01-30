@@ -223,6 +223,78 @@ C             Here, we chose to base the threshold only on the energy component
 
 	  END
 
+	  SUBROUTINE %(proc_prefix)sMP_BUILD_KINEMATIC_MATRIX(NLOOPLINE,P_LOOP,M2L,S_MAT) 
+C
+C       Helper function that compute the loop kinematic matrix with proper thresholds
+C       NLOOPLINE : Number of loop lines
+C       P_LOOP    : List of external momenta running in the loop, i.e. q_i in the denominator (l_i+q_i)**2-m_i**2
+C       M2L       : List of complex-valued masses running in the loop.
+C       S_MAT(N,N): Kinematic matrix output.
+C
+C    	ARGUMENTS
+C
+		INTEGER NLOOPLINE
+    	%(real_mp_format)s P_LOOP(NLOOPLINE,0:3)
+    	%(complex_mp_format)s M2L(NLOOPLINE)
+    	%(complex_mp_format)s S_MAT(NLOOPLINE,NLOOPLINE)
+C    
+C    	GLOBAL VARIABLES
+C
+     	include 'MadLoopParams.inc'
+C
+C    	LOCAL VARIABLES
+C
+     	INTEGER I,J,K
+     	%(complex_mp_format)s DIFFSQ
+     	%(real_mp_format)s REF_NORMALIZATION
+
+C     	----------
+C     	BEGIN CODE
+C     	----------
+
+     	do i=1,NLOOPLINE
+       	  do j=1,NLOOPLINE
+            
+		    if(i.eq.j)then
+	          s_mat(i,j)=-(M2L(i)+M2L(j))
+	        else
+	          DIFFSQ = (CMPLX(P_LOOP(i,0),0.0e0_16,KIND=16)-CMPLX(P_LOOP(j,0),0.0e0_16,KIND=16))**2
+	          do k=1,3
+	            DIFFSQ = DIFFSQ - (CMPLX(P_LOOP(i,k),0.0e0_16,KIND=16)-CMPLX(P_LOOP(j,k),0.0e0_16,KIND=16))**2
+	          enddo
+C             Default value of the kinematic matrix
+	          s_mat(i,j)=DIFFSQ-M2L(i)-M2L(j)
+C             And we now test various thresholds. Normaly, at most one applies.
+	          IF(ABS(M2L(i)).NE.0.0e0_16)THEN
+	            IF(ABS((DIFFSQ-M2L(i))/M2L(i)).LT.OSThres)THEN
+	              s_mat(i,j)=-M2L(j)
+ 	            ENDIF
+	          ENDIF
+		      IF(ABS(M2L(j)).NE.0.0e0_16)THEN
+	            IF(ABS((DIFFSQ-M2L(j))/M2L(j)).LT.OSThres)THEN
+	              s_mat(i,j)=-M2L(i)
+	            ENDIF
+		      ENDIF
+C             Choose what seems the most appropriate way to compare
+C             massless onshellness.
+              REF_NORMALIZATION=0.0e0_16
+C             Here, we chose to base the threshold only on the energy component
+	          do k=0,0
+		        REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(i,k)) + ABS(P_LOOP(J,k))
+		      ENDDO
+			  REF_NORMALIZATION = (REF_NORMALIZATION/2.0e0_16)**2
+	          IF(REF_NORMALIZATION.NE.0.0e0_16)THEN
+                IF(ABS(DIFFSQ/REF_NORMALIZATION).LT.OSThres)THEN
+	              s_mat(i,j)=-(M2L(i)+M2L(j))
+			    ENDIF
+	          ENDIF
+            ENDIF
+
+          ENDDO
+        ENDDO
+
+	  END
+
 ## if(samurai_available){
 
 C     ===========================================
@@ -547,6 +619,7 @@ C
       %(mass_dp_format)s M2L_NINJA(NLOOPLINE)
       %(complex_dp_format)s NINJA_RES(0:2)
 	  %(complex_dp_format)s R1
+	  INTEGER NINJA_STATUS
 	  INTEGER I, J, K
       %(real_dp_format)s PDEN_DUMMY(0:3,NLOOPLINE-1)
 
@@ -555,6 +628,7 @@ C
 
       INTEGER CURR_MAXCOEF	  
 	  %(complex_dp_format)s, ALLOCATABLE :: TENSORCOEFS(:)
+
 C
 C GLOBAL VARIABLES
 C
@@ -697,6 +771,254 @@ C     Make sure to deallocate the tensor of coefficients
 ## }
 C     WRITE(*,*) 'Ninja:  Loop ID',ID,' =',RES(1),RES(2),RES(3)
       END
+
+## if(ninja_supports_quad_prec){
+C
+C Quadruple precision version of loop_ninja
+C
+      SUBROUTINE %(proc_prefix)sMP_NINJA_LOOP(NLOOPLINE,PL,M2L,RANK,RES,STABLE)
+C    
+C     Module used
+C
+      use mninja
+C  
+%(info_lines)s
+C 
+C Interface between MG5 and Ninja.
+C  
+%(process_lines)s
+C  
+C  
+C CONSTANTS 
+C  
+	  INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      LOGICAL checkPConservation
+      PARAMETER (checkPConservation=.TRUE.)
+      %(real_dp_format)s NORMALIZATION
+      PARAMETER (NORMALIZATION = 1.D0/(16.D0*3.14159265358979323846D0**2))
+      INTEGER NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
+C     These are constants related to the split orders
+      INTEGER NSQUAREDSO
+      PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      INTEGER LOOPMAXCOEFS
+      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+C  
+C ARGUMENTS 
+C
+      INTEGER NLOOPLINE, RANK
+      %(real_mp_format)s PL(0:3,NLOOPLINE)
+      %(mass_dp_format)s M2L(NLOOPLINE)
+      %(complex_dp_format)s RES(3)
+	  LOGICAL STABLE	  
+C  
+C LOCAL VARIABLES 
+C
+      %(real_mp_format)s NINJA_SCALE
+      %(real_mp_format)s P_TMP(0:3,0:NLOOPLINE-1)
+      real(KI_QNIN) MP_P_NINJA(0:3,NLOOPLINE)
+      %(real_mp_format)s MP_P(0:3,NLOOPLINE)	  
+      %(real_mp_format)s P_S_MAT(NLOOPLINE,0:3)
+      %(complex_mp_format)s MP_M2L(NLOOPLINE)
+      complex(KI_QNIN) MP_M2L_NINJA(NLOOPLINE)
+      complex(KI_QNIN) NINJA_RES(0:2)
+	  complex(KI_QNIN) NINJA_R1
+	  %(complex_dp_format)s R1
+	  %(complex_dp_format)s DP_RES(0:2)
+	  INTEGER NINJA_STATUS
+	  INTEGER I, J, K
+      %(real_mp_format)s PDEN_DUMMY(0:3,NLOOPLINE-1)
+
+      %(complex_mp_format)s MP_S_MAT(NLOOPLINE,NLOOPLINE)
+      %(real_mp_format)s MP_REAL_S_MAT(NLOOPLINE,NLOOPLINE)
+      real(KI_QNIN) MP_REAL_S_MAT_NINJA(NLOOPLINE,NLOOPLINE)
+
+      INTEGER CURR_MAXCOEF	  
+	  %(complex_mp_format)s, ALLOCATABLE :: MP_TENSORCOEFS(:)
+	  complex(KI_QNIN), ALLOCATABLE :: MP_NINJA_TENSORCOEFS(:)
+
+C
+C GLOBAL VARIABLES
+C
+      include 'coupl.inc'
+
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+
+	  %(real_dp_format)s LSCALE
+	  INTEGER CTMODE
+      common/%(proc_prefix)sCT/LSCALE,CTMODE
+
+      INTEGER ID,SQSOINDEX,R
+      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+## if(not AmplitudeReduction){
+       %(complex_mp_format)s MP_LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## }else{
+       %(complex_mp_format)s MP_LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
+       COMMON/%(proc_prefix)sMP_LCOEFS/MP_LOOPCOEFS
+
+C ----------
+C BEGIN CODE
+C ----------
+
+C     Cast the masses in complex quadruple precision
+      DO I=1,NLOOPLINE
+	    MP_M2L(I) = CMPLX(M2L(I),KIND=16)
+	  ENDDO
+
+C     For the direction test, we must switch the direction in which the loop is read for CTMode equal to 2 or 4.
+      CALL %(proc_prefix)sMP_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN_DUMMY,MP_M2L)
+
+C The CT initialization is also performed here if not done already because it calls MPINIT of OneLOop which is necessary on some system
+      IF (CTINIT) THEN
+	    CTINIT=.FALSE.
+		CALL %(proc_prefix)sINITCT()
+      ENDIF
+
+C INITIALIZE NINJA IF NEEDED
+      IF (NINJAINIT) THEN
+	    NINJAINIT=.FALSE.
+		CALL %(proc_prefix)sINITNINJA()
+      ENDIF
+
+C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
+      do I=0,3
+        do J=0,(NLOOPLINE-1)
+          P_TMP(I,J)=0.e0+0_16
+        enddo
+      enddo
+      do I=0,3
+        do J=1,NLOOPLINE
+          P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+        enddo
+      enddo
+      if (checkPConservation) then
+        if (P_TMP(0,0).gt.1.e-6_16) then
+          write(*,*) 'energy is not conserved ',DBLE(P_TMP(0,0))
+          stop 'energy is not conserved'
+        elseif (P_TMP(1,0).gt.1.e-6_16) then
+         write(*,*) 'px is not conserved ',DBLE(P_TMP(1,0))
+         stop 'px is not conserved'
+        elseif (P_TMP(2,0).gt.1.e-6_16) then
+         write(*,*) 'py is not conserved ',DBLE(P_TMP(2,0))
+         stop 'py is not conserved'
+        elseif (P_TMP(3,0).gt.1.e-6_16) then
+         write(*,*) 'pz is not conserved ',DBLE(P_TMP(3,0))
+         stop 'pz is not conserved'
+        endif
+      endif
+      do I=0,3
+        do J=1,(NLOOPLINE-1)
+          do K=1,J
+            P_TMP(I,J)=P_TMP(I,J)+PL(I,K)
+          enddo
+        enddo
+      enddo
+C     In Ninja, the loop line index starts at 1
+      DO I=0,NLOOPLINE-1
+        MP_P(0,I+1) = P_TMP(0,I)
+        MP_P(1,I+1) = P_TMP(1,I)
+        MP_P(2,I+1) = P_TMP(2,I)
+        MP_P(3,I+1) = P_TMP(3,I)
+      ENDDO
+
+C     Number of coefficients for the current rank
+      CURR_MAXCOEF = 0
+      DO I=0,RANK
+        CURR_MAXCOEF=CURR_MAXCOEF+(3+I)*(2+I)*(1+I)/6
+      ENDDO
+C     Now write the tensor coefficients for Ninja
+C     It should never be allocated at this stage
+      IF (.NOT. ALLOCATED(MP_TENSORCOEFS)) THEN
+        ALLOCATE(MP_TENSORCOEFS(0:CURR_MAXCOEF-1))
+      ENDIF
+      IF (.NOT. ALLOCATED(MP_NINJA_TENSORCOEFS)) THEN
+        ALLOCATE(MP_NINJA_TENSORCOEFS(0:CURR_MAXCOEF-1))
+	  ENDIF
+      DO I=0,CURR_MAXCOEF-1
+## if(AmplitudeReduction) {
+        MP_TENSORCOEFS(I) = MP_LOOPCOEFS(I,ID)
+## } else {
+        MP_TENSORCOEFS(I) = MP_LOOPCOEFS(I,SQSOINDEX,ID)
+## }
+      ENDDO
+C     The loop momentum is in fact q_loop -> -q_loop, so that the
+C     coefficients must be changed accordingly
+      CALL MP_%(proc_prefix)sINVERT_MOMENTA_IN_POLYNOMIAL(CURR_MAXCOEF,MP_TENSORCOEFS)
+
+C     Compute the kinematic matrix
+      DO J=1,NLOOPLINE
+        DO I=0,3
+          P_S_MAT(J,I)=MP_P(I,J)
+        ENDDO
+      ENDDO
+      CALL %(proc_prefix)sMP_BUILD_KINEMATIC_MATRIX(NLOOPLINE,P_S_MAT,MP_M2L,MP_S_MAT)
+
+	  DO I=1,NLOOPLINE
+	    DO J=1,NLOOPLINE
+		  MP_REAL_S_MAT(I,J) = REAL(MP_S_MAT(I,J)+MP_M2L(i)+MP_M2L(j),KIND=16)
+		ENDDO
+	  ENDDO
+
+C     Now typecast to Ninja's quadruple precision format
+      DO I=0,CURR_MAXCOEF-1
+	    MP_NINJA_TENSORCOEFS(I)=CMPLX(MP_TENSORCOEFS(I),KIND=KI_QNIN)
+      ENDDO
+	  DO I=1,NLOOPLINE
+	    DO J=1,NLOOPLINE
+		  MP_REAL_S_MAT_NINJA(I,J) = REAL(MP_REAL_S_MAT(I,J),KIND=KI_QNIN)
+		ENDDO
+	  ENDDO
+      DO I=1,NLOOPLINE
+	    MP_M2L_NINJA(I)=CMPLX(MP_M2L(I),KIND=KI_QNIN)
+	  ENDDO
+      DO I=1,NLOOPLINE
+        MP_P_NINJA(0,I) = REAL(MP_P(0,I),KIND=KI_QNIN)
+        MP_P_NINJA(1,I) = REAL(MP_P(1,I),KIND=KI_QNIN)
+        MP_P_NINJA(2,I) = REAL(MP_P(2,I),KIND=KI_QNIN)
+        MP_P_NINJA(3,I) = REAL(MP_P(3,I),KIND=KI_QNIN)
+      ENDDO
+	  NINJA_SCALE = REAL(MU_R**2,KIND=KI_QNIN)
+
+
+C     Below is the call specifying the kinematic matrix
+	  call ninja_tensor_evaluate(MP_NINJA_TENSORCOEFS,NLOOPLINE,RANK,MP_REAL_S_MAT_NINJA,MP_P_NINJA,MP_M2L_NINJA,NINJA_SCALE,NINJA_RES,NINJA_R1,NINJA_STATUS)
+C     Below is the call without specification of the kinematic matrix
+c      call ninja_tensor_evaluate(MP_NINJA_TENSORCOEFS,NLOOPLINE,RANK,MP_P_NINJA,MP_M2L_NINJA,NINJA_SCALE,NINJA_RES,NINJA_R1,NINJA_STATUS)
+
+C     Typecast the result back
+	  R1 = DCMPLX(R1)
+	  DO I=0,2
+	    DP_RES(I)=DCMPLX(NINJA_RES(I))
+	  ENDDO
+
+C     Make sure to deallocate the tensor of coefficients
+      IF (ALLOCATED(MP_TENSORCOEFS)) THEN
+        DEALLOCATE(MP_TENSORCOEFS)
+      ENDIF
+      IF (ALLOCATED(MP_NINJA_TENSORCOEFS)) THEN
+        DEALLOCATE(MP_NINJA_TENSORCOEFS)
+      ENDIF
+
+## if(AmplitudeReduction) {
+      RES(1)=NORMALIZATION*DP_RES(0)
+      RES(2)=NORMALIZATION*DP_RES(1)
+      RES(3)=NORMALIZATION*DP_RES(2)
+## } else {
+      RES(1)=NORMALIZATION*2.0d0*DBLE(DP_RES(0))
+      RES(2)=NORMALIZATION*2.0d0*DBLE(DP_RES(1))
+      RES(3)=NORMALIZATION*2.0d0*DBLE(DP_RES(2))
+## }
+C     WRITE(*,*) 'QP Ninja:  Loop ID',ID,' =',RES(1),RES(2),RES(3)
+      END
+## } else {
+C 
+C The Ninja version installed does not support quadruple precision
+C so that the corresponding subroutines are not output.
+C
+## }
 
 	  SUBROUTINE %(proc_prefix)sINITNINJA()
 C    

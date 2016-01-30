@@ -704,7 +704,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             elif key == 'ForceMP':
                 mode = 4
             elif key in MLCard:
-                MLCard.set(key,value)    
+                MLCard.set(key,value)
             else:
                 raise Exception, 'The MadLoop options %s specified in function'%key+\
                   ' fix_MadLoopParamCard does not correspond to an option defined'+\
@@ -714,6 +714,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             MLCard.set('CTModeInit',mode)
         MLCard.set('UseLoopFilter',loop_filter)
         MLCard.set('DoubleCheckHelicityFilter',DoubleCheckHelicityFilter)
+        
         MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
 
     @classmethod

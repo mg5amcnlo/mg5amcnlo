@@ -56,6 +56,7 @@ class RunStatistics(dict):
           'IREGI_usage'        : 0,
           'Samurai_usage'      : 0,
           'Ninja_usage'        : 0,
+          'Ninja_QP_usage'     : 0,
           'max_precision'      : 1.0e99,
           'min_precision'      : 0.0,
           'averaged_timing'    : 0.0,
@@ -117,7 +118,8 @@ class RunStatistics(dict):
         self['IREGI_usage']       = u_codes[3]
         self['Golem_usage']       = u_codes[4]
         self['Samurai_usage']     = u_codes[5]
-        self['Ninja_usage']     = u_codes[6]
+        self['Ninja_usage']       = u_codes[6]
+        self['Ninja_QP_usage']    = u_codes[8]
         self['CutTools_QP_usage'] = u_codes[9]
         t_return_code = xml_node.getElementsByTagName('t_return_code')
         t_codes = [int(_) for _ in getData(t_return_code[0]).split(',')]
@@ -175,7 +177,8 @@ class RunStatistics(dict):
           ('Golem',float(self['Golem_usage'])/self['n_madloop_calls']),
           ('IREGI',float(self['IREGI_usage'])/self['n_madloop_calls']),
           ('Samurai',float(self['Samurai_usage'])/self['n_madloop_calls']),
-          ('Ninja',float(self['Ninja_usage'])/self['n_madloop_calls'])]
+          ('Ninja_DP',float(self['Ninja_usage'])/self['n_madloop_calls']),
+          ('Ninja_QP',float(self['Ninja_QP_usage'])/self['n_madloop_calls'])]
 
         tools_used = [(_[0],'%.3g'%(100.0*_[1])) for _ in tools_used if _[1] > 0.0 ]
 

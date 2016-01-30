@@ -265,14 +265,68 @@ C     ENDIF
 
       %(real_dp_format)s PL(0:3,NLOOPLINE)
       %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
-      COMPLEX*16 M2L(NLOOPLINE)
+      %(complex_dp_format)s M2L(NLOOPLINE)
       %(real_dp_format)s NEW_PL(0:3,NLOOPLINE)
       %(real_dp_format)s NEW_PDEN(0:3,NLOOPLINE-1)
       %(complex_dp_format)s NEW_M2L(NLOOPLINE)
 
       INTEGER I,J,K
 
-      IF (CTMode.ne.2.and.CTMode.ne.4) THEN
+      IF (CTMode.ne.2.and.CTMode.ne.5) THEN
+        RETURN 
+      ENDIF
+
+      IF (NLOOPLINE.le.2) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           NEW_PDEN(J,NLOOPLINE-I) = PDEN(J,I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           PDEN(J,I) = NEW_PDEN(J,I)
+        ENDDO
+      ENDDO
+
+      DO I=2,NLOOPLINE
+        NEW_M2L(I)=M2L(NLOOPLINE-I+2)
+      ENDDO
+      DO I=2,NLOOPLINE
+        M2L(I)=NEW_M2L(I)
+      ENDDO
+
+
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          NEW_PL(J,I) = -PL(J,NLOOPLINE+1-I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE
+        DO J=0,3
+           PL(J,I) = NEW_PL(J,I)
+        ENDDO
+      ENDDO
+
+      end
+
+      SUBROUTINE %(proc_prefix)sMP_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      IMPLICIT NONE
+
+      INTEGER CTMODE,NLOOPLINE
+
+      %(real_mp_format)s PL(0:3,NLOOPLINE)
+      %(real_mp_format)s PDEN(0:3,NLOOPLINE-1)
+      %(complex_mp_format)s M2L(NLOOPLINE)
+      %(real_mp_format)s NEW_PL(0:3,NLOOPLINE)
+      %(real_mp_format)s NEW_PDEN(0:3,NLOOPLINE-1)
+      %(complex_mp_format)s NEW_M2L(NLOOPLINE)
+
+      INTEGER I,J,K
+
+      IF (CTMode.ne.2.and.CTMode.ne.5) THEN
         RETURN 
       ENDIF
 
@@ -366,8 +420,14 @@ C
 C
 C CONSTANTS
 C
-            INTEGER NLOOPLIB,QP_NLOOPLIB
-            PARAMETER (NLOOPLIB=4,QP_NLOOPLIB=1)
+            INTEGER NLOOPLIB
+			PARAMETER (NLOOPLIB=4)
+			INTEGER QP_NLOOPLIB
+## if(ninja_supports_quad_prec) {
+      		PARAMETER (QP_NLOOPLIB=2)
+## } else {
+      		PARAMETER (QP_NLOOPLIB=1)
+## }
             INTEGER NLOOPGROUPS
             PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C

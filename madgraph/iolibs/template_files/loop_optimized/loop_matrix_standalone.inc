@@ -97,12 +97,16 @@ C     These are constants related to the split orders
 	  INTEGER NSQUAREDSOP1
 	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI,Golem95
+C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai and Ninja
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=4)
-C     Only CutTools provides QP
+      PARAMETER (NLOOPLIB=6)
+C     Only CutTools or possibly Ninja (if installed with qp support) provide QP
       INTEGER QP_NLOOPLIB
+## if(ninja_supports_quad_prec) {
+      PARAMETER (QP_NLOOPLIB=2)
+## } else {
       PARAMETER (QP_NLOOPLIB=1)
+## }
 	  INTEGER MAXSTABILITYLENGTH
 	  DATA MAXSTABILITYLENGTH/20/
 	  common/%(proc_prefix)sstability_tests/maxstabilitylength
@@ -266,15 +270,17 @@ C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE AVAILABLE OR NOT
       DATA LOOPLIBS_AVAILABLE/%(data_looplibs_av)s/
 	  common/%(proc_prefix)sLOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS AVAILABLE OR NOT IN THE LOOPLIBS
-C     PJFry++ and Golem95 do not support direction test
       LOGICAL LOOPLIBS_DIRECTEST(6)
 	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
 C     Specifying for which reduction tool quadruple precision is available.
 C     The index 0 is dummy and simply means that the corresponding loop_library is not available
 C     in which case neither is its quadruple precision version.
       LOGICAL LOOPLIBS_QPAVAILABLE(0:6)
+## if(ninja_supports_quad_prec) {
+	  DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TRUE./
+## } else {
 	  DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
-
+## }
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
 	  %(real_dp_format)s PS(0:3,NEXTERNAL)

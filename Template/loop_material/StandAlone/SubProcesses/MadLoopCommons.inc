@@ -158,11 +158,13 @@ C         Stable with PJFry++.
 C     U == 3
 C         Stable with IREGI.
 C     U == 4
-C         Stable with Golem95
+C         Stable with Golem95.
 C     U == 5
-C         Stable with Samurai
+C         Stable with Samurai.
 C     U == 6
-C         Stable with Ninja
+C         Stable with Ninja in double precision.
+C     U == 8
+C         Stable with Ninja in quadruple precision.
 C     U == 9
 C         Stable with CutTools in quadruple precision.
 C
@@ -192,8 +194,11 @@ C
          IF(MLRed.EQ.1)THEN
             SET_RET_CODE_U=9
             RETURN
-         ELSE
-            STOP 'Only CutTools can use quardruple precision'
+         ELSEIF(MLRed.EQ.6)THEN
+            SET_RET_CODE_U=8
+            RETURN
+		 ELSE
+            STOP 'Only CutTools and Ninja can use quardruple precision'
          ENDIF
       ENDIF
       IF(MLRed.GE.1.AND.MLRed.LE.6)THEN

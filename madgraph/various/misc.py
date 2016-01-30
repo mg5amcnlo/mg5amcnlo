@@ -159,6 +159,29 @@ def find_includes_path(start_path, extension):
     return None
 
 #===============================================================================
+# Given the path of a ninja installation, this function determines if it 
+# supports quadruple precision or not. 
+#===============================================================================
+def get_ninja_quad_prec_support(ninja_lib_path):
+    """ Get whether ninja supports quad prec in different ways"""
+    
+    # First try with the ninja-config executable if present
+    ninja_config = os.path.abspath(pjoin(
+                                 ninja_lib_path,os.pardir,'bin','ninja-config'))
+    if os.path.exists(ninja_config):
+        try:    
+            p = Popen([ninja_config, '-quadsupport'], stdout=subprocess.PIPE, 
+                                                         stderr=subprocess.PIPE)
+            output, error = p.communicate()
+            return 'TRUE' in output.upper()
+        except Exception:
+            pass
+    
+    # If no ninja-config is present, then simply use the presence of
+    # 'quadninja' in the include
+    return os.path.exists(pjoin(ninja_lib_path,os.pardir,'include','quadninja'))
+
+#===============================================================================
 # find a executable
 #===============================================================================
 def which(program):
