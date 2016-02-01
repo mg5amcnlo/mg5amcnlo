@@ -643,8 +643,9 @@ class HwU(Histogram):
     weight_label_PDF = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
     weight_label_PDF_XML = re.compile('^\s*pdfset\s*=\s*(?P<PDF_set>\d+)\s*$')
     weight_label_TMS = re.compile('^\s*TMS\s*=\s*(?P<Merging_scale>%s)\s*$'%a_float_re)
-    weight_label_alpsfact = re.compile('^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re)
-    
+    weight_label_alpsfact = re.compile('^\s*alpsfact\s*=\s*(?P<alpsfact>%s)\s*$'%a_float_re,
+                                                                  re.IGNORECASE)
+
     class ParseError(MadGraph5Error):
         """a class for histogram data parsing errors"""
     
@@ -845,7 +846,7 @@ class HwU(Histogram):
                     elif Merging_wgt:
                         header[i] = float(Merging_wgt.group('Merging_scale'))
                     elif alpsfact_wgt:
-                        header[i] = ('alpsfact_wgt',float(Merging_wgt.group('alpsfact_wgt')))                      
+                        header[i] = ('alpsfact',float(alpsfact_wgt.group('alpsfact')))                      
 
                 return header
             
@@ -1400,12 +1401,12 @@ class HwUList(histograms_PhysicsObjectList):
         # the 'default' value was used (whatever it was).
         # Also cast them in the proper type
         for wgt_label in all_weights:
-            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','alpsfact']:
+            for mandatory_attribute in ['PDF','MUR','MUF','MERGING','ALPSFACT']:
                 if mandatory_attribute not in wgt_label:
                     wgt_label[mandatory_attribute] = '-1'
                 if mandatory_attribute=='PDF':
                     wgt_label[mandatory_attribute] = int(wgt_label[mandatory_attribute])
-                elif mandatory_attribute in ['MUR','MUF','MERGING','alpsfact']:
+                elif mandatory_attribute in ['MUR','MUF','MERGING','ALPSFACT']:
                     wgt_label[mandatory_attribute] = float(wgt_label[mandatory_attribute])                
 
         # If merging cut is negative, then pick only the one of the central scale
@@ -1421,7 +1422,7 @@ class HwUList(histograms_PhysicsObjectList):
         # Assume central scale is one, unless specified.
         central_MUR   = all_weights[2]['MUR'] if all_weights[2]['MUR']!=-1.0 else 1.0
         central_MUF   = all_weights[2]['MUF'] if all_weights[2]['MUF']!=-1.0 else 1.0
-        central_alpsfact = all_weights[2]['alpsfact'] if all_weights[2]['alpsfact']!=-1.0 else 1.0
+        central_alpsfact = all_weights[2]['ALPSFACT'] if all_weights[2]['ALPSFACT']!=-1.0 else 1.0
         
         # Dictionary of selected weights with their position as key and the
         # list of weight labels they correspond to.
@@ -1435,6 +1436,55 @@ class HwUList(histograms_PhysicsObjectList):
               ' source are not the standard expected ones  (xmin, xmax, sigmaCentral, errorCentral)'
         selected_weights[0] = ['xmin']
         selected_weights[1] = ['xmax']
+
+# ===========  BEGIN HELPER FUNCTIONS ===========
+        def get_difference_to_central(weight):
+            """ Return the list of properties which differ from the central weight.
+            This disregards the merging scale value for which any central value
+            can be picked anyway."""
+            
+            differences = []
+            # If the tag 'Weight' is in the weight label, then this is 
+            # automatically considered as the Event weight (central) for which
+            # only the merging scale can be different
+            if 'Weight' in weight:
+                return set([])
+            if weight['MUR'] not in [central_MUR, -1.0] or \
+               weight['MUF'] not in [central_MUF, -1.0]:
+                differences.append('mur_muf_scale')
+            if weight['PDF'] not in [central_PDF,-1]:
+                differences.append('pdf')
+            if weight['ALPSFACT'] not in [central_alpsfact, -1]:
+                differences.append('ALPSFACT')
+            return set(differences) 
+
+        def format_weight_label(weight):
+            """ Print the weight attributes in a nice order."""
+            
+            all_properties = weight.keys()
+            all_properties.pop(all_properties.index('POSITION'))
+            ordered_properties = []
+            # First add the attributes without value
+            for property in all_properties:
+                if weight[property] is None:
+                    ordered_properties.append(property)
+            
+            ordered_properties.sort()
+            all_properties = [property for property in all_properties if 
+                                                   not weight[property] is None]
+            
+            # then add PDF, MUR, MUF and MERGING if present
+            for property in ['PDF','MUR','MUF','ALPSFACT','MERGING']:
+                all_properties.pop(all_properties.index(property))
+                if weight[property]!=-1:
+                    ordered_properties.append(property)
+
+            ordered_properties.extend(sorted(all_properties))
+            
+            return '_'.join('%s%s'\
+                    %(key,'' if weight[key] is None else '=%s'%str(weight[key])) for 
+                                                      key in ordered_properties)
+# ===========  END HELPER FUNCTIONS ===========
         
         # The central value is not necessarily the 3rd one if a different merging
         # cut was selected.
@@ -1444,9 +1494,7 @@ class HwUList(histograms_PhysicsObjectList):
             for weight_position, weight in enumerate(all_weights):
                 # Check if that weight corresponds to a central weight 
                 # (conventional label for central weight is 'Weight'
-                if ('Weight' in weight) or \
-                   (weight['PDF']==central_PDF and weight['MUR'] in [central_MUR, -1.0] \
-                    and weight['MUF'] in [central_MUF, -1.0]): 
+                if get_difference_to_central(weight)==set([]):
                     # Check if the merging scale matches this time
                     if weight['MERGING']==merging_scale_chosen:
                         selected_weights[weight_position] = ['central value']
@@ -1464,55 +1512,6 @@ class HwUList(histograms_PhysicsObjectList):
         # The error is always the third entry for now.
         selected_weights[3]=['dy']
 
-# ===========        
-        def format_weight_label(weight):
-            """ Print the weight attributes in a nice order."""
-            
-            all_properties = weight.keys()
-            all_properties.pop(all_properties.index('POSITION'))
-            ordered_properties = []
-            # First add the attributes without value
-            for property in all_properties:
-                if weight[property] is None:
-                    ordered_properties.append(property)
-            
-            ordered_properties.sort()
-            all_properties = [property for property in all_properties if 
-                                                   not weight[property] is None]
-            
-            # then add PDF, MUR, MUF and MERGING if present
-            for property in ['PDF','MUR','MUF','alpsfact','MERGING']:
-                all_properties.pop(all_properties.index(property))
-                if weight[property]!=-1:
-                    ordered_properties.append(property)
-
-            ordered_properties.extend(sorted(all_properties))
-            
-            return '_'.join('%s%s'\
-                    %(key,'' if weight[key] is None else '=%s'%str(weight[key])) for 
-                                                      key in ordered_properties)
-# ===========
-        
-        def get_difference_to_central(weight):
-            """ Return the list of properties which differ from the central weight.
-            This disregards the merging scale value for which any central value
-            can be picked anyway."""
-            
-            differences = []
-            # If the tag 'Weight' is in the weight label, then this is 
-            # automatically considered as the Event weight (central) for which
-            # only the merging scale can be different
-            if 'Weight' in weight:
-                return set([])
-            if weight['MUR'] not in [central_MUR, -1.0] or \
-               weight['MUF'] not in [central_MUF, -1.0]:
-                differences.append('mur_muf_scale')
-            if weight['PDF'] not in [central_PDF,-1]:
-                differences.append('pdf')
-            if weight['alpsfact'] not in [central_alpsfact, -1]:
-                differences.append('alpsfact')
-            return set(differences)            
-
         # Now process all other weights  
         for weight_position, weight in enumerate(all_weights[4:]):
             # Apply special transformation for the weight label:
@@ -1521,8 +1520,7 @@ class HwUList(histograms_PhysicsObjectList):
             #   int            for PDF
             #   float          for merging scale
             #   ('type',value) for all others (e.g. alpsfact)
-            variations = get_difference_to_central(weight)
-            
+            variations = get_difference_to_central(weight)            
             # We know select the 'diagonal' variations where each parameter
             # is varied one at a time.
             
@@ -1533,8 +1531,8 @@ class HwUList(histograms_PhysicsObjectList):
                 wgt_label = (weight['MUR'],weight['MUF'])
             if variations == set(['pdf']):
                 wgt_label = weight['PDF']
-            if variations == set(['alpsfact']):
-                wgt_label = ('alpsfact',weight['alpsfact'])                
+            if variations == set(['ALPSFACT']):
+                wgt_label = ('alpsfact',weight['ALPSFACT'])                
             if variations == set([]):
                 # Unknown weight (might turn out to be taken as a merging variation weight below)
                 wgt_label = format_weight_label(weight)
@@ -1661,7 +1659,7 @@ class HwUList(histograms_PhysicsObjectList):
             
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
 
-#Val#                    if bin_weights['central']!=0.0:
+#VAL#                     if bin_weights['central']!=0.0:
 #                         print '---------'
 #                         print 'multiplicity =',multiplicity
 #                         print 'central =', bin_weights['central']
