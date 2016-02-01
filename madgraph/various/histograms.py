@@ -132,9 +132,6 @@ class Bin(object):
             if not isinstance(value, dict):
                 raise MadGraph5Error, "Argument '%s' for bin uncertainty "+\
                                           "'wgts' must be a dictionary."%str(value)
-            if not 'central' in value.keys(): 
-                raise MadGraph5Error, "The keys of the dictionary specifying "+\
-                    "the weights of the bin must include the keyword 'central'."
             for val in value.values():
                 if not isinstance(val,float):
                     raise MadGraph5Error, "The bin weight value '%s' is not a "+\
@@ -672,13 +669,17 @@ class HwU(Histogram):
         return 'UNKNOWN_TYPE'
     
     
-    def __init__(self, file_path=None, weight_header=None, **opts):
+    def __init__(self, file_path=None, weight_header=None,
+                                                      raw_labels=False, **opts):
         """ Read one plot from a file_path or a stream. Notice that this
         constructor only reads one, and the first one, of the plots specified.
         If file_path was a path in argument, it would then close the opened stream.
         If file_path was a stream in argument, it would leave it open.
         The option weight_header specifies an ordered list of weight names 
-        to appear in the file specified."""
+        to appear in the file specified.
+        The option 'raw_labels' specifies that one wants to import the
+        histogram data with no treatment of the weight labels at all
+        (this is used for the matplotlib output)."""
         
         super(HwU, self).__init__(**opts)
 
@@ -696,9 +697,10 @@ class HwU(Histogram):
 
         # Attempt to find the weight headers if not specified        
         if not weight_header:
-            weight_header = HwU.parse_weight_header(stream)
+            weight_header = HwU.parse_weight_header(stream, raw_labels=raw_labels)
 
-        if not self.parse_one_histo_from_stream(stream, weight_header):
+        if not self.parse_one_histo_from_stream(stream, weight_header,
+                                                           raw_labels=raw_labels):
             # Indicate that the initialization of the histogram was unsuccessful
             # by setting the BinList property to None.
             super(Histogram,self).__setattr__('bins',None)
@@ -802,7 +804,7 @@ class HwU(Histogram):
             
     
     @classmethod
-    def parse_weight_header(cls, stream):
+    def parse_weight_header(cls, stream, raw_labels=False):
         """ Read a given stream until it finds a header specifying the weights
         and then returns them."""
         
@@ -816,7 +818,15 @@ class HwU(Histogram):
                      " in the following HwU header definition:\n   %s"%line
                 
                 # Apply replacement rules specified in mandatory_weights
-                header = [ (h if h not in cls.mandatory_weights else 
+                if raw_labels:
+                    # If using raw labels, then just change the name of the 
+                    # labels corresponding to the bin edges
+                    header = [ (h if h not in ['xmin','xmax'] else 
+                                     cls.mandatory_weights[h]) for h in header ]
+                    # And return it with no further modification
+                    return header
+                else:
+                    header = [ (h if h not in cls.mandatory_weights else 
                                      cls.mandatory_weights[h]) for h in header ]
                 
                 # We use a special rule for the weight labeled as a 
@@ -902,7 +912,7 @@ class HwU(Histogram):
                 res.append('|TYPE@%s'%self.type)
             return ' '.join(res)
         
-    def parse_one_histo_from_stream(self, stream, weight_header):
+    def parse_one_histo_from_stream(self, stream, weight_header, raw_labels=False):
         """ Reads *one* histogram from a stream, with the mandatory specification
         of the ordered list of weight names. Return True or False depending
         on whether the starting definition of a new plot could be found in this
@@ -960,8 +970,10 @@ class HwU(Histogram):
         # Now jump to the next <\histo> tag.
         for line_end in stream:
             if HwU.histo_end_re.match(line_end):
-                # Finally, remove all the auxiliary weights
-                self.trim_auxiliary_weights()
+                # Finally, remove all the auxiliary weights, but only if not
+                # asking for raw labels
+                if not raw_labels:
+                    self.trim_auxiliary_weights()
                 # End of successful parsing this histogram, so return True.
                 return True
 
@@ -1244,8 +1256,8 @@ class HwUList(histograms_PhysicsObjectList):
         return isinstance(obj, HwU) or isinstance(obj, HwUList)
 
     def __init__(self, file_path, weight_header=None, run_id=None,
-            merging_scale=None, accepted_types_order=[], consider_reweights=True, 
-                                                                        **opts):
+            merging_scale=None, accepted_types_order=[], consider_reweights=True,
+                                                     raw_labels=False, **opts):
         """ Read one plot from a file_path or a stream. 
         This constructor reads all plots specified in target file.
         File_path can be a path or a stream in the argument.
@@ -1254,7 +1266,10 @@ class HwUList(histograms_PhysicsObjectList):
         empty, no filter is applied, otherwise only histograms of the specified  
         types will be kept, and in this specified order for a given identical 
         title. The option 'consider_reweights' selects whether one wants to 
-        include all the extra scale/pdf/merging variation weights
+        include all the extra scale/pdf/merging variation weights.
+        The option 'raw_labels' specifies that one wants to import the
+        histogram data with no treatment of the weight labels at all
+        (this is used for the matplotlib output).
         """
         
         if isinstance(file_path, str):
@@ -1267,21 +1282,22 @@ class HwUList(histograms_PhysicsObjectList):
         try:
             # Try to read it in XML format
             self.parse_histos_from_PY8_XML_stream(stream, run_id, 
-                                merging_scale, accepted_types_order,
-                                          consider_reweights=consider_reweights)
+                    merging_scale, accepted_types_order,
+                    consider_reweights=consider_reweights,
+                    raw_labels=raw_labels)    
         except XMLParsingError:
             # Rewing the stream
             stream.seek(0)
             # Attempt to find the weight headers if not specified        
             if not weight_header:
-                weight_header = HwU.parse_weight_header(stream)
+                weight_header = HwU.parse_weight_header(stream,raw_labels=raw_labels)
         
-            new_histo = HwU(stream, weight_header)
+            new_histo = HwU(stream, weight_header,raw_labels=raw_labels)
             while not new_histo.bins is None:
                 if accepted_types_order==[] or \
                                          new_histo.type in accepted_types_order:
                     self.append(new_histo)
-                new_histo = HwU(stream, weight_header)
+                new_histo = HwU(stream, weight_header, raw_labels=raw_labels)
 
             if not run_id is None:
                 logger.info("The run_id '%s' was specified, but "%run_id+
@@ -1315,7 +1331,7 @@ class HwUList(histograms_PhysicsObjectList):
 
     def parse_histos_from_PY8_XML_stream(self, stream, run_id=None, 
             merging_scale=None, accepted_types_order=[], 
-                                                   consider_reweights=True):
+            consider_reweights=True, raw_labels=False):
         """Initialize the HwU histograms from an XML stream. Only one run is 
         used: the first one if run_id is None or the specified run otherwise.
         Accepted type order is a filter to select histograms of only a certain
@@ -1343,6 +1359,23 @@ class HwUList(histograms_PhysicsObjectList):
                     "Histogram with run_id '%d' was not found in the "%run_id+\
                                                          "specified XML source."
  
+        # If raw weight label are asked for, then simply read the weight_labels
+        # directly as specified in the XML header
+        if raw_labels:
+            # Filter empty weights coming from the split
+            weight_label_list = [wgt.strip() for wgt in 
+                str(selected_run_node.getAttribute('header')).split(';') if
+                                                      not re.match('^\s*$',wgt)]
+            # Remove potential repetition of identical weight labels
+            weight_label_list = list(set(weight_label_list))
+            selected_weights = dict([ (wgt_pos, 
+             [wgt if wgt not in ['xmin','xmax'] else HwU.mandatory_weights[wgt]])
+                              for wgt_pos, wgt in enumerate(weight_label_list)])    
+            ordered_weight_label_list = [w for w in weight_label_list if w not\
+                                                             in ['xmin','xmax']]
+            return self.retrieve_plots_from_XML_source(selected_run_node,
+                   selected_weights, ordered_weight_label_list, raw_labels=True)
+
         # Now retrieve the header and save all weight labels as dictionaries
         # with key being properties and their values as value. If the property
         # does not defined a value, then put None as a value
@@ -1567,9 +1600,18 @@ class HwUList(histograms_PhysicsObjectList):
             if isinstance(weight_label, str):
                 ordered_weight_label_list.append(weight_label)
         
+        # Now that we know the desired weights, retrieve all plots from the
+        # XML source node.
+        return self.retrieve_plots_from_XML_source(selected_run_node,
+                  selected_weights, ordered_weight_label_list, raw_labels=False)
+
+    def retrieve_plots_from_XML_source(self, xml_node,
+                  selected_weights, ordered_weight_label_list,raw_labels=False):
+        """Given an XML node and the selected weights and their ordered list,
+        import all histograms from the specified XML node."""
+
         # We now start scanning all the plots
-        for multiplicity_node in \
-                        selected_run_node.getElementsByTagName("jethistograms"):
+        for multiplicity_node in xml_node.getElementsByTagName("jethistograms"):
             multiplicity = int(multiplicity_node.getAttribute('njet'))
             for histogram in multiplicity_node.getElementsByTagName("histogram"):
                 # We only consider the histograms with all the weight information
@@ -1608,10 +1650,15 @@ class HwUList(histograms_PhysicsObjectList):
                         except KeyError:
                             continue
                     # For this check, we subtract two because of the bin boundaries
-                    if len(bin_weights)!=len(weight_label_list)-2:
+                    if len(bin_weights)!=len(ordered_weight_label_list):
+                        print '\nThe difference is %s.'%\
+                         str(set(ordered_weight_label_list)-set(bin_weights.keys()))
                         raise MadGraph5Error, \
                          'Not all defined weights were found in the XML source.\n'+\
-                         '%d found / %d expected.'%(len(bin_weights),len(weight_label_list)-2)
+                         '%d found / %d expected.'%(len(bin_weights),len(ordered_weight_label_list))+\
+                         '\nThe missing ones are: %s.'%\
+                         str(list(set(ordered_weight_label_list)-set(bin_weights.keys())))
+            
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
 
 #Val#                    if bin_weights['central']!=0.0:
@@ -1629,7 +1676,8 @@ class HwUList(histograms_PhysicsObjectList):
 #                         print '---------'
 
                 # Finally remove auxiliary weights
-                new_histo.trim_auxiliary_weights()
+                if not raw_labels:
+                    new_histo.trim_auxiliary_weights()
                 
                 # And add it to the list
                 self.append(new_histo)
