@@ -37,6 +37,7 @@ import time
 import tarfile
 import StringIO
 import shutil
+import xml.dom.minidom as minidom
 
 try:
     import readline
@@ -3459,7 +3460,7 @@ Please install this tool with the following MG5_aMC command:
             djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
             cross_sections = None 
             if os.path.isfile(djr_output):
-                run_nodes = minidom.parse(stream).getElementsByTagName("run")
+                run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
                 all_nodes = dict((int(node.getAttribute('id')),node) for
                                                               node in run_nodes)
                 try:

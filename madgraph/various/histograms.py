@@ -634,7 +634,7 @@ class HwU(Histogram):
                                    '(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
     # A given weight specifier
     a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
-    histo_bin_weight_re = re.compile('(?P<weight>%s)'%a_float_re)
+    histo_bin_weight_re = re.compile('(?P<weight>%s|NaN)'%a_float_re,re.IGNORECASE)
     # The end of a plot
     histo_end_re = re.compile(r'^\s*<\\histogram>\s*$')
     # A scale type of weight
@@ -1794,19 +1794,24 @@ class HwUList(histograms_PhysicsObjectList):
                                 elif wgt_label == 'boundary_xmax':
                                     boundaries[1] = float(weight.group('weight'))                            
                                 else:
-                                    bin_weights[wgt_label] = \
+                                    if weight.group('weight').upper()=='NAN':
+                                        raise MadGraph5Error, \
+    "Some weights are found to be 'NAN' in histogram with name '%s'"%hist_name+\
+    " and jet sample multiplicity %d."%multiplicity
+                                    else:
+                                        bin_weights[wgt_label] = \
                                                    float(weight.group('weight'))
                         except KeyError:
                             continue
                     # For this check, we subtract two because of the bin boundaries
                     if len(bin_weights)!=len(ordered_weight_label_list):
-                        print '\nThe difference is %s.'%\
-                         str(set(ordered_weight_label_list)-set(bin_weights.keys()))
                         raise MadGraph5Error, \
                          'Not all defined weights were found in the XML source.\n'+\
                          '%d found / %d expected.'%(len(bin_weights),len(ordered_weight_label_list))+\
                          '\nThe missing ones are: %s.'%\
-                         str(list(set(ordered_weight_label_list)-set(bin_weights.keys())))
+                         str(list(set(ordered_weight_label_list)-set(bin_weights.keys())))+\
+                         "\nIn plot with title '%s' and jet sample multiplicity %d."%\
+                                                       (hist_name, multiplicity)
             
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
 
