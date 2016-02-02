@@ -714,6 +714,10 @@ c Thus the integral of rho is performed by summing up
             xacc(kint)=xacc(kint-1)
          endif
       enddo
+
+c No valid points. Simply return
+      if (xacc(ninter).eq.0d0) return
+
       do kint=1,ninter
          xacc(kint)=xacc(kint)/xacc(ninter)
       enddo
