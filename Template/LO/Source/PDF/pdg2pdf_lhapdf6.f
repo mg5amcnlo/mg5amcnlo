@@ -101,7 +101,7 @@ c     Call lhapdf and give the current values to the arrays that should
 c     be saved
       call evolvepart(ipart,x,xmu,pdg2pdf)
       pdg2pdf=pdg2pdf/x
-      pdflast(ireuse)=pdg2pdf
+      pdflast(i_replace)=pdg2pdf
       xlast(i_replace)=x
       xmulast(i_replace)=xmu
       ihlast(i_replace)=ih
