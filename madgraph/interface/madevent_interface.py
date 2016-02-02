@@ -3259,13 +3259,20 @@ Please install this tool with the following MG5_aMC command:
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
                 PY8_Card.MadGraphSet('JetMatching:qCut',1.3*self.run_card['xqcut'])
-            if PY8_Card['SysCalc:qCutList']=='auto':
-                PY8_Card.MadGraphSet('SysCalc:qCutList',\
-                     ','.join('%.4f'%(factor*self.run_card['xqcut']) for \
-                                                   factor in [1.1,1.5,1.7,2.0]))
+            if self.run_card['use_syst'] and PY8_Card['SysCalc:qCutList']=='auto':
+                if self.run_card['sys_matchscale']=='auto':
+                    PY8_Card.MadGraphSet('SysCalc:qCutList',\
+                     ','.join('%.4f'%(factor*PY8_Card['JetMatching:qCut']) for \
+                     factor in [0.5,0.75,1.5,2.0] if \
+                    factor*PY8_Card['JetMatching:qCut']>self.run_card['xqcut']))
+                else:
+                    PY8_Card.MadGraphSet('SysCalc:qCutList',
+                             ','.join(self.run_card['sys_matchscale'].split()))
             # Specific MLM settings
-            # PY8 should not implement the MLM veto since the driver should do it.
-            PY8_Card.MadGraphSet('JetMatching:doVeto',False)            
+            # PY8 should not implement the MLM veto since the driver should do it
+            # if merging scale variation is turned on
+            if self.run_card['use_syst']:
+                PY8_Card.MadGraphSet('JetMatching:doVeto',False)          
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
             PY8_Card.MadGraphSet('JetMatching:setMad',True)
@@ -3282,14 +3289,23 @@ Please install this tool with the following MG5_aMC command:
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
         elif int(self.run_card['ickkw'])==2:
             # Specific CKKW settings
+            # MadGraphSet sets the corresponding value (in system mode)
+            # only if it is not already user_set.
+            if PY8_Card['Merging:TMS']==-1.0:
+                if self.run_card['ktdurham']>0.0:
+                    PY8_Card.MadGraphSet('Merging:TMS',self.run_card['ktdurham'])
+                else:
+                    raise self.InvalidCmd('When running CKKWl merging, the user'+\
+                      " select a 'ktdurham' cut larger than 0.0 in the run_card.")
             if PY8_Card['Merging:Process']=='<set_by_user>':
-                raise self.InvalidCmd('When running CKKW merging, the user must'+
+                raise self.InvalidCmd('When running CKKWl merging, the user must'+
                     " specifiy the option 'Merging:Process' in pythia8_card.dat")
             PY8_Card.MadGraphSet('TimeShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
             # PY8 should not implement the CKKW veto since the driver should do it.
-            PY8_Card.MadGraphSet('Merging:applyVeto',False)
+            if self.run_card['use_syst']:
+                PY8_Card.MadGraphSet('Merging:applyVeto',False)
             # It is actually safer to let PY8 assign it automatically from the 
             # scale specified for each event in the .lhe file.
 #            if self.run_card['fixed_ren_scale']:
@@ -3308,25 +3324,46 @@ Please install this tool with the following MG5_aMC command:
                 logger.info("No user-defined value for Pythia8 parameter "+
                 "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
-            if PY8_Card['SysCalc:tmsList']=='auto':
-                PY8_Card.MadGraphSet('SysCalc:tmsList',\
+                
+            if self.run_card['use_syst'] and PY8_Card['SysCalc:tmsList']=='auto':
+                    if self.run_card['sys_matchscale']=='auto':
+                        PY8_Card.MadGraphSet('SysCalc:tmsList',\
                      ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
-                                              for factor in [0.5,0.75,1.5,2.0]))        
-        
-            PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
+                       for factor in [0.5,0.75,1.5,2.0] if 
+                   factor*PY8_Card["Merging:TMS"] >= self.run_card['ktdurham']))
+                    else:
+                        PY8_Card.MadGraphSet('SysCalc:tmsList',
+                              ','.join(self.run_card['sys_matchscale'].split()))                           
+            if self.run_card['ktscheme']==1:
+                PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
+            else:
+                raise InvalidCmd("For now, the CKKWl merging only supports the "+\
+    "value '1' for the run_card parameter 'ktscheme' (i.e. kt-durham merging).")
             PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
                                                          run_card['dparameter'])
         ########################################################################
+
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)
         cmd_card = StringIO.StringIO()
         PY8_Card.write(cmd_card,pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                                                        direct_pythia_input=True)
+        
+        # Now setup the preamble to make sure that everything will use the locally
+        # installed tools (if present) even if the user did not add it to its
+        # environment variables.
+        if MADEVENT:
+            preamble = misc.get_HEPTools_location_setter(
+               pjoin(self.options['mg5amc_py8_interface_path'],os.pardir),'lib')
+        else:
+            preamble = misc.get_HEPTools_location_setter(
+                                                 pjoin(MG5DIR,'HEPTools'),'lib')
+            
         open(pythia_cmd_card,'w').write("""!
 ! It is possible to run this card manually with:
 !    %s %s my_hepmc_output_events.hepmc
 !
-"""%(pythia_main,pythia_cmd_card)+cmd_card.getvalue())
+"""%(preamble+pythia_main,os.path.basename(pythia_cmd_card))+cmd_card.getvalue())
         
         HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
@@ -3336,11 +3373,31 @@ Please install this tool with the following MG5_aMC command:
         logger.info('Follow Pythia8 shower by running the following command'+
                         ' (in a separate terminal):\n    tail -f %s'%pythia_log)
 
-        self.cluster.launch_and_wait(pythia_main, 
-                        argument= [pythia_cmd_card,HepMC_event_output],
+        # Write a bash wrapper to run the shower with custom environment variables
+        wrapper_path = pjoin(self.me_dir,'Events',self.run_name,'run_shower.sh')
+        wrapper = open(wrapper_path,'w')
+        shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'
+        shell_exe = None
+        if os.path.exists('/usr/bin/env'):
+            shell_exe = '/usr/bin/env %s'%shell
+        else:
+            shell_exe = misc.which(shell)
+            if not shell_exe:
+                self.InvalidCmd('No shell could be found in your environment.\n'+
+                  "Make sure that either '%s' is in your path or that the"%shell+\
+                  " command '/usr/bin/env %s' exists and returns a valid path."%shell)
+        wrapper.write("#!%s\n%s"%(shell_exe,' '.join(
+                    [preamble+pythia_main,pythia_cmd_card,HepMC_event_output])))
+        wrapper.close()
+        # Set it as executable
+        st = os.stat(wrapper_path)
+        os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
+
+        self.cluster.launch_and_wait(wrapper_path, 
+                        argument= [],
                         stdout= pythia_log,
                         stderr=subprocess.STDOUT,
-                        cwd=pjoin(self.me_dir,'Events'))
+                        cwd=pjoin(self.me_dir,'Events',self.run_name))
 
 
         if not os.path.isfile(pythia_log) or \
@@ -3393,7 +3450,6 @@ Please install this tool with the following MG5_aMC command:
                 self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
-        
 
         self.update_status('finish', level='pythia8', makehtml=False)
         if self.options['delphes_path']:

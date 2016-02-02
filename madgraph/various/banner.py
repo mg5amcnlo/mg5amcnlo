@@ -1239,12 +1239,10 @@ class PY8Card(ConfigFile):
         # for MLM merging
         # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
         self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
-        self.add_param("SysCalc:qCutList", 'auto', always_write_to_card=False)
         # -1 means that it is automatically set. 
         self.add_param("JetMatching:nJetMax", -1, always_write_to_card=False) 
         # for CKKWL merging
-        self.add_param("Merging:TMS", 10.0, always_write_to_card=False)
-        self.add_param("SysCalc:tmsList", 'auto', always_write_to_card=False)
+        self.add_param("Merging:TMS", -1.0, always_write_to_card=False)
         self.add_param("Merging:Process", '<set_by_user>', always_write_to_card=False)
         # -1 means that it is automatically set.   
         self.add_param("Merging:nJetMax", -1, always_write_to_card=False)
@@ -1272,6 +1270,7 @@ class PY8Card(ConfigFile):
         # for MLM merging
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
+        self.add_param("SysCalc:qCutList", 'auto', hidden=True, always_write_to_card=False)
         self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
           comment='Do veto externally (e.g. in SysCalc).')
         self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
@@ -1282,6 +1281,7 @@ class PY8Card(ConfigFile):
         # for CKKWL merging (common with UMEPS, UNLOPS)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
         self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
+        self.add_param("SysCalc:tmsList", 'auto', hidden=True, always_write_to_card=False)
         self.add_param("Merging:muFac", 91.188, hidden=True, always_write_to_card=False,
                         comment='Set factorisation scales of the 2->2 process.')
         self.add_param("Merging:applyVeto", False, hidden=True, always_write_to_card=False,

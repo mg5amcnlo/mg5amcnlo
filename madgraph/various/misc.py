@@ -1168,6 +1168,39 @@ class open_file(object):
             # not shell program
             os.system('open -a %s %s' % (program, file_path))
 
+def get_HEPTools_location_setter(HEPToolsDir,type):
+    """ Checks whether mg5dir/HEPTools/<type> (which is 'lib', 'bin' or 'include')
+    is in the environment paths of the user. If not, it returns a preamble that
+    sets it before calling the exectuable, for example:
+       <preamble> ./my_exe
+    with <preamble> -> DYLD_LIBRARY_PATH='blabla;$DYLD_LIBRARY_PATH'"""
+    
+    assert(type in ['bin','include','lib'])
+    
+    target_env_var = 'PATH' if type in ['bin','include'] else \
+          ('DYLD_LIBRARY_PATH' if sys.platform=='darwin' else 'LD_LIBRARY_PATH')
+    
+    target_path = os.path.abspath(pjoin(HEPToolsDir,type))
+    
+    if target_env_var not in os.environ or \
+                target_path not in os.environ[target_env_var].split(os.pathsep):
+        return "%s='%s;$%s' "%(target_env_var,target_path,target_env_var)
+    else:
+        return ''
+
+def get_shell_type():
+    """ Try and guess what shell type does the user use."""
+    try:
+        if os.environ['SHELL'].endswith('bash'):
+            return 'bash'
+        elif os.environ['SHELL'].endswith('tcsh'):
+            return 'tcsh'
+        else:
+            # If unknown, return None
+            return None 
+    except KeyError:
+        return None
+
 def is_executable(path):
     """ check if a path is executable"""
     try: 

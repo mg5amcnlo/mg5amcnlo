@@ -1399,13 +1399,19 @@ class HwUList(histograms_PhysicsObjectList):
             weight_label_list = [wgt.strip() for wgt in 
                 str(selected_run_node.getAttribute('header')).split(';') if
                                                       not re.match('^\s*$',wgt)]
-            # Remove potential repetition of identical weight labels
-            weight_label_list = list(set(weight_label_list))
-            selected_weights = dict([ (wgt_pos, 
-             [wgt if wgt not in ['xmin','xmax'] else HwU.mandatory_weights[wgt]])
-                              for wgt_pos, wgt in enumerate(weight_label_list)])    
             ordered_weight_label_list = [w for w in weight_label_list if w not\
                                                              in ['xmin','xmax']]
+            # Remove potential repetition of identical weight labels
+            filtered_ordered_weight_label_list = []
+            for wgt_label in ordered_weight_label_list:
+                if wgt_label not in filtered_ordered_weight_label_list:
+                    filtered_ordered_weight_label_list.append(wgt_label)
+    
+            selected_weights = dict([ (wgt_pos, 
+             [wgt if wgt not in ['xmin','xmax'] else HwU.mandatory_weights[wgt]])
+                 for wgt_pos, wgt in enumerate(weight_label_list) if wgt in 
+                            filtered_ordered_weight_label_list+['xmin','xmax']])
+
             return self.retrieve_plots_from_XML_source(selected_run_node,
                    selected_weights, ordered_weight_label_list, raw_labels=True)
 

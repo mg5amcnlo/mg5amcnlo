@@ -5140,12 +5140,7 @@ This implies that with decay chains:
         """ Uses the HEPToolsInstaller.py script maintened online to install
         HEP tools with more complicated dependences.
         Additional options will be added to the list when calling HEPInstaller"""
-        
-        # Make sure additional_options contains the option '--force' at most once
-        # and placed last.
-        additional_options = [opt for opt in additional_options if opt!='--force']+\
-                        (['--force'] if '--force' in additional_options else [])
-        
+
         # Always refresh the installer if already present
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
             if HepToolsInstaller_web_address is None:
@@ -5177,9 +5172,9 @@ This implies that with decay chains:
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
 ############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
             
         # Potential change in naming convention
@@ -5201,9 +5196,18 @@ This implies that with decay chains:
         # Add the path of pythia8 if known and the MG5 path
         if tool=='mg5amc_py8_interface':
             additional_options.append('--mg5_path=%s'%MG5DIR)
+            # Warn about the soft dependency to gnuplot
+            if misc.which('gnuplot') is None:
+                logger.warning("==========")
+                logger.warning("The optional dependency 'gnuplot' for the tool"+\
+                 " 'mg5amc_py8_interface' was not found. We recommend that you"+\
+                 " install it so as to be able to view the plots related to "+\
+                                                      " merging with Pythia 8.")
+                logger.warning("==========")
             if self.options['pythia8_path']:
                 additional_options.append(
                                '--with_pythia8=%s'%self.options['pythia8_path'])
+
 ##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
 #            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
 #                    pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
@@ -5259,13 +5263,22 @@ This implies that with decay chains:
             elif lhapdf_version==6:
                 lhapdf_option.append('--with_lhapdf5=OFF')
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
-
+            # Make sure each otion in additional_options appears only once
+            additional_options = list(set(additional_options))
+             # And that the option '--force' is placed last.
+            additional_options = [opt for opt in additional_options if opt!='--force']+\
+                        (['--force'] if '--force' in additional_options else [])
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
              'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
              '--prefix=%s'%pjoin(MG5DIR,'HEPTools')]
                         + lhapdf_option + compiler_options + additional_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
+            # Make sure each otion in additional_options appears only once
+            additional_options = list(set(additional_options))
+             # And that the option '--force' is placed last.
+            additional_options = [opt for opt in additional_options if opt!='--force']+\
+                        (['--force'] if '--force' in additional_options else [])
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               pjoin(MG5DIR,'HEPTools')] + compiler_options + additional_options)
@@ -5308,8 +5321,47 @@ This implies that with decay chains:
         elif tool == 'mg5amc_py8_interface':
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
-            self.exec_cmd('save options')                      
-
+            self.exec_cmd('save options')      
+            
+        # Now warn the user if he didn't add HEPTools first in his environment
+        # variables.
+        path_to_be_set = []
+        if sys.platform == "darwin":
+            library_variables = ["DYLD_LIBRARY_PATH"]
+        else:
+            library_variables = ["LD_LIBRARY_PATH"]
+        for variable in library_variables:
+            if not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','lib'))==\
+                os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
+                path_to_be_set.append((variable,
+                               os.path.abspath(pjoin(MG5DIR,'HEPTools','lib'))))
+        for variable in ["PATH"]:
+            if not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','bin'))==\
+                os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
+                path_to_be_set.append((variable,
+                               os.path.abspath(pjoin(MG5DIR,'HEPTools','bin'))))
+            if not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','include'))==\
+                os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
+                path_to_be_set.append((variable,
+                               os.path.abspath(pjoin(MG5DIR,'HEPTools','include'))))
+       
+        if len(path_to_be_set)>0:
+            shell_type = misc.get_shell_type()
+            if shell_type in ['bash',None]:
+                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.bashrc"%\
+                (r'\n'.join('export %s=%s%s$%s'%(var,path,os.pathsep,var) for var,path in path_to_be_set))
+            elif shell_type=='tcsh':
+                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.cshrc"%\
+                (r'\n'.join('setenv %s %s%s$%s'%(var,path,os.pathsep,var) for var,path in path_to_be_set))
+            
+            logger.warning("==========")
+            logger.warning("We recommend that you add to the following paths"+\
+             " to your environment variables, so that you are garanteed that"+\
+             " at runtime, MG5_aMC will use the tools you have just installed"+\
+             " and not some other versions installed elsewhere on your system:"+\
+             "\n   %s"%modification_line) 
+            logger.warning("==========")
+    
     def do_install(self, line, paths=None, additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
