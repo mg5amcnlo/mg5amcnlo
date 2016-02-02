@@ -3394,12 +3394,6 @@ Please install this tool with the following MG5_aMC command:
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
         
-        # For now, bypass the hep2lhe step as we anyway have hepmc on our hands
-        # now. We will see what is the best way to proceed later and how to 
-        # link SysCalc to this (i.e. check with Simon).
-        if self.run_card['use_syst'] in self.true:
-            logger.error('Hep2Lhe and SysCalc not compatible with Pythia8 yet!'+\
-                                                         ' It will not be run.')
 
         self.update_status('finish', level='pythia8', makehtml=False)
         if self.options['delphes_path']:

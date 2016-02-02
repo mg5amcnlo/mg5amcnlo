@@ -5443,6 +5443,7 @@ This implies that with decay chains:
             if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
                 os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
 
+        make_flags = [] #flags for the compilation
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
@@ -5510,7 +5511,10 @@ This implies that with decay chains:
                     if misc.which('lhapdf-config') != os.path.realpath(self.options['lhapdf']):
                         os.environ['PATH'] = '%s:%s' % (os.path.realpath(self.options['lhapdf']),os.environ['PATH']) 
             else:
-                raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
+                raise self.InvalidCmd('lhapdf is required to compile/use SysCalc. Specify his path or install it via install lhapdf6')
+            if self.options['cpp_compiler']:
+                make_flags.append('CXX=%s' % self.options['cpp_compiler'])
+            
 
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w')
@@ -5525,7 +5529,7 @@ This implies that with decay chains:
                 status = misc.call(['make','install'], 
                                                cwd = os.path.join(MG5DIR, name))
             else:
-                status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
+                status = misc.call(['make']+make_flags, cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -5538,7 +5542,8 @@ This implies that with decay chains:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
-                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+                status = self.compile(make_flags, mode='', 
+                                               cwd = os.path.join(MG5DIR, name))
 
         if not status:
             logger.info('Compilation succeeded')

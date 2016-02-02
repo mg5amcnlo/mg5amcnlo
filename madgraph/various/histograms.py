@@ -653,6 +653,7 @@ class HwU(Histogram):
     def get_HwU_wgt_label_type(cls, wgt_label):
         """ From the format of the weight label given in argument, it returns
         a string identifying the type of standard weight it is."""
+
         if isinstance(wgt_label,str):
             return 'UNKNOWN_TYPE'
         if isinstance(wgt_label,tuple):
@@ -716,6 +717,15 @@ class HwU(Histogram):
         for bin in self.bins:
             if bin.boundaries[0] <= x_value < bin.boundaries[1]:
                 bin.addEvent(weights = weights)
+    
+    def get(self, name):
+        
+        if name == 'bins':
+            print [b.boundaries[0] for b in self.bins]
+            return [b.boundaries[0] for b in self.bins]
+        else:
+            return [b.wgts[name] for b in self.bins]
+    
     
     def get_formatted_header(self):
         """ Return a HwU formatted header for the weight label definition."""
@@ -1330,6 +1340,28 @@ class HwUList(histograms_PhysicsObjectList):
         if isinstance(file_path, str):
             stream.close()
 
+    def get_hist_names(self):
+        """return a list of all the names of define histograms"""
+
+        output = []
+        for hist in self:
+            output.append(hist.get_HwU_histogram_name())
+        return output
+    
+    def get_wgt_names(self):
+        """ return the list of all weights define in each histograms"""
+        
+        return self[0].bins.weight_labels
+        
+    
+    def get(self, name):
+        """return the HWU histograms related to a given name"""
+        for hist in self:
+            if hist.get_HwU_histogram_name() == name:
+                return hist
+
+        raise NameError, "no histogram with name: %s" % name
+    
     def parse_histos_from_PY8_XML_stream(self, stream, run_id=None, 
             merging_scale=None, accepted_types_order=[], 
             consider_reweights=True, raw_labels=False):
@@ -1383,17 +1415,17 @@ class HwUList(histograms_PhysicsObjectList):
         all_weights = []
         for wgt_position, wgt_label in \
             enumerate(str(selected_run_node.getAttribute('header')).split(';')):
-             if not re.match('^\s*$',wgt_label) is None:
-                 continue
-             all_weights.append({'POSITION':wgt_position})
-             for wgt_item in wgt_label.strip().split('_'):
-                 property = wgt_item.strip().split('=')
-                 if len(property) == 2:
-                     all_weights[-1][property[0].strip()] = property[1].strip()
-                 elif len(property)==1:
-                     all_weights[-1][property[0].strip()] = None
-                 else:
-                     raise MadGraph5Error, \
+            if not re.match('^\s*$',wgt_label) is None:
+                continue
+            all_weights.append({'POSITION':wgt_position})
+            for wgt_item in wgt_label.strip().split('_'):
+                property = wgt_item.strip().split('=')
+                if len(property) == 2:
+                    all_weights[-1][property[0].strip()] = property[1].strip()
+                elif len(property)==1:
+                    all_weights[-1][property[0].strip()] = None
+                else:
+                    raise MadGraph5Error, \
                          "The weight label property %s could not be parsed."%wgt_item
         
         # Now make sure that for all weights, there is 'PDF', 'MUF' and 'MUR' 
@@ -1485,6 +1517,7 @@ class HwUList(histograms_PhysicsObjectList):
                     %(key,'' if weight[key] is None else '=%s'%str(weight[key])) for 
                                                       key in ordered_properties)
 # ===========  END HELPER FUNCTIONS ===========
+        
         
         # The central value is not necessarily the 3rd one if a different merging
         # cut was selected.
@@ -1587,6 +1620,8 @@ class HwUList(histograms_PhysicsObjectList):
 
         # Cache the list of selected weights to be defined at each line
         weight_label_list = sum(selected_weights.values(),[])
+            
+
         # The weight_label list to set to self.bins 
         ordered_weight_label_list = ['central','stat_error']
         for weight_label in weight_label_list:

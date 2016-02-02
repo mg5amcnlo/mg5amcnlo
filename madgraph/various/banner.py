@@ -2108,11 +2108,11 @@ class RunCardLO(RunCard):
         #matching
         self.add_param("scalefact", 1.0)
         self.add_param("ickkw", 0)
-        self.add_param("highestmult", 1, fortran_name="nhmult")
-        self.add_param("ktscheme", 1)
+        self.add_param("highestmult", 1, fortran_name="nhmult", hidden=True)
+        self.add_param("ktscheme", 1, hidden=True)
         self.add_param("alpsfact", 1.0)
-        self.add_param("chcluster", False)
-        self.add_param("pdfwgt", True)
+        self.add_param("chcluster", False, hidden=True)
+        self.add_param("pdfwgt", True, hidden=True)
         self.add_param("asrwgtflavor", 5)
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
@@ -2238,7 +2238,7 @@ class RunCardLO(RunCard):
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
         self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "30 50", include=False)
-        self.add_param("sys_pdf", "Ct10nlo.LHgrid", include=False)
+        self.add_param("sys_pdf", "CT10nlo.LHgrid", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
         
         #parameter not in the run_card by default
@@ -2291,6 +2291,12 @@ class RunCardLO(RunCard):
      
         # CKKW Treatment
         if self['ickkw'] > 0:
+            if self['ickkw'] != 1:
+                logger.critical('ickkw >1 is pure alpha and only partly implemented.')
+                import madgraph.interface.extended_cmd as basic_cmd
+                answer = basic_cmd.smart_input('Do you really want to continue', allow_arg=['y','n'], default='n')
+                if answer !='y':
+                    raise InvalidRunCard, 'ickkw>1 is still in alpha'
             if self['use_syst']:
                 # some additional parameter need to be fixed for Syscalc + matching
                 if self['alpsfact'] != 1.0:
@@ -2303,6 +2309,10 @@ class RunCardLO(RunCard):
                 self.get_default('highestmult', log_level=20)                   
                 self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
         if self['xqcut'] > 0:
+            if self['ickkw'] == 0:
+                logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be carefull')
+                import time
+                time.sleep(5)
             if self['drjj'] != 0:
                 logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
                 self['drjj'] = 0
@@ -2313,6 +2323,7 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
+
 
 
         # check validity of the pdf set
