@@ -1524,7 +1524,8 @@ class HwUList(histograms_PhysicsObjectList):
                             filtered_ordered_weight_label_list+['xmin','xmax']])
 
             return self.retrieve_plots_from_XML_source(selected_run_node,
-                   selected_weights, ordered_weight_label_list, raw_labels=True)
+                   selected_weights, filtered_ordered_weight_label_list,
+                                                                raw_labels=True)
 
         # Now retrieve the header and save all weight labels as dictionaries
         # with key being properties and their values as value. If the property
