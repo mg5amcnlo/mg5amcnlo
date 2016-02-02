@@ -3255,7 +3255,10 @@ Please install this tool with the following MG5_aMC command:
         ### Special setup of the Hidden parameters in the card for each MG type of run
         # Here we force the Beams:LHEF to have the correct value
         PY8_Card.subruns[0].systemSet('Beams:LHEF',
-                         pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz"))        
+                         pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz"))
+        # We specify by hand all necessary parameters, so that there is no
+        # need to read parameters from the Banner.
+        PY8_Card.MadGraphSet('JetMatching:setMad',False)        
         if int(self.run_card['ickkw'])==1:
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
@@ -3277,7 +3280,9 @@ Please install this tool with the following MG5_aMC command:
                 PY8_Card.MadGraphSet('JetMatching:doVeto',False)          
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
-            PY8_Card.MadGraphSet('JetMatching:setMad',True)
+            # Use the parameter maxjetflavor for JetMatching:nQmatch which specifies
+            # up to which parton must be matched.Merging:nQuarksMerge
+            PY8_Card.MadGraphSet('JetMatching:nQmatch',self.run_card['maxjetflavor'])
             # It is not really meaningful to use the same cuts at the ME and shower level.
             # PY8_Card.MadGraphSet('JetMatching:coneRadius',self.run_card['drjj'])
             # PY8_Card.MadGraphSet('JetMatching:etaJetMax',self.run_card['etaj'])
@@ -3308,6 +3313,9 @@ Please install this tool with the following MG5_aMC command:
             # PY8 should not implement the CKKW veto since the driver should do it.
             if self.run_card['use_syst']:
                 PY8_Card.MadGraphSet('Merging:applyVeto',False)
+            # Use the parameter maxjetflavor for Merging:nQuarksMerge which specifies
+            # up to which parton must be matched.
+            PY8_Card.MadGraphSet('Merging:nQuarksMerge',self.run_card['maxjetflavor'])
             # It is actually safer to let PY8 assign it automatically from the 
             # scale specified for each event in the .lhe file.
 #            if self.run_card['fixed_ren_scale']:
@@ -3470,7 +3478,8 @@ Please install this tool with the following MG5_aMC command:
                 if selected_run_node:
                     xsections = selected_run_node.getElementsByTagName("xsection")
                     cross_sections = dict((xsec.getAttribute('name'),
-                    (float(xsec.data.split()[0]),float(xsec.data.split()[1])))
+                    (float(xsec.childNodes[0].data.split()[0]),
+                     float(xsec.childNodes[0].data.split()[1])))
                                                           for xsec in xsections)
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
@@ -3481,7 +3490,8 @@ Please install this tool with the following MG5_aMC command:
                                                                   re.IGNORECASE)                
                 cross_sections = dict(
                     (float(central_merging_re.match(xsec).group('merging')),value)
-                    for xsec, value in cross_sections if not central_merging_re.match(xsec) is None)
+                        for xsec, value in cross_sections.items() if not 
+                                         central_merging_re.match(xsec) is None)
                 central_scale = PY8_Card['JetMatching:qCut'] if \
                         int(self.run_card['ickkw'])==1 else PY8_Card['Merging:TMS']
                 if central_scale in cross_sections:

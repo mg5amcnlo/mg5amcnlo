@@ -1274,10 +1274,11 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
           comment='Do veto externally (e.g. in SysCalc).')
         self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
-        self.add_param("JetMatching:setMad", True, hidden=True, always_write_to_card=False,
-                                     comment='Specify if from MadGraph origin.') 
+        self.add_param("JetMatching:setMad", False, hidden=True, always_write_to_card=False,
+              comment='Specify one must read inputs from the MadGraph banner.') 
         self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False) 
         self.add_param("JetMatching:etaJetMax", 10.0, hidden=True, always_write_to_card=False)
+        self.add_param("JetMatching:nQmatch",4,hidden=True, always_write_to_card=False)
         # for CKKWL merging (common with UMEPS, UNLOPS)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
         self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
@@ -1293,6 +1294,7 @@ class PY8Card(ConfigFile):
         self.add_param("Merging:muRenInME", 91.188, hidden=True, always_write_to_card=False,
                comment='Set renormalization scales of the 2->2 Matrix Element.')
         self.add_param("SpaceShower:rapidityOrder", False, hidden=True, always_write_to_card=False)
+        self.add_param("Merging:nQuarksMerge",4,hidden=True, always_write_to_card=False)
         # To be added in subruns for CKKWL
         self.add_param("Merging:doKTMerging", False, hidden=True, always_write_to_card=False)
         self.add_param("Merging:Dparameter", False, hidden=True, always_write_to_card=False)        
