@@ -3263,16 +3263,35 @@ Please install this tool with the following MG5_aMC command:
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
-                PY8_Card.MadGraphSet('JetMatching:qCut',1.3*self.run_card['xqcut'])
+                PY8_Card.MadGraphSet('JetMatching:qCut',1.5*self.run_card['xqcut'])
+                
+            if PY8_Card['JetMatching:qCut']<(1.5*self.run_card['xqcut']):
+                logger.error(
+    'The MLM merging qCut parameter you chose (%f) is less than'%PY8_Card['JetMatching:qCut']+
+    '1.5*xqcut, with xqcut your run_card parameter (=%f).\n'%self.run_card['xqcut']+
+    'It would be better/safer to use a larger qCut or a smaller xqcut.')
+                
             if self.run_card['use_syst'] and PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['sys_matchscale']=='auto':
                     PY8_Card.MadGraphSet('SysCalc:qCutList',\
                      ','.join('%.4f'%(factor*PY8_Card['JetMatching:qCut']) for \
                      factor in [0.5,0.75,1.5,2.0] if \
-                    factor*PY8_Card['JetMatching:qCut']>self.run_card['xqcut']))
+                    factor*PY8_Card['JetMatching:qCut']>1.5*self.run_card['xqcut']))
                 else:
                     PY8_Card.MadGraphSet('SysCalc:qCutList',
                              ','.join(self.run_card['sys_matchscale'].split()))
+            
+            for scale in PY8_Card['SysCalc:qCutList'].split(','):
+                if re.match('^\s*$',scale): continue
+                sc = float(scale.strip())
+                if sc<(1.5*self.run_card['xqcut']):
+                    logger.error(
+        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%sc+\
+        " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
+        "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
+        ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
+        'It would be better/safer to use a larger qCut or a smaller xqcut.')
+                
             # Specific MLM settings
             # PY8 should not implement the MLM veto since the driver should do it
             # if merging scale variation is turned on
@@ -3294,7 +3313,8 @@ Please install this tool with the following MG5_aMC command:
                 logger.info("No user-defined value for Pythia8 parameter "+
             "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
-        elif int(self.run_card['ickkw'])==2:
+        # We use the positivity of 'ktdurham' cut as a CKKWl marker.
+        elif int(self.run_card['ickkw'])==2 or self.run_card['ktdurham']>0.0:
             # Specific CKKW settings
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
@@ -3304,6 +3324,12 @@ Please install this tool with the following MG5_aMC command:
                 else:
                     raise self.InvalidCmd('When running CKKWl merging, the user'+\
                       " select a 'ktdurham' cut larger than 0.0 in the run_card.")
+            if PY8_Card['Merging:TMS']<self.run_card['ktdurham']:
+                logger.error(
+    'The CKKWl merging scale you chose (%f) is less than'%PY8_Card['Merging:TMS']+
+    'the ktdurham cut specified in the run_card parameter (=%f).\n'%self.run_card['ktdurham']+
+    'It is incorrect to use a smaller CKKWl scale than the generation-level ktdurham cut!')
+    
             if PY8_Card['Merging:Process']=='<set_by_user>':
                 raise self.InvalidCmd('When running CKKWl merging, the user must'+
                     " specifiy the option 'Merging:Process' in pythia8_card.dat")
@@ -3336,14 +3362,26 @@ Please install this tool with the following MG5_aMC command:
                 PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
                 
             if self.run_card['use_syst'] and PY8_Card['SysCalc:tmsList']=='auto':
-                    if self.run_card['sys_matchscale']=='auto':
-                        PY8_Card.MadGraphSet('SysCalc:tmsList',\
-                     ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
-                       for factor in [0.5,0.75,1.5,2.0] if 
-                   factor*PY8_Card["Merging:TMS"] >= self.run_card['ktdurham']))
-                    else:
-                        PY8_Card.MadGraphSet('SysCalc:tmsList',
-                              ','.join(self.run_card['sys_matchscale'].split()))                           
+                if self.run_card['sys_matchscale']=='auto':
+                    PY8_Card.MadGraphSet('SysCalc:tmsList',\
+                 ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
+                   for factor in [0.5,0.75,1.5,2.0] if 
+               factor*PY8_Card["Merging:TMS"] >= self.run_card['ktdurham']))
+                else:
+                    PY8_Card.MadGraphSet('SysCalc:tmsList',
+                          ','.join(self.run_card['sys_matchscale'].split())) 
+            
+            for scale in PY8_Card['SysCalc:tmsList'].split(','):
+                if re.match('^\s*$',scale): continue
+                sc = float(scale.strip())
+                if sc<self.run_card['ktdurham']:
+                    logger.error(
+        'One of the CKKWl merging scale you chose (%f) in the variation list'%sc+\
+        " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
+        "'sys_matchscale' in the run_card) is less than %f, "%self.run_card['ktdurham']+
+        'the ktdurham cut specified in the run_card parameter.\n'+
+        'It is incorrect to use a smaller CKKWl scale than the generation-level ktdurham cut!')
+
             if self.run_card['ktscheme']==1:
                 PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
             else:
