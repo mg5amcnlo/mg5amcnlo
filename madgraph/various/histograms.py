@@ -1481,16 +1481,18 @@ class HwUList(histograms_PhysicsObjectList):
         include all the extra scale/pdf/merging variation weights."""
         
         run_nodes = minidom.parse(stream).getElementsByTagName("run")
-        
+        all_nodes = dict((int(node.getAttribute('id')),node) for
+                                                              node in run_nodes)
         selected_run_node = None
         weight_header     = None
         if run_id is None:
             if len(run_nodes)>0:
-                selected_run_node = run_nodes[0]
+                selected_run_node = all_nodes[min(all_nodes.keys())]
         else:
-            for node in run_nodes:
-                if node.getAttribute('id')==run_id:
-                    selected_run_node = node
+            try:
+                selected_run_node = all_nodes[int(run_id)]
+            except:
+                selected_run_node = None
         
         if selected_run_node is None:
             if run_id is None:

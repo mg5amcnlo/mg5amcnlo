@@ -5172,9 +5172,9 @@ This implies that with decay chains:
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
 ############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
             
         # Potential change in naming convention
@@ -5331,16 +5331,19 @@ This implies that with decay chains:
         else:
             library_variables = ["LD_LIBRARY_PATH"]
         for variable in library_variables:
-            if not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','lib'))==\
+            if (variable not in os.environ) or \
+                not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','lib'))==\
                 os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
                 path_to_be_set.append((variable,
                                os.path.abspath(pjoin(MG5DIR,'HEPTools','lib'))))
         for variable in ["PATH"]:
-            if not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','bin'))==\
+            if (variable not in os.environ) or \
+                not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','bin'))==\
                 os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
                 path_to_be_set.append((variable,
                                os.path.abspath(pjoin(MG5DIR,'HEPTools','bin'))))
-            if not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','include'))==\
+            if (variable not in os.environ) or \
+                not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','include'))==\
                 os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
                 path_to_be_set.append((variable,
                                os.path.abspath(pjoin(MG5DIR,'HEPTools','include'))))
@@ -5349,10 +5352,14 @@ This implies that with decay chains:
             shell_type = misc.get_shell_type()
             if shell_type in ['bash',None]:
                 modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.bashrc"%\
-                (r'\n'.join('export %s=%s%s$%s'%(var,path,os.pathsep,var) for var,path in path_to_be_set))
+                (r'\n'.join('export %s=%s%s'%
+                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '') 
+                                                for var,path in path_to_be_set))
             elif shell_type=='tcsh':
                 modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.cshrc"%\
-                (r'\n'.join('setenv %s %s%s$%s'%(var,path,os.pathsep,var) for var,path in path_to_be_set))
+                (r'\n'.join('setenv %s %s'%
+                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '')
+                                                for var,path in path_to_be_set))
             
             logger.warning("==========")
             logger.warning("We recommend that you add to the following paths"+\

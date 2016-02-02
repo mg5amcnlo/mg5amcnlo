@@ -417,7 +417,7 @@ class Banner(dict):
                 tag = 'MGRunCard'
             elif 'pythia_card' in card_name:
                 tag = 'MGPythiaCard'
-            elif 'pythia8_card' in card_name:
+            elif 'pythia8_card' in card_name or 'pythia8.cmd' in card_name:
                 tag = 'MGPythiaCard'
             elif 'pgs_card' in card_name:
                 tag = 'MGPGSCard'

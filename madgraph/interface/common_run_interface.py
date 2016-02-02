@@ -1098,10 +1098,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
                 # Load the HwU file.
                 # If they are NaN's around for the reweighting weights, then
-                # setting consider_reweights to False will disregard them
+                # setting consider_reweights to False will disregard them.
                 # run_id = None means that the first run is considered
                 histos = histograms.HwUList(djr_path, consider_reweights=True,
-                                                                    run_id=None)
+                                                                       run_id=0)
                 
                 if len(histos)==0:
                     return False
@@ -1132,11 +1132,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 # merging scale available.
                 if not min_merging_scale is None:
                     min_scale_histos = histograms.HwUList(djr_path, 
-                                       consider_reweights=False, run_id=None, 
-                                                    merging_scale=min_merging_scale)
+                                       consider_reweights=False, run_id=0, 
+                                                merging_scale=min_merging_scale)
                     max_scale_histos = histograms.HwUList(djr_path, 
-                                       consider_reweights=False, run_id=None, 
-                                                    merging_scale=max_merging_scale)
+                                       consider_reweights=False, run_id=0, 
+                                                merging_scale=max_merging_scale)
     
                     # Give the histos types so that the plot labels look good
                     for histo in min_scale_histos:

@@ -3418,8 +3418,11 @@ Please install this tool with the following MG5_aMC command:
         
         self.to_store.append('pythia8')
 
-        # Find the matched cross-section
-        if int(self.run_card['ickkw']):
+        # Study matched cross-sections
+        if int(self.run_card['ickkw']) or self.run_card['ktdurham']>0.0:
+            #####
+            # From the log file
+            #####
             # read the line from the bottom of the file
             pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
                                                         '%s_pythia8.log' % tag))
@@ -3447,12 +3450,55 @@ Please install this tool with the following MG5_aMC command:
                     error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
                     # works both for fixed number of generated events and fixed accepted events
                     self.results.add_detail('error_pythia', error_m)
-                break                 
-
+                break
             pythia_log.close()
-
+            
+            #####
+            # From the djr file generated
+            #####
+            djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
+            cross_sections = None 
+            if os.path.isfile(djr_output):
+                run_nodes = minidom.parse(stream).getElementsByTagName("run")
+                all_nodes = dict((int(node.getAttribute('id')),node) for
+                                                              node in run_nodes)
+                try:
+                    selected_run_node = all_nodes[0]
+                except:
+                    selected_run_node = None
+                if selected_run_node:
+                    xsections = selected_run_node.getElementsByTagName("xsection")
+                    cross_sections = dict((xsec.getAttribute('name'),
+                    (float(xsec.data.split()[0]),float(xsec.data.split()[1])))
+                                                          for xsec in xsections)
+            if cross_sections:
+                # Filter the cross_sections specified an keep only the ones 
+                # with central parameters and a different merging scale
+                a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+                central_merging_re = re.compile(
+                  '^\s*Weight_MERGING\s*=\s*(?P<merging>%s)\s*$'%a_float_re,
+                                                                  re.IGNORECASE)                
+                cross_sections = dict(
+                    (float(central_merging_re.match(xsec).group('merging')),value)
+                    for xsec, value in cross_sections if not central_merging_re.match(xsec) is None)
+                central_scale = PY8_Card['JetMatching:qCut'] if \
+                        int(self.run_card['ickkw'])==1 else PY8_Card['Merging:TMS']
+                if central_scale in cross_sections:
+                    self.results.add_detail('cross_pythia', cross_sections[central_scale][0])
+                    self.results.add_detail('error_pythia', cross_sections[central_scale][1])
+                
+                if len(cross_sections)>0:
+                    logger.info('Pythia8 matched cross-sections are:')
+                    for scale in sorted(cross_sections.keys()):
+                        logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                        (scale,cross_sections[scale][0],cross_sections[scale][1]))
+            
         #Update the banner
-        self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
+        # self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
+        # We add directly the pythia command card because it has the full 
+        # information
+        self.banner.add(pythia_cmd_card)
+
         if int(self.run_card['ickkw']):
             # Add the matched cross-section
             if 'MGGenerationInfo' in self.banner:
