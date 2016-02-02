@@ -726,6 +726,115 @@ class HwU(Histogram):
         else:
             return [b.wgts[name] for b in self.bins]
     
+    def get_uncertainty_band(self, selector, mode=0):
+        """return two list of entry one with the minimum and one with the maximum value.
+           selector can be:
+               - a regular expression on the label name
+               - a function returning T/F (applying on the label name)
+               - a list of labels
+               - a keyword
+        """     
+        
+        # find the set of weights to consider
+        if isinstance(selector, str):
+            if selector == 'QCUT':
+                selector = r'^Weight_MERGING=[\d]*[.]?\d*$'
+            elif selector == 'SCALE':
+                selector = r'(MUF=\d*[.]?\d*_MUR=([^1]\d*|1\d+)_PDF=\d*)[.]?\d*|(MUF=([^1]\d*|1\d+)[.]?\d*_MUR=\d*[.]?\d*_PDF=\d*)'
+            elif selector == 'ALPSFACT':
+                selector = r'ALPSFACT'
+            elif selector == 'PDF':
+                selector = r'MUF=1_MUR=1_PDF=(\d*)'
+                if not mode:
+                    pdfs = [int(re.findall(selector, n)[0]) for n in self.bins[0].wgts if re.search(selector,n, re.IGNORECASE)]
+                    min_pdf, max_pdf = min(pdfs), max(pdfs) 
+                    if max_pdf - min_pdf > 100:
+                        mode == 'min/max'
+                    elif  max_pdf <= 90000:
+                        mode = 'hessian'
+                    else:
+                        mode = 'gaussian'
+            selections = [n for n in self.bins[0].wgts if re.search(selector,n, re.IGNORECASE)]
+        elif hasattr(selector, '__call__'):
+            selections = [n for n in self.bins[0].wgts if selector(n)]
+        elif isinstance(selector, (list, tuple)):
+            selections = selector
+        
+        # find the way to find the minimal/maximal curve
+        if not mode:
+            mode = 'min/max'
+        
+        # build the collection of values
+        values = []
+        for s in selections:
+            values.append(self.get(s))
+        
+        #sanity check
+        if not len(values):
+            return [0] * len(self.bins), [0]* len(self.bins)
+        elif len(values) ==1:
+            return values[0], values[0]
+        
+        
+        # Start the real work
+        if mode == 'min/max':
+            min_value, max_value = [], []
+            for i in xrange(len(values[0])):
+                data = [values[s][i] for s in xrange(len(values))]
+                min_value.append(min(data))
+                max_value.append(max(data))
+        elif mode == 'gaussian':
+            # use Gaussian method (NNPDF)
+            min_value, max_value = [], []
+            for i in xrange(len(values[0])):
+                pdf_stdev = 0.0
+                data = [values[s][i] for s in xrange(len(values))]
+                sdata = sum(data)
+                sdata2 = sum(x**2 for x in data)
+                pdf_stdev = math.sqrt(sdata2 -sdata**2/float(len(values)-2))
+                min_value.append(sdata - pdf_stdev)
+                max_value.append(sdata + pdf_stdev)                 
+
+        elif mode == 'hessian':
+            # For old PDF this is based on the set ordering ->
+            #need to order the pdf sets:
+            pdfs = [(int(re.findall(selector, n)[0]),n) for n in self.bins[0].wgts if re.search(selector,n, re.IGNORECASE)]
+            pdfs.sort()
+            
+            # check if the central was put or not in this sets:
+            if len(pdfs) % 2:
+                # adding the central automatically
+                pdf1 = pdfs[0][0]
+                central = pdf1 -1
+                name = pdfs[0][1].replace(str(pdf1), str(central))
+                central = self.get(name)
+            else:
+                central = self.get(pdfs.pop(0)[1])
+            
+            #rebuilt the collection of values but this time ordered correctly
+            values = []
+            for _, name in pdfs:
+                values.append(self.get(name))
+                
+            #Do the computation
+            min_value, max_value = [], []
+            for i in xrange(len(values[0])):
+                pdf_up = 0
+                pdf_down = 0
+                cntrl_val = central[i]
+                for s in range(int((len(pdfs))/2)):
+                    pdf_up   += max(0.0,values[2*s][i]   - cntrl_val,
+                                        values[2*s+1][i] - cntrl_val)**2
+                    pdf_down   += max(0.0,cntrl_val - values[2*s][i],
+                                          cntrl_val - values[2*s+1][i])**2  
+                                          
+                min_value.append(cntrl_val - math.sqrt(pdf_down))
+                max_value.append(cntrl_val + math.sqrt(pdf_up))                  
+                                          
+
+                
+        
+        return min_value, max_value            
     
     def get_formatted_header(self):
         """ Return a HwU formatted header for the weight label definition."""
