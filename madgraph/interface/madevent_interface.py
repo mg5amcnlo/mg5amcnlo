@@ -36,6 +36,7 @@ import traceback
 import time
 import tarfile
 import StringIO
+import shutil
 
 try:
     import readline
@@ -3398,12 +3399,22 @@ Please install this tool with the following MG5_aMC command:
                         stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events',self.run_name))
-
+        
+        # Properly rename the djr output if present.
+        djr_output = pjoin(self.me_dir,'Events', self.run_name, 'djrs.dat')
+        if os.path.isfile(djr_output):
+            shutil.move(djr_output, pjoin(self.me_dir,'Events',
+                                            self.run_name, '%s_djrs.dat' % tag))
 
         if not os.path.isfile(pythia_log) or \
              'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[-20]):
             logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
             return
+        
+        # Plot for Pythia8
+        successful = self.create_plot('Pythia8')
+        if not successful:
+            logger.warning('Failed to produce Pythia8 merging plots.')
         
         self.to_store.append('pythia8')
 

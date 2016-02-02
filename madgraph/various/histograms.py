@@ -1677,7 +1677,6 @@ class HwUList(histograms_PhysicsObjectList):
                     for j, weight in \
                               enumerate(HwU.histo_bin_weight_re.finditer(line)):
                         try:
-                            # Scan over all selected weights for this position
                             for wgt_label in selected_weights[j]:
                                 if wgt_label == 'boundary_xmin':
                                     boundaries[0] = float(weight.group('weight'))
@@ -1725,7 +1724,8 @@ class HwUList(histograms_PhysicsObjectList):
           uncertainties=['scale','pdf','statitistical','merging','alpsfact'],
           use_band = None,
           ratio_correlations=True, arg_string='', 
-          jet_samples_to_keep=None):
+          jet_samples_to_keep=None,
+          auto_open=True):
         """ Ouput this histogram to a file, stream or string if path is kept to
         None. The supported format are for now. Chose whether to print the header
         or not."""
@@ -1985,9 +1985,10 @@ set style data histeps
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
           "unset multiplot",
-          '!ps2pdf "%s.ps" &> /dev/null'%output_base_name,
-          '!open "%s.pdf" &> /dev/null'%output_base_name])
-        
+          '!ps2pdf "%s.ps" &> /dev/null'%output_base_name])
+        if auto_open:
+            gnuplot_output_list.append(
+                                 '!open "%s.pdf" &> /dev/null'%output_base_name)
         # Now write result to stream and close it
         gnuplot_stream.write('\n'.join(gnuplot_output_list))
         HwU_stream.write('\n'.join(HwU_output_list))

@@ -65,6 +65,7 @@ except ImportError:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
+    import internal.histograms as histograms
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True    
 else:
@@ -76,6 +77,7 @@ else:
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import models.check_param_card as check_param_card
+    import madgraph.various.histograms as histograms
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
 
@@ -1046,38 +1048,147 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot"""
 
-        madir = self.options['madanalysis_path']
         if not tag:
             tag = self.run_card['run_tag']
-        td = self.options['td_path']
 
-        if not madir or not td or \
-            not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
-            return False
+        if mode != 'Pythia8':
+            madir = self.options['madanalysis_path']
+            td = self.options['td_path']
+    
+            if not madir or not td or \
+                not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
+                return False
+    
+        if 'ickkw' in self.run_card:
+            if int(self.run_card['ickkw']) and mode == 'Pythia':
+                self.update_status('Create matching plots for Pythia', level='pythia')
+                # recover old data if none newly created
+                if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
+                    misc.gunzip(pjoin(self.me_dir,'Events',
+                          self.run_name, '%s_pythia_events.tree.gz' % tag), keep=True,
+                               stdout=pjoin(self.me_dir,'Events','events.tree'))
+                    files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
+                         pjoin(self.me_dir,'Events','xsecs.tree'))
+    
+                # Generate the matching plots
+                misc.call([self.dirbin+'/create_matching_plots.sh',
+                           self.run_name, tag, madir],
+                                stdout = os.open(os.devnull, os.O_RDWR),
+                                cwd=pjoin(self.me_dir,'Events'))
+    
+                #Clean output
+                misc.gzip(pjoin(self.me_dir,"Events","events.tree"),
+                          stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
+                files.mv(pjoin(self.me_dir,'Events','xsecs.tree'),
+                         pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
+            
+            elif mode == 'Pythia8' and (int(self.run_card['ickkw'])==1  or \
+                                                 self.run_card['ktdurham']>0.0):
+                self.update_status('Create matching plots for Pythia8',
+                                                                 level='pythia')
+                djr_path = pjoin(self.me_dir,'Events',
+                                             self.run_name, '%s_djrs.dat' % tag)
 
-        if 'ickkw' in self.run_card and int(self.run_card['ickkw']) and \
-                mode == 'Pythia':
-            self.update_status('Create matching plots for Pythia', level='pythia')
-            # recover old data if none newly created
-            if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
-                misc.gunzip(pjoin(self.me_dir,'Events',
-                      self.run_name, '%s_pythia_events.tree.gz' % tag), keep=True,
-                           stdout=pjoin(self.me_dir,'Events','events.tree'))
-                files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
-                     pjoin(self.me_dir,'Events','xsecs.tree'))
+                merging_scale_name = 'qCut' if int(self.run_card['ickkw'])==1 \
+                                                                      else 'TMS'
 
-            # Generate the matching plots
-            misc.call([self.dirbin+'/create_matching_plots.sh',
-                       self.run_name, tag, madir],
-                            stdout = os.open(os.devnull, os.O_RDWR),
-                            cwd=pjoin(self.me_dir,'Events'))
+                # Make sure that the file is present
+                if not os.path.isfile(djr_path):
+                    return False
 
-            #Clean output
-            misc.gzip(pjoin(self.me_dir,"Events","events.tree"),
-                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
-            files.mv(pjoin(self.me_dir,'Events','xsecs.tree'),
-                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
+                # Load the HwU file.
+                # If they are NaN's around for the reweighting weights, then
+                # setting consider_reweights to False will disregard them
+                # run_id = None means that the first run is considered
+                histos = histograms.HwUList(djr_path, consider_reweights=True,
+                                                                    run_id=None)
+                
+                if len(histos)==0:
+                    return False
 
+                # Now also plot the max vs min merging scale
+                merging_scales_available = [label for label in \
+                          histos[0].bins.weight_labels if 
+                  histograms.HwU.get_HwU_wgt_label_type(label)=='merging_scale']
+                if len(merging_scales_available)>=2:
+                    min_merging_scale = min(merging_scales_available)
+                    max_merging_scale = max(merging_scales_available)
+                else:
+                    min_merging_scale = None
+                    max_merging_scale = None
+
+                # jet_samples_to_keep = None means that all jet_samples are kept
+                histos.output(pjoin(self.me_dir,'Events',
+                  self.run_name,'%s_djr_plots'%tag), format='gnuplot', 
+                  uncertainties=['scale','pdf','statistical','merging','alpsfact'], 
+                  ratio_correlations=True,
+                  arg_string='Automatic plotting from MG5aMC', 
+                  jet_samples_to_keep=None,
+                  use_band=['merging','alpsfact'],
+                  auto_open=False)
+
+                # If several merging scales were specified, then it is interesting
+                # to compare the summed jet samples for the maximum and minimum
+                # merging scale available.
+                if not min_merging_scale is None:
+                    min_scale_histos = histograms.HwUList(djr_path, 
+                                       consider_reweights=False, run_id=None, 
+                                                    merging_scale=min_merging_scale)
+                    max_scale_histos = histograms.HwUList(djr_path, 
+                                       consider_reweights=False, run_id=None, 
+                                                    merging_scale=max_merging_scale)
+    
+                    # Give the histos types so that the plot labels look good
+                    for histo in min_scale_histos:
+                        if histo.type is None:
+                            histo.type = '%s=%.4g'%(merging_scale_name, min_merging_scale)
+                        else:
+                            histo.type += '|%s=%.4g'%(merging_scale_name, min_merging_scale)
+                    for histo in max_scale_histos:
+                        if histo.type is None:
+                            histo.type = '%s=%.4g'%(merging_scale_name, max_merging_scale)
+                        else:
+                            histo.type += '|%s=%.4g'%(merging_scale_name, max_merging_scale)
+                    
+                    # Now plot and compare against oneanother the shape for the the two scales
+                    histograms.HwUList(min_scale_histos+max_scale_histos).output(
+                        pjoin(self.me_dir,'Events',self.run_name,'%s_min_max_scale_comparison'%tag),
+                        format='gnuplot', 
+                        uncertainties=[], 
+                        ratio_correlations=True,
+                        arg_string='Automatic plotting from MG5aMC', 
+                        jet_samples_to_keep=[],
+                        use_band=[],
+                        auto_open=False)
+
+        if mode == 'Pythia8':
+            plot_files = [
+                pjoin(self.me_dir,'Events',self.run_name,'%s_djr_plots'%tag),
+                pjoin(self.me_dir,'Events',self.run_name,'%s_min_max_scale_comparison'%tag)]
+            if not misc.which('gnuplot'):
+                logger.warning("Install gnuplot to be able to view the plots"+\
+                               " generated at :\n   "+\
+                               '\n   '.join('%s.gnuplot'%p for p in plot_files))
+                return True
+            for plot in plot_files:
+                command = 'gnuplot %s.gnuplot'%plot
+                try:
+                    subprocess.call(['gnuplot','%s.gnuplot'%plot],
+                            cwd=pjoin(self.me_dir,'Events',self.run_name),
+                            stderr=subprocess.PIPE)
+                except Exception as e:
+                    logger.warning("Automatic processing of the Pythia8 "+\
+                            "merging plots with gnuplot failed. Try the"+\
+                            " following command by hand:\n   %s"%command+\
+                            "\nException was: %s"%str(e))
+                    return False
+
+            plot_files = ['%s.pdf'%p for p in plot_files if os.path.isfile('%s.pdf'%p)]
+            if len(plot_files)>0:
+                logger.error('Plots for Pythia8 merging generated here:\n   '+\
+                               '\n   '.join(plot_files)+\
+                               '\nbut not accessible from the HTML summary page.')
+            return True
 
         if not event_path:
             if mode == 'parton':
