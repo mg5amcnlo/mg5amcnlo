@@ -1270,7 +1270,7 @@ class PY8Card(ConfigFile):
         # for MLM merging
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
-        self.add_param("SysCalc:qCutList", 'auto', hidden=False, always_write_to_card=False)
+        self.add_param("SysCalc:qCutList", 'auto', hidden=True, always_write_to_card=False)
         self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
           comment='Do veto externally (e.g. in SysCalc).')
         self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
