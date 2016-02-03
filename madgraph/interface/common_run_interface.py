@@ -1187,7 +1187,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if len(plot_files)>0:
                 logger.error('Plots for Pythia8 merging generated here:\n   '+\
                                '\n   '.join(plot_files)+\
-                               '\nbut not accessible from the HTML summary page.')
+                        '\nbut not accessible from the HTML summary page (yet).')
             return True
 
         if not event_path:

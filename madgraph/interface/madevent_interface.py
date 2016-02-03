@@ -3437,14 +3437,17 @@ Please install this tool with the following MG5_aMC command:
                   "Make sure that either '%s' is in your path or that the"%shell+\
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
                 
-## Fix so as not to write HepMC
-#        wrapper.write("#!%s\n%s"%(shell_exe,' '.join(
-#                    [preamble+pythia_main,pythia_cmd_card,HepMC_event_output])))
-        wrapper.write("#!%s\n%s"%(shell_exe,' '.join(
-                    [preamble+pythia_main,pythia_cmd_card,os.devnull])))
-        dummy = open(HepMC_event_output,'w')
-        dummy.write('DUMMY, told ya')
-        dummy.close()
+        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
+                     [preamble+pythia_main,pythia_cmd_card,HepMC_event_output]))
+################################################################################
+#### Uncomment the lines below so as *not* to output an hepMC file #############
+################################################################################
+#        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
+#                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
+#        open(HepMC_event_output,'w').write('DUMMY')
+################################################################################
+        wrapper.write(exe_cmd)
+
         
         wrapper.close()
         # Set it as executable
