@@ -3552,9 +3552,10 @@ Please install this tool with the following MG5_aMC command:
                     selected_run_node = None
                 if selected_run_node:
                     xsections = selected_run_node.getElementsByTagName("xsection")
+                    # We need to translate PY8's output in mb into pb
                     cross_sections = dict((xsec.getAttribute('name'),
-                    (float(xsec.childNodes[0].data.split()[0]),
-                     float(xsec.childNodes[0].data.split()[1])))
+                    (float(xsec.childNodes[0].data.split()[0]*1e9),
+                     float(xsec.childNodes[0].data.split()[1]*1e9)))
                                                           for xsec in xsections)
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
@@ -3576,9 +3577,8 @@ Please install this tool with the following MG5_aMC command:
                 if len(cross_sections)>0:
                     logger.info('Pythia8 matched cross-sections are:')
                     for scale in sorted(cross_sections.keys()):
-                        # We need to translate PY8's output in mb into pb
                         logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
-                        (scale,cross_sections[scale][0]*1e9,cross_sections[scale][1]*1e9))
+                        (scale,cross_sections[scale][0],cross_sections[scale][1]))
             
         #Update the banner
         # self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
