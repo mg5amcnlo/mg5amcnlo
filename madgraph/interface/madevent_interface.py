@@ -3271,16 +3271,20 @@ Please install this tool with the following MG5_aMC command:
     '1.5*xqcut, with xqcut your run_card parameter (=%f).\n'%self.run_card['xqcut']+
     'It would be better/safer to use a larger qCut or a smaller xqcut.')
                 
-            if self.run_card['use_syst'] and PY8_Card['SysCalc:qCutList']=='auto':
-                if self.run_card['sys_matchscale']=='auto':
-                    PY8_Card.MadGraphSet('SysCalc:qCutList',\
-                     ','.join('%.4f'%(factor*PY8_Card['JetMatching:qCut']) for \
-                     factor in [0.5,0.75,1.5,2.0] if \
-                    factor*PY8_Card['JetMatching:qCut']>1.5*self.run_card['xqcut']))
+            if PY8_Card['SysCalc:qCutList']=='auto':
+                if self.run_card['use_syst']:
+                    if self.run_card['sys_matchscale']=='auto':
+                        PY8_Card.MadGraphSet('SysCalc:qCutList',\
+                         ','.join('%.4f'%(factor*PY8_Card['JetMatching:qCut']) for \
+                         factor in [0.5,0.75,1.5,2.0] if \
+                        factor*PY8_Card['JetMatching:qCut']>1.5*self.run_card['xqcut']))
+                    else:
+                        PY8_Card.MadGraphSet('SysCalc:qCutList',
+                                 ','.join(self.run_card['sys_matchscale'].split()))
                 else:
-                    PY8_Card.MadGraphSet('SysCalc:qCutList',
-                             ','.join(self.run_card['sys_matchscale'].split()))
-            
+                    PY8_Card.MadGraphSet('SysCalc:qCutList','')
+                    
+
             for scale in PY8_Card['SysCalc:qCutList'].split(','):
                 if re.match('^\s*$',scale): continue
                 sc = float(scale.strip())
@@ -3361,15 +3365,18 @@ Please install this tool with the following MG5_aMC command:
                 "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
                 
-            if self.run_card['use_syst'] and PY8_Card['SysCalc:tmsList']=='auto':
-                if self.run_card['sys_matchscale']=='auto':
-                    PY8_Card.MadGraphSet('SysCalc:tmsList',\
-                 ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
-                   for factor in [0.5,0.75,1.5,2.0] if 
-               factor*PY8_Card["Merging:TMS"] >= self.run_card['ktdurham']))
+            if PY8_Card['SysCalc:tmsList']=='auto':
+                if self.run_card['use_syst']:
+                    if self.run_card['sys_matchscale']=='auto':
+                        PY8_Card.MadGraphSet('SysCalc:tmsList',\
+                     ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
+                       for factor in [0.5,0.75,1.5,2.0] if 
+                   factor*PY8_Card["Merging:TMS"] >= self.run_card['ktdurham']))
+                    else:
+                        PY8_Card.MadGraphSet('SysCalc:tmsList',
+                              ','.join(self.run_card['sys_matchscale'].split()))
                 else:
-                    PY8_Card.MadGraphSet('SysCalc:tmsList',
-                          ','.join(self.run_card['sys_matchscale'].split())) 
+                    PY8_Card.MadGraphSet('SysCalc:tmsList','')
             
             for scale in PY8_Card['SysCalc:tmsList'].split(','):
                 if re.match('^\s*$',scale): continue
@@ -3432,8 +3439,16 @@ Please install this tool with the following MG5_aMC command:
                 self.InvalidCmd('No shell could be found in your environment.\n'+
                   "Make sure that either '%s' is in your path or that the"%shell+\
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
+                
+## Fix so as not to write HepMC
+#        wrapper.write("#!%s\n%s"%(shell_exe,' '.join(
+#                    [preamble+pythia_main,pythia_cmd_card,HepMC_event_output])))
         wrapper.write("#!%s\n%s"%(shell_exe,' '.join(
-                    [preamble+pythia_main,pythia_cmd_card,HepMC_event_output])))
+                    [preamble+pythia_main,pythia_cmd_card,os.devnull])))
+        dummy = open(HepMC_event_output,'w')
+        dummy.write('DUMMY, told ya')
+        dummy.close()
+        
         wrapper.close()
         # Set it as executable
         st = os.stat(wrapper_path)
