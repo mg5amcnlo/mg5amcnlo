@@ -3281,12 +3281,10 @@ Please install this tool with the following MG5_aMC command:
                     else:
                         PY8_Card.MadGraphSet('SysCalc:qCutList',
                                  ','.join(self.run_card['sys_matchscale'].split()))
-                else:
-                    PY8_Card.MadGraphSet('SysCalc:qCutList','')
-                    
 
             for scale in PY8_Card['SysCalc:qCutList'].split(','):
                 if re.match('^\s*$',scale): continue
+                if 'auto' in scale.lower(): break
                 sc = float(scale.strip())
                 if sc<(1.5*self.run_card['xqcut']):
                     logger.error(
@@ -3375,11 +3373,10 @@ Please install this tool with the following MG5_aMC command:
                     else:
                         PY8_Card.MadGraphSet('SysCalc:tmsList',
                               ','.join(self.run_card['sys_matchscale'].split()))
-                else:
-                    PY8_Card.MadGraphSet('SysCalc:tmsList','')
             
             for scale in PY8_Card['SysCalc:tmsList'].split(','):
                 if re.match('^\s*$',scale): continue
+                if 'auto' in scale.lower(): break
                 sc = float(scale.strip())
                 if sc<self.run_card['ktdurham']:
                     logger.error(
@@ -3526,8 +3523,12 @@ Please install this tool with the following MG5_aMC command:
                     self.results.add_detail('cross_pythia', sigma_m)
                     self.results.add_detail('nb_event_pythia', Nacc)
                     #compute pythia error
-                    error = self.results[self.run_name].return_tag(self.run_tag)['error']                    
-                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
+                    try:                   
+                        error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    except ZeroDivisionError:
+                        # Cannot compute error
+                        error_m = -1.0
                     # works both for fixed number of generated events and fixed accepted events
                     self.results.add_detail('error_pythia', error_m)
                 break
@@ -3572,8 +3573,9 @@ Please install this tool with the following MG5_aMC command:
                 if len(cross_sections)>0:
                     logger.info('Pythia8 matched cross-sections are:')
                     for scale in sorted(cross_sections.keys()):
+                        # We need to translate PY8's output in mb into pb
                         logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
-                        (scale,cross_sections[scale][0],cross_sections[scale][1]))
+                        (scale,cross_sections[scale][0]*1e9,cross_sections[scale][1]*1e9))
             
         #Update the banner
         # self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
