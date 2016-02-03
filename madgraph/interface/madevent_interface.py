@@ -3418,8 +3418,6 @@ Please install this tool with the following MG5_aMC command:
         # launch pythia8
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.log' % tag)
-        logger.info('Follow Pythia8 shower by running the following command'+
-                        ' (in a separate terminal):\n    tail -f %s'%pythia_log)
 
         # Write a bash wrapper to run the shower with custom environment variables
         wrapper_path = pjoin(self.me_dir,'Events',self.run_name,'run_shower.sh')
@@ -3440,6 +3438,26 @@ Please install this tool with the following MG5_aMC command:
         # Set it as executable
         st = os.stat(wrapper_path)
         os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
+
+        # Some advertisement
+        if self.run_card['use_syst']:
+            logger.info("--------------------------------------------------------------------------", '$MG:color:BLACK')
+            logger.info(" You are using Pythia8 and SysCalc, please cite the following two ref.    ", '$MG:color:BLACK')
+            logger.info(" 'arXiv:1410.3012' and 'arXiv:XXXX.YYYYY' when using the present results. ", '$MG:color:BLACK')
+            logger.info("--------------------------------------------------------------------------", '$MG:color:BLACK')            
+        else:
+            logger.info("-------------------------------------------------------", '$MG:color:BLACK')
+            logger.info(" You are using Pythia8, please cite the following ref. ", '$MG:color:BLACK')
+            logger.info(" 'arXiv:1410.3012' when using the present results      ", '$MG:color:BLACK')
+            logger.info("-------------------------------------------------------", '$MG:color:BLACK')             
+        if int(self.run_card['ickkw'])==2 or \
+           (int(self.run_card['ickkw'])==0 and self.run_card['ktdurham']>0.0):
+            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
+            logger.info(" You are using the CKKWl merging scheme, please cite this ref. ", '$MG:color:BLACK')
+            logger.info(" 'arXiv:1109.4829' when using the present results.             ", '$MG:color:BLACK')
+            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')                        
+        logger.info('Follow Pythia8 shower by running the following command'+
+                            ' (in a separate terminal):\n    tail -f %s'%pythia_log)
 
         self.cluster.launch_and_wait(wrapper_path, 
                         argument= [],
