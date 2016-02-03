@@ -3742,6 +3742,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                self.proc_characteristic['max_n_matched_jets'],
                                    min(max_qcd_order,max_n_light_final_partons))
 
+        # List of pdgs to be merged in CKKWl
+        self.proc_characteristic['merged_pdgs'] = \
+          str(sorted(list(set([abs(p.get('pdg_code')) for p in
+            matrix_element.get('processes')[0].get('model').get('particles') if
+                                                           p.get('color')>1]))))
+
         if ninitial < 1 or ninitial > 2:
             raise writers.FortranWriter.FortranWriterError, \
                   """Need ninitial = 1 or 2 to write auto_dsig file"""

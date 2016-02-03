@@ -1108,6 +1108,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('grouped_matrix', True)
         self.add_param('has_loops', False)
         self.add_param('max_n_matched_jets', 0)
+        self.add_param('merged_pdgs', '[1,2,3,4,5]')        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1997,7 +1998,12 @@ class RunCard(ConfigFile):
             return ('%.10e' % float(value)).replace('e','d')
         
         elif formatv == 'str':
-            return "'%s'" % value
+            # Check if it is a list
+            if value.strip().startswith('[') and value.strip().endswith(']'):
+                return ['(%d) = %s'%(i+1, elem.strip()) for i, elem in \
+                                       enumerate((value.strip()[1:-1]).split())]
+            else:
+                return "'%s'" % value
 
         
 
@@ -2021,8 +2027,15 @@ class RunCard(ConfigFile):
             #get the value with warning if the user didn't set it
             value = self.get_default(key) 
             
-            line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
-            fsock.writelines(line)
+            formatted_value = self.f77_formatting(value)
+            if isinstance(formatted_value, str):
+                line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
+                fsock.writelines(line)
+            elif isinstance(formatted_value, list):
+                # For outputting fortran list
+                fsock.writelines('\n'.join('%s%s'%(fortran_name, line) for
+                                                  line in formatted_value)+'\n')
+
         fsock.close()   
 
 
@@ -2255,9 +2268,9 @@ class RunCardLO(RunCard):
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
-
- 
-
+        # Specify what particle IDs to use for the CKKWL merging cut ktdurham
+        self.add_param("merged_PDGs", "[21 1 2 3 4 5 6]", hidden=True)        
+        self.add_param("n_merged_PDGs", 7, hidden=True)
         
     def check_validity(self):
         """ """
@@ -2271,6 +2284,15 @@ class RunCardLO(RunCard):
                                                           "not %s." % self['nhel']
         if int(self['maxjetflavor']) > 6:
             raise InvalidRunCard, 'maxjetflavor should be lower than 5! (6 is partly supported)'
+  
+        if self['n_merged_PDGs'] != len(self['merged_PDGs'].strip()[1:-1].split()):
+            logger.warning("The run_card parameter 'n_merged_PDGs' should be"+\
+          " set equal to the number of elements in the parameter 'merged_PDGs'")
+  
+        if self['n_merged_PDGs'] > 1000 or \
+           len(self['merged_PDGs'].strip()[1:-1].split()) > 1000:
+            raise InvalidRunCard, "'n_merged_PDGs' or the number of elements in "+\
+                                         "'merged_PDGs' should not exceed 1000."
   
         # some cut need to be deactivated in presence of isolation
         if self['ptgmin'] > 0:
@@ -2355,6 +2377,10 @@ class RunCardLO(RunCard):
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
             
+        self['merged_PDGs'] = '[ %s ]'%(' '.join('%d'%pdg for pdg in 
+                                     eval(proc_characteristic['merged_pdgs'])))
+        self['n_merged_PDGs'] = len(eval(proc_characteristic['merged_pdgs']))
+
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()

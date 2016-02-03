@@ -247,6 +247,12 @@
  %(ktdurham)s    =  ktdurham        
  %(dparameter)s  =  dparameter 
 #*********************************************************************
+# List of PDGs affected by the cut (i.e. intended to be merged)      *
+# Always set n_merged_PDGs equal to the number of merged_PDGs        *   
+#*********************************************************************
+ %(merged_PDGs)s    =  merged_PDGs        
+ %(n_merged_PDGs)s  =  n_merged_PDGs 
+#*********************************************************************
 # maximal pdg code for quark to be considered as a light jet         *
 # (otherwise b cuts are applied)                                     *
 #*********************************************************************
@@ -272,3 +278,4 @@
 # PDF sets and number of members (0 or none for all members).
 %(sys_pdf)s = sys_pdf # matching scales
 # MSTW2008nlo68cl.LHgrid 1  = sys_pdf
+#
