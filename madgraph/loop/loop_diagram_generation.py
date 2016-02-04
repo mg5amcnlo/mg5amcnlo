@@ -79,8 +79,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         If loop_filter is not None, then it will be applied to all subsequent
         diagram generation from this LoopAmplitude."""
         
-        if not loop_filter is None:
-            self.loop_filter = loop_filter
+        self.loop_filter = loop_filter
         
         if isinstance(argument, base_objects.Process):
             super(LoopAmplitude, self).__init__()
