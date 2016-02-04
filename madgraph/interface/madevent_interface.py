@@ -3249,7 +3249,7 @@ Please install this tool with the following MG5_aMC command:
                 logger.warning(warnings)
 
         # Again here 'pythia' is just a keyword for the simulation level.
-        self.update_status('Running Pythia8', 'pythia8')
+        self.update_status('Running Pythia8 [arXiv:1410.3012]', 'pythia8')
         
         tag = self.run_tag        
         # Now write Pythia8 card
@@ -3260,14 +3260,23 @@ Please install this tool with the following MG5_aMC command:
         PY8_Card.read(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'),
                                                                   setter='user')
         ########################################################################
-        ### Special setup of the Hidden parameters in the card for each MG type of run
+        ### Special setup of the Hidden parameters in the card for each MG type 
+        #   of run
         # Here we force the Beams:LHEF to have the correct value
+        
+        run_type = 'default'
+        merged_run_types = ['MLM','CKKW']
+        if int(self.run_card['ickkw'])==1:
+            run_type = 'MLM'
+        elif int(self.run_card['ickkw'])==2 or self.run_card['ktdurham']>0.0:
+            run_type = 'CKKW'
+        
         PY8_Card.subruns[0].systemSet('Beams:LHEF',
-                         pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz"))
+          pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz"))
         # We specify by hand all necessary parameters, so that there is no
         # need to read parameters from the Banner.
-        PY8_Card.MadGraphSet('JetMatching:setMad',False)        
-        if int(self.run_card['ickkw'])==1:
+        PY8_Card.MadGraphSet('JetMatching:setMad',False)
+        if run_type=='MLM':
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
@@ -3324,7 +3333,7 @@ Please install this tool with the following MG5_aMC command:
             "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
         # We use the positivity of 'ktdurham' cut as a CKKWl marker.
-        elif int(self.run_card['ickkw'])==2 or self.run_card['ktdurham']>0.0:
+        elif run_type=='CKKW':
             # Specific CKKW settings
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
@@ -3352,18 +3361,6 @@ Please install this tool with the following MG5_aMC command:
             # Use the parameter maxjetflavor for Merging:nQuarksMerge which specifies
             # up to which parton must be matched.
             PY8_Card.MadGraphSet('Merging:nQuarksMerge',self.run_card['maxjetflavor'])
-            # It is actually safer to let PY8 assign it automatically from the 
-            # scale specified for each event in the .lhe file.
-#            if self.run_card['fixed_ren_scale']:
-#                PY8_Card.MadGraphSet('Merging:muRen',
-#                              self.run_card['scale']*self.run_card['scalefact'])
-#                PY8_Card.MadGraphSet('Merging:muRenInME',
-#                              self.run_card['scale']*self.run_card['scalefact'])
-#            if self.run_card['fixed_fac_scale']:
-#                PY8_Card.MadGraphSet('Merging:muFac',self.run_card['scalefact']*
-#                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
-#                PY8_Card.MadGraphSet('Merging:muFacInME',self.run_card['scalefact']*
-#                   (self.run_card['dsqrt_q2fact1']+self.run_card['dsqrt_q2fact2'])/2.0)
             nJetMax = self.proc_characteristic['max_n_matched_jets']
             if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
                              'Merging:nJetMax'.lower() not in PY8_Card.user_set:
@@ -3394,13 +3391,16 @@ Please install this tool with the following MG5_aMC command:
         'the ktdurham cut specified in the run_card parameter.\n'+
         'It is incorrect to use a smaller CKKWl scale than the generation-level ktdurham cut!')
 
-            if self.run_card['ktscheme']==1:
+            if self.run_card['ptlund']==0.0 and self.run_card['ktdurham']>0.0:
                 PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
-            else:
-                raise InvalidCmd("For now, the CKKWl merging only supports the "+\
-    "value '1' for the run_card parameter 'ktscheme' (i.e. kt-durham merging).")
-            PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
+                PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
                                                          run_card['dparameter'])
+            elif self.run_card['ptlund']>0.0 and self.run_card['ktdurham']==0.0:
+                PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
+            else:
+                raise InvalidCmd("*Either* the 'ptlund' or 'ktdurham' cut in "+\
+                  " the run_card must be turned on to activate CKKW(L) merging"+
+                  " with Pythia8, but *both* cuts cannot be turned on at the same time.")
         ########################################################################
 
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
@@ -3462,25 +3462,8 @@ Please install this tool with the following MG5_aMC command:
         st = os.stat(wrapper_path)
         os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
 
-        # Some advertisement
-        if self.run_card['use_syst']:
-            logger.info("--------------------------------------------------------------------------", '$MG:color:BLACK')
-            logger.info(" You are using Pythia8 and SysCalc, please cite the following two ref.    ", '$MG:color:BLACK')
-            logger.info(" 'arXiv:1410.3012' and 'arXiv:XXXX.YYYYY' when using the present results. ", '$MG:color:BLACK')
-            logger.info("--------------------------------------------------------------------------", '$MG:color:BLACK')            
-        else:
-            logger.info("-------------------------------------------------------", '$MG:color:BLACK')
-            logger.info(" You are using Pythia8, please cite the following ref. ", '$MG:color:BLACK')
-            logger.info(" 'arXiv:1410.3012' when using the present results      ", '$MG:color:BLACK')
-            logger.info("-------------------------------------------------------", '$MG:color:BLACK')             
-        if int(self.run_card['ickkw'])==2 or \
-           (int(self.run_card['ickkw'])==0 and self.run_card['ktdurham']>0.0):
-            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
-            logger.info(" You are using the CKKWl merging scheme, please cite this ref. ", '$MG:color:BLACK')
-            logger.info(" 'arXiv:1109.4829' when using the present results.             ", '$MG:color:BLACK')
-            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')                        
-        logger.info('Follow Pythia8 shower by running the following command'+
-                            ' (in a separate terminal):\n    tail -f %s'%pythia_log)
+        logger.info('Follow Pythia8 shower by running the '+
+            'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
 
         self.cluster.launch_and_wait(wrapper_path, 
                         argument= [],
@@ -3507,7 +3490,7 @@ Please install this tool with the following MG5_aMC command:
         self.to_store.append('pythia8')
 
         # Study matched cross-sections
-        if int(self.run_card['ickkw']) or self.run_card['ktdurham']>0.0:
+        if run_type in merged_run_types:
             #####
             # From the log file
             #####
@@ -3516,7 +3499,7 @@ Please install this tool with the following MG5_aMC command:
                                                         '%s_pythia8.log' % tag))
             # The main89 driver should be modified so as to allow for easier parsing
             pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")            
-            for line in pythia_log:  
+            for line in pythia_log: 
                 info = pythiare.search(line)
                 if not info:
                     continue

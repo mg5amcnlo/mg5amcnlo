@@ -81,6 +81,11 @@ C
       logical  do_cuts(nexternal)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM, do_cuts 
+
+c     Store which external particles undergo the ktdurham and ptlund cuts.
+      LOGICAL  is_pdg_for_merging_cut(NEXTERNAL)
+      COMMON /TO_MERGE_CUTS/is_pdg_for_merging_cut
+
 c
 c
 c     reading parameters
@@ -270,6 +275,16 @@ c-onium
          if (idup(i,1,iproc).eq.10543)   is_a_onium(i)=.true. ! Bc
          if (idup(i,1,iproc).eq.20543)   is_a_onium(i)=.true. ! Bc
          if (idup(i,1,iproc).eq.545)   is_a_onium(i)=.true. ! Bc
+
+c        Remember mergeable particles
+         do j=1,pdgs_for_merging_cut_length
+           if (    pdgs_for_merging_cut(j) .ne. 0
+     $       .and. abs(idup(i,1,iproc)) .eq.pdgs_for_merging_cut(j) ) then
+             is_pdg_for_merging_cut(i)=.true.
+             exit
+            endif
+         enddo
+
       enddo
 
 c

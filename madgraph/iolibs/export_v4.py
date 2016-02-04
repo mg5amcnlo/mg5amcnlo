@@ -3742,8 +3742,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                self.proc_characteristic['max_n_matched_jets'],
                                    min(max_qcd_order,max_n_light_final_partons))
 
-        # List of pdgs to be merged in CKKWl
-        self.proc_characteristic['merged_pdgs'] = \
+        # List of default pdgs to be considered for the CKKWl merging cut
+        self.proc_characteristic['colored_pdgs'] = \
           str(sorted(list(set([abs(p.get('pdg_code')) for p in
             matrix_element.get('processes')[0].get('model').get('particles') if
                                                            p.get('color')>1]))))

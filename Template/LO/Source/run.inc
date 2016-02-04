@@ -68,5 +68,7 @@ C
 C Controls what are the PDGs included in the CKKWl merging procedure, i.e. what
 C are the PDGs subject to the ktdurham cut
 C
-      integer n_merged_pdgs
-      integer merged_pdgs(1000)
+      integer pdgs_for_merging_cut_length
+      integer pdgs_for_merging_cut(1000)
+      common/TO_MERGE/pdgs_for_merging_cut,pdgs_for_merging_cut_length
+

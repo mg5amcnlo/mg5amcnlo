@@ -241,17 +241,14 @@
 #*********************************************************************
  %(xetamin)s   = xetamin ! minimum rapidity for two jets in the WBF case  
  %(deltaeta)s   = deltaeta ! minimum rapidity for two jets in the WBF case 
-#*********************************************************************
-# KT DURHAM CUT: USE This cut for CKKW(L) Merging with PY8           *
-#*********************************************************************
+#***********************************************************************
+# Turn on either the ktdurham or ptlund cut to activate                *
+# CKKW(L) merging with Pythia8 [arXiv:1410.3012]                       *
+#***********************************************************************
  %(ktdurham)s    =  ktdurham        
- %(dparameter)s  =  dparameter 
-#*********************************************************************
-# List of PDGs affected by the cut (i.e. intended to be merged)      *
-# Always set n_merged_PDGs equal to the number of merged_PDGs        *   
-#*********************************************************************
- %(merged_pdgs)s    =  merged_PDGs        
- %(n_merged_pdgs)s  =  n_merged_PDGs 
+ %(dparameter)s  =  dparameter
+ %(ptlund)s      =  ptlund
+ %(pdgs_for_merging_cut)s  =  pdgs_for_merging_cut ! PDGs for two cuts above   
 #*********************************************************************
 # maximal pdg code for quark to be considered as a light jet         *
 # (otherwise b cuts are applied)                                     *
