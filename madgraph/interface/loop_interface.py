@@ -707,7 +707,14 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         else:
             self.validate_model()
 
-        if args[0] == 'process':            
+        loop_filter=None
+        if args[0] == 'process':
+
+            # Extract potential loop_filter          
+            for arg in args:
+                if arg.startswith('--loop_filter='):
+                    loop_filter = arg[14:]
+            args = [a for a in args if not a.startswith('--loop_filter=')]
             # Rejoin line
             line = ' '.join(args[1:])
             
@@ -717,9 +724,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 
             # Reset Helas matrix elements
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-
-            # Extract process from process definition
-
+            
+        # Extract process from process definition
         myprocdef = self.extract_process(line)
              
         # If it is a process for MadLoop standalone, make sure it has a 
@@ -739,9 +745,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             multiprocessclass=loop_diagram_generation.LoopMultiProcess
         else:
             multiprocessclass=diagram_generation.MultiProcess
-        
+
         myproc = multiprocessclass(myprocdef, collect_mirror_procs = False,
-                                            ignore_six_quark_processes = False)
+                                            ignore_six_quark_processes = False,
+                                            loop_filter = loop_filter)
         
         for amp in myproc.get('amplitudes'):
             if amp not in self._curr_amps:

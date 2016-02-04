@@ -1288,7 +1288,7 @@ class DecayChainAmplitude(Amplitude):
         self['decay_chains'] = DecayChainAmplitudeList()
 
     def __init__(self, argument = None, collect_mirror_procs = False,
-                 ignore_six_quark_processes = False):
+                 ignore_six_quark_processes = False, loop_filter=None):
         """Allow initialization with Process and with ProcessDefinition"""
 
         if isinstance(argument, base_objects.Process):
@@ -1302,10 +1302,12 @@ class DecayChainAmplitude(Amplitude):
                 self['amplitudes'].extend(\
                   MultiProcessClass.generate_multi_amplitudes(argument,
                                                     collect_mirror_procs,
-                                                    ignore_six_quark_processes))
+                                                    ignore_six_quark_processes,
+                                                    loop_filter=loop_filter))
             else:
                 self['amplitudes'].append(\
-                  MultiProcessClass.get_amplitude_from_proc(argument))
+                  MultiProcessClass.get_amplitude_from_proc(argument,
+                                                       loop_filter=loop_filter))
                 # Clean decay chains from process, since we haven't
                 # combined processes with decay chains yet
                 process = copy.copy(self.get('amplitudes')[0].get('process'))
@@ -1516,7 +1518,8 @@ class MultiProcess(base_objects.PhysicsObject):
         self['use_numerical'] = False
         
     def __init__(self, argument=None, collect_mirror_procs = False,
-                 ignore_six_quark_processes = [], optimize=False):
+                 ignore_six_quark_processes = [], optimize=False,
+                 loop_filter=None):
         """Allow initialization with ProcessDefinition or
         ProcessDefinitionList
         optimize allows to use param_card information. (usefull for 1-.N)"""
@@ -1537,6 +1540,7 @@ class MultiProcess(base_objects.PhysicsObject):
         self['collect_mirror_procs'] = collect_mirror_procs
         self['ignore_six_quark_processes'] = ignore_six_quark_processes
         self['use_numerical'] = optimize
+        self['loop_filter'] = loop_filter
         
         if isinstance(argument, base_objects.ProcessDefinition) or \
                isinstance(argument, base_objects.ProcessDefinitionList):
@@ -1586,7 +1590,8 @@ class MultiProcess(base_objects.PhysicsObject):
                        self.generate_multi_amplitudes(process_def,
                                        self.get('collect_mirror_procs'),
                                        self.get('ignore_six_quark_processes'),
-                                       self['use_numerical']))
+                                       self['use_numerical'],
+                                       loop_filter=self['loop_filter']))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -1599,7 +1604,8 @@ class MultiProcess(base_objects.PhysicsObject):
     def generate_multi_amplitudes(cls,process_definition,
                                   collect_mirror_procs = False,
                                   ignore_six_quark_processes = [],
-                                  use_numerical=False):
+                                  use_numerical=False,
+                                  loop_filter=None):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -1752,7 +1758,8 @@ class MultiProcess(base_objects.PhysicsObject):
                         continue
                     
                 # Create new amplitude
-                amplitude = cls.get_amplitude_from_proc(process)
+                amplitude = cls.get_amplitude_from_proc(process,
+                                                        loop_filter=loop_filter)
 
                 try:
                     result = amplitude.generate_diagrams()
@@ -1783,11 +1790,13 @@ class MultiProcess(base_objects.PhysicsObject):
         return amplitudes
 
     @classmethod
-    def get_amplitude_from_proc(cls,proc):
+    def get_amplitude_from_proc(cls,proc,**opts):
         """ Return the correct amplitude type according to the characteristics of
-            the process proc """
+            the process proc. The only option that could be specified here is
+            loop_filter and it is of course not relevant for a tree amplitude."""
+            
         return Amplitude({"process": proc})
-
+        
 
     @staticmethod
     def find_optimal_process_orders(process_definition):

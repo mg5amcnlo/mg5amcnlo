@@ -273,6 +273,9 @@ class BasicCmd(cmd.Cmd):
                 tmp += data
                 tmp = os.path.expanduser(os.path.expandvars(tmp))
                 out.append(tmp)
+                # Reinitialize tmp in case there is another differen argument
+                # containing escape characters
+                tmp = ''
             else:
                 out.append(data)
         return out
