@@ -5,9 +5,11 @@
 # Reweighting by Leading Order (tree-level / loop-induced) matrix
 # elements
 #
-# Caution: this is not (in general) NLO accurate, even when starting
-#          with NLO accurate events.
-#
+# Warning: To have NLO accurate reweighting, you need to specify in the 
+#          run_card (at the time of the NLO sample generation) 
+#          keep_rwgt_info on "True". If it is on False a LO type of
+#          reweighting will be performed (not assuring NLO accuracy)
+#          
 # Note: 
 #   1) the value of alpha_s will be used from the event so the value in
 #      the param_card is not taken into account.
@@ -17,7 +19,6 @@
 #      width leads to very inaccurate result). In such a case, separate 
 #      event generation runs are needed.
 #
-#
 # Example of (standard) code for the computation of two weights:
 #
 # launch                    ! tag to start the computat'n of the first weight
@@ -26,6 +27,7 @@
 # launch                    ! start to compute a second weight
 #  /home/Cards/param_card_2.dat ! you can also enter a path to a valid card
 #
+# Note: The command to specify the parameter are AFTER the associated "launch" 
 #
 # Possible options: 
 #   You can enter one of the following lines to customize the reweighting 
