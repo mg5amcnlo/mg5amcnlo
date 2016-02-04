@@ -1708,8 +1708,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 process = self.process # define in find_model_name
                 self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
                 self.results.resetall(self.me_dir)
-            else:                                
-                self.results.resetall(self.me_dir)
+            else:
+                try:                                
+                    self.results.resetall(self.me_dir)
+                except Exception, error:
+                    logger.debug(error)
+                    # Maybe the format was updated -> try fresh
+                    model = self.find_model_name()
+                    process = self.process # define in find_model_name
+                    self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+                    self.results.resetall(self.me_dir)                    
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
@@ -3241,7 +3249,7 @@ Please install this tool with the following MG5_aMC command:
                 logger.warning(warnings)
 
         # Again here 'pythia' is just a keyword for the simulation level.
-        self.update_status('Running Pythia8', 'pythia')
+        self.update_status('Running Pythia8', 'pythia8')
         
         tag = self.run_tag        
         # Now write Pythia8 card
@@ -4403,12 +4411,12 @@ Please install this tool with the following MG5_aMC command:
             # tag/run to working wel.
             if level == 'parton':
                 return
-            elif level == 'pythia':
+            elif level in ['pythia','pythia8']:
                 return self.results[self.run_name][0]['tag']
             else:
                 for i in range(-1,-len(self.results[self.run_name])-1,-1):
                     tagRun = self.results[self.run_name][i]
-                    if tagRun.pythia or tagRun.shower:
+                    if tagRun.pythia or tagRun.shower or tagRun.pythia8 :
                         return tagRun['tag']
     
         

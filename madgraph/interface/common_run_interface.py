@@ -314,7 +314,7 @@ class CheckValidForCmd(object):
 
         return output
 
-    def check_delphes(self, arg):
+    def check_delphes(self, arg, nodefault=False):
         """Check the argument for pythia command
         syntax: delphes [NAME] 
         Note that other option are already remove at this point
@@ -349,25 +349,29 @@ class CheckValidForCmd(object):
         filepath = None        
         if not len(arg):
             prev_tag = self.set_run_name(self.run_name, tag, 'delphes')
-            if os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):            
-                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
-            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)):
-                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hepmc.gz' % prev_tag)
-            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep' % prev_tag)):            
-                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep' % prev_tag)
-            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)):
-                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)
-            elif os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hep')
-            elif os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hepmc')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc')
-            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hep.gz')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hep.gz')
-            elif os.path.exists(pjoin(self.me_dir,'Events','pythia8_events.hepmc.gz')):
-                filepath = pjoin(self.me_dir,'Events','pythia_events.hepmc.gz')
-            else:            
-                self.help_pgs()
-                raise self.InvalidCmd('''No file file pythia_events.* currently available
+            paths = [pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia_events.hep.gz'),
+                     pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia8_events.hepmc.gz'),
+                     pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia_events.hep'),
+                     pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia8_events.hepmc'),
+                     pjoin(self.me_dir,'Events','pythia_events.hep'),
+                     pjoin(self.me_dir,'Events','pythia_events.hepmc'),
+                     pjoin(self.me_dir,'Events','pythia8_events.hep.gz'),
+                     pjoin(self.me_dir,'Events','pythia8_events.hepmc.gz')
+                     ]
+            for p in paths:
+                if os.path.exists(p % {'tag': prev_tag}):
+                    filepath = p % {'tag': prev_tag}
+                    print "found"
+                    break
+                else:
+                    print "not in ",  p % {'tag': prev_tag}
+            else:
+                a = raw_input("NO INPUT")          
+                if nodefault:
+                    return False
+                else:
+                    self.help_pgs()
+                    raise self.InvalidCmd('''No file file pythia_events.* currently available
             Please specify a valid run_name''')
         
         if len(arg) == 1:
@@ -1581,8 +1585,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             args.remove('--no_default')
         else:
             no_default = False
+            
+            
         # Check all arguments
-        filepath = self.check_delphes(args)
+        filepath = self.check_delphes(args, nodefault=no_default)
+        if no_default and not filepath:
+            return # no output file but nothing to do either.
+        
         self.update_status('prepare delphes run', level=None)
 
         if os.path.exists(pjoin(self.options['delphes_path'], 'data')):

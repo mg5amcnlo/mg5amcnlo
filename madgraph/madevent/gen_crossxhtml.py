@@ -691,7 +691,7 @@ class RunResults(list):
         
     def get_last_pythia(self):
         for i in range(1, len(self)+1):
-            if self[-i].pythia:
+            if self[-i].pythia or self[-i].pythia8:
                 return self[-i]['tag']
 
     def get_current_info(self):
@@ -758,9 +758,11 @@ class OneTagResults(dict):
         self.parton = []
         self.reweight = [] 
         self.pythia = []
+        self.pythia8 = []
         self.pgs = []
         self.delphes = []
         self.shower = []
+        self.level_modes = ['parton', 'pythia', 'pythia8','pgs', 'delphes','reweight','shower']
         # data 
         self.status = ''
 
@@ -848,10 +850,11 @@ class OneTagResults(dict):
                           exists(pjoin(html_path,"plots_pythia_%s.html" % tag)):
                 self.pythia.append('plot')
             
-            if 'lhe' not in self.pythia and \
-                            (exists(pjoin(path,"%s_pythia_events.lhe.gz" % tag)) or
-                             exists(pjoin(path,"%s_pythia_events.lhe" % tag))):
-                self.pythia.append('lhe')
+            # Do not include the lhe in the html anymore
+            #if 'lhe' not in self.pythia and \
+            #                (exists(pjoin(path,"%s_pythia_events.lhe.gz" % tag)) or
+            #                 exists(pjoin(path,"%s_pythia_events.lhe" % tag))):
+            #    self.pythia.append('lhe')
 
 
             if 'hep' not in self.pythia and \
@@ -876,38 +879,33 @@ class OneTagResults(dict):
                           exists(pjoin(path,"%s_pythia.log" % tag)):
                 self.pythia.append('log')     
 
+
         if level in ['pythia8', 'all']:
-            if 'plot' not in self.pythia and \
+            if 'plot' not in self.pythia8 and \
                           exists(pjoin(html_path,"plots_pythia_%s.html" % tag)):
-                self.pythia.append('plot')
+                self.pythia8.append('plot')
             
-            if 'lhe' not in self.pythia and \
-                            (exists(pjoin(path,"%s_pythia_events.lhe.gz" % tag)) or
-                             exists(pjoin(path,"%s_pythia_events.lhe" % tag))):
-                self.pythia.append('lhe')
-
-
-            if 'hepmc' not in self.pythia and \
+            if 'hepmc' not in self.pythia8 and \
                             (exists(pjoin(path,"%s_pythia8_events.hepmc.gz" % tag)) or
                              exists(pjoin(path,"%s_pythia8_events.hepmc" % tag))):
-                self.pythia.append('hepmc')
+                self.pythia8.append('hepmc')
             
-            if 'rwt' not in self.pythia and \
-                            (exists(pjoin(path,"%s_syscalc.dat.gz" % tag)) or
-                             exists(pjoin(path,"%s_syscalc.dat" % tag))):
-                self.pythia.append('rwt')
+            #if 'rwt' not in self.pythia8 and \
+            #                (exists(pjoin(path,"%s_syscalc.dat.gz" % tag)) or
+            #                 exists(pjoin(path,"%s_syscalc.dat" % tag))):
+            #    self.pythia8.append('rwt')
             
-            if 'root' not in self.pythia and \
-                              exists(pjoin(path,"%s_pythia_events.root" % tag)):
-                self.pythia.append('root')
-                
-            if 'lheroot' not in self.pythia and \
-                          exists(pjoin(path,"%s_pythia_lhe_events.root" % tag)):
-                self.pythia.append('lheroot')
-            
-            if 'log' not in self.pythia and \
+            #if 'root' not in self.pythia8 and \
+            #                  exists(pjoin(path,"%s_pythia_events.root" % tag)):
+            #    self.pythia8.append('root')
+                            
+            if 'log' not in self.pythia8 and \
                           exists(pjoin(path,"%s_pythia8.log" % tag)):
-                self.pythia.append('log')            
+                self.pythia8.append('log') 
+                
+            if 'djr_plot' not  in self.pythia8 and \
+                          exists(pjoin(path,"%s_djr_plots.pdf" % tag)):
+                self.pythia8.append('djr_plot') 
 
         if level in ['pgs', 'all']:
             
@@ -1042,6 +1040,29 @@ class OneTagResults(dict):
                 out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             return out % self
 
+        if level == 'pythia8':          
+            if 'log' in self.pythia8:
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia8.log">LOG</a>"""
+            if 'hep' in self.pythia8:
+                link = './Events/%(run_name)s/%(tag)s_pythia8_events.hep'
+                level = 'pythia'
+                name = 'STDHEP'
+                out += self.special_link(link, level, name)  
+            if 'hepmc' in self.pythia8:
+                link = './Events/%(run_name)s/%(tag)s_pythia8_events.hepmc'
+                level = 'pythia'
+                name = 'HEPMC'
+                out += self.special_link(link, level, name)                                  
+            #if 'plot' in self.pythia8:
+            #    out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
+            if 'djr_plot' in self.pythia8:
+                out += ' <a href="./Events/%(run_name)s/%(tag)s_djr_plots.pdf">DJR(plot)</a>'
+
+                
+                      
+                
+            return out % self
+
         if level == 'pgs':
             if 'log' in self.pgs:
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pgs.log">LOG</a>"""
@@ -1092,7 +1113,7 @@ class OneTagResults(dict):
     def get_nb_line(self):
         
         nb_line = 0
-        for i in [self.parton, self.reweight, self.pythia, self.pgs, self.delphes, self.shower]:
+        for i in [self.parton, self.reweight, self.pythia, self.pythia8, self.pgs, self.delphes, self.shower]:
             if len(i):
                 nb_line += 1
         return max([nb_line,1])
@@ -1103,7 +1124,6 @@ class OneTagResults(dict):
            RunResults is given in case of cross-section need to be taken
            from a previous run
         """
-        
         
         tag_template = """
         <td rowspan=%(tag_span)s> <a href="./Events/%(run)s/%(run)s_%(tag)s_banner.txt">%(tag)s</a>%(debug)s</td>
@@ -1147,6 +1167,13 @@ class OneTagResults(dict):
                 self['error'] = runresults[-2]['error']
             except Exception:
                 pass
+        elif self.pythia8 and not self['nb_event']:
+            try:
+                self['nb_event'] = runresults[-2]['nb_event']
+                self['cross'] = runresults[-2]['cross']
+                self['error'] = runresults[-2]['error']
+            except Exception:
+                pass
                 
         elif (self.pgs or self.delphes) and not self['nb_event'] and \
              len(runresults) > 1:
@@ -1162,7 +1189,7 @@ class OneTagResults(dict):
         
         first = None
         subresults_html = ''
-        for ttype in ['parton', 'pythia', 'pgs', 'delphes','reweight','shower']:
+        for ttype in self.level_modes:
             data = getattr(self, ttype)
             if not data:
                 continue
@@ -1210,7 +1237,7 @@ class OneTagResults(dict):
                         local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
                                              % {'run_name':self['run_name'], 'tag': self['tag']}
                     
-            elif ttype == 'pythia' and self['cross_pythia']:
+            elif ttype in ['pythia','pythia8'] and self['cross_pythia']:
                 template = sub_part_template_parton
                 if self.parton:           
                     local_dico['cross_span'] = nb_line - 1
@@ -1294,7 +1321,7 @@ class OneTagResults(dict):
                     else: 
                         pass
 
-            elif ttype == 'pythia':
+            elif ttype in ['pythia', 'pythia8']:
                 if self['tag'] == runresults.get_last_pythia():
                     if runresults.web:
                         local_dico['action'] = """
@@ -1318,7 +1345,7 @@ class OneTagResults(dict):
                                                 'remove %s pythia --tag=%s' % \
                                                 (self['run_name'], self['tag']))
                         local_dico['action'] += self.command_suggestion_html(
-                         'pgs %(1)s or delphes %(1)s' % {'1': self['run_name']})
+                         'delphes %(1)s' % {'1': self['run_name']})
                 else:
                     if runresults.web:
                         local_dico['action'] = ''
