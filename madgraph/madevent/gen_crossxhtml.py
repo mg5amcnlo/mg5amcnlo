@@ -428,8 +428,8 @@ class AllResults(dict):
                                    'noshowerLO': '(aMC@LO)',
                                    'NLO': '(NLO f.o.)',
                                    'LO': '(LO f.o.)',
-                                   'madevent':'',
-                                   'madevent_PY8':''}
+                                   'madevent':''
+                                   }
                 status_dict['run_mode_string'] = run_mode_string[self.current['run_mode']]
             else:
                 status_dict['run_mode_string'] = ''
@@ -905,7 +905,7 @@ class OneTagResults(dict):
                 self.pythia8.append('log') 
                 
             if 'djr_plot' not  in self.pythia8 and \
-                          exists(pjoin(path,"%s_djr_plots.pdf" % tag)):
+                          exists(pjoin(html_path,'%s_djr_plots'%tag,'index.html')):
                 self.pythia8.append('djr_plot') 
 
         if level in ['pgs', 'all']:
@@ -1046,18 +1046,19 @@ class OneTagResults(dict):
                 out += """ <a href="./Events/%(run_name)s/%(tag)s_pythia8.log">LOG</a>"""
             if 'hep' in self.pythia8:
                 link = './Events/%(run_name)s/%(tag)s_pythia8_events.hep'
-                level = 'pythia'
+                level = 'pythia8'
                 name = 'STDHEP'
-                out += self.special_link(link, level, name)  
+                
             if 'hepmc' in self.pythia8:
                 link = './Events/%(run_name)s/%(tag)s_pythia8_events.hepmc'
-                level = 'pythia'
-                name = 'HEPMC'
-                out += self.special_link(link, level, name)                                  
+                level = 'pythia8'
+                name = 'HEPMC'                                 
+                out += self.special_link(link, level, name)  
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_merged_xsecs.txt">merged xsection</a> """
             #if 'plot' in self.pythia8:
             #    out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             if 'djr_plot' in self.pythia8:
-                out += ' <a href="./Events/%(run_name)s/%(tag)s_djr_plots.pdf">DJR(plot)</a>'
+                out += ' <a href="./HTML/%(run_name)s/%(tag)s_djr_plots/index.html">DJR(plot)</a>'
 
                 
                       

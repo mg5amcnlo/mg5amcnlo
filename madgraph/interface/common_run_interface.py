@@ -361,10 +361,7 @@ class CheckValidForCmd(object):
             for p in paths:
                 if os.path.exists(p % {'tag': prev_tag}):
                     filepath = p % {'tag': prev_tag}
-                    print "found"
                     break
-                else:
-                    print "not in ",  p % {'tag': prev_tag}
             else:
                 a = raw_input("NO INPUT")          
                 if nodefault:
@@ -1206,9 +1203,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.pdf'))
             if len(plot_files)>0:
-                logger.error('Plots for Pythia8 merging generated here:\n   '+\
-                               '\n   '.join(plot_files)+\
-                        '\nbut not accessible from the HTML summary page (yet).')
+                # Add an html page
+                html = "<html>\n<head>\n<TITLE>PLOT FOR PYTHIA8</TITLE>"
+                html+= '<link rel=stylesheet href="../../mgstyle.css" type="text/css">\n</head>\n<body>\n'
+                html += "<h2> Plot for Pythia8 </h2>\n"
+                html += "<table>\n<tr><td> <b>Type of plot</b> </td> <td><b> PDF</b> </td> <td><b> input file</b> </td> </tr>\n"
+                for one_plot in plot_files:
+                    name = os.path.basename(one_plot).replace('.pdf','')
+                    short_name = name.replace('_plots','')
+                    if 'min_max_qCut_comparison' in short_name:
+                        short_name = "Plot to determine the correct value of the merging scale"
+                    html += "<tr><td>%(sn)s</td><td> <a href=./%(n)s.pdf>PDF</a> </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> </td></tr>\n" %\
+                            {'sn': short_name, 'n': name}
+                html += '</table>\n<a href=../../../crossx.html>return to summary</a></body>\n</html>'
+                ff=open(pjoin(PY8_plots_root_path, 'index.html'),'w')
+                ff.write(html)
             return True
 
         if not event_path:
