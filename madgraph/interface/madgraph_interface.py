@@ -5391,6 +5391,26 @@ This implies that with decay chains:
             self.install_update(args, wget=program)
             return
 
+        advertisements = {'pythia-pgs':'[arXiv:0603175]',
+                          'Delphes':'[arXiv:1307.6346]',
+                          'Delphes2':'[arXiv:0903.2225]',
+                          'SysCalc':'[arXiv:XXXX.YYYYY]',
+                          'Golem95':'[arXiv:0807.0605]',
+                          'PJFry':'[arXiv:1210.4095,1112.0500]',
+                          'QCDLoop':'[arXiv:0712.1851]',
+                          'pythia8':'[arXiv:1410.3012]',
+                          'lhapdf6':'[arXiv:1412.7420]',
+                          'lhapdf5':'[arXiv:0605240]',
+                          'hepmc':'[CPC 134 (2001) 41-46]',
+                          'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]'}
+
+        if args[0] in advertisements:
+            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
+            logger.info("   You are installing '%s', please cite ref(s). "%args[0], '$MG:color:BLACK')
+            logger.info("         %s"%advertisements[args[0]], '$MG:color:BLACK')
+            logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
+            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
+            
         # Load file with path of the different program:
         import urllib
         if paths:
@@ -5404,7 +5424,7 @@ This implies that with decay chains:
             r = [r, (1-r)]
 ################################################################################
 #           Force her to choose one particular server
-            r = [0]
+#            r = [0]
 ################################################################################
             for index in r:
                 cluster_path = data_path[index]

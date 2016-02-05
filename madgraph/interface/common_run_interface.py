@@ -35,7 +35,7 @@ import subprocess
 import sys
 import time
 import traceback
-
+import glob
 
 try:
     import readline
@@ -1062,7 +1062,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not madir or not td or \
                 not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
                 return False
-    
+        else:
+            PY8_plots_root_path = pjoin(self.me_dir,'HTML',
+                                               self.run_name,'%s_djr_plots'%tag)
+            
         if 'ickkw' in self.run_card:
             if int(self.run_card['ickkw']) and mode == 'Pythia':
                 self.update_status('Create matching plots for Pythia', level='pythia')
@@ -1087,9 +1090,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
             
             elif mode == 'Pythia8' and (int(self.run_card['ickkw'])==1  or \
-                                                 self.run_card['ktdurham']>0.0):
+                  self.run_card['ktdurham']>0.0 or self.run_card['ptlund']>0.0):
+                
                 self.update_status('Create matching plots for Pythia8',
-                                                                 level='pythia')
+                                                                level='pythia8')
+
+                # Create the directory if not existing at this stage
+                if not os.path.isdir(PY8_plots_root_path):
+                    os.makedirs(PY8_plots_root_path)
+
                 djr_path = pjoin(self.me_dir,'Events',
                                              self.run_name, '%s_djrs.dat' % tag)
 
@@ -1121,15 +1130,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     min_merging_scale = None
                     max_merging_scale = None
 
+                histo_output_options = {
+                  'format':'gnuplot', 
+                  'uncertainties':['scale','pdf','statistical','merging','alpsfact'], 
+                  'ratio_correlations':True,
+                  'arg_string':'Automatic plotting from MG5aMC', 
+                  'jet_samples_to_keep':None,
+                  'use_band':['merging','alpsfact'],
+                  'auto_open':False
+                }
+
                 # jet_samples_to_keep = None means that all jet_samples are kept
-                histos.output(pjoin(self.me_dir,'Events',
-                  self.run_name,'%s_djr_plots'%tag), format='gnuplot', 
-                  uncertainties=['scale','pdf','statistical','merging','alpsfact'], 
-                  ratio_correlations=True,
-                  arg_string='Automatic plotting from MG5aMC', 
-                  jet_samples_to_keep=None,
-                  use_band=['merging','alpsfact'],
-                  auto_open=False)
+                histos.output(pjoin(PY8_plots_root_path,
+                              'central_%s_djr_plots'%merging_scale_name),
+                              **histo_output_options)
+                
+                for scale in merging_scales_available:
+                    that_scale_histos = histograms.HwUList(
+                                       djr_path,  run_id=0, merging_scale=scale)
+                    that_scale_histos.output(pjoin(PY8_plots_root_path,
+                                '%s_%.3g_djr_plots'%(merging_scale_name,scale)),
+                                **histo_output_options)
 
                 # If several merging scales were specified, then it is interesting
                 # to compare the summed jet samples for the maximum and minimum
@@ -1156,7 +1177,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     
                     # Now plot and compare against oneanother the shape for the the two scales
                     histograms.HwUList(min_scale_histos+max_scale_histos).output(
-                        pjoin(self.me_dir,'Events',self.run_name,'%s_min_max_scale_comparison'%tag),
+                        pjoin(PY8_plots_root_path,'min_max_%s_comparison'%merging_scale_name),
                         format='gnuplot', 
                         uncertainties=[], 
                         ratio_correlations=True,
@@ -1166,28 +1187,24 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         auto_open=False)
 
         if mode == 'Pythia8':
-            plot_files = [
-                pjoin(self.me_dir,'Events',self.run_name,'%s_djr_plots'%tag),
-                pjoin(self.me_dir,'Events',self.run_name,'%s_min_max_scale_comparison'%tag)]
+            plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
             if not misc.which('gnuplot'):
                 logger.warning("Install gnuplot to be able to view the plots"+\
                                " generated at :\n   "+\
                                '\n   '.join('%s.gnuplot'%p for p in plot_files))
                 return True
             for plot in plot_files:
-                command = 'gnuplot %s.gnuplot'%plot
+                command = ['gnuplot',plot]
                 try:
-                    subprocess.call(['gnuplot','%s.gnuplot'%plot],
-                            cwd=pjoin(self.me_dir,'Events',self.run_name),
-                            stderr=subprocess.PIPE)
+                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=subprocess.PIPE)
                 except Exception as e:
                     logger.warning("Automatic processing of the Pythia8 "+\
                             "merging plots with gnuplot failed. Try the"+\
-                            " following command by hand:\n   %s"%command+\
+                            " following command by hand:\n   %s"%(' '.join(command))+\
                             "\nException was: %s"%str(e))
                     return False
 
-            plot_files = ['%s.pdf'%p for p in plot_files if os.path.isfile('%s.pdf'%p)]
+            plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.pdf'))
             if len(plot_files)>0:
                 logger.error('Plots for Pythia8 merging generated here:\n   '+\
                                '\n   '.join(plot_files)+\

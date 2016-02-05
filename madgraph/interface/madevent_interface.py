@@ -2181,15 +2181,32 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
         logger.info("     Nb of events :  %s" % data['nb_event'] )
-        if data['cross_pythia'] and data['nb_event_pythia']:
-            if self.ninitial == 1:
-                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
-            else:
-                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
-            logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
-            if self.run_card['use_syst'] in self.true:
-                logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")
-            
+
+        if data['run_mode']=='madevent':
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                if self.ninitial == 1:
+                    logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+                else:
+                    logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+                logger.info("     Nb of events after matching :  %s" % data['nb_event_pythia'])
+                if self.run_card['use_syst'] in self.true:
+                    logger.info("     Notice that matching information reported here does *not* apply for the central value for the merging value.\n"+\
+                                "     You must refer to the SysCalc output to obtain it.")
+        elif data['run_mode']=='madevent_PY8':
+            if data['cross_pythia8'] and data['nb_event_pythia8']:
+                if self.ninitial == 1:
+                    logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_pythia8'], data['error_pythia8']))
+                else:
+                    logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_pythia8'], data['error_pythia8']))            
+                    logger.info("     Nb of events after matching :  %d" % int(data['nb_event_pythia8']))
+                if self.run_card['use_syst'] in self.true and \
+                   (int(self.run_card['ickkw'])==1 or self.run_card['ktdurham']>0.0
+                                                    or self.run_card['ptlund']>0.0):
+                    logger.info("     Notice that because SysCalc is turned on, the merging did not veto events but modified their weights instead.\n"+\
+                                "     The resulting hepmc file is therefore no longer unweighted.")
+                else:
+                    logger.info("     Nb of events after merging :  %s" % data['nb_event_pythia8'])
+
         logger.info(" " )
 
     def print_results_in_file(self, data, path, mode='w', format='full'):
@@ -3248,6 +3265,8 @@ Please install this tool with the following MG5_aMC command:
             if warnings:
                 logger.warning(warnings)
 
+        self.results.add_detail('run_mode', 'madevent_PY8')
+
         # Again here 'pythia' is just a keyword for the simulation level.
         self.update_status('Running Pythia8 [arXiv:1410.3012]', 'pythia8')
         
@@ -3510,12 +3529,12 @@ Please install this tool with the following MG5_aMC command:
                     Ntry = int(info.group('tried'))
                 except ValueError:
                     # xsec is not float - this should not happen
-                    self.results.add_detail('cross_pythia', 0)
-                    self.results.add_detail('nb_event_pythia', 0)
-                    self.results.add_detail('error_pythia', 0)
+                    self.results.add_detail('cross_pythia8', 0)
+                    self.results.add_detail('nb_event_pythia8', 0)
+                    self.results.add_detail('error_pythia8', 0)
                 else:
-                    self.results.add_detail('cross_pythia', sigma_m)
-                    self.results.add_detail('nb_event_pythia', Nacc)
+                    self.results.add_detail('cross_pythia8', sigma_m)
+                    self.results.add_detail('nb_event_pythia8', Nacc)
                     #compute pythia error
                     error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
                     try:                   
@@ -3524,7 +3543,7 @@ Please install this tool with the following MG5_aMC command:
                         # Cannot compute error
                         error_m = -1.0
                     # works both for fixed number of generated events and fixed accepted events
-                    self.results.add_detail('error_pythia', error_m)
+                    self.results.add_detail('error_pythia8', error_m)
                 break
             pythia_log.close()
             
@@ -3545,8 +3564,8 @@ Please install this tool with the following MG5_aMC command:
                     xsections = selected_run_node.getElementsByTagName("xsection")
                     # We need to translate PY8's output in mb into pb
                     cross_sections = dict((xsec.getAttribute('name'),
-                    (float(xsec.childNodes[0].data.split()[0]*1e9),
-                     float(xsec.childNodes[0].data.split()[1]*1e9)))
+                    (float(xsec.childNodes[0].data.split()[0])*1e9,
+                     float(xsec.childNodes[0].data.split()[1])*1e9))
                                                           for xsec in xsections)
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
@@ -3562,14 +3581,27 @@ Please install this tool with the following MG5_aMC command:
                 central_scale = PY8_Card['JetMatching:qCut'] if \
                         int(self.run_card['ickkw'])==1 else PY8_Card['Merging:TMS']
                 if central_scale in cross_sections:
-                    self.results.add_detail('cross_pythia', cross_sections[central_scale][0])
-                    self.results.add_detail('error_pythia', cross_sections[central_scale][1])
+                    self.results.add_detail('cross_pythia8', cross_sections[central_scale][0])
+                    self.results.add_detail('error_pythia8', cross_sections[central_scale][1])
                 
                 if len(cross_sections)>0:
-                    logger.info('Pythia8 matched cross-sections are:')
+                    logger.info('Pythia8 merged cross-sections are:')
                     for scale in sorted(cross_sections.keys()):
                         logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
-                        (scale,cross_sections[scale][0],cross_sections[scale][1]))
+                        (scale,cross_sections[scale][0],cross_sections[scale][1]))       
+            
+            xsecs_file = open(pjoin(self.me_dir,'Events',self.run_name,
+                                                 '%s_merged_xsecs.dat'%tag),'w')
+            if cross_sections:
+                xsecs_file.write('%-20s%-20s%-20s\n'%('Merging scale',
+                                    'Cross-section [pb]','MC uncertainty [pb]'))
+                for scale in sorted(cross_sections.keys()):
+                   xsecs_file.write('%-20.4g%-20.6e%-20.2e\n'%
+                      (scale,cross_sections[scale][0],cross_sections[scale][1]))
+            else:
+                xsecs_file.write('Cross-sections could not be read from the'+\
+                    "XML node 'xsection' of the .dat file produced by Pythia8.")
+            xsecs_file.close()
             
         #Update the banner
         # self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
@@ -3580,9 +3612,9 @@ Please install this tool with the following MG5_aMC command:
         if int(self.run_card['ickkw']):
             # Add the matched cross-section
             if 'MGGenerationInfo' in self.banner:
-                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia8']
             else:
-                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia8']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
 
@@ -3627,6 +3659,8 @@ Please install this tool with the following MG5_aMC command:
 
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
+        self.results.add_detail('run_mode', 'madevent')
+
         self.update_status('Running Pythia', 'pythia')
         try:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
@@ -3642,8 +3676,6 @@ Please install this tool with the following MG5_aMC command:
                         cwd=pjoin(self.me_dir,'Events'))
 
         os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe"))
-
-
 
         if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
             logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
@@ -4970,7 +5002,7 @@ Please install this tool with the following MG5_aMC command:
             question += """    1 / pythia  : Pythia\n"""
             question += """    2 / pgs     : Pythia + PGS\n"""
         else:
-            question += """"   1 / pythia8  : Pythia8\n"""
+            question += """    1 / pythia8  : Pythia8\n"""
 
         if '3' in available_mode:
             question += """    3 / delphes  : Pythia%s + Delphes.\n"""%pythia_suffix

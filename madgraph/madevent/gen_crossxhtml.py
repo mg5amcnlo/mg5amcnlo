@@ -428,7 +428,8 @@ class AllResults(dict):
                                    'noshowerLO': '(aMC@LO)',
                                    'NLO': '(NLO f.o.)',
                                    'LO': '(LO f.o.)',
-                                   'madevent':''}
+                                   'madevent':'',
+                                   'madevent_PY8':''}
                 status_dict['run_mode_string'] = run_mode_string[self.current['run_mode']]
             else:
                 status_dict['run_mode_string'] = ''
