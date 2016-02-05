@@ -594,7 +594,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
             timeout = True, fct_timeout=None, ask_class=None, alias={},
-            first_cmd=None, **opt):
+            first_cmd=None, text_format='4', **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -609,11 +609,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 timeout = self.options['timeout']
             except Exception:
                 pass
-                    
+
         # add choice info to the question
         if choices + path_msg:
             question += ' ['
-            question += "\033[%dm%s\033[0m, " % (4, default)    
+            question += "\033[%sm%s\033[0m, " % (text_format, default)    
             for data in choices[:9] + path_msg:
                 if default == data:
                     continue
@@ -624,7 +624,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 question += '... , ' 
             question = question[:-2]+']'
         else:
-            question += "[\033[%dm%s\033[0m] " % (4, default)    
+            question += "[\033[%sm%s\033[0m] " % (text_format, default)    
         if ask_class:
             obj = ask_class  
         elif path_msg:
