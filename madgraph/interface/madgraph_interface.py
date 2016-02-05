@@ -5363,7 +5363,7 @@ This implies that with decay chains:
             self.exec_cmd('save options')      
 
         elif tool == 'ninja':
-            self.options['ninja'] = pjoin(os.curdir,'HEPTools','ninja','lib')
+            self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
             self.exec_cmd('save options')
             
         # Now warn the user if he didn't add HEPTools first in his environment
