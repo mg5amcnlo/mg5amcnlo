@@ -49,7 +49,75 @@ else:
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
+
+#===============================================================================
+# Return a warning (if applicable) on the consistency of the current Pythia8
+# and MG5_aMC version specified. It is placed here because it should be accessible
+# from both madgraph5_interface and madevent_interface
+#===============================================================================
+def mg5amc_py8_interface_consistency_warning(options):
+    """ Check the consistency of the mg5amc_py8_interface installed with
+    the current MG5 and Pythia8 versions. """
+
+    # All this is only relevant is Pythia8 is interfaced to MG5
+    if not options['pythia8_path']:
+        return None
+    
+    if not options['mg5amc_py8_interface_path']:
+        return \
+"""
+A Pythia8 path is specified via the option 'pythia8_path' but no path for option
+'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
+leading order simulations with MadEvent.
+Consider installing the MG5_aMC-PY8 interface with the following command:
+ MG5_aMC>install mg5amc_py8_interface
+"""
+    
+    # Retrieve all the on-install and current versions  
+    MG5_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                       'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+    if MG5_version_on_install == 'UNSPECIFIED':
+        MG5_version_on_install = None
+    PY8_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                          'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+    MG5_curr_version = get_pkg_info()['version']
+    try:
+        p = subprocess.Popen(['./get_pythia8_version.py',options['pythia8_path']],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                   cwd=options['mg5amc_py8_interface_path'])
+        (out, err) = p.communicate()
+        out = out.replace('\n','')
+        PY8_curr_version = out
+        # In order to test that the version is correctly formed, we try to cast
+        # it to a float
+        float(out)
+    except:
+        PY8_curr_version = None
+
+    if not MG5_version_on_install is None and not MG5_curr_version is None:
+        if MG5_version_on_install != MG5_curr_version:
+            return \
+"""
+The current version of MG5_aMC (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(MG5_curr_version, MG5_version_on_install)
+
+    if not PY8_version_on_install is None and not PY8_curr_version is None:
+        if PY8_version_on_install != PY8_curr_version:
+            return \
+"""
+The current version of Pythia8 (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(PY8_curr_version,PY8_version_on_install)
+
+    return None
    
+
+
 #===============================================================================
 # parse_info_str
 #===============================================================================
@@ -1131,6 +1199,39 @@ class open_file(object):
         else:
             # not shell program
             os.system('open -a %s %s' % (program, file_path))
+
+def get_HEPTools_location_setter(HEPToolsDir,type):
+    """ Checks whether mg5dir/HEPTools/<type> (which is 'lib', 'bin' or 'include')
+    is in the environment paths of the user. If not, it returns a preamble that
+    sets it before calling the exectuable, for example:
+       <preamble> ./my_exe
+    with <preamble> -> DYLD_LIBRARY_PATH='blabla;$DYLD_LIBRARY_PATH'"""
+    
+    assert(type in ['bin','include','lib'])
+    
+    target_env_var = 'PATH' if type in ['bin','include'] else \
+          ('DYLD_LIBRARY_PATH' if sys.platform=='darwin' else 'LD_LIBRARY_PATH')
+    
+    target_path = os.path.abspath(pjoin(HEPToolsDir,type))
+    
+    if target_env_var not in os.environ or \
+                target_path not in os.environ[target_env_var].split(os.pathsep):
+        return "%s='%s;$%s' "%(target_env_var,target_path,target_env_var)
+    else:
+        return ''
+
+def get_shell_type():
+    """ Try and guess what shell type does the user use."""
+    try:
+        if os.environ['SHELL'].endswith('bash'):
+            return 'bash'
+        elif os.environ['SHELL'].endswith('tcsh'):
+            return 'tcsh'
+        else:
+            # If unknown, return None
+            return None 
+    except KeyError:
+        return None
 
 def is_executable(path):
     """ check if a path is executable"""
