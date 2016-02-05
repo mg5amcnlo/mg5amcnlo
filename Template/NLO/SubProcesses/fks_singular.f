@@ -3250,8 +3250,8 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
            wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
      #             wgt1(2) * azifact
            do i = 1, amp_split_size
-              amp_split_cnt(i,2,iord) = -(cphi_mother+ximag*sphi_mother)**2 * 
-     #               amp_split_cnt(i,2,iord) * dconjg(azifact)
+              amp_split_cnt(i,2,iord) = -(cphi_mother-ximag*sphi_mother)**2 * 
+     #               amp_split_cnt(i,2,iord) * azifact
            enddo
         else
            write(*,*) 'FATAL ERROR in sborncol_fsr',i_type,j_type,i_fks,j_fks
