@@ -1554,8 +1554,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
-            if tir_dir in self.opt:
-                setattr(self,tir_dir,self.opt[tir_dir])
+            if tir_dir in self.opt and not self.opt[tir_dir] is None:
+                # Make sure to defer the 'local path' to the current MG5aMC root.
+                tir_path = self.opt[tir_dir].strip()
+                if tir_path.startswith('.'):
+                    tir_path = os.path.abspath(pjoin(MG5DIR,tir_path))
+                setattr(self,tir_dir,tir_path)
             else:
                 setattr(self,tir_dir,'')
 
@@ -1750,7 +1754,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                               "functionalities are turned off.")
                     self.tir_available_dict[tir_name]=False
                     return ""
-            # We link the tools below directly to directly where the library is detected
+            # We link the tools below directly to the lib directory of the output 
             if not tir_name in ['pjfry','golem','samurai','ninja']:
                 ln(os.path.join(libpath,libname),targetPath,abspath=True)
 

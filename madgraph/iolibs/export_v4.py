@@ -56,6 +56,8 @@ import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 from madgraph.iolibs.files import cp, ln, mv
 
+from madgraph import InvalidCmd
+
 pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
@@ -6255,6 +6257,45 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         and 'default' for tree-level outputs."""
 
     opt = cmd.options
+
+    # ==========================================================================
+    # First check whether Ninja must be installed.
+    # Ninja would only be required if:
+    #  a) Loop optimized output is selected
+    #  b) We are attempting to output in:
+    #      > MadLoop standalone mode
+    #      > aMC@NLO mode
+    #      > LoopInduced mode
+    requires_ninja = opt['loop_optimized_output'] and \
+                      (output_type.startswith('madloop') or \
+                       output_type=='amcatnlo' or 
+                       (output_type=='default' and format in ['madevent']))
+    # An installation is required then, but only if the specified path is the
+    # default local one and that the Ninja library appears missing.
+    if requires_ninja and (not opt['ninja'] is None) and\
+            os.path.abspath(opt['ninja'])==pjoin(MG5DIR,'HEPTools','lib') and\
+            not os.path.isfile(pjoin(MG5DIR,'HEPTools','lib','libninja.a')):
+                # Then install Ninja here from the tarballs in the vendor
+                # directory so that it would work offline too.
+                logger.info(
+"""MG5aMC will now install the loop reduction tool 'Ninja' from the local offline installer.
+Use the command 'install ninja' if you want to update to the latest online version.
+This installation can take some time but only needs to be performed once.""",'$MG:color:GREEN')
+                try:
+                    cmd.do_install('ninja',paths={'HEPToolsInstaller':
+                        pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
+                  additional_options=[
+                  '--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','ninja.tar.gz'),
+                  '--oneloop_tarball=%s'%pjoin(MG5DIR,'vendor','oneloop.tar.gz')])
+                except InvalidCmd:
+                    logger.warning(
+"""The offline installation of Ninja was unsuccessful, and MG5aMC disabled it.
+In the future, if you want to reactivate Ninja, you can do so by re-attempting
+its online installation with the command 'install ninja' or install it on your
+own and set the path to its library in the MG5aMC option 'ninja'.""")
+                    cmd.exec_cmd('set ninja None')
+                    cmd.exec_cmd('save options')  
+    # ==========================================================================
 
     # First treat the MadLoop5 standalone case       
     MadLoop_SA_options = {'clean': not noclean, 

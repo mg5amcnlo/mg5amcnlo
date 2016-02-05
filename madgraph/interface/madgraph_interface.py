@@ -2627,7 +2627,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                                                                       'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5',
-                              'hepmc','mg5amc_py8_interface']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop']
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
@@ -2677,7 +2677,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'pjfry':'auto',
                        'golem':'auto',
                        'samurai':'auto',
-                       'ninja':'auto',
+                       'ninja':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
@@ -5186,16 +5186,23 @@ This implies that with decay chains:
         if not HepToolsInstaller_web_address is None:
             logger.info('Downloading the HEPToolInstaller at:\n   %s'%
                                                   HepToolsInstaller_web_address)
-            if sys.platform == "darwin":
-                misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
-                  %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
-                  stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
-                                                                     cwd=MG5DIR)
+            # Guess if it is a local or web address
+            if '//' in HepToolsInstaller_web_address:
+                if sys.platform == "darwin":
+                    misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
+                      %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
+                      stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                                                                         cwd=MG5DIR)
+                else:
+                    misc.call(['wget', HepToolsInstaller_web_address, 
+                      '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
+                      'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
+                                           stdout=open(os.devnull, 'w'), cwd=MG5DIR)
             else:
-                misc.call(['wget', HepToolsInstaller_web_address, 
-                  '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
-                  'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
-                                       stdout=open(os.devnull, 'w'), cwd=MG5DIR)
+                # If it is a local tarball, then just copy it
+                shutil.copyfile(HepToolsInstaller_web_address,
+                           pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
+
             # Untar the file
             returncode = misc.call(['tar', '-xzpf', 'HEPToolsInstallers.tar.gz'],
                      cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
@@ -5354,6 +5361,10 @@ This implies that with decay chains:
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
             self.exec_cmd('save options')      
+
+        elif tool == 'ninja':
+            self.options['ninja'] = pjoin(os.curdir,'HEPTools','ninja','lib')
+            self.exec_cmd('save options')
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
@@ -5401,6 +5412,9 @@ This implies that with decay chains:
              "\n   %s"%modification_line) 
             logger.warning("==========")
     
+        # Return true for successful installation
+        return True
+    
     def do_install(self, line, paths=None, additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
@@ -5434,14 +5448,16 @@ This implies that with decay chains:
                           'lhapdf6':'[arXiv:1412.7420]',
                           'lhapdf5':'[arXiv:0605240]',
                           'hepmc':'[CPC 134 (2001) 41-46]',
-                          'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]'}
+                          'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]',
+                          'ninja':'[arXiv:1403.1229,XXXX.YYYYY]',
+                          'oneloop':'[arXiv:1007.4716]'}
 
         if args[0] in advertisements:
-            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
+            logger.info("------------------------------------------------------", '$MG:color:BLACK')
             logger.info("   You are installing '%s', please cite ref(s). "%args[0], '$MG:color:BLACK')
             logger.info("         %s"%advertisements[args[0]], '$MG:color:BLACK')
             logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
-            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
+            logger.info("------------------------------------------------------", '$MG:color:BLACK')
 
 
         # Load file with path of the different program:
@@ -5486,8 +5502,10 @@ This implies that with decay chains:
             # path['HEPToolsInstaller'] is the online adress where to downlaod
             # the installers if necessary.
             # Specify the path of the MG5_aMC_interface
+            MG5aMC_PY8_interface_path = path['MG5aMC_PY8_interface'] if \
+                                        'MG5aMC_PY8_interface' in path else 'NA'
             additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
-                                                   path['MG5aMC_PY8_interface'])
+                                                      MG5aMC_PY8_interface_path)
             return self.advanced_install(args[0], path['HEPToolsInstaller'],
                                         additional_options = additional_options)
 
@@ -6189,7 +6207,7 @@ This implies that with decay chains:
                     else:
                         continue
 
-            elif key in ['pjfry','golem','samurai','ninja']:
+            elif key in ['pjfry','golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -6200,7 +6218,7 @@ This implies that with decay chains:
                     else:
                         # Try to look for it locally
                         local_install = {'pjfry':'PJFRY', 'golem':'golem95',
-                                         'samurai':'samurai','ninja':'ninja'}
+                                         'samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
@@ -6762,19 +6780,23 @@ This implies that with decay chains:
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ['pjfry','golem','samurai','ninja']:
-            program = misc.which_lib(os.path.join(args[1],'lib%s.a'%args[0]))
-            if program!=None:
-                res = 0
-                logger.info('set %s to %s' % (args[0],args[1]))
-                self.options[args[0]] = args[1]
+        elif args[0] in ['pjfry','golem','samurai','ninja'] and \
+                           not (args[0]=='ninja' and args[1]=='./HEPTools/lib'):
+            if args[1] in ['None',"''",'""']:
+                self.options[args[0]] = None
             else:
-                res = 1
-
-            if res != 0 :
-                logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
-                        '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
-                        'You will NOT be able to run %s otherwise.\n'%args[0])
+                program = misc.which_lib(os.path.join(args[1],'lib%s.a'%args[0]))
+                if program!=None:
+                    res = 0
+                    logger.info('set %s to %s' % (args[0],args[1]))
+                    self.options[args[0]] = args[1]
+                else:
+                    res = 1
+    
+                if res != 0 :
+                    logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
+                            '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
+                            'You will NOT be able to run %s otherwise.\n'%args[0])
                 
         elif args[0] == 'lhapdf':
             try:
