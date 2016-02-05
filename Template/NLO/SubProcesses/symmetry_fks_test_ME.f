@@ -567,7 +567,7 @@ c in genps_fks_test.f
                   call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
                enddo
                call checkres(limit_split(1,iamp),fxl_split(iamp),
-     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
                write(*,*) 'RETURN CODE', iret
              endif
@@ -596,7 +596,7 @@ c
            do iamp=1, amp_split_size
              if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
                call checkres(limit_split(1,iamp),fxl_split(iamp),
-     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
                nerr=nerr+iret
              endif
