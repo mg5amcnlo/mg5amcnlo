@@ -3003,3 +3003,52 @@ if __name__ == "__main__":
                 log('-------')
             log(histo.nice_string(short=(not '--show_full' in sys.argv)))
     log("=======")
+
+######## Routine from https://gist.github.com/thriveth/8352565 
+######## To fill for histograms data in matplotlib
+def fill_between_steps(x, y1, y2=0, h_align='right', ax=None, **kwargs):
+    ''' Fills a hole in matplotlib: fill_between for step plots.
+    Parameters :
+    ------------
+    x : array-like
+        Array/vector of index values. These are assumed to be equally-spaced.
+        If not, the result will probably look weird...
+    y1 : array-like
+        Array/vector of values to be filled under.
+    y2 : array-Like
+        Array/vector or bottom values for filled area. Default is 0.
+    **kwargs will be passed to the matplotlib fill_between() function.
+    '''
+    # If no Axes opject given, grab the current one:
+    if ax is None:
+        ax = plt.gca()
+
+
+    # First, duplicate the x values
+    #duplicate the info # xx = numpy.repeat(2)[1:] 
+    xx= []; [(xx.append(d),xx.append(d)) for d in x]; xx = xx[1:]
+    # Now: the average x binwidth
+    xstep = x[1] -x[0]
+    # Now: add one step at end of row.
+    xx.append(xx[-1] + xstep)
+
+    # Make it possible to change step alignment.
+    if h_align == 'mid':
+        xx = [X-xstep/2. for X in xx]
+    elif h_align == 'right':
+        xx = [X-xstep for X in xx]
+
+    # Also, duplicate each y coordinate in both arrays
+    yy1 = []; [(yy1.append(d),yy1.append(d)) for d in y1]
+    if isinstance(y1, list):
+        yy2 = []; [(yy2.append(d),yy2.append(d)) for d in y2]
+    else:
+        yy2=y2
+
+    # now to the plotting part:
+    ax.fill_between(xx, yy1, y2=yy2, **kwargs)
+
+    return ax
+######## end routine from https://gist.github.com/thriveth/835256
+
+

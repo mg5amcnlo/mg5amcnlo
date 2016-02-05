@@ -1207,6 +1207,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 html = "<html>\n<head>\n<TITLE>PLOT FOR PYTHIA8</TITLE>"
                 html+= '<link rel=stylesheet href="../../mgstyle.css" type="text/css">\n</head>\n<body>\n'
                 html += "<h2> Plot for Pythia8 </h2>\n"
+                html += '<a href=../../../crossx.html>return to summary</a><br>'
                 html += "<table>\n<tr><td> <b>Type of plot</b> </td> <td><b> PDF</b> </td> <td><b> input file</b> </td> </tr>\n"
                 for one_plot in plot_files:
                     name = os.path.basename(one_plot).replace('.pdf','')
@@ -1215,7 +1216,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         short_name = "Plot to determine the correct value of the merging scale"
                     html += "<tr><td>%(sn)s</td><td> <a href=./%(n)s.pdf>PDF</a> </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> </td></tr>\n" %\
                             {'sn': short_name, 'n': name}
-                html += '</table>\n<a href=../../../crossx.html>return to summary</a></body>\n</html>'
+                html += '</table>\n'
+                html += '<a href=../../../bin/internal/plot_djrs.py> Example of code to plot DJR with matplotlib </a><br><br>'
+                html+='</body>\n</html>'
                 ff=open(pjoin(PY8_plots_root_path, 'index.html'),'w')
                 ff.write(html)
             return True
@@ -2045,6 +2048,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                            (status[0], status[1], status[2], running_time))
             else:
                 logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
+
+        if 'arXiv' in status:
+            if '[' in status:
+                status = status.split('[',1)[0]
+            else:
+                status = status.split('arXiv',1)[0]
 
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)

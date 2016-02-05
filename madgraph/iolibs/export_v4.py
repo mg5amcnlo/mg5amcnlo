@@ -3166,6 +3166,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                    self.dir_path+'/bin/internal/banner.py')
         cp(_file_path+'/various/histograms.py', 
                                    self.dir_path+'/bin/internal/histograms.py')
+        cp(_file_path+'/various/plot_djrs.py', 
+                                   self.dir_path+'/bin/internal/plot_djrs.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/madevent/combine_runs.py', 
