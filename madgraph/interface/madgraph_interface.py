@@ -5406,7 +5406,7 @@ This implies that with decay chains:
             
             logger.warning("==========")
             logger.warning("We recommend that you add to the following paths"+\
-             " to your environment variables, so that you are garanteed that"+\
+             " to your environment variables, so that you are guaranteed that"+\
              " at runtime, MG5_aMC will use the tools you have just installed"+\
              " and not some other versions installed elsewhere on your system:"+\
              "\n   %s"%modification_line) 

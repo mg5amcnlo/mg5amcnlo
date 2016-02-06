@@ -247,7 +247,7 @@ def get_ninja_quad_prec_support(ninja_lib_path):
     
     # If no ninja-config is present, then simply use the presence of
     # 'quadninja' in the include
-    return os.path.exists(pjoin(ninja_lib_path,os.pardir,'include','quadninja'))
+    return False
 
 #===============================================================================
 # find a executable

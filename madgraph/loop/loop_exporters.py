@@ -1613,10 +1613,15 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             setattr(self,tir_dir,libpath)
             if libpath != "":
                 if tir in ['ninja','pjfry','golem','samurai']:
-                    # We should link dynamically when possible, so we use the original
-                    # location of these libraries.
-                    link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
-                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    # It is cleaner to use the original location of the libraries
+                    if tir=='ninja' and os.path.exists(pjoin(libpath,'lib%s.a'%tir)) \
+                            and (not any(os.path.exists(pjoin(libpath,
+                            'lib%s.%s'%(tir,ext))) for ext in ['.so','.dylib'])):
+                            link_tir_libs.append('-L%s/ -l%s -lstdc++'%(libpath,tir))
+                            tir_libs.append('%s/lib%s.a'%(libpath,tir))   
+                    else:
+                        link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
+                        tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
                     if tir in ['ninja','golem', 'samurai']:
                         trgt_path = pjoin(os.path.dirname(libpath),'include')
                         to_include = misc.find_includes_path(trgt_path,
