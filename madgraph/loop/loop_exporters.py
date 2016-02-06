@@ -1696,8 +1696,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         logger.warning(
 "Your version of '%s' in \n  %s\nseems too old %sto be compatible with MG5_aMC."
 %(tir_name, libpath ,'' if not version else '(v%s) '%version)+
-"\nConsider updating it by hand or using the 'install' function of MG5_aMC.")
-
+("\nConsider updating it by hand or using the 'install' function of MG5_aMC." if tir_name!='samurai'
+ else "\nAsk the authors for the latest version compatible with MG5_aMC."))
         else:
             # self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)):
