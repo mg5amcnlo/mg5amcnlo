@@ -1,8 +1,8 @@
-export lhapdf=True
+lhapdf=True
 include ../Source/make_opts
 
 LIBDIR = ../lib/
-LINKLIBS =  -L../lib/ -lpdf $(lhapdf)
+LINKLIBS =  -L../lib/ -lpdf $(llhapdf)
 LIBS = $(LIBDIR)libpdf.$(libext) 
 
 RWGT=rwgt.f alfas_functions_lhapdf.f

@@ -784,6 +784,7 @@ class ReweightInterface(extended_cmd.Cmd):
         pdg = self.invert_momenta(pdg)
         bjx = self.invert_momenta(bjx)
         wgt = self.invert_momenta(wgt)
+        misc.sprint(ratio_V, ratio_T)
         out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
         
         #if True and __debug__: #this is only for trivial reweighting

@@ -179,8 +179,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if not hasattr(self,'multiparticles_ms'):
             for key, value in self.banner.get_detail('proc_card','multiparticles'):
-                self.do_define('%s = %s' % (key, value))
-
+                try:
+                    self.do_define('%s = %s' % (key, value))
+                except self.mg5cmd.InvalidCmd:  
+                    pass
+                
         # Read the final state of the production process:
         #     "_full" means with the complete decay chain syntax 
         #     "_compact" means without the decay chain syntax 
