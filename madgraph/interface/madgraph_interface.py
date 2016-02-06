@@ -5319,6 +5319,9 @@ This implies that with decay chains:
             self.exec_cmd('save options')            
 
         elif tool == 'mg5amc_py8_interface':
+            # At this stage, pythia is guaranteed to be installed, s
+            if self.options['pythia8_path'] in ['',None,'None']:
+                self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
             self.exec_cmd('save options')      
@@ -5478,7 +5481,9 @@ This implies that with decay chains:
         #check outdated install
         if args[0] in ['Delphes2', 'pythia-pgs']:
             logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
-                           "  You should consider using an up-to-date version of the code.")
+               "  You should consider using installing and unsing Pythia8 + Delphes, with:\n"+
+               "   > install mg5amc_py8_interface\n"
+               "   > install Delphes")
 
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
