@@ -5363,6 +5363,15 @@ This implies that with decay chains:
             self.exec_cmd('save options')      
 
         elif tool == 'ninja':
+            if not misc.get_ninja_quad_prec_support(pjoin(
+                                              MG5DIR,'HEPTools','ninja','lib')):
+                logger.warning(
+"""Successful installation of Ninja, but without support for quadruple precision
+arithmetics. If you want to enable this (hence improving the treatment of numerically
+unstable points in the loop matrix elements) you can try to reinstall Ninja with:
+  MG5aMC>install ninja
+After having made sure to have selected a C++ compiler in the 'cpp' option of
+MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
             self.exec_cmd('save options')
             
