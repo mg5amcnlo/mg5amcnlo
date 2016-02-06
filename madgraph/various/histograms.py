@@ -1677,13 +1677,14 @@ class HwUList(histograms_PhysicsObjectList):
             
             # Accept also if both pdf and mur_muf_scale differ because
             # the PDF used for the Event weight is often unknown but the
-            # mu_r and mu_f variational weight specify it
+            # mu_r and mu_f variational weight specify it. Same story for
+            # alpsfact.
             if variations in [set(['mur_muf_scale']),set(['pdf','mur_muf_scale'])]:
                 wgt_label = (weight['MUR'],weight['MUF'])
+            if variations in [set(['ALPSFACT']),set(['pdf','ALPSFACT'])]:
+                wgt_label = ('alpsfact',weight['ALPSFACT'])
             if variations == set(['pdf']):
-                wgt_label = weight['PDF']
-            if variations == set(['ALPSFACT']):
-                wgt_label = ('alpsfact',weight['ALPSFACT'])                
+                wgt_label = weight['PDF']                
             if variations == set([]):
                 # Unknown weight (might turn out to be taken as a merging variation weight below)
                 wgt_label = format_weight_label(weight)
@@ -1816,19 +1817,19 @@ class HwUList(histograms_PhysicsObjectList):
             
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
 
-#VAL#                     if bin_weights['central']!=0.0:
-#                         print '---------'
-#                         print 'multiplicity =',multiplicity
-#                         print 'central =', bin_weights['central']
-#                         print 'PDF     = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,int)]
-#                         print 'PDF min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,int)),max(bin_weights[key] for key in bin_weights if isinstance(key,int))
-#                         print 'scale   = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,tuple)]
-#                         print 'scale min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,tuple)),max(bin_weights[key] for key in bin_weights if isinstance(key,tuple))
-#                         print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,float)] 
-#                         print 'merging min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,float)),max(bin_weights[key] for key in bin_weights if isinstance(key,float))
-#                         print 'alpsfact = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'] 
-#                         print 'alpsfact min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact')
-#                         print '---------'
+#                     if bin_weights['central']!=0.0:
+#                           print '---------'
+#                           print 'multiplicity =',multiplicity
+#                           print 'central =', bin_weights['central']
+#                           print 'PDF     = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,int)]
+#                           print 'PDF min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,int)),max(bin_weights[key] for key in bin_weights if isinstance(key,int))
+#                           print 'scale   = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,tuple)]
+#                           print 'scale min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,tuple)),max(bin_weights[key] for key in bin_weights if isinstance(key,tuple))
+#                           print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,float)] 
+#                           print 'merging min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,float)),max(bin_weights[key] for key in bin_weights if isinstance(key,float))
+#                           print 'alpsfact = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'] 
+#                           print 'alpsfact min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact')
+#                           print '---------'
 
                 # Finally remove auxiliary weights
                 if not raw_labels:
