@@ -71,7 +71,7 @@ endif
 ifdef lhapdf
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  llhapdf=-lLHAPDF -lstdc++
+  llhapdf+=-lLHAPDF -lstdc++
 else
   alfas_functions=alfas_functions
   llhapdf=

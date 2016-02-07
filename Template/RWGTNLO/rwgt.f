@@ -22,6 +22,18 @@ c       Initialise the pdf
         return
         end
 
+      subroutine test_pdf()
+      implicit none 
+      integer lpp(2)
+      double precision pdf, PDG2PDF
+      lpp(1)=1
+      lpp(2) =1
+      call initialise(lpp, 230000)
+      pdf = PDG2PDF(1,1,0.1,100)
+      write(*,*) pdf
+      end
+     
+
 
       subroutine get_wgt(scales2, pdg, bjx, wgt, g, qcdpower, ymur, 
      &                   ymuf, n_ctr, new_wgt, all_wgt)
@@ -79,13 +91,13 @@ c call the PDFs
          LP=SIGN(1,save_LPP(1))
          pd=pdg(1,i)
          if (pd.eq.21) pd=0
-         xlum=xlum*PDG2PDF(ABS(save_LPP(1)),pd*LP,bjx(1,i)
-     &           ,DSQRT(mu2_f))
+c         xlum=xlum*PDG2PDF(ABS(save_LPP(1)),pd*LP,bjx(1,i)
+c     &           ,DSQRT(mu2_f))
          LP=SIGN(1,save_LPP(2))
          pd=pdg(2,i)
          if (pd.eq.21) pd=0
-         xlum=xlum*PDG2PDF(ABS(save_LPP(2)),pd*LP,bjx(2,i)
-     &           ,DSQRT(mu2_f))
+c         xlum=xlum*PDG2PDF(ABS(save_LPP(2)),pd*LP,bjx(2,i)
+c     &           ,DSQRT(mu2_f))
 c         write(*,*) "xlum", xlum
 c add the weights to the array
          add_wgt =  xlum * (wgt(1,i)+wgt(2,i)*log(mu2_r

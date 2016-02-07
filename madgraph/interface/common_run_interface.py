@@ -2067,6 +2067,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """update the make_opts file writing the environmental variables
         stored in make_opts_var"""
         make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
+        
+        return self.update_make_opts_full(make_opts, self.make_opts_var)
+        
+
+    @staticmethod
+    def update_make_opts_full(path, def_variables):
+        """update the make_opts file writing the environmental variables
+        stored in make_opts_var"""
+        make_opts = path
         tag = '#end_of_make_opts_variables\n'
         content = open(make_opts).read()
 
@@ -2074,13 +2083,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # should be a line #end_of_make_opts_variables
         if tag in content:
             content = content.split(tag)[1]
-
-        variables = '\n'.join('%s=%s' % (k,v) for k, v in self.make_opts_var.items())
+        variables = '\n'.join('%s=%s' % (k,v) for k, v in def_variables.items())
         variables += '\n%s' % tag
 
         open(make_opts, 'w').write(variables + content)
-        return
-
+        return       
 
 
 # lhapdf-related functions

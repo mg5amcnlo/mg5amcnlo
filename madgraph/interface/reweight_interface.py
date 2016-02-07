@@ -784,7 +784,6 @@ class ReweightInterface(extended_cmd.Cmd):
         pdg = self.invert_momenta(pdg)
         bjx = self.invert_momenta(bjx)
         wgt = self.invert_momenta(wgt)
-        misc.sprint(ratio_V, ratio_T)
         out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
         
         #if True and __debug__: #this is only for trivial reweighting
@@ -1162,7 +1161,25 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
             commandline = 'output standalone_rw %s -f' % pjoin(path_me,'rw_mevirt')
-            mgcmd.exec_cmd(commandline, precmd=True)        
+            mgcmd.exec_cmd(commandline, precmd=True) 
+            # update make_opts
+            m_opts = {}
+            if mgcmd.options['lhapdf']:
+                #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
+                #        stdout = subprocess.PIPE).stdout.read().strip()[0]
+                m_opts['lhapdf'] = True
+                m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
+                m_opts['llhapdf'] = subprocess.Popen([mgcmd.options['lhapdf'], '--libs'], 
+                        stdout = subprocess.PIPE).stdout.read().strip().split()[0]
+            else:
+                lhapdf = False
+                lhapdfversion = 0
+
+            path = pjoin(path_me,'rw_mevirt', 'Source', 'make_opts')
+            
+            common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)
+
+            
             logger.info('Done %.4g' % (time.time()-start))
 
             # now store the id information             

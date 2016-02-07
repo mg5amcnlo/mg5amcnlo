@@ -1,4 +1,3 @@
-lhapdf=True
 include ../Source/make_opts
 
 LIBDIR = ../lib/
