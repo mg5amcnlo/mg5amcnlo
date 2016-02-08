@@ -292,3 +292,11 @@ c       Call SetCtq6(4)
       end
  
 
+      subroutine numberPDFm(idummy)
+      implicit none
+      integer idummy
+      write (*,*) 'ERROR: YOU ARE IN THE numberPDFm SUBROUTINE.'
+      write (*,*) 'THIS SUBROUTINE SHOULD NEVER BE USED'
+      stop
+      return
+      end

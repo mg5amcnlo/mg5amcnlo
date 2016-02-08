@@ -82,26 +82,25 @@ c MZ add the possibility to have shower_MC input lowercase
       call to_upper(shower_MC)
 C
 
-c Temporary until Fortran writer for arrays works correctly
-      lhaPDFid(0)=1
-      lhaPDFid(1)=lhaid
-      LHAPDFsetname(1)='NNPDF23_nlo_as_0118_qed'
-      if (do_rwgt_pdf) then
-         nmemPDF(1)=pdf_set_max-pdf_set_min+1
-      else
-         nmemPDF(1)=1
-      endif
-      dyn_scale(0)=1
-      dyn_scale(1)=dynamical_scale_choice
-      lscalevar(1)=do_rwgt_scale
-      scalevarR(0)=3d0
-      scalevarR(1)=1.0d0
-      scalevarR(2)=2.0d0
-      scalevarR(3)=0.5d0
-      scalevarF(0)=3d0
-      scalevarF(1)=1.0d0
-      scalevarF(2)=2.0d0
-      scalevarF(3)=0.5d0
+c Determine if there is a need to do scale and/or PDF reweighting
+      do_rwgt_scale=.false.
+      do i=1,dyn_scale(0)
+         if (lscalevar(i)) then
+            do_rwgt_scale=.true.
+            return
+         endif
+      enddo
+      do_rwgt_pdf=.false.
+      do i=1,lhaPDFid(0)
+         if (lpdfvar(i)) then
+            do_rwgt_pdf=.true.
+            return
+         endif
+      enddo
+
+c Default scale and PDF choice used for the actual run
+      dynamical_scale_choice=dyn_scale(1)
+      lhaid=lhaPDFid(1)
 
 c merging cuts
       xqcut=0d0
@@ -200,6 +199,20 @@ C       Fill common block for Les Houches init info
         ebmup(i)=ebeam(i)
       enddo
       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
+
+
+cCCC TEMPORAIRY VALUE FOR LHAPDFSETNAME
+      LHAPDFsetname(1)='NNPDF23_nlo_as_0118_qed'
+      
+      do i=1,lhaPDFid(0)
+         if (lpdfvar(i) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then
+c fill the nmemPDF(i) array with the number of PDF error set. This we
+c get from LHAPDF.
+            call numberPDFm(1,nmemPDF(i))
+         else
+            nmemPDF(i)=1
+         endif
+      enddo
 
       return
  99   write(*,*) 'error in reading'

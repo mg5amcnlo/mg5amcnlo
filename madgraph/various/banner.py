@@ -1470,10 +1470,22 @@ class RunCard(ConfigFile):
             #get the value with warning if the user didn't set it
             value = self.get_default(key) 
             if isinstance(value, list):
-                value = value[0]
-                
-            line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
-            fsock.writelines(line)
+                # in case of a list, add the length of the list as 0th
+                # element in fortran. Only in case of integer or float
+                # list (not for bool nor string)
+                if isinstance(value[0], int):
+                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
+                    fsock.writelines(line)
+                elif isinstance(value[0], float):
+                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
+                    fsock.writelines(line)
+                # output the rest of the list in fortran
+                for i,v in enumerate(value):
+                    line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
+                    fsock.writelines(line)
+            else:
+                line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
+                fsock.writelines(line)
         fsock.close()   
 
 
@@ -1903,7 +1915,7 @@ class RunCardNLO(RunCard):
         self.add_param('ebeam1', 6500.0, fortran_name='ebeam(1)')
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo')                
-        self.add_param('lhaid', 244600)
+        self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
@@ -1911,20 +1923,24 @@ class RunCardNLO(RunCard):
         self.add_param('fixed_fac_scale', False)
         self.add_param('mur_ref_fixed', 91.118)                       
         self.add_param('muf1_ref_fixed', 91.118)
+        self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', 91.118)
-        self.add_param("dynamical_scale_choice", [-1])
+        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale')
         self.add_param('fixed_qes_scale', False)
         self.add_param('qes_ref_fixed', 91.118)
         self.add_param('mur_over_ref', 1.0)
+        self.add_param('muf_over_ref', 1.0)                       
         self.add_param('muf1_over_ref', 1.0)                       
         self.add_param('muf2_over_ref', 1.0)
         self.add_param('qes_over_ref', 1.0)
-        self.add_param('reweight_scale', True, fortran_name='do_rwgt_scale')
+        self.add_param('reweight_scale', [True], fortran_name='lscalevar')
         self.add_param('rw_rscale_down', 0.5)        
         self.add_param('rw_rscale_up', 2.0)
         self.add_param('rw_fscale_down', 0.5)                       
         self.add_param('rw_fscale_up', 2.0)
-        self.add_param('reweight_pdf', False, fortran_name='do_rwgt_pdf')
+        self.add_param('rw_rscale', [1.0,2.0,0.5], fortran_name='scalevarR')
+        self.add_param('rw_fscale', [1.0,2.0,0.5], fortran_name='scalevarF')
+        self.add_param('reweight_pdf', [False], fortran_name='lpdfvar')
         self.add_param('pdf_set_min', 244601)
         self.add_param('pdf_set_max', 244700)
         #merging
@@ -1997,17 +2013,25 @@ class RunCardNLO(RunCard):
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
     
-
         # PDF reweighting check
-        if self['reweight_pdf']:
+        if any(rpdf for rpdf in self['reweight_pdf']):
             # check that we use lhapdf if reweighting is ON
             if self['pdlabel'] != "lhapdf":
-                raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel or set reweight_pdf to False.'
-            
-            # check that the number of pdf set is coherent for the reweigting:    
-            if (self['pdf_set_max'] - self['pdf_set_min'] + 1) % 2:
-                raise InvalidRunCard, "The number of PDF error sets must be even" 
-        
+                raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel to use LHAPDF or set reweight_pdf to False.'
+
+        if len(self['reweight_pdf']) != len(self['lhaid']):
+            raise InvalidRunCard, "'reweight_pdf' and 'lhaid' lists should have the same length"
+        if len(self['reweight_scale']) != len(self['dynamical_scale_choice']):
+            raise InvalidRunCard, "'reweight_scale' and 'lhaid' lists should have the same length"
+        if len(self['dynamical_scale_choice']) > 10 :
+            raise InvalidRunCard, "Length of list for 'dynamical_scale_choice' too long: max is 10."
+        if len(self['lhaid']) > 10 :
+            raise InvalidRunCard, "Length of list for 'lhaid' too long: max is 10."
+        if len(self['rw_rscale']) > 9 :
+            raise InvalidRunCard, "Length of list for 'rw_rscale' too long: max is 9."
+        if len(self['rw_fscale']) > 9 :
+            raise InvalidRunCard, "Length of list for 'rw_fscale' too long: max is 9."
+
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
