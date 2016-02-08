@@ -409,8 +409,9 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+C     Stability studies show that IREGI is completely unstable at rank 7 and above.
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.8.OR.RANK.GE.8)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
       RETURN
       END
 

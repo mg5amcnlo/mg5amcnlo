@@ -6269,7 +6269,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
     requires_ninja = opt['loop_optimized_output'] and \
                       (output_type.startswith('madloop') or \
                        output_type=='amcatnlo' or 
-                       (output_type=='default' and format in ['madevent']))
+                       (output_type=='default' and cmd._export_format in ['madevent']))
     # An installation is required then, but only if the specified path is the
     # default local one and that the Ninja library appears missing.
     if requires_ninja and (not opt['ninja'] is None) and\

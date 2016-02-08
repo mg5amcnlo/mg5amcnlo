@@ -1299,7 +1299,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_tot_hel']=len(helicities)
         
         # We aim at a 30 sec run
-        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,10)
+        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,40)
 
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
