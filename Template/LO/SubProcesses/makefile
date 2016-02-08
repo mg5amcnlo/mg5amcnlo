@@ -17,7 +17,7 @@ else
     MADLOOP_LIB =
 endif
 
-LINKLIBS = $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS) -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(lhapdf) 
+LINKLIBS = $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS) -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(llhapdf) 
 
 LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(MADLOOP_LIB) $(LOOP_LIBS)
 
@@ -34,10 +34,10 @@ SYMMETRY = symmetry.o idenparts.o
 # Binaries
 
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
-	$(FC) $(FFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+	$(FC) $(LDFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
 
 gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
-	$(FC) $(FFLAGS) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric
+	$(FC) $(LDFLAGS) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 	cd ../../Source/MODEL; make

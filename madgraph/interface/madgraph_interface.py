@@ -5104,7 +5104,11 @@ This implies that with decay chains:
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
                     defined_multiparticles.remove(container)
-
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' ' .join([`i` for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
                 
         
         if defined_multiparticles:
@@ -5222,7 +5226,7 @@ This implies that with decay chains:
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
 
 
-        logger.info('compile %s. This might takes a while.' % name)
+        logger.info('compile %s. This might take a while.' % name)
 
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
