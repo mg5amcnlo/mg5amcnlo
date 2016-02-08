@@ -3370,6 +3370,8 @@ Please install this tool with the following MG5_aMC command:
             # Use the parameter maxjetflavor for Merging:nQuarksMerge which specifies
             # up to which parton must be matched.
             PY8_Card.MadGraphSet('Merging:nQuarksMerge',self.run_card['maxjetflavor'])
+            if not hasattr(self,'proc_characteristic'):
+                self.proc_characteristic = self.get_characteristics()
             nJetMax = self.proc_characteristic['max_n_matched_jets']
             if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
                              'Merging:nJetMax'.lower() not in PY8_Card.user_set:
@@ -3400,16 +3402,17 @@ Please install this tool with the following MG5_aMC command:
         'the ktdurham cut specified in the run_card parameter.\n'+
         'It is incorrect to use a smaller CKKWl scale than the generation-level ktdurham cut!')
 
-            if self.run_card['ptlund']==0.0 and self.run_card['ktdurham']>0.0:
+            if self.run_card['ptlund']<=0.0 and self.run_card['ktdurham']>0.0:
                 PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
                 PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
-                                                         run_card['dparameter'])
-            elif self.run_card['ptlund']>0.0 and self.run_card['ktdurham']==0.0:
+                                                         self.run_card['dparameter'])
+            elif self.run_card['ptlund']>0.0 and self.run_card['ktdurham']<=0.0:
                 PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
             else:
                 raise InvalidCmd("*Either* the 'ptlund' or 'ktdurham' cut in "+\
                   " the run_card must be turned on to activate CKKW(L) merging"+
-                  " with Pythia8, but *both* cuts cannot be turned on at the same time.")
+                  " with Pythia8, but *both* cuts cannot be turned on at the same time."+
+                  "\n ptlund=%f, ktdurham=%f."%(self.run_card['ptlund'],self.run_card['ktdurham']))
         ########################################################################
 
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
@@ -3459,9 +3462,9 @@ Please install this tool with the following MG5_aMC command:
 ################################################################################
 #### Uncomment the lines below so as *not* to output an hepMC file #############
 ################################################################################
-#        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
-#                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
-#        open(HepMC_event_output,'w').write('DUMMY')
+        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
+                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
+        open(HepMC_event_output,'w').write('DUMMY')
 ################################################################################
         wrapper.write(exe_cmd)
 

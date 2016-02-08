@@ -1298,7 +1298,7 @@ class PY8Card(ConfigFile):
         self.add_param("Merging:nQuarksMerge",4,hidden=True, always_write_to_card=False)
         # To be added in subruns for CKKWL
         self.add_param("Merging:doKTMerging", False, hidden=True, always_write_to_card=False)
-        self.add_param("Merging:Dparameter", False, hidden=True, always_write_to_card=False)        
+        self.add_param("Merging:Dparameter", 0.4, hidden=True, always_write_to_card=False)        
         self.add_param("Merging:doPTLundMerging", False, hidden=True, always_write_to_card=False)
 
         # Add parameters controlling the subruns execution flow.
