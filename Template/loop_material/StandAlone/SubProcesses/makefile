@@ -8,12 +8,13 @@ ifeq ($(wildcard ../Source/make_opts),)
 else
     ROOT = ..
 endif
+LIBDIR = $(ROOT)/lib/
 
 include $(ROOT)/Source/make_opts
 include $(ROOT)/SubProcesses/MadLoop_makefile_definitions
 SHELL = /bin/bash
 
-LIBDIR = $(ROOT)/lib/
+
 PROG   = check
 all : $(PROG)
 OLP    = OLP
@@ -88,15 +89,26 @@ clean:
 	rm -f libMadLoop.dylib
 	ln -s ../libMadLoop.dylib
 
-../$(OLP)_static: $(OLP_PROCESS)
-	cd ..; make $(OLP)_static; cd -
-	ln -s $(MADLOOP_LIB)
+$(MADLOOP_LIB): $(OLP_PROCESS)
+ifeq ($(ROOT), ../..)
+	cd ..;make ../lib/libMadLoop.$(libext);cd -
+else
+	ar rcs libMadLoop.$(libext) $(OLP_PROCESS)
+	mv libMadLoop.$(libext) $(MADLOOP_LIB)
+endif
+
 
 libMadLoop.dylib: ../$(OLP)
+
+libMadLoop.$(libext): $(MADLOOP_LIB)
+	rm -f libMadLoop.$(libext)
+	ln -s $(MADLOOP_LIB)
+
+
 
 ifeq ($(origin MENUM),undefined)
   MENUM=2
 endif
-matrix$(MENUM)py.so: ../$(OLP)_static  libMadLoop.$(libext) 
+matrix$(MENUM)py.so: libMadLoop.$(libext) check_sa.f  
 	touch __init__.py
 	$(F2PY) libMadLoop.$(libext) -m matrix$(MENUM)py -c check_sa.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel -L../../lib/ -lcts -liregi
