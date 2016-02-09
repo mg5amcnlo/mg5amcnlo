@@ -235,6 +235,86 @@ C            component
 
       END
 
+      SUBROUTINE ML5_0_MP_BUILD_KINEMATIC_MATRIX(NLOOPLINE,P_LOOP,M2L
+     $ ,S_MAT)
+C     
+C     Helper function that compute the loop kinematic matrix with
+C      proper thresholds
+C     NLOOPLINE : Number of loop lines
+C     P_LOOP    : List of external momenta running in the loop, i.e.
+C      q_i in the denominator (l_i+q_i)**2-m_i**2
+C     M2L       : List of complex-valued masses running in the loop.
+C     S_MAT(N,N): Kinematic matrix output.
+C     
+C     ARGUMENTS
+C     
+      INTEGER NLOOPLINE
+      REAL*16 P_LOOP(NLOOPLINE,0:3)
+      COMPLEX*32 M2L(NLOOPLINE)
+      COMPLEX*32 S_MAT(NLOOPLINE,NLOOPLINE)
+C     
+C     GLOBAL VARIABLES
+C     
+      INCLUDE 'MadLoopParams.inc'
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J,K
+      COMPLEX*32 DIFFSQ
+      REAL*16 REF_NORMALIZATION
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      DO I=1,NLOOPLINE
+        DO J=1,NLOOPLINE
+
+          IF(I.EQ.J)THEN
+            S_MAT(I,J)=-(M2L(I)+M2L(J))
+          ELSE
+            DIFFSQ = (CMPLX(P_LOOP(I,0),0.0E0_16,KIND=16)-CMPLX(P_LOOP(
+     $       J,0),0.0E0_16,KIND=16))**2
+            DO K=1,3
+              DIFFSQ = DIFFSQ - (CMPLX(P_LOOP(I,K),0.0E0_16,KIND=16)
+     $         -CMPLX(P_LOOP(J,K),0.0E0_16,KIND=16))**2
+            ENDDO
+C           Default value of the kinematic matrix
+            S_MAT(I,J)=DIFFSQ-M2L(I)-M2L(J)
+C           And we now test various thresholds. Normaly, at most one
+C            applies.
+            IF(ABS(M2L(I)).NE.0.0E0_16)THEN
+              IF(ABS((DIFFSQ-M2L(I))/M2L(I)).LT.OSTHRES)THEN
+                S_MAT(I,J)=-M2L(J)
+              ENDIF
+            ENDIF
+            IF(ABS(M2L(J)).NE.0.0E0_16)THEN
+              IF(ABS((DIFFSQ-M2L(J))/M2L(J)).LT.OSTHRES)THEN
+                S_MAT(I,J)=-M2L(I)
+              ENDIF
+            ENDIF
+C           Choose what seems the most appropriate way to compare
+C           massless onshellness.
+            REF_NORMALIZATION=0.0E0_16
+C           Here, we chose to base the threshold only on the energy
+C            component
+            DO K=0,0
+              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I
+     $         ,K)) + ABS(P_LOOP(J,K))
+            ENDDO
+            REF_NORMALIZATION = (REF_NORMALIZATION/2.0E0_16)**2
+            IF(REF_NORMALIZATION.NE.0.0E0_16)THEN
+              IF(ABS(DIFFSQ/REF_NORMALIZATION).LT.OSTHRES)THEN
+                S_MAT(I,J)=-(M2L(I)+M2L(J))
+              ENDIF
+            ENDIF
+          ENDIF
+
+        ENDDO
+      ENDDO
+
+      END
+
 
 
       SUBROUTINE ML5_0_LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK
@@ -264,6 +344,7 @@ C
 C     LOCAL VARIABLES 
 C     
       REAL*8 PL(0:3,NLOOPLINE)
+      REAL*16 MP_PL(0:3,NLOOPLINE)
       COMPLEX*16 M2L(NLOOPLINE)
       INTEGER PAIRING(NLOOPLINE),WE(4)
       INTEGER I, J, K, TEMP,I_LIB
@@ -290,6 +371,9 @@ C
 
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMMON/ML5_0_W/W
+      COMPLEX*32 MP_W(20,NWAVEFUNCS)
+      COMMON/ML5_0_MP_W/MP_W
+
       REAL*8 LSCALE
       INTEGER CTMODE
       COMMON/ML5_0_CT/LSCALE,CTMODE
@@ -299,6 +383,9 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+
+C     Determine it uses qp or not
+      DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
      $ EX,LOOPNUM)) THEN
@@ -321,8 +408,14 @@ C     ----------
           TEMP=1
           DO J=1,NLOOPLINE
             PL(I,J)=0.D0
+            IF (DOING_QP) THEN
+              MP_PL(I,J)=0.0E+0_16
+            ENDIF
             DO K=TEMP,(TEMP+PAIRING(J)-1)
               PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
+              IF (DOING_QP) THEN
+                MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)
+              ENDIF
             ENDDO
             TEMP=TEMP+PAIRING(J)
           ENDDO
@@ -339,9 +432,6 @@ C       not able to deal with complex masses
             EXIT
           ENDIF
         ENDDO
-C       Determine it uses qp or not
-        DOING_QP=.FALSE.
-        IF(CTMODE.GE.4)DOING_QP=.TRUE.
 C       Choose the correct loop library
         CALL ML5_0_CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,COMPLEX_MASS
      $   ,ID,DOING_QP,I_LIB)
@@ -390,6 +480,7 @@ C
 C     LOCAL VARIABLES 
 C     
       REAL*8 PL(0:3,NLOOPLINE)
+      REAL*16 MP_PL(0:3,NLOOPLINE)
       COMPLEX*16 M2L(NLOOPLINE)
       INTEGER PAIRING(NLOOPLINE),WE(3)
       INTEGER I, J, K, TEMP,I_LIB
@@ -416,6 +507,9 @@ C
 
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMMON/ML5_0_W/W
+      COMPLEX*32 MP_W(20,NWAVEFUNCS)
+      COMMON/ML5_0_MP_W/MP_W
+
       REAL*8 LSCALE
       INTEGER CTMODE
       COMMON/ML5_0_CT/LSCALE,CTMODE
@@ -425,6 +519,9 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+
+C     Determine it uses qp or not
+      DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
      $ EX,LOOPNUM)) THEN
@@ -445,8 +542,14 @@ C     ----------
           TEMP=1
           DO J=1,NLOOPLINE
             PL(I,J)=0.D0
+            IF (DOING_QP) THEN
+              MP_PL(I,J)=0.0E+0_16
+            ENDIF
             DO K=TEMP,(TEMP+PAIRING(J)-1)
               PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
+              IF (DOING_QP) THEN
+                MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)
+              ENDIF
             ENDDO
             TEMP=TEMP+PAIRING(J)
           ENDDO
@@ -463,9 +566,6 @@ C       not able to deal with complex masses
             EXIT
           ENDIF
         ENDDO
-C       Determine it uses qp or not
-        DOING_QP=.FALSE.
-        IF(CTMODE.GE.4)DOING_QP=.TRUE.
 C       Choose the correct loop library
         CALL ML5_0_CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,COMPLEX_MASS
      $   ,ID,DOING_QP,I_LIB)
@@ -514,6 +614,7 @@ C
 C     LOCAL VARIABLES 
 C     
       REAL*8 PL(0:3,NLOOPLINE)
+      REAL*16 MP_PL(0:3,NLOOPLINE)
       COMPLEX*16 M2L(NLOOPLINE)
       INTEGER PAIRING(NLOOPLINE),WE(2)
       INTEGER I, J, K, TEMP,I_LIB
@@ -540,6 +641,9 @@ C
 
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMMON/ML5_0_W/W
+      COMPLEX*32 MP_W(20,NWAVEFUNCS)
+      COMMON/ML5_0_MP_W/MP_W
+
       REAL*8 LSCALE
       INTEGER CTMODE
       COMMON/ML5_0_CT/LSCALE,CTMODE
@@ -549,6 +653,9 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+
+C     Determine it uses qp or not
+      DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
      $ EX,LOOPNUM)) THEN
@@ -567,8 +674,14 @@ C     ----------
           TEMP=1
           DO J=1,NLOOPLINE
             PL(I,J)=0.D0
+            IF (DOING_QP) THEN
+              MP_PL(I,J)=0.0E+0_16
+            ENDIF
             DO K=TEMP,(TEMP+PAIRING(J)-1)
               PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
+              IF (DOING_QP) THEN
+                MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)
+              ENDIF
             ENDDO
             TEMP=TEMP+PAIRING(J)
           ENDDO
@@ -585,9 +698,6 @@ C       not able to deal with complex masses
             EXIT
           ENDIF
         ENDDO
-C       Determine it uses qp or not
-        DOING_QP=.FALSE.
-        IF(CTMODE.GE.4)DOING_QP=.TRUE.
 C       Choose the correct loop library
         CALL ML5_0_CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,COMPLEX_MASS
      $   ,ID,DOING_QP,I_LIB)

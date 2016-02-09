@@ -166,11 +166,13 @@ C     Stable with PJFry++.
 C     U == 3
 C     Stable with IREGI.
 C     U == 4
-C     Stable with Golem95
+C     Stable with Golem95.
 C     U == 5
-C     Stable with Samurai
+C     Stable with Samurai.
 C     U == 6
-C     Stable with Ninja
+C     Stable with Ninja in double precision.
+C     U == 8
+C     Stable with Ninja in quadruple precision.
 C     U == 9
 C     Stable with CutTools in quadruple precision.
 C     
@@ -200,8 +202,11 @@ C
         IF(MLRED.EQ.1)THEN
           SET_RET_CODE_U=9
           RETURN
+        ELSEIF(MLRED.EQ.6)THEN
+          SET_RET_CODE_U=8
+          RETURN
         ELSE
-          STOP 'Only CutTools can use quardruple precision'
+          STOP 'Only CutTools and Ninja can use quardruple precision'
         ENDIF
       ENDIF
       IF(MLRED.GE.1.AND.MLRED.LE.6)THEN
@@ -424,8 +429,10 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+C     Stability studies show that IREGI is completely unstable at rank
+C      7 and above.
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.8.OR.RANK.GE.8)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
       RETURN
       END
 

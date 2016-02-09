@@ -75,12 +75,14 @@ C     These are constants related to the split orders
       INTEGER NSQUAREDSOP1
       PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI,Golem95
+C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai
+C      and Ninja
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=4)
-C     Only CutTools provides QP
+      PARAMETER (NLOOPLIB=6)
+C     Only CutTools or possibly Ninja (if installed with qp support)
+C      provide QP
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=1)
+      PARAMETER (QP_NLOOPLIB=2)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/MG5_1_STABILITY_TESTS/MAXSTABILITYLENGTH
@@ -233,12 +235,11 @@ C
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
       LOGICAL LOOPLIBS_AVAILABLE(6)
-      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.TRUE.,.TRUE.
+      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.TRUE.,.FALSE.
      $ ,.TRUE./
       COMMON/MG5_1_LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
-C     PJFry++ and Golem95 do not support direction test
       LOGICAL LOOPLIBS_DIRECTEST(6)
       DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.
      $ ,.TRUE./
@@ -249,8 +250,7 @@ C      loop_library is not available
 C     in which case neither is its quadruple precision version.
       LOGICAL LOOPLIBS_QPAVAILABLE(0:6)
       DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
-     $ ,.FALSE.,.FALSE.,.FALSE./
-
+     $ ,.FALSE.,.FALSE.,.TRUE./
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT
@@ -569,6 +569,7 @@ C      helicity is asked
         ENDIF
         NROTATIONS_QP=0
         NROTATIONS_DP=0
+        CALL MG5_1_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
       ENDIF
 
       IF(NTRY.EQ.0) THEN
