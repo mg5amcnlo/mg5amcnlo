@@ -304,9 +304,9 @@ def deactivate_dependence(dependency, cmd=None, log = None):
     if dependency in ['pjfry','golem','samurai','ninja']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
-            cmd.options[dependency] = 'None'
+            cmd.options[dependency] = None
 
-def activate_dependence(dependency, cmd=None, log = None):
+def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     """ Checks whether the specfieid MG dependency can be activated if it was
     not turned off in MG5 options."""
     
@@ -337,8 +337,12 @@ def activate_dependence(dependency, cmd=None, log = None):
         raise MadGraph5Error, 'Samurai cannot yet be automatically installed.' 
 
     if dependency=='ninja':
-        raise MadGraph5Error, 'Ninja cannot yet be automatically installed.' 
-    
+        if cmd.options['ninja'] in ['None',None,''] or\
+         (cmd.options['ninja'] == './HEPTools/lib' and not MG5dir is None and\
+         which_lib(pjoin(MG5dir,cmd.options['ninja'],'libninja.a')) is None):
+            tell("Installing ninja...")
+            cmd.do_install('ninja')
+ 
 #===============================================================================
 # find a library
 #===============================================================================

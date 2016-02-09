@@ -487,7 +487,9 @@ class TestCmdMatchBox(IOTests.IOTestManager):
 
         # Select the Tensor Integral to include in the test
         misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
+        misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
         misc.activate_dependence('golem', cmd = self.interface, log='stdout')
+        misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -524,8 +526,10 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
                                precmd=True, postcmd=True)
         
         # Select the Tensor Integral to include in the test
-        misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
-        misc.activate_dependence('golem', cmd = interface, log='stdout')
-        
+        misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
+        misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
+        misc.activate_dependence('golem', cmd = self.interface, log='stdout')
+        misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
+
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
