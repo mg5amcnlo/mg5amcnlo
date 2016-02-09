@@ -1473,7 +1473,9 @@ class RunCard(ConfigFile):
                 # in case of a list, add the length of the list as 0th
                 # element in fortran. Only in case of integer or float
                 # list (not for bool nor string)
-                if isinstance(value[0], int):
+                if isinstance(value[0], bool):
+                    pass
+                elif isinstance(value[0], int):
                     line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
                     fsock.writelines(line)
                 elif isinstance(value[0], float):
