@@ -2457,7 +2457,7 @@ RESTART = %(mint_mode)s
             r"\s*\+/-\s*-?[\d\+-Eed\.]*\s*\(\s*-?(?P<v_abs_contr_err>[\d\+-Eed\.]*)\s*\%\)")
     
         virt_frac_finder = re.compile(r"update virtual fraction to\s*:\s*"+\
-                     "-?(?P<v_frac>[\d\+-Eed\.]*)\s*-?(?P<v_average>[\d\+-Eed\.]*)")
+                     "-?(?P<v_frac>[\d\+-Eed\.]*)\s*")
         
         channel_contr_finder = re.compile(r"Final result \[ABS\]\s*:\s*-?(?P<v_contr>[\d\+-Eed\.]*)")
         
@@ -2472,7 +2472,7 @@ RESTART = %(mint_mode)s
                 pass
             if not vf_stats is None:
                 v_frac = float(vf_stats.group('v_frac'))
-                v_average = float(vf_stats.group('v_average'))
+                ###v_average = float(vf_stats.group('v_average'))
                 try:
                     if v_frac < stats['virt_stats']['v_frac_min'][0]:
                         stats['virt_stats']['v_frac_min']=(v_frac,channel_name)
@@ -2566,20 +2566,20 @@ RESTART = %(mint_mode)s
             vf_stats = None
             for vf_stats in re.finditer(virt_frac_finder, log):
                 pass
-            if not vf_stats is None:
-                v_frac = float(vf_stats.group('v_frac'))
-                v_average = float(vf_stats.group('v_average'))
-                try:
-                    if v_average < stats['virt_stats']['v_average_min'][0]:
-                        stats['virt_stats']['v_average_min']=(v_average,channel_name)
-                    if v_average > stats['virt_stats']['v_average_max'][0]:
-                        stats['virt_stats']['v_average_max']=(v_average,channel_name)
-                    stats['virt_stats']['v_average_avg'][0] += v_average
-                    stats['virt_stats']['v_average_avg'][1] += 1
-                except KeyError:
-                    stats['virt_stats']['v_average_min']=[v_average,channel_name]
-                    stats['virt_stats']['v_average_max']=[v_average,channel_name]
-                    stats['virt_stats']['v_average_avg']=[v_average,1]
+            ##if not vf_stats is None:
+            ##    v_frac = float(vf_stats.group('v_frac'))
+            ##    v_average = float(vf_stats.group('v_average'))
+            ##    try:
+            ##        if v_average < stats['virt_stats']['v_average_min'][0]:
+            ##            stats['virt_stats']['v_average_min']=(v_average,channel_name)
+            ##        if v_average > stats['virt_stats']['v_average_max'][0]:
+            ##            stats['virt_stats']['v_average_max']=(v_average,channel_name)
+            ##        stats['virt_stats']['v_average_avg'][0] += v_average
+            ##        stats['virt_stats']['v_average_avg'][1] += 1
+            ##    except KeyError:
+            ##        stats['virt_stats']['v_average_min']=[v_average,channel_name]
+            ##        stats['virt_stats']['v_average_max']=[v_average,channel_name]
+            ##        stats['virt_stats']['v_average_avg']=[v_average,1]
         
         try:
             debug_msg += '\n\n  Statistics on virtual integration optimization : '
@@ -2592,8 +2592,8 @@ RESTART = %(mint_mode)s
               %float(stats['virt_stats']['v_frac_avg'][0]/float(stats['virt_stats']['v_frac_avg'][1]))
             debug_msg += '\n  Stats below exclude negligible channels (%d excluded out of %d)'%\
                  (len(excluded_channels),len(all_channels))
-            debug_msg += '\n    Maximum virt ratio used                %.2f (%s)'\
-                                    %tuple(stats['virt_stats']['v_average_max'])          
+            ##debug_msg += '\n    Maximum virt ratio used                %.2f (%s)'\
+            ##                        %tuple(stats['virt_stats']['v_average_max'])          
             debug_msg += '\n    Maximum virt ratio found from grids    %.2f (%s)'\
                                      %tuple(stats['virt_stats']['v_ratio_max'])
             tmpStr = '\n    Max. MC err. on virt ratio from grids  %.1f %% (%s)'\
