@@ -629,6 +629,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 run_card = self.run_card
 
+            # add the conversion from the lhaid to the pdf set names
+            if amcatnlo and run_card['pdlabel']=='lhapdf':
+                pdfsetsdir=self.get_lhapdf_pdfsetsdir()
+                pdfsets=self.get_lhapdf_pdfsets_list(pdfsetsdir)
+                lhapdfsetname=[]
+                for lhaid in run_card['lhaid']:
+                    if lhaid in pdfsets:
+                        lhapdfsetname.append(pdfsets[lhaid]['filename'])
+                    else:
+                        raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
+                run_card['lhapdfsetname']=lhapdfsetname
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
 
         if mode in ['MadLoop', 'all']:

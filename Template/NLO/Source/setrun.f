@@ -200,10 +200,6 @@ C       Fill common block for Les Houches init info
       enddo
       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
 
-
-cCCC TEMPORAIRY VALUE FOR LHAPDFSETNAME
-      LHAPDFsetname(1)='NNPDF23_nlo_as_0118_qed'
-      
       do i=1,lhaPDFid(0)
          if (lpdfvar(i) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then
 c fill the nmemPDF(i) array with the number of PDF error set. This we

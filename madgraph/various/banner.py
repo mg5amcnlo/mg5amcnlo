@@ -1232,7 +1232,7 @@ class RunCard(ConfigFile):
             elif isinstance(finput, str):
                 if '\n' not in finput:
                     finput = open(finput).read()
-                if 'fixed_QES_scale' in finput:
+                if 'req_acc_FO' in finput:
                     target_class = RunCardNLO
                 else:
                     target_class = RunCardLO
@@ -1468,7 +1468,11 @@ class RunCard(ConfigFile):
                 fortran_name = key
                 
             #get the value with warning if the user didn't set it
-            value = self.get_default(key) 
+            value = self.get_default(key)
+            # Special treatment for strings containing a list of
+            # strings. Convert it to a list of strings
+            if isinstance(value,basestring) and value[0] =='[' and value[-1] == ']':
+                value=value[2:-2].split("', '")
             if isinstance(value, list):
                 # in case of a list, add the length of the list as 0th
                 # element in fortran. Only in case of integer or float
@@ -1925,33 +1929,33 @@ class RunCardNLO(RunCard):
         self.add_param('fixed_ren_scale', False)
         self.add_param('fixed_fac_scale', False)
         self.add_param('mur_ref_fixed', 91.118)                       
-        self.add_param('muf1_ref_fixed', 91.118)
+        self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
-        self.add_param('muf2_ref_fixed', 91.118)
+        self.add_param('muf2_ref_fixed', -1.0, hidden=True)
         self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale')
-        self.add_param('fixed_qes_scale', False)
-        self.add_param('qes_ref_fixed', 91.118)
+        self.add_param('fixed_qes_scale', False, hidden=True)
+        self.add_param('qes_ref_fixed', -1.0, hidden=True)
         self.add_param('mur_over_ref', 1.0)
         self.add_param('muf_over_ref', 1.0)                       
-        self.add_param('muf1_over_ref', 1.0)                       
-        self.add_param('muf2_over_ref', 1.0)
-        self.add_param('qes_over_ref', 1.0)
+        self.add_param('muf1_over_ref', -1.0, hidden=True)                       
+        self.add_param('muf2_over_ref', -1.0, hidden=True)
+        self.add_param('qes_over_ref', -1.0, hidden=True)
         self.add_param('reweight_scale', [True], fortran_name='lscalevar')
-        self.add_param('rw_rscale_down', 0.5)        
-        self.add_param('rw_rscale_up', 2.0)
-        self.add_param('rw_fscale_down', 0.5)                       
-        self.add_param('rw_fscale_up', 2.0)
+        self.add_param('rw_rscale_down', -1.0, hidden=True)        
+        self.add_param('rw_rscale_up', -1.0, hidden=True)
+        self.add_param('rw_fscale_down', -1.0, hidden=True)                       
+        self.add_param('rw_fscale_up', -1.0, hidden=True)
         self.add_param('rw_rscale', [1.0,2.0,0.5], fortran_name='scalevarR')
         self.add_param('rw_fscale', [1.0,2.0,0.5], fortran_name='scalevarF')
         self.add_param('reweight_pdf', [False], fortran_name='lpdfvar')
-        self.add_param('pdf_set_min', 244601)
-        self.add_param('pdf_set_max', 244700)
+        self.add_param('pdf_set_min', 244601, hidden=True)
+        self.add_param('pdf_set_max', 244700, hidden=True)
         #merging
         self.add_param('ickkw', 0)
         self.add_param('bwcutoff', 15.0)
         #cuts        
         self.add_param('jetalgo', 1.0)
-        self.add_param('jetradius', 0.7, hidden=True)         
+        self.add_param('jetradius', 0.7)         
         self.add_param('ptj', 10.0 , cut=True)
         self.add_param('etaj', -1.0, cut=True)        
         self.add_param('ptl', 0.0, cut=True)
@@ -1966,9 +1970,8 @@ class RunCardNLO(RunCard):
         self.add_param('xn', 1.0)                         
         self.add_param('epsgamma', 1.0)
         self.add_param('isoem', True)        
-        self.add_param('maxjetflavor', 4)
+        self.add_param('maxjetflavor', 4, hidden=True)
         self.add_param('iappl', 0)   
-    
         self.add_param('lhe_version', 3, hidden=True, include=False)
     
     def check_validity(self):
@@ -2015,6 +2018,30 @@ class RunCardNLO(RunCard):
         possible_set = ['lhapdf','mrs02nl','mrs02nn', 'mrs0119','mrs0117','mrs0121','mrs01_j', 'mrs99_1','mrs99_2','mrs99_3','mrs99_4','mrs99_5','mrs99_6', 'mrs99_7','mrs99_8','mrs99_9','mrs9910','mrs9911','mrs9912', 'mrs98z1','mrs98z2','mrs98z3','mrs98z4','mrs98z5','mrs98ht', 'mrs98l1','mrs98l2','mrs98l3','mrs98l4','mrs98l5', 'cteq3_m','cteq3_l','cteq3_d', 'cteq4_m','cteq4_d','cteq4_l','cteq4a1','cteq4a2', 'cteq4a3','cteq4a4','cteq4a5','cteq4hj','cteq4lq', 'cteq5_m','cteq5_d','cteq5_l','cteq5hj','cteq5hq', 'cteq5f3','cteq5f4','cteq5m1','ctq5hq1','cteq5l1', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo']
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel) possible choice are:\n %s' % ','.join(possible_set)
+
+        # Hidden values check
+        if self['qes_ref_fixed'] == -1.0:
+            self['qes_ref_fixed']=self['mur_ref_fixed']
+        if self['qes_over_ref'] == -1.0:
+            self['qes_over_ref']=self['mur_over_ref']
+        if self['muf1_over_ref'] != -1.0 and self['muf1_over_ref'] == self['muf2_over_ref']:
+            self['muf_over_ref']=self['muf1_over_ref']
+        if self['muf1_over_ref'] == -1.0:
+            self['muf1_over_ref']=self['muf_over_ref']
+        if self['muf2_over_ref'] == -1.0:
+            self['muf2_over_ref']=self['muf_over_ref']
+        if self['muf1_ref_fixed'] != -1.0 and self['muf1_ref_fixed'] == self['muf2_ref_fixed']:
+            self['muf_ref_fixed']=self['muf1_ref_fixed']
+        if self['muf1_ref_fixed'] == -1.0:
+            self['muf1_ref_fixed']=self['muf_ref_fixed']
+        if self['muf2_ref_fixed'] == -1.0:
+            self['muf2_ref_fixed']=self['muf_ref_fixed']
+        if (self['rw_rscale_down'] != -1.0 and ['rw_rscale_down'] not in self['rw_rscale']) or\
+           (self['rw_rscale_up'] != -1.0 and ['rw_rscale_up'] not in self['rw_rscale']):
+            self['rw_rscale']=[1.0,self['rw_rscale_up'],self['rw_rscale_down']]
+        if (self['rw_fscale_down'] != -1.0 and ['rw_fscale_down'] not in self['rw_fscale']) or\
+           (self['rw_fscale_up'] != -1.0 and ['rw_fscale_up'] not in self['rw_fscale']):
+            self['rw_fscale']=[1.0,self['rw_fscale_up'],self['rw_fscale_down']]
     
         # PDF reweighting check
         if any(rpdf for rpdf in self['reweight_pdf']):

@@ -74,11 +74,11 @@ c and normal)
       parameter (maxPDFsets=10,maxdynscales=10)
       integer lhaPDFid(0:maxPDFsets),nmemPDF(maxPDFsets)
      $     ,dyn_scale(0:maxdynscales)
-      logical lscalevar(1:maxdynscales)
+      logical lscalevar(1:maxdynscales),lpdfvar(1:maxPDFsets)
       character*100 LHAPDFsetname(maxPDFsets)
       double precision scalevarR(0:maxscales),scalevarF(0:maxscales)
       common/new_format_scale_pdf/LHAPDFsetname,scalevarR,scalevarF
-     $     ,lhaPDFid,nmemPDF,dyn_scale,lscalevar
+     $     ,lhaPDFid,nmemPDF,dyn_scale,lscalevar,lpdfvar
 
 c Number of scale factors (for each scale) and PDF error pairs
       integer numscales,numPDFpairs,numPDFs
