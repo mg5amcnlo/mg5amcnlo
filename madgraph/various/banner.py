@@ -1992,7 +1992,6 @@ class RunCardNLO(RunCard):
                 logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
                                 ,'$MG:color:BLACK')
                 
-                
             # 2. Use kT algorithm for jets with pseudo-code size R=1.0
             jetparams=['jetradius','jetalgo']
             for jetparam in jetparams:
@@ -2005,7 +2004,6 @@ class RunCardNLO(RunCard):
                 self["dynamical_scale_choice"] = -1
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
                                 ,'$MG:color:BLACK')            
-            
                                 
         # For interface to APPLGRID, need to use LHAPDF and reweighting to get scale uncertainties
         if self['iappl'] != 0 and self['pdlabel'].lower() != 'lhapdf':
@@ -2044,7 +2042,7 @@ class RunCardNLO(RunCard):
             self['rw_fscale']=[1.0,self['rw_fscale_up'],self['rw_fscale_down']]
     
         # PDF reweighting check
-        if any(rpdf for rpdf in self['reweight_pdf']):
+        if any(self['reweight_pdf']):
             # check that we use lhapdf if reweighting is ON
             if self['pdlabel'] != "lhapdf":
                 raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel to use LHAPDF or set reweight_pdf to False.'

@@ -85,16 +85,16 @@ C
 c Determine if there is a need to do scale and/or PDF reweighting
       do_rwgt_scale=.false.
       do i=1,dyn_scale(0)
-         if (lscalevar(i)) then
+         if (lscalevar(i) .or. dyn_scale(0).gt.1) then
             do_rwgt_scale=.true.
-            return
+            exit
          endif
       enddo
       do_rwgt_pdf=.false.
       do i=1,lhaPDFid(0)
-         if (lpdfvar(i)) then
+         if (lpdfvar(i) .or. lhaPDFid(0).gt.1) then
             do_rwgt_pdf=.true.
-            return
+            exit
          endif
       enddo
 

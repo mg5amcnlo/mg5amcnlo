@@ -1910,7 +1910,7 @@ RESTART = %(mint_mode)s
     def collect_scale_pdf_info(self,options,jobs):
         """read the scale_pdf_dependence.dat files and collects there results"""
         scale_pdf_info={}
-        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF']:
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']):
             data_files=[]
             for job in jobs:
                 data_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
@@ -2217,11 +2217,11 @@ RESTART = %(mint_mode)s
                           '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                         self.cross_sect_dict
 
-                if self.run_card['nevents']>=10000 and self.run_card['reweight_scale']:
+                if self.run_card['nevents']>=10000 and any(self.run_card['reweight_scale']):
                    message = message + \
                        ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if self.run_card['nevents']>=10000 and self.run_card['reweight_PDF']:
+                if self.run_card['nevents']>=10000 and any(self.run_card['reweight_PDF']):
                    message = message + \
                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2253,7 +2253,7 @@ RESTART = %(mint_mode)s
                 message = '\n      ' + status[2] + proc_info + \
                      '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                              self.cross_sect_dict
-                if self.run_card['reweight_scale']:
+                if any(self.run_card['reweight_scale']):
                     if self.run_card['ickkw'] != -1:
                         message = message + \
                             ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
@@ -2262,7 +2262,7 @@ RESTART = %(mint_mode)s
                         message = message + \
                             ('\n      Soft and hard scale dependence (added in quadrature): +%0.1f%% -%0.1f%%') % \
                             (scale_pdf_info['scale_upp_quad'], scale_pdf_info['scale_low_quad'])
-                if self.run_card['reweight_PDF']:
+                if any(self.run_card['reweight_PDF']):
                     message = message + \
                         ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
                         (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
@@ -2726,7 +2726,7 @@ RESTART = %(mint_mode)s
         Event dir. Return the name of the event file created
         """
         scale_pdf_info={}
-        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF'] :
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']):
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
@@ -3615,7 +3615,7 @@ RESTART = %(mint_mode)s
                 scale_pdf_info['scale_low'] = 0.0
 
         # get the pdf uncertainty in percent (according to the Hessian method)
-        lhaid=self.run_card['lhaid']
+        lhaid=self.run_card['lhaid'][0]
         pdf_upp=0.0
         pdf_low=0.0
         if lhaid <= 90000:
@@ -4013,10 +4013,7 @@ RESTART = %(mint_mode)s
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [self.run_card['lhaid']]
-            if self.run_card['reweight_PDF']:
-                lhaid_list.append(self.run_card['PDF_set_min'])
-                lhaid_list.append(self.run_card['PDF_set_max'])
+            lhaid_list = self.run_card['lhaid']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
         else:

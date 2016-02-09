@@ -300,3 +300,22 @@ c       Call SetCtq6(4)
       stop
       return
       end
+
+      subroutine initPDFm(idummy1,idummy2)
+      implicit none
+      integer idummy1,idummy2
+      write (*,*) 'ERROR: YOU ARE IN THE initPDFm SUBROUTINE.'
+      write (*,*) 'THIS SUBROUTINE SHOULD NEVER BE USED'
+      stop
+      return
+      end
+
+      subroutine initPDFsetbynamem(idummy,cdummy)
+      implicit none
+      integer idummy
+      character*(*) cdummy
+      write (*,*) 'ERROR: YOU ARE IN THE initPDFsetbynamem SUBROUTINE.'
+      write (*,*) 'THIS SUBROUTINE SHOULD NEVER BE USED'
+      stop
+      return
+      end

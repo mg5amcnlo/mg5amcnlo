@@ -35,6 +35,7 @@ import subprocess
 import sys
 import time
 import traceback
+import sets
 
 
 try:
@@ -2140,20 +2141,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
         into lib/PDFsets"""
 
-        pdfsetname = ''
+        pdfsetname=set()
         for lhaid in lhaid_list:
             try:
-                if not pdfsetname:
-                    if lhaid in self.lhapdf_pdfsets:
-                        pdfsetname = self.lhapdf_pdfsets[lhaid]['filename']
-                    else:
-                        raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
-                # just check the other ids refer to the same pdfsetname
-                elif not \
-                  self.lhapdf_pdfsets[lhaid]['filename'] == pdfsetname:
-                    raise MadGraph5Error(\
-                        'lhaid and PDF_set_min/max in the run_card do not correspond to the' + \
-                        'same PDF set. Please check the run_card.')
+                if lhaid in self.lhapdf_pdfsets:
+                    pdfsetname.add(self.lhapdf_pdfsets[lhaid]['filename'])
+                else:
+                    raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
             except KeyError:
                 if self.lhapdf_version.startswith('5'):
                     raise MadGraph5Error(\
@@ -2174,7 +2168,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             #clean previous set of pdf used
             for name in os.listdir(pjoin(self.me_dir, 'lib', 'PDFsets')):
-                if name != pdfsetname:
+                if name not in pdfsetname:
                     try:
                         if os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', name)):
                             shutil.rmtree(pjoin(self.me_dir, 'lib', 'PDFsets', name))
@@ -2194,33 +2188,34 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             lhapdf_cluster_possibilities = []
 
+        for pdfset in pdfsetname:
         # Check if we need to copy the pdf
-        if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
-            any((os.path.exists(pjoin(d, pdfsetname)) for d in lhapdf_cluster_possibilities)):
-
-            os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfsetname))][0]
-            os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
-            # no need to copy it
-            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-                try:
-                    if os.path.isdir(pjoin(pdfsets_dir, name)):
-                        shutil.rmtree(pjoin(pdfsets_dir, name))
-                    else:
-                        os.remove(pjoin(pdfsets_dir, name))
-                except Exception, error:
-                    logger.debug('%s', error)
+            if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
+                any((os.path.exists(pjoin(d, pdfset)) for d in lhapdf_cluster_possibilities)):
+    
+                os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfset))][0]
+                os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
+                # no need to copy it
+                if os.path.exists(pjoin(pdfsets_dir, pdfset)):
+                    try:
+                        if os.path.isdir(pjoin(pdfsets_dir, name)):
+                            shutil.rmtree(pjoin(pdfsets_dir, name))
+                        else:
+                            os.remove(pjoin(pdfsets_dir, name))
+                    except Exception, error:
+                        logger.debug('%s', error)
         
-        #check that the pdfset is not already there
-        elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
-           not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
-
-            if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-                self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
-
-            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-                files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
-            elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
-                files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+            #check that the pdfset is not already there
+            elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
+               not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
+    
+                if pdfset and not os.path.exists(pjoin(pdfsets_dir, pdfset)):
+                    self.install_lhapdf_pdfset(pdfsets_dir, pdfset)
+    
+                if os.path.exists(pjoin(pdfsets_dir, pdfset)):
+                    files.cp(pjoin(pdfsets_dir, pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
+                elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfset)):
+                    files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
