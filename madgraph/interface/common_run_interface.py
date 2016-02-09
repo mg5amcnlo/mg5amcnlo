@@ -1136,6 +1136,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                   'use_band':['merging','alpsfact'],
                   'auto_open':False
                 }
+                # alpsfact variation only applies to MLM
+                if not (int(self.run_card['ickkw'])==1:
+                    histo_output_options['uncertainties'].pop('alpsfact')
+                    histo_output_options['use_band'].pop('alpsfact')
 
                 # jet_samples_to_keep = None means that all jet_samples are kept
                 histos.output(pjoin(PY8_plots_root_path,
