@@ -206,7 +206,7 @@ c fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.
             call numberPDFm(1,nmemPDF(i))
          else
-            nmemPDF(i)=1
+            nmemPDF(i)=0
          endif
       enddo
 

@@ -8,13 +8,13 @@ c Compile with makefile_rwgt
       implicit none
       include "run.inc"
       include "reweight_all.inc"
-      integer i,ii,jj,isave,idpdf(0:maxPDFs),itmp,lef,ifile,maxevt
+      integer i,ii,jj,kk,isave,idpdf(0:maxPDFs),itmp,lef,ifile,maxevt
      $     ,iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
      $     ,kwgtinfo,kexternal,jwgtnumpartn,ofile,kf,kr,n,nn
       double precision yfactR(maxscales),yfactF(maxscales),value(20)
      $     ,scale1_lhe,scale2_lhe,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
-     $     ,wgtpdfmax,saved_weight,xsecPDFr_acc(0:maxPDFs)
-     $     ,xsecScale_acc(maxscales,maxscales)
+     $     ,wgtpdfmax,saved_weight,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
+     $     ,xsecScale_acc(maxscales,maxscales,maxdynscales)
       logical AddInfoLHE,unweighted
       character*9 ch1
       character*10 MonteCarlo
@@ -53,54 +53,41 @@ c
       endif
 
       if(do_rwgt_scale)then
-        yfactR(1)=1.d0
-        yfactR(2)=rw_Rscale_up
-        yfactR(3)=rw_Rscale_down
-        yfactF(1)=1.d0
-        yfactF(2)=rw_Fscale_up
-        yfactF(3)=rw_Fscale_down
-        write(*,*) 'Doing scale reweight:'
-        write(*,*) rw_Fscale_down, ' < mu_F < ', rw_Fscale_up
-        write(*,*) rw_Rscale_down, ' < mu_R < ', rw_Rscale_up
-        numscales=3
-        if(numscales.gt.maxscales)then
-           write(*,*)'Too many scales: '/
-     $          /'increase maxscales in reweight0.inc'
-           stop
-        endif
-      else
-        numscales=0
+         do nn=1,dyn_scale(0)
+            if (lscalevar(i)) then
+               write (*,*) "Including scale uncertainties for"/
+     $              /" dynamical_scale_choice",nn
+               write (*,*) "  - renormalisation scale variation:"
+     $              ,(scalevarR(i),i=1,scalevarR(0))
+               write (*,*) "  - factorisation scale variation:"
+     $              ,(scalevarF(i),i=1,scalevarF(0))
+            else
+               write (*,*) "Including central value for"/
+     $              /" dynamical_scale_choice",nn
+            endif
+         enddo
       endif
 
-c Note: when ipdf#0, the central PDF set will be used also as a reference
-c for the scale uncertainty
       if(do_rwgt_pdf)then
-         idpdf(0)=lhaid
-         idpdf(1)=pdf_set_min
-         itmp=pdf_set_max
-         numPDFs=itmp-idpdf(1)+1
-         if(numPDFs.gt.maxPDFs)then
-            write(*,*)'Too many PDFs: increase maxPDFs in reweight0.inc'
-            stop
-         endif
-         write(*,*) 'Doing PDF reweight:'
-         write(*,*) 'Central set id: ', idpdf(0)
-         write(*,*) 'Min error set id: ', idpdf(1)
-         write(*,*) 'Max error set id: ', itmp
-         do i=2,numPDFs
-            idpdf(i)=idpdf(1)+i-1
-         enddo
-         if (lhaPDFid(0).gt.1) then
+         do nn=1,lhaPDFid(0)
+            if (lpdfvar(nn)) then
+               write (*,*) "Including PDF with uncertainties for "
+     $              //lhaPDFsetname(nn)
+            else
+               write (*,*) "Including central PDF for "
+     $              //lhaPDFsetname(nn)
+            endif
+            if(nmemPDF(nn)+1.gt.maxPDFs)then
+               write(*,*)'Too many PDFs: increase maxPDFs in '/
+     $              /'reweight0.inc to ',numPDFs+1
+               stop
+            endif
 c Load all the PDF sets (the 1st one has already by loaded by the call
-c to "setrun"). Can only load multiple PDF sets by name...
-            do nn=2,lhaPDFid(0)
-               call initpdfsetbynamem(nn,lhaPDFsetname(nn))
-            enddo
-         endif
+c to "setrun")
+            if (nn.gt.1) call initpdfsetbynamem(nn,lhaPDFsetname(nn))
+         enddo
 c start with central member of the first set
          call InitPDFm(1,0)
-      else
-         numPDFs=0
       endif
 
       lef=index(event_file,' ')-1
@@ -165,16 +152,27 @@ c start with central member of the first set
      &     XSECUP,XERRUP,XMAXUP,LPRUP)
 
 c To keep track of the accumulated results:
-      do ii=1,numscales
-         do jj=1,numscales
-            xsecScale_acc(jj,ii)=0d0
-         enddo
+      do kk=1,dyn_scale(0)
+         if (lscalevar(kk)) then
+            do ii=1,scalevarF(0)
+               do jj=1,scalevarR(0)
+                  xsecScale_acc(jj,ii,kk)=0d0
+               enddo
+            enddo
+         else
+            xsecScale_acc(1,1,kk)=0d0
+         endif
       enddo
-      do n=0,numPDFs
-         xsecPDFr_acc(n)=0d0
+      do nn=1,lhaPDFid(0)
+         if (lpdfvar(nn)) then
+            do n=0,nmemPDF(nn)
+               xsecPDFr_acc(n,nn)=0d0
+            enddo
+         else
+            xsecPDFr_acc(0,nn)=0d0
+         endif
       enddo
-
-       nScontributions=1
+      nScontributions=1
 
 c Determine the flavor map between the NLO and Born
       call find_iproc_map()
@@ -205,33 +203,59 @@ c Do the actual reweighting.
 c renormalize all the scale & PDF weights to have the same normalization
 c as XWGTUP
          if(do_rwgt_scale)then
-            do kr=1,numscales
-               do kf=1,numscales
-                  wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)/wgtref*XWGTUP
-               enddo
+            do kk=1,dyn_scale(0)
+               if (lscalevar(kk)) then
+                  do kr=1,numscales
+                     do kf=1,numscales
+                        wgtxsecmu(kr,kf,kk)=
+     &                       wgtxsecmu(kr,kf,kk)/wgtref*XWGTUP
+                     enddo
+                  enddo
+               else
+                  wgtxsecmu(1,1,kk)=wgtxsecmu(1,1,kk)/wgtref*XWGTUP
+               endif
             enddo
          endif
-         if(do_rwgt_pdf)then
-            do n=0,numPDFs
-               wgtxsecPDF(n)=wgtxsecPDF(n)/wgtref*XWGTUP
+         if (do_rwgt_pdf) then
+            do nn=1,lhaPDFid(0)
+               if (lpdfvar(nn)) then
+                  do n=0,nmemPDF(nn)
+                     wgtxsecPDF(n,nn)=wgtxsecPDF(n,nn)/wgtref*XWGTUP
+                  enddo
+               else
+                  wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)/wgtref*XWGTUP
+               endif
             enddo
          endif
 
 c Keep track of the accumulated results:
-         if (numscales.gt.0) then
-            do ii=1,numscales
-               do jj=1,numscales
-                  xsecScale_acc(ii,jj)=xsecScale_acc(ii,jj)+wgtxsecmu(ii
-     $                 ,jj)
-               enddo
+         if (do_rwgt_scale) then
+            do kk=1,dyn_scale(0)
+               if (lscalevar(kk)) then
+                  do ii=1,scalevarF(0)
+                     do jj=1,scalevarR(0)
+                        xsecScale_acc(ii,jj,kk)=xsecScale_acc(ii,jj,kk)
+     $                       +wgtxsecmu(ii,jj,kk)
+                        
+                     enddo
+                  enddo
+               else
+                  xsecScale_acc(1,1,kk)=xsecScale_acc(1,1,kk)
+     $                 +wgtxsecmu(1,1,kk)
+               endif
             enddo
          endif
-         if (numPDFs.gt.0) then
-            do n=0,numPDFs
-               xsecPDFr_acc(n)=xsecPDFr_acc(n)+wgtxsecPDF(n)
+         if (do_rwgt_pdf) then
+            do nn=1,lhaPDFid(0)
+               if (lpdfvar(nn)) then
+                  do n=0,nmemPDF(nn)
+                     xsecPDFr_acc(n,nn)=xsecPDFr_acc(n,nn)+wgtxsecPDF(n,nn)
+                  enddo
+               else
+                  xsecPDFr_acc(0,nn)=xsecPDFr_acc(0,nn)+wgtxsecPDF(0,nn)
+               endif
             enddo
          endif
-
 c Write event to disk:
          call write_lhef_event(ofile,
      &        NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -245,19 +269,30 @@ c Write event to disk:
 
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
-      write (34,*) numscales**2
-      if (numscales.gt.0) then
-         write (34,*) ((xsecScale_acc(ii,jj),ii=1,numscales),jj=1
-     $        ,numscales)
-      else
-         write (34,*) ''
+      if (do_rwgt_scale) then
+         write (34,*) "scale variations:"
+         do kk=1,dyn_scale(0)
+            if (lscalevar(kk)) then
+               write (34,*) scalevarR(0),scalevarF(0)
+               write (34,*) ((xsecScale_acc(ii,jj,kk),ii=1,scalevarR(0))
+     &              ,jj=1,scalevarF(0))
+            else
+               write (34,*) 1d0,1d0
+               write (34,*) xsecScale_acc(1,1,kk)
+            endif
+         enddo
       endif
-      if (numPDFs.gt.0) then
-         write (34,*) numPDFs + 1
-         write (34,*) (xsecPDFr_acc(n),n=0,numPDFs)
-      else
-         write(34,*) numPDFs
-         write (34,*) ''
+      if (do_rwgt_pdf) then
+         write (34,*) "pdf variations:"
+         do nn=1,lhaPDFid(0)
+            if (lpdfvar(nn)) then
+               write (34,*) lhaPDFsetname(nn),nmemPDF(nn) + 1
+               write (34,*) (xsecPDFr_acc(n,nn),n=0,nmemPDF(nn))
+            else
+               write(34,*) lhaPDFsetname(nn),nmemPDF(nn) + 1
+               write (34,*) xsecPDFr_acc(0,nn)
+            endif
+         enddo
       endif
       close(34)
 
@@ -327,9 +362,6 @@ c do the same as above for the counterevents
       end
 
 
-
-
-
       
       subroutine fill_wgt_info_from_rwgt_lines
       implicit none
@@ -370,11 +402,13 @@ c do the same as above for the counterevents
          do dd=1,dyn_scale(0)
             call set_mu_central(i,dd,c_mu2_r,c_mu2_f)
             do kr=1,nint(scalevarR(0))
+               if ((.not. lscalevar(kk)) .and. kr.ne.1) exit
                mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
 c Update the strong coupling
                g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
             enddo
             do kf=1,nint(scalevarF(0))
+               if ((.not. lscalevar(kk)) .and. kf.ne.1) exit
                mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
 c call the PDFs
                xlum(kf)=1d0
@@ -389,8 +423,10 @@ c call the PDFs
                xlum(kf)=xlum(kf)*PDG2PDF(ABS(LPP(2)),pd*LP,bjx(2,i)
      &              ,DSQRT(mu2_f(kf)))
             enddo
-            do kr=1,nint(scalevarR(0))
-               do kf=1,nint(scalevarF(0))
+            do kf=1,nint(scalevarF(0))
+               if ((.not. lscalevar(kk)) .and. kf.ne.1) exit
+               do kr=1,nint(scalevarR(0))
+                  if ((.not. lscalevar(kk)) .and. kr.ne.1) exit
                   iwgt=iwgt+1   ! increment the iwgt for the wgts() array
                   if (iwgt.gt.max_wgt) then
                      write (*,*) 'ERROR too many weights in '/
@@ -426,6 +462,7 @@ c IS THIS FACTOR STILL CORRECT? --> PROBABLY NEED TO CHANGE 2ND ARGUMENT!
       external pdg2pdf,rwgt_muR_dep_fac,alphas
       do nn=1,lhaPDFid(0)
          do n=0,nmemPDF(nn)
+            if ((.not. lpdfvar(nn)) .and. n.ne.0) exit
             iwgt=iwgt+1
             if (iwgt.gt.max_wgt) then
                write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
@@ -470,31 +507,57 @@ c reset to the 0th member of the 1st set
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'reweight0.inc'
-      integer kr,kf,n,iw,i
-      do kr=1,numscales
-         do kf=1,numscales
-            wgtxsecmu(kr,kf)=0d0
-         enddo
+      integer ii,jj,kk,nn,n,iw,i
+      do kk=1,dyn_scale(0)
+         if (lscalevar(kk)) then
+            do ii=1,scalevarF(0)
+               do jj=1,scalevarR(0)
+                  wgtxsecmu(jj,ii,kk)=0d0
+               enddo
+            enddo
+         else
+            wgtxsecmu(1,1,kk)=0d0
+         endif
       enddo
-      do n=0,numPDFs
-         wgtxsecPDF(n)=0d0
+      do nn=1,lhaPDFid(0)
+         if (lpdfvar(nn)) then
+            do n=0,nmemPDF(nn)
+               wgtxsecPDF(n,nn)=0d0
+            enddo
+         else
+            wgtxsecPDF(0,nn)=0d0
+         endif
       enddo
       do i=1,icontr
          iw=2
-         do kr=1,numscales
-            do kf=1,numscales
-               wgtxsecmu(kr,kf)=wgtxsecmu(kr,kf)+wgts(iw,i)
-               iw=iw+1
+         if (do_rwgt_scale) then
+            do kk=1,dyn_scale(0)
+               if (lscalevar(kk)) then
+                  do ii=1,scalevarF(0)
+                     do jj=1,scalevarR(0)
+                        wgtxsecmu(jj,ii,kk)=wgtxsecmu(jj,ii,kk)+wgts(iw,i)
+                        iw=iw+1
+                     enddo
+                  enddo
+               else
+                  wgtxsecmu(1,1,kk)=wgtxsecmu(1,1,kk)+wgts(iw,i)
+                  iw=iw+1
+               endif
             enddo
-         enddo
-         do n=0,numPDFs
-            wgtxsecPDF(n)=wgtxsecPDF(n)+wgts(iw,i)
-            iw=iw+1
-         enddo
+         endif
+         if (do_rwgt_pdf) then
+            do nn=1,lhaPDFid(0)
+               if (lpdfvar(nn)) then
+                  do n=0,nmemPDF(nn)
+                     wgtxsecPDF(n,nn)=wgtxsecPDF(n,nn)+wgts(iw,i)
+                     iw=iw+1
+                  enddo
+               else
+                  wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)+wgts(iw,i)
+               endif
+            enddo
+         endif
       enddo
-      if (numscales.eq.0) then
-         wgtxsecmu(1,1)=wgtxsecPDF(0)
-      endif
       return
       end
 

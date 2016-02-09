@@ -74,7 +74,7 @@ c and normal)
       parameter (maxPDFsets=10,maxdynscales=10)
       integer lhaPDFid(0:maxPDFsets),nmemPDF(maxPDFsets)
      $     ,dyn_scale(0:maxdynscales)
-      logical lscalevar(1:maxdynscales),lpdfvar(1:maxPDFsets)
+      logical lscalevar(maxdynscales),lpdfvar(maxPDFsets)
       character*100 LHAPDFsetname(maxPDFsets)
       double precision scalevarR(0:maxscales),scalevarF(0:maxscales)
       common/new_format_scale_pdf/LHAPDFsetname,scalevarR,scalevarF
@@ -85,8 +85,8 @@ c Number of scale factors (for each scale) and PDF error pairs
       common/cwgxsec1/numscales,numPDFpairs,numPDFs
 
 c Cross sections at different scales and PDFs
-      double precision wgtxsecmu(maxscales,maxscales),
-     #                 wgtxsecPDF(0:maxPDFs)
+      double precision wgtxsecmu(maxscales,maxscales,maxdynscales),
+     #                 wgtxsecPDF(0:maxPDFs,maxPDFsets)
       common/cwgxsec2/wgtxsecmu,wgtxsecPDF
 
 c Cross sections at different scales and PDFs, for NLO computations
