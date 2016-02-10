@@ -3462,9 +3462,9 @@ Please install this tool with the following MG5_aMC command:
 ################################################################################
 #### Uncomment the lines below so as *not* to output an hepMC file #############
 ################################################################################
-        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
-                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
-        open(HepMC_event_output,'w').write('DUMMY')
+#        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
+#                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
+#        open(HepMC_event_output,'w').write('DUMMY')
 ################################################################################
         wrapper.write(exe_cmd)
 
