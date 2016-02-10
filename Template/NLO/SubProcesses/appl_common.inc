@@ -3,7 +3,7 @@
 *     NLO mode of aMC@NLO
 ************************************************************************
       include 'orders.inc'
-*     Power of alphaS for Born matrix element (alphas^(appl_bpower) multiplies W0)
+*     Power of alphaS for the various contributions
       integer appl_qcdpower(4, amp_split_size) 
       common / appl_common_fixed / appl_qcdpower
 

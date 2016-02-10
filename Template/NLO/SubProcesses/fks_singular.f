@@ -1752,9 +1752,9 @@ c must do MC over FKS directories.
          final_state_rescaling = dble(iproc_save(nFKS(i))) /
      &        dble(appl_nproc(flavour_map(nFKS(i))))
          if (itype(i).eq.2) then
-            pos = lo_qcd_to_amp_pos(qcdpower)
+            pos = lo_qcd_to_amp_pos(qcdpower(i))
          else
-            pos = nlo_qcd_to_amp_pos(qcdpower)
+            pos = nlo_qcd_to_amp_pos(qcdpower(i))
          endif
 
          if (itype(i).eq.1) then
