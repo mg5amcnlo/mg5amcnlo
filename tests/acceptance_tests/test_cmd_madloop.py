@@ -229,7 +229,7 @@ class TestCmdLoop(unittest.TestCase):
             res = open(self.tmp_path['madgraph.check_cmd']).read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
-            self.assertTrue(res.count('NA')<=8)
+            self.assertTrue(res.count('NA')<=10)
         except:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):

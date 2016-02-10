@@ -3521,7 +3521,6 @@ This implies that with decay chains:
                 options['report'] = option[1].lower()
             elif option[0]=='--seed':
                 options['seed'] = int(option[1])
-                CMS_options['seed'] = int(option[1])
             elif option[0]=='--name':
                 if '.' in option[1]:
                     raise self.InvalidCmd("Do not specify the extension in the"+
@@ -6232,6 +6231,26 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
                             self.options[key]=None
+                    # Make sure that samurai version is recent enough
+                    if key=='samurai' and \
+                       isinstance(self.options[key],str) and \
+                       self.options[key].lower() != 'auto':
+                        if os.path.isfile(pjoin(self.options[key],os.pardir,'AUTHORS')):
+                            try:
+                                version = open(pjoin(self.options[key],os.pardir,
+                                                          'VERSION'),'r').read()
+                            except IOError:
+                                version = None
+                            if version is None:
+                                self.options[key] = None
+                                logger.info('--------')
+                                logger.info(
+"""The version of 'samurai' automatically detected seems too old to be compatible
+with MG5aMC and it will be turned off. Ask the authors for the latest version if
+you want to use samurai. 
+If you want to enforce its use as-it-is, then specify directly its library folder
+in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto').""")
+                                logger.info('--------')
 
             elif key.endswith('path'):
                 pass

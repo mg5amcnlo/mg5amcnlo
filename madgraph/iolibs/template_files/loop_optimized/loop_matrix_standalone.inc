@@ -587,7 +587,7 @@ if(MAX_SPIN_EXTERNAL_PARTICLE.gt.3.AND.USERHEL.NE.-1) THEN
      WRITE(*,*) '##WARNING: Evaluation of a specific helicity was asked for this PS point, and there is a spin-2 (or higher) particle in the external states.'
 	 WRITE(*,*) '##WARNING: As a result, MadLoop disabled the Lorentz rotation test for this phase-space point only.'
 	 WRITE(*,*) '##WARNING: Further warning of that type suppressed.'
-     WARNED_LORENTZ_STAB_TEST_OFF = .FALSE. 
+     WARNED_LORENTZ_STAB_TEST_OFF = .TRUE. 
    ENDIF
    NROTATIONS_QP=0
    NROTATIONS_DP=0

@@ -1257,7 +1257,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['du_source']=check_disk_usage(pjoin(\
                                                  export_dir,'Source','*','*.f'))
         res_timings['du_process']=check_disk_usage(pjoin(dir_name,'*.f'))
-        res_timings['du_color']=check_disk_usage(pjoin(dir_name,'*.dat'))
+        res_timings['du_color']=check_disk_usage(pjoin(dir_name,
+                                                  'MadLoop5_resources','*.dat'))
         res_timings['du_exe']=check_disk_usage(pjoin(dir_name,'check'))
 
         if not res_timings['Initialization']==None:
@@ -1299,7 +1300,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_tot_hel']=len(helicities)
         
         # We aim at a 30 sec run
-        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,40)
+        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,20)
 
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
