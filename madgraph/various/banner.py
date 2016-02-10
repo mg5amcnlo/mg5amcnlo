@@ -1272,6 +1272,7 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
         self.add_param("SysCalc:qCutList", 'auto', hidden=True, always_write_to_card=False)
+        self.add_param("SysCalc:qCutMin",-1.0,hidden=True, always_write_to_card=False)
         self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
           comment='Do veto externally (e.g. in SysCalc).')
         self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
@@ -1297,6 +1298,7 @@ class PY8Card(ConfigFile):
         self.add_param("SpaceShower:rapidityOrder", False, hidden=True, always_write_to_card=False)
         self.add_param("Merging:nQuarksMerge",4,hidden=True, always_write_to_card=False)
         # To be added in subruns for CKKWL
+        self.add_param("Merging:mayRemoveDecayProducts", False, hidden=True, always_write_to_card=False)
         self.add_param("Merging:doKTMerging", False, hidden=True, always_write_to_card=False)
         self.add_param("Merging:Dparameter", 0.4, hidden=True, always_write_to_card=False)        
         self.add_param("Merging:doPTLundMerging", False, hidden=True, always_write_to_card=False)
