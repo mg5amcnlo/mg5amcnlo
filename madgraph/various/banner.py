@@ -1987,8 +1987,9 @@ class RunCardNLO(RunCard):
                                 % scale,'$MG:color:BLACK')
                     self[scale]= False
             #and left to default dynamical scale
-            if self["dynamical_scale_choice"] != -1:
-                self["dynamical_scale_choice"] = -1
+            if len(self["dynamical_scale_choice"]) > 1 or self["dynamical_scale_choice"][0] != -1:
+                self["dynamical_scale_choice"] = [-1]
+                self["reweight_scale"]=[self["reweight_scale"][0]]
                 logger.warning('''For consistency in the FxFx merging, dynamical_scale_choice has been set to -1 (default)'''
                                 ,'$MG:color:BLACK')
                 
@@ -1999,9 +2000,10 @@ class RunCardNLO(RunCard):
                     logger.info('''For consistency in the FxFx merging, \'%s\' has been set to 1.0'''
                                 % jetparam ,'$MG:color:BLACK')
                     self[jetparam] = 1.0
-        elif self['ickkw'] == -1 and self["dynamical_scale_choice"] != -1:
-                self["dynamical_scale_choice"] = -1
-                self["dynamical_scale_choice"] = -1
+        elif self['ickkw'] == -1 and (self["dynamical_scale_choice"][0] != -1 or
+                                      len(self["dynamical_scale_choice"]) > 1):
+                self["dynamical_scale_choice"] = [-1]
+                self["reweight_scale"]=[self["reweight_scale"][0]]
                 logger.warning('''For consistency with the jet veto, the scale which will be used is ptj. dynamical_scale_choice will be set at -1.'''
                                 ,'$MG:color:BLACK')            
                                 

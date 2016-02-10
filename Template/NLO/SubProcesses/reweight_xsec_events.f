@@ -58,9 +58,9 @@ c
                write (*,*) "Including scale uncertainties for"/
      $              /" dynamical_scale_choice",nn
                write (*,*) "  - renormalisation scale variation:"
-     $              ,(scalevarR(i),i=1,scalevarR(0))
+     $              ,(scalevarR(i),i=1,nint(scalevarR(0)))
                write (*,*) "  - factorisation scale variation:"
-     $              ,(scalevarF(i),i=1,scalevarF(0))
+     $              ,(scalevarF(i),i=1,nint(scalevarF(0)))
             else
                write (*,*) "Including central value for"/
      $              /" dynamical_scale_choice",nn
@@ -154,8 +154,8 @@ c start with central member of the first set
 c To keep track of the accumulated results:
       do kk=1,dyn_scale(0)
          if (lscalevar(kk)) then
-            do ii=1,scalevarF(0)
-               do jj=1,scalevarR(0)
+            do ii=1,nint(scalevarF(0))
+               do jj=1,nint(scalevarR(0))
                   xsecScale_acc(jj,ii,kk)=0d0
                enddo
             enddo
@@ -205,10 +205,10 @@ c as XWGTUP
          if(do_rwgt_scale)then
             do kk=1,dyn_scale(0)
                if (lscalevar(kk)) then
-                  do kr=1,numscales
-                     do kf=1,numscales
-                        wgtxsecmu(kr,kf,kk)=
-     &                       wgtxsecmu(kr,kf,kk)/wgtref*XWGTUP
+                  do ii=1,nint(scalevarF(0))
+                     do jj=1,nint(scalevarR(0))
+                        wgtxsecmu(jj,ii,kk)=
+     &                       wgtxsecmu(jj,ii,kk)/wgtref*XWGTUP
                      enddo
                   enddo
                else
@@ -232,10 +232,10 @@ c Keep track of the accumulated results:
          if (do_rwgt_scale) then
             do kk=1,dyn_scale(0)
                if (lscalevar(kk)) then
-                  do ii=1,scalevarF(0)
-                     do jj=1,scalevarR(0)
-                        xsecScale_acc(ii,jj,kk)=xsecScale_acc(ii,jj,kk)
-     $                       +wgtxsecmu(ii,jj,kk)
+                  do ii=1,nint(scalevarF(0))
+                     do jj=1,nint(scalevarR(0))
+                        xsecScale_acc(jj,ii,kk)=xsecScale_acc(jj,ii,kk)
+     $                       +wgtxsecmu(jj,ii,kk)
                         
                      enddo
                   enddo
@@ -273,9 +273,10 @@ c Write the accumulated results to a file
          write (34,*) "scale variations:"
          do kk=1,dyn_scale(0)
             if (lscalevar(kk)) then
-               write (34,*) scalevarR(0),scalevarF(0)
-               write (34,*) ((xsecScale_acc(ii,jj,kk),ii=1,scalevarR(0))
-     &              ,jj=1,scalevarF(0))
+               write (34,*) dyn_scale(kk),nint(scalevarR(0))
+     $              ,nint(scalevarF(0))
+               write (34,*) ((xsecScale_acc(jj,ii,kk),jj=1
+     $              ,nint(scalevarR(0))),ii=1,nint(scalevarF(0)))
             else
                write (34,*) 1d0,1d0
                write (34,*) xsecScale_acc(1,1,kk)
@@ -286,7 +287,8 @@ c Write the accumulated results to a file
          write (34,*) "pdf variations:"
          do nn=1,lhaPDFid(0)
             if (lpdfvar(nn)) then
-               write (34,*) lhaPDFsetname(nn),nmemPDF(nn) + 1
+               write (34,*) trim(adjustl(lhaPDFsetname(nn))),
+     $              nmemPDF(nn)+1
                write (34,*) (xsecPDFr_acc(n,nn),n=0,nmemPDF(nn))
             else
                write(34,*) lhaPDFsetname(nn),nmemPDF(nn) + 1
@@ -362,7 +364,6 @@ c do the same as above for the counterevents
       end
 
 
-      
       subroutine fill_wgt_info_from_rwgt_lines
       implicit none
       include 'nexternal.inc'
@@ -402,13 +403,13 @@ c do the same as above for the counterevents
          do dd=1,dyn_scale(0)
             call set_mu_central(i,dd,c_mu2_r,c_mu2_f)
             do kr=1,nint(scalevarR(0))
-               if ((.not. lscalevar(kk)) .and. kr.ne.1) exit
+               if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
                mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
 c Update the strong coupling
                g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
             enddo
             do kf=1,nint(scalevarF(0))
-               if ((.not. lscalevar(kk)) .and. kf.ne.1) exit
+               if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
 c call the PDFs
                xlum(kf)=1d0
@@ -424,9 +425,9 @@ c call the PDFs
      &              ,DSQRT(mu2_f(kf)))
             enddo
             do kf=1,nint(scalevarF(0))
-               if ((.not. lscalevar(kk)) .and. kf.ne.1) exit
+               if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
                do kr=1,nint(scalevarR(0))
-                  if ((.not. lscalevar(kk)) .and. kr.ne.1) exit
+                  if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
                   iwgt=iwgt+1   ! increment the iwgt for the wgts() array
                   if (iwgt.gt.max_wgt) then
                      write (*,*) 'ERROR too many weights in '/
@@ -437,9 +438,8 @@ c add the weights to the array
                   wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
      $                 *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
      $                 /mu2_q))*g(kr)**QCDpower(i)
-c IS THIS FACTOR STILL CORRECT? --> PROBABLY NEED TO CHANGE 2ND ARGUMENT!
-                  wgts(iwgt,i)=wgts(iwgt,i)
-     $                 *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)))
+                  wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
+     &                          sqrt(mu2_r(kr)),sqrt(scales2(2,i)))
                enddo
             enddo
          enddo
@@ -507,11 +507,12 @@ c reset to the 0th member of the 1st set
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'reweight0.inc'
+      include 'run.inc'
       integer ii,jj,kk,nn,n,iw,i
       do kk=1,dyn_scale(0)
          if (lscalevar(kk)) then
-            do ii=1,scalevarF(0)
-               do jj=1,scalevarR(0)
+            do ii=1,nint(scalevarF(0))
+               do jj=1,nint(scalevarR(0))
                   wgtxsecmu(jj,ii,kk)=0d0
                enddo
             enddo
@@ -533,8 +534,8 @@ c reset to the 0th member of the 1st set
          if (do_rwgt_scale) then
             do kk=1,dyn_scale(0)
                if (lscalevar(kk)) then
-                  do ii=1,scalevarF(0)
-                     do jj=1,scalevarR(0)
+                  do ii=1,nint(scalevarF(0))
+                     do jj=1,nint(scalevarR(0))
                         wgtxsecmu(jj,ii,kk)=wgtxsecmu(jj,ii,kk)+wgts(iw,i)
                         iw=iw+1
                      enddo
@@ -554,6 +555,7 @@ c reset to the 0th member of the 1st set
                   enddo
                else
                   wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)+wgts(iw,i)
+                  iw=iw+1
                endif
             enddo
          endif
@@ -567,18 +569,26 @@ c reset to the 0th member of the 1st set
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'reweight0.inc'
-      integer ic,dd
-      double precision c_mu2_r,c_mu2_f
+      include 'run.inc'
+      integer ic,dd,i,j
+      double precision c_mu2_r,c_mu2_f,muR,muF,pp(0:3,nexternal)
       if (dd.eq.1) then
          c_mu2_r=scales2(2,ic)
          c_mu2_f=scales2(3,ic)
       else
-c need to recompute the scales using the momenta!         
-         write (*,*) 'Need to recompute the scale from the'/
-     &        /' momenta. Not yet implemented!'
-         c_mu2_r=0d0
-         c_mu2_f=0d0
-         stop
+c need to recompute the scales using the momenta
+         dynamical_scale_choice=dyn_scale(dd)
+         do i=1,nexternal
+            do j=0,3
+               pp(j,i)=momenta(j,i,ic)
+            enddo
+         enddo
+         call set_ren_scale(pp,muR)
+         c_mu2_r=muR**2
+         call set_fac_scale(pp,muF)
+         c_mu2_f=muF**2
+c     reset the default dynamical_scale_choice
+         dynamical_scale_choice=dyn_scale(1)
       endif
       return
       end
