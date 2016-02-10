@@ -838,6 +838,7 @@ c bpower.
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
       include "appl_common.inc" 
+      include "orders.inc"
       call cpu_time(tBefore)
 c Random numbers to be used in the plotting routine: these numbers will
 c not change between events, counter events and n-body contributions.
@@ -847,6 +848,7 @@ c not change between events, counter events and n-body contributions.
          enddo
       endif
       if (firsttime) then
+         if (iappl.ne.0) appl_amp_split_size = amp_split_size
 c Initialize hiostograms for fixed order runs
          if (fixed_order) call initplot
 c Compute cpower done for bottom Yukawa, routine needs to be adopted
