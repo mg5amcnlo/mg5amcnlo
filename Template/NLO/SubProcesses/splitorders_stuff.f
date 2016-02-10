@@ -96,6 +96,34 @@ C sanity check
       end
 
 
+      integer function lo_qcd_to_amp_pos(qcdpower)
+      implicit none
+      integer qcdpower
+      include 'orders.inc'
+      integer pos, orders(nsplitorders)
+      do pos = 1, amp_split_size_born
+        call amp_split_pos_to_orders(pos, orders)
+        if (orders(qcd_pos).eq.qcdpower) exit
+      enddo
+      lo_qcd_to_amp_pos = pos
+      return
+      end
+
+
+      integer function nlo_qcd_to_amp_pos(qcdpower)
+      implicit none
+      integer qcdpower
+      include 'orders.inc'
+      integer pos, orders(nsplitorders)
+      do pos = amp_split_size_born + 1, amp_split_size
+        call amp_split_pos_to_orders(pos, orders)
+        if (orders(qcd_pos).eq.qcdpower) exit
+      enddo
+      nlo_qcd_to_amp_pos = pos
+      return
+      end
+
+
       subroutine check_amp_split()
 C check that amp_split_pos_to_orders and orders_to_amp_split_pos behave
 C as expected (one the inverse of the other)

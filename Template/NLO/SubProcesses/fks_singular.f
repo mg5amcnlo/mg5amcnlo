@@ -847,10 +847,6 @@ c not change between events, counter events and n-body contributions.
          enddo
       endif
       if (firsttime) then
-c Put here call to compute bpower
-         wgtbpower=bpower
-c Store the power of alphas of the Born events in the appl common block.
-         if(iappl.ne.0) appl_bpower = wgtbpower
 c Initialize hiostograms for fixed order runs
          if (fixed_order) call initplot
 c Compute cpower done for bottom Yukawa, routine needs to be adopted
@@ -1719,29 +1715,34 @@ c must do MC over FKS directories.
       include 'appl_common.inc'
       include 'nFKSconfigs.inc'
       include 'genps.inc'
-      integer i
+      integer i,j 
       double precision final_state_rescaling,vegas_wgt
       integer              flavour_map(fks_configs)
       common/c_flavour_map/flavour_map
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
+      integer lo_qcd_to_amp_pos, nlo_qcd_to_amp_pos
+      integer pos
       if (icontr.gt.7) then
          write (*,*) 'ERROR: too many applgrid weights. '/
      &        /'Should have at most one of each itype.',icontr
          stop 1
       endif
-      do i=1,4
-         appl_w0(i)=0d0
-         appl_wR(i)=0d0
-         appl_wF(i)=0d0
-         appl_wB(i)=0d0
-         appl_x1(i)=0d0
-         appl_x2(i)=0d0
-         appl_QES2(i)=0d0
-         appl_muR2(i)=0d0
-         appl_muF2(i)=0d0
-         appl_flavmap(i)=0
+      do j=1,amp_split_size
+        do i=1,4
+          appl_w0(i,j)=0d0
+          appl_wR(i,j)=0d0
+          appl_wF(i,j)=0d0
+          appl_wB(i,j)=0d0
+          appl_x1(i,j)=0d0
+          appl_x2(i,j)=0d0
+          appl_QES2(i,j)=0d0
+          appl_muR2(i,j)=0d0
+          appl_muF2(i,j)=0d0
+          appl_qcdpower(i,j) = -1
+        enddo
+        appl_flavmap(i)=0
       enddo
       appl_event_weight = 0d0
       appl_vegaswgt = vegas_wgt
@@ -1750,56 +1751,67 @@ c must do MC over FKS directories.
          appl_event_weight=appl_event_weight+wgts(1,i)/vegas_wgt
          final_state_rescaling = dble(iproc_save(nFKS(i))) /
      &        dble(appl_nproc(flavour_map(nFKS(i))))
+         if (itype(i).eq.2) then
+            pos = lo_qcd_to_amp_pos(qcdpower)
+         else
+            pos = nlo_qcd_to_amp_pos(qcdpower)
+         endif
+
          if (itype(i).eq.1) then
 c     real
-            appl_w0(1)=appl_w0(1)+wgt(1,i)*final_state_rescaling
-            appl_x1(1)=bjx(1,i)
-            appl_x2(1)=bjx(2,i)
+            appl_w0(1,pos)=appl_w0(1,pos)+wgt(1,i)*final_state_rescaling
+            appl_qcdpower(1,pos)=qcdpower(i)
+            appl_x1(1,pos)=bjx(1,i)
+            appl_x2(1,pos)=bjx(2,i)
             appl_flavmap(1) = flavour_map(nFKS(i))
-            appl_QES2(1)=scales2(1,i)
-            appl_muR2(1)=scales2(2,i)
-            appl_muF2(1)=scales2(3,i)
+            appl_QES2(1,pos)=scales2(1,i)
+            appl_muR2(1,pos)=scales2(2,i)
+            appl_muF2(1,pos)=scales2(3,i)
          elseif (itype(i).eq.2) then
 c     born
-            appl_wB(2)=appl_wB(2)+wgt(1,i)*final_state_rescaling
-            appl_x1(2)=bjx(1,i)
-            appl_x2(2)=bjx(2,i)
+            appl_wB(2,pos)=appl_wB(2,pos)+wgt(1,i)*final_state_rescaling
+            appl_qcdpower(2,pos)=qcdpower(i)
+            appl_x1(2,pos)=bjx(1,i)
+            appl_x2(2,pos)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2)=scales2(1,i)
-            appl_muR2(2)=scales2(2,i)
-            appl_muF2(2)=scales2(3,i)
+            appl_QES2(2,pos)=scales2(1,i)
+            appl_muR2(2,pos)=scales2(2,i)
+            appl_muF2(2,pos)=scales2(3,i)
          elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14)
      $           then
 c     virtual, soft-virtual or soft-counter
-            appl_w0(2)=appl_w0(2)+wgt(1,i)*final_state_rescaling
-            appl_wR(2)=appl_wR(2)+wgt(2,i)*final_state_rescaling
-            appl_wF(2)=appl_wF(2)+wgt(3,i)*final_state_rescaling
-            appl_x1(2)=bjx(1,i)
-            appl_x2(2)=bjx(2,i)
+            appl_w0(2,pos)=appl_w0(2,pos)+wgt(1,i)*final_state_rescaling
+            appl_wR(2,pos)=appl_wR(2,pos)+wgt(2,i)*final_state_rescaling
+            appl_wF(2,pos)=appl_wF(2,pos)+wgt(3,i)*final_state_rescaling
+            appl_qcdpower(2,pos)=qcdpower(i)
+            appl_x1(2,pos)=bjx(1,i)
+            appl_x2(2,pos)=bjx(2,i)
             appl_flavmap(2) = flavour_map(nFKS(i))
-            appl_QES2(2)=scales2(1,i)
-            appl_muR2(2)=scales2(2,i)
-            appl_muF2(2)=scales2(3,i)
+            appl_QES2(2,pos)=scales2(1,i)
+            appl_muR2(2,pos)=scales2(2,i)
+            appl_muF2(2,pos)=scales2(3,i)
          elseif (itype(i).eq.5) then
 c     collinear counter            
-            appl_w0(3)=appl_w0(3)+wgt(1,i)*final_state_rescaling
-            appl_wF(3)=appl_wF(3)+wgt(3,i)*final_state_rescaling
-            appl_x1(3)=bjx(1,i)
-            appl_x2(3)=bjx(2,i)
+            appl_w0(3,pos)=appl_w0(3,pos)+wgt(1,i)*final_state_rescaling
+            appl_wF(3,pos)=appl_wF(3,pos)+wgt(3,i)*final_state_rescaling
+            appl_qcdpower(3,pos)=qcdpower(i)
+            appl_x1(3,pos)=bjx(1,i)
+            appl_x2(3,pos)=bjx(2,i)
             appl_flavmap(3) = flavour_map(nFKS(i))
-            appl_QES2(3)=scales2(1,i)
-            appl_muR2(3)=scales2(2,i)
-            appl_muF2(3)=scales2(3,i)
+            appl_QES2(3,pos)=scales2(1,i)
+            appl_muR2(3,pos)=scales2(2,i)
+            appl_muF2(3,pos)=scales2(3,i)
          elseif (itype(i).eq.6) then
 c     soft-collinear counter            
-            appl_w0(4)=appl_w0(4)+wgt(1,i)*final_state_rescaling
-            appl_wF(4)=appl_wF(4)+wgt(3,i)*final_state_rescaling
-            appl_x1(4)=bjx(1,i)
-            appl_x2(4)=bjx(2,i)
+            appl_w0(4,pos)=appl_w0(4,pos)+wgt(1,i)*final_state_rescaling
+            appl_wF(4,pos)=appl_wF(4,pos)+wgt(3,i)*final_state_rescaling
+            appl_qcdpower(4,pos)=qcdpower(i)
+            appl_x1(4,pos)=bjx(1,i)
+            appl_x2(4,pos)=bjx(2,i)
             appl_flavmap(4) = flavour_map(nFKS(i))
-            appl_QES2(4)=scales2(1,i)
-            appl_muR2(4)=scales2(2,i)
-            appl_muF2(4)=scales2(3,i)
+            appl_QES2(4,pos)=scales2(1,i)
+            appl_muR2(4,pos)=scales2(2,i)
+            appl_muF2(4,pos)=scales2(3,i)
          endif
       enddo
       return
@@ -5646,85 +5658,6 @@ c         stop
       return
       end
 
-
-      subroutine compute_bpower(p_born,bpower)
-      implicit none
-      include "nexternal.inc"
-      include "coupl.inc"
-
-      double precision p_born(0:3,nexternal-1)
-      double precision bpower,born_wgt
-      double precision wgt1
-
-      integer           isum_hel
-      logical                   multi_channel
-      common/to_matrix/isum_hel, multi_channel
-      integer isum_hel_orig
-      integer i_fks,j_fks
-      common/fks_indices/i_fks,j_fks
-
-      logical calculatedBorn
-      common/ccalculatedBorn/calculatedBorn
-
-      double precision tiny
-      parameter (tiny=1d-6)
-
-C should NOT be used (MZ, 18/11/2014)
-      write(*,*)"ERROR, bpower must NOT be used in the EW branch"
-      stop 1
-c Make sure that we sum over helicities (such that we do get a
-c non-zero Born)
-      isum_hel_orig = isum_hel
-      isum_hel=0
-      call get_helicity(i_fks,j_fks)
-
-      calculatedBorn=.false.
-      call sborn(p_born,wgt1)
-c Born contribution:
-      born_wgt=wgt1
-      
-c Multiply the strong coupling by 10
-      if (g.ne.0d0) then
-         g=10d0*g
-      else
-         write(*,*)'Error in bornsoftvirtual'
-         write(*,*)'Strong coupling is zero'
-         stop
-      endif
-
-c Update alphaS-dependent couplings
-      call update_as_param()
-
-c recompute the Born with the new couplings
-      calculatedBorn=.false.
-      call sborn(p_born,wgt1)
-
-c Compute bpower
-      bpower=Log10(wgt1/born_wgt)/2d0
-      if(abs(bpower-dble(nint(bpower))) .gt. tiny) then
-         write(*,*)'Error in computation of bpower:'
-         write(*,*)' not an integer',bpower
-         stop
-      elseif (bpower.lt.-tiny) then
-         write(*,*)'Error in computation of bpower:'
-         write(*,*)' negative value',bpower
-         stop
-      else
-c set it to the integer exactly
-         bpower=dble(nint(bpower))
-         write(*,*)'bpower is', bpower
-      endif
-
-c Change couplings back and recompute the Born to make sure that 
-c nothing funny happens later on
-      g=g/10d0
-      call update_as_param()
-      isum_hel=isum_hel_orig
-      calculatedBorn=.false.
-      call sborn(p_born,wgt1)
-
-      return
-      end
 
 c       This function computes the power of a muR-dependent factor which
 c       is stored in cpower. You need to modify it when you try to 
