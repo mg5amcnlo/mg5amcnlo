@@ -1137,7 +1137,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                   'auto_open':False
                 }
                 # alpsfact variation only applies to MLM
-                if not (int(self.run_card['ickkw'])==1:
+                if not (int(self.run_card['ickkw'])==1):
                     histo_output_options['uncertainties'].pop('alpsfact')
                     histo_output_options['use_band'].pop('alpsfact')
 
