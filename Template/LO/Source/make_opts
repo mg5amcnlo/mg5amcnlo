@@ -7,12 +7,12 @@ endif
 
 ifeq ($(origin CXXFLAGS),undefined)
   #CXXFLAGS= -g 
-  CXXFLAGS = -O 
+  CXXFLAGS= -O -stdlib=libc++ -mmacosx-version-min=10.7
 endif
 
 ifeq ($(origin CFLAGS),undefined)
   #CFLAGS= -g 
-  CFLAGS = -O 
+  CFLAGS= -O -stdlib=libc++ -mmacosx-version-min=10.7
 endif
 
 # Increase the number of allowed charcters in a Fortran line
@@ -29,7 +29,7 @@ endif
 UNAME := $(shell uname -s)
 ifeq ($(UNAME), Darwin)
    ifeq ($(origin LDFLAGS), undefined)
-      LDFLAGS=-lc++ 
+      LDFLAGS=-lc++  -mmacosx-version-min=10.7
    endif
 endif
 
