@@ -278,7 +278,7 @@ c Write the accumulated results to a file
                write (34,*) ((xsecScale_acc(jj,ii,kk),jj=1
      $              ,nint(scalevarR(0))),ii=1,nint(scalevarF(0)))
             else
-               write (34,*) 1d0,1d0
+               write (34,*) dyn_scale(kk),1,1
                write (34,*) xsecScale_acc(1,1,kk)
             endif
          enddo
