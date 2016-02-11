@@ -1752,6 +1752,7 @@ class RunCardLO(RunCard):
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
+            self['use_syst'] = False
         else:
             # check for beam_id
             beam_id = set()

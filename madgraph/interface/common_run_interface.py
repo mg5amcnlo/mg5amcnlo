@@ -175,14 +175,18 @@ class CheckValidForCmd(object):
     def check_set(self, args):
         """ check the validity of the line"""
 
+
         if len(args) < 2:
-            self.help_set()
-            raise self.InvalidCmd('set needs an option and an argument')
+            if len(args)==1 and "=" in args[0]:
+                args[:] = args[0].split("=",1)
+            else:
+                self.help_set()
+                raise self.InvalidCmd('set needs an option and an argument')
 
         if args[0] not in self._set_options + self.options.keys():
             self.help_set()
             raise self.InvalidCmd('Possible options for set are %s' % \
-                                  self._set_options)
+                                  (self._set_options+self.options.keys()))
 
         if args[0] in ['stdout_level']:
             if args[1] not in ['DEBUG','INFO','WARNING','ERROR','CRITICAL'] \
@@ -1062,7 +1066,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.import_command_file(path)
-        
+        reweight_cmd.do_quit('')
         # re-define current run
         try:
             self.results.def_current(self.run_name, self.run_tag)
@@ -1072,7 +1076,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     def do_pgs(self, line):
         """launch pgs"""
-
+        
         args = self.split_arg(line)
         # Check argument's validity
         if '--no_default' in args:
@@ -1081,19 +1085,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             no_default = False
 
+        if no_default and not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+            logger.info('No pgs_card detected, so not run pgs')
+            return
+
         # Check all arguments
         # This might launch a gunzip in another thread. After the question
         # This thread need to be wait for completion. (This allow to have the
         # question right away and have the computer working in the same time)
         # if lock is define this a locker for the completion of the thread
-        lock = self.check_pgs(args)
+        lock = self.check_pgs(args,  no_default=no_default)
 
         # Check that the pgs_card exists. If not copy the default
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-            if no_default:
-                logger.info('No pgs_card detected, so not run pgs')
-                return
-
             files.cp(pjoin(self.me_dir, 'Cards', 'pgs_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
             logger.info('No pgs card found. Take the default one.')
@@ -1269,6 +1273,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             args.remove('--no_default')
         else:
             no_default = False
+            
+        if no_default and  not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+            logger.info('No delphes_card detected, so not run Delphes')
+            return
+            
         # Check all arguments
         # This might launch a gunzip in another thread. After the question
         # This thread need to be wait for completion. (This allow to have the
@@ -1538,7 +1547,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.allow_notification_center = eval(args[1])
                 self.options[args[0]] = eval(args[1])
             else:
-                 raise self.InvalidCmd('Not a valid value for notification_center')
+                raise self.InvalidCmd('Not a valid value for notification_center')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -2054,6 +2063,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.deal_multiple_categories(completion)
         
 
+    def update_make_opts(self):
+        """update the make_opts file writing the environmental variables
+        stored in make_opts_var"""
+        make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
+        tag = '#end_of_make_opts_variables\n'
+        content = open(make_opts).read()
+
+        # if this is not the first time that the file is updated, there
+        # should be a line #end_of_make_opts_variables
+        if tag in content:
+            content = content.split(tag)[1]
+
+        variables = '\n'.join('%s=%s' % (k,v) for k, v in self.make_opts_var.items())
+        variables += '\n%s' % tag
+
+        open(make_opts, 'w').write(variables + content)
+        return
+
+
+
 # lhapdf-related functions
     def link_lhapdf(self, libdir, extra_dirs = []):
         """links lhapdf into libdir"""
@@ -2080,8 +2109,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
-        os.environ['lhapdf_config'] = self.options['lhapdf']
+        self.make_opts_var['lhapdf'] = self.options['lhapdf']
+        self.make_opts_var['lhapdfversion'] = lhapdf_version[0]
+        self.make_opts_var['lhapdf_config'] = self.options['lhapdf']
 
 
     def get_characteristics(self, path=None):

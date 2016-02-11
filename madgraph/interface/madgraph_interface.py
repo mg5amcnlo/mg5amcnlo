@@ -2992,6 +2992,7 @@ This implies that with decay chains:
         self.avoid_history_duplicate('define %s' % line, ['define'])
         if not self._curr_model:
             self.do_import('model sm')
+            self.history.append('define %s' % line)
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -5141,7 +5142,11 @@ This implies that with decay chains:
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
                     defined_multiparticles.remove(container)
-
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' ' .join([`i` for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
                 
         
         if defined_multiparticles:
@@ -5572,7 +5577,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
 
 
-        logger.info('compile %s. This might takes a while.' % name)
+        logger.info('compile %s. This might take a while.' % name)
 
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
@@ -5635,6 +5640,19 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
                                         stdout=subprocess.PIPE).communicate()[0]
 
+        misc.sprint(args[0], name)
+        # For Delphes edit the makefile to add the proper link to correct library
+        if args[0] == 'Delphes3':
+            #change in the makefile 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)
+            # to 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,/Applications/root_v6.04.08/lib/
+            rootsys = os.environ['ROOTSYS']
+            text = open('./Delphes/Makefile').read()
+            text = text.replace('DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)', 
+                         'DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,%s/lib/' % rootsys)
+            open('./Delphes/Makefile','w').write(text)
+            
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
             if self.options['lhapdf']:
@@ -6220,8 +6238,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
                     if program != None:
-                        fpath, fname = os.path.split(program)
-                        logger.info('Using %s library in %s'%(key,fpath))
+                        fpath, _ = os.path.split(program)
+                        logger.info('Using %s library in %s' % (key,fpath))
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
@@ -6260,8 +6278,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 pass
             elif key in ['notification_center']:
                 if self.options[key] in ['False', 'True']:
-                   self.allow_notification_center = eval(self.options[key])
-                   self.options[key] = self.allow_notification_center
+                    self.allow_notification_center = eval(self.options[key])
+                    self.options[key] = self.allow_notification_center
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
@@ -6874,6 +6892,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.allow_notification_center = self.options[args[0]]
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
+        elif args[0] in ['cluster_queue']:
+            self.options[args[0]] = args[1].strip()
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])

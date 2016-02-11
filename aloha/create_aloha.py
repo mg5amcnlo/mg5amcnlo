@@ -252,7 +252,7 @@ in presence of majorana particle/flow violation"""
             expr = self.lorentz_expr
         
         if need_P_sign:
-            expr = re.sub(r'\b(P|PSlash)\(', r'-\1\(', expr)
+            expr = re.sub(r'\b(P|PSlash)\(', r'-\1(', expr)
         
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(expr)
@@ -470,7 +470,7 @@ in presence of majorana particle/flow violation"""
         numerator = self.mod_propagator_expression(tag, numerator)
         if denominator:
             denominator = self.mod_propagator_expression(tag, denominator)      
-                
+        
         numerator = self.parse_expression(numerator, needPflipping)
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)

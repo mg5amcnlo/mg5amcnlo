@@ -565,7 +565,7 @@ C      helicity is asked
      $     //'e Lorentz rotation test for this phase-space point only.'
           WRITE(*,*) '##WARNING: Further warning of that typ'
      $     //'e suppressed.'
-          WARNED_LORENTZ_STAB_TEST_OFF = .FALSE.
+          WARNED_LORENTZ_STAB_TEST_OFF = .TRUE.
         ENDIF
         NROTATIONS_QP=0
         NROTATIONS_DP=0

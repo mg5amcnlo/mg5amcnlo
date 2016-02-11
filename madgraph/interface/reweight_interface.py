@@ -41,6 +41,7 @@ import madgraph.various.lhe_parser as lhe_parser
 import madgraph.various.combine_plots as combine_plots
 import madgraph.various.cluster as cluster
 import madgraph.fks.fks_common as fks_common
+import madgraph.core.diagram_generation as diagram_generation
 
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card 
@@ -91,7 +92,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.output_type = "default"
         self.helicity_reweighting = True
         self.rwgt_dir = None
-        
+        self.exitted = False # Flag to know if do_quit was already called.
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -386,7 +387,8 @@ class ReweightInterface(extended_cmd.Cmd):
         pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
-            if not isinstance(self.mother, cmd.CmdShell): 
+            import madgraph.interface.extended_cmd as extended_cmd
+            if not isinstance(self.mother, extended_cmd.CmdShell): 
                 raise Exception, "scan are not allowed on the Web"
             # at least one scan parameter found. create an iterator to go trough the cards
             main_card = check_param_card.ParamCardIterator(new_card)
@@ -862,7 +864,9 @@ class ReweightInterface(extended_cmd.Cmd):
             del self.calculator[(mode, production)]
     
     def do_quit(self, line):
-        
+        if self.exitted:
+            return
+        self.exitted = True
         
         if 'init' in self.banner:
             cross = 0 
@@ -966,7 +970,20 @@ class ReweightInterface(extended_cmd.Cmd):
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
-        mgcmd.exec_cmd(commandline, precmd=True)
+        try:
+            mgcmd.exec_cmd(commandline, precmd=True, errorhandling=False)
+        except diagram_generation.NoDiagramException:
+            commandline=''
+            for proc in processes:
+                if '[' not in proc:
+                    raise
+                commandline += "add process %s ;" % proc
+            commandline = commandline.replace('add process', 'generate',1)
+            logger.info("RETRY with %s", commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+        except Exception, error:
+            raise
+        
         commandline = 'output standalone_rw %s' % pjoin(path_me,'rw_me')
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))

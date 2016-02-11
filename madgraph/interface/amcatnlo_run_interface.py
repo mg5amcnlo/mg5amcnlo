@@ -1614,6 +1614,7 @@ RESTART = %(mint_mode)s
             run_type="Fixed order integration step %s" % integration_step
         else:
             run_type="MINT step %s" % integration_step
+        self.njobs=len(jobs_to_run)            
         for job in jobs_to_run:
             executable='ajob1'
             if fixed_order:
@@ -1627,7 +1628,6 @@ RESTART = %(mint_mode)s
 
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
-        self.njobs=len(jobs_to_run)
         self.wait_for_complete(run_type)
 
 
@@ -3633,6 +3633,24 @@ RESTART = %(mint_mode)s
                 else:
                     scale_pdf_info['pdf_upp'] = 0.0
                     scale_pdf_info['pdf_low'] = 0.0
+        elif lhaid in range(90200, 90303) or \
+             lhaid in range(90400, 90433) or \
+             lhaid in range(90700, 90801) or \
+             lhaid in range(90900, 90931) or \
+             lhaid in range(91200, 91303) or \
+             lhaid in range(91400, 91433) or \
+             lhaid in range(91700, 91801) or \
+             lhaid in range(91900, 90931):
+            # PDF4LHC15 Hessian sets
+            pdf_stdev = 0.0
+            for pdf in pdfs[1:]:
+                pdf_stdev += (pdf - cntrl_val)**2
+            pdf_stdev = math.sqrt(pdf_stdev)
+            if cntrl_val != 0.0:
+                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            else:
+                scale_pdf_info['pdf_upp'] = 0.0
+            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
         else:
             # use Gaussian method (NNPDF)
             pdf_stdev=0.0
@@ -3950,8 +3968,13 @@ RESTART = %(mint_mode)s
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
-        self.update_status('Compiling the code', level=None, update_results=True)
+        # environmental variables to be included in make_opts
+        self.make_opts_var = {}
+        if self.proc_characteristics['has_loops'] and \
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
+            self.make_opts_var['madloop'] = 'true'
 
+        self.update_status('Compiling the code', level=None, update_results=True)
 
         libdir = pjoin(self.me_dir, 'lib')
         sourcedir = pjoin(self.me_dir, 'Source')
@@ -4004,14 +4027,10 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
             if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
-            try:
-                del os.environ['lhapdf']
-            except KeyError:
-                pass
 
         # read the run_card to find if applgrid is used or not
         if self.run_card['iappl'] != 0:
-            os.environ['applgrid'] = 'True'
+            self.make_opts_var['applgrid'] = 'True'
             # check versions of applgrid and amcfast
             for code in ['applgrid','amcfast']:
                 try:
@@ -4040,18 +4059,12 @@ RESTART = %(mint_mode)s
                     line=appllibs
                 text_out.append(line)
             open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
-        else:
-            try:
-                del os.environ['applgrid']
-            except KeyError:
-                pass
 
-        try: 
-            os.environ['fastjet_config'] = self.options['fastjet']
-        except (TypeError, KeyError):
-            if 'fastjet_config' in os.environ:
-                del os.environ['fastjet_config']
-            os.unsetenv('fastjet_config')
+        if 'fastjet' in self.options.keys() and self.options['fastjet']:
+            self.make_opts_var['fastjet_config'] = self.options['fastjet']
+        
+        # add the make_opts_var to make_opts
+        self.update_make_opts()
         
         # make Source
         self.update_status('Compiling source...', level=None)
@@ -4144,11 +4157,8 @@ RESTART = %(mint_mode)s
         # check if MadLoop virtuals have been generated
         if self.proc_characteristics['has_loops'] and \
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
-            os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
-        else:
-            os.unsetenv('madloop')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)

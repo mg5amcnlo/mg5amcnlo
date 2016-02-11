@@ -1,10 +1,16 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.3.4(XX/XX/XX)
+        VH: Interfaced MadLoop to Samurai and Ninja (the latter is now the default)
         RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
-
-2.3.4 (XX/XX/XX)
- 	VH: Interfaced MadLoop to Samurai and Ninja
+        OM: Fixing the problem of using lhapdf6 on Mac
+        MZ: Faster interface for LHAPDF6
+        OM: Add support of epsilon_ijk in MadSpin
+        OM: Fix multiple problem with multiparticles in MadSpin
+        OM: Improve spinmode=None in MadSpin
+        OM: Update the TopEffTh model
+        MZ: Fix problem with slurm cluster
+        OM: Improve scan functionalities
 
 2.3.3 (15/10/15)
 	OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
