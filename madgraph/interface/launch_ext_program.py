@@ -531,7 +531,6 @@ class aMCatNLOLauncher(ExtLauncher):
             arg = line.split()
             if arg[1] not in all_options:
                 continue
-            misc.sprint(line)
             try:
                 usecmd.exec_cmd(line)
             except Exception, error:
