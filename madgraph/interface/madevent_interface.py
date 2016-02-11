@@ -4102,7 +4102,7 @@ Beware that this can be dangerous for local multicore runs.""")
         return CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
-    def treat_ckkw_matching(self):
+    def treat_CKKW_matching(self):
         """check for ckkw"""
         
         lpp1 = self.run_card['lpp1']
