@@ -475,6 +475,12 @@ c check (only available when not doing MC over hels)
      $           /' found for which the accuracy reported by MadLoop'/
      $           /' is worse than 5%. Setting virtual to zero for this'/
      $           /' PS point.'
+            do i = 1, amp_split_size
+               amp_split(i) = 0d0
+               amp_split_finite_ML(i) = 0d0
+               amp_split_poles_ML(i,1) = 0d0
+               amp_split_poles_ML(i,2) = 0d0
+            enddo
             virt_wgt=0d0
          endif
       endif
