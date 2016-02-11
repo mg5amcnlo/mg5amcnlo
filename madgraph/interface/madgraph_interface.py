@@ -5413,10 +5413,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                                                 for var,path in path_to_be_set))
             elif shell_type=='tcsh':
                 modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.cshrc"%\
-                (r'\n'.join('setenv %s %s'%
+                (r'\n'.join('setenv %s %s%s'%
                 (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '')
                                                 for var,path in path_to_be_set))
-            
+
             logger.warning("==========")
             logger.warning("We recommend that you add to the following paths"+\
              " to your environment variables, so that you are guaranteed that"+\
