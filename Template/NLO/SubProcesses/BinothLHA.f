@@ -51,7 +51,7 @@ c general MadFKS parameters
       parameter (fksprefact=.true.)
       integer ret_code
       double precision madfks_single, madfks_double
-      double precision tolerance, prec_found
+      double precision tolerance
       double precision, allocatable :: accuracies(:)
       integer i,j,IOErr, IOErrCounter
       integer dt(8)
@@ -83,6 +83,7 @@ c statistics for MadLoop
       integer split_amp_orders(nsplitorders), iamp
       double precision amp_split_finite_ML(amp_split_size)
       common /to_amp_split_finite/amp_split_finite_ML
+      double precision prec_found(amp_split_size)
       double precision amp_split_poles_ML(amp_split_size,2),
      $ amp_split_poles_FKS(amp_split_size,2)
       common /to_amp_split_poles_FKS/amp_split_poles_FKS
@@ -110,8 +111,8 @@ C     reset the amp_split array
         amp_split_finite_ML(i) = 0d0
         amp_split_poles_ML(i,1) = 0d0
         amp_split_poles_ML(i,2) = 0d0
+        prec_found(i) = 1.0d0
       enddo
-      prec_found = 1.0d0
 c This is no longer needed, because now the Born has the correct symmetry factor:
 c      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
       symfactvirt = 1d0
@@ -155,7 +156,6 @@ C        look for orders which match the nlo order constraint
              write(*,*) 'VIRT: not keeping split order ', i
            endif
          enddo
-         prec_found = accuracies(0)
          do i = 1, nsqso
            if (keep_order(i)) then
              virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
@@ -169,6 +169,7 @@ C          different coupling combinations
              amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
              amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
              amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
+             prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
            endif
         enddo
       else
@@ -178,7 +179,6 @@ c once the initial pole check is performed.
          if (mc_hel.eq.0) then
             call sloopmatrix_thres(p,virt_wgts,tolerance,accuracies
      $           ,ret_code)
-            prec_found = accuracies(0)            
             do i = 1, nsqso
               if (keep_order(i)) then
                 virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
@@ -192,6 +192,7 @@ C          different coupling combinations
                 amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
                 amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
                 amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
+                prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
               endif
             enddo
          elseif (mc_hel.eq.1) then
@@ -217,7 +218,6 @@ c virtual as flat as possible
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
      $           ,tolerance,accuracies,ret_code)
-            prec_found = accuracies(0)
             virt_wgt = virt_wgt + virt_wgts_hel(1,0)*dble(goodhel(ihel))
      $           /volh/4d0/symfactvirt
             single   = single   + virt_wgts_hel(2,0)*dble(goodhel(ihel))
@@ -437,61 +437,67 @@ c Update the statistics using the MadLoop return code (ret_code)
       else
          n10=n10+1              ! no known ret_code (10)
       endif
-         n1(mod(ret_code,10))=n1(mod(ret_code,10))+1                ! unit ret code distribution
+      n1(mod(ret_code,10))=n1(mod(ret_code,10))+1 ! unit ret code distribution
 
 c Write out the unstable, non-rescued phase-space points (MadLoop return
 c code is in the four hundreds) or the ones that are found by the pole
 c check (only available when not doing MC over hels)
-      if (.not.firsttime .and. (ret_code/100.eq.4 .or. cpol .or.
-     $     prec_found.gt.0.05d0.or.isnan(virt_wgt))) then
-         if (neps.lt.10) then
-            if (neps.eq.1) then
-               open(unit=78, file='UPS.log')
-            else
-               open(unit=78, file='UPS.log', access='append')
+      do iamp=0,amp_split_size
+         if (.not.firsttime .and. (ret_code/100.eq.4 .or. cpol .or.
+     $        prec_found(iamp).gt.0.05d0 .or.
+     $        isnan(amp_split_finite_ML(iamp)))) then
+            if (neps.lt.10) then
+               if (neps.eq.1) then
+                  open(unit=78, file='UPS.log')
+               else
+                  open(unit=78, file='UPS.log', access='append')
+               endif
+               write(78,*) '===== EPS #',neps,' ====='
+               write(78,*) 'mu_r    =',mu_r           
+               write(78,*) 'alpha_S =',alpha_S
+               write(78,*) 'MadLoop return code, pole check and'/
+     $              /' accuracy reported',ret_code,cpol,prec_found
+               if (mc_hel.ne.0) then
+                  write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
+               endif
+               write(78,*) '1/eps**2 expected from MadFKS=',amp_split_poles_FKS(iamp,2)
+               write(78,*) '1/eps**2 obtained in MadLoop =',amp_split_poles_ML(iamp,2)
+               write(78,*) '1/eps    expected from MadFKS=',amp_split_poles_FKS(iamp,1)
+               write(78,*) '1/eps    obtained in MadLoop =',amp_split_poles_ML(iamp,1)
+               write(78,*) 'finite   obtained in MadLoop =',amp_split_finite_ML(iamp)
+               write(78,*) 'Accuracy estimated by MadLop =',prec_found(iamp)
+               do i = 1, nexternal-1
+                  write(78,'(i2,1x,5e25.15)') 
+     &                 i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
+               enddo
+               close(78)
             endif
-            write(78,*) '===== EPS #',neps,' ====='
-            write(78,*) 'mu_r    =',mu_r           
-            write(78,*) 'alpha_S =',alpha_S
-            write(78,*) 'MadLoop return code, pole check and'/
-     $           /' accuracy reported',ret_code,cpol,prec_found
-            if (mc_hel.ne.0) then
-               write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
+            if ( prec_found(iamp).gt.0.05d0 .or.
+     $           isnan(amp_split_finite_ML(iamp)) ) then
+               write (*,*) 'WARNING: unstable non-rescued phase-space'/
+     $              /' found for which the accuracy reported by'/
+     $              /' MadLoop is worse than 5%. Setting virtual to'/
+     $              /' zero for this PS point.'
+               amp_split_finite_ML(iamp) = 0d0
             endif
-            write(78,*) '1/eps**2 expected from MadFKS=',madfks_double
-            write(78,*) '1/eps**2 obtained in MadLoop =',double
-            write(78,*) '1/eps    expected from MadFKS=',madfks_single
-            write(78,*) '1/eps    obtained in MadLoop =',single
-            write(78,*) 'finite   obtained in MadLoop =',virt_wgt
-            write(78,*) 'Accuracy estimated by MadLop =',prec_found
-            do i = 1, nexternal-1
-               write(78,'(i2,1x,5e25.15)') 
-     &              i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
-            enddo
-            close(78)
          endif
-         if (prec_found.gt.0.05d0) then
-            write (*,*) 'WARNING: unstable non-rescued phase-space'/
-     $           /' found for which the accuracy reported by MadLoop'/
-     $           /' is worse than 5%. Setting virtual to zero for this'/
-     $           /' PS point.'
-            do i = 1, amp_split_size
-               amp_split(i) = 0d0
-               amp_split_finite_ML(i) = 0d0
-               amp_split_poles_ML(i,1) = 0d0
-               amp_split_poles_ML(i,2) = 0d0
-            enddo
-            virt_wgt=0d0
-         endif
+      enddo
+c also set the central value to zero if it is very unstable
+      if (.not.firsttime .and.
+     $     (accuracies(0).gt.0.05d0 .or. isnan(virt_wgt))) then
+         virt_wgt=0d0
       endif
-
 c If a MadLoop initialisation PS point (and stability is unknown), we
 c better set the virtual to zero to NOT include it in the
 c result. Sometimes this can be an unstable point with a very large
 c weight, screwing up the complete integration afterward.
       if ( ( mod(ret_code,100)/10.eq.4 .or. mod(ret_code,100)/10.eq.3 )
-     $     .and. ret_code/100.eq.1)virt_wgt=0d0
-
+     $     .and. ret_code/100.eq.1) then
+         do iamp=0,amp_split_size
+            amp_split_finite_ML(iamp) = 0d0
+         enddo
+         virt_wgt=0d0
+      endif
       return
       end
 
