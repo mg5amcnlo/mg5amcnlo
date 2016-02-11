@@ -198,7 +198,7 @@ C-------------------------------------------------
       integer mpdf
       integer npdfs,i,pdfgup(2),pdfsup(2),lhaid
 
-      parameter (npdfs=17)
+      parameter (npdfs=20)
       character*7 pdflabs(npdfs)
       data pdflabs/
      $   'none',
@@ -217,7 +217,10 @@ C-------------------------------------------------
      $   'nn23lo',
      $   'nn23lo1',
      $   'nn23nlo',
-     $   'cteqqed'/
+     $   'ct14q00',
+     $   'ct14q07',
+     $   'ct14q14',
+     $   'ct14q21'/
       integer numspdf(npdfs)
       data numspdf/
      $   00000,
@@ -236,6 +239,9 @@ C-------------------------------------------------
      $   246800,
      $   247000,
      $   244600,
+     $   666666,
+     $   666666,
+     $   666666,
      $   666666/
 
 
