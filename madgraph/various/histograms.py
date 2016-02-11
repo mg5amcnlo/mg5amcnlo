@@ -903,15 +903,25 @@ class HwU(Histogram):
         return True
 
     def test_plot_compability(self, other, consider_type=True,
-                                                   consider_weight_labels=True):
+                                                consider_unknown_weight_labels=True):
         """ Test whether the defining attributes of self are identical to histo,
         typically to make sure that they are the same plots but from different
         runs, and they can be summed safely. We however don't want to 
         overload the __eq__ because it is still a more superficial check."""
-        
+       
+        this_known_weight_labels = [label for label in self.bins.weight_labels if
+                                   HwU.get_HwU_wgt_label_type(label)!='UNKNOWN_TYPE']
+        other_known_weight_labels = [label for label in other.bins.weight_labels if
+                                   HwU.get_HwU_wgt_label_type(label)!='UNKNOWN_TYPE']
+        this_unknown_weight_labels = [label for label in self.bins.weight_labels if
+                                   HwU.get_HwU_wgt_label_type(label)=='UNKNOWN_TYPE']
+        other_unknown_weight_labels = [label for label in other.bins.weight_labels if
+                                   HwU.get_HwU_wgt_label_type(label)=='UNKNOWN_TYPE']
+
         if self.title != other.title or \
-           (self.bins.weight_labels != other.bins.weight_labels and\
-                                          consider_weight_labels) or \
+           set(this_known_weight_labels) != set(other_known_weight_labels) or \
+           (set(this_unknown_weight_labels) != set(other_unknown_weight_labels) and\
+                                                 consider_unknown_weight_labels) or \
            (self.type != other.type and consider_type) or \
            self.x_axis_mode != self.x_axis_mode or \
            self.y_axis_mode != self.y_axis_mode or \
@@ -1376,7 +1386,7 @@ class HwUList(histograms_PhysicsObjectList):
         return isinstance(obj, HwU) or isinstance(obj, HwUList)
 
     def __init__(self, file_path, weight_header=None, run_id=None,
-            merging_scale=None, accepted_types_order=[], consider_reweights=True,
+            merging_scale=None, accepted_types_order=[], consider_reweights='ALL',
                                                      raw_labels=False, **opts):
         """ Read one plot from a file_path or a stream. 
         This constructor reads all plots specified in target file.
@@ -1386,7 +1396,8 @@ class HwUList(histograms_PhysicsObjectList):
         empty, no filter is applied, otherwise only histograms of the specified  
         types will be kept, and in this specified order for a given identical 
         title. The option 'consider_reweights' selects whether one wants to 
-        include all the extra scale/pdf/merging variation weights.
+        include all the extra scale/pdf/merging variation weights. Possible values
+        are 'ALL', 'KNOWN_ONES', 'NONE'.
         The option 'raw_labels' specifies that one wants to import the
         histogram data with no treatment of the weight labels at all
         (this is used for the matplotlib output).
@@ -1473,12 +1484,13 @@ class HwUList(histograms_PhysicsObjectList):
     
     def parse_histos_from_PY8_XML_stream(self, stream, run_id=None, 
             merging_scale=None, accepted_types_order=[], 
-            consider_reweights=True, raw_labels=False):
+            consider_reweights='ALL', raw_labels=False):
         """Initialize the HwU histograms from an XML stream. Only one run is 
         used: the first one if run_id is None or the specified run otherwise.
         Accepted type order is a filter to select histograms of only a certain
         type. The option 'consider_reweights' selects whether one wants to 
-        include all the extra scale/pdf/merging variation weights."""
+        include all the extra scale/pdf/merging variation weights.
+        Possible values are 'ALL', 'KNOWN_ONES', 'NONE'."""
         
         run_nodes = minidom.parse(stream).getElementsByTagName("run")
         all_nodes = dict((int(node.getAttribute('id')),node) for
@@ -1725,12 +1737,15 @@ class HwUList(histograms_PhysicsObjectList):
                 except KeyError:
                     pass
                 
-        # Keep only central weight if asked for
-        if not consider_reweights:
+        # Keep only the weights asked for
+        if consider_reweights!='ALL':
             new_selected_weights = {}
             for wgt_position, wgt_labels in selected_weights.items():
                 for wgt_label in wgt_labels:
-                    if wgt_label in ['central','stat_error','boundary_xmin','boundary_xmax']:
+                    if (consider_reweights not in ['NONE','KNOWN_ONES']) or \
+                       (wgt_label in ['central','stat_error','boundary_xmin','boundary_xmax']) or\
+                       (consider_reweights=='KNOWN_ONES' and \
+                        HwU.get_HwU_wgt_label_type(wgt_label)!='UNKNOWN_TYPE'):
                         try:
                             new_selected_weights[wgt_position].append(wgt_label)
                         except KeyError:
@@ -1885,13 +1900,13 @@ class HwUList(histograms_PhysicsObjectList):
             matched = False
             for histo_list in matching_histo_lists:
                 if histo.test_plot_compability(histo_list[0],
-                              consider_type=False, consider_weight_labels=True):
+                       consider_type=False, consider_unknown_weight_labels=True):
                     histo_list.append(histo)
                     matched = True
                     break
             if not matched:
                 matching_histo_lists.append(HwUList([histo]))
-
+        
         self[:] = matching_histo_lists
 
         # Write the gnuplot header
@@ -2777,6 +2792,8 @@ if __name__ == "__main__":
            '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
            '--jet_samples=[int1,int2]' Specifies what jet samples to keep. 'None' is the default and keeps them all.
            '--central_only'  This option specifies to disregard all extra weights, so as to make it possible
+           '--keep_all_weights' This option specifies to keep in the HwU produced all the weights, even
+                                those which are not known (i.e. that is scale, PDF or merging variation)
                              to take the ratio of plots with different extra weights specified.   
         For chosing what kind of variation you want to see on your plot, you can use the following options
            '--no_<type>'                   Turn off the plotting of variations of the chosen type
@@ -2810,7 +2827,7 @@ if __name__ == "__main__":
     use_band      = None
     auto_open = True
     ratio_correlations = True
-    consider_reweights = True
+    consider_reweights = 'KNOWN_ONES'
     
     def log(msg):
         print "histograms.py :: %s"%str(msg)
@@ -2850,7 +2867,10 @@ if __name__ == "__main__":
         no_suffix = True
     
     if '--central_only' in sys.argv:
-        consider_reweights = False
+        consider_reweights = 'NONE'
+
+    if '--keep_all_weights' in sys.argv:
+        consider_reweights = 'ALL'
 
     for arg in sys.argv[1:]:
         if arg.startswith('--n_ratios='):
