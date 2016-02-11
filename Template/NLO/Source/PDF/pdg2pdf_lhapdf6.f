@@ -79,7 +79,6 @@ c     This will be called for any PDG code, but we only support up to 7
 
 c     Determine the iset used in lhapdf
       call getnset(iset)
-
 c     Determine the member of the set (function of lhapdf)
       call getnmem(iset,imem)
 
@@ -119,7 +118,7 @@ c Calculated a new value: replace the value computed longest ago
 
 c     Call lhapdf and give the current values to the arrays that should
 c     be saved
-      call evolvepart(ipart,x,xmu,pdg2pdf)
+      call evolvepartm(iset,ipart,x,xmu,pdg2pdf)
       pdg2pdf=pdg2pdf/x
       pdflast(i_replace)=pdg2pdf
       xlast(i_replace)=x

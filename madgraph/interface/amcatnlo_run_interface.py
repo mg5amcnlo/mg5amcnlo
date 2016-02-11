@@ -2183,24 +2183,7 @@ RESTART = %(mint_mode)s
             self.cross_sect_dict['unit']='pb'
             self.cross_sect_dict['xsec_string']='Total cross-section'
             self.cross_sect_dict['axsec_string']='Total abs(cross-section)'
-        # Gather some basic statistics for the run and extracted from the log files.
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
-            log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','G*','log_MINT*.txt'))
-            all_log_files = log_GV_files
-        elif mode == 'NLO':
-            log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','all_G*','log_MINT*.txt'))
-            all_log_files = log_GV_files
 
-        elif mode == 'LO':
-            log_GV_files = ''
-            all_log_files = glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','born_G*','log_MINT*.txt'))
-        else:
-            raise aMCatNLOError, 'Running mode %s not supported.'%mode
-
-        
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
@@ -2222,30 +2205,32 @@ RESTART = %(mint_mode)s
                 if scale_pdf_info and self.run_card['nevents']>=10000:
                     if scale_pdf_info[0]:
                         # scale uncertainties
+                        message = message + '\n      Scale variation(s):'
                         for s in scale_pdf_info[0]:
                             if s['unc']:
                                 message = message + \
-                                          ('\n      Cross section dynamical_scale_choice %(label)i: '\
-                                           '%(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%% (scale)') % s
+                                          ('\n          Dynamical_scale_choice %(label)i: '\
+                                           '%(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%%') % s
                             else:
                                 message = message + \
-                                          ('\n      Cross section dynamical_scale_choice %(label)i: '\
+                                          ('\n          Dynamical_scale_choice %(label)i: '\
                                            '%(cen)8.3e pb') % s
                                 
                     if scale_pdf_info[1]:
+                        message = message + '\n      PDF variation(s):'
                         for p in scale_pdf_info[1]:
                             if p['unc']=='none':
                                 message = message + \
-                                          ('\n      Cross section %(name)s: '\
+                                          ('\n          %(name)s (central value only): '\
                                            '%(cen)8.3e pb') % p
                                 
                             elif p['unc']=='unknown':
                                 message = message + \
-                                          ('\n      Cross section %(name)s: '\
-                                           '%(cen)8.3e pb (not possible to compute uncertainty)') % p
+                                          ('\n          %(name)s (%(size)s members; combination method unknown): '\
+                                           '%(cen)8.3e pb') % p
                             else:
                                 message = message + \
-                                          ('\n      Cross section %(name)s: '\
+                                          ('\n          %(name)s (using %(unc)s method): '\
                                            '%(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%% (PDF @ 90%% C.L.)') % p
                         # pdf uncertainties
                     message = message + \
@@ -2287,6 +2272,23 @@ RESTART = %(mint_mode)s
         # Some advanced general statistics are shown in the debug message at the
         # end of the run
         # Make sure it never stops a run
+        # Gather some basic statistics for the run and extracted from the log files.
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
+            log_GV_files =  glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','G*','log_MINT*.txt'))
+            all_log_files = log_GV_files
+        elif mode == 'NLO':
+            log_GV_files =  glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','all_G*','log_MINT*.txt'))
+            all_log_files = log_GV_files
+
+        elif mode == 'LO':
+            log_GV_files = ''
+            all_log_files = glob.glob(pjoin(self.me_dir, \
+                                    'SubProcesses', 'P*','born_G*','log_MINT*.txt'))
+        else:
+            raise aMCatNLOError, 'Running mode %s not supported.'%mode
+
         try:
             message, debug_msg = \
                self.compile_advanced_stats(log_GV_files, all_log_files, message)
@@ -3658,11 +3660,13 @@ RESTART = %(mint_mode)s
                     p_max=0.0
                     p_type='unknown'
                     p_size=len(pdfset)
+                    pdfsetname=self.run_card['lhaid'][j]
             else:
                 p_min=0.0
                 p_max=0.0
                 p_type='none'
                 p_size=len(pdfset)
+                pdfsetname=self.run_card['lhaid'][j]
             pdf_info.append({'cen':p_cen, 'min':p_min, 'max':p_max, \
                              'unc':p_type, 'name':pdfsetname, 'size':p_size, \
                              'label':self.run_card['lhaid'][j]})

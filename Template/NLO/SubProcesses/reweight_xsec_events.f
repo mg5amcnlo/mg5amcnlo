@@ -54,16 +54,16 @@ c
 
       if(do_rwgt_scale)then
          do nn=1,dyn_scale(0)
-            if (lscalevar(i)) then
+            if (lscalevar(nn)) then
                write (*,*) "Including scale uncertainties for"/
-     $              /" dynamical_scale_choice",nn
+     $              /" dynamical_scale_choice",dyn_scale(nn)
                write (*,*) "  - renormalisation scale variation:"
      $              ,(scalevarR(i),i=1,nint(scalevarR(0)))
                write (*,*) "  - factorisation scale variation:"
      $              ,(scalevarF(i),i=1,nint(scalevarF(0)))
             else
                write (*,*) "Including central value for"/
-     $              /" dynamical_scale_choice",nn
+     $              /" dynamical_scale_choice",dyn_scale(nn)
             endif
          enddo
       endif
@@ -71,8 +71,8 @@ c
       if(do_rwgt_pdf)then
          do nn=1,lhaPDFid(0)
             if (lpdfvar(nn)) then
-               write (*,*) "Including PDF with uncertainties for "
-     $              //lhaPDFsetname(nn)
+               write (*,*) "Including central PDF with "/
+     $              /"uncertainties for "//lhaPDFsetname(nn)
             else
                write (*,*) "Including central PDF for "
      $              //lhaPDFsetname(nn)
@@ -454,7 +454,7 @@ c add the weights to the array
       include 'c_weight.inc'
       include 'run.inc'
       include 'reweight0.inc'
-      integer i,pd,lp,iwgt_save,izero,n,nn
+      integer i,pd,lp,iwgt_save,izero,n,nn,iset,imem
       parameter (izero=0)
       double precision mu2_f,mu2_r,pdg2pdf,mu2_q,rwgt_muR_dep_fac
      &     ,xlum,alphas,g,pi
