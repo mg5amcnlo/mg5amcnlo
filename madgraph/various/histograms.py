@@ -1397,7 +1397,7 @@ class HwUList(histograms_PhysicsObjectList):
         types will be kept, and in this specified order for a given identical 
         title. The option 'consider_reweights' selects whether one wants to 
         include all the extra scale/pdf/merging variation weights. Possible values
-        are 'ALL', 'KNOWN_ONES', 'NONE'.
+        are 'ALL' or a list of the return types of the function get_HwU_wgt_label_type().
         The option 'raw_labels' specifies that one wants to import the
         histogram data with no treatment of the weight labels at all
         (this is used for the matplotlib output).
@@ -1490,7 +1490,8 @@ class HwUList(histograms_PhysicsObjectList):
         Accepted type order is a filter to select histograms of only a certain
         type. The option 'consider_reweights' selects whether one wants to 
         include all the extra scale/pdf/merging variation weights.
-        Possible values are 'ALL', 'KNOWN_ONES', 'NONE'."""
+        Possible values are 'ALL' or a list of the return types of the
+        function get_HwU_wgt_label_type()."""
         
         run_nodes = minidom.parse(stream).getElementsByTagName("run")
         all_nodes = dict((int(node.getAttribute('id')),node) for
@@ -1742,10 +1743,8 @@ class HwUList(histograms_PhysicsObjectList):
             new_selected_weights = {}
             for wgt_position, wgt_labels in selected_weights.items():
                 for wgt_label in wgt_labels:
-                    if (consider_reweights not in ['NONE','KNOWN_ONES']) or \
-                       (wgt_label in ['central','stat_error','boundary_xmin','boundary_xmax']) or\
-                       (consider_reweights=='KNOWN_ONES' and \
-                        HwU.get_HwU_wgt_label_type(wgt_label)!='UNKNOWN_TYPE'):
+                    if wgt_label in ['central','stat_error','boundary_xmin','boundary_xmax'] or\
+                       HwU.get_HwU_wgt_label_type(wgt_label) in consider_reweights:
                         try:
                             new_selected_weights[wgt_position].append(wgt_label)
                         except KeyError:
@@ -2827,8 +2826,8 @@ if __name__ == "__main__":
     use_band      = None
     auto_open = True
     ratio_correlations = True
-    consider_reweights = 'KNOWN_ONES'
-    
+    consider_reweights = ['pdfset','merging_scale','murmuf_scales','alpsfact']
+
     def log(msg):
         print "histograms.py :: %s"%str(msg)
     
@@ -2867,7 +2866,7 @@ if __name__ == "__main__":
         no_suffix = True
     
     if '--central_only' in sys.argv:
-        consider_reweights = 'NONE'
+        consider_reweights = []
 
     if '--keep_all_weights' in sys.argv:
         consider_reweights = 'ALL'
@@ -2907,6 +2906,15 @@ if __name__ == "__main__":
         if arg.startswith('--only_'):
             uncertainties= [variation_type_map[arg[7:]]]
             break         
+
+    # Now remove from the weights considered all those not deemed necessary
+    # in view of which uncertainties are selected
+    if isinstance(consider_reweights, list):
+        naming_map={'pdf':'pdfset','scale':'murmuf_scales',
+                  'merging':'merging_scale','alpsfact':'alpsfact'}
+        for key in naming_map:
+            if (not key in uncertainties) and (naming_map[key] in consider_reweights):
+                consider_reweights.remove(naming_map[key])
 
     n_files    = len([_ for _ in sys.argv[1:] if not _.startswith('--')])
     histo_norm = [1.0]*n_files
