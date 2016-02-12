@@ -1723,7 +1723,20 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
         is_clang = 'LLVM' in output
-
+        is_lc = False
+        if is_clang:
+            import platform
+            v, _,_ = platform.mac_ver()
+            if not v:
+                is_lc = True
+            else:
+                v = float(v.rsplit('.')[1])
+                misc.sprint( v)
+                if v >= 9:
+                    is_lc = True
+                else:
+                    is_lc = False
+    
         mod = False #avoid to rewrite the file if not needed
         if not root_dir:
             root_dir = self.dir_path
@@ -1737,13 +1750,19 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     mod = True
                 lines[iline] = CC_result.group(1) + "CXX=" + compiler
             if 'LDFLAGS=-lc++' in line:
-                if is_clang and not 'mmacosx-version' in line:
+                if not is_lc:
+                    lines[iline] = 'LDFLAGS=-lstdc++'
+                    mod = True
+                elif is_clang and not 'mmacosx-version' in line:
                     lines[iline] += " -mmacosx-version-min=10.7"
                     mod=True
                 elif not is_clang and 'mmacosx-version' in line:
                     lines[iline] = lines[iline].replace('-mmacosx-version-min=10.7', '')
                     mod = True
-
+            elif 'LDFLAGS=-lstdc++' in line:
+                if is_lc and is_clang:
+                    lines[iline] = 'LDFLAGS=-lc++  -mmacosx-version-min=10.7'
+                    mod = True
 
         if is_clang:
             CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
