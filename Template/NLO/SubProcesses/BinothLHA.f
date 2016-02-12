@@ -111,7 +111,7 @@ C     reset the amp_split array
         amp_split_finite_ML(i) = 0d0
         amp_split_poles_ML(i,1) = 0d0
         amp_split_poles_ML(i,2) = 0d0
-        prec_found(i) = 1.0d0
+        prec_found(i) = 0d0
       enddo
 c This is no longer needed, because now the Born has the correct symmetry factor:
 c      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
@@ -442,7 +442,7 @@ c Update the statistics using the MadLoop return code (ret_code)
 c Write out the unstable, non-rescued phase-space points (MadLoop return
 c code is in the four hundreds) or the ones that are found by the pole
 c check (only available when not doing MC over hels)
-      do iamp=0,amp_split_size
+      do iamp=1,amp_split_size
          if (.not.firsttime .and. (ret_code/100.eq.4 .or. cpol .or.
      $        prec_found(iamp).gt.0.05d0 .or.
      $        isnan(amp_split_finite_ML(iamp)))) then
@@ -493,7 +493,7 @@ c result. Sometimes this can be an unstable point with a very large
 c weight, screwing up the complete integration afterward.
       if ( ( mod(ret_code,100)/10.eq.4 .or. mod(ret_code,100)/10.eq.3 )
      $     .and. ret_code/100.eq.1) then
-         do iamp=0,amp_split_size
+         do iamp=1,amp_split_size
             amp_split_finite_ML(iamp) = 0d0
          enddo
          virt_wgt=0d0
