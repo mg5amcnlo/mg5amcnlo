@@ -2205,7 +2205,7 @@ RESTART = %(mint_mode)s
                 if scale_pdf_info and self.run_card['nevents']>=10000:
                     if scale_pdf_info[0]:
                         # scale uncertainties
-                        message = message + '\n      Scale variation(s):'
+                        message = message + '\n      Scale variation (computed from events):'
                         for s in scale_pdf_info[0]:
                             if s['unc']:
                                 message = message + \
@@ -2217,7 +2217,7 @@ RESTART = %(mint_mode)s
                                            '\n              %(cen)8.3e pb') % s
                                 
                     if scale_pdf_info[1]:
-                        message = message + '\n      PDF variation(s):'
+                        message = message + '\n      PDF variation (computed from events):'
                         for p in scale_pdf_info[1]:
                             if p['unc']=='none':
                                 message = message + \

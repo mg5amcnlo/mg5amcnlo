@@ -1,7 +1,7 @@
 *     -*-fortran-*-
 
       integer max_contr,max_wgt,max_iproc
-      parameter (max_contr=128,max_wgt=256,max_iproc=100)
+      parameter (max_contr=128,max_wgt=1024,max_iproc=100)
       logical H_event(max_contr)
       integer nFKS(max_contr),itype(max_contr),QCDpower(max_contr)
      $     ,pdg(nexternal,max_contr),pdg_uborn(nexternal,max_contr)
