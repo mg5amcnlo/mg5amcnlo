@@ -1767,18 +1767,19 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     lines[iline] = 'LDFLAGS=-lc++  -mmacosx-version-min=10.7'
                     mod = True
 
-        if is_clang:
+        if is_clang and is_lc:
             CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
             CXXFLAGS_re=re.compile('^(\s*)CXXFLAGS\s*=\s*(.+)\s*$')
             flags= '-O -stdlib=libc++ -mmacosx-version-min=10.7'
             for iline, line in enumerate(lines):
                 CF_result = CFLAGS_re.match(line)
                 CXXF_result = CXXFLAGS_re.match(line)
-                if CF_result:
+                if CF_result and CF_result.group(2) != flags:
                     lines[iline] = CF_result.group(1) + "CFLAGS= " + flags
-                if CXXF_result:
+                    mod=True
+                if CXXF_result and CXXF_result.group(1)!= flags:
                     lines[iline] = CXXF_result.group(1) + "CXXFLAGS= " + flags
-                    
+                    mod=True                    
         if not mod:
             return
         try:
