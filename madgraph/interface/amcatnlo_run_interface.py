@@ -2209,12 +2209,12 @@ RESTART = %(mint_mode)s
                         for s in scale_pdf_info[0]:
                             if s['unc']:
                                 message = message + \
-                                          ('\n          Dynamical_scale_choice %(label)i: '\
-                                           '%(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%%') % s
+                                          ('\n          Dynamical_scale_choice %(label)i (envelope of %(size)s values): '\
+                                           '\n              %(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%%') % s
                             else:
                                 message = message + \
                                           ('\n          Dynamical_scale_choice %(label)i: '\
-                                           '%(cen)8.3e pb') % s
+                                           '\n              %(cen)8.3e pb') % s
                                 
                     if scale_pdf_info[1]:
                         message = message + '\n      PDF variation(s):'
@@ -2222,16 +2222,16 @@ RESTART = %(mint_mode)s
                             if p['unc']=='none':
                                 message = message + \
                                           ('\n          %(name)s (central value only): '\
-                                           '%(cen)8.3e pb') % p
+                                           '\n              %(cen)8.3e pb') % p
                                 
                             elif p['unc']=='unknown':
                                 message = message + \
                                           ('\n          %(name)s (%(size)s members; combination method unknown): '\
-                                           '%(cen)8.3e pb') % p
+                                           '\n              %(cen)8.3e pb') % p
                             else:
                                 message = message + \
-                                          ('\n          %(name)s (using %(unc)s method): '\
-                                           '%(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%% (PDF @ 90%% C.L.)') % p
+                                          ('\n          %(name)s (%(size)s members; using %(unc)s method): '\
+                                           '\n              %(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%% (PDF @ 90%% C.L.)') % p
                         # pdf uncertainties
                     message = message + \
                           '\n      -------------------------------------------------'

@@ -21,6 +21,9 @@ c
 
       subroutine write_lhef_header(ifile,nevents,MonteCarlo)
       implicit none 
+      include 'run.inc'
+      include 'reweight0.inc'
+      integer idwgt,kk,ii,jj,nn,n
       integer ifile,nevents
       character*10 MonteCarlo
 c Scales
@@ -32,6 +35,56 @@ c
      #     '<LesHouchesEvents version="3.0">'
       write(ifile,'(a)')
      #     '  <!--'
+      if (do_rwgt_scale .or. do_rwgt_pdf) then
+         write(ifile,'(a)') '  <initrwgt>'
+         idwgt=1000
+         if (do_rwgt_scale) then
+            do kk=1,dyn_scale(0)
+               write(ifile,'(a,i4,a)') 
+     &              "    <weightgroup type='scale_variation ",
+     &              dyn_scale(kk),"' combine='envelope'>"
+               if (lscalevar(kk)) then
+                  do ii=1,nint(scalevarF(0))
+                     do jj=1,nint(scalevarR(0))
+                        idwgt=idwgt+1
+                        write(ifile,602) "      <weight id='",idwgt,"'>"
+     $                       //" muR=",scalevarR(jj)," muF="
+     $                       ,scalevarF(ii)," </weight>"
+                     enddo
+                  enddo
+               else
+                  idwgt=idwgt+1
+                  write(ifile,602) "      <weight id='",idwgt,"'>"/
+     $                 /" muR=",1d0," muF=",1d0," </weight>"
+               endif
+               write(ifile,'(a)') "    </weightgroup>"
+            enddo
+         endif
+         if (do_rwgt_pdf) then
+            do nn=1,lhaPDFid(0)
+               if (lpdfvar(nn)) then
+                  write(ifile,'(a)') "    <weightgroup "/
+     &                 /"type='PDF_variation "/
+     &                 /trim(adjustl(lhaPDFsetname(nn)))/
+     &                 /"' combine='unknown'>"
+                  do n=0,nmemPDF(nn)
+                     idwgt=idwgt+1
+                     write(ifile,'(a,i4,a,i7,a)') "      <weight id='"
+     $                    ,idwgt,"'> pdfset=",lhaPDFid(nn)+n
+     $                    ," </weight>"
+                  enddo
+               else
+                  write(ifile,'(a)') "    <weightgroup "/
+     &                 /"type='PDF_variation' combine='none'>"
+                  idwgt=idwgt+1
+                  write(ifile,'(a,i4,a,i7,a)') "      <weight id='"
+     $                 ,idwgt,"'> pdfset=",lhaPDFid(nn)," </weight>"
+               endif
+               write(ifile,'(a)') "    </weightgroup>"
+            enddo
+         endif
+         write(ifile,'(a)') '  </initrwgt>'
+      endif
       write(ifile,'(a)')'  <scalesfunctionalform>'
       write(ifile,'(a)')muR_id_str(1:len_trim(muR_id_str))
       write(ifile,'(a)')muF1_id_str(1:len_trim(muF1_id_str))
@@ -48,6 +101,7 @@ c
       write(ifile,'(a)')
      #     '  </header>'
  250  format(1x,i8)
+ 602  format(a,i4,a,e11.5,a,e11.5,a)
       return
       end
 
@@ -187,11 +241,10 @@ c Write here the reweight information if need be
          if (do_rwgt_pdf) then
             do nn=1,lhaPDFid(0)
                if (lpdfvar(nn)) then
-C FIX THIS FIX THIS: HESSIAN VS GAUSSIAN AND OTHERS!
                   write(ifile,'(a)') "    <weightgroup "/
      &                 /"type='PDF_variation "/
      &                 /trim(adjustl(lhaPDFsetname(nn)))/
-     &                 /"' combine='hessian'>"
+     &                 /"' combine='unknown'>"
                   do n=0,nmemPDF(nn)
                      idwgt=idwgt+1
                      write(ifile,'(a,i4,a,i7,a)') "      <weight id='"
@@ -283,7 +336,7 @@ c     find the start of a weightgroup
                  if (index(string,'<weightgroup').ne.0) exit
                  if (index(string,'</initrwgt').ne.0) exit
               enddo
-              if (index(string,"type='scale_variation").eq.0) then
+              if (index(string,"type='scale_variation").ne.0) then
                  do_rwgt_scale=.true.
                  dyn_scale(0)=dyn_scale(0)+1
                  read(ifile,'(a)')string
@@ -294,7 +347,7 @@ c     find the start of a weightgroup
                  do
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
-                    read(string(index(string,'muR=')+5:),*) temp
+                    read(string(index(string,'muR=')+4:),*) temp
                     already_found=.false.
                     do i=1,nint(scalevarR(0))
                        if (temp.eq.scalevarR(i)) already_found=.true.
@@ -303,7 +356,7 @@ c     find the start of a weightgroup
                        scalevarR(0)=scalevarR(0)+1d0
                        scalevarR(nint(scalevarR(0)))=temp
                     endif
-                    read(string(index(string,'muF=')+5:),*) scalevarF(1)
+                    read(string(index(string,'muF=')+4:),*) temp
                     already_found=.false.
                     do i=1,nint(scalevarF(0))
                        if (temp.eq.scalevarF(i)) already_found=.true.
@@ -318,11 +371,12 @@ c     find the start of a weightgroup
                  else
                     lscalevar(dyn_scale(0))=.false.
                  endif
-              elseif (index(string,"type='PDF_variation").eq.0) then
+              elseif (index(string,"type='PDF_variation").ne.0) then
                  do_rwgt_pdf=.true.
                  lhaPDFid(0)=lhaPDFid(0)+1
+                 write (*,*) 'AAA'
+                 nmemPDF(lhaPDFid(0))=-1
                  do 
-                    nmemPDF(lhaPDFid(0))=-1
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
                     nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
@@ -338,6 +392,11 @@ c     find the start of a weightgroup
            enddo
         endif
       enddo
+
+      write (*,*) nmemPDF
+      write (*,*) scalevarR
+      write (*,*) scalevarF
+
 c Works only if the name of the MC is the last line of the comments
       MonteCarlo=string0(1:10)
       call case_trap4(10,MonteCarlo)

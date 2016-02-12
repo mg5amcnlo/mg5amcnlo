@@ -84,7 +84,10 @@ c
             endif
 c Load all the PDF sets (the 1st one has already by loaded by the call
 c to "setrun")
-            if (nn.gt.1) call initpdfsetbynamem(nn,lhaPDFsetname(nn))
+            if (nn.gt.1) then
+               call initpdfsetbynamem(nn,lhaPDFsetname(nn))
+               call numberPDFm(nn,nmemPDF(nn))
+            endif
          enddo
 c start with central member of the first set
          call InitPDFm(1,0)

@@ -200,15 +200,13 @@ C       Fill common block for Les Houches init info
       enddo
       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
 
-      do i=1,lhaPDFid(0)
-         if (lpdfvar(i) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then
+      if (lpdfvar(1) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then
 c fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.
-            call numberPDFm(1,nmemPDF(i))
-         else
-            nmemPDF(i)=0
-         endif
-      enddo
+         call numberPDFm(1,nmemPDF(1))
+      else
+         nmemPDF(1)=0
+      endif
 
       return
  99   write(*,*) 'error in reading'
