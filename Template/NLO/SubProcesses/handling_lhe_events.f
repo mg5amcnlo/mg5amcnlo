@@ -374,7 +374,6 @@ c     find the start of a weightgroup
               elseif (index(string,"type='PDF_variation").ne.0) then
                  do_rwgt_pdf=.true.
                  lhaPDFid(0)=lhaPDFid(0)+1
-                 write (*,*) 'AAA'
                  nmemPDF(lhaPDFid(0))=-1
                  do 
                     read(ifile,'(a)')string
@@ -392,10 +391,6 @@ c     find the start of a weightgroup
            enddo
         endif
       enddo
-
-      write (*,*) nmemPDF
-      write (*,*) scalevarR
-      write (*,*) scalevarF
 
 c Works only if the name of the MC is the last line of the comments
       MonteCarlo=string0(1:10)

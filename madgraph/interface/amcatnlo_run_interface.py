@@ -3626,14 +3626,23 @@ RESTART = %(mint_mode)s
 
         # check if we can use LHAPDF to compute the PDF uncertainty
         if any(self.run_card['reweight_pdf']):
-            try:
-                import lhapdf
-                use_lhapdf=True
-            except ImportError:
+            use_lhapdf=False
+            lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
+                                           stdout=subprocess.PIPE).stdout.read().strip() 
+            candidates=[x[0] for x in os.walk(lhapdf_libdir)]
+            for candidate in candidates:
+                if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                    sys.path.insert(0,pjoin(lhapdf_libdir,'candidate','site-packages'))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError:
+                        sys.path.pop(0)
+                        break
+                
+            if not use_lhapdf:
                 try:
-                    lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
-                                                   stdout=subprocess.PIPE).stdout.read().strip() 
-                    sys.path.append(pjoin(lhapdf_libdir,'python2.7','site-packages'))
                     import lhapdf
                     use_lhapdf=True
                 except ImportError:
@@ -3648,13 +3657,20 @@ RESTART = %(mint_mode)s
             if p_cen != 0.0 and self.run_card['reweight_pdf'][j]:
                 if use_lhapdf:
                     pdfsetname=self.run_card['lhapdfsetname'][2:-2].split("', '")[j]
-                    p=lhapdf.getPDFSet(pdfsetname)
-                    ep=p.uncertainty(pdfset,-1)
-                    p_cen=ep.central
-                    p_min=abs(ep.errminus/p_cen)*100
-                    p_max=abs(ep.errplus/p_cen)*100
-                    p_type=p.errorType
-                    p_size=p.size
+                    try:
+                        p=lhapdf.getPDFSet(pdfsetname)
+                        ep=p.uncertainty(pdfset,-1)
+                        p_cen=ep.central
+                        p_min=abs(ep.errminus/p_cen)*100
+                        p_max=abs(ep.errplus/p_cen)*100
+                        p_type=p.errorType
+                        p_size=p.size
+                    except:
+                        logger.warning("Could not access LHAPDF to compute uncertainties for %s" % pdfsetname)
+                        p_min=0.0
+                        p_max=0.0
+                        p_type='unknown'
+                        p_size=len(pdfset)
                 else:
                     p_min=0.0
                     p_max=0.0
