@@ -618,7 +618,10 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                     for c in l]))
             FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
-            FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
+            FortranExporter.finalize_v4_directory(None,"",False,False,compiler=
+                       {'fortran':self.cmd.options['fortran_compiler'],
+                        'f2py':self.cmd.options['fortran_compiler'],
+                        'cpp':self.cmd.options['fortran_compiler']})
 
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                                                       split_orders=split_orders)
@@ -1160,7 +1163,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             FortranExporter.convert_model_to_mg4(self.full_model,wanted_lorentz,wanted_couplings)
             infos['Process_output'] = time.time()-start
             start=time.time()
-            FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
+            FortranExporter.finalize_v4_directory(None,"",False,False,compiler=
+                       {'fortran':self.cmd.options['fortran_compiler'],
+                        'f2py':self.cmd.options['fortran_compiler'],
+                        'cpp':self.cmd.options['fortran_compiler']})
             infos['HELAS_MODEL_compilation'] = time.time()-start
         
         # Copy the parameter card if provided

@@ -35,10 +35,8 @@ ifeq ($(origin CXX),default)
 endif
 
 UNAME := $(shell uname -s)
-ifeq ($(UNAME), Darwin)
-   ifeq ($(origin LDFLAGS), undefined)
-      LDFLAGS=-lc++
-   endif
+ifeq ($(origin LDFLAGS), undefined)
+     LDFLAGS=-lc++
 endif
 # Options: dynamic, lhapdf
 
@@ -75,7 +73,7 @@ endif
 ifdef lhapdf
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  llhapdf=-lLHAPDF -lstdc++
+  llhapdf=-lLHAPDF 
   reweight_xsec_events_pdf_dummy=
 else
   alfas_functions=alfas_functions

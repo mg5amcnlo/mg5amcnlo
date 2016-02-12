@@ -377,14 +377,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     #===========================================================================
     # Set the compiler to be gfortran for the loop processes.
     #===========================================================================
-    def compiler_choice(self, compiler):
+    def compiler_choice(self, compiler=export_v4.default_compiler):
         """ Different daughter classes might want different compilers.
         Here, the gfortran compiler is used throughout the compilation 
         (mandatory for CutTools written in f90) """
         if isinstance(compiler, str):
-            compiler= {'fortran':compiler, 'f2py':''}
+            fortran_compiler = compiler
+            compiler = export_v4.default_compiler
+            compiler['fortran'] = fortran_compiler
         
-        if not compiler['fortran'] is None and not any([name in compiler['fortran'] for name in \
+        if not compiler['fortran'] is None and not \
+                       any([name in compiler['fortran'] for name in \
                                                          ['gfortran','ifort']]):
             logger.info('For loop processes, the compiler must be fortran90'+\
                         'compatible, like gfortran.')
@@ -392,7 +395,9 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
             self.set_compiler(compiler,True)
         else:
             self.set_compiler(compiler)
-
+        
+        self.set_cpp_compiler(compiler['cpp'])
+    
     def turn_to_mp_calls(self, helas_calls_list):
         # Prepend 'MP_' to all the helas calls in helas_calls_list.
         # Might look like a brutal unsafe implementation, but it is not as 
@@ -1614,14 +1619,8 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             if libpath != "":
                 if tir in ['ninja','pjfry','golem','samurai']:
                     # It is cleaner to use the original location of the libraries
-                    if tir=='ninja' and os.path.exists(pjoin(libpath,'lib%s.a'%tir)) \
-                            and (not any(os.path.exists(pjoin(libpath,
-                            'lib%s.%s'%(tir,ext))) for ext in ['.so','.dylib'])):
-                            link_tir_libs.append('-L%s/ -l%s -lstdc++'%(libpath,tir))
-                            tir_libs.append('%s/lib%s.a'%(libpath,tir))   
-                    else:
-                        link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
-                        tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
+                    tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
                     if tir in ['ninja','golem', 'samurai']:
                         trgt_path = pjoin(os.path.dirname(libpath),'include')
                         to_include = misc.find_includes_path(trgt_path,

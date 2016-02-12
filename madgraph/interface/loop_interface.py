@@ -616,7 +616,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                                            wanted_couplings)
             
         compiler = {'fortran': self.options['fortran_compiler'],
-                    'f2py': self.options['f2py_compiler']}
+                    'f2py': self.options['f2py_compiler'],
+                    'cpp': self.options['cpp_compiler']}
         
         if self._export_format in self.supported_ML_format:
             self._curr_exporter.finalize_v4_directory( \
