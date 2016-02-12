@@ -2231,7 +2231,7 @@ RESTART = %(mint_mode)s
                             else:
                                 message = message + \
                                           ('\n          %(name)s (%(size)s members; using %(unc)s method): '\
-                                           '\n              %(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%% (PDF @ 90%% C.L.)') % p
+                                           '\n              %(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%%') % p
                         # pdf uncertainties
                     message = message + \
                           '\n      -------------------------------------------------'
@@ -3632,7 +3632,7 @@ RESTART = %(mint_mode)s
             candidates=[x[0] for x in os.walk(lhapdf_libdir)]
             for candidate in candidates:
                 if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
-                    sys.path.insert(0,pjoin(lhapdf_libdir,'candidate','site-packages'))
+                    sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
                     try:
                         import lhapdf
                         use_lhapdf=True
@@ -3665,27 +3665,31 @@ RESTART = %(mint_mode)s
                         p_max=abs(ep.errplus/p_cen)*100
                         p_type=p.errorType
                         p_size=p.size
+                        p_conf=p.errorConfLevel
                     except:
                         logger.warning("Could not access LHAPDF to compute uncertainties for %s" % pdfsetname)
                         p_min=0.0
                         p_max=0.0
                         p_type='unknown'
+                        p_conf='unknown'
                         p_size=len(pdfset)
                 else:
                     p_min=0.0
                     p_max=0.0
                     p_type='unknown'
+                    p_conf='unknown'
                     p_size=len(pdfset)
                     pdfsetname=self.run_card['lhaid'][j]
             else:
                 p_min=0.0
                 p_max=0.0
                 p_type='none'
+                p_conf='unknown'
                 p_size=len(pdfset)
                 pdfsetname=self.run_card['lhaid'][j]
             pdf_info.append({'cen':p_cen, 'min':p_min, 'max':p_max, \
                              'unc':p_type, 'name':pdfsetname, 'size':p_size, \
-                             'label':self.run_card['lhaid'][j]})
+                             'label':self.run_card['lhaid'][j], 'conf':p_conf})
 
         scale_pdf_info=[scale_info,pdf_info]
         return scale_pdf_info
