@@ -1573,7 +1573,7 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 C   If a floating point exception was encountered during the reduction,
 C   the result cannot be trusted at all and we hardset all accuracies to 1.0
     IF(FPE_IN_QP_REDUCTION) THEN
-      DO I=1,NSQUAREDSO
+      DO I=0,NSQUAREDSO
         ACC(I)=1.0d0
       ENDDO
     ENDIF
@@ -1646,7 +1646,7 @@ C    A new reduction tool will be used. Reinitialize the FPE flags.
 C   If a floating point exception was encountered during the reduction,
 C   the result cannot be trusted at all and we hardset all accuracies to 1.0
     IF(FPE_IN_DP_REDUCTION) THEN
-      DO I=1,NSQUAREDSO
+      DO I=0,NSQUAREDSO
         ACC(I)=1.0d0
       ENDDO
     ENDIF
