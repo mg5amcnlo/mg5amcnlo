@@ -650,6 +650,9 @@ C
 ## }
        COMMON/%(proc_prefix)sLCOEFS/LOOPCOEFS
 
+      LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
+	  COMMON/%(proc_prefix)sFPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -752,8 +755,15 @@ C     Compute the kinematic matrix
 
 C     Below is the call specifying the kinematic matrix
 	  call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,REAL_S_MAT,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
+
 C     Below is the call without specification of the kinematic matrix
 c      call ninja_tensor_evaluate(TENSORCOEFS,NLOOPLINE,RANK,P_NINJA,M2L,MU_R**2,NINJA_RES,R1,NINJA_STATUS)
+
+C     If a floating point exception was found in Ninja (e.g. exactly zero gram. det.)
+C     Then warn loop_matrix.f so that it will flag this kinematic point as unstable no matter what.
+      IF (NINJA_STATUS.EQ.NINJA_UNSTABLE_KINEMATICS) THEN
+	    FPE_IN_DP_REDUCTION = .TRUE. 
+	  ENDIF
 
 C     Make sure to deallocate the tensor of coefficients
       IF (ALLOCATED(TENSORCOEFS)) THEN
@@ -858,6 +868,9 @@ C
        %(complex_mp_format)s MP_LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
 ## }
        COMMON/%(proc_prefix)sMP_LCOEFS/MP_LOOPCOEFS
+
+      LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
+	  COMMON/%(proc_prefix)sFPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
 
 C ----------
 C BEGIN CODE
@@ -987,6 +1000,12 @@ C     Below is the call specifying the kinematic matrix
 	  call ninja_tensor_evaluate(MP_NINJA_TENSORCOEFS,NLOOPLINE,RANK,MP_REAL_S_MAT_NINJA,MP_P_NINJA,MP_M2L_NINJA,NINJA_SCALE,NINJA_RES,NINJA_R1,NINJA_STATUS)
 C     Below is the call without specification of the kinematic matrix
 c      call ninja_tensor_evaluate(MP_NINJA_TENSORCOEFS,NLOOPLINE,RANK,MP_P_NINJA,MP_M2L_NINJA,NINJA_SCALE,NINJA_RES,NINJA_R1,NINJA_STATUS)
+
+C     If a floating point exception was found in Ninja (e.g. exactly zero gram. det.)
+C     Then warn loop_matrix.f so that it will flag this kinematic point as unstable no matter what.
+      IF (NINJA_STATUS.EQ.NINJA_UNSTABLE_KINEMATICS) THEN
+	    FPE_IN_QP_REDUCTION = .TRUE. 
+	  ENDIF
 
 C     Typecast the result back
 	  R1 = DCMPLX(R1)

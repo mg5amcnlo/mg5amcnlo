@@ -436,6 +436,9 @@ C     For example, the reading of the filters must be done independently by each
 	  data WARNED_LORENTZ_STAB_TEST_OFF/.FALSE./
 	  INTEGER NROTATIONS_DP_BU,NROTATIONS_QP_BU
 
+      LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
+	  data FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION/.FALSE.,.FALSE./      
+	  COMMON/%(proc_prefix)sFPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
 C ----------
 C BEGIN CODE
 C ----------
@@ -1567,6 +1570,13 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 
   IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLReductionLib(I_LIB))) THEN
     CALL %(proc_prefix)sCOMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
+C   If a floating point exception was encountered during the reduction,
+C   the result cannot be trusted at all and we hardset all accuracies to 1.0
+    IF(FPE_IN_QP_REDUCTION) THEN
+      DO I=1,NSQUAREDSO
+        ACC(I)=1.0d0
+      ENDDO
+    ENDIF
 	DO I=0,NSQUAREDSO
 	  ACCURACY(I)=ACC(I)
 	ENDDO
@@ -1579,8 +1589,12 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	  RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.TRUE.,.FALSE.)
 	  NEPS=NEPS+1
       CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)
+      CALL %(proc_prefix)sCOMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
 	  IF(NEPS.LE.10) THEN	  
         WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
+        IF(FPE_IN_QP_REDUCTION) THEN
+          WRITE(*,*) '## The last QP reduction was deemed unstable because a floating point exception was encountered.'        
+        ENDIF
 		IF (NSQUAREDSO.NE.1) THEN
 		  WRITE(*,*) '##Accuracies for each split order, starting with the summed case'
 	      WRITE(*,*) '##DP accuracies (for each split order): ',(TEMP1(I),I=0,NSQUAREDSO)
@@ -1611,6 +1625,9 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	    WRITE(*,*) 'Further output of the details of these unstable PS points will now be suppressed.'
 	  ENDIF
     ELSE
+C    A new reduction tool will be used. Reinitialize the FPE flags.
+	 FPE_IN_DP_REDUCTION=.False.
+	 FPE_IN_QP_REDUCTION=.False.
      I_LIB=INDEX_QP_TOOLS(I_QP_LIB)
      EVAL_DONE(1)=.TRUE.
      DO I=2,MAXSTABILITYLENGTH
@@ -1626,10 +1643,20 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
     ENDIF
   ELSEIF(.NOT.DOING_QP_EVALS)THEN
     CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS)
+C   If a floating point exception was encountered during the reduction,
+C   the result cannot be trusted at all and we hardset all accuracies to 1.0
+    IF(FPE_IN_DP_REDUCTION) THEN
+      DO I=1,NSQUAREDSO
+        ACC(I)=1.0d0
+      ENDDO
+    ENDIF
 	IF(MAXVAL(ACC).GE.MLSTABTHRES) THEN
 	  I_LIB=I_LIB+1
 	  IF((I_LIB.GT.NLOOPLIB.OR.MLReductionLib(I_LIB).EQ.0).AND.QP_TOOLS_AVAILABLE)THEN
 	        I_LIB=INDEX_QP_TOOLS(1)
+C       A new reduction tool will be used. Reinitialize the FPE flags.
+	    FPE_IN_DP_REDUCTION=.False.
+	    FPE_IN_QP_REDUCTION=.False.	    
 		I_QP_LIB=1
 		DOING_QP_EVALS=.TRUE.
 	  	EVAL_DONE(1)=.TRUE.
@@ -1640,7 +1667,10 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 		CTMODE=4
 	  	goto 200
 	  ELSEIF(I_LIB.LE.NLOOPLIB.AND.MLReductionLib(I_LIB).GT.0)THEN
-	        EVAL_DONE(1)=.TRUE.
+C       A new reduction tool will be used. Reinitialize the FPE flags.
+	    FPE_IN_DP_REDUCTION=.False.
+	    FPE_IN_QP_REDUCTION=.False.
+	    EVAL_DONE(1)=.TRUE.
 		DO I=2,MAXSTABILITYLENGTH
 		EVAL_DONE(I)=.FALSE.
 		ENDDO
@@ -1658,14 +1688,18 @@ C END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
 	     RET_CODE_U=SET_RET_CODE_U(MLReductionLib(I_LIB),.FALSE.,.FALSE.)
 	     NEPS=NEPS+1
              IF(NEPS.LE.10) THEN
-             WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
-	     WRITE(*,*) '##W03 WARNING No quadruple precision will be used.'
-              IF (NSQUAREDSO.NE.1) THEN
+               WRITE(*,*) '##W03 WARNING An unstable PS point was',       ' detected.'
+	           WRITE(*,*) '##W03 WARNING No quadruple precision will be used.'
+               IF(FPE_IN_DP_REDUCTION) THEN
+                 WRITE(*,*) '## The last DP reduction was deemed unstable because a floating point exception was encountered.'        
+               ENDIF
+               CALL %(proc_prefix)sCOMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS)
+               IF (NSQUAREDSO.NE.1) THEN
                   WRITE(*,*) 'Accuracies for each split order, starting with the summed case'
               	  WRITE(*,*) 'DP accuracies (for each split order): ',(ACC(I),I=0,NSQUAREDSO)
-              ELSE
-              	WRITE(*,*) 'DP accuracy: ',ACC(1)
-	      ENDIF
+               ELSE
+              WRITE(*,*) 'DP accuracy: ',ACC(1)
+	        ENDIF
               DO J=0,NSQUAREDSO
                   IF (NSQUAREDSO.NE.1.OR.J.NE.0) THEN
                     IF (J.EQ.0) THEN
@@ -2462,6 +2496,12 @@ C     U == 3
 C         Stable with IREGI.
 C     U == 4
 C         Stable with Golem95
+C     U == 5
+C         Stable with Samurai
+C     U == 6
+C         Stable with Ninja in double precision
+C     U == 8
+C         Stable with Ninja in quadruple precision
 C     U == 9
 C         Stable with CutTools in quadruple precision.         
 C
