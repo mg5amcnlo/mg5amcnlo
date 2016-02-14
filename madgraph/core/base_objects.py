@@ -2676,7 +2676,6 @@ class DiagramList(PhysicsObjectList):
         which do not obey the condition """ 
         
         new = []
-        misc.sprint(len(self))
         for tested_diag in self:
             if operator == '==':
                 if tested_diag['orders'][order] == value:
@@ -2684,7 +2683,6 @@ class DiagramList(PhysicsObjectList):
             elif operator == '>':
                 if tested_diag['orders'][order] > value:
                     new.append(tested_diag)                
-        misc.sprint(len(new))
         self[:] = new
         return self
 
