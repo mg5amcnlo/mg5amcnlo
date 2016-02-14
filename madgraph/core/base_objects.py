@@ -2671,6 +2671,24 @@ class DiagramList(PhysicsObjectList):
                     break
         return new_diag_list
 
+    def filter_constrained_orders(self, order, value, operator):
+        """ This function modifies the current object and remove the diagram
+        which do not obey the condition """ 
+        
+        new = []
+        misc.sprint(len(self))
+        for tested_diag in self:
+            if operator == '==':
+                if tested_diag['orders'][order] == value:
+                    new.append(tested_diag)
+            elif operator == '>':
+                if tested_diag['orders'][order] > value:
+                    new.append(tested_diag)                
+        misc.sprint(len(new))
+        self[:] = new
+        return self
+
+
     def get_min_order(self,order):
         """ Return the order of the diagram in the list with the mimimum coupling
         order for the coupling specified """
@@ -2743,6 +2761,8 @@ class Process(PhysicsObject):
         # in the user input. This choice is stored in the dictionary below.
         # Notice that the upper bound is the default
         self['sqorders_types'] = {}
+        # other type of constraint at amplitude level
+        self['constrained_orders'] = {} # {QED: (4,'>')}
         self['has_born'] = True
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
@@ -2768,6 +2788,11 @@ class Process(PhysicsObject):
 
         if name in ['orders', 'overall_orders','squared_orders']:
             Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'constrained_orders':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary" % str(value)            
 
         if name == 'sqorders_types':
             if not isinstance(value, dict):
@@ -2919,6 +2944,7 @@ class Process(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'overall_orders', 'squared_orders',
+                'constrained_orders',
                 'model', 'id', 'required_s_channels', 
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
@@ -2954,9 +2980,31 @@ class Process(PhysicsObject):
 
         # Add orders
         if self['orders']:
-            mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-              for key in self['orders'] if (print_weighted or key!='WEIGHTED') \
+            mystr = mystr + " ".join(['%s%s%s' % (key, 
+                                                '<=' if self['orders'][key] else '=',
+                                                 repr(self['orders'][key])) \
+              for key in self['orders'] if  key!='WEIGHTED' \
               and not key in self['squared_orders'].keys()]) + ' '
+
+        if print_weighted and 'WEIGHTED' in self['orders']:
+            hierarchy = self['model'].get('order_hierarchy')
+            tmp = []
+            hierarchy = hierarchy.items()
+            hierarchy.sort()
+            for key, value in hierarchy:
+                if value>1:
+                    tmp.append('%s*%s' % (value,key))
+                else:
+                    tmp.append('%s' % (key))
+            mystr = mystr + '+'.join(tmp) + '%s%s' % ('<=' if self['orders']['WEIGHTED'] else '=',
+                                              self['orders']['WEIGHTED']) + ' '
+            
+            
+
+        if self['constrained_orders']:
+            mystr = mystr + " ".join('%s%s%d' % (key, type, value) for 
+                                     (key,(value,type)) 
+                                         in self['constrained_orders'].items())  + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -3645,6 +3693,11 @@ class ProcessDefinition(Process):
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
                        for key in sorted(self['orders'])]) + ' '
 
+        if self['constrained_orders']:
+            mystr = mystr + " ".join('%s%s%d' % (key, operator, value) for 
+                                     (key,(value, operator)) 
+                                   in self['constrained_orders'].items()) + ' '
+
         # Add perturbation_couplings
         if self['perturbation_couplings']:
             mystr = mystr + '[ '
@@ -3693,6 +3746,7 @@ class ProcessDefinition(Process):
             'orders': self.get('orders'),
             'sqorders_types': self.get('sqorders_types'),
             'squared_orders': self.get('squared_orders'),
+            'constrained_orders': self.get('constrained_orders'),
             'has_born': self.get('has_born'),
             'required_s_channels': self.get('required_s_channels'),
             'forbidden_onsh_s_channels': self.get('forbidden_onsh_s_channels'),            

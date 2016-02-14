@@ -8,8 +8,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: t > b u d~ g WEIGHTED=5 QED=2 [ real = QCD ]
-C     Process: t > b c s~ g WEIGHTED=5 QED=2 [ real = QCD ]
+C     Process: t > b u d~ g QED<=2 QCD+2*QED<=5 [ real = QCD ]
+C     Process: t > b c s~ g QED<=2 QCD+2*QED<=5 [ real = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -118,8 +118,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: t > b u d~ g WEIGHTED=5 QED=2 [ real = QCD ]
-C     Process: t > b c s~ g WEIGHTED=5 QED=2 [ real = QCD ]
+C     Process: t > b u d~ g QED<=2 QCD+2*QED<=5 [ real = QCD ]
+C     Process: t > b c s~ g QED<=2 QCD+2*QED<=5 [ real = QCD ]
 C     
       IMPLICIT NONE
 C     

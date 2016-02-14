@@ -841,11 +841,19 @@ class Amplitude(base_objects.PhysicsObject):
         list in argument."""
 
         res = copy.copy(diag_list)                  
-
+        
+        # Apply the filtering  on constrained amplitude (== and >)
+        # No need to iterate on this one
+        for name, (value, operator) in self['process'].get('constrained_orders').items():
+            res.filter_constrained_orders(name, value, operator)
+            
+        
+        
+        
         # Iterate the filtering since the applying the constraint on one
         # type of coupling order can impact what the filtering on a previous
         # one (relevant for the '==' type of constraint).
-        while True:   
+        while True: 
             new_res = res.apply_positive_sq_orders(res, 
                                           self['process'].get('squared_orders'), 
                                               self['process']['sqorders_types'])
@@ -857,6 +865,8 @@ class Amplitude(base_objects.PhysicsObject):
                  'Inconsistency in function apply_squared_order_constraints().')
             # Actualizing the list of diagram for the next iteration
             res = new_res
+            
+
 
         # Now treat the negative squared order constraint (at most one)
         neg_orders = [(order, value) for order, value in \
