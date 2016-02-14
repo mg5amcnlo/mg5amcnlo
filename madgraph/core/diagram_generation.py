@@ -841,7 +841,6 @@ class Amplitude(base_objects.PhysicsObject):
         list in argument."""
 
         res = copy.copy(diag_list)                  
-
         # Iterate the filtering since the applying the constraint on one
         # type of coupling order can impact what the filtering on a previous
         # one (relevant for the '==' type of constraint).

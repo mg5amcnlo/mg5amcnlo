@@ -735,6 +735,7 @@ class ReweightInterface(extended_cmd.Cmd):
         pdg = []
         bjx = []
         wgt= []
+        base_wgt = []
         gs=[]
         qcdpower = []
         ref_wgts = [] #for debugging
@@ -776,28 +777,24 @@ class ReweightInterface(extended_cmd.Cmd):
                 new_wgt = [c_wgt.pwgt[0] * R,
                            c_wgt.pwgt[1] * ratio_T,
                            c_wgt.pwgt[2] * ratio_T]
-                
                 wgt.append(new_wgt)
+                base_wgt.append(c_wgt.pwgt[:3])
         
         #change the ordering to the fortran one:
         scales2 = self.invert_momenta(scales2)
         pdg = self.invert_momenta(pdg)
         bjx = self.invert_momenta(bjx)
         wgt = self.invert_momenta(wgt)
+        base_wgt = self.invert_momenta(base_wgt)
         out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+        orig_wgt_check, partial_check = self.combine_wgt(scales2, pdg, bjx, base_wgt, gs, qcdpower, 1., 1.)
+        # try to correct for precision issue
+        avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
+        new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
+                         for i in range(len(avg)))
         
-        #if True and __debug__: #this is only for trivial reweighting
-        #    if not misc.equal(out, orig_wgt,1):
-        #        misc.sprint(event)
-        #        for i, computed in enumerate(partial):
-        #            if not misc.equal(computed, ref_wgts[i], 3):
-        #                misc.sprint("fail since %s != %s for wgt %s " % (computed, ref_wgts[i], i))
-        #                misc.sprint(need_V, R, ratio_T)
-        #        misc.sprint("fail since %s != %s for the sum." % (out, orig_wgt))
-        #        misc.sprint( need_V, R, ratio_T)
-        #        raw_input()
-        
-        return out/orig_wgt*event.wgt
+             
+        return new_out/orig_wgt*event.wgt
         
      
     @staticmethod   
@@ -907,7 +904,7 @@ class ReweightInterface(extended_cmd.Cmd):
             space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                      
         else:
-            subdir = pjoin(self.me_dir,'%_second' % base, 'SubProcesses')
+            subdir = pjoin(self.me_dir,'%s_second' % base, 'SubProcesses')
             if self.me_dir not in sys.path:
                 sys.path.append(self.me_dir)
 
@@ -1170,16 +1167,18 @@ class ReweightInterface(extended_cmd.Cmd):
                 m_opts['lhapdf'] = True
                 m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
                 m_opts['llhapdf'] = subprocess.Popen([mgcmd.options['lhapdf'], '--libs'], 
-                        stdout = subprocess.PIPE).stdout.read().strip().split()[0]
+                         stdout = subprocess.PIPE).stdout.read().strip().split()[0]
             else:
                 lhapdf = False
                 lhapdfversion = 0
-
-            path = pjoin(path_me,'rw_mevirt', 'Source', 'make_opts')
-            
+ 
+            path = pjoin(path_me,'rw_mevirt', 'Source', 'make_opts')             
             common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)
-
+ 
+         
             
+            
+            mgcmd.exec_cmd(commandline, precmd=True)        
             logger.info('Done %.4g' % (time.time()-start))
 
             # now store the id information             

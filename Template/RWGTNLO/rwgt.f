@@ -91,13 +91,13 @@ c call the PDFs
          LP=SIGN(1,save_LPP(1))
          pd=pdg(1,i)
          if (pd.eq.21) pd=0
-c         xlum=xlum*PDG2PDF(ABS(save_LPP(1)),pd*LP,bjx(1,i)
-c     &           ,DSQRT(mu2_f))
+         xlum=xlum*PDG2PDF(ABS(save_LPP(1)),pd*LP,bjx(1,i)
+     &           ,DSQRT(mu2_f))
          LP=SIGN(1,save_LPP(2))
          pd=pdg(2,i)
          if (pd.eq.21) pd=0
-c         xlum=xlum*PDG2PDF(ABS(save_LPP(2)),pd*LP,bjx(2,i)
-c     &           ,DSQRT(mu2_f))
+         xlum=xlum*PDG2PDF(ABS(save_LPP(2)),pd*LP,bjx(2,i)
+     &           ,DSQRT(mu2_f))
 c         write(*,*) "xlum", xlum
 c add the weights to the array
          add_wgt =  xlum * (wgt(1,i)+wgt(2,i)*log(mu2_r
