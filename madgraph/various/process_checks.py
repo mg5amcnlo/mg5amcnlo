@@ -1230,6 +1230,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
 
+        # If True, then force three PS points only and skip the test on
+        # unpolarized PS point 
+        make_it_quick=False
+
         if options and 'split_orders' in options.keys():
             split_orders = options['split_orders']
         else:
@@ -1269,6 +1273,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         if not res_timings['Initialization']==None:
             time_per_ps_estimate = (res_timings['Initialization']/4.0)/2.0
+        elif make_it_quick:
+            time_per_ps_estimate = -1.0            
         else:
             # We cannot estimate from the initialization, so we run just a 3
             # PS point run to evaluate it.
@@ -1306,8 +1312,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_tot_hel']=len(helicities)
         
         # We aim at a 30 sec run
-        target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,20)
-
+        if not make_it_quick:
+            target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,50)
+        else:
+            target_pspoints_number = 10
+        target_pspoints_number =3
+        
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
         
@@ -1315,19 +1325,26 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                           read_ps = False, npoints = target_pspoints_number*2, \
                        hel_config = contributing_hel, split_orders=split_orders)
         compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
+        
         if compile_time == None: return None
+        
         res_timings['run_polarized_total']=\
                (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)
 
-        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number, hel_config = -1,
-                                                      split_orders=split_orders)
-        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name, 
-                                                                  checkRam=True)
-        if compile_time == None: return None
-        res_timings['run_unpolarized_total']=\
-                   (run_time-res_timings['Booting_time'])/target_pspoints_number
-        res_timings['ram_usage'] = ram_usage
+        if make_it_quick:
+            res_timings['run_unpolarized_total'] = 1.0
+            res_timings['ram_usage'] = 0.0
+        else:
+            MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+                 read_ps = False, npoints = target_pspoints_number, hel_config = -1,
+                                                          split_orders=split_orders)
+            compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name, 
+                                                                      checkRam=True)
+
+            if compile_time == None: return None
+            res_timings['run_unpolarized_total']=\
+                       (run_time-res_timings['Booting_time'])/target_pspoints_number
+            res_timings['ram_usage'] = ram_usage       
         
         if not self.loop_optimized_output:
             return res_timings
@@ -1338,13 +1355,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # So we modify loop_matrix.f in order to skip the loop evaluation phase.
         self.skip_loop_evaluation_setup(dir_name,skip=True)
 
-        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number, hel_config = -1,
-                                                      split_orders=split_orders)
-        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
-        if compile_time == None: return None
-        res_timings['run_unpolarized_coefs']=\
-                   (run_time-res_timings['Booting_time'])/target_pspoints_number
+        if make_it_quick:
+            res_timings['run_unpolarized_coefs'] = 1.0
+        else:
+            MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+                 read_ps = False, npoints = target_pspoints_number, hel_config = -1,
+                                                          split_orders=split_orders)
+            compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
+            if compile_time == None: return None
+            res_timings['run_unpolarized_coefs']=\
+                       (run_time-res_timings['Booting_time'])/target_pspoints_number
         
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                           read_ps = False, npoints = target_pspoints_number*2, \
