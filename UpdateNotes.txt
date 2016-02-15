@@ -6,6 +6,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.3.4(XX/XX/XX)
         RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
+        OM: In MLM matching, fix a bug where the alpha_s reweighting was not fully applied on some events. 
+            (This was leading to effects smaller than the theoretical uncertainty)
         OM: Fixing the problem of using lhapdf6 on Mac
         MZ: Faster interface for LHAPDF6
         OM: Add support of epsilon_ijk in MadSpin

@@ -792,8 +792,7 @@ class ReweightInterface(extended_cmd.Cmd):
         avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
         new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
                          for i in range(len(avg)))
-        
-             
+            
         return new_out/orig_wgt*event.wgt
         
      
