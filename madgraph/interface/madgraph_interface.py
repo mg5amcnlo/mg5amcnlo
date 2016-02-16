@@ -5421,7 +5421,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             logger.warning("We recommend that you add to the following paths"+\
              " to your environment variables, so that you are guaranteed that"+\
              " at runtime, MG5_aMC will use the tools you have just installed"+\
-             " and not some other versions installed elsewhere on your system:"+\
+             " and not some other versions installed elsewhere on your system.\n"+\
+             "You can do so by running the following command in your terminal:"
              "\n   %s"%modification_line) 
             logger.warning("==========")
     
