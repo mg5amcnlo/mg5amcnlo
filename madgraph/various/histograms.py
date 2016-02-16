@@ -272,12 +272,6 @@ class BinList(histograms_PhysicsObjectList):
                         raise MadGraph5Error, "Argument '%s' for BinList property '%s'"\
                                  %(str(value),name)+' must be a string, an '+\
                                                   'integer or a tuple of float.'
-                    if isinstance(label, tuple):
-                        for elem in label:
-                            if not isinstance(elem, float):
-                                raise MadGraph5Error, "Argument "+\
-                            "'%s' for BinList property '%s'"%(str(value),name)+\
-                           ' can be a tuple, but it must be filled with floats.'
                                 
    
         super(BinList, self).__setattr__(name, value)    
@@ -628,6 +622,7 @@ class HwU(Histogram):
                                    '(?P<histo_name>(\S|(\s(?!\s*")))+)\s*"\s*$')
     # A given weight specifier
     a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+    a_int_re = '[\+|-]?\d+'
     histo_bin_weight_re = re.compile('(?P<weight>%s)'%a_float_re)
     # The end of a plot
     histo_end_re = re.compile(r'^\s*<\\histogram>\s*$')
@@ -635,6 +630,11 @@ class HwU(Histogram):
     weight_label_scale = re.compile('^\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
                    '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
     weight_label_PDF = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s*$')
+    weight_label_scale_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
+                                        '\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
+                                        '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
+    weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\d+)\s*$')
+    
     
     class ParseError(MadGraph5Error):
         """a class for histogram data parsing errors"""
@@ -693,9 +693,14 @@ class HwU(Histogram):
             if isinstance(label, str):
                 others.append(label)
             elif isinstance(label, tuple):
-                others.append('muR=%4.2f muF=%4.2f'%(label[0],label[1]))
-            elif isinstance(label, int):
-                others.append('PDF= %d'%label)
+                if label[0] == 'scale':
+                    others.append('muR=%6.3f muF=%6.3f'%(label[1],label[2]))
+                elif label[0] == 'scale_adv':
+                    others.append('dyn=%i muR=%6.3f muF=%6.3f'%(label[1],label[2],label[3]))
+                elif label[0] == 'pdf':
+                    others.append('PDF=%i'%(label[1]))
+                elif label[0] == 'pdf_adv':
+                    others.append('PDF=%i %i'%(label[1],label[2]))
         
         return res+' & '.join(others)
 
@@ -785,11 +790,23 @@ class HwU(Histogram):
                 for i, h in enumerate(header):
                     scale_wgt = HwU.weight_label_scale.match(h)
                     PDF_wgt   = HwU.weight_label_PDF.match(h)
-                    if scale_wgt:
-                        header[i] = (float(scale_wgt.group('mur_fact')),
+                    scale_wgt_adv = HwU.weight_label_scale_adv.match(h)
+                    PDF_wgt_adv   = HwU.weight_label_PDF_adv.match(h)
+                    if scale_wgt_adv:
+                        header[i] = ('scale_adv',
+                                     int(scale_wgt_adv.group('dyn_choice')),
+                                     float(scale_wgt_adv.group('mur_fact')),
+                                     float(scale_wgt_adv.group('muf_fact')))
+                    elif scale_wgt:
+                        header[i] = ('scale',
+                                     float(scale_wgt.group('mur_fact')),
                                      float(scale_wgt.group('muf_fact')))
+                    elif PDF_wgt_adv:
+                        header[i] = ('pdf_adv',
+                                     int(PDF_wgt_adv.group('PDF_set')),
+                                     int(PDF_wgt_adv.group('PDF_set_cen')))
                     elif PDF_wgt:
-                        header[i] = int(PDF_wgt.group('PDF_set'))
+                        header[i] = ('pdf',int(PDF_wgt.group('PDF_set')))
 
                 return header
             
@@ -933,10 +950,10 @@ class HwU(Histogram):
 
         if type.upper()=='MUR':
             new_wgt_label  = 'delta_mur'
-            scale_position = 0
+            scale_position = 1
         elif type.upper()=='MUF':
             new_wgt_label = 'delta_muf'
-            scale_position = 1
+            scale_position = 2
         elif type.upper()=='ALL_SCALE':
             new_wgt_label = 'delta_mu'
             scale_position = -1
@@ -947,92 +964,142 @@ class HwU(Histogram):
             raise MadGraph5Error, ' The function set_uncertainty can'+\
               " only handle the scales 'mur', 'muf', 'all_scale' or 'pdf'."       
         
+        wgts_to_consider=[]
+        label_to_consider=[]
         if scale_position > -2:
-            ## this is for the usual 9-point variations
-            wgts_to_consider = [ label for label in self.bins.weight_labels if \
-                                                      isinstance(label, tuple) ]
+            ##########: advanced scale
+            dyn_scales=[label[1] for label in self.bins.weight_labels if \
+                        isinstance(label,tuple) and label[0]=='scale_adv']
+            # remove doubles in list but keep the order!
+            dyn_scales=[ii for n,ii in enumerate(dyn_scales) if ii not in dyn_scales[:n]]
+            for dyn_scale in dyn_scales:
+                wgts=[label for label in self.bins.weight_labels if \
+                      isinstance(label,tuple) and label[0]=='scale_adv' and label[1]==dyn_scale]
+                if wgts:
+                    wgts_to_consider.append(wgts)
+                    label_to_consider.append(dyn_scale)
+            ##########: normal scale
+            wgts=[label for label in self.bins.weight_labels if \
+                                 isinstance(label,tuple) and label[0]=='scale']
             ## this is for the 7-point variations (excludes mur/muf = 4, 1/4)
             #wgts_to_consider = [ label for label in self.bins.weight_labels if \
-            #                                          isinstance(label, tuple) and \
+            #                     isinstance(label,tuple) and label[0]=='scale' and \
             #                                  not (0.5 in label and 2.0 in label)]
+            if wgts:
+                wgts_to_consider.append(wgts)
+                label_to_consider.append('none')
+            ##########: remove renormalisation OR factorisation scale dependence...
             if scale_position > -1:
-                wgts_to_consider = [ lab for lab in wgts_to_consider if \
-                    (lab[scale_position]!=1.0 and all(k==1.0 for k in \
-                                lab[:scale_position]+lab[scale_position+1:]) ) ]
+                for wgts in wgts_to_consider:
+                    wgts_to_consider.remove(wgts)
+                    wgts = [ label for label in wgts if label[-scale_position]==1.0 ]
+                    wgts_to_consider.append(wgts)
+
         elif scale_position == -2:
-            wgts_to_consider = [ label for label in self.bins.weight_labels if \
-                                                      isinstance(label, int) ]            
+            ##########: advanced PDF
+            pdf_sets=[label[2] for label in self.bins.weight_labels if \
+                        isinstance(label,tuple) and label[0]=='pdf_adv']
+            # remove doubles in list but keep the order!
+            pdf_sets=[ii for n,ii in enumerate(pdf_sets) if ii not in pdf_sets[:n]]
+            for pdf_set in pdf_sets:
+                wgts=[label for label in self.bins.weight_labels if \
+                      isinstance(label,tuple) and label[0]=='pdf_adv' and label[2]==pdf_set]
+                if wgts:
+                    wgts_to_consider.append(wgts)
+                    label_to_consider.append(pdf_set)
+            ##########: normal PDF
+            wgts = [ label for label in self.bins.weight_labels if \
+                     isinstance(label, int) and label[0]=='pdf']            
+            if wgts:
+                wgts_to_consider.append(wgts)
+                label_to_consider.append('none')
         if len(wgts_to_consider)==0:
             # No envelope can be constructed, it is not worth adding the weights
-            return None
+            return (None,None)
         else:
             # Place the new weight label last before the first tuple
-            new_wgt_labels  = ['%s_min @aux'%new_wgt_label,
-                                                    '%s_max @aux'%new_wgt_label]
-            try:
-                position = [(not isinstance(lab, str)) for lab in \
-                                            self.bins.weight_labels].index(True)
-                self.bins.weight_labels = self.bins.weight_labels[:position]+\
-                  new_wgt_labels + self.bins.weight_labels[position:]
-            except ValueError:
-                position = len(self.bins.weight_labels)
-                self.bins.weight_labels.extend(new_wgt_labels)
+            position=[]
+            labels=[]
+            for i,label in enumerate(label_to_consider):
+                wgts=wgts_to_consider[i]
+                if label != 'none':
+                    new_wgt_labels=['%s_cen %i @aux' % (new_wgt_label,label),
+                                    '%s_min %i @aux' % (new_wgt_label,label),
+                                    '%s_max %i @aux' % (new_wgt_label,label)]
+                else:
+                    new_wgt_labels=['%s_cen @aux' % new_wgt_label,
+                                    '%s_min @aux' % new_wgt_label,
+                                    '%s_max @aux' % new_wgt_label]
+                try:
+                    pos=[(not isinstance(lab, str)) for lab in \
+                                self.bins.weight_labels].index(True)
+                    position.append(pos)
+                    labels.append(label)
+                    self.bins.weight_labels = self.bins.weight_labels[:pos]+\
+                                              new_wgt_labels + self.bins.weight_labels[pos:]
+                except ValueError:
+                    pos=len(self.bins.weight_labels)
+                    position.append(pos)
+                    labels.append(label)
+                    self.bins.weight_labels.extend(new_wgt_labels)
 
             # Now add the corresponding weight to all Bins
-            for bin in self.bins:
-                if type!='PDF':
-                    bin.wgts[new_wgt_labels[0]] = min(bin.wgts[label] \
-                                                  for label in wgts_to_consider)
-                    bin.wgts[new_wgt_labels[1]] = max(bin.wgts[label] \
-                                                  for label in wgts_to_consider)
-                else:
-                    pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts_to_consider)]
-                    pdf_up     = 0.0
-                    pdf_down   = 0.0
-                    cntrl_val  = bin.wgts['central']
-                    if wgts_to_consider[0] <= 90000:
-                        # use Hessian method (CTEQ & MSTW)
-                        if len(pdfs)>2:
-                            for i in range(int((len(pdfs)-1)/2)):
-                                pdf_up   += max(0.0,pdfs[2*i+1]-cntrl_val,
-                                                      pdfs[2*i+2]-cntrl_val)**2
-                                pdf_down += max(0.0,cntrl_val-pdfs[2*i+1],
-                                                       cntrl_val-pdfs[2*i+2])**2
-                            pdf_up   = cntrl_val + math.sqrt(pdf_up)
-                            pdf_down = cntrl_val - math.sqrt(pdf_down)
-                        else:
-                            pdf_up   = bin.wgts[pdfs[0]]
-                            pdf_down = bin.wgts[pdfs[0]]
-                    elif wgts_to_consider[0] in range(90200, 90303) or \
-                         wgts_to_consider[0] in range(90400, 90433) or \
-                         wgts_to_consider[0] in range(90700, 90801) or \
-                         wgts_to_consider[0] in range(90900, 90931) or \
-                         wgts_to_consider[0] in range(91200, 91303) or \
-                         wgts_to_consider[0] in range(91400, 91433) or \
-                         wgts_to_consider[0] in range(91700, 91801) or \
-                         wgts_to_consider[0] in range(91900, 90931):
-                        # PDF4LHC15 Hessian sets
-                        pdf_stdev = 0.0
-                        for pdf in pdfs[1:]:
-                            pdf_stdev += (pdf - cntrl_val)**2
-                        pdf_stdev = math.sqrt(pdf_stdev)
-                        pdf_up   = cntrl_val+pdf_stdev
-                        pdf_down = cntrl_val-pdf_stdev
+                for bin in self.bins:
+                    if type!='PDF':
+                        bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
+                        bin.wgts[new_wgt_labels[1]] = min(bin.wgts[label] \
+                                                      for label in wgts)
+                        bin.wgts[new_wgt_labels[2]] = max(bin.wgts[label] \
+                                                      for label in wgts)
                     else:
-                        # use Gaussian method (NNPDF)
-                        pdf_stdev = 0.0
-                        for pdf in pdfs[1:]:
-                            pdf_stdev += (pdf - cntrl_val)**2
-                        pdf_stdev = math.sqrt(pdf_stdev/float(len(pdfs)-2))
-                        pdf_up   = cntrl_val+pdf_stdev
-                        pdf_down = cntrl_val-pdf_stdev
-                    # Finally add them to the corresponding new weight
-                    bin.wgts[new_wgt_labels[0]] = pdf_down
-                    bin.wgts[new_wgt_labels[1]] = pdf_up
-            
+                        pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
+                        pdf_up     = 0.0
+                        pdf_down   = 0.0
+                        cntrl_val  = bin.wgts['central']
+                        if wgts[0] <= 90000:
+                            # use Hessian method (CTEQ & MSTW)
+                            if len(pdfs)>2:
+                                for i in range(int((len(pdfs)-1)/2)):
+                                    pdf_up   += max(0.0,pdfs[2*i+1]-cntrl_val,
+                                                          pdfs[2*i+2]-cntrl_val)**2
+                                    pdf_down += max(0.0,cntrl_val-pdfs[2*i+1],
+                                                           cntrl_val-pdfs[2*i+2])**2
+                                pdf_up   = cntrl_val + math.sqrt(pdf_up)
+                                pdf_down = cntrl_val - math.sqrt(pdf_down)
+                            else:
+                                pdf_up   = bin.wgts[pdfs[0]]
+                                pdf_down = bin.wgts[pdfs[0]]
+                        elif wgts[0] in range(90200, 90303) or \
+                             wgts[0] in range(90400, 90433) or \
+                             wgts[0] in range(90700, 90801) or \
+                             wgts[0] in range(90900, 90931) or \
+                             wgts[0] in range(91200, 91303) or \
+                             wgts[0] in range(91400, 91433) or \
+                             wgts[0] in range(91700, 91801) or \
+                             wgts[0] in range(91900, 90931):
+                            # PDF4LHC15 Hessian sets
+                            pdf_stdev = 0.0
+                            for pdf in pdfs[1:]:
+                                pdf_stdev += (pdf - cntrl_val)**2
+                            pdf_stdev = math.sqrt(pdf_stdev)
+                            pdf_up   = cntrl_val+pdf_stdev
+                            pdf_down = cntrl_val-pdf_stdev
+                        else:
+                            # use Gaussian method (NNPDF)
+                            pdf_stdev = 0.0
+                            for pdf in pdfs[1:]:
+                                pdf_stdev += (pdf - cntrl_val)**2
+                            pdf_stdev = math.sqrt(pdf_stdev/float(len(pdfs)-2))
+                            pdf_up   = cntrl_val+pdf_stdev
+                            pdf_down = cntrl_val-pdf_stdev
+                        # Finally add them to the corresponding new weight
+                        bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
+                        bin.wgts[new_wgt_labels[1]] = pdf_down
+                        bin.wgts[new_wgt_labels[2]] = pdf_up
+                
             # And return the position in self.bins.weight_labels of the first
             # of the two new weight label added.
-            return position                 
+            return (position,labels)
     
     def rebin(self, n_rebin):
         """ Rebin the x-axis so as to merge n_rebin consecutive bins into a 
@@ -1539,14 +1606,14 @@ set style data histeps
 
         # Compute scale variation envelope for all diagrams
         if 'scale' in uncertainties:
-            mu_var_pos  = self[0].set_uncertainty(type='all_scale')
+            (mu_var_pos,mu)  = self[0].set_uncertainty(type='all_scale')
         else:
-            mu_var_pos = None
+            (mu_var_pos,mu) = (None,None)
         
         if 'pdf' in uncertainties: 
-            PDF_var_pos = self[0].set_uncertainty(type='PDF')
+            (PDF_var_pos,pdf) = self[0].set_uncertainty(type='PDF')
         else:
-            PDF_var_pos = None
+            (PDF_var_pos,pdf) = (None,None)
 
         no_uncertainties =  (PDF_var_pos is None or 'PDF' not in uncertainties) \
                      and (mu_var_pos is None or 'scale' not in uncertainties) and \
@@ -1554,12 +1621,12 @@ set style data histeps
 
         for histo in self[1:]:
             if (not mu_var_pos is None) and \
-                          mu_var_pos != histo.set_uncertainty(type='all_scale'):
+                          mu_var_pos != histo.set_uncertainty(type='all_scale')[0]:
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' scale dependencies. It is required to be able to output them'+\
                  ' together.'
             if (not PDF_var_pos is None) and\
-                               PDF_var_pos != histo.set_uncertainty(type='PDF'):
+                               PDF_var_pos != histo.set_uncertainty(type='PDF')[0]:
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' PDF dependencies. It is required to be able to output them'+\
                  ' together.'
@@ -1613,11 +1680,15 @@ plot \\"""
         # range for the y-axis.
         wgts_to_consider = ['central']
         if not mu_var_pos is None:
-            wgts_to_consider.append(self[0].bins.weight_labels[mu_var_pos])
-            wgts_to_consider.append(self[0].bins.weight_labels[mu_var_pos+1])
+            for mu_var in mu_var_pos:
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var])
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var+1])
+                wgts_to_consider.append(self[0].bins.weight_labels[mu_var+2])
         if not PDF_var_pos is None:
-            wgts_to_consider.append(self[0].bins.weight_labels[PDF_var_pos])
-            wgts_to_consider.append(self[0].bins.weight_labels[PDF_var_pos+1])
+            for PDF_var in PDF_var_pos:
+                wgts_to_consider.append(self[0].bins.weight_labels[PDF_var])
+                wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+1])
+                wgts_to_consider.append(self[0].bins.weight_labels[PDF_var+2])
 
         (xmin, xmax) = HwU.get_x_optimal_range(self[:2],\
                                                weight_labels = wgts_to_consider)
@@ -1669,36 +1740,38 @@ plot \\"""
         
         # Now add the main layout
         plot_lines = []
+        n=-1
         for i, histo in enumerate(self[:n_histograms]):
-            color_index = i%self.number_line_colors_defined+1
+            n=n+1
+            color_index = n%self.number_line_colors_defined+1
             title = '%d'%(i+1) if histo.type is None else ('NLO' if \
                                    histo.type.split()[0]=='NLO' else histo.type)
             plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
-%(HwU_name,block_position+i,color_index,histo.get_HwU_histogram_name(format='human')
-if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))))
+%(HwU_name,block_position+i,color_index,\
+'%s central value' % title))
             if 'statistical' in uncertainties:
                 plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
 %(HwU_name,block_position+i,color_index))
             # And show scale variation if available
             if not mu_var_pos is None:
-                plot_lines.extend([
+                for j,mu_var in enumerate(mu_var_pos):
+                    if j!=0:
+                        n=n+1
+                        plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,mu_var_pos+3,color_index+10,'%s scale variation'\
-%title),
-"'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-%(HwU_name,block_position+i,mu_var_pos+4,color_index+10),
-                ])
+%(HwU_name,block_position+i,mu_var+3,color_index+j,\
+'%s dynamical scale choice %s' % (title,mu[j])))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
-                plot_lines.extend([
+                for j,PDF_var in enumerate(PDF_var_pos):
+                    if j!=0:
+                        n=n+1
+                        plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,PDF_var_pos+3,color_index+20,'%s PDF variation'\
-%title),
-"'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var_pos+4,color_index+20),
-                ])
+%(HwU_name,block_position+i,PDF_var+3,color_index+j,\
+'%s PDF set %s' % (title,pdf[j])))
 
         # Add the plot lines
         gnuplot_out.append(',\\\n'.join(plot_lines))
@@ -1758,7 +1831,7 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
         replacement_dic['set_format_y'] = 'unset format'
                                 
         replacement_dic['set_histo_label'] = \
-         'set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13'
+         'set label "Relative uncertainties (scale is dashed; PDF is dotted)" font ",9" at graph 0.03, graph 0.13'
 #        'set label "Relative uncertainties" font ",9" at graph 0.79, graph 0.13'
         # Simply don't add these lines if there are no uncertainties.
         # This meant uncessary extra work, but I no longer car at this point
@@ -1767,26 +1840,36 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
         
         # Now add the first subhistogram
         plot_lines = ["0.0 ls 999 title ''"]
+        n=-1
         for i, histo in enumerate(self[:n_histograms]):
-            color_index = i%self.number_line_colors_defined+1
+            n=n+1
+            color_index = n%self.number_line_colors_defined+1
             if 'statistical' in uncertainties:
                plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls %d title ''"%\
 (HwU_name,block_position+i,color_index))
         # Then the scale variations
             if not mu_var_pos is None:
-                plot_lines.extend([
+                for j,mu_var in enumerate(mu_var_pos):
+                    if j!=0: n=n+1
+                    plot_lines.extend([
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,mu_var_pos+3,color_index+10),
+%(HwU_name,block_position+i,mu_var+3,color_index+j),
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,mu_var_pos+4,color_index+10)
+%(HwU_name,block_position+i,mu_var+4,color_index+10+j),
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,mu_var+5,color_index+10+j)
                 ])
             if not PDF_var_pos is None:
-                plot_lines.extend([
+                for j,PDF_var in enumerate(PDF_var_pos):
+                    if j!=0: n=n+1
+                    plot_lines.extend([
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var_pos+3,color_index+20),
+%(HwU_name,block_position+i,PDF_var+3,color_index+j),
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var_pos+4,color_index+20)
+%(HwU_name,block_position+i,PDF_var+4,color_index+20+j),
+"'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
+%(HwU_name,block_position+i,PDF_var+5,color_index+20+j)
                 ])
         
         # Add the plot lines
@@ -1806,7 +1889,7 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
             '(2)' if (len(self)-n_histograms)==1 else 
             '((2) to (%d))'%(len(self)-n_histograms+1),
             '(1)' if self[0].type==None else '%s'%('NLO' if \
-            self[0].type.split()[0]=='NLO' else self[0].type))
+            self[0].type.split()[0]=='NLO' else self[0].type))+' central value'
 
         ratio_name_short = ratio_name_long
             
@@ -1837,10 +1920,18 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
         gnuplot_out.append(subhistogram_header%replacement_dic)
 
         plot_lines = []
+        n=-1
+        n=n+1
+        if not mu_var_pos is None:
+            for j,mu_var in enumerate(mu_var_pos):
+                if j!=0: n=n+1
+        if not PDF_var_pos is None:
+            for j,PDF_var in enumerate(PDF_var_pos):
+                if j!=0: n=n+1
         for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
+            n=n+1
             block_ratio_pos = block_position+n_histograms+i_histo_ratio
-            color_index     = color_index = (i_histo_ratio+1)%\
-                                               self.number_line_colors_defined+1
+            color_index     = n%self.number_line_colors_defined+1
             # Now add the subhistograms
             plot_lines.extend(["1.0 ls 999 title ''",
     "'%s' index %d using (($1+$2)/2):3 ls %d title ''"%\
@@ -1851,18 +1942,26 @@ if i==0 else (histo.type if histo.type else 'central value for plot (%d)'%(i+1))
     (HwU_name,block_ratio_pos,color_index))
             # Then the scale variations
             if not mu_var_pos is None:
-                plot_lines.extend([
+                for j,mu_var in enumerate(mu_var_pos):
+                    if j!=0: n=n+1
+                    plot_lines.extend([
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,mu_var_pos+3,10+color_index),
+    %(HwU_name,block_ratio_pos,mu_var+3,color_index+j),
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,mu_var_pos+4,10+color_index)
+    %(HwU_name,block_ratio_pos,mu_var+4,10+color_index+j),
+    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+    %(HwU_name,block_ratio_pos,mu_var+5,10+color_index+j)
                 ])
             if not PDF_var_pos is None:
-                plot_lines.extend([
+                for j,PDF_var in enumerate(PDF_var_pos):
+                    if j!=0: n=n+1
+                    plot_lines.extend([
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDF_var_pos+3,20+color_index),
+    %(HwU_name,block_ratio_pos,PDF_var+3,color_index+j),
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDF_var_pos+4,20+color_index)
+    %(HwU_name,block_ratio_pos,PDF_var+4,20+color_index+j),
+    "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
+    %(HwU_name,block_ratio_pos,PDF_var+5,20+color_index+j)
                 ])
         
         # Add the plot lines

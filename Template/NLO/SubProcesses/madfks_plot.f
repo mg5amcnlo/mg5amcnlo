@@ -6,7 +6,7 @@ c Wrapper routines for the fixed order analyses
       include 'reweight0.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*28 weights_info(max_weight)
+      character*30 weights_info(max_weight)
       integer i,npdfs,ii,jj,n,kk,nn
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
@@ -25,27 +25,27 @@ c set the weights_info string for scale variations
                      nwgt=nwgt+1
                      if (ickkw.ne.-1) then
                         write(weights_info(nwgt),
-     &                                '(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+     &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
      $                       "dyn=",dyn_scale(kk),"muR=",scalevarR(jj)
-     $                       ," muF=",scalevarF(ii)
+     $                       ,"muF=",scalevarF(ii)
                      else
                         write(weights_info(nwgt),
-     &                                '(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+     &                                '(a4,i4,x,a4,f6.3,x,a4,f6.3)')
      $                       "dyn=",dyn_scale(kk),"muS=",scalevarR(jj)
-     $                       ," muH=",scalevarF(ii)
+     $                       ,"muH=",scalevarF(ii)
                      endif
                   enddo
                enddo
             else
                nwgt=nwgt+1
                if (ickkw.ne.-1) then
-                  write(weights_info(nwgt),'(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+                  write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
      $                 "dyn=",dyn_scale(kk),"muR=",scalevarR(1)
-     $                 ," muF=",scalevarF(1)
+     $                 ,"muF=",scalevarF(1)
                else
-                  write(weights_info(nwgt),'(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+                  write(weights_info(nwgt),'(a4,i4,x,a4,f6.3,x,a4,f6.3)')
      $                 "dyn=",dyn_scale(kk),"muS=",scalevarR(1)
-     $                 ," muH=",scalevarF(1)
+     $                 ,"muH=",scalevarF(1)
                endif
             endif
          enddo
@@ -74,13 +74,13 @@ c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
                do n=0,nmemPDF(nn)
                   nwgt=nwgt+1
-                  write(weights_info(nwgt),'(a4,i8,a16)')
-     &                 "PDF=",lhaPDFid(nn)+n,"                "
+                  write(weights_info(nwgt),'(a4,i8,2x,i8,a8)')
+     &                 "PDF=",lhaPDFid(nn)+n,lhaPDFid(nn),"        "
                enddo
             else
                nwgt=nwgt+1
-               write(weights_info(nwgt),'(a4,i8,a16)')
-     &              "PDF=",lhaPDFid(nn),"                "
+               write(weights_info(nwgt),'(a4,i8,2x,i8,a8)')
+     &              "PDF=",lhaPDFid(nn),lhaPDFid(nn),"        "
             endif
          enddo
 c start with central member of the first set
