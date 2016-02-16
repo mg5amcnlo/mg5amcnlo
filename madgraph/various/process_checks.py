@@ -1316,7 +1316,6 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,50)
         else:
             target_pspoints_number = 10
-        target_pspoints_number =3
         
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
