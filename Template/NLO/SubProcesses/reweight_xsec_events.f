@@ -77,16 +77,16 @@ c
                write (*,*) "Including central PDF for "
      $              //lhaPDFsetname(nn)
             endif
-            if(nmemPDF(nn)+1.gt.maxPDFs)then
-               write(*,*)'Too many PDFs: increase maxPDFs in '/
-     $              /'reweight0.inc to ',numPDFs+1
-               stop
-            endif
 c Load all the PDF sets (the 1st one has already by loaded by the call
 c to "setrun")
             if (nn.gt.1) then
                call initpdfsetbynamem(nn,lhaPDFsetname(nn))
                call numberPDFm(nn,nmemPDF(nn))
+            endif
+            if(nmemPDF(nn)+1.gt.maxPDFs)then
+               write(*,*)'Too many PDFs: increase maxPDFs in '/
+     $              /'reweight0.inc to ',numPDFs+1
+               stop
             endif
          enddo
 c start with central member of the first set

@@ -6,77 +6,85 @@ c Wrapper routines for the fixed order analyses
       include 'reweight0.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
-      integer i,npdfs,ii,jj,n
-      double precision xsecScale_acc(maxscales,maxscales)
-     $     ,xsecPDFr_acc(0:maxPDFs)
+      character*28 weights_info(max_weight)
+      integer i,npdfs,ii,jj,n,kk,nn
+      double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
+     $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
       integer iappl
       common /for_applgrid/ iappl
       include "appl_common.inc"
-
       nwgt=1
-      weights_info(nwgt)="  central value"
+      weights_info(nwgt)="central value               "
       if (do_rwgt_scale) then
-         nwgt=nwgt+9
-         if (numscales.ne.3) then
-            write (*,*) 'ERROR #1 in initplot:',numscales
-            stop 1
-         endif
-         if (ickkw.ne.-1) then
-c Renormalisation and factorisation scale uncertainties
-            write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",1.0,"muF=",1d0
-            write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",1.0,"muF=",rw_Fscale_up
-            write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",1.0,"muF=",rw_Fscale_down
-            write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",rw_Rscale_up,"muF=",1d0
-            write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",rw_Rscale_up,"muF=",rw_Fscale_up
-            write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",rw_Rscale_up,"muF=",rw_Fscale_down
-            write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",rw_Rscale_down,"muF=",1d0
-            write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",rw_Rscale_down,"muF=",rw_Fscale_up
-            write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
-     &           "muR=",rw_Rscale_down,"muF=",rw_Fscale_down
-         else
-c Soft and Hard scale variations for NLO+NNLO jet veto
-            write (weights_info(nwgt-8),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",1.0,"muH=",1.0
-            write (weights_info(nwgt-7),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",1.0,"muH=",2.0
-            write (weights_info(nwgt-6),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",1.0,"muH=",0.5
-            write (weights_info(nwgt-5),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",2.0,"muH=",1.0
-            write (weights_info(nwgt-4),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",2.0,"muH=",2.0
-            write (weights_info(nwgt-3),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",2.0,"muH=",0.5
-            write (weights_info(nwgt-2),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",0.5,"muH=",1.0
-            write (weights_info(nwgt-1),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",0.5,"muH=",2.0
-            write (weights_info(nwgt  ),'(a4,f3.1,x,a4,f3.1)')
-     &           "muS=",0.5,"muH=",0.5
-         endif
+         do kk=1,dyn_scale(0)
+c set the weights_info string for scale variations
+            if (lscalevar(kk)) then
+               do ii=1,nint(scalevarF(0))
+                  do jj=1,nint(scalevarR(0))
+                     nwgt=nwgt+1
+                     if (ickkw.ne.-1) then
+                        write(weights_info(nwgt),
+     &                                '(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+     $                       "dyn=",dyn_scale(kk),"muR=",scalevarR(jj)
+     $                       ," muF=",scalevarF(ii)
+                     else
+                        write(weights_info(nwgt),
+     &                                '(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+     $                       "dyn=",dyn_scale(kk),"muS=",scalevarR(jj)
+     $                       ," muH=",scalevarF(ii)
+                     endif
+                  enddo
+               enddo
+            else
+               nwgt=nwgt+1
+               if (ickkw.ne.-1) then
+                  write(weights_info(nwgt),'(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+     $                 "dyn=",dyn_scale(kk),"muR=",scalevarR(1)
+     $                 ," muF=",scalevarF(1)
+               else
+                  write(weights_info(nwgt),'(a4,i4,x,a4,f5.3,x,a4,f5.3)')
+     $                 "dyn=",dyn_scale(kk),"muS=",scalevarR(1)
+     $                 ," muH=",scalevarF(1)
+               endif
+            endif
+         enddo
       endif
       if (do_rwgt_pdf) then
-         npdfs=pdf_set_max-pdf_set_min+1
-         if (nwgt+npdfs.gt.max_weight) then
-            write (*,*) "ERROR in initplot: "/
-     $           /"too many PDFs in reweighting"
-            stop 1
-         endif
-         do i=1,npdfs
-            write(weights_info(nwgt+i),'(a4,i8,a3)')
-     &           'PDF=',pdf_set_min-1+i,'   '
+         do nn=1,lhaPDFid(0)
+            if (lpdfvar(nn)) then
+               write (*,*) "Including central PDF with "/
+     $              /"uncertainties for "//lhaPDFsetname(nn)
+            else
+               write (*,*) "Including central PDF for "
+     $              //lhaPDFsetname(nn)
+            endif
+c     Load all the PDF sets (the 1st one has already by loaded by the call
+c     to "setrun")
+            if (nn.gt.1) then
+               call initpdfsetbynamem(nn,lhaPDFsetname(nn))
+               call numberPDFm(nn,nmemPDF(nn))
+            endif
+            if(nmemPDF(nn)+1.gt.maxPDFs)then
+               write(*,*)'Too many PDFs: increase maxPDFs in '/
+     $              /'reweight0.inc to ',numPDFs+1
+               stop
+            endif
+c set the weights_info string for PDF variation
+            if (lpdfvar(nn)) then
+               do n=0,nmemPDF(nn)
+                  nwgt=nwgt+1
+                  write(weights_info(nwgt),'(a4,i8,a16)')
+     &                 "PDF=",lhaPDFid(nn)+n,"                "
+               enddo
+            else
+               nwgt=nwgt+1
+               write(weights_info(nwgt),'(a4,i8,a16)')
+     &              "PDF=",lhaPDFid(nn),"                "
+            endif
          enddo
-         nwgt=nwgt+npdfs
+c start with central member of the first set
+         call InitPDFm(1,0)
       endif
       if(iappl.ne.0)then
 c Initialize grid parameters to negative values.
@@ -91,13 +99,25 @@ c Initialize grid parameters to negative values.
       endif
       call analysis_begin(nwgt,weights_info)
 c To keep track of the accumulated results:
-      do ii=1,numscales
-         do jj=1,numscales
-            xsecScale_acc(jj,ii)=0d0
-         enddo
+      do kk=1,dyn_scale(0)
+         if (lscalevar(kk)) then
+            do ii=1,nint(scalevarF(0))
+               do jj=1,nint(scalevarR(0))
+                  xsecScale_acc(jj,ii,kk)=0d0
+               enddo
+            enddo
+         else
+            xsecScale_acc(1,1,kk)=0d0
+         endif
       enddo
-      do n=0,npdfs
-         xsecPDFr_acc(n)=0d0
+      do nn=1,lhaPDFid(0)
+         if (lpdfvar(nn)) then
+            do n=0,nmemPDF(nn)
+               xsecPDFr_acc(n,nn)=0d0
+            enddo
+         else
+            xsecPDFr_acc(0,nn)=0d0
+         endif
       enddo
       return
       end
@@ -107,7 +127,8 @@ c To keep track of the accumulated results:
       implicit none
       include "nexternal.inc"
       include 'reweight0.inc'
-      integer ii,jj,n
+      include 'run.inc'
+      integer ii,jj,n,kk,nn
       logical usexinteg,mint
       common/cusexinteg/usexinteg,mint
       integer itmax,ncall
@@ -115,8 +136,8 @@ c To keep track of the accumulated results:
       logical useitmax
       common/cuseitmax/useitmax
       real*8 xnorm
-      double precision xsecScale_acc(maxscales,maxscales)
-     $     ,xsecPDFr_acc(0:maxPDFs)
+      double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
+     $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
       integer iappl
       common /for_applgrid/ iappl
@@ -136,19 +157,32 @@ c Normalization factor for the APPLgrid grids
 c Write the accumulated results to a file
       open (unit=34,file='scale_pdf_dependence.dat',status='unknown')
       if (.not.useitmax) xnorm=xnorm/float(itmax)
-      write (34,*) numscales**2
-      if (numscales.gt.0) then
-         write (34,*) ((xsecScale_acc(ii,jj)*xnorm,ii=1
-     $        ,numscales),jj=1,numscales)
-      else
-         write (34,*) ''
+      if (do_rwgt_scale) then
+         write (34,*) "scale variations:"
+         do kk=1,dyn_scale(0)
+            if (lscalevar(kk)) then
+               write (34,*) dyn_scale(kk),nint(scalevarR(0))
+     $              ,nint(scalevarF(0))
+               write (34,*) ((xsecScale_acc(jj,ii,kk)*xnorm,jj=1
+     $              ,nint(scalevarR(0))),ii=1,nint(scalevarF(0)))
+            else
+               write (34,*) dyn_scale(kk),1,1
+               write (34,*) xsecScale_acc(1,1,kk)*xnorm
+            endif
+         enddo
       endif
-      if (numPDFs.gt.0) then
-         write (34,*) numPDFs
-         write (34,*) (xsecPDFr_acc(n)*xnorm,n=0,numPDFs-1)
-      else
-         write(34,*) numPDFs
-         write (34,*) ''
+      if (do_rwgt_pdf) then
+         write (34,*) "pdf variations:"
+         do nn=1,lhaPDFid(0)
+            if (lpdfvar(nn)) then
+               write (34,*) trim(adjustl(lhaPDFsetname(nn))),
+     $              nmemPDF(nn)+1
+               write (34,*) (xsecPDFr_acc(n,nn)*xnorm,n=0,nmemPDF(nn))
+            else
+               write(34,*) lhaPDFsetname(nn),nmemPDF(nn) + 1
+               write (34,*) xsecPDFr_acc(0,nn)*xnorm
+            endif
+         enddo
       endif
       close(34)
       return                
@@ -184,7 +218,7 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       integer itype
       double precision p(0:4,nexternal),pplab(0:3,nexternal),chybst
      $     ,shybst,chybstmo
-      integer i,j,ibody,i_wgt
+      integer i,j,ibody,i_wgt,ii,jj,kk,n,nn
       double precision xd(3)
       data (xd(i),i=1,3) /0d0,0d0,1d0/
       integer istatus(nexternal),iPDG(nexternal)
@@ -198,8 +232,8 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       double precision www(max_weight),wgtden,ratio
-      double precision xsecScale_acc(maxscales,maxscales)
-     $     ,xsecPDFr_acc(0:maxPDFs)
+      double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
+     $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
       integer iappl
       common /for_applgrid/ iappl
@@ -242,18 +276,33 @@ c Fill the arrays (momenta, status and PDG):
 c Fill the accumulated results
       i_wgt=1
       if (do_rwgt_scale) then
-         do i=1,numscales
-            do j=1,numscales
+         do kk=1,dyn_scale(0)
+            if (lscalevar(kk)) then
+               do ii=1,nint(scalevarF(0))
+                  do jj=1,nint(scalevarR(0))
+                     i_wgt=i_wgt+1
+                     xsecScale_acc(jj,ii,kk)=xsecScale_acc(jj,ii,kk)
+     $                    +www(i_wgt)
+                  enddo
+               enddo
+            else
                i_wgt=i_wgt+1
-               xsecScale_acc(i,j)=xsecScale_acc(i,j)+www(i_wgt)
-            enddo
+               xsecScale_acc(1,1,kk)=xsecScale_acc(1,1,kk)
+     $              +www(i_wgt)
+            endif
          enddo
       endif
       if (do_rwgt_pdf) then
-         xsecPDFr_acc(0)=xsecPDFr_acc(0)+www(1)
-         do i=1,numPDFs-1
-            i_wgt=i_wgt+1
-            xsecPDFr_acc(i)=xsecPDFr_acc(i)+www(i_wgt)
+         do nn=1,lhaPDFid(0)
+            if (lpdfvar(nn)) then
+               do n=0,nmemPDF(nn)
+                  i_wgt=i_wgt+1
+                  xsecPDFr_acc(n,nn)=xsecPDFr_acc(n,nn)+www(i_wgt)
+               enddo
+            else
+               i_wgt=i_wgt+1
+               xsecPDFr_acc(0,nn)=xsecPDFr_acc(0,nn)+www(i_wgt)
+            endif
          enddo
       endif
  999  return      

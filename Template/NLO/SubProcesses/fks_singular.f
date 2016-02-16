@@ -1276,9 +1276,10 @@ c wgts() array to include the weights.
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
-      integer i,kr,kf,iwgt_save
-      double precision xlum(maxscales),dlum,pi,mu2_r(maxscales)
-     &     ,mu2_f(maxscales),mu2_q,alphas,g(maxscales),rwgt_muR_dep_fac
+      integer i,kr,kf,iwgt_save,dd
+      double precision xlum(maxscales),dlum,pi,mu2_r(maxscales),c_mu2_r
+     $     ,c_mu2_f,mu2_f(maxscales),mu2_q,alphas,g(maxscales)
+     $     ,rwgt_muR_dep_fac
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas
@@ -1297,33 +1298,41 @@ c loop over all the contributions in the c_weights common block
          xbk(1) = bjx(1,i)
          xbk(2) = bjx(2,i)
          mu2_q=scales2(1,i)
+c Loop over the dynamical_scale_choices
+         do dd=1,dyn_scale(0)
 c renormalisation scale variation (requires recomputation of the strong
 c coupling)
-         do kr=1,numscales
-            mu2_r(kr)=scales2(2,i)*yfactR(kr)**2
-            g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
-         enddo
+            call set_mu_central(i,dd,c_mu2_r,c_mu2_f)
+            do kr=1,nint(scalevarR(0))
+               if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
+               mu2_r(kr)=c_mu2_r*scalevarR(kr)**2
+               g(kr)=sqrt(4d0*pi*alphas(sqrt(mu2_r(kr))))
+            enddo
 c factorisation scale variation (require recomputation of the PDFs)
-         do kf=1,numscales
-            mu2_f(kf)=scales2(3,i)*yfactF(kf)**2
-            q2fact(1)=mu2_f(kf)
-            q2fact(2)=mu2_f(kf)
-            xlum(kf) = dlum()
-         enddo
-         do kr=1,numscales
-            do kf=1,numscales
-               iwgt=iwgt+1 ! increment the iwgt for the wgts() array
-               if (iwgt.gt.max_wgt) then
-                  write (*,*) 'ERROR too many weights in reweight_scale'
-     &                 ,iwgt,max_wgt
-                  stop 1
-               endif
+            do kf=1,nint(scalevarF(0))
+               if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
+               mu2_f(kf)=c_mu2_f*scalevarF(kf)**2
+               q2fact(1)=mu2_f(kf)
+               q2fact(2)=mu2_f(kf)
+               xlum(kf) = dlum()
+            enddo
+            do kf=1,nint(scalevarF(0))
+               if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
+               do kr=1,nint(scalevarR(0))
+                  if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
+                  iwgt=iwgt+1   ! increment the iwgt for the wgts() array
+                  if (iwgt.gt.max_wgt) then
+                     write (*,*) 'ERROR too many weights in '/
+     $                    /'reweight_scale',iwgt,max_wgt
+                     stop 1
+                  endif
 c add the weights to the array
-               wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)*log(mu2_r(kr)
-     &              /mu2_q)+wgt(3,i)*log(mu2_f(kf)/mu2_q))*g(kr)
-     &              **QCDpower(i)
-               wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r(kr)),sqrt(mu2_r(1)))
+                  wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
+     $                 *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
+     $                 /mu2_q))*g(kr)**QCDpower(i)
+                  wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
+     &                 sqrt(mu2_r(kr)),sqrt(scales2(2,i)))
+               enddo
             enddo
          enddo
       enddo
@@ -1355,14 +1364,22 @@ c computations (ickkw.eq.-1).
       common/c_nFKSprocess/nFKSprocess
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+      if (dyn_scale(0).gt.1) then
+         write (*,*) "When doing NNLL+NLO veto, "/
+     $        /"can only do one dynamical_scale_choice",dyn_scale(0)
+         stop
+      endif
+
 c currently we have 'iwgt' weights in the wgts() array.
       iwgt_save=iwgt
 c compute the new veto multiplier factor      
-      do ks=1,numscales
-         do kh=1,numscales
+      do ks=1,nint(scalevarR(0))
+         if ((.not. lscalevar(1)) .and. ks.ne.1) exit
+         do kh=1,nint(scalevarF(0))
+            if ((.not. lscalevar(1)) .and. kh.ne.1) exit
             if (H1_factor_virt.ne.0d0) then
-               call compute_veto_multiplier(H1_factor_virt,yfactR(ks)
-     &              ,yfactF(kh),veto_multiplier_new(ks,kh))
+               call compute_veto_multiplier(H1_factor_virt,scalevarR(ks)
+     $              ,scalevarF(kh),veto_multiplier_new(ks,kh))
                veto_multiplier_new(ks,kh)=veto_multiplier_new(ks,kh)
      &              /veto_multiplier
             else
@@ -1377,17 +1394,19 @@ c loop over all the contributions in the c_weights common block
          xbk(1) = bjx(1,i)
          xbk(2) = bjx(2,i)
          mu2_q=scales2(1,i)
-c soft scale variation
-         do ks=1,numscales
-            mu2_r(ks)=scales2(2,i)*yfactR(ks)**2
-            g(ks)=sqrt(4d0*pi*alphas(sqrt(mu2_r(ks))))
-            mu2_f(ks)=scales2(2,i)*yfactR(ks)**2
-            q2fact(1)=mu2_f(ks)
-            q2fact(2)=mu2_f(ks)
-            xlum(ks) = dlum()
 c Hard scale variation
-            do kh=1,numscales
-               iwgt=iwgt+1 ! increment the iwgt for the wgts() array
+         do kh=1,nint(scalevarF(0))
+            if ((.not. lscalevar(1)) .and. kh.ne.1) exit
+c soft scale variation
+            do ks=1,nint(scalevarR(0))
+               if ((.not. lscalevar(1)) .and. ks.ne.1) exit
+               mu2_r(ks)=scales2(2,i)*scalevarR(ks)**2
+               g(ks)=sqrt(4d0*pi*alphas(sqrt(mu2_r(ks))))
+               mu2_f(ks)=scales2(2,i)*scalevarR(ks)**2
+               q2fact(1)=mu2_f(ks)
+               q2fact(2)=mu2_f(ks)
+               xlum(ks) = dlum()
+               iwgt=iwgt+1      ! increment the iwgt for the wgts() array
                if (iwgt.gt.max_wgt) then
                   write (*,*) 'ERROR too many weights in reweight_scale'
      &                 ,iwgt,max_wgt
@@ -1401,14 +1420,14 @@ c add the weights to the array
                else
 c special for the itype=7 (i.e, the veto-compensating factor)                  
                   call compute_veto_compensating_factor(H1_factor_virt
-     &                 ,born_wgt_veto,yfactR(ks),yfactF(kh)
+     &                 ,born_wgt_veto,scalevarR(ks),scalevarF(kh)
      &                 ,veto_compensating_factor_new)
                   wgts(iwgt,i)=xlum(ks) * wgt(1,i)*g(ks)**QCDpower(i)
      &                 /veto_compensating_factor
      &                 *veto_compensating_factor_new
                endif
-               wgts(iwgt,i)=wgts(iwgt,i)
-     &              *rwgt_muR_dep_fac(sqrt(mu2_r(ks)),sqrt(mu2_r(1)))
+               wgts(iwgt,i)=wgts(iwgt,i)*rwgt_muR_dep_fac(
+     &              sqrt(mu2_r(ks)),sqrt(scales2(2,i)))
                wgts(iwgt,i)=wgts(iwgt,i)*veto_multiplier_new(ks,kh)
             enddo
          enddo
@@ -1428,8 +1447,7 @@ c wgts() array to include the weights.
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
-      integer n,izero,i
-      parameter (izero=0)
+      integer n,i,nn
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac,g
      &     ,alphas
       external rwgt_muR_dep_fac
@@ -1439,38 +1457,40 @@ c wgts() array to include the weights.
       common/c_nFKSprocess/nFKSprocess
       call cpu_time(tBefore)
       if (icontr.eq.0) return
+      do nn=1,lhaPDFid(0)
 c Use as external loop the one over the PDF sets and as internal the one
 c over the icontr. This reduces the number of calls to InitPDF and
 c allows for better caching of the PDFs
-      do n=1,numPDFs-1
-         iwgt=iwgt+1
-         if (iwgt.gt.max_wgt) then
-            write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
-     &           ,max_wgt
-            stop 1
-         endif
-         call InitPDF(n)
-         do i=1,icontr
-            nFKSprocess=nFKS(i)
-            xbk(1) = bjx(1,i)
-            xbk(2) = bjx(2,i)
-            mu2_q=scales2(1,i)
-            mu2_r=scales2(2,i)
-            mu2_f=scales2(3,i)
-            q2fact(1)=mu2_f
-            q2fact(2)=mu2_f
+         do n=0,nmemPDF(nn)
+            iwgt=iwgt+1
+            if (iwgt.gt.max_wgt) then
+               write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
+     &              ,max_wgt
+               stop 1
+            endif
+            call InitPDFm(nn,n)
+            do i=1,icontr
+               nFKSprocess=nFKS(i)
+               xbk(1) = bjx(1,i)
+               xbk(2) = bjx(2,i)
+               mu2_q=scales2(1,i)
+               mu2_r=scales2(2,i)
+               mu2_f=scales2(3,i)
+               q2fact(1)=mu2_f
+               q2fact(2)=mu2_f
 c Compute the luminosity
-            xlum = dlum()
+               xlum = dlum()
 c Recompute the strong coupling: alpha_s in the PDF might change
-            g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
+               g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c add the weights to the array
-            wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) +
-     &           wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
-            wgts(iwgt,i)=wgts(iwgt,i)*
-     &                       rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+               wgts(iwgt,i)=xlum * (wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q)
+     $              +wgt(3,i)*log(mu2_f/mu2_q))*g**QCDpower(i)
+               wgts(iwgt,i)=wgts(iwgt,i)*
+     &              rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
+            enddo
          enddo
       enddo
-      call InitPDF(izero)
+      call InitPDFm(1,0)
       call cpu_time(tAfter)
       tr_pdf=tr_pdf+(tAfter-tBefore)
       return
@@ -6010,3 +6030,32 @@ c
       FK88RANDOM = SEED*MINV
       END
 
+
+      subroutine set_mu_central(ic,dd,c_mu2_r,c_mu2_f)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      include 'reweight0.inc'
+      include 'run.inc'
+      integer ic,dd,i,j
+      double precision c_mu2_r,c_mu2_f,muR,muF,pp(0:3,nexternal)
+      if (dd.eq.1) then
+         c_mu2_r=scales2(2,ic)
+         c_mu2_f=scales2(3,ic)
+      else
+c need to recompute the scales using the momenta
+         dynamical_scale_choice=dyn_scale(dd)
+         do i=1,nexternal
+            do j=0,3
+               pp(j,i)=momenta(j,i,ic)
+            enddo
+         enddo
+         call set_ren_scale(pp,muR)
+         c_mu2_r=muR**2
+         call set_fac_scale(pp,muF)
+         c_mu2_f=muF**2
+c     reset the default dynamical_scale_choice
+         dynamical_scale_choice=dyn_scale(1)
+      endif
+      return
+      end

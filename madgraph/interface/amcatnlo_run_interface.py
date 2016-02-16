@@ -1881,10 +1881,10 @@ RESTART = %(mint_mode)s
         """writes the res.txt files in the SubProcess dir"""
         jobs.sort(key = lambda job: -job['errorABS'])
         content=[]
-        content.append('\n\nCross-section per integration channel:')
+        content.append('\n\nCross section per integration channel:')
         for job in jobs:
             content.append('%(p_dir)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  ' %  job)
-        content.append('\n\nABS cross-section per integration channel:')
+        content.append('\n\nABS cross section per integration channel:')
         for job in jobs:
             content.append('%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  ' %  job)
         totABS=0
@@ -2181,88 +2181,83 @@ RESTART = %(mint_mode)s
             self.cross_sect_dict['axsec_string']='(Partial) abs(decay width)'
         else:
             self.cross_sect_dict['unit']='pb'
-            self.cross_sect_dict['xsec_string']='Total cross-section'
-            self.cross_sect_dict['axsec_string']='Total abs(cross-section)'
+            self.cross_sect_dict['xsec_string']='Total cross section'
+            self.cross_sect_dict['axsec_string']='Total abs(cross section)'
 
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
                       'Summary:']
-            if step != 2:
-                message = status[step] + '\n\n      Intermediate results:' + \
-                    ('\n      Random seed: %(randinit)d' + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
-                     '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
-                     % self.cross_sect_dict
-            else:
-                message = '\n      -------------------------------------------------'
-                message = message + \
-                          '\n      ' + status[step] + proc_info + \
-                          '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                        self.cross_sect_dict
-                message = message + \
-                          '\n      -------------------------------------------------'
-                if scale_pdf_info and self.run_card['nevents']>=10000:
-                    if scale_pdf_info[0]:
-                        # scale uncertainties
-                        message = message + '\n      Scale variation (computed from events):'
-                        for s in scale_pdf_info[0]:
-                            if s['unc']:
-                                message = message + \
-                                          ('\n          Dynamical_scale_choice %(label)i (envelope of %(size)s values): '\
-                                           '\n              %(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%%') % s
-                            else:
-                                message = message + \
-                                          ('\n          Dynamical_scale_choice %(label)i: '\
-                                           '\n              %(cen)8.3e pb') % s
-                                
-                    if scale_pdf_info[1]:
-                        message = message + '\n      PDF variation (computed from events):'
-                        for p in scale_pdf_info[1]:
-                            if p['unc']=='none':
-                                message = message + \
-                                          ('\n          %(name)s (central value only): '\
-                                           '\n              %(cen)8.3e pb') % p
-                                
-                            elif p['unc']=='unknown':
-                                message = message + \
-                                          ('\n          %(name)s (%(size)s members; combination method unknown): '\
-                                           '\n              %(cen)8.3e pb') % p
-                            else:
-                                message = message + \
-                                          ('\n          %(name)s (%(size)s members; using %(unc)s method): '\
-                                           '\n              %(cen)8.3e pb +%(max)0.1f%% -%(min)0.1f%%') % p
-                        # pdf uncertainties
-                    message = message + \
-                          '\n      -------------------------------------------------'
+            computed='(computed from LHE events)'
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup:','Current results:',
                       'Final results and run summary:']
-            if (not done) and (step == 0):
+            computed='(computed from histogram information)'
+
+        if step != 2 and mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            message = status[step] + '\n\n      Intermediate results:' + \
+                      ('\n      Random seed: %(randinit)d' + \
+                       '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
+                       '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
+                      % self.cross_sect_dict
+        elif mode in ['NLO','LO'] and not done:
+            if step == 0:
                 message = '\n      ' + status[0] + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-            elif not done:
+                          '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                          self.cross_sect_dict
+            else:
                 message = '\n      ' + status[1] + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-            elif done:
-                message = '\n      ' + status[2] + proc_info + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-                if any(self.run_card['reweight_scale']):
-                    if self.run_card['ickkw'] != -1:
-                        message = message + \
-                            ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                            (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                    else:
-                        message = message + \
-                            ('\n      Soft and hard scale dependence (added in quadrature): +%0.1f%% -%0.1f%%') % \
-                            (scale_pdf_info['scale_upp_quad'], scale_pdf_info['scale_low_quad'])
-                if any(self.run_card['reweight_PDF']):
-                    message = message + \
-                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
-                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
+                          '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                          self.cross_sect_dict
+                
+        else:
+            message = '\n   --------------------------------------------------------------'
+            message = message + \
+                      '\n      ' + status[2] + proc_info + \
+                      '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                      self.cross_sect_dict
+            message = message + \
+                      '\n   --------------------------------------------------------------'
+            if scale_pdf_info and (self.run_card['nevents']>=10000 or mode in ['NLO', 'LO']):
+                if scale_pdf_info[0]:
+                        # scale uncertainties
+                    message = message + '\n      Scale variation %s:' % computed
+                    for s in scale_pdf_info[0]:
+                        if s['unc']:
+                            if self.run_card['ickkw'] != -1:
+                                message = message + \
+                                          ('\n          Dynamical_scale_choice %(label)i (envelope of %(size)s values): '\
+                                           '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % s
+                            else:
+                                message = message + \
+                                          ('\n          Soft and hard scale dependence (added in quadrature): '\
+                                           '\n              %(cen)8.3e pb  +%(max_q)0.1f%% -%(min_q)0.1f%%') % s
+                                    
+                        else:
+                            message = message + \
+                                          ('\n          Dynamical_scale_choice %(label)i: '\
+                                           '\n              %(cen)8.3e pb') % s
+                                
+                if scale_pdf_info[1]:
+                    message = message + '\n      PDF variation %s:' % computed
+                    for p in scale_pdf_info[1]:
+                        if p['unc']=='none':
+                            message = message + \
+                                          ('\n          %(name)s (central value only): '\
+                                           '\n              %(cen)8.3e pb') % p
+                            
+                        elif p['unc']=='unknown':
+                            message = message + \
+                                          ('\n          %(name)s (%(size)s members; combination method unknown): '\
+                                           '\n              %(cen)8.3e pb') % p
+                        else:
+                            message = message + \
+                                          ('\n          %(name)s (%(size)s members; using %(unc)s method): '\
+                                           '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % p
+                        # pdf uncertainties
+                message = message + \
+                          '\n   --------------------------------------------------------------'
+
         
         if (mode in ['NLO', 'LO'] and not done) or \
            (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
@@ -4639,7 +4634,7 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     computation of the total cross section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
@@ -4678,7 +4673,7 @@ _generate_events_usage = "generate_events [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     computation of the total cross section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
@@ -4708,7 +4703,7 @@ _generate_events_parser.add_option("-n", "--name", default=False, dest='run_name
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
-                "-- calculate cross-section up to ORDER.\n" + \
+                "-- calculate cross section up to ORDER.\n" + \
                 "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n"
 
 _calculate_xsect_parser = misc.OptionParser(usage=_calculate_xsect_usage)
