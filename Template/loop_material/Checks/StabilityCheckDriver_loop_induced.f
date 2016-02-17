@@ -119,7 +119,7 @@
         do i=1,nexternal      
           write (*,'(a2,1x,5ES30.15E4)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
         enddo
-        write (*,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
+        write (*,'(a3,1x,i3)') 'EXP',-(2*nexternal-8)
         write (*,'(a4,1x,1ES30.15E4)') 'BORN',0.0d0
         write (*,'(a3,1x,1ES30.15E4)') 'FIN',MATELEM(1,0)
         write (*,'(a4,1x,1ES30.15E4)') '1EPS',0.0d0

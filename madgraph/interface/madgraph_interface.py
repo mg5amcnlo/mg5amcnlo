@@ -5463,13 +5463,14 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'lhapdf5':'[arXiv:0605240]',
                           'hepmc':'[CPC 134 (2001) 41-46]',
                           'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]',
-                          'ninja':'[arXiv:1403.1229,XXXX.YYYYY]',
+                          'ninja':'[arXiv:1203.0291,arXiv:1403.1229,XXXX.YYYYY]',
                           'oneloop':'[arXiv:1007.4716]'}
 
         if args[0] in advertisements:
             logger.info("------------------------------------------------------", '$MG:color:BLACK')
             logger.info("   You are installing '%s', please cite ref(s). "%args[0], '$MG:color:BLACK')
             logger.info("         %s"%advertisements[args[0]], '$MG:color:BLACK')
+            logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
             logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
             logger.info("------------------------------------------------------", '$MG:color:BLACK')
 

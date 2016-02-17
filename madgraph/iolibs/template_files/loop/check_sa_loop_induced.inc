@@ -260,7 +260,7 @@ C
       do i=1,nexternal      
           write (69,'(a2,1x,5ES30.15E3)') 'PS',P(0,i),P(1,i),P(2,i),P(3,i)
       enddo
-      write (69,'(a3,1x,i2)') 'EXP',-(2*nexternal-8)
+      write (69,'(a3,1x,i3)') 'EXP',-(2*nexternal-8)
       write (69,'(a4,1x,1ES30.15E3)') 'BORN',0.0d0
       write (69,'(a3,1x,1ES30.15E3)') 'FIN',MATELEM(1,0)
       write (69,'(a4,1x,1ES30.15E3)') '1EPS',MATELEM(2,0)
