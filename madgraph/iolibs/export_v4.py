@@ -1585,7 +1585,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
     def set_fortran_compiler(self, default_compiler, force=False):
         """Set compiler based on what's available on the system"""
-                
+               
         # Check for compiler
         if default_compiler['fortran'] and misc.which(default_compiler['fortran']):
             f77_compiler = default_compiler['fortran']
@@ -1684,7 +1684,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         f2py_compiler = compilers['f2py']
         if not f2py_compiler:
             f2py_compiler = 'f2py'
-    
+
+            
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
         FC_re = re.compile('^(\s*)(FC|F2PY)\s*=\s*(.+)\s*$')
@@ -1699,7 +1700,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 elif 'F2PY' ==  FC_result.group(2):
                     if f2py_compiler != FC_result.group(3):
                         mod = True
-                    lines[iline] = FC_result.group(1) + "F2PY=" + f2py_compiler                    
+                    lines[iline] = FC_result.group(1) + "F2PY=" + f2py_compiler
+                                    
         if not mod:
             return
         
@@ -1716,13 +1718,24 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Set CXX=compiler in Source/make_opts.
         The version is also checked, in order to set some extra flags
         if the compiler is clang (on MACOS)"""
-
-        
+       
         p = misc.Popen([compiler, '--version'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
         is_clang = 'LLVM' in output
-
+        is_lc = False
+        if is_clang:
+            import platform
+            v, _,_ = platform.mac_ver()
+            if not v:
+                is_lc = True
+            else:
+                v = float(v.rsplit('.')[1])
+                if v >= 9:
+                    is_lc = True
+                else:
+                    is_lc = False
+    
         mod = False #avoid to rewrite the file if not needed
         if not root_dir:
             root_dir = self.dir_path
@@ -1735,18 +1748,34 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 if compiler != CC_result.group(2):
                     mod = True
                 lines[iline] = CC_result.group(1) + "CXX=" + compiler
+            if 'LDFLAGS=-lc++' in line:
+                if not is_lc:
+                    lines[iline] = 'LDFLAGS=-lstdc++'
+                    mod = True
+                elif is_clang and not 'mmacosx-version' in line:
+                    lines[iline] += " -mmacosx-version-min=10.7"
+                    mod=True
+                elif not is_clang and 'mmacosx-version' in line:
+                    lines[iline] = lines[iline].replace('-mmacosx-version-min=10.7', '')
+                    mod = True
+            elif 'LDFLAGS=-lstdc++' in line:
+                if is_lc and is_clang:
+                    lines[iline] = 'LDFLAGS=-lc++  -mmacosx-version-min=10.7'
+                    mod = True
 
-        if is_clang:
+        if is_clang and is_lc:
             CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
             CXXFLAGS_re=re.compile('^(\s*)CXXFLAGS\s*=\s*(.+)\s*$')
-            flags= '-O -stdlib=libstdc++ -mmacosx-version-min=10.6'
+            flags= '-O -stdlib=libc++ -mmacosx-version-min=10.7'
             for iline, line in enumerate(lines):
                 CF_result = CFLAGS_re.match(line)
                 CXXF_result = CXXFLAGS_re.match(line)
-                if CF_result:
+                if CF_result and CF_result.group(2) != flags:
                     lines[iline] = CF_result.group(1) + "CFLAGS= " + flags
-                if CXXF_result:
+                    mod=True
+                if CXXF_result and CXXF_result.group(1)!= flags:
                     lines[iline] = CXXF_result.group(1) + "CXXFLAGS= " + flags
+                    mod=True                    
         if not mod:
             return
         try:
@@ -3488,6 +3517,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Check for compiler
         self.set_compiler(compiler)
+        self.set_cpp_compiler(compiler['cpp'])
+        
 
         old_pos = os.getcwd()
         subpath = pjoin(self.dir_path, 'SubProcesses')

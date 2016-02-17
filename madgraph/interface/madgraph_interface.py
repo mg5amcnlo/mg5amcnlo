@@ -5106,7 +5106,11 @@ This implies that with decay chains:
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
                     defined_multiparticles.remove(container)
-
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' ' .join([`i` for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
                 
         
         if defined_multiparticles:
@@ -5224,7 +5228,7 @@ This implies that with decay chains:
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
 
 
-        logger.info('compile %s. This might takes a while.' % name)
+        logger.info('compile %s. This might take a while.' % name)
 
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
@@ -5286,6 +5290,19 @@ This implies that with decay chains:
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
                                         stdout=subprocess.PIPE).communicate()[0]
 
+        misc.sprint(args[0], name)
+        # For Delphes edit the makefile to add the proper link to correct library
+        if args[0] == 'Delphes3':
+            #change in the makefile 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)
+            # to 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,/Applications/root_v6.04.08/lib/
+            rootsys = os.environ['ROOTSYS']
+            text = open('./Delphes/Makefile').read()
+            text = text.replace('DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)', 
+                         'DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,%s/lib/' % rootsys)
+            open('./Delphes/Makefile','w').write(text)
+            
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
             if self.options['lhapdf']:

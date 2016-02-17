@@ -1015,6 +1015,10 @@ C     MadLoop jumps to this label during stability checks when it
 C      recomputes the same PS point with a different CTMode
  300  CONTINUE
 
+C     Make sure that the loop calls are performed since this is new
+C      evaluation.
+      CTCALL_REQ_SO_DONE=.FALSE.
+
 
 
 

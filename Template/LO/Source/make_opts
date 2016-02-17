@@ -4,6 +4,18 @@ ifeq ($(origin FFLAGS),undefined)
   FFLAGS= -O -w -fbounds-check -fPIC
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
+
+ifeq ($(origin CXXFLAGS),undefined)
+  #CXXFLAGS= -g 
+  CXXFLAGS= -O -stdlib=libc++ -mmacosx-version-min=10.7
+endif
+
+ifeq ($(origin CFLAGS),undefined)
+  #CFLAGS= -g 
+  CFLAGS= -O -stdlib=libc++ -mmacosx-version-min=10.7
+endif
+
+# Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable
@@ -14,12 +26,12 @@ ifeq ($(origin F2PY), undefined)
    F2PY=f2py
 endif
 
-
+UNAME := $(shell uname -s)
+ifeq ($(origin LDFLAGS), undefined)
+LDFLAGS=-lstdc++
+endif
 
 # Options: dynamic, lhapdf
-
-UNAME := $(shell uname)
-
 # Option dynamic
 
 ifeq ($(UNAME), Darwin)
@@ -55,9 +67,10 @@ endif
 # Option lhapdf
 
 ifdef lhapdf
+  CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  lhapdf=-lLHAPDF -lstdc++
+  llhapdf=-lLHAPDF
 else
   alfas_functions=alfas_functions
-  lhapdf=
+  llhapdf=
 endif
