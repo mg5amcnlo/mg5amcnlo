@@ -788,15 +788,20 @@ class FKSHelasRealProcess(object): #test written
                 self.matrix_element = real_me_list
 
             else:
-                logger.info('generating matrix element...')
-                self.matrix_element = helas_objects.HelasMatrixElement(
-                                                  fksrealproc.amplitude, **opts)
-                #generate the color for the real
-                self.matrix_element.get('color_basis').build(
-                                    self.matrix_element.get('base_amplitude'))
-                self.matrix_element.set('color_matrix',
-                                 color_amp.ColorMatrix(
-                                    self.matrix_element.get('color_basis')))
+
+                if real_me_list and real_amp_list:
+                    self.matrix_element = copy.deepcopy(real_me_list[real_amp_list.index(fksrealproc.amplitude)])
+                    self.matrix_element['processes'] = copy.deepcopy(self.matrix_element['processes'])
+                else:
+                    logger.info('generating matrix element...')
+                    self.matrix_element = helas_objects.HelasMatrixElement(
+                                                      fksrealproc.amplitude, **opts)
+                    #generate the color for the real
+                    self.matrix_element.get('color_basis').build(
+                                        self.matrix_element.get('base_amplitude'))
+                    self.matrix_element.set('color_matrix',
+                                     color_amp.ColorMatrix(
+                                        self.matrix_element.get('color_basis')))
             #self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
             self.fks_j_from_i = fksrealproc.fks_j_from_i
 
