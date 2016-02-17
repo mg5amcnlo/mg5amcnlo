@@ -6249,9 +6249,12 @@ class UFO_model_to_mg4(object):
     def create_param_card(self):
         """ create the param_card.dat """
 
+        rule_card = pjoin(self.dir_path, 'param_card_rule.dat')
+        if not os.path.exists(rule_card):
+            rule_card=False
         self.create_param_card_static(self.model, 
                                       output_path=pjoin(self.dir_path, 'param_card.dat'), 
-                                      rule_card_path=pjoin(self.dir_path, 'param_card_rule.dat'), 
+                                      rule_card_path=rule_card, 
                                       mssm_convert=True)
         
 def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True):

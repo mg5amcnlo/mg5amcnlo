@@ -105,6 +105,14 @@ c general MadFKS parameters
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
 
+      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max
+      integer ntot_granny,derntot,ncase(0:6)
+      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
+     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      integer                     n_MC_subt_diverge
+      common/counter_subt_diverge/n_MC_subt_diverge
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -125,7 +133,12 @@ c
       enddo
       virtual_fraction=virt_fraction
       n_ord_virt=amp_split_size
-      
+      n_MC_subt_diverge=0
+      ntot_granny=0
+      derntot=0
+      do i=0,6
+         ncase(i)=0
+      enddo
       ntot=0
       nsun=0
       nsps=0
@@ -462,6 +475,19 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
          enddo
       endif
 
+      write (*,*) 'counters for the granny resonances'
+      write (*,*) 'ntot     ',ntot_granny
+      if (ntot_granny.gt.0) then
+         do i=0,6
+            write (*,*) '% icase ',i,' : ',ncase(i)/dble(ntot_granny)
+         enddo
+         write (*,*) 'average,std dev. and max of derivative:',deravg
+     &        ,sqrt(abs(derstd-deravg**2)),dermax
+         write (*,*)
+     &        'and xi_i_fks and y_ij_fks corresponding to max of der.',
+     &        xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      endif
+      write (*,*) 'counter for the diverging MC subtraction',n_MC_subt_diverge
       call cpu_time(tAfter)
       tTot = tAfter-tBefore
       tOther = tTot - (tBorn+tGenPS+tReal+tCount+tIS+tFxFx+tf_nb+tf_all
@@ -558,6 +584,8 @@ c
 c
 c     Global
 c
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
@@ -669,16 +697,26 @@ c These should be ignored (but kept for 'historical reasons')
       endif
       isum_hel = 0
 
-      write(*,10) 'Enter Configuration Number: '
+      write(*,'(a)') 'Enter Configuration Number: '
       read(*,*) dconfig
       iconfig = int(dconfig)
+      if ( nint(dconfig*10) - iconfig*10 .eq.0 ) then
+         ini_fin_fks=0
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.1 ) then
+         ini_fin_fks=1
+      elseif ( nint(dconfig*10) -iconfig*10 .eq.2 ) then
+         ini_fin_fks=2
+      else
+         write (*,*) 'ERROR: invalid configuration number',dconfig
+         stop 1
+      endif
       do i=1,mapconfig(0)
          if (iconfig.eq.mapconfig(i)) then
             iconfig=i
             exit
          endif
       enddo
-      write(*,12) 'Running Configuration Number: ',iconfig
+      write(*,*) 'Running Configuration Number: ',iconfig,ini_fin_fks
 
       write (*,'(a)') 'Enter running mode for MINT:'
       write (*,'(a)') '0 to set-up grids, 1 to integrate,'//
@@ -737,17 +775,7 @@ c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c
-      dconfig = dconfig-iconfig
-      if (dconfig .eq. 0) then
-         write(*,*) 'Not subdividing B.W.'
-         lbw(0)=0
-      else
-         lbw(0)=1
-         jconfig=dconfig*1000.1
-         write(*,*) 'Using dconfig=',jconfig
-         call DeCode(jconfig,lbw(1),3,nexternal)
-         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
-      endif
+      lbw(0)=0
  10   format( a)
  12   format( a,i4)
       end
@@ -769,13 +797,16 @@ c From dsample_fks
       include 'c_weight.inc'
       include 'run.inc'
       include 'orders.inc'
+      include 'fks_info.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
-      integer i,ifl,proc_map(0:fks_configs,0:fks_configs)
+      integer i,j,ifl,proc_map(0:fks_configs,0:fks_configs)
      $     ,nFKS_picked_nbody,nFKS_in,nFKS_out,izero,ione,itwo,mohdr
      $     ,iFKS,sum,iamp
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt,vol1,probne,gfactsf
      $     ,gfactcl,replace_MC_subt,sudakov_damp,sigintF,n1body_wgt
+      integer             ini_fin_fks
+      common/fks_channels/ini_fin_fks
       external passcuts
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       data firsttime/.true./
@@ -837,6 +868,15 @@ c "npNLO".
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+         if (ini_fin_fks.eq.1) then
+            do while (fks_j_d(proc_map(proc_map(0,1),1)).le.nincoming) 
+               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+            enddo
+         elseif (ini_fin_fks.eq.2) then
+            do while (fks_j_d(proc_map(proc_map(0,1),1)).gt.nincoming) 
+               call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
+            enddo
+         endif
 
 c The nbody contributions
          if (abrv.eq.'real') goto 11
@@ -851,7 +891,11 @@ c For sum=0, determine nFKSprocess so that the soft limit gives a non-zero Born
             nFKS_picked_nbody=nFKS_out
          endif
          call update_fks_dir(nFKS_picked_nbody,iconfig)
-         jac=1d0
+         if (ini_fin_fks.eq.0) then
+            jac=1d0
+         else
+            jac=0.5d0
+         endif
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) goto 12
          call compute_prefactors_nbody(vegas_wgt)
@@ -1281,7 +1325,7 @@ c     include all quarks (except top quark) and the gluon.
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer nFKS_in,nFKS_out,iFKS,nFKSprocessBorn(2)
+      integer nFKS_in,nFKS_out,iFKS,iiFKS,nFKSprocessBorn(fks_configs)
       logical firsttime,foundB(2)
       data firsttime /.true./
       save nFKSprocessBorn,foundB
@@ -1290,37 +1334,48 @@ c     include all quarks (except top quark) and the gluon.
          foundB(1)=.false.
          foundB(2)=.false.
          do iFKS=1,fks_configs
+            nFKSprocessBorn(iFKS)=0
             if (particle_type_D(iFKS,fks_i_D(iFKS)).eq.8) then
-               if (fks_j_D(iFKS).le.nincoming) then
-                  foundB(1)=.true.
-                  nFKSprocessBorn(1)=iFKS
-               else
-                  foundB(2)=.true.
-                  nFKSprocessBorn(2)=iFKS
-               endif
+               nFKSprocessBorn(iFKS)=iFKS
+            endif
+            if (nFKSprocessBorn(iFKS).eq.0) then
+c     try to find the process that has the same j_fks but with i_fks a
+c     gluon
+               do iiFKS=1,fks_configs
+                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 .and.
+     &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
+                     nFKSprocessBorn(iFKS)=iiFKS
+                     exit
+                  endif
+               enddo
+            endif
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               do iiFKS=1,fks_configs
+                  if ( particle_type_D(iiFKS,fks_i_D(iiFKS)).eq.8 ) then
+                     if ( fks_j_D(iiFKS).le.nincoming .and.
+     &                    fks_j_D(iFKS).le.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     elseif ( fks_j_D(iiFKS).gt.nincoming .and.
+     &                        fks_j_D(iFKS).gt.nincoming ) then
+                        nFKSprocessBorn(iFKS)=iiFKS
+                        exit
+                     endif
+                  endif
+               enddo
             endif
          enddo
          write (*,*) 'Total number of FKS directories is', fks_configs
-         write (*,*) 'For the Born we use nFKSprocesses  #',
-     $        nFKSprocessBorn
+         write (*,*) 'For the Born we use nFKSprocesses:'
+         write (*,*)  nFKSprocessBorn
       endif
-      if (fks_j_D(nFKS_in).le.nincoming) then
-         if (.not.foundB(1)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'initial state j_fks, but there is no '/
-     &           /'configuration with i_fks a gluon and j_fks '/
-     &           /'initial state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(1)
+      if (nFKSprocessBorn(nFKS_in).eq.0) then
+         write(*,*) 'Could not find the correct map to Born '/
+     &        /'FKS configuration for the NLO FKS '/
+     &        /'configuration', nFKS_in
+         stop 1
       else
-         if (.not.foundB(2)) then
-            write(*,*) 'Trying to generate Born momenta with '/
-     &           /'final state j_fks, but there is no configuration'/
-     &           /' with i_fks a gluon and j_fks final state'
-            stop 1
-         endif
-         nFKS_out=nFKSprocessBorn(2)
+         nFKS_out=nFKSprocessBorn(nFKS_in)
       endif
       return
       end

@@ -948,8 +948,13 @@ class HwU(Histogram):
               " only handle the scales 'mur', 'muf', 'all_scale' or 'pdf'."       
         
         if scale_position > -2:
+            ## this is for the usual 9-point variations
             wgts_to_consider = [ label for label in self.bins.weight_labels if \
                                                       isinstance(label, tuple) ]
+            ## this is for the 7-point variations (excludes mur/muf = 4, 1/4)
+            #wgts_to_consider = [ label for label in self.bins.weight_labels if \
+            #                                          isinstance(label, tuple) and \
+            #                                  not (0.5 in label and 2.0 in label)]
             if scale_position > -1:
                 wgts_to_consider = [ lab for lab in wgts_to_consider if \
                     (lab[scale_position]!=1.0 and all(k==1.0 for k in \
@@ -998,6 +1003,21 @@ class HwU(Histogram):
                         else:
                             pdf_up   = bin.wgts[pdfs[0]]
                             pdf_down = bin.wgts[pdfs[0]]
+                    elif wgts_to_consider[0] in range(90200, 90303) or \
+                         wgts_to_consider[0] in range(90400, 90433) or \
+                         wgts_to_consider[0] in range(90700, 90801) or \
+                         wgts_to_consider[0] in range(90900, 90931) or \
+                         wgts_to_consider[0] in range(91200, 91303) or \
+                         wgts_to_consider[0] in range(91400, 91433) or \
+                         wgts_to_consider[0] in range(91700, 91801) or \
+                         wgts_to_consider[0] in range(91900, 90931):
+                        # PDF4LHC15 Hessian sets
+                        pdf_stdev = 0.0
+                        for pdf in pdfs[1:]:
+                            pdf_stdev += (pdf - cntrl_val)**2
+                        pdf_stdev = math.sqrt(pdf_stdev)
+                        pdf_up   = cntrl_val+pdf_stdev
+                        pdf_down = cntrl_val-pdf_stdev
                     else:
                         # use Gaussian method (NNPDF)
                         pdf_stdev = 0.0

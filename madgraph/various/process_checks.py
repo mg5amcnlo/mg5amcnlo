@@ -4940,7 +4940,9 @@ def output_unitary_feynman(comparison_results, output='text'):
         
         min_val = min(values)
         max_val = max(values)
-        diff = (max_val - min_val) / max_val 
+        # when max_val is also negative
+        # diff will be negative if there is no abs
+        diff = (max_val - min_val) / abs(max_val) 
         
         res_str += '\n' + fixed_string_length(proc, proc_col_size) + \
                    fixed_string_length("%1.10e" % values[0], col_size) + \

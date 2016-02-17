@@ -38,8 +38,8 @@ c      include "fks.inc"
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      double precision fxl,limit(15),wlimit(15)
-      double precision lxp(0:3,nexternal+1),xp(15,0:3,nexternal+1)
+      double precision fxl(15),wfxl(15),limit(15),wlimit(15)
+      double precision lxp(15,0:3,nexternal+1),xp(15,0:3,nexternal+1)
       double precision fks_Sij
       double precision check,tolerance,zh,h_damp
       parameter (tolerance=1.d-4)
@@ -136,7 +136,7 @@ C split orders stuff
       include 'orders.inc'
       integer iamp
       integer orders(nsplitorders)
-      double precision fxl_split(amp_split_size)
+      double precision fxl_split(15,amp_split_size),wfxl_split(15,amp_split_size)
       double precision limit_split(15,amp_split_size), wlimit_split(15,amp_split_size)
 
 c born configuration stuff
@@ -289,11 +289,12 @@ c x_to_f_arg subroutine
       do j=1,nsofttests
       call get_helicity(i_fks,j_fks)
          do iamp=1,amp_split_size
-           fxl_split(iamp) = 0d0
-           do i = 1,imax
-             limit_split(i,iamp) = 0d0
-             wlimit_split(i,iamp) = 0d0
-           enddo
+            do i = 1,imax
+               fxl_split(i,iamp) = 0d0
+               wfxl_split(i,iamp) = 0d0
+               limit_split(i,iamp) = 0d0
+               wlimit_split(i,iamp) = 0d0
+            enddo
          enddo
 
          if(nsofttests.le.10)then
@@ -318,80 +319,62 @@ c x_to_f_arg subroutine
             ntry=ntry+1
          enddo
          if(nsofttests.le.10)write (*,*) 'ntry',ntry
-         calculatedBorn=.false.
-         call set_cms_stuff(0)
-         call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl) 
-         fxl=fxl*jac_cnt(0)
-         ! keep track of the separate splitorders
-         do iamp=1,amp_split_size
-           fxl_split(iamp) = amp_split(iamp)*jac_cnt(0)
-         enddo
-
-         call set_cms_stuff(-100)
-         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-         limit(1)=fx*wgt
-         wlimit(1)=wgt
-         ! keep track of the separate splitorders
-         do iamp=1,amp_split_size
-           limit_split(1,iamp) = amp_split(iamp)*wgt
-           wlimit_split(1,iamp) = wgt
-         enddo
-
-         do k=1,nexternal
-            do l=0,3
-               lxp(l,k)=p1_cnt(l,k,0)
-               xp(1,l,k)=p(l,k)
-            enddo
-         enddo
-         do l=0,3
-            lxp(l,nexternal+1)=p_i_fks_cnt(l,0)
-            xp(1,l,nexternal+1)=p_i_fks_ev(l)
-         enddo
-
-         do i=2,imax
-            xi_i_fks_fix=xi_i_fks_fix/10d0
+         do i=1,imax
             wgt=1d0
             call generate_momenta(ndim,iconfig,wgt,x,p)
+            calculatedBorn=.false.
+            call set_cms_stuff(0)
+            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fx)
+            fxl(i)=fx*wgt
+            wfxl(i)=jac_cnt(0)
+! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+               fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(0)
+               wfxl_split(i,iamp)=jac_cnt(0)
+            enddo
             calculatedBorn=.false.
             call set_cms_stuff(-100)
             call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             limit(i)=fx*wgt
             wlimit(i)=wgt
-            ! keep track of the separate splitorders
+         ! keep track of the separate splitorders
             do iamp=1,amp_split_size
-              limit_split(i,iamp) = amp_split(iamp)*wgt
-              wlimit_split(i,iamp) = wgt
+               limit_split(i,iamp) = amp_split(iamp)*wgt
+               wlimit_split(i,iamp) = wgt
             enddo
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
+                  lxp(i,l,k)=p1_cnt(l,k,0)
                enddo
             enddo
             do l=0,3
                xp(i,l,nexternal+1)=p_i_fks_ev(l)
+               lxp(i,l,nexternal+1)=p_i_fks_cnt(l,0)
             enddo
+            xi_i_fks_fix=xi_i_fks_fix/10d0
          enddo
 
          if(nsofttests.le.10)then
            write (*,*) 'Soft limit:'
            write (*,*) '   Sum of all contributions:'
            do i=1,imax
-              call xprintout(6,limit(i),fxl)
+              call xprintout(6,limit(i),fxl(i))
            enddo
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
            do iamp=1, amp_split_size
-             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(1,iamp).ne.0d0) then
                write(*,*) '   Split-order', iamp
                call amp_split_pos_to_orders(iamp,orders)
                do i = 1, nsplitorders
                   write(*,*) '      ',ordernames(i), ':', orders(i)
                enddo
                do i=1,imax
-                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+                  call xprintout(6,limit_split(i,iamp),fxl_split(i,iamp))
                enddo
-               call checkres(limit_split(1,iamp),fxl_split(iamp),
-     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+               call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
+     &                   wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
                write(*,*) 'RETURN CODE', iret
              endif
@@ -407,21 +390,21 @@ c
               do l=0,3
                  write(80,*)'comp:',l
                  do i=1,10
-                    call xprintout(80,xp(i,l,k),lxp(l,k))
+                    call xprintout(80,xp(i,l,k),lxp(i,l,k))
                  enddo
               enddo
            enddo
         else
            iflag=0
-           call checkres(limit,fxl,wlimit,jac_cnt(0),xp,lxp,
+           call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
            nerr=nerr+iret
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
            do iamp=1, amp_split_size
-             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
-               call checkres(limit_split(1,iamp),fxl_split(iamp),
-     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(1,iamp).ne.0d0) then
+               call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
+     &                   wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
                nerr=nerr+iret
              endif
@@ -466,11 +449,12 @@ c in genps_fks_test.f
       do j=1,ncolltests
          call get_helicity(i_fks,j_fks)
          do iamp=1,amp_split_size
-           fxl_split(iamp) = 0d0
-           do i = 1,imax
-             limit_split(i,iamp) = 0d0
-             wlimit_split(i,iamp) = 0d0
-           enddo
+            do i = 1,imax
+               fxl_split(i,iamp) = 0d0
+               wfxl_split(i,iamp) = 0d0
+               limit_split(i,iamp) = 0d0
+               wlimit_split(i,iamp) = 0d0
+            enddo
          enddo
 
          if(ncolltests.le.10)then
@@ -495,40 +479,20 @@ c in genps_fks_test.f
             ntry=ntry+1
          enddo
          if(ncolltests.le.10)write (*,*) 'ntry',ntry
-         calculatedBorn=.false.
-         call set_cms_stuff(1)
-         call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl) 
-         fxl=fxl*jac_cnt(1)
-         ! keep track of the separate splitorders
-         do iamp=1,amp_split_size
-           fxl_split(iamp) = amp_split(iamp)*jac_cnt(1)
-         enddo
-
-         call set_cms_stuff(-100)
-         call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
-         limit(1)=fx*wgt
-         wlimit(1)=wgt
-         ! keep track of the separate splitorders
-         do iamp=1,amp_split_size
-              limit_split(1,iamp) = amp_split(iamp)*wgt
-              wlimit_split(1,iamp) = wgt
-         enddo
-
-         do k=1,nexternal
-            do l=0,3
-               lxp(l,k)=p1_cnt(l,k,1)
-               xp(1,l,k)=p(l,k)
-            enddo
-         enddo
-         do l=0,3
-            lxp(l,nexternal+1)=p_i_fks_cnt(l,1)
-            xp(1,l,nexternal+1)=p_i_fks_ev(l)
-         enddo
-
-         do i=2,imax
+         do i=1,imax
             y_ij_fks_fix=1-0.1d0**i
             wgt=1d0
             call generate_momenta(ndim,iconfig,wgt,x,p)
+            calculatedBorn=.false.
+            call set_cms_stuff(1)
+            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fx) 
+            fxl(i)=fx*jac_cnt(1)
+         ! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+               fxl_split(i,iamp) = amp_split(iamp)*jac_cnt(1)
+               wfxl_split(i,iamp) = jac_cnt(1)
+            enddo
+            wfxl(i)=jac_cnt(1)
             calculatedBorn=.false.
             call set_cms_stuff(-100)
             call sreal(p,xi_i_fks_ev,y_ij_fks_ev,fx)
@@ -541,10 +505,12 @@ c in genps_fks_test.f
             enddo
             do k=1,nexternal
                do l=0,3
+                  lxp(i,l,k)=p1_cnt(l,k,1)
                   xp(i,l,k)=p(l,k)
                enddo
             enddo
             do l=0,3
+               lxp(i,l,nexternal+1)=p_i_fks_cnt(l,1)
                xp(i,l,nexternal+1)=p_i_fks_ev(l)
             enddo
          enddo
@@ -552,22 +518,22 @@ c in genps_fks_test.f
             write (*,*) 'Collinear limit:'
            write (*,*) '   Sum of all contributions:'
             do i=1,imax
-               call xprintout(6,limit(i),fxl)
+               call xprintout(6,limit(i),fxl(i))
             enddo
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
            do iamp=1, amp_split_size
-             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(1,iamp).ne.0d0) then
                write(*,*) '   Split-order', iamp
                call amp_split_pos_to_orders(iamp,orders)
                do i = 1, nsplitorders
                   write(*,*) '      ',ordernames(i), ':', orders(i)
                enddo
                do i=1,imax
-                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+                  call xprintout(6,limit_split(i,iamp),fxl_split(i,iamp))
                enddo
-               call checkres(limit_split(1,iamp),fxl_split(iamp),
-     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
+               call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
+     &                   wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
                write(*,*) 'RETURN CODE', iret
              endif
@@ -582,21 +548,21 @@ c
                do l=0,3
                   write(80,*)'comp:',l
                   do i=1,10
-                     call xprintout(80,xp(i,l,k),lxp(l,k))
+                     call xprintout(80,xp(i,l,k),lxp(i,l,k))
                   enddo
                enddo
             enddo
          else
             iflag=1
-            call checkres(limit,fxl,wlimit,jac_cnt(1),xp,lxp,
-     &                    iflag,imax,j,nexternal,i_fks,j_fks,iret)
+           call checkres2(limit,fxl,wlimit,wfxl,xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
             nerr=nerr+iret
            ! check the contributions coming from each splitorders
            ! only look at the non vanishing ones
            do iamp=1, amp_split_size
-             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
-               call checkres(limit_split(1,iamp),fxl_split(iamp),
-     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(1,iamp).ne.0d0) then
+               call checkres2(limit_split(1,iamp),fxl_split(1,iamp),
+     &                   wlimit_split(1,iamp),wfxl_split(1,iamp),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
                nerr=nerr+iret
              endif

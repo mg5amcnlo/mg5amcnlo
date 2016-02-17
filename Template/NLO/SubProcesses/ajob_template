@@ -98,6 +98,6 @@ TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     cp -f log.txt log_MINT$integration_step.txt  >/dev/null 2>&1
     cp -f res.dat res_$integration_step.dat  >/dev/null 2>&1
     exit $status
+    cd ..
 done
-    
-
+exit $status

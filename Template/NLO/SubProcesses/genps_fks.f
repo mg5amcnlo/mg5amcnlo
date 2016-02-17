@@ -26,6 +26,11 @@ c     Timing profile statistics
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       integer iconfig0
       common/ciconfig0/iconfig0
+      double precision qmass_common(-nexternal:0),qwidth_common(
+     &     -nexternal:0)
+      common /c_qmass_qwidth/qmass_common,qwidth_common
+      double precision xvar(99)
+      common /c_vegas_x/xvar
       include 'coupl.inc'
 
 c      
@@ -53,9 +58,14 @@ c
       do i=-nexternal,0
          qmass(i)=pmass(i,iconfig)
          qwidth(i)=pwidth(i,iconfig)
+         qmass_common(i)=qmass(i)
+         qwidth_common(i)=qwidth(i)
+      enddo
+      do i=1,ndim
+         xvar(i)=x(i)
       enddo
 c
-      call generate_momenta_conf(ndim,jac,x,itree,qmass,qwidth,p)
+      call generate_momenta_conf_wrapper(ndim,jac,x,itree,qmass,qwidth,p)
 c If the input weight 'wgt' to this subroutine was not equal to one,
 c make sure we update all the (counter-event) jacobians and return also
 c the updated wgt (i.e. the jacobian for the event)
@@ -67,9 +77,543 @@ c
       call cpu_time(tAfter)      
       tGenPS = tGenPS + (tAfter-tBefore)
       return
-      end 
+      end
+
+      double precision function virtgranny(virtgrannybar)
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision virtgrannybar
+      integer i,j,igranny_fail
+      data igranny_fail /0/
+      double precision dot,dummy,pgranny(0:3),jac
+      external dot
+      double precision rat_xi_orig
+      common /c_rat_xi/ rat_xi_orig
+      double precision granny_m2_red(-1:1)
+      common /to_virtgranny/granny_m2_red
+c common block that is filled by this subroutine
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+c arguments for the generate_momenta_conf subroutine from common blocks
+      double precision p(0:3,nexternal)
+      integer itree(2,-max_branch:-1),iconf
+      common /to_itree/itree,iconf
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
+      double precision qmass_common(-nexternal:0),qwidth_common(
+     &     -nexternal:0)
+      common /c_qmass_qwidth/qmass_common,qwidth_common
+      double precision xvar(99)
+      common /c_vegas_x/xvar
+c      
+      granny_m2_red(0)=virtgrannybar
+      if (virtgrannybar.le.granny_m2_red(-1) .or.
+     &     virtgrannybar.ge.granny_m2_red(1) ) then
+         igranny_fail=igranny_fail+1
+         virtgranny=0d0
+         return
+      endif
+      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red
+     &     ,rat_xi_orig,itree,qmass_common,qwidth_common,p)
+      if (jac.gt.0d0) then
+         do j=0,3
+            pgranny(j)=0d0
+            do i=1,nexternal
+               if (granny_chain_real_final(i)) pgranny(j)=pgranny(j)+p(j
+     &              ,i)
+            enddo
+         enddo
+         virtgranny=dot(pgranny,pgranny)
+      else
+         virtgranny=0d0
+      endif
+      return
+      end
+
+      double precision function virtgranny_red(virtgrannybar)
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision virtgrannybar
+      integer i,j,igranny_fail
+      data igranny_fail /0/
+      double precision dot,rho,dummy,pgranny_bar(0:3),p_mother_bar3(3)
+     &     ,pcm(0:3),df1(0:3),jac
+      external dot,rho
+      double precision granny_m2_red(-1:1)
+      common /to_virtgranny/granny_m2_red
+      double precision rat_xi_orig
+      common /c_rat_xi/ rat_xi_orig
+c common block that is filled by this subroutine
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+c arguments for the generate_momenta_conf subroutine from common blocks
+      double precision p(0:3,nexternal)
+      integer itree(2,-max_branch:-1),iconf
+      common /to_itree/itree,iconf
+      integer ndim,ipole
+      common/tosigint/ndim,ipole
+      double precision qmass_common(-nexternal:0),qwidth_common(
+     &     -nexternal:0)
+      common /c_qmass_qwidth/qmass_common,qwidth_common
+c
+      double precision ybst_til_tolab,ybst_til_tocm,sqrtshat,shat
+      common/parton_cms_stuff/ybst_til_tolab,ybst_til_tocm,
+     &                        sqrtshat,shat
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision p_born_l(0:3,nexternal-1)
+      common/pborn_l/p_born_l
+      double precision shybst,chybst,chybstmo
+      common /virtgranny_boost/shybst,chybst,chybstmo
+      double precision xvar(99)
+      common /c_vegas_x/xvar
+c      
+      granny_m2_red(0)=virtgrannybar
+      if (virtgrannybar.le.granny_m2_red(-1) .or.
+     &     virtgrannybar.ge.granny_m2_red(1) ) then
+         igranny_fail=igranny_fail+1
+         virtgranny_red=0d0
+         return
+      endif
+      call generate_momenta_conf(.true.,ndim,jac,xvar,granny_m2_red
+     &     ,rat_xi_orig,itree,qmass_common,qwidth_common,p)
+      if (jac.gt.0d0) then
+         do j=1,3
+            pcm(j)=0d0
+            p_mother_bar3(j)=p_born_l(j,j_fks)/rho(p_born_l(0,j_fks))
+         enddo
+         pcm(0)=sqrtshat
+         call boostwdir2(chybst,-shybst,chybstmo,p_mother_bar3,pcm,df1)
+         do j=0,3
+            df1(j)=df1(j)-pcm(j)
+         enddo
+         do j=0,3
+            pgranny_bar(j)=0d0
+            do i=1,nexternal-1
+               if (granny_chain(i))
+     &              pgranny_bar(j)=pgranny_bar(j)+p_born_l(j,i)
+            enddo
+         enddo
+         virtgranny_red=dot(df1,df1)+2*dot(pgranny_bar,df1)
+      else
+         virtgranny_red=0d0
+      endif
+      return
+      end
+
+      function xinv_virtgranny(valxmbe2)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 xinv_virtgranny,valxmbe2
+      real*8 tmp,tolerance
+      parameter (tolerance=1.d-15)
+      integer ierr,mxf,mode
+      parameter (mxf=500)
+      parameter (mode=2)
+      real*8 xmbemin2,xmbemax2
+      common/cgrannyrange/xmbemin2,xmbemax2
+      real*8 offset
+      common/coffset/offset
+      real*8 dzerox,off_virtgranny
+      external off_virtgranny
+c
+      offset=valxmbe2
+      tmp=dzerox(xmbemin2,xmbemax2,tolerance,mxf,
+     #           off_virtgranny,mode,ierr)
+      if(ierr.ne.0)tmp=0.d0
+      xinv_virtgranny=tmp
+      return
+      end
+
+
+      function xinv_redvirtgranny(valxmbe2)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 xinv_redvirtgranny,valxmbe2
+      real*8 tmp,tolerance
+      parameter (tolerance=1.d-15)
+      integer ierr,mxf,mode
+      parameter (mxf=500)
+      parameter (mode=2)
+      real*8 xmbemin2,xmbemax2
+      common/cgrannyrange/xmbemin2,xmbemax2
+      real*8 offset
+      common/coffset/offset
+      real*8 dzerox,off_redvirtgranny
+      external off_redvirtgranny
+c
+      offset=valxmbe2
+      tmp=dzerox(xmbemin2,xmbemax2,tolerance,mxf,
+     #           off_redvirtgranny,mode,ierr)
+      if(ierr.ne.0)tmp=0.d0
+      xinv_redvirtgranny=tmp
+      return
+      end
+
+
+      function off_virtgranny(virtgrannybar)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 off_virtgranny,virtgrannybar
+      real*8 tmp,virtgranny,offset
+      common/coffset/offset
+      external virtgranny
+c
+      tmp=virtgranny(virtgrannybar)-offset
+      off_virtgranny=tmp
+      return
+      end
+
+
+      function off_redvirtgranny(virtgrannybar)
+c Any call to this function must be preceded by a call to fillcblk
+      implicit none
+      real*8 off_redvirtgranny,virtgrannybar
+      real*8 tmp,virtgranny_red,offset
+      common/coffset/offset
+      external virtgranny_red
+c
+      tmp=virtgranny_red(virtgrannybar)+virtgrannybar-offset
+      off_redvirtgranny=tmp
+      return
+      end
+
+
       
-      subroutine generate_momenta_conf(ndim,jac,x,itree,qmass,qwidth,p)
+      subroutine generate_momenta_conf_wrapper(ndim,jac,x,itree,qmass
+     $     ,qwidth,p)
+      implicit none
+      include 'nexternal.inc'
+      include 'genps.inc'
+      include 'nFKSconfigs.inc'
+      integer ndim
+      double precision jac,x(99),p(0:3,nexternal)
+      integer itree(2,-max_branch:-1),i,j
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),del1
+     &     ,del2,del3,del30,der,derivative,errder,random,ran2,virtgranny
+     &     ,virtgranny_red,MC_sum_factor,xmbe2hatlow,xmbe2hatupp
+     &     ,xmbe2inv,xmbe2inv_temp,xinv_redvirtgranny,xinv_virtgranny
+      external derivative,ran2,virtgranny,xinv_redvirtgranny
+     &     ,xinv_virtgranny
+c     granny stuff
+      double precision tiny,granny_m2(-1:1),step,granny_m2_red_local(
+     &     -1:1)
+      double precision granny_m2_red(-1:1)
+      common /to_virtgranny/granny_m2_red
+      real*8 xmbemin2,xmbemax2,xmbemin2_0,xmbemax2_0
+      common/cgrannyrange/xmbemin2,xmbemax2
+      logical input_granny_m2,compute_mapped,compute_non_shifted
+      parameter (tiny=1d-3)
+      integer irange,idir
+      data irange/0/
+      parameter (idir=0,step=1d-2)
+c common block that is filled by this subroutine
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+      logical only_event_phsp,skip_event_phsp
+      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+      double precision p1_cnt(0:3,nexternal,-2:2)
+      double precision wgt_cnt(-2:2)
+      double precision pswgt_cnt(-2:2)
+      double precision jac_cnt(-2:2)
+      common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision rat_xi,rat_xi_orig
+      common /c_rat_xi/ rat_xi_orig
+c     debug stuff
+      double precision temp
+      logical debug_granny
+      parameter (debug_granny=.false.)
+      double precision deravg,derstd,dermax,xi_i_fks_ev_der_max
+     &     ,y_ij_fks_ev_der_max
+      integer ntot_granny,derntot,ncase(0:6)
+      common /c_granny_counters/ ntot_granny,ncase,derntot,deravg,derstd
+     &     ,dermax,xi_i_fks_ev_der_max,y_ij_fks_ev_der_max
+      logical nocntevents
+      common/cnocntevents/nocntevents
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision xi_i_fks_cnt(-2:2)
+      common /cxiifkscnt/xi_i_fks_cnt
+      logical do_mapping_granny
+      logical softtest,colltest
+      common/sctests/softtest,colltest
+      integer              nFKSprocess
+      common/c_nFKSprocess/nFKSprocess
+c Common block with information to determine if we should not write a
+c possible resonance.
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+      integer isolsign
+      common /c_isolsign/isolsign
+      double precision border,border_massive,border_massless,fborder
+      parameter (border_massive=2d0,border_massless=0.1d0,fborder=0.02d0)
+      logical firsttime
+      data firsttime/.true./
+      integer icase
+      logical case_0or1or6
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      common /to_mass/pmass
+c
+      write_granny(nFKSprocess)=.true.
+      which_is_granny(nFKSprocess)=0
+c
+      do i=-1,1
+         granny_m2_red(i)=-99d99
+      enddo
+      rat_xi=-99d99
+c By default always try to do the mapping if need be. Change the logical
+c 'do_mapping_granny' to false to never do the phase-space mapping to
+c keep the invariant mass of the granny fixed.
+      do_mapping_granny=.true.
+
+      if (granny_is_res) then
+         which_is_granny(nFKSprocess)=igranny
+         if (.not. do_mapping_granny) then
+            compute_non_shifted=.true.
+            compute_mapped=.false.
+            MC_sum_factor=1d0
+         else
+            ntot_granny=ntot_granny+1
+c This computes the event kinematics and sets the range for the granny
+c inv. mass, in terms of the integration variable (which is not the
+c physical range of the invariant mass in the event!)
+            only_event_phsp=.true.
+            skip_event_phsp=.false.
+            input_granny_m2=.false.
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+            if (nint(jac).eq.-222) return ! numerical inaccuracy: not
+                                          ! even Born momenta generated.
+            rat_xi_orig=rat_xi
+            granny_m2_red_local( 0)=granny_m2_red( 0)
+            granny_m2_red_local(-1)=granny_m2_red(-1)
+            granny_m2_red_local( 1)=granny_m2_red( 1)
+            xmbemin2_0=granny_m2_red_local(-1)
+            xmbemax2_0=granny_m2_red_local(1)
+
+            if (pmass(j_fks).gt.0d0) then
+               border=max(border_massive ,fborder*(sqrt(xmbemax2_0)
+     &                                            -sqrt(xmbemin2_0)))
+            else
+               border=max(border_massless,fborder*(sqrt(xmbemax2_0)
+     &                                            -sqrt(xmbemin2_0)))
+            endif
+            xmbemin2=(sqrt(xmbemin2_0)+border)**2
+            xmbemax2=(max(0.d0,sqrt(xmbemax2_0)-border))**2
+            if (firsttime) then
+               write (*,*) 'In phase-space generator, the border'/
+     &              /' for the mapping range is set to ',border,
+     &              'for the first PS point.'
+               firsttime=.false.
+            endif
+            if(xmbemin2.ge.xmbemax2)then
+               icase=0
+               goto 111
+            endif
+            granny_m2(0) =virtgranny_red(granny_m2_red_local( 0))
+     &           +granny_m2_red_local(0) ! central value
+            granny_m2(1) =virtgranny_red(xmbemax2)
+     &           +xmbemax2      ! upper limit
+            granny_m2(-1)=virtgranny_red(xmbemin2)
+     &           +xmbemin2      ! lower limit
+            
+            if (debug_granny) then
+               temp =virtgranny(granny_m2_red_local( 0))
+               if (abs((temp-granny_m2(0))/temp).gt.1d-3)then
+                  write (*,*) 'DEBUG error: virtgranny,virtgranny_red'
+     &                 ,temp,granny_m2(0),granny_m2_red_local(0)
+c$$$                  stop
+               endif
+            endif
+            if(granny_m2(-1).gt.granny_m2(1))then
+               icase=0
+            else
+               if(granny_m2(1).le.xmbemin2)then
+                  icase=1
+               elseif( granny_m2(-1).le.xmbemin2.and.
+     &                 granny_m2( 1).gt.xmbemin2.and.
+     &                 granny_m2( 1).le.xmbemax2 )then
+                  icase=2
+               elseif( granny_m2(-1).le.xmbemin2.and.
+     &                 granny_m2( 1).gt.xmbemax2 )then
+                  icase=3
+               elseif( granny_m2(-1).gt.xmbemin2.and.
+     &                 granny_m2(-1).le.xmbemax2.and.
+     &                 granny_m2( 1).le.xmbemax2 )then
+                  icase=4
+               elseif( granny_m2(-1).gt.xmbemin2.and.
+     &                 granny_m2(-1).le.xmbemax2.and.
+     &                 granny_m2( 1).gt.xmbemax2 )then
+                  icase=5
+               elseif( granny_m2(-1).gt.xmbemax2 )then
+                  icase=6
+               else
+                  write(*,*)'Error in determining cases in '/
+     &                 /'phase-space generation', granny_m2(-1)
+     &                 ,granny_m2(1),xmbemin2,xmbemax2
+                  stop
+               endif
+            endif
+ 111        continue
+            ncase(icase)=ncase(icase)+1
+            case_0or1or6=.false.
+            if(icase.eq.0 .or. icase.eq.1 .or. icase.eq.6)then
+               case_0or1or6=.true.
+               xmbe2hatlow=xmbemax2_0 ! makes sure that we always go to 'compute_non_shifted'
+               xmbe2hatupp=xmbemax2_0
+            elseif(icase.eq.2)then
+               xmbe2hatlow=xinv_redvirtgranny(xmbemin2)
+               xmbe2hatupp=xmbemax2
+            elseif(icase.eq.3)then
+               xmbe2hatlow=xinv_redvirtgranny(xmbemin2)
+               xmbe2hatupp=xinv_redvirtgranny(xmbemax2)
+            elseif(icase.eq.4)then
+               xmbe2hatlow=xmbemin2
+               xmbe2hatupp=xmbemax2
+            elseif(icase.eq.5)then
+               xmbe2hatlow=xmbemin2
+               xmbe2hatupp=xinv_redvirtgranny(xmbemax2)
+            endif
+
+            
+c Check that granny_m2_red_local is covering the whole integration range
+c of granny_m2. If that's the case, we do the special granny trick, if
+c not, integrate as normal.
+            if ( (granny_m2_red_local(0).lt.xmbe2hatlow .or.
+     &            granny_m2_red_local(0).gt.xmbe2hatupp) .or.
+     &           isolsign.eq.-1) then
+c     2nd term in eq.70 of the note
+               compute_non_shifted=.true.
+            else
+               compute_non_shifted=.false.
+            endif
+            if ( granny_m2_red_local(0).gt.max(granny_m2(-1),xmbemin2) .and.
+     &           granny_m2_red_local(0).lt.min(granny_m2(1),xmbemax2) .and.
+     &           isolsign.ne.-1 .and. (.not.case_0or1or6) ) then
+c     1st term in eq.70 of the note
+               compute_mapped=.true.
+            else
+               compute_mapped=.false.
+            endif
+            MC_sum_factor=1d0
+            if (compute_mapped.and.compute_non_shifted) then
+c     Could add importance sampling here
+               random=ran2()
+               if (random.lt.0.5d0) then
+                  compute_mapped=.false.
+               else
+                  compute_non_shifted=.false.
+               endif
+               MC_sum_factor=2d0
+            endif
+         endif
+         if (.not. compute_mapped .and. .not. compute_non_shifted) then
+c only counter-event exists.
+            input_granny_m2=.false.
+            only_event_phsp=.false.
+c In principle skip_event_phsp can be set to .true. to save time, but
+c need to set it to .false. to fill shat_ev (et al) to be able to assign
+c a shower scale. The kinematics won't be used, because below jac=-222
+c and p(0,1)=-99d0.
+            skip_event_phsp=.false. 
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+            jac=-222
+            p(0,1)=-99d0
+            return
+         endif
+         if (compute_non_shifted) then
+c integrate as normal
+            input_granny_m2=.false.
+            only_event_phsp=.false.
+            skip_event_phsp=.false.
+            do i=-1,1
+               granny_m2_red(i)=-99d99
+            enddo
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+c In this case, we should not write the grandmother in the event file,
+c because the shower should not keep its inv. mass fixed.
+            write_granny(nFKSprocess)=.false.
+         endif
+         if (compute_mapped) then
+c Special Phase-space generation for granny stuff: keep its invariant
+c mass fixed.
+c Apply the theta functions on the range of granny_m2_red also to the
+c corresponding granny_m2.
+c compute the derivative numerically (to compute the Jacobian)
+            only_event_phsp=.true.
+            skip_event_phsp=.false.
+            xmbe2inv=xinv_redvirtgranny(granny_m2_red_local(0))
+            der=derivative(virtgranny_red,xmbe2inv,step,idir,xmbemin2
+     &           ,xmbemax2,errder)
+            if(abs(der).lt.1.d-8)der=0.d0
+            der=1.d0/(1.d0+der)
+            derntot=derntot+1
+            deravg=(deravg*(derntot-1)+abs(der))/dfloat(derntot)
+            derstd=(derstd*(derntot-1)+der**2)/dfloat(derntot)
+            if (abs(der).gt.dermax) then
+               dermax=abs(der)
+               xi_i_fks_ev_der_max=xi_i_fks_ev
+               y_ij_fks_ev_der_max=y_ij_fks_ev
+            endif
+            if (errder.gt.0.1d0) then
+               write (*,*) 'WARNING: error is large in the computation'/
+     $              /' of the derivative',errder,der
+            endif
+c compute the event kinematics using xmbe2inv as mass for the
+c grandmother of the Born (this will give granny_m2_red_local(0) mass to
+c the event).
+            input_granny_m2=.true.
+            skip_event_phsp=.false.
+            only_event_phsp=.true.
+            granny_m2_red(0)=xmbe2inv
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,rat_xi_orig,itree,qmass,qwidth,p)
+c multiply event jacobian by the numerically computed jacobian for the
+c derivative
+            jac=jac*abs(der)
+c counter-event kinematics: even though it shouldn't change from above,
+c better compute it again to set all the common blocks correctly.
+            input_granny_m2=.false.
+            only_event_phsp=.false.
+            skip_event_phsp=.true.
+            call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $           ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+         endif
+         do i=-2,2
+            jac_cnt(i)=jac_cnt(i)*MC_sum_factor
+         enddo
+      else
+         skip_event_phsp=.false.
+         only_event_phsp =.false.
+         input_granny_m2=.false.
+         call generate_momenta_conf(input_granny_m2,ndim,jac,x
+     $        ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
+      endif
+      end
+
+
+      subroutine generate_momenta_conf(input_granny_m2,ndim,jac,x
+     &     ,granny_m2_red,rat_xi,itree,qmass,qwidth,p)
 c
 c x(1)...x(ndim-5) --> invariant mass & angles for the Born
 c x(ndim-4) --> tau_born
@@ -87,6 +631,8 @@ c arguments
       double precision jac,x(99),p(0:3,nexternal)
       integer itree(2,-max_branch:-1)
       double precision qmass(-nexternal:0),qwidth(-nexternal:0)
+     &     ,granny_m2_red(-1:1)
+      logical input_granny_m2
 c common
 c     Arguments have the following meanings:
 c     -2 soft-collinear, incoming leg, - direction as in FKS paper
@@ -101,6 +647,10 @@ c     2 soft-collinear
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
+      double precision p_born_l(0:3,nexternal-1)
+      common/pborn_l/p_born_l
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
       double precision p_ev(0:3,nexternal)
       common/pev/p_ev
       double precision xi_i_fks_ev,y_ij_fks_ev
@@ -108,6 +658,8 @@ c     2 soft-collinear
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+      double precision xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double complex xij_aor
       common/cxij_aor/xij_aor
       integer i_fks,j_fks
@@ -157,7 +709,8 @@ c local
      &     ,sqrtshat_born,S(-max_branch:max_particles),xpswgt0
      &     ,m_born(nexternal-1),m_j_fks,xmrec2,xjac,xpswgt,phi_i_fks
      &     ,tau,ycm,xbjrk(2),xiimax,xinorm,xi_i_fks ,y_ij_fks,flux
-     &     ,p_i_fks(0:3),pwgt,p_born_CHECK(0:3,nexternal-1)
+     &     ,p_i_fks(0:3),pwgt,p_born_CHECK(0:3,nexternal-1),xi_i_hat
+     &     ,rat_xi
       logical one_body,pass,check_cnt
 c external
       double precision lambda
@@ -174,13 +727,23 @@ c parameters
 c saves
       save m,stot,totmassin,totmass,ns_channel,nt_channel,one_body
      &     ,ionebody,fksmass,nbranch
+      common /c_isolsign/isolsign
 c Conflicting BW stuff
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-nexternal:-1,-1:1),
-     &     cBW_width(-nexternal:-1,-1:1)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
-
+c Common block with granny information
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+      logical only_event_phsp,skip_event_phsp
+      common /c_skip_only_event_phsp/only_event_phsp,skip_event_phsp
+      
       pass=.true.
       do i=1,nexternal-1
          if (i.lt.i_fks) then
@@ -260,8 +823,8 @@ c tau is fixed by the mass of the final state particle
      $           cBW(-ns_channel-1).ne.2)then
 c Generate tau according to a Breit-Wiger function
                call generate_tau_BW(stot,x(ndim-4),qmass(-ns_channel-1)
-     $              ,qwidth(-ns_channel-1),cBW(-ns_channel-1),cBW_mass(
-     $              -ns_channel-1,1),cBW_width(-ns_channel-1,1),tau_born
+     $              ,qwidth(-ns_channel-1),cBW(-ns_channel-1),cBW_mass(1
+     $              ,-ns_channel-1),cBW_width(1,-ns_channel-1),tau_born
      $              ,xjac0)
             else
 c not a Breit Wigner
@@ -320,8 +883,15 @@ c
 c Generate Born-level momenta
 c
 c Start by generating all the invariant masses of the s-channels
-      call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
-     &     ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0,pass)
+      if (granny_is_res) then
+         call generate_inv_mass_sch_granny(input_granny_m2,ns_channel
+     &        ,itree,m,granny_m2_red,sqrtshat_born,totmass,qwidth,qmass
+     &        ,cBW,cBW_mass ,cBW_width,s,x,xjac0,pass)
+      else
+         call generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
+     &        ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0
+     &        ,pass)
+      endif
       if (.not.pass) goto 222
 c If only s-channels, also set the p1+p2 s-channel
       if (nt_channel .eq. 0 .and. nincoming .eq. 2) then
@@ -353,7 +923,7 @@ c  Now I have the Born momenta
 c
       do i=1,nexternal-1
          do j=0,3
-            p_born(j,i)=pb(j,i)
+            p_born_l(j,i)=pb(j,i)
             p_born_CHECK(j,i)=pb(j,i)
          enddo
          m_born(i)=m(i)
@@ -363,6 +933,23 @@ c
          xjac0=-142
          goto 222
       endif
+
+      if (.not.only_event_phsp) then
+         do i=1,nexternal-1
+            do j=0,3
+               p_born(j,i)=p_born_l(j,i)
+            enddo
+         enddo
+      endif
+
+      if (.not. skip_event_phsp) then
+         do i=1,nexternal-1
+            do j=0,3
+               p_born_ev(j,i)=p_born_l(j,i)
+            enddo
+         enddo
+      endif
+         
 
 c
 c
@@ -377,13 +964,32 @@ c energy components will stay negative. Also set the upper limits of
 c the xi ranges to negative values to force crash if something
 c goes wrong. The jacobian of the counterevents are set negative
 c to prevent using those skipped because e.g. m(j_fks)#0
-      p_i_fks_ev(0)=-1.d0
-      xiimax_ev=-1.d0
-      do i=-2,2
-         p_i_fks_cnt(0,i)=-1.d0
-         xiimax_cnt(i)=-1.d0
-         jac_cnt(i)=-1.d0
-      enddo
+      if (skip_event_phsp) then
+         xi_i_hat=xi_i_hat_ev
+         if( (j_fks.eq.1.or.j_fks.eq.2).and.fks_as_is )then
+            icountevts=-2
+         else
+            icountevts=0
+         endif
+c     skips counterevents when integrating over second fold for massive
+c     j_fks
+c     FIXTHIS FIXTHIS FIXTHIS FIXTHIS:         
+         if( isolsign.eq.-1 )then
+            write (*,*) 'ERROR, when doing 2nd fold of massive j_fks,'
+     &           //' cannot skip event_phsp'
+            stop
+         endif
+      else
+         p_i_fks_ev(0)=-1.d0
+         xiimax_ev=-1.d0
+      endif
+      if (.not.only_event_phsp) then
+         do i=-2,2
+            p_i_fks_cnt(0,i)=-1.d0
+            xiimax_cnt(i)=-1.d0
+            jac_cnt(i)=-1.d0
+         enddo
+      endif
 c set cm stuff to values to make the program crash if not set elsewhere
       ybst_til_tolab=1.d14
       ybst_til_tocm=1.d14
@@ -391,7 +997,7 @@ c set cm stuff to values to make the program crash if not set elsewhere
       shat=0.d0
 c if collinear counterevent will not be generated, the following
 c quantity will stay zero
-      xij_aor=(0.d0,0.d0)
+      if (.not.only_event_phsp) xij_aor=(0.d0,0.d0)
 c
 c These will correspond to the vegas x's for the FKS variables xi_i,
 c y_ij and phi_i
@@ -408,7 +1014,7 @@ c
 c
 c For final state j_fks, compute the recoil invariant mass
       if (j_fks.gt.nincoming) then
-         call get_recoil(p_born,imother,shat_born,xmrec2,pass)
+         call get_recoil(p_born_l,imother,shat_born,xmrec2,pass)
          if (.not.pass) then
             xjac0=-44
             goto 222
@@ -427,7 +1033,7 @@ c is correct; put i_fks momenta equal to zero.
       do i=1,nexternal
          if(i.lt.i_fks) then
             do j=0,3
-               xp(j,i)=p_born(j,i)
+               xp(j,i)=p_born_l(j,i)
             enddo
             m(i)=m_born(i)
          elseif(i.eq.i_fks) then
@@ -437,7 +1043,7 @@ c is correct; put i_fks momenta equal to zero.
             m(i)=0d0
          elseif(i.ge.i_fks) then
             do j=0,3
-               xp(j,i)=p_born(j,i-1)
+               xp(j,i)=p_born_l(j,i-1)
             enddo
             m(i)=m_born(i-1)
          endif
@@ -464,23 +1070,24 @@ c case 3: j_fks is initial state
          if (m_j_fks.eq.0d0) then
             isolsign=1
             call generate_momenta_massless_final(icountevts,i_fks,j_fks
-     &           ,p_born(0,imother),shat,sqrtshat ,x(ixEi),xmrec2,xp
-     &           ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,p_i_fks
-     &           ,xjac,xpswgt,pass)
+     &           ,p_born_l(0,imother),shat,sqrtshat,x(ixEi),xmrec2,xp
+     &           ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat
+     &           ,p_i_fks,xjac,xpswgt,pass)
             if (.not.pass) goto 112
          elseif(m_j_fks.gt.0d0) then
             call generate_momenta_massive_final(icountevts,isolsign
-     &           ,i_fks,j_fks,p_born(0,imother),shat,sqrtshat,m_j_fks
-     &           ,x(ixEi),xmrec2,xp,phi_i_fks,xiimax,xinorm
-     &           ,xi_i_fks,y_ij_fks,p_i_fks,xjac,xpswgt,pass)
+     &           ,input_granny_m2,rat_xi,i_fks,j_fks,p_born_l(0,imother)
+     &           ,shat,sqrtshat,m_j_fks,x(ixEi),xmrec2,xp,phi_i_fks
+     &           ,xiimax,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac
+     &           ,xpswgt,pass)
             if (.not.pass) goto 112
          endif
       elseif(j_fks.le.nincoming) then
          isolsign=1
          call generate_momenta_initial(icountevts,i_fks,j_fks,xbjrk_born
-     &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp ,x(ixEi)
+     &        ,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks,xp,x(ixEi)
      &        ,shat,stot,sqrtshat,tau,ycm,xbjrk,p_i_fks,xiimax,xinorm
-     &        ,xi_i_fks,y_ij_fks ,xpswgt,xjac,pass)
+     &        ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt,xjac ,pass)
          if (.not.pass) goto 112
       else
          write (*,*) 'Error #2 in genps_fks.f',j_fks
@@ -535,6 +1142,7 @@ c Fill common blocks
          xiimax_ev=xiimax
          xinorm_ev=xinorm
          xi_i_fks_ev=xi_i_fks
+         xi_i_hat_ev=xi_i_hat
          do i=0,3
             p_i_fks_ev(i)=p_i_fks(i)
          enddo
@@ -562,6 +1170,7 @@ c run_card). This fix is needed for set_cms_stuff to work properly.
          xiimax_cnt(icountevts)=xiimax
          xinorm_cnt(icountevts)=xinorm
          xi_i_fks_cnt(icountevts)=xi_i_fks
+         xi_i_hat_cnt(icountevts)=xi_i_hat
          do i=0,3
             p_i_fks_cnt(i,icountevts)=p_i_fks(i)
          enddo
@@ -585,11 +1194,11 @@ c
          endif
 c skips counterevents when integrating over second fold for massive
 c j_fks
-        if( isolsign.eq.-1 )icountevts=5 
+         if( isolsign.eq.-1 )icountevts=5
+         if (only_event_phsp) return
       else
          icountevts=icountevts+1
       endif
-
       if( (icountevts.le.2.and.m_j_fks.eq.0.d0.and.(.not.nbody)).or.
      &    (icountevts.eq.0.and.m_j_fks.eq.0.d0.and.nbody) .or.
      &    (icountevts.eq.0.and.m_j_fks.ne.0.d0) )then
@@ -629,21 +1238,22 @@ c Set all to negative values and exit
       do i=-2,2
         p1_cnt(0,1,i)=-99
       enddo
-      p_born(0,1)=-99
+      if (.not.only_event_phsp) p_born(0,1)=-99
       nocntevents=.true.
       return
       end
       
 
       subroutine generate_momenta_massless_final(icountevts,i_fks,j_fks
-     &     ,p_born_imother,shat,sqrtshat,x,xmrec2,xp,phi_i_fks,
-     &     xiimax,xinorm,xi_i_fks,y_ij_fks,p_i_fks,xjac,xpswgt,pass)
+     &     ,p_born_imother,shat,sqrtshat,x,xmrec2,xp,phi_i_fks,xiimax
+     &     ,xinorm,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt
+     &     ,pass)
       implicit none
       include 'nexternal.inc'
 c arguments
       integer icountevts,i_fks,j_fks
       double precision shat,sqrtshat,x(2),xmrec2,xp(0:3,nexternal)
-     &     ,y_ij_fks,p_born_imother(0:3),phi_i_fks
+     &     ,y_ij_fks,p_born_imother(0:3),phi_i_fks,xi_i_hat
       double precision xiimax,xinorm,xi_i_fks,p_i_fks(0:3),xjac,xpswgt
       logical pass
 c common blocks
@@ -663,8 +1273,10 @@ c local
      &     ,cosphi_mother_fks,sinphi_mother_fks,recoil(0:3),sumrec
      &     ,sumrec2,betabst,gammabst,shybst,chybst,chybstmo,xdir(3)
      &     ,veckn,veckbarn,xp_mother(0:3),cosphi_i_fks
-     &     ,sinphi_i_fks,xi_i_hat
+     &     ,sinphi_i_fks,xiimax_save
+      save xiimax_save
       double complex resAoR0
+      common /virtgranny_boost/shybst,chybst,chybstmo
 c external
       double precision rho
       external rho
@@ -735,19 +1347,22 @@ c importance sampling towards soft singularity
 c insert here further importance sampling towards xi_i_hat->0
             xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          endif
+c in the case of counter events, xi_i_hat is an input to this function
          xi_i_fks=xi_i_hat*xiimax
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
      &        (.not.softtest)  )then
+c This is to keep xi_i_hat, rather than xi_i, fixed in the tests.
+c Changed in the context of granny stuff       
          if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
+            xi_i_fks=xi_i_fks_fix*xiimax
          else
             xi_i_fks=xi_i_fks_fix*xiimax
          endif
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        softtest )then
-         if(xi_i_fks_fix.lt.xiimax)then
-            xi_i_fks=xi_i_fks_fix
+         if(xi_i_fks_fix.lt.1d0)then
+            xi_i_fks=xi_i_fks_fix*xiimax
          else
             xjac=-102
             pass=.false.
@@ -896,17 +1511,17 @@ c
       end
 
       subroutine generate_momenta_massive_final(icountevts,isolsign
-     &     ,i_fks,j_fks,p_born_imother,shat,sqrtshat,m_j_fks,x,xmrec2,xp
-     &     ,phi_i_fks,xiimax,xinorm,xi_i_fks,y_ij_fks,p_i_fks,xjac
-     &     ,xpswgt,pass)
+     &     ,input_granny_m2,rat_xi,i_fks,j_fks,p_born_imother,shat
+     &     ,sqrtshat,m_j_fks,x,xmrec2,xp,phi_i_fks,xiimax,xinorm
+     &     ,xi_i_fks,y_ij_fks,xi_i_hat,p_i_fks,xjac,xpswgt,pass)
       implicit none
       include 'nexternal.inc'
 c arguments
       integer icountevts,i_fks,j_fks,isolsign
       double precision shat,sqrtshat,x(2),xmrec2,xp(0:3,nexternal)
-     &     ,y_ij_fks,p_born_imother(0:3),m_j_fks,phi_i_fks
+     &     ,y_ij_fks,p_born_imother(0:3),m_j_fks,phi_i_fks,xi_i_hat
       double precision xiimax,xinorm,xi_i_fks,p_i_fks(0:3),xjac,xpswgt
-      logical pass
+      logical pass,input_granny_m2
 c common blocks
       double precision  veckn_ev,veckbarn_ev,xp0jfks
       common/cgenps_fks/veckn_ev,veckbarn_ev,xp0jfks
@@ -924,8 +1539,9 @@ c local
      $     ,shybst,chybst,chybstmo,xdir(3),veckn,veckbarn ,cosphi_i_fks
      $     ,sinphi_i_fks,cosphi_mother_fks,costh_mother_fks
      $     ,phi_mother_fks,sinphi_mother_fks,th_mother_fks,xitmp2
-     $     ,sinth_mother_fks,xi_i_hat
+     $     ,sinth_mother_fks
       save xjactmp
+      common /virtgranny_boost/shybst,chybst,chybstmo
 c external
       double precision rho
       external rho
@@ -1002,8 +1618,8 @@ c
       ximax=1-(xmhat+xmjhat)**2
       if(xiBm.lt.(xim-1.d-8).or.xim.lt.0.d0.or.xiBm.lt.0.d0.or.
      &     xiBm.gt.(ximax+1.d-8).or.ximax.gt.1.or.ximax.lt.0.d0)then
-         write(*,*)'Fatal error #4 in one_tree',xim,xiBm,ximax
-         xjac=-1d0
+         write(*,*)'WARNING #4 in one_tree',xim,xiBm,ximax
+         xjac=-104d0
          pass=.false.
          return
       endif
@@ -1016,7 +1632,11 @@ c
       endif
       xiimax=xirplus
       xinorm=xirplus+xirminus
-      rat_xi=xiimax/xinorm
+c If inputing the granny mass, do not update rat_xi, but use the
+c inputted rat_xi instead.
+      if (.not.input_granny_m2) then
+         rat_xi=xiimax/xinorm
+      endif
 c
 c Generate xi_i_fks
 c
@@ -1089,7 +1709,7 @@ c
       x3len_i_fks=E_i_fks
       b2m4ac=xi_i_fks**2*cffA2 + xi_i_fks*cffB2 + cffC2
       if(b2m4ac.le.0.d0)then
-         if(abs(b2m4ac).lt.1.d-8)then
+         if(abs(b2m4ac).lt.1.d-3)then
             b2m4ac=0.d0
          else
             write(*,*)'Fatal error #6 in one_tree'
@@ -1105,9 +1725,11 @@ c
      &                (2-xi_i_fks*(1+y_ij_fks))
       x3len_j_fks=sqrtshat*x3len_j_fks_num/x3len_j_fks_den
       if(x3len_j_fks.lt.0.d0)then
-         write(*,*)'Fatal error #7 in one_tree',
+         write(*,*)'WARNING #7 in one_tree',
      &        x3len_j_fks_num,x3len_j_fks_den,xi_i_fks,y_ij_fks
-         stop
+         xjac=-107d0
+         pass=.false.
+         return
       endif
       x3len_fks_mother=sqrt( x3len_i_fks**2+x3len_j_fks**2+
      &                       2*x3len_i_fks*x3len_j_fks*y_ij_fks )
@@ -1215,14 +1837,14 @@ c
       subroutine generate_momenta_initial(icountevts,i_fks,j_fks,
      &     xbjrk_born,tau_born,ycm_born,ycmhat,shat_born,phi_i_fks ,xp,x
      &     , shat,stot,sqrtshat,tau,ycm,xbjrk ,p_i_fks,xiimax,xinorm
-     &     ,xi_i_fks,y_ij_fks,xpswgt ,xjac ,pass)
+     &     ,xi_i_fks,y_ij_fks,xi_i_hat,xpswgt ,xjac ,pass)
       implicit none
       include 'nexternal.inc'
 c arguments
       integer icountevts,i_fks,j_fks
       double precision xbjrk_born(2),tau_born,ycm_born,ycmhat,shat_born
      &     ,phi_i_fks,xpswgt,xjac,xiimax,xinorm,xp(0:3,nexternal),stot
-     &     ,x(2) ,y_ij_fks
+     &     ,x(2) ,y_ij_fks,xi_i_hat
       double precision shat,sqrtshat,tau,ycm,xbjrk(2),p_i_fks(0:3)
       logical pass
 c common blocks
@@ -1244,8 +1866,7 @@ c local
      $     ,ximaxtmp,omega,bstfact,shy_tbst,chy_tbst,chy_tbstmo
      $     ,xdir_t(3),cosphi_i_fks,sinphi_i_fks,shy_lbst,chy_lbst
      $     ,encmso2,E_i_fks,sinth_i_fks,xpifksred(0:3),xi_i_fks
-     $     ,xi_i_hat,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
-      save xi_i_hat
+     $     ,xiimin,yij_upp,yij_low,y_ij_fks_upp,y_ij_fks_low
       double complex resAoR0
 c external
 c
@@ -1434,6 +2055,7 @@ c insert here further importance sampling towards xi_i_hat->0
             xi_i_hat=sstiny+(1-sstiny)*x(1)**2
          endif
 c$$$         xi_i_fks=xi_i_hat*xiimax
+c     xi_i_hat is an input to the function if not event.
          xi_i_fks=xiimin+(xiimax-xiimin)*xi_i_hat
       elseif( (icountevts.eq.-100.or.abs(icountevts).eq.1) .and.
      &        (colltest.and.xi_i_fks_fix.ne.-2.d0) .and.
@@ -1995,29 +2617,17 @@ c For e+e- collisions, set tau to one and y to zero
       subroutine generate_inv_mass_sch(ns_channel,itree,m,sqrtshat_born
      &     ,totmass,qwidth,qmass,cBW,cBW_mass,cBW_width,s,x,xjac0,pass)
       implicit none
-      real*8 pi
-      parameter (pi=3.1415926535897932d0)
       include 'genps.inc'
       include 'nexternal.inc'
-      integer ns_channel
-      double precision qmass(-nexternal:0),qwidth(-nexternal:0)
-      double precision M(-max_branch:max_particles),x(99)
-      double precision s(-max_branch:max_particles)
-      double precision sqrtshat_born,totmass,xjac0
-      integer itree(2,-max_branch:-1)
-      integer i,j,nsamp
-      parameter (nsamp=1)
-      double precision smin,smax,xm02,bwmdpl,bwmdmn,bwfmpl,bwfmmn,bwdelf
-     &     ,totalmass,tmp,ximin0,ximax0
-      double precision xbwmass3,bwfunc
-      external xbwmass3,bwfunc
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),M(
+     $     -max_branch:max_particles),x(99),s(-max_branch:max_particles)
+     $     ,sqrtshat_born,totmass,xjac0,smin,smax,totalmass
+      integer ns_channel,i,j,itree(2,-max_branch:-1)
       logical pass
       integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
-      double precision cBW_mass(-nexternal:-1,-1:1),
-     &     cBW_width(-nexternal:-1,-1:1)
-      double precision b(-1:1),x0
-      double precision s_mass(-nexternal:-1),xi,fract
-      parameter (fract=0.1d0)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
+      double precision s_mass(-nexternal:-1)
       common/to_phase_space_s_channel/s_mass
       pass=.true.
       totalmass=totmass
@@ -2030,136 +2640,8 @@ c Generate invariant masses for all s-channel branchings of the Born
             write(*,*)smin,smax,i
             stop
          endif
-c Choose the appropriate s given our constraints smin,smax
-         if(qwidth(i).ne.0.d0 .and. cBW(i).ne.2)then
-c Breit Wigner
-            if (cBW(i).eq.1 .and.
-     &          cBW_width(i,1).gt.0d0 .and. cBW_width(i,-1).gt.0d0) then
-c     conflicting BW on both sides
-               do j=-1,1,2
-                  b(j)=(cBW_mass(i,j)-qmass(i))/
-     &                 (qwidth(i)+cBW_width(i,j))
-                  b(j)=qmass(i)+b(j)*qwidth(i)
-                  b(j)=b(j)**2
-               enddo
-               if (x(-i).lt.1d0/3d0) then
-                  x0=3d0*x(-i)
-                  s(i)=(b(-1)-smin)*x0+smin
-                  xjac0=3d0*xjac0*(b(-1)-smin)
-               elseif (x(-i).gt.1d0/3d0 .and. x(-i).lt.2d0/3d0) then
-                  x0=3d0*x(-i)-1d0
-                  xm02=qmass(i)**2
-                  bwmdpl=b(1)-xm02
-                  bwmdmn=xm02-b(-1)
-                  bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
-                  bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
-                  bwdelf=(bwfmpl+bwfmmn)/pi
-                  s(i)=xbwmass3(x0,xm02,qwidth(i),bwdelf
-     &                 ,bwfmmn)
-                  xjac0=3d0*xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
-               else
-                  x0=3d0*x(-i)-2d0
-                  s(i)=(smax-b(1))*x0+b(1)
-                  xjac0=3d0*xjac0*(smax-b(1))
-               endif
-            elseif (cBW(i).eq.1.and.cBW_width(i,1).gt.0d0) then
-c     conflicting BW with alternative mass larger
-               b(1)=(cBW_mass(i,1)-qmass(i))/
-     &              (qwidth(i)+cBW_width(i,1))
-               b(1)=qmass(i)+b(1)*qwidth(i)
-               b(1)=b(1)**2
-               if (x(-i).lt.0.5d0) then
-                  x0=2d0*x(-i)
-                  xm02=qmass(i)**2
-                  bwmdpl=b(1)-xm02
-                  bwmdmn=xm02-smin
-                  bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
-                  bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
-                  bwdelf=(bwfmpl+bwfmmn)/pi
-                  s(i)=xbwmass3(x0,xm02,qwidth(i),bwdelf
-     &                 ,bwfmmn)
-                  xjac0=2d0*xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
-               else
-                  x0=2d0*x(-i)-1d0
-                  s(i)=(smax-b(1))*x0+b(1)
-                  xjac0=2d0*xjac0*(smax-b(1))
-               endif
-            elseif (cBW(i).eq.1.and.cBW_width(i,-1).gt.0d0) then
-c     conflicting BW with alternative mass smaller
-               b(-1)=(cBW_mass(i,-1)-qmass(i))/
-     &              (qwidth(i)+cBW_width(i,-1)) ! b(-1) is negative here
-               b(-1)=qmass(i)+b(-1)*qwidth(i)
-               b(-1)=b(-1)**2
-
-               if (b(-1).gt.smax) then
-                   s(i)=(smax-smin)*x(-i)+smin
-                   xjac0=xjac0*(smax-smin)
-               elseif (x(-i).lt.0.5d0) then
-                  x0=2d0*x(-i)
-                  s(i)=(b(-1)-smin)*x0+smin
-                  xjac0=2d0*xjac0*(b(-1)-smin)
-               else
-                  x0=2d0*x(-i)-1d0
-                  xm02=qmass(i)**2
-                  bwmdpl=smax-xm02
-                  bwmdmn=xm02-b(-1)
-                  bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
-                  bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
-                  bwdelf=(bwfmpl+bwfmmn)/pi
-                  s(i)=xbwmass3(x0,xm02,qwidth(i),bwdelf
-     &                 ,bwfmmn)
-                  xjac0=2d0*xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
-               endif
-            else
-c     normal BW
-               xm02=qmass(i)**2
-               bwmdpl=smax-xm02
-               bwmdmn=xm02-smin
-               bwfmpl=atan(bwmdpl/(qmass(i)*qwidth(i)))
-               bwfmmn=atan(bwmdmn/(qmass(i)*qwidth(i)))
-               bwdelf=(bwfmpl+bwfmmn)/pi
-               s(i)=xbwmass3(x(-i),xm02,qwidth(i),bwdelf
-     &              ,bwfmmn)
-               xjac0=xjac0*bwdelf/bwfunc(s(i),xm02,qwidth(i))
-            endif
-         else
-c not a Breit Wigner
-            if (smin.eq.0d0 .and. s_mass(i).eq.0d0) then
-c     no lower limit on invariant mass from cuts or final state masses:
-c     use flat distribution
-               s(i) = (smax-smin)*x(-i)+smin
-               xjac0 = xjac0*(smax-smin)
-            elseif (smin.ge.s_mass(i) .and. smin.gt.0d0) then
-c     A lower limit on smin, which is larger than lower limit from cuts
-c     or masses. Use 1/x^nsamp importance sampling
-               ximax0 = smin**(-nsamp)
-               ximin0 = smax**(-nsamp)
-               tmp  = ximin0 +(1d0-x(-i))*(ximax0-ximin0)
-               s(i) = tmp**(-1/dble(nsamp))
-               xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
-            elseif (smin.lt.s_mass(i) .and. s_mass(i).gt.0d0) then
-c     Use flat grid between smin and s_mass(i), and 1/x^nsamp above
-c     s_mass(i)
-               if (x(-i).lt.fract) then
-                  xi=x(-i)/fract ! between 0 and 1
-                  xjac0=xjac0/fract
-                  s(i) = (s_mass(i)-smin)*xi+smin
-                  xjac0 = xjac0*(s_mass(i)-smin)
-               else
-                  xi=(x(-i)-fract)/(1d0-fract) ! between 0 and 1
-                  xjac0=xjac0/(1d0-fract)
-                  ximax0 = s_mass(i)**(-nsamp)
-                  ximin0 = smax**(-nsamp)
-                  tmp  = ximin0 +(1d0-xi)*(ximax0-ximin0)
-                  s(i) = tmp**(-1/dble(nsamp))
-                  xjac0= xjac0/nsamp*s(i)**(nsamp+1)*(ximax0-ximin0)
-               endif
-            else
-               write (*,*) "ERROR in genps_fks.f:"/
-     $              /" cannot set s-channel without BW"
-               stop 1
-            endif
-         endif
+         call generate_si(smin,smax,s(i),cBW(i),cBW_width(-1,i)
+     $        ,cBW_mass(-1,i),qmass(i),qwidth(i),x(-i),xjac0,s_mass(i))
 c If numerical inaccuracy, quit loop
          if (xjac0 .lt. 0d0) then
             xjac0 = -6
@@ -2187,6 +2669,344 @@ c
       end
 
 
+      subroutine generate_inv_mass_sch_granny(input_granny_m2,ns_channel
+     &     ,itree,m,granny_m2_red,sqrtshat_born,totmass,qwidth,qmass,cBW
+     &     ,cBW_mass,cBW_width,s,x,xjac0,pass)
+c Identical to generate_inv_mass_sch, but that it generates the masses
+c from the inside to the outside (i.e., first the largest one, and then
+c the smaller ones). All the daughters of the granny are generated
+c next-to-last, with granny itself as the final one.
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      double precision qmass(-nexternal:0),qwidth(-nexternal:0),M(
+     &     -max_branch:max_particles),x(99),s(-max_branch:max_particles)
+     &     ,sqrtshat_born,totmass,xjac0,smin,smax,totalmass,min_m(
+     &     -nexternal:nexternal),max_m(-nexternal:nexternal)
+     &     ,granny_m2_red(-1:1)
+      integer ns_channel,i,j,itree(2,-max_branch:-1),do_granny_daughters
+      logical pass,start_s_chan(-nexternal:nexternal),input_granny_m2
+      integer cBW_level_max,cBW(-nexternal:-1),cBW_level(-nexternal:-1)
+      double precision cBW_mass(-1:1,-nexternal:-1),
+     &     cBW_width(-1:1,-nexternal:-1)
+      double precision s_mass(-nexternal:-1)
+      common/to_phase_space_s_channel/s_mass
+c Common block with granny information
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+c
+      totalmass=0d0
+      do i=nexternal-1,-ns_channel,-1
+         if (i.gt.0) then
+            min_m(i)=m(i)
+            totalmass=totalmass+m(i)
+         elseif (i.lt.0) then
+c     "Bare" integration ranges. 'max_m' will be updated below as soon
+c     as invariant mass of mother has been generated.
+            min_m(i)=min_m(itree(1,i))+min_m(itree(2,i))
+            max_m(i)=sqrtshat_born-totalmass+min_m(i)
+c     At the of the loop 'start_s_chan' is .true. only for s-channel
+c     propagators attached directly to the t-channel.
+            start_s_chan(i)=.true.
+            start_s_chan(itree(1,i))=.false.
+            start_s_chan(itree(2,i))=.false.
+         else
+            min_m(i)=0d0
+            max_m(i)=sqrtshat_born
+         endif
+      enddo
+c
+c Generate the s-channel masses for everything.
+c
+      pass=.true.
+      do do_granny_daughters=0,1
+         do i = -ns_channel,-1
+c Skip granny and its daughters if do_granny_daughters is 0,
+c skip everything else if do_granny_daughters is 1
+            if ( (do_granny_daughters.eq.0 .and. granny_chain(i)) .or.
+     $           (do_granny_daughters.eq.1 .and. .not. granny_chain(i)))
+     $           cycle
+c Skip the granny
+            if (i.eq.igranny) then
+               if (do_granny_daughters.eq.1) then
+c     once we have done all the masses except granny and daughters, we
+c     have to update the integration ranges on imother and iaunt, using
+c     the maximal allowed range, i.e. granny is as heavy as possible
+                  if (itree(1,i).lt.0) then
+                     max_m(itree(1,i))=max_m(i)-min_m(itree(2,i))
+                  endif
+                  if (itree(2,i).lt.0) then
+                     max_m(itree(2,i))=max_m(i)-min_m(itree(1,i))
+                  endif
+               endif
+               cycle
+            endif
+c Generate invariant masses for all s-channel branchings of the Born
+            if ( max_m(i).lt.min_m(i) .or. max_m(i).lt.0.d0
+     &           .or. min_m(i).lt.0.d0)then
+               write(*,*) 'Error #13 in genps_fks.f (granny)'
+               write(*,*) min_m(i),max_m(i),i
+               stop
+            endif
+            smin = min_m(i)**2
+            smax = max_m(i)**2
+            call generate_si(smin,smax,s(i),cBW(i),cBW_width(-1,i)
+     &           ,cBW_mass(-1,i),qmass(i),qwidth(i),x(-i),xjac0
+     &           ,s_mass(i))
+c     If numerical inaccuracy, quit loop
+            if ( xjac0.lt.0d0 .or.
+     &           s(i) .lt. smin .or. s(i).gt.smax) then
+               xjac0=-5
+               pass=.false.
+               return
+            endif
+c fill masses, update (upper) integration boundary for the next s-channel
+            m(i) = sqrt(s(i))
+c     update the range for the two daughters of the current s-channel
+            if (itree(1,i).lt.0) then
+               max_m(itree(1,i))=m(i)-min_m(itree(2,i))
+            endif
+            if (itree(2,i).lt.0) then
+               max_m(itree(2,i))=m(i)-min_m(itree(1,i))
+            endif
+c     update the range for the sister
+            do j=-ns_channel,i
+               if (itree(1,j).eq.i .and.
+     &              itree(2,j).lt.0 .and. itree(2,j).gt.i) then
+c                 1st daughter of "j" is "i" --> 2nd is sister
+                  max_m(itree(2,j))=m(j)-m(i)
+               elseif( itree(2,j).eq.i .and. 
+     &              itree(1,j).lt.0 .and. itree(1,j).gt.i) then
+c                 2nd daughter of "j" is "i" --> 1st is sister
+                  max_m(itree(1,j))=m(j)-m(i)
+               endif
+            enddo
+c     update the range for all the other starts of s-channels chains if
+c     the current one is the start of an s-channel chain.
+            if (start_s_chan(i)) then
+               do j=i,-1
+                  if (start_s_chan(j))
+     &                 max_m(j)=max_m(j)-(m(i)-min_m(i))
+               enddo
+c     be sure to also update the range for granny: it always computed
+c     later
+               if (start_s_chan(igranny).and.igranny.lt.i) then
+                  max_m(igranny)=max_m(igranny)-(m(i)-min_m(i))
+               endif
+            endif
+         enddo
+      enddo
+c At the end, compute the grandmother invariant mass
+      smin = (m(itree(1,igranny))+m(itree(2,igranny)))**2
+      smax = max_m(igranny)**2
+      if (.not. input_granny_m2) then
+         call generate_si(smin,smax,s(igranny),cBW(igranny),cBW_width(-1
+     &        ,igranny),cBW_mass(-1,igranny),qmass(igranny)
+     &        ,qwidth(igranny),x(-igranny),xjac0,s_mass(igranny))
+c     if numerical inaccuracy, quit.
+         if ( xjac0.lt.0d0 ) then
+            xjac0=-5
+            pass=.false.
+            return
+         endif
+         granny_m2_red( 0)=s(igranny)
+         granny_m2_red(-1)=smin
+         granny_m2_red( 1)=smax
+      else
+c     call this function just to get the right Jacobian.
+         call generate_si(smin,smax,s(igranny),cBW(igranny),cBW_width(-1
+     &        ,igranny),cBW_mass(-1,igranny),qmass(igranny)
+     &        ,qwidth(igranny),x(-igranny),xjac0,s_mass(igranny))
+c     if numerical inaccuracy, quit.
+         if ( xjac0.lt.0d0 ) then
+            xjac0=-5
+            pass=.false.
+            return
+         endif
+c     overwrite the mass with the granny_m2_red(0).
+         s(igranny)=granny_m2_red(0)
+      endif
+c     Check that this is a valid invariant, i.e. sum of daughter masses
+c     is smaller than granny mass.
+      if (s(igranny) .lt. smin .or. s(igranny).gt.smax) then
+         xjac0=-5
+         pass=.false.
+         return
+      endif
+      m(igranny) = sqrt(s(igranny))
+      return
+      end
+
+
+
+
+      subroutine generate_si(smin,smax,s,cBW,cBW_width,cBW_mass,qmass
+     $     ,qwidth,x,xjac0,s_mass)
+      implicit none 
+      include 'genps.inc'
+      real*8 pi
+      parameter (pi=3.1415926535897932d0)
+      double precision smin,smax,s,qwidth,qmass,cBW_width(-1:1)
+     $     ,cBW_mass(-1:1),xjac0,x,b(-1:1),x0,xm02,bwmdpl,bwmdmn,bwfmpl
+     $     ,bwfmmn,bwdelf,tmp,ximin0,ximax0,xi,s_mass
+      double precision xbwmass3,bwfunc
+      external xbwmass3,bwfunc
+      integer j,nsamp,cBW
+      double precision fract
+      parameter (nsamp=1,fract=0.1d0)
+
+      double precision tbound
+      integer n,gammax
+      double precision upper,lower,mass_orig
+      common /fill_plot_bw/upper,lower,mass_orig
+      
+
+c     Choose the appropriate s given our constraints smin,smax
+      if(qwidth.ne.0.d0 .and. cBW.ne.2)then
+c Breit Wigner
+         if (cBW.eq.1 .and. cBW_width(1).gt.0d0 .and.
+     $        cBW_width(-1).gt.0d0) then
+c     conflicting BW on both sides
+            do j=-1,1,2
+               b(j)=(cBW_mass(j)-qmass)/(qwidth+cBW_width(j))
+               b(j)=qmass+b(j)*qwidth
+               b(j)=b(j)**2
+            enddo
+            if (x.lt.1d0/3d0) then
+               x0=3d0*x
+               s=(b(-1)-smin)*x0+smin
+               xjac0=3d0*xjac0*(b(-1)-smin)
+            elseif (x.gt.1d0/3d0 .and. x.lt.2d0/3d0) then
+               x0=3d0*x-1d0
+               xm02=qmass**2
+               bwmdpl=b(1)-xm02
+               bwmdmn=xm02-b(-1)
+               bwfmpl=atan(bwmdpl/(qmass*qwidth))
+               bwfmmn=atan(bwmdmn/(qmass*qwidth))
+               bwdelf=(bwfmpl+bwfmmn)/pi
+               s=xbwmass3(x0,xm02,qwidth,bwdelf,bwfmmn)
+               xjac0=3d0*xjac0*bwdelf/bwfunc(s,xm02,qwidth)
+            else
+               x0=3d0*x-2d0
+               s=(smax-b(1))*x0+b(1)
+               xjac0=3d0*xjac0*(smax-b(1))
+            endif
+         elseif (cBW.eq.1.and.cBW_width(1).gt.0d0) then
+c     conflicting BW with alternative mass larger
+            b(1)=(cBW_mass(1)-qmass)/(qwidth+cBW_width(1))
+            b(1)=qmass+b(1)*qwidth
+            b(1)=b(1)**2
+            if (x.lt.0.5d0) then
+               x0=2d0*x
+               xm02=qmass**2
+               bwmdpl=b(1)-xm02
+               bwmdmn=xm02-smin
+               bwfmpl=atan(bwmdpl/(qmass*qwidth))
+               bwfmmn=atan(bwmdmn/(qmass*qwidth))
+               bwdelf=(bwfmpl+bwfmmn)/pi
+               s=xbwmass3(x0,xm02,qwidth,bwdelf,bwfmmn)
+               xjac0=2d0*xjac0*bwdelf/bwfunc(s,xm02,qwidth)
+            else
+               x0=2d0*x-1d0
+               s=(smax-b(1))*x0+b(1)
+               xjac0=2d0*xjac0*(smax-b(1))
+            endif
+         elseif (cBW.eq.1.and.cBW_width(-1).gt.0d0) then
+c     conflicting BW with alternative mass smaller
+            b(-1)=(cBW_mass(-1)-qmass)/(qwidth+cBW_width(-1))
+            b(-1)=qmass+b(-1)*qwidth
+            b(-1)=b(-1)**2
+            if (b(-1).gt.smax) then
+               s=(smax-smin)*x+smin
+               xjac0=xjac0*(smax-smin)
+            elseif (x.lt.0.5d0) then
+               x0=2d0*x
+               s=(b(-1)-smin)*x0+smin
+               xjac0=2d0*xjac0*(b(-1)-smin)
+            else
+               x0=2d0*x-1d0
+               xm02=qmass**2
+               bwmdpl=smax-xm02
+               bwmdmn=xm02-b(-1)
+               bwfmpl=atan(bwmdpl/(qmass*qwidth))
+               bwfmmn=atan(bwmdmn/(qmass*qwidth))
+               bwdelf=(bwfmpl+bwfmmn)/pi
+               s=xbwmass3(x0,xm02,qwidth,bwdelf,bwfmmn)
+               xjac0=2d0*xjac0*bwdelf/bwfunc(s,xm02,qwidth)
+            endif
+         else
+c     normal BW
+            xm02=qmass**2
+            bwmdpl=smax-xm02
+            bwmdmn=xm02-smin
+            bwfmpl=atan(bwmdpl/(qmass*qwidth))
+            bwfmmn=atan(bwmdmn/(qmass*qwidth))
+            bwdelf=(bwfmpl+bwfmmn)/pi
+
+c$$$            gammax=2 ! (1, 2, or 3, ...)
+c$$$            tbound= (atan( ((qmass-gammax*qwidth)**2 - xm02)/(qmass
+c$$$     &           *qwidth) )+bwfmmn)/(pi*bwdelf)
+c$$$
+c$$$            if(x.ge.tbound .or. bwmdpl.le.0d0 .or. bwmdmn.le.0d0)then
+               s=xbwmass3(x,xm02,qwidth,bwdelf,bwfmmn)
+               xjac0=xjac0*bwdelf/bwfunc(s,xm02,qwidth)
+c$$$            else
+c$$$               n = 1 ! (1, 2, or 3, ...)
+c$$$               s = smin+((qmass-gammax*qwidth)**2-smin)*(x/tbound)**n
+c$$$               xjac0=xjac0*
+c$$$     &              ((qmass-gammax*qwidth)**2-smin)*n*(x/tbound)**(n-1)/tbound
+c$$$            endif
+            
+            upper=sqrt(smax)
+            lower=sqrt(smin)
+            mass_orig=sqrt(s)
+            
+         endif
+      else
+c not a Breit Wigner
+         if (smin.eq.0d0 .and. s_mass.eq.0d0) then
+c     no lower limit on invariant mass from cuts or final state masses:
+c     use flat distribution
+            s = (smax-smin)*x+smin
+            xjac0 = xjac0*(smax-smin)
+         elseif (smin.ge.s_mass .and. smin.gt.0d0) then
+c     A lower limit on smin, which is larger than lower limit from cuts
+c     or masses. Use 1/x^nsamp importance sampling
+            ximax0 = smin**(-nsamp)
+            ximin0 = smax**(-nsamp)
+            tmp  = ximin0 +(1d0-x)*(ximax0-ximin0)
+            s = tmp**(-1/dble(nsamp))
+            xjac0= xjac0/nsamp*s**(nsamp+1)*(ximax0-ximin0)
+         elseif (smin.lt.s_mass .and. s_mass.gt.0d0) then
+c     Use flat grid between smin and s_mass(i), and 1/x^nsamp above
+c     s_mass(i)
+            if (x.lt.fract) then
+               xi=x/fract   ! between 0 and 1
+               xjac0=xjac0/fract
+               s = (s_mass-smin)*xi+smin
+               xjac0 = xjac0*(s_mass-smin)
+            else
+               xi=(x-fract)/(1d0-fract) ! between 0 and 1
+               xjac0=xjac0/(1d0-fract)
+               ximax0 = s_mass**(-nsamp)
+               ximin0 = smax**(-nsamp)
+               tmp  = ximin0 +(1d0-xi)*(ximax0-ximin0)
+               s = tmp**(-1/dble(nsamp))
+               xjac0= xjac0/nsamp*s**(nsamp+1)*(ximax0-ximin0)
+            endif
+         else
+            write (*,*) "ERROR in genps_fks.f:"/
+     $           /" cannot set s-channel without BW"
+            stop 1
+         endif
+      endif
+      return
+      end
+
       subroutine generate_t_channel_branchings(ns_channel,nbranch,itree
      &     ,m,s,x,pb,xjac0,xpswgt0,pass)
 c First we need to determine the energy of the remaining particles this
@@ -2206,7 +3026,7 @@ c with the s channel decay sequence
       logical pass
 c
       double precision totalmass,smin,smax,s1,ma2,mbq,m12,mnq,tmin,tmax
-     &     ,t,tmax_temp,phi
+     &     ,t,phi
       integer i,ibranch
       double precision lambda,dot
       external lambda,dot
@@ -2264,9 +3084,8 @@ c
          m12 = m(itree(2,ibranch))**2
          mnq = m(ibranch-1)**2
          call yminmax(s1,t,m12,ma2,mbq,mnq,tmin,tmax)
-         tmax_temp = tmax
-         t = (tmax_temp-tmin)*x(-ibranch)+tmin
-         xjac0=xjac0*(tmax_temp-tmin)
+         t = (tmax-tmin)*x(-ibranch)+tmin
+         xjac0=xjac0*(tmax-tmin)
          if (t .lt. tmin .or. t .gt. tmax) then
             xjac0=-3d0
             pass=.false.

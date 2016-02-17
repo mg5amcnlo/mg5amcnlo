@@ -13,17 +13,18 @@ c to the list of weights using the add_wgt subroutine
       double precision wgt1
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       integer get_orders_tag
       call cpu_time(tBefore)
       if (f_b.eq.0d0) return
-      if (xi_i_fks_ev .gt. xiBSVcut_used) return
+      if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
       call sborn(p_born,wgt_c)
       do iamp=1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
@@ -70,11 +71,12 @@ c value to the list of weights using the add_wgt subroutine
       double precision           virt_wgt_mint(0:n_ave_virt),
      &                           born_wgt_mint(0:n_ave_virt)
       common /virt_born_wgt_mint/virt_wgt_mint,born_wgt_mint
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision      f_b,f_nb
       common /factor_nbody/ f_b,f_nb
-      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
-     $                    ,p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fxfx_exp_rewgt
@@ -82,7 +84,7 @@ c value to the list of weights using the add_wgt subroutine
       integer get_orders_tag
       call cpu_time(tBefore)
       if (f_nb.eq.0d0) return
-      if (xi_i_fks_ev .gt. xiBSVcut_used) return
+      if (xi_i_hat_ev*xiimax_cnt(0) .gt. xiBSVcut_used) return
       call bornsoftvirtual(p1_cnt(0,1,0),bsv_wgt,virt_wgt,born_wgt)
       if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
         write(*,*) 'FIX FXFX-MERGING in FKS_EW'
@@ -211,11 +213,15 @@ c the list of weights using the add_wgt subroutine
       common/counterevnts/ p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
+      double precision    xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev(0:3)
+     $                    ,p_i_fks_cnt(0:3,-2:2)
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      double precision    xi_i_fks_ev,y_ij_fks_ev
-      double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
-      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -225,7 +231,7 @@ c the list of weights using the add_wgt subroutine
       integer get_orders_tag
       call cpu_time(tBefore)
       if (f_s.eq.0d0 .and. f_s_MC_S.eq.0d0 .and. f_s_MC_H.eq.0d0) return
-      if (xi_i_fks_ev.gt.xiScut_used .and. replace_MC_subt.eq.0d0)
+      if (xi_i_hat_ev*xiimax_cnt(0).gt.xiScut_used .and. replace_MC_subt.eq.0d0)
      $     return
       s_s = fks_Sij(p1_cnt(0,1,0),i_fks,j_fks,zero,y_ij_fks_ev)
       if (s_s.le.0d0) return
@@ -398,6 +404,10 @@ c value to the list of weights using the add_wgt subroutine
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision   xi_i_fks_cnt(-2:2)
       common /cxiifkscnt/xi_i_fks_cnt
+      double precision   xiimax_cnt(-2:2)
+      common /cxiimaxcnt/xiimax_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -414,7 +424,7 @@ c value to the list of weights using the add_wgt subroutine
       if (f_sc.eq.0d0 .and. f_dsc(1).eq.0d0 .and. f_dsc(2).eq.0d0 .and.
      $     f_dsc(3).eq.0d0 .and. f_dsc(4).eq.0d0 .and. f_sc_MC_S.eq.0d0
      $     .and. f_sc_MC_H.eq.0d0) return
-      if ( ((xi_i_fks_cnt(1).ge.xiScut_used .or. y_ij_fks_ev.le.1d0
+      if ( ((xi_i_hat_ev*xiimax_cnt(1).ge.xiScut_used .or. y_ij_fks_ev.le.1d0
      $     -deltaS) .and. replace_MC_subt.eq.0d0).or.
      $     pmass(j_fks).ne.0.d0 ) return
       s_sc = fks_Sij(p1_cnt(0,1,2),i_fks,j_fks,zero,one)
@@ -507,12 +517,13 @@ c respectively.
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
       common/factor_n1body_NLOPS/f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
      $     ,f_sc_MC_S,f_sc_MC_H,f_MC_S,f_MC_H
-
       integer iamp
       integer orders(nsplitorders)
       double precision amp_split_xmcxsec(amp_split_size,nexternal)
       common /to_amp_split_xmcxsec/amp_split_xmcxsec
       integer get_orders_tag
+      integer                     n_MC_subt_diverge
+      common/counter_subt_diverge/n_MC_subt_diverge
       call cpu_time(tBefore)
       if (f_MC_S.eq.0d0 .and. f_MC_H.eq.0d0) return
       if(UseSfun)then
@@ -530,12 +541,13 @@ c respectively.
       call xmcsubt(p,xi_i_fks_ev,y_ij_fks_ev,gfactsf,gfactcl,probne,
      $             dummy,nofpartners,lzone,flagmc,zhw,xmcxsec)
       MCcntcalled=.true.
-      if(ileg.gt.4 .or. ileg.lt.1)then
-         write(*,*)'Error: unrecognized ileg in compute_MC_subt_term',
-     $        ileg
-         stop 1
-      endif
       if (flagmc) then
+         if(ileg.gt.4 .or. ileg.lt.1)then
+            write(*,*)'Error: unrecognized ileg in compute_MC_subt_term'
+     &           ,ileg
+            stop 1
+         endif
+         g22=g**(nint(2*wgtbpower+2))
          do i=1,nofpartners
             if(lzone(i))then
               call get_mc_lum(j_fks,zhw(i),xi_i_fks_ev,xlum_mc_fact)
@@ -559,8 +571,7 @@ c respectively.
       endif
       if( (.not.flagmc) .and. gfactsf.eq.1.d0 .and.
      $     xi_i_fks_ev.lt.0.02d0 .and. particle_type(i_fks).eq.8 )then
-         write(*,*)'Error in compute_MC_subt_term: will diverge'
-         stop
+         n_MC_subt_diverge=n_MC_subt_diverge+1
       endif
       call cpu_time(tAfter)
       t_MC_subt=t_MC_subt+(tAfter-tBefore)
@@ -925,7 +936,7 @@ c terms.
       double precision unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
      &     ,prefact,prefact_cnt_ssc,prefact_deg,prefact_c,prefact_coll
      &     ,jac_ev,pi,prefact_cnt_ssc_c,prefact_coll_c,prefact_deg_slxi
-     &     ,prefact_deg_sxi,zero
+     &     ,prefact_deg_sxi,zero,enhance_real
       parameter (pi=3.1415926535897932385d0, zero=0d0)
       data xnoborn_cnt /0d0/
       integer inoborn_cnt,i
@@ -933,12 +944,16 @@ c terms.
       double precision wgt_c
       double precision p_born(0:3,nexternal-1)
       common/pborn/    p_born
+      double precision p_born_ev(0:3,nexternal-1)
+      common/pborn_ev/p_born_ev
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
       double precision    xi_i_fks_ev,y_ij_fks_ev
       double precision    p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
       common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+      double precision  xi_i_hat_ev,xi_i_hat_cnt(-2:2)
+      common /cxi_i_hat/xi_i_hat_ev,xi_i_hat_cnt
       integer            i_fks,j_fks
       common/fks_indices/i_fks,j_fks
       double precision   xi_i_fks_cnt(-2:2)
@@ -972,6 +987,11 @@ c terms.
       common /dsymfactor/diagramsymmetryfactor
       logical nocntevents
       common/cnocntevents/nocntevents
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal),granny_is_res
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
       double precision     f_r,f_s,f_c,f_dc,f_sc,f_dsc(4)
       common/factor_n1body/f_r,f_s,f_c,f_dc,f_sc,f_dsc
       double precision           f_s_MC_S,f_s_MC_H,f_c_MC_S,f_c_MC_H
@@ -982,6 +1002,8 @@ c terms.
       double precision prefact_dis_d,prefact_dis_p,prefact_dis_l
       double precision f_dis_d,f_dis_p,f_dis_l
       common/factor_dis/f_dis_d,f_dis_p,f_dis_l
+      logical calculatedBorn
+      common/ccalculatedBorn/calculatedBorn
       double precision pmass(nexternal)
       include 'pmass.inc'
       call cpu_time(tBefore)
@@ -1018,17 +1040,61 @@ c Compute the multi-channel enhancement factor 'enhance'.
             enhance=0d0
          endif
       endif
+
+      enhance_real=1.d0
+      if (granny_is_res) then
+         if (p_born_ev(0,1).gt.0d0) then
+            calculatedBorn=.false.
+            call sborn(p_born_ev,wgt_c)
+            calculatedBorn=.false.
+         elseif(p_born_ev(0,1).lt.0d0)then
+            if (enhance.ne.0d0) then 
+               enhance_real=enhance
+            else
+               enhance_real=0d0
+            endif
+         endif
+c Compute the multi-channel enhancement factor 'enhance_real'.
+         if (enhance_real.eq.0d0)then
+            xnoborn_cnt=xnoborn_cnt+1.d0
+            if(log10(xnoborn_cnt).gt.inoborn_cnt)then
+               write (*,*) 'WARNING: no Born momenta more than 10**',
+     $              inoborn_cnt,'times'
+               inoborn_cnt=inoborn_cnt+1
+            endif
+         else
+            xtot=0d0
+            if (mapconfig(0).eq.0) then
+               write (*,*) 'Fatal error in compute_prefactor_n1body,'/
+     &              /' no Born diagrams ',mapconfig
+     &              ,'. Check bornfromreal.inc'
+               write (*,*) 'Is fks_singular compiled correctly?'
+               stop 1
+            endif
+            do i=1, mapconfig(0)
+               xtot=xtot+amp2(mapconfig(i))
+            enddo
+            if (xtot.ne.0d0) then
+               enhance_real=amp2(mapconfig(iconfig))/xtot
+               enhance_real=enhance_real*diagramsymmetryfactor
+            else
+               enhance_real=0d0
+            endif
+         endif
+      else
+         enhance_real=enhance
+      endif
       call unweight_function(p_born,unwgtfun)
-      prefact=xinorm_ev/xi_i_fks_ev/(1-y_ij_fks_ev)
 
 c f_* multiplication factors for real-emission, soft counter, ... etc.       
-      f_r=prefact*jac_ev*enhance*unwgtfun*fkssymmetryfactor*vegas_wgt
+      prefact=1d0/xi_i_hat_ev/(1-y_ij_fks_ev)
+      f_r=prefact*jac_ev*enhance_real*unwgtfun*fkssymmetryfactor*vegas_wgt
       f_MC_S=f_r
       f_MC_H=f_r
       if (.not.nocntevents) then
-         prefact_cnt_ssc=xinorm_ev/min(xiimax_ev,xiScut_used)*
-     &        log(xicut_used/min(xiimax_ev,xiScut_used))/(1
-     &        -y_ij_fks_ev)
+         prefact_cnt_ssc=xinorm_cnt(0)/min(xiimax_cnt(0),xiScut_used)
+     $        *log(xicut_used/min(xiimax_cnt(0),xiScut_used))/
+     $        (1-y_ij_fks_ev)
          f_s=(prefact+prefact_cnt_ssc)*jac_cnt(0)*enhance
      $        *unwgtfun*fkssymmetryfactor*vegas_wgt
          f_s_MC_S=prefact*jac_cnt(0)*enhance
@@ -1036,6 +1102,8 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
          f_s_MC_H=f_s_MC_S
 
          if (pmass(j_fks).eq.0d0) then
+c For the soft-collinear, these should be itwo. But they are always
+c equal to ione, so no need to define separate factors.
             prefact_c=xinorm_cnt(1)/xi_i_fks_cnt(1)/(1-y_ij_fks_ev)
             prefact_coll=xinorm_cnt(1)/xi_i_fks_cnt(1)*log(delta_used
      $           /deltaS)/deltaS
@@ -2221,6 +2289,7 @@ c include it here!
       return
       end
 
+      
       subroutine update_shower_scale_Sevents
 c When contributions from various FKS configrations are summed together
 c for the S-events (see the sum_identical_contributions subroutine), we
@@ -2398,6 +2467,11 @@ c PS point that should be written in the event file.
       common/c_nFKSprocess/nFKSprocess
       double precision     SCALUP(fks_configs*2)
       common /cshowerscale/SCALUP
+      double precision tmp_wgt(fks_configs),sum_granny_wgt
+      logical write_granny(fks_configs)
+      integer which_is_granny(fks_configs)
+      common/write_granny_resonance/which_is_granny,write_granny
+
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       tot_sum=0d0
@@ -2443,6 +2517,33 @@ c found the contribution that should be written:
             endif
          enddo
          SCALUP(iFKS_picked*2-1)=shower_scale(icontr_picked)
+c Determine if we need to write the granny (based only on the special
+c mapping in genps_fks) randomly, weighted by the seperate contributions
+c that are summed together in a single S-event.
+         do i=1,fks_configs
+            tmp_wgt(i)=0d0
+         enddo
+c fill tmp_wgt with the sum of weights per FKS configuration
+         do k=1,icontr_sum(0,icontr_picked)
+            ict=icontr_sum(k,icontr_picked)
+            tmp_wgt(nFKS(ict))=tmp_wgt(nFKS(ict))+wgts(1,ict)
+         enddo
+c Randomly select an FKS configuration
+         sum_granny_wgt=0d0
+         do i=1,fks_configs
+            sum_granny_wgt=sum_granny_wgt+abs(tmp_wgt(i))
+         enddo
+         target=ran2()*sum_granny_wgt
+         current=0d0
+         i=0
+         do while (current.le.target)
+            i=i+1
+            current=current+abs(tmp_wgt(i))
+         enddo
+c Overwrite the granny information of the FKS configuration with the
+c soft singularity with the FKS configuration randomly chosen.
+         write_granny(iFKS_picked)=write_granny(i)
+         which_is_granny(iFKS_picked)=which_is_granny(i)
       endif
       evtsgn=sign(1d0,unwgt(iproc_picked,icontr_picked))
       call cpu_time(tAfter)
@@ -4903,6 +5004,140 @@ c
       return
       end
 
+c The following has been derived with minor modifications from the
+c analogous routine written for VBF
+      subroutine checkres2(xsecvc,xseclvc,wgt,wgtl,xp,lxp,
+     #                    iflag,imax,iev,nexternal,i_fks,j_fks,iret)
+c     same as checkres, but also limits are arrays.
+      implicit none
+      real*8 xsecvc(15),xseclvc(15),wgt(15),wgtl(15),lxp(15,0:3,21)
+     &     ,xp(15,0:3,21)
+      real*8 ckc(15),rckc(15),rat
+      integer iflag,imax,iev,nexternal,i_fks,j_fks,iret,ithrs,istop,
+     # iwrite,i,k,l,imin,icount
+      parameter (ithrs=3)
+      parameter (istop=0)
+      parameter (iwrite=1)
+c
+      if(imax.gt.15)then
+        write(6,*)'Error in checkres: imax is too large',imax
+        stop
+      endif
+      do i=1,imax
+        if(xseclvc(i).eq.0.d0)then
+          ckc(i)=abs(xsecvc(i))
+        else
+          ckc(i)=abs(xsecvc(i)/xseclvc(i)-1.d0)
+        endif
+      enddo
+      if(iflag.eq.0)then
+        rat=4.d0
+      elseif(iflag.eq.1)then
+        rat=2.d0
+      else
+        write(6,*)'Error in checkres: iflag=',iflag
+        write(6,*)' Must be 0 for soft, 1 for collinear'
+        stop
+      endif
+c
+      i=1
+      do while(ckc(i).gt.0.1d0 .and. xseclvc(i).ne.0d0)
+        i=i+1
+      enddo
+      imin=i
+      do i=imin,imax-1
+        if(ckc(i+1).ne.0.d0)then
+          rckc(i)=ckc(i)/ckc(i+1)
+        else
+          rckc(i)=1.d8
+        endif
+      enddo
+      icount=0
+      i=imin
+      do while(icount.lt.ithrs.and.i.lt.imax)
+        if(rckc(i).gt.rat)then
+          icount=icount+1
+        else
+          icount=0
+        endif
+        i=i+1
+      enddo
+c
+      iret=0
+      if(icount.ne.ithrs)then
+        iret=1
+        if(istop.eq.1)then
+          write(6,*)'Test failed',iflag
+          write(6,*)'Event #',iev
+          stop
+        endif
+        if(iwrite.eq.1)then
+          write(77,*)'    '
+          if(iflag.eq.0)then
+            write(77,*)'Soft #',iev
+          elseif(iflag.eq.1)then
+            write(77,*)'Collinear #',iev
+          endif
+          write(77,*)'ME*wgt:'
+          do i=1,imax
+             call xprintout(77,xsecvc(i),xseclvc(i))
+          enddo
+          write(77,*)'wgt:'
+          do i=1,imax
+             call xprintout(77,wgt(i),wgtl(i))
+          enddo
+c
+          write(78,*)'    '
+          if(iflag.eq.0)then
+            write(78,*)'Soft #',iev
+          elseif(iflag.eq.1)then
+            write(78,*)'Collinear #',iev
+          endif
+          do k=1,nexternal
+            write(78,*)''
+            write(78,*)'part:',k
+            do l=0,3
+              write(78,*)'comp:',l
+              do i=1,imax
+                call xprintout(78,xp(i,l,k),lxp(i,l,k))
+              enddo
+            enddo
+          enddo
+          if(iflag.eq.0)then
+            write(78,*)''
+            write(78,*)'part: i_fks reduced'
+            do l=0,3
+              write(78,*)'comp:',l
+              do i=1,imax
+                call xprintout(78,xp(i,l,nexternal+1),
+     #                            lxp(i,l,nexternal+1))
+              enddo
+            enddo
+            write(78,*)''
+            write(78,*)'part: i_fks full/reduced'
+            do l=0,3
+              write(78,*)'comp:',l
+              do i=1,imax
+                call xprintout(78,xp(i,l,i_fks),
+     #                            xp(i,l,nexternal+1))
+              enddo
+            enddo
+          elseif(iflag.eq.1)then
+            write(78,*)''
+            write(78,*)'part: i_fks+j_fks'
+            do l=0,3
+              write(78,*)'comp:',l
+              do i=1,imax
+                call xprintout(78,xp(i,l,i_fks)+xp(i,l,j_fks),
+     #                            lxp(i,l,i_fks)+lxp(i,l,j_fks))
+              enddo
+            enddo
+          endif
+        endif
+      endif
+      return
+      end
+      
 
 
 
@@ -6296,6 +6531,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       common/sctests/softtest,colltest
 
       integer config_fks,i,j,iconfig,fac1,fac2
+      double precision dfac1
       logical match_to_shower
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -6396,7 +6632,7 @@ c parametrization allows it
       xiScut_used=xiScut
       if( nbody .or. (abrv.eq.'born' .or. abrv.eq.'grid' .or.
      &     abrv(1:2).eq.'vi') )then
-        xiBSVcut_used=1.d0
+        xiBSVcut_used=1d0
       else
         xiBSVcut_used=xiBSVcut
       endif
@@ -6616,8 +6852,15 @@ c Check to see if this channel needs to be included in the multi-channeling
          diagramsymmetryfactor=0d0
          if (multi_channel) then
             open (unit=19,file="symfact.dat",status="old",err=14)
-            do i=1,mapconfig(0)
-               read (19,*,err=23) fac1,fac2
+            i=0
+            do
+               i=i+1
+               read (19,*,err=23,end=23) dfac1,fac2
+               fac1=nint(dfac1)
+               if (nint(dfac1*10)-fac1*10 .eq.2 ) then
+                  i=i-1
+                  cycle
+               endif
                if (i.eq.iconfig) then
                   if (mapconfig(iconfig).ne.fac1) then
                      write (*,*) 'inconsistency in symfact.dat',i
@@ -6627,6 +6870,7 @@ c Check to see if this channel needs to be included in the multi-channeling
                   diagramsymmetryfactor=dble(fac2)
                endif
             enddo
+ 23         continue
             close(19)
          else                   ! no multi_channel
             diagramsymmetryfactor=1d0
@@ -6635,20 +6879,172 @@ c Check to see if this channel needs to be included in the multi-channeling
          firsttime=.false.
       endif
 
+      call set_granny(nFKSprocess,iconfig)
       return
 
  99   continue
       write (*,*) '"integrate.fks" or "nbodyonly.fks" not found.'
       write (*,*) 'make and run "genint_fks" first.'
       stop
- 23   continue
-      write (*,*) '"symfact.dat" is not of the correct format'
-      stop
  14   continue
       diagramsymmetryfactor=1d0
       goto 12
       end
 
+      subroutine set_granny(nFKSprocess,iconfig)
+c This determines of the grandmother of the FKS pair is a resonance. If
+c so, set granny_is_res=.true. and also set to which internal propagator
+c the grandmother corresponds (igranny) as well as the aunt (iaunt).
+c This information can be used to improve the phase-space
+c parametrisation.
+      implicit none
+      include 'genps.inc'
+      include 'nexternal.inc'
+      include 'nFKSconfigs.inc'
+c arguments
+      integer nFKSprocess,iconfig
+c common block that is filled by this subroutine
+      logical granny_is_res
+      integer igranny,iaunt
+      logical granny_chain(-nexternal:nexternal)
+     &     ,granny_chain_real_final(-nexternal:nexternal)
+      common /c_granny_res/igranny,iaunt,granny_is_res,granny_chain
+     &     ,granny_chain_real_final
+c other common blocks
+      integer i_fks,j_fks
+      common/fks_indices/i_fks,j_fks
+c local 
+      logical firsttime_fks(fks_configs)
+      data firsttime_fks/fks_configs*.true./
+      integer i,imother
+c save
+      logical granny_is_res_fks(fks_configs)
+      integer igranny_fks(fks_configs),iaunt_fks(fks_configs)
+      logical granny_chain_fks(-nexternal:nexternal,fks_configs)
+      save granny_is_res_fks,igranny_fks,iaunt_fks,granny_chain_fks
+c itree info
+      include 'born_conf.inc'
+c propagator info
+      double precision zero
+      parameter (zero=0d0)
+      double precision pmass(-nexternal:0,lmaxconfigs)
+      double precision pwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      include 'coupl.inc'
+      include 'born_props.inc'
+c
+c If it's the firsttime going into this subroutine for this nFKSprocess,
+c save all the relevant information so that for later calls a simple
+c copy will do.
+      if (firsttime_fks(nFKSprocess)) then
+         firsttime_fks(nFKSprocess)=.false.
+c need to have at least 2->3 (or 1->3) process to have non-trivial
+c grandmother
+         if (nexternal-nincoming.lt.3) then
+            igranny_fks(nFKSprocess)=0
+            iaunt_fks(nFKSprocess)=0
+            granny_is_res_fks(nFKSprocess)=.false.
+            igranny=0
+            iaunt=0
+            granny_is_res=.false.
+            return
+c j_fks needs to be final state to have non-trivial grandmother
+         elseif (j_fks.le.nincoming) then
+            igranny_fks(nFKSprocess)=0
+            iaunt_fks(nFKSprocess)=0
+            granny_is_res_fks(nFKSprocess)=.false.
+            igranny=0
+            iaunt=0
+            granny_is_res=.false.
+            return
+         endif
+c determine if grandmother is an s-channel particle. If so, set igranny
+c and iaunt.
+         imother=min(i_fks,j_fks)
+         do i=-1,-(nexternal-4),-1
+            if (iforest(1,i,iconfig).eq.1 .or.
+     &              iforest(1,i,iconfig).eq.2) then
+c no more s-channels, so exit the do-loop and set igranny=0
+               igranny_fks(nFKSprocess)=0
+               iaunt_fks(nFKSprocess)=0
+               exit
+            elseif (iforest(1,i,iconfig).eq.imother) then
+c Daughter 1 is the fks_mother.
+               igranny_fks(nFKSprocess)=i
+               iaunt_fks(nFKSprocess)=iforest(2,i,iconfig)
+               exit
+            elseif (iforest(2,i,iconfig).eq.imother) then
+c Daughter 2 is the fks_mother.
+               igranny_fks(nFKSprocess)=i
+               iaunt_fks(nFKSprocess)=iforest(1,i,iconfig)
+               exit
+            endif
+         enddo
+c If there is an s-channel grandmother, determine if it's a resonance by
+c making sure that it's massive and has a non-zero width. In the special
+c case that the grandmother is the s-hat propagator (which means that
+c the process has no t-channels), set granny_is_res to false.
+         if (igranny_fks(nFKSprocess).ne.0 .and.
+     $        igranny_fks(nFKSprocess).ne.-(nexternal-4)) then
+            if (pmass(igranny_fks(nFKSprocess),iconfig).ne.0d0 .and.
+     $           pwidth(igranny_fks(nFKSprocess),iconfig).gt.0d0) then
+               granny_is_res_fks(nFKSprocess)=.true.
+            else
+               granny_is_res_fks(nFKSprocess)=.false.
+            endif
+         else
+            granny_is_res_fks(nFKSprocess)=.false.
+         endif
+c Now we have igranny and granny_is_res_fks. We can now determine the
+c chain of s-channels that originates from the grandmother
+         do i=-nexternal,nexternal
+            granny_chain_fks(i,nFKSprocess)=.false.
+         enddo
+         if (granny_is_res_fks(nFKSprocess)) then
+c granny is part of the chain            
+            granny_chain_fks(igranny_fks(nFKSprocess),nFKSprocess)
+     &           =.true.
+c loop from the granny to the external particles. If mother was part of
+c the granny chain, so are the daugthers.
+            do i=igranny_fks(nFKSprocess),-1
+               if (granny_chain_fks(i,nFKSprocess)) then
+                  granny_chain_fks(iforest(1,i,iconfig),nFKSprocess) =
+     $                 .true.
+                  granny_chain_fks(iforest(2,i,iconfig),nFKSprocess) =
+     $                 .true.
+               endif
+            enddo
+         endif
+      endif
+c Here is the simply copy for later calls to this subroutine: set
+c igranny, iaunt and granny_is_res from the saved information
+      if (granny_is_res_fks(nFKSprocess)) then
+         igranny=igranny_fks(nFKSprocess)
+         iaunt=iaunt_fks(nFKSprocess)
+         granny_is_res=.true.
+         do i=-nexternal,nexternal
+            granny_chain(i)=granny_chain_fks(i,nFKSprocess)
+            if (i.le.0) then
+               granny_chain_real_final(i)=.false.
+            elseif (i.lt.max(i_fks,j_fks)) then
+               granny_chain_real_final(i)=granny_chain(i)
+            elseif(i.eq.max(i_fks,j_fks)) then
+               granny_chain_real_final(i)=.true.
+            else
+               granny_chain_real_final(i)=granny_chain(i-1)
+            endif
+         enddo
+      else
+         igranny=0
+         iaunt=0
+         granny_is_res=.false.
+         do i=-nexternal,nexternal
+            granny_chain(i)=.false.
+            granny_chain_real_final(i)=.false.
+         enddo
+      endif
+      return
+      end
 
       subroutine get_helicity(i_fks,j_fks)
       implicit none

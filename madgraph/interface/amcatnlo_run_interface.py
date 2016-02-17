@@ -1614,6 +1614,7 @@ RESTART = %(mint_mode)s
             run_type="Fixed order integration step %s" % integration_step
         else:
             run_type="MINT step %s" % integration_step
+        self.njobs=len(jobs_to_run)            
         for job in jobs_to_run:
             executable='ajob1'
             if fixed_order:
@@ -1627,7 +1628,6 @@ RESTART = %(mint_mode)s
 
         if self.cluster_mode == 2:
             time.sleep(1) # security to allow all jobs to be launched
-        self.njobs=len(jobs_to_run)
         self.wait_for_complete(run_type)
 
 
@@ -3637,6 +3637,24 @@ RESTART = %(mint_mode)s
                 else:
                     scale_pdf_info['pdf_upp'] = 0.0
                     scale_pdf_info['pdf_low'] = 0.0
+        elif lhaid in range(90200, 90303) or \
+             lhaid in range(90400, 90433) or \
+             lhaid in range(90700, 90801) or \
+             lhaid in range(90900, 90931) or \
+             lhaid in range(91200, 91303) or \
+             lhaid in range(91400, 91433) or \
+             lhaid in range(91700, 91801) or \
+             lhaid in range(91900, 90931):
+            # PDF4LHC15 Hessian sets
+            pdf_stdev = 0.0
+            for pdf in pdfs[1:]:
+                pdf_stdev += (pdf - cntrl_val)**2
+            pdf_stdev = math.sqrt(pdf_stdev)
+            if cntrl_val != 0.0:
+                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+            else:
+                scale_pdf_info['pdf_upp'] = 0.0
+            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
         else:
             # use Gaussian method (NNPDF)
             pdf_stdev=0.0
@@ -3713,7 +3731,7 @@ RESTART = %(mint_mode)s
         # find the number of the integration channel
         splittings = []
         ajob = open(pjoin(self.me_dir, 'SubProcesses', pdir, job)).read()
-        pattern = re.compile('for i in (\d+) ; do')
+        pattern = re.compile('for i in  ([\d.\d\s]*); do')
         match = re.search(pattern, ajob)
         channel = match.groups()[0]
         # then open the nevents_unweighted_splitted file and look for the 

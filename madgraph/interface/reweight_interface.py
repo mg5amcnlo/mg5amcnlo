@@ -92,7 +92,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.output_type = "default"
         self.helicity_reweighting = True
         self.rwgt_dir = None
-        
+        self.exitted = False # Flag to know if do_quit was already called.
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -864,7 +864,9 @@ class ReweightInterface(extended_cmd.Cmd):
             del self.calculator[(mode, production)]
     
     def do_quit(self, line):
-        
+        if self.exitted:
+            return
+        self.exitted = True
         
         if 'init' in self.banner:
             cross = 0 
