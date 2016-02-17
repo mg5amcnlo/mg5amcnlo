@@ -43,11 +43,11 @@ def async_generate_real(args):
     i = args[0]
     real_amp = args[1]
 
-    print "async_generate_real %i" % (i)
-
     #amplitude generation
     amplitude = real_amp.generate_real_amplitude()
     helasreal = helas_objects.HelasMatrixElement(amplitude)
+    logger.info('Generating real %s' % \
+            real_amp.process.nice_string(print_weighted=False).replace('Process', 'process'))
 
     # Keep track of already generated color objects, to reuse as
     # much as possible
@@ -85,8 +85,9 @@ def async_generate_born(args):
     pdg_list = args[4]
     loop_optimized = args[5]
     realmapout = args[6]
-    
-    print "async_generate_born %i" % (i)
+
+    logger.info('Generating born %s' % \
+            born.born_proc.nice_string(print_weighted=False).replace('Process', 'process'))
     
     #load informations on reals from temp files
     helasreal_list = []
@@ -137,8 +138,6 @@ def async_finalize_matrix_elements(args):
     i = args[0]
     mefile = args[1]
     duplist = args[2]
-    
-    print "async_finalize_matrix_elements %i" % (i)
     
     infile = open(mefile,'rb')
     me = cPickle.load(infile)
@@ -287,7 +286,6 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             for realtmp in realmapout:
                 os.remove(realtmp[0])
                 
-            print "start double loop"
             unique_me_list = []
             duplicate_me_lists = []
             for bornout in bornmapout:
@@ -308,8 +306,6 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 if unique:
                     unique_me_list.append(bornout)
                     duplicate_me_lists.append([])
-            print "end double loop"
-            print "initial size = %i, unique size = %i" % (len(bornmapout),len(unique_me_list))
             
             memapin = []
             for i,bornout in enumerate(unique_me_list):
