@@ -28,4 +28,5 @@ split40: $(SPLIT40)
 
 collect_events: $(COLLECT_EVENTS)
 	$(FC) $(LDFLAGS) -o collect_events $(COLLECT_EVENTS) $(LINKLIBS)
+	rm handling_lhe_events.o
 
