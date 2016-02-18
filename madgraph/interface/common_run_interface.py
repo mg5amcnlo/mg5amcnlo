@@ -2625,8 +2625,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             args.remove('=')
         # do not set lowercase the case-sensitive parameters from the shower_card
         if not ( args[0].lower() in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or \
-                 args[0].lower().startswith('dm_') or args[0].lower().startswith('py8_') or \
-                 args[0].lower().startswith('hwpp_') ):
+                 args[0].lower().startswith('dm_') ):
             args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:

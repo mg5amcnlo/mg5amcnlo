@@ -629,9 +629,7 @@ Random:setSeed = on                ! random seed
 Random:seed = $RNDEVSEED_PY8
 EOF
 fi
-cat <<EOF >> $ifile
 
-EOF
 
 arr=()
 numDM=0
@@ -644,33 +642,11 @@ do
   arr=("${arr[@]}" "$arr_elem")
  fi
 done
+
 for DM in "${arr[@]}"
 do
 cat <<EOF >> ./$ifile
 $DM  ! decay mode
-EOF
-done
-
-cat <<EOF >> $ifile
-
-! 11) Expert mode.
-EOF
-
-arr=()
-numPY8=0
-iPY8=0
-for i in {1..99}
-do
- eval arr_elem='$'PY8_$i
- if [ "$arr_elem" != "" ]
- then
-  arr=("${arr[@]}" "$arr_elem")
- fi
-done
-for PY8 in "${arr[@]}"
-do
-cat <<EOF >> ./$ifile
-$PY8  ! expert-mode command
 EOF
 done
 

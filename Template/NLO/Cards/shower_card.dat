@@ -105,22 +105,6 @@ njmax      = 0        # Maximal multiplicity in the merging
 # DM_2 = 24:onIfAny = 11 12
 # DM_3 = 24:onNegIfAny = 13 14
 #***********************************************************************
-# Expert mode                                                          *
-#***********************************************************************
-# The user can type here explicit commands for PYTHIA8 and HERWIG++    *
-# with the following template syntax                                   *
-# PY8_i = command                                                      *
-# HWPP_i = command                                                     *
-# where i is an integer from 1 to 99, and 'command' is a string (under *
-# the user's responsibility) that will be copied at the end of the MC  *
-# input file.                                                          *
-# IMPORTANT: certain settings MUST NOT be edited for correct MC@NLO    *
-# matching, see http://amcatnlo.web.cern.ch/amcatnlo -> Help and FAQs  *
-# -> Special settings for the parton shower                            *
-# Examples:                                                            *
-# PY8_1 = Next:numberShowProcess = 1                                   
-# HWPP_1 = set /Herwig/Particles/W+:Width 2.085                        
-#***********************************************************************
 # Extra libraries/analyses                                             *
 #***********************************************************************
 # The following lines need to be changed if the user does not want to  *
