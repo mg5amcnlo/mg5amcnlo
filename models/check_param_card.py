@@ -787,7 +787,17 @@ class ParamCardIterator(ParamCard):
             name = info['run_name']
             ff.write("%-20s %-20s %-20s \n" % (name,' '.join(bench) ,cross))
             #ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
-            
+    
+    def get_next_name(self, run_name):
+        """returns a smart name for the next run"""
+    
+        if '_' in run_name:
+            name, value = run_name.rsplit('_',1)
+            if value.isdigit():
+                return '%s_%02i' % (name, float(value)+1)
+        # no valid '_' in the name
+        return '%s_scan_02' % run_name
+    
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of

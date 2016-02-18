@@ -1003,7 +1003,14 @@ class HwU(Histogram):
                         else:
                             pdf_up   = bin.wgts[pdfs[0]]
                             pdf_down = bin.wgts[pdfs[0]]
-                    elif wgts_to_consider[0] in [90200, 90400, 90700, 90900]:
+                    elif wgts_to_consider[0] in range(90200, 90303) or \
+                         wgts_to_consider[0] in range(90400, 90433) or \
+                         wgts_to_consider[0] in range(90700, 90801) or \
+                         wgts_to_consider[0] in range(90900, 90931) or \
+                         wgts_to_consider[0] in range(91200, 91303) or \
+                         wgts_to_consider[0] in range(91400, 91433) or \
+                         wgts_to_consider[0] in range(91700, 91801) or \
+                         wgts_to_consider[0] in range(91900, 90931):
                         # PDF4LHC15 Hessian sets
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:
@@ -1243,7 +1250,8 @@ class HwUList(histograms_PhysicsObjectList):
             stream.close()
 
     def output(self, path, format='gnuplot',number_of_ratios = -1, 
-          uncertainties=['scale','pdf','statitistical'],ratio_correlations=True,arg_string=''):
+          uncertainties=['scale','pdf','statitistical'],
+          ratio_correlations=True,arg_string='',auto_open=False):
         """ Ouput this histogram to a file, stream or string if path is kept to
         None. The supported format are for now. Chose whether to print the header
         or not."""
@@ -1463,8 +1471,10 @@ set style data histeps
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
           "unset multiplot",
-          '!ps2pdf "%s.ps" &> /dev/null'%output_base_name,
-          '!open "%s.pdf" &> /dev/null'%output_base_name])
+          '!ps2pdf "%s.ps" &> /dev/null'%output_base_name])
+        if auto_open:
+            gnuplot_output_list.append(
+                                 '!open "%s.pdf" &> /dev/null'%output_base_name)
         
         # Now write result to stream and close it
         gnuplot_stream.write('\n'.join(gnuplot_output_list))
@@ -2024,7 +2034,8 @@ if __name__ == "__main__":
 
     if '--gnuplot' in sys.argv or all(arg not in ['--HwU'] for arg in sys.argv):
         histo_list.output(OutName, format='gnuplot', number_of_ratios = n_ratios, 
-            uncertainties=uncertainties, ratio_correlations=ratio_correlations,arg_string=arg_string)
+            uncertainties=uncertainties, ratio_correlations=ratio_correlations,
+            arg_string=arg_string, auto_open=True)
         log("%d histograms have been output in " % len(histo_list)+\
                 "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
         if auto_open:

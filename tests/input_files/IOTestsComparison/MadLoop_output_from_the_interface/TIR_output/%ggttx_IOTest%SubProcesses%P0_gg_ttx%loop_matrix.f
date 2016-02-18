@@ -1428,6 +1428,10 @@ C     MadLoop jumps to this label during stability checks when it
 C      recomputes the same PS point with a different CTMode
  300  CONTINUE
 
+C     Make sure that the loop calls are performed since this is new
+C      evaluation.
+      CTCALL_REQ_SO_DONE=.FALSE.
+
 C     Free cache when using IREGI
       IF(IREGIRECY.AND.MLREDUCTIONLIB(I_LIB).EQ.3) THEN
         CALL IREGI_FREE_PS()

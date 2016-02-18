@@ -449,12 +449,13 @@ class TestColorTripletModel(unittest.TestCase):
            matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
                                                                       2)
         self.assertEqual(col_flow,
-                         [{1: [501, 0], 2: [503, 0],
-                           3: [0, 504], 4: [501, 502]},
+                         [{1: [501, 0], 2: [502, 0],
+                           3: [0, 504], 4: [504, 503]},
                           {1: [501, 0], 2: [504, 0],
-                           3: [0, 503], 4: [504, 502]},
-                          {1: [501, 0], 2: [502, 0],
-                           3: [0, 504], 4: [504, 503]}])
+                           3: [0, 502], 4: [504, 503]},
+                          {1: [504, 0], 2: [501, 0],
+                           3: [0, 502], 4: [504, 503]}])
+
 
         # Test u u > trip~ > u u g
 
