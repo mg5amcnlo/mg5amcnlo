@@ -4198,7 +4198,7 @@ This implies that with decay chains:
                 if type == '=':
                     name =  order_re.group('name')
                     value = order_re.group('value')
-                    logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'." %\
+                    logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
                                        {'n':name, 'v': value})
                     type = "<="
                 squared_orders[order_re.group('name')[:-2]] = \
@@ -4212,7 +4212,7 @@ This implies that with decay chains:
                 value = int(order_re.group('value'))
                 if type in ['=', '<=']:
                     if type == '=' and value != 0:
-                        logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'." %\
+                        logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
                                        {'n':name, 'v': value}) 
                     orders[name] = value
                 elif type == "==":

@@ -2997,10 +2997,9 @@ class Process(PhysicsObject):
                     to_add.append('%s=0' % key)
                 else:
                     to_add.append('%s<=%s' % (key,value))
-                
                  
-            
-            mystr = mystr + " ".join(to_add) + ' '
+            if to_add:
+                mystr = mystr + " ".join(to_add) + ' '
 
         if self['constrained_orders']:
             mystr = mystr + " ".join('%s%s%d' % (key, type, value) for 
@@ -3031,7 +3030,9 @@ class Process(PhysicsObject):
                         continue
                 to_add.append(key + '^2%s%d'%\
                 (self.get_squared_order_type(key),self['squared_orders'][key]))
-            mystr = mystr + " ".join(to_add) + ' '
+            
+            if to_add:
+                mystr = mystr + " ".join(to_add) + ' '
             
 
         # Add forbidden s-channels
