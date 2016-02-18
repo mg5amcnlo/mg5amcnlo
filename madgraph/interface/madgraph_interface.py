@@ -2626,8 +2626,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
                                                                       'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
-    _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5',
-                              'hepmc','mg5amc_py8_interface','ninja','oneloop']
+    _advanced_install_opts = ['ninja']
+    
+    # The options below are commented for now but already available
+#    _advanced_install_opts += ['pythia8','zlib','boost','lhapdf6','lhapdf5','hepmc','mg5amc_py8_interface','oneloop']
+    
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
