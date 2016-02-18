@@ -199,9 +199,9 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
       LOGICAL LOOPFILTERBUFF(NSQUAREDSO,NLOOPGROUPS)
 	  DATA ((LOOPFILTERBUFF(J,I),J=1,NSQUAREDSO),I=1,NLOOPGROUPS)/NSQSOXNLG*.FALSE./
 
-      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
-      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
-      COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+      LOGICAL AUTOMATIC_CACHE_CLEARING
+      DATA AUTOMATIC_CACHE_CLEARING/.TRUE./
+      COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_CACHE_CLEARING
 
 	  INTEGER IDEN
       %(den_factor_line)s
@@ -468,10 +468,10 @@ IF(ML_INIT) THEN
   ENDIF
 ## }
 
-C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
-  if(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
+C Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero if AUTOMATIC_CACHE_CLEARING is disabled.
+  if(.NOT.AUTOMATIC_CACHE_CLEARING) THEN
     IF(NROTATIONS_DP.NE.0.or.NROTATIONS_QP.NE.0) THEN
-      WRITE(*,*) '##INFO: AUTOMATIC_TIR_CACHE_CLEARING is disabled, so MadLoop automatically resets NROTATIONS_DP and NROTATIONS_QP to 0.'
+      WRITE(*,*) '##INFO: AUTOMATIC_CACHE_CLEARING is disabled, so MadLoop automatically resets NROTATIONS_DP and NROTATIONS_QP to 0.'
       NROTATIONS_QP=0
       NROTATIONS_DP=0
     ENDIF
@@ -795,11 +795,10 @@ DO I=1,NEXTERNAL
   ENDDO
 ENDDO
 
-## if(TIRCaching){
-IF (AUTOMATIC_TIR_CACHE_CLEARING) THEN
-  CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+C Make sure we start with empty caches
+IF (AUTOMATIC_CACHE_CLEARING) THEN
+  CALL %(proc_prefix)sCLEAR_CACHES()
 ENDIF
-## }
 
 IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
@@ -832,8 +831,9 @@ I_QP_LIB=1
 goto 208
 C MadLoop jumps to this label during stability checks when it recomputes a rotated PS point
 200 CONTINUE
-C For the computation of a rotated version of this PS point we must reset the TIR cache since this changes the definition of the loop denominators.
-CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+C For the computation of a rotated version of this PS point we must reset the all MadLoop cache since this changes the definition of the loop denominators.
+C We don't check for AUTOMATIC_CACHE_CLEARING here because the Lorentz test should anyway be disabled if the flag is turned off.
+CALL %(proc_prefix)sCLEAR_CACHES()
 208 CONTINUE
 ## if(AmplitudeReduction) {
 SKIP_LOOPNUM_COEFS_CONSTRUCTION=.FALSE.
@@ -1805,6 +1805,19 @@ IF (BYPASS_CHECK) THEN
     ENDDO
   ENDDO
 ENDIF
+
+C Make sure that we finish by emptying caches
+IF (AUTOMATIC_CACHE_CLEARING) THEN
+  CALL %(proc_prefix)sCLEAR_CACHES()
+ENDIF
+      END
+
+      SUBROUTINE %(proc_prefix)sCLEAR_CACHES()
+C Clears all the caches used at some point in MadLoop
+        CALL %(proc_prefix)sCLEAR_TIR_CACHE()
+## if(ninja_available){
+        call ninja_clear_integral_cache()
+## }
       END
 
 C --=========================================--
@@ -2326,7 +2339,7 @@ C
 
 	  END SUBROUTINE
 
-	  SUBROUTINE %(proc_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(ONOFF)
+	  SUBROUTINE %(proc_prefix)sSET_AUTOMATIC_CACHE_CLEARING(ONOFF)
 C
 C This function can be called by the MadLoop user so as to manually chose when
 C to reset the TIR cache.
@@ -2337,18 +2350,18 @@ C
 
 		LOGICAL ONOFF
 
-      	LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
-      	DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
-      	COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+      	LOGICAL AUTOMATIC_CACHE_CLEARING
+      	DATA AUTOMATIC_CACHE_CLEARING/.TRUE./
+      	COMMON/%(proc_prefix)sRUNTIME_OPTIONS/AUTOMATIC_CACHE_CLEARING
       	
 	    INTEGER N_DP_EVAL, N_QP_EVAL
 	    COMMON/%(proc_prefix)sN_EVALS/N_DP_EVAL,N_QP_EVAL
 
 ## if(not TIRCaching){
-       WRITE(*,*) 'Warning: No TIR caching implemented. Call to SET_AUTOMATIC_TIR_CACHE_CLEARING did nothing.'
+       WRITE(*,*) 'Warning: No TIR caching implemented. Call to SET_AUTOMATIC_CACHE_CLEARING did nothing.'
 ## } else {
 
-		AUTOMATIC_TIR_CACHE_CLEARING = ONOFF
+		AUTOMATIC_CACHE_CLEARING = ONOFF
 		
 		IF (NRotations_DP.ne.0.or.NRotations_QP.ne.0) THEN
 		  WRITE(*,*) 'Warning: One cannot remove the TIR cache automatic clearing while at the same time keeping Lorentz rotations for stability tests.'
@@ -2581,4 +2594,3 @@ c arrays
 ## }
         CONTINUE
 	  END
-

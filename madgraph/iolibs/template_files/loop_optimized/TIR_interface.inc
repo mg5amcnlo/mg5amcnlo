@@ -535,11 +535,6 @@ C  DP EVALUATION
 C No TIR caching implemented, this is dummy. (The subroutine is kept as it might be called by the MC).
 	    CONTINUE
 ## }
-
-C       General cache clearing for other reduction methods:
-## if(ninja_available){
-        call ninja_clear_integral_cache()
-## }
 	  END SUBROUTINE
 
 ## if(TIRCaching){
