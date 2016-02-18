@@ -30,6 +30,7 @@ import copy
 import logging
 import array
 import multiprocessing
+import signal
 import tempfile
 import cPickle
 import itertools
@@ -270,8 +271,19 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             for i,real_amp in enumerate(real_amp_list):
                 realmapin.append([i,real_amp])
 
+            # start the pool instance with a signal instance to catch ctr+c
+            original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
             pool = multiprocessing.Pool(maxtasksperchild=1)
-            realmapout = pool.map(async_generate_real,realmapin)
+            signal.signal(signal.SIGINT, original_sigint_handler)
+
+            try:
+                # the very large timeout passed to get is to be able to catch
+                # KeyboardInterrupts
+                realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
+            except KeyboardInterrupt:
+                pool.terminate()
+                raise KeyboardInterrupt 
+
             realmapfiles = []
             for realout in realmapout:
                 realmapfiles.append(realout[0])
@@ -280,7 +292,12 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             bornmapin = []
             for i,born in enumerate(born_procs):
                 bornmapin.append([i,born,born_pdg_list,loop_orders,pdg_list,loop_optimized,realmapfiles])
-            bornmapout = pool.map(async_generate_born,bornmapin)            
+
+            try:
+                bornmapout = pool.map_async(async_generate_born,bornmapin).get(9999999)
+            except KeyboardInterrupt:
+                pool.terminate()
+                raise KeyboardInterrupt 
 
             #remove real temp files
             for realtmp in realmapout:
@@ -312,7 +329,11 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 mefile = bornout[0]
                 memapin.append([i,mefile, duplicate_me_lists[i]])
 
-            memapout = pool.map(async_finalize_matrix_elements,memapin)        
+            try:
+                memapout = pool.map_async(async_finalize_matrix_elements,memapin).get(9999999)
+            except KeyboardInterrupt:
+                pool.terminate()
+                raise KeyboardInterrupt 
 
             #remove born+virtual temp files
             for bornout in bornmapout:
