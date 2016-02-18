@@ -1326,7 +1326,7 @@ This will take effect only in a NEW terminal
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output',\
                                           'loop_color_flows',\
-                                          'new_nlo_generation']:
+                                          'low_mem_multicore_nlo_generation']:
             args.append('True')
 
         if len(args) > 2 and '=' == args[1]:
@@ -1375,7 +1375,7 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
-        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'new_nlo_generation']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -2682,7 +2682,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
-                          'new_nlo_generation': False,
+                          'low_mem_multicore_nlo_generation': False,
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,

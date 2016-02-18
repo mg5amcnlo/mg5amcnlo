@@ -105,10 +105,10 @@ class TestFKSOutput(unittest.TestCase):
         
         run_cmd('generate p p > w+ [QCD]')
         run_cmd('output %s' % os.path.join(path, 'W-oldway'))
-        run_cmd('set new_nlo_generation True')
+        run_cmd('set low_mem_multicore_nlo_generation True')
         run_cmd('generate p p > w+ [QCD]')
         run_cmd('output %s' % os.path.join(path, 'W-newway'))
-        run_cmd('set new_nlo_generation False')
+        run_cmd('set low_mem_multicore_nlo_generation False')
         
         # the P0 dirs
         for oldf in \

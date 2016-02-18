@@ -465,18 +465,34 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 #                
 #                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
 #                        % ', '.join(myprocdef['perturbation_couplings']))
+        ##
+
+        # if the new nlo process generation mode is enabled, the number of cores to be
+        # used has to be passed
+        # ncores_for_proc_gen has the following meaning
+        #   0 : do things the old way
+        #   > 0 use ncores_for_proc_gen
+        #   -1 : use all cores
+        if self.options['low_mem_multicore_nlo_generation']:
+            if self.options['nb_core']:
+                self.ncores_for_proc_gen = int(self.options['nb_core'])
+            else:
+                self.ncores_for_proc_gen = -1
+        else:
+            self.ncores_for_proc_gen = 0
+
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes,
                                    OLP=self.options['OLP'],
-                                   new_nlo_generation=self.options['new_nlo_generation']))
+                                   ncores_for_proc_gen=self.ncores_for_proc_gen))
         except AttributeError: 
             self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
                                    collect_mirror_procs,
                                    ignore_six_quark_processes,
                                    OLP=self.options['OLP'],
-                                   new_nlo_generation=self.options['new_nlo_generation'])
+                                   ncores_for_proc_gen=self.ncores_for_proc_gen)
 
 
     def do_output(self, line):
@@ -567,7 +583,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                 self._fks_multi_proc, 
                                 loop_optimized= self.options['loop_optimized_output'])
                     
-                    if not self.options['new_nlo_generation']: 
+                    if not self.options['low_mem_multicore_nlo_generation']: 
                         # generate the code the old way
                         ndiags = sum([len(me.get('diagrams')) for \
                                       me in self._curr_matrix_elements.\
@@ -638,7 +654,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
-                if not self.options['new_nlo_generation']:
+                if not self.options['low_mem_multicore_nlo_generation']:
                     #me is a FKSHelasProcessFromReals
                     calls = calls + \
                             self._curr_exporter.generate_directories_fks(me, 
@@ -652,7 +668,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                              path, self.options['OLP']])
 
-            if self.options['new_nlo_generation']:
+            if self.options['low_mem_multicore_nlo_generation']:
                 pool = multiprocessing.Pool(maxtasksperchild=1)
                 diroutputmap = pool.map(generate_directories_fks_async,range(len(glob_directories_map)))
     

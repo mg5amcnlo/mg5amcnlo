@@ -24,7 +24,6 @@ import subprocess
 import string
 import copy
 import platform
-import multiprocessing
 
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects

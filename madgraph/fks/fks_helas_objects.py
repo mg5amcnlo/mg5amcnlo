@@ -39,7 +39,7 @@ import os
 logger = logging.getLogger('madgraph.fks_helas_objects')
 
 
-#functions to be used in the new_nlo_generation mode
+#functions to be used in the ncores_for_proc_gen mode
 def async_generate_real(args):
     i = args[0]
     real_amp = args[1]
@@ -228,7 +228,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
         self['max_particles'] = -1
         self['max_configs'] = -1
 
-        if not fksmulti['new_nlo_generation']:
+        if not fksmulti['ncores_for_proc_gen']:
             # generate the real ME's if they are needed.
             # note that it may not be always the case, e.g. it the NLO_mode is LOonly
             if fksmulti['real_amplitudes']:
@@ -273,7 +273,10 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
             # start the pool instance with a signal instance to catch ctr+c
             original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-            pool = multiprocessing.Pool(maxtasksperchild=1)
+            if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
+                pool = multiprocessing.Pool(maxtasksperchild=1)
+            else:
+                pool = multiprocessing.Pool(processes=fksmulti['ncores_for_proc_gen'],maxtasksperchild=1)
             signal.signal(signal.SIGINT, original_sigint_handler)
 
             try:
@@ -605,8 +608,8 @@ class FKSHelasProcess(object):
             self.perturbation = fksproc.perturbation
             real_amps_new = []
             # combine for example u u~ > t t~ and d d~ > t t~
-            if fksproc.new_nlo_generation:
-                # new NLO generation mode 
+            if fksproc.ncores_for_proc_gen:
+                # new NLO (multicore) generation mode 
                 for real_me, proc in itertools.izip(real_me_list,fksproc.real_amps):
                     fksreal_me = FKSHelasRealProcess(proc, real_me, **opts)
                     try:
