@@ -549,7 +549,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- generate diagrams for a given process",'$MG:color:BLUE')
         logger.info("General leading-order syntax:",'$MG:color:BLACK')
         logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2^2=ORDER2 @N")
-        logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
+        logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED<=3 QCD=0 @1",'$MG:color:GREEN')
         logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
         logger.info(" > If no coupling orders are given, MG5 will try to determine")
@@ -560,6 +560,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   interference terms only. The other two operators '<=' and '>' are")
         logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
         logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
+        logger.info(" > allowed coupling operator are: \"==\", \"=\", \"<=\" and \">\".")
+        logger.info("    \"==\" request exactly that number of coupling while \"=\" is interpreted as \"<=\".")
         logger.info(" > To generate a second process use the \"add process\" command")
         logger.info("Decay chain syntax:",'$MG:color:BLACK')
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
@@ -2913,6 +2915,7 @@ This implies that with decay chains:
             nprocs = len(myproc.get('amplitudes'))
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in myproc.get('amplitudes')])
+            
             logger.info("%i processes with %i diagrams generated in %0.3f s" % \
                   (nprocs, ndiags, (cpu_time2 - cpu_time1)))
             ndiags = sum([amp.get_number_of_diagrams() for \
@@ -4192,6 +4195,12 @@ This implies that with decay chains:
                 if type not in self._valid_sqso_types:
                     raise self.InvalidCmd, "Type of squared order "+\
                                  "constraint '%s'"% type+" is not supported."
+                if type == '=':
+                    name =  order_re.group('name')
+                    value = order_re.group('value')
+                    logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'." %\
+                                       {'n':name, 'v': value})
+                    type = "<="
                 squared_orders[order_re.group('name')[:-2]] = \
                                          (int(order_re.group('value')),type)
             else:
@@ -4203,17 +4212,21 @@ This implies that with decay chains:
                 value = int(order_re.group('value'))
                 if type in ['=', '<=']:
                     if type == '=' and value != 0:
-                        logger.warning('Dangerous syntax use %(n)s=%(v)s interpreted as %(n)s<=%(v)s. Use %(n)s==%(v)s for the real equal.' %\
-                                       {'n':name, 'v': type}) 
+                        logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'." %\
+                                       {'n':name, 'v': value}) 
                     orders[name] = value
                 elif type == "==":
-                    squared_orders[name] = (2 * value,'==')
                     constrained_orders[name] = (value, type)
+                    if name not in squared_orders:
+                        squared_orders[name] = (2 * value,'==')
+                    if True:#name not in orders:
+                        orders[name] = value
+                    
                 elif type == ">":
                     constrained_orders[name] = (value, type)
-                    squared_orders[name] = (2 * value,'>')
-                orders[order_re.group('name')] = \
-                                                int(order_re.group('value'))                    
+                    if name not in squared_orders:
+                        squared_orders[name] = (2 * value,'>')
+                                          
             line = order_re.group('before')
             order_re = order_pattern.match(line)          
             

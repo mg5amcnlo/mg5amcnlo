@@ -1873,11 +1873,21 @@ class MultiProcess(base_objects.PhysicsObject):
         max_WEIGHTED_order = \
                         (len(fsids + isids) - 2)*int(model.get_max_WEIGHTED())
 
+        # get the definition of the WEIGHTED
+        hierarchydef = process_definition['model'].get('order_hierarchy')
+        tmp = []
+        hierarchy = hierarchydef.items()
+        hierarchy.sort()
+        for key, value in hierarchydef.items():
+            if value>1:
+                tmp.append('%s*%s' % (value,key))
+            else:
+                tmp.append('%s' % key)
+        wgtdef = '+'.join(tmp)
         # Run diagram generation with increasing max_order_now until
         # we manage to get diagrams
         while max_order_now < max_WEIGHTED_order:
-
-            logger.info("Trying coupling order WEIGHTED=%d" % max_order_now)
+            logger.info("Trying coupling order WEIGHTED<=%d: WEIGTHED IS %s" % (max_order_now, wgtdef))
 
             oldloglevel = logger.level
             logger.setLevel(logging.WARNING)

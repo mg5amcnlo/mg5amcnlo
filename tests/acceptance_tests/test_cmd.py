@@ -30,6 +30,7 @@ import tests.unit_tests.iolibs.test_file_writers as test_file_writers
 import madgraph.interface.master_interface as Cmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.iolibs.files as files
+import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.misc as misc
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -106,7 +107,15 @@ class TestCmdShell1(unittest.TestCase):
         self.do('generate e+ e- > e+ e- @0 QCD<=2')
         self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 4)   
         
+        self.do('generate u u~ > d d~ QED>0')
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 3)           
         
+        self.assertRaises(diagram_generation.NoDiagramException, self.do, 'generate u u~ > d d~ QED>0 QED^2==0')
+        self.do('generate u u~ > d d~ QED==0 QCD>1 QED^2<=4')
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 1)
+        
+        self.do('generate u u~ > d d~ c c~ QED==2')
+        self.assertEqual(len(self.cmd._curr_amps[0].get('diagrams')), 28)
         
             
     def test_import_model(self):

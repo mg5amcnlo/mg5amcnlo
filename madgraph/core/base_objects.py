@@ -2978,26 +2978,29 @@ class Process(PhysicsObject):
 
         # Add orders
         if self['orders']:
-            mystr = mystr + " ".join(['%s%s%s' % (key, 
-                                                '<=' if self['orders'][key] else '=',
-                                                 repr(self['orders'][key])) \
-              for key in self['orders'] if  key!='WEIGHTED' \
-              and not key in self['squared_orders'].keys()]) + ' '
-
-        if print_weighted and 'WEIGHTED' in self['orders']:
-            hierarchy = self['model'].get('order_hierarchy')
-            tmp = []
-            hierarchy = hierarchy.items()
-            hierarchy.sort()
-            for key, value in hierarchy:
-                if value>1:
-                    tmp.append('%s*%s' % (value,key))
+            to_add = []
+            for key in self['orders']:
+                if not print_weighted and key == 'WEIGHTED':
+                    continue
+                value = int(self['orders'][key])
+                if key in self['squared_orders']:
+                    if self.get_squared_order_type(key) in ['<=', '==', '='] and \
+                        self['squared_orders'][key] == value:
+                        continue 
+                    if self.get_squared_order_type(key) in ['>'] and value == 99:
+                        continue
+                if key in self['constrained_orders']:
+                    if value == self['constrained_orders'][key][0] and\
+                       self['constrained_orders'][key][1] in ['=', '<=', '==']:
+                        continue
+                if value == 0:
+                    to_add.append('%s=0' % key)
                 else:
-                    tmp.append('%s' % (key))
-            mystr = mystr + '+'.join(tmp) + '%s%s' % ('<=' if self['orders']['WEIGHTED'] else '=',
-                                              self['orders']['WEIGHTED']) + ' '
+                    to_add.append('%s<=%s' % (key,value))
+                
+                 
             
-            
+            mystr = mystr + " ".join(to_add) + ' '
 
         if self['constrained_orders']:
             mystr = mystr + " ".join('%s%s%d' % (key, type, value) for 
@@ -3018,10 +3021,18 @@ class Process(PhysicsObject):
 
         # Add squared orders
         if self['squared_orders']:
-            mystr = mystr + " ".join([key + '^2%s%d'%\
-                (self.get_squared_order_type(key),self['squared_orders'][key]) \
-              for key in self['squared_orders'].keys() \
-                                    if print_weighted or key!='WEIGHTED']) + ' '
+            to_add = []
+            for key in self['squared_orders'].keys():
+                if not print_weighted and key == 'WEIGHTED':
+                    continue
+                if key in self['constrained_orders']:
+                    if self['constrained_orders'][key][0] == self['squared_orders'][key]/2 and \
+                       self['constrained_orders'][key][1] == self.get_squared_order_type(key):
+                        continue
+                to_add.append(key + '^2%s%d'%\
+                (self.get_squared_order_type(key),self['squared_orders'][key]))
+            mystr = mystr + " ".join(to_add) + ' '
+            
 
         # Add forbidden s-channels
         if self['forbidden_onsh_s_channels']:
