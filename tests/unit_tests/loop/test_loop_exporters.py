@@ -23,6 +23,7 @@ import sys
 import shutil
 import tarfile
 import datetime
+import glob
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
@@ -240,6 +241,10 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
     @IOTests.createIOTest(groupName='LoopSquaredOrder_IOTest')
     def testIO_Loop_sqso_uux_ddx(self):
         """ target: [loop_matrix(.*)\.f]
+                    [write_mp_compute_loop_coefs(.*)\.f]
+                    [mp_helas_calls(.*)\.f]
+                    [helas_calls(.*)\.f]
+                    [loop_CT_calls(.*)\.f]
         """
     
         myleglist = base_objects.LegList()
@@ -280,8 +285,6 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
             myloopamp = loop_diagram_generation.LoopAmplitude(myproc)
             matrix_element=loop_helas_objects.LoopHelasMatrixElement(\
                                                 myloopamp,optimized_output=True)
-            writer = writers.FortranWriter(\
-                                     pjoin(self.IOpath,'loop_matrix_%s.f'%name))
             
             # It is enough here to generate and check the filer loop_matrix.f 
             # only here. For that we must initialize the general replacement 
@@ -302,5 +305,17 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                                                  matrix_element)
         
             # We can then finally write out 'loop_matrix.f'
-            self.exporter.write_loopmatrix(writer,matrix_element, fortran_model,
-                                      noSplit=True, write_auxiliary_files=False)
+            with misc.chdir(self.IOpath):
+                writer = writers.FortranWriter(\
+                                     pjoin(self.IOpath,'loop_matrix_%s.f'%name))
+                self.exporter.write_loopmatrix(writer,matrix_element,
+                                     fortran_model, write_auxiliary_files=False)
+                writer = writers.FortranWriter(\
+                     pjoin(self.IOpath,'write_mp_compute_loop_coefs_%s.f'%name))                    
+                self.exporter.write_mp_compute_loop_coefs(writer, 
+                                                  matrix_element, fortran_model)
+            for file in glob.glob(pjoin(self.IOpath,'mp_helas_calls_*.f'))+\
+                        glob.glob(pjoin(self.IOpath,'helas_calls_*.f'))+\
+                        glob.glob(pjoin(self.IOpath,'loop_CT_calls*.f')):
+                base_name = '.'.join(file.split('.')[:-1])+'_%s.'+file.split('.')[-1]
+                shutil.move(file,base_name%name)

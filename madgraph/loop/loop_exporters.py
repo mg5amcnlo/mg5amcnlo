@@ -1226,7 +1226,8 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
     def split_HELASCALLS(self, writer, replace_dict, template_name, masterfile, \
                          helas_calls, entry_name, bunch_name,n_helas=2000,
                          required_so_broadcaster = 'LOOP_REQ_SO_DONE',
-                         continue_label = 1000, context={}):
+                         continue_label = 1000, momenta_array_name='P',
+                         context={}):
         """ Finish the code generation with splitting.         
         Split the helas calls in the argument helas_calls into bunches of 
         size n_helas and place them in dedicated subroutine with name 
@@ -1248,8 +1249,8 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
             new_helascalls_file = new_helascalls_file % helascalls_replace_dict
             helascalls_files.append(new_helascalls_file)
         # Setup the call to these HELASCALLS subroutines in loop_matrix.f
-        helascalls_calls = [ "CALL %s%s_%d(P,NHEL,H,IC)"%\
-                    (replace_dict['proc_prefix'] ,bunch_name,a+1) \
+        helascalls_calls = [ "CALL %s%s_%d(%s,NHEL,H,IC)"%\
+              (replace_dict['proc_prefix'] ,bunch_name,a+1,momenta_array_name) \
                                           for a in range(len(helascalls_files))]
         replace_dict[entry_name]='\n'.join(helascalls_calls)
         if writer:
@@ -1262,8 +1263,7 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         return masterfile
 
-    def write_loopmatrix(self, writer, matrix_element, fortran_model, \
-                                                                 noSplit=False):
+    def write_loopmatrix(self, writer, matrix_element, fortran_model):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -1474,8 +1474,8 @@ C               ENDIF""")%replace_dict
                                                   writer, bornME, fortran_model, 
                            proc_prefix=matrix_element.rep_dict['proc_prefix'])
 
-    def write_born_amps_and_wfs(self, writer, matrix_element, fortran_model,\
-                                noSplit=False): 
+    def write_born_amps_and_wfs(self, writer, matrix_element, fortran_model,
+                                                                 noSplit=False): 
         """ Writes out the code for the subroutine MP_BORN_AMPS_AND_WFS which 
         computes just the external wavefunction and born amplitudes in 
         multiple precision. """
@@ -2117,8 +2117,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         writer.writelines('\n\n'.join(subroutines),
                                        context=self.get_context(matrix_element))
 
-    def write_mp_compute_loop_coefs(self, writer, matrix_element, fortran_model, \
-                                    noSplit=False):
+    def write_mp_compute_loop_coefs(self, writer, matrix_element, fortran_model):
         """Create the write_mp_compute_loop_coefs.f file."""
         
         if not matrix_element.get('processes') or \
@@ -2155,29 +2154,28 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # Setup the contextual environment which is used in the splitting
         # functions below
         context = self.get_context(matrix_element)
-        # Decide here wether we need to split the loop_matrix.f file or not.
-        # 200 is reasonable but feel free to change it.
-        if (not noSplit and (len(matrix_element.get_all_amplitudes())>200)):
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                            'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'mp_born_ct_helas_calls','mp_helas_calls_ampb',
-                            required_so_broadcaster = 'MP_CT_REQ_SO_DONE',
-                            continue_label = 2000,context=context)
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                            'mp_helas_calls_split.inc',file,uvct_helas_calls,\
-                            'mp_uvct_helas_calls','mp_helas_calls_uvct',
-                            required_so_broadcaster = 'MP_UVCT_REQ_SO_DONE',
-                            continue_label = 3000,context=context)
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                    'mp_helas_calls_split.inc',file,coef_construction,\
-                    'mp_coef_construction','mp_coef_construction',
-                    required_so_broadcaster = 'MP_LOOP_REQ_SO_DONE',
-                    continue_label = 4000,context=context)
-        else:
-            replace_dict['mp_born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
-            replace_dict['mp_uvct_helas_calls']='\n'.join(uvct_helas_calls)
-            replace_dict['mp_coef_construction']='\n'.join(coef_construction)
-        
+        file=self.split_HELASCALLS(writer,replace_dict,\
+                        'mp_helas_calls_split.inc',file,born_ct_helas_calls,\
+                        'mp_born_ct_helas_calls','mp_helas_calls_ampb',
+                        required_so_broadcaster = 'MP_CT_REQ_SO_DONE',
+                        continue_label = 2000,
+                        momenta_array_name = 'MP_P',
+                        context=context)
+        file=self.split_HELASCALLS(writer,replace_dict,\
+                        'mp_helas_calls_split.inc',file,uvct_helas_calls,\
+                        'mp_uvct_helas_calls','mp_helas_calls_uvct',
+                        required_so_broadcaster = 'MP_UVCT_REQ_SO_DONE',
+                        continue_label = 3000,
+                        momenta_array_name = 'MP_P',
+                        context=context)
+        file=self.split_HELASCALLS(writer,replace_dict,\
+                'mp_helas_calls_split.inc',file,coef_construction,\
+                'mp_coef_construction','mp_coef_construction',
+                required_so_broadcaster = 'MP_LOOP_REQ_SO_DONE',
+                continue_label = 4000,
+                momenta_array_name = 'MP_P',
+                context=context)
+
         replace_dict['mp_coef_merging']='\n'.join(coef_merging)
                     
         file = file % replace_dict
@@ -2416,7 +2414,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         writer.writelines(tir_cach_size)
 
     def write_loopmatrix(self, writer, matrix_element, fortran_model, \
-                         noSplit=False, write_auxiliary_files=True,):
+                                                   write_auxiliary_files=True,):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \
@@ -2570,46 +2568,33 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         # Setup the contextual environment which is used in the splitting
         # functions below
         context = self.get_context(matrix_element)
-        # Decide here wether we need to split the loop_matrix.f file or not.
-        # 200 is reasonable but feel free to change it.
-        if not noSplit and (len(matrix_element.get_all_amplitudes())>200):
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                            'helas_calls_split.inc',file,born_ct_helas_calls,\
-                            'born_ct_helas_calls','helas_calls_ampb',
-                            required_so_broadcaster = 'CT_REQ_SO_DONE',
-                            continue_label = 2000, context = context)
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                            'helas_calls_split.inc',file,uvct_helas_calls,\
-                            'uvct_helas_calls','helas_calls_uvct',
-                            required_so_broadcaster = 'UVCT_REQ_SO_DONE',
-                            continue_label = 3000, context=context)
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                    'helas_calls_split.inc',file,coef_construction,\
-                    'coef_construction','coef_construction',
-                    required_so_broadcaster = 'LOOP_REQ_SO_DONE',
-                    continue_label = 4000, context=context)
-        else:
-            replace_dict['born_ct_helas_calls']='\n'.join(born_ct_helas_calls)
-            replace_dict['uvct_helas_calls']='\n'.join(uvct_helas_calls)
-            replace_dict['coef_construction']='\n'.join(coef_construction)
-    
-        # For loop induced processes, always split the loop_CT_calls because
-        # they are used both in loop_matrix.f and mp_compute_loop_coef.f so 
-        # that it is quite nice to have them placed in the same subroutine.
-        if not noSplit and ( (len(matrix_element.get_all_amplitudes())>200) or
-                        not matrix_element.get('processes')[0].get('has_born')):
-            file=self.split_HELASCALLS(writer,replace_dict,\
-                    'helas_calls_split.inc',file,loop_CT_calls,\
-                    'loop_CT_calls','loop_CT_calls',
-                    required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
-                    continue_label = 5000, context=context)
-        else:
-            replace_dict['loop_CT_calls']='\n'.join(loop_CT_calls)
+        file=self.split_HELASCALLS(writer,replace_dict,\
+                        'helas_calls_split.inc',file,born_ct_helas_calls,\
+                        'born_ct_helas_calls','helas_calls_ampb',
+                        required_so_broadcaster = 'CT_REQ_SO_DONE',
+                        continue_label = 2000, context = context)
+        file=self.split_HELASCALLS(writer,replace_dict,\
+                        'helas_calls_split.inc',file,uvct_helas_calls,\
+                        'uvct_helas_calls','helas_calls_uvct',
+                        required_so_broadcaster = 'UVCT_REQ_SO_DONE',
+                        continue_label = 3000, context=context)
+        file=self.split_HELASCALLS(writer,replace_dict,\
+                'helas_calls_split.inc',file,coef_construction,\
+                'coef_construction','coef_construction',
+                required_so_broadcaster = 'LOOP_REQ_SO_DONE',
+                continue_label = 4000, context=context)    
+        file=self.split_HELASCALLS(writer,replace_dict,\
+                'helas_calls_split.inc',file,loop_CT_calls,\
+                'loop_CT_calls','loop_CT_calls',
+                required_so_broadcaster = 'CTCALL_REQ_SO_DONE',
+                continue_label = 5000, context=context)
        
-        # For loop induced processes, add the 'loop_CT_calls' entry to the
-        # general_replace_dict so that it can be used by 
-        # write_mp_compute_loop_coefs later
+        # Add the entries above to the general_replace_dict so that it can be 
+        # used by write_mp_compute_loop_coefs later
         matrix_element.rep_dict['loop_CT_calls']=replace_dict['loop_CT_calls']            
+        matrix_element.rep_dict['born_ct_helas_calls']=replace_dict['born_ct_helas_calls']            
+        matrix_element.rep_dict['uvct_helas_calls']=replace_dict['uvct_helas_calls']            
+        matrix_element.rep_dict['coef_construction']=replace_dict['coef_construction']            
         
         replace_dict['coef_merging']='\n'.join(coef_merging)
 

@@ -19,6 +19,18 @@
 !     Notice that any reduction tool not avaialble on the system will be automatically
 !     skipped. 
 
+!     When using quadruple precision with Ninja or CutTools, the reduction will 
+!     always be done in quadruple precision, but the parameters below allow you to
+!     chose if you want to also recompute the *integrand* in quadruple precision.
+!     Doing so is slow and typically does not improve the accuracy for Ninja, so it 
+!     is disabled by default in this case.
+#UseQPIntegrandForCutTools
+!.TRUE.
+! Defaul :: .TRUE.
+#UseQPIntegrandForNinja
+!.FALSE.
+! Defaul :: .FALSE.
+!
 !     =================================================================================
 !     The parameters below set the parameters for IREGI
 !     =================================================================================

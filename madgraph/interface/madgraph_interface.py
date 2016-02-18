@@ -5451,28 +5451,29 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.install_update(args, wget=program)
             return
 
-        advertisements = {'pythia-pgs':'[arXiv:0603175]',
-                          'Delphes':'[arXiv:1307.6346]',
-                          'Delphes2':'[arXiv:0903.2225]',
-                          'SysCalc':'[arXiv:XXXX.YYYYY]',
-                          'Golem95':'[arXiv:0807.0605]',
-                          'PJFry':'[arXiv:1210.4095,1112.0500]',
-                          'QCDLoop':'[arXiv:0712.1851]',
-                          'pythia8':'[arXiv:1410.3012]',
-                          'lhapdf6':'[arXiv:1412.7420]',
-                          'lhapdf5':'[arXiv:0605240]',
-                          'hepmc':'[CPC 134 (2001) 41-46]',
-                          'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]',
-                          'ninja':'[arXiv:1203.0291,arXiv:1403.1229,XXXX.YYYYY]',
-                          'oneloop':'[arXiv:1007.4716]'}
+        advertisements = {'pythia-pgs':['arXiv:0603175'],
+                          'Delphes':['arXiv:1307.6346'],
+                          'Delphes2':['arXiv:0903.2225'],
+                          'SysCalc':['arXiv:XXXX.YYYYY'],
+                          'Golem95':['arXiv:0807.0605'],
+                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
+                          'QCDLoop':['arXiv:0712.1851'],
+                          'pythia8':['arXiv:1410.3012'],
+                          'lhapdf6':['arXiv:1412.7420'],
+                          'lhapdf5':['arXiv:0605240'],
+                          'hepmc':['CPC 134 (2001) 41-46'],
+                          'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
+                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:XXXX.YYYYY'],
+                          'oneloop':['arXiv:1007.4716']}
 
         if args[0] in advertisements:
-            logger.info("------------------------------------------------------", '$MG:color:BLACK')
-            logger.info("   You are installing '%s', please cite ref(s). "%args[0], '$MG:color:BLACK')
-            logger.info("         %s"%advertisements[args[0]], '$MG:color:BLACK')
+            logger.info("------------------------------------------------------", '$MG:color:GREEN')
+            logger.info("   You are installing '%s', please cite ref(s): "%args[0], '$MG:color:BLACK')
+            for ad in advertisements[args[0]]:
+              logger.info("                 %s"%ad, '$MG:color:GREEN')
             logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
             logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
-            logger.info("------------------------------------------------------", '$MG:color:BLACK')
+            logger.info("------------------------------------------------------", '$MG:color:GREEN')
 
 
         # Load file with path of the different program:

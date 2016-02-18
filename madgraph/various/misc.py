@@ -1319,6 +1319,9 @@ def equal(a,b,sig_fig=6, zero_limit=True):
 
 ################################################################################
 # class to change directory with the "with statement"
+# Exemple:
+# with chdir(path) as path:
+#     pass
 ################################################################################
 class chdir:
     def __init__(self, newPath):

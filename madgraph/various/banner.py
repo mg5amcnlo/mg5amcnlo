@@ -2041,6 +2041,8 @@ class MadLoopParam(ConfigFile):
         self.add_param("HelicityFilterLevel", 2)
         self.add_param("LoopInitStartOver", False)
         self.add_param("HelInitStartOver", False)
+        self.add_param("UseQPIntegrandForNinja", False)        
+        self.add_param("UseQPIntegrandForCutTools", True)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

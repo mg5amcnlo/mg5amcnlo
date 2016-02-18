@@ -1722,8 +1722,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                    abs(sum(dp_res)/len(dp_res)))
                     dp_dict['Accuracy'] = dp_accuracy
                     if dp_accuracy>accuracy_threshold:
-                        if tool==1:
-                            # Only CutTools can use QP
+                        if tool in [1,6]:
+                            # Only CutTools or Ninja can use QP
                             UPS = [i,p]
                             qp_res=[]
                             PSPoint = format_PS_point(p,0)

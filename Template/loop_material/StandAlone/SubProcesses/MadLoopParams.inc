@@ -13,10 +13,11 @@
 
       logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter
 	  logical HelInitStartOver,IREGIRECY,WriteOutFilters
+      logical UseQPIntegrandForNinja, UseQPIntegrandForCutTools
 
       common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
      &ImprovePSPoint,CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,
      &CTStabThres,CTLoopLibrary,LoopInitStartOver,
      &DoubleCheckHelicityFilter,ZeroThres,OSThres,HelInitStartOver,
      &MLReductionLib,IREGIMODE,HelicityFilterLevel,IREGIRECY,
-     &WriteOutFilters
+     &WriteOutFilters,UseQPIntegrandForNinja,UseQPIntegrandForCutTools
