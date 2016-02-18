@@ -6,7 +6,8 @@ c Wrapper routines for the fixed order analyses
       include 'reweight0.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*30 weights_info(max_weight)
+      character*50 weights_info(max_weight)
+      character*13 temp
       integer i,npdfs,ii,jj,n,kk,nn
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
@@ -74,13 +75,15 @@ c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
                do n=0,nmemPDF(nn)
                   nwgt=nwgt+1
-                  write(weights_info(nwgt),'(a4,i8,2x,i8,a8)')
-     &                 "PDF=",lhaPDFid(nn)+n,lhaPDFid(nn),"        "
+                  write(temp,'(a4,i8,x)') "PDF=",lhaPDFid(nn)+n
+                  write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+     $                 /' '//trim(adjustl(lhaPDFsetname(nn)))
                enddo
             else
                nwgt=nwgt+1
-               write(weights_info(nwgt),'(a4,i8,2x,i8,a8)')
-     &              "PDF=",lhaPDFid(nn),lhaPDFid(nn),"        "
+               write(temp,'(a4,i8,x)') "PDF=",lhaPDFid(nn)
+               write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
+     $              /' '//trim(adjustl(lhaPDFsetname(nn)))
             endif
          enddo
 c start with central member of the first set

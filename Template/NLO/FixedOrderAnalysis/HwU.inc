@@ -10,7 +10,7 @@
       integer nbin(max_plots),nwgts,np,p_bin(max_points)
      &     ,p_label(max_points),histi(max_plots,max_bins)
       character*50 title(max_plots)
-      character*30 wgts_info(max_wgts)
+      character*50 wgts_info(max_wgts)
       double precision histy(max_wgts,max_plots,max_bins)
      $     ,histy_acc(max_wgts,max_plots,max_bins),histy2(max_plots
      $     ,max_bins),histy_err(max_plots,max_bins),histxl(max_plots

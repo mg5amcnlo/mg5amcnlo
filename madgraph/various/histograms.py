@@ -28,6 +28,7 @@ import math
 import os
 import re
 import sys
+import subprocess
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path)) 
@@ -633,7 +634,7 @@ class HwU(Histogram):
     weight_label_scale_adv = re.compile('^\s*dyn\s*=\s*(?P<dyn_choice>%s)'%a_int_re+\
                                         '\s*mur\s*=\s*(?P<mur_fact>%s)'%a_float_re+\
                                         '\s*muf\s*=\s*(?P<muf_fact>%s)\s*$'%a_float_re,re.IGNORECASE)
-    weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\d+)\s*$')
+    weight_label_PDF_adv = re.compile('^\s*PDF\s*=\s*(?P<PDF_set>\d+)\s+(?P<PDF_set_cen>\S+)\s*$')
     
     
     class ParseError(MadGraph5Error):
@@ -700,7 +701,7 @@ class HwU(Histogram):
                 elif label[0] == 'pdf':
                     others.append('PDF=%i'%(label[1]))
                 elif label[0] == 'pdf_adv':
-                    others.append('PDF=%i %i'%(label[1],label[2]))
+                    others.append('PDF=%i %s'%(label[1],label[2]))
         
         return res+' & '.join(others)
 
@@ -804,7 +805,7 @@ class HwU(Histogram):
                     elif PDF_wgt_adv:
                         header[i] = ('pdf_adv',
                                      int(PDF_wgt_adv.group('PDF_set')),
-                                     int(PDF_wgt_adv.group('PDF_set_cen')))
+                                     PDF_wgt_adv.group('PDF_set_cen'))
                     elif PDF_wgt:
                         header[i] = ('pdf',int(PDF_wgt.group('PDF_set')))
 
@@ -943,7 +944,7 @@ class HwU(Histogram):
             self.bins.weight_labels if (not isinstance(wgt_label, str) 
            or (isinstance(wgt_label, str) and not wgt_label.endswith('@aux')) )]
 
-    def set_uncertainty(self, type='all_scale'):
+    def set_uncertainty(self, type='all_scale',lhapdfconfig='lhapdf-config'):
         """ Adds a weight to the bins which is the envelope of the scale
         uncertainty, for the scale specified which can be either 'mur', 'muf',
         'all_scale' or 'PDF'."""
@@ -1017,15 +1018,44 @@ class HwU(Histogram):
             # No envelope can be constructed, it is not worth adding the weights
             return (None,None)
         else:
+
+
+            # find and import python version of lhapdf if doing PDF uncertainties
+            if type=='PDF':
+                use_lhapdf=False
+                lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
+                                              stdout=subprocess.PIPE).stdout.read().strip() 
+                candidates=[x[0] for x in os.walk(lhapdf_libdir)]
+                for candidate in candidates:
+                    if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                        sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
+                        try:
+                            import lhapdf
+                            use_lhapdf=True
+                            break
+                        except ImportError:
+                            sys.path.pop(0)
+                            break
+                   
+                if not use_lhapdf:
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                    except ImportError:
+                        logger.warning("Failed to access python version of LHAPDF: "\
+                                      "cannot compute PDF uncertainty from the "\
+                                      "weights in the events.")
+                        use_lhapdf=False
+
             # Place the new weight label last before the first tuple
             position=[]
             labels=[]
             for i,label in enumerate(label_to_consider):
                 wgts=wgts_to_consider[i]
                 if label != 'none':
-                    new_wgt_labels=['%s_cen %i @aux' % (new_wgt_label,label),
-                                    '%s_min %i @aux' % (new_wgt_label,label),
-                                    '%s_max %i @aux' % (new_wgt_label,label)]
+                    new_wgt_labels=['%s_cen %s @aux' % (new_wgt_label,label),
+                                    '%s_min %s @aux' % (new_wgt_label,label),
+                                    '%s_max %s @aux' % (new_wgt_label,label)]
                 else:
                     new_wgt_labels=['%s_cen @aux' % new_wgt_label,
                                     '%s_min @aux' % new_wgt_label,
@@ -1043,6 +1073,9 @@ class HwU(Histogram):
                     labels.append(label)
                     self.bins.weight_labels.extend(new_wgt_labels)
 
+                if type=='PDF' and use_lhapdf and label != 'none':
+                    p=lhapdf.getPDFSet(label)
+
             # Now add the corresponding weight to all Bins
                 for bin in self.bins:
                     if type!='PDF':
@@ -1051,6 +1084,12 @@ class HwU(Histogram):
                                                       for label in wgts)
                         bin.wgts[new_wgt_labels[2]] = max(bin.wgts[label] \
                                                       for label in wgts)
+                    elif type=='PDF' and use_lhapdf and label != 'none':
+                        pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
+                        ep=p.uncertainty(pdfs,-1)
+                        bin.wgts[new_wgt_labels[0]] = ep.central
+                        bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
+                        bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
                     else:
                         pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
                         pdf_up     = 0.0
@@ -1191,11 +1230,12 @@ class HwU(Histogram):
                             all_weights.append(-bin.wgts[label])  
                     elif bin.wgts[label]>0.0:
                         all_weights.append(bin.wgts[label])
+                        
         
         sum([ [bin.wgts[label] for label in weight_labels if \
                              (scale!='LOG' or bin.wgts[label]!=0.0)] \
                            for histo in histo_list for bin in histo.bins],  [])
-
+        
         all_weights.sort()
         if len(all_weights)!=0:
             partial_max = all_weights[int(len(all_weights)*0.95)]
@@ -1207,7 +1247,7 @@ class HwU(Histogram):
                 return (0.0,1.0)
             else:
                 return (1.0,10.0)
-        
+
         y_max = 0.0
         y_min = 0.0
 
@@ -1317,7 +1357,8 @@ class HwUList(histograms_PhysicsObjectList):
             stream.close()
 
     def output(self, path, format='gnuplot',number_of_ratios = -1, 
-          uncertainties=['scale','pdf','statitistical'],ratio_correlations=True,arg_string=''):
+               uncertainties=['scale','pdf','statitistical'],ratio_correlations=True,
+               arg_string='',lhapdfconfig='lhapdf-config'):
         """ Ouput this histogram to a file, stream or string if path is kept to
         None. The supported format are for now. Chose whether to print the header
         or not."""
@@ -1508,7 +1549,6 @@ set style data histeps
         
         # determine the gnuplot version
         try:
-            import subprocess
             p = subprocess.Popen(['gnuplot', '--version'], \
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except OSError:
@@ -1532,7 +1572,8 @@ set style data histeps
                     gnuplot_output_list, block_position,output_base_name+'.HwU',
                     number_of_ratios=number_of_ratios, 
                     uncertainties = uncertainties,
-                    ratio_correlations = ratio_correlations)
+                    ratio_correlations = ratio_correlations,
+                    lhapdfconfig = lhapdfconfig)
 
         # Now write the tail of the gnuplot command file
         gnuplot_output_list.extend([
@@ -1552,7 +1593,7 @@ set style data histeps
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1, uncertainties =['scale','pdf','statitistical'],
-          ratio_correlations = True):
+                     ratio_correlations = True, lhapdfconfig='lhapdf-config'):
         """ This functions output a single group of histograms with either one
         histograms untyped (i.e. type=None) or two of type 'NLO' and 'LO' 
         respectively."""
@@ -1608,14 +1649,14 @@ set style data histeps
         if 'scale' in uncertainties:
             (mu_var_pos,mu)  = self[0].set_uncertainty(type='all_scale')
         else:
-            (mu_var_pos,mu) = (None,None)
+            (mu_var_pos,mu) = (None,[None])
         
         if 'pdf' in uncertainties: 
-            (PDF_var_pos,pdf) = self[0].set_uncertainty(type='PDF')
+            (PDF_var_pos,pdf) = self[0].set_uncertainty(type='PDF',lhapdfconfig=lhapdfconfig)
         else:
-            (PDF_var_pos,pdf) = (None,None)
+            (PDF_var_pos,pdf) = (None,[None])
 
-        no_uncertainties =  (PDF_var_pos is None or 'PDF' not in uncertainties) \
+        no_uncertainties =  (PDF_var_pos is None or 'pdf' not in uncertainties) \
                      and (mu_var_pos is None or 'scale' not in uncertainties) and \
                                              'statistical' not in uncertainties
 
@@ -1626,7 +1667,8 @@ set style data histeps
                  ' scale dependencies. It is required to be able to output them'+\
                  ' together.'
             if (not PDF_var_pos is None) and\
-                               PDF_var_pos != histo.set_uncertainty(type='PDF')[0]:
+                               PDF_var_pos != histo.set_uncertainty(type='PDF',\
+                                                                    lhapdfconfig=lhapdfconfig)[0]:
                raise MadGraph5Error, 'Not all histograms in this group specify'+\
                  ' PDF dependencies. It is required to be able to output them'+\
                  ' together.'
@@ -1731,7 +1773,7 @@ plot \\"""
           (len(self)-n_histograms>0 or not no_uncertainties) else "set format x"
         replacement_dic['set_ylabel'] = 'set ylabel "{/Symbol s} per bin [pb]"' 
         replacement_dic['set_yscale'] = "set logscale y" if \
-                              self[0].y_axis_mode=='LOG' else 'unset logscale y'
+                             self[0].y_axis_mode=='LOG' else 'unset logscale y'
         replacement_dic['set_format_y'] = "set format y '10^{%T}'" if \
                                 self[0].y_axis_mode=='LOG' else 'unset format'
                                 
@@ -1749,7 +1791,9 @@ plot \\"""
             plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
 %(HwU_name,block_position+i,color_index,\
-'%s central value' % title))
+'%s central value (%s %s)' % \
+      (title,'' if mu[0] is None else 'dynamical\_scale\_choice %s'%mu[0],
+             '' if pdf[0] is None else 'PDF set %s'%pdf[0].replace('_','\_'))))
             if 'statistical' in uncertainties:
                 plot_lines.append(
 "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
@@ -1759,19 +1803,21 @@ plot \\"""
                 for j,mu_var in enumerate(mu_var_pos):
                     if j!=0:
                         n=n+1
+                        color_index = n%self.number_line_colors_defined+1
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,mu_var+3,color_index+j,\
+%(HwU_name,block_position+i,mu_var+3,color_index,\
 '%s dynamical scale choice %s' % (title,mu[j])))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
                     if j!=0:
                         n=n+1
+                        color_index = n%self.number_line_colors_defined+1
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
-%(HwU_name,block_position+i,PDF_var+3,color_index+j,\
-'%s PDF set %s' % (title,pdf[j])))
+%(HwU_name,block_position+i,PDF_var+3,color_index,\
+'%s PDF set %s' % (title,pdf[j].replace('_','\_'))))
 
         # Add the plot lines
         gnuplot_out.append(',\\\n'.join(plot_lines))
@@ -1806,9 +1852,16 @@ plot \\"""
         # Notice even though a ratio histogram is created here, it
         # is not actually used to plot the quantity in gnuplot, but just to
         # compute the y range. 
-        (ymin, ymax) = HwU.get_y_optimal_range(
-          [self[0].__class__.combine(self[0],self[0],rel_scale),], 
-          labels = wgts_to_consider,  scale='LIN')
+        for i,histo in enumerate(self[:n_histograms]):
+            (y_min, y_max) = HwU.get_y_optimal_range(
+                [histo.__class__.combine(histo,histo,rel_scale),], 
+                labels = wgts_to_consider,  scale='LIN')
+            if i==0:
+                ymin=y_min
+                ymax=y_max
+            else:
+                ymin=min(y_min,ymin)
+                ymax=max(y_max,ymax)
 
         # Add a margin on upper and lower bound.
         ymax = ymax + 0.2 * (ymax - ymin)
@@ -1824,14 +1877,12 @@ plot \\"""
         replacement_dic['set_ytics'] = 'set ytics auto'
         replacement_dic['set_format_x'] = "set format x ''" if \
                                     len(self)-n_histograms>0 else "set format x"
-        replacement_dic['set_ylabel'] = 'set ylabel "%s rel.unc."'\
-                              %('#1' if self[0].type==None else '%s'%('NLO' if \
-                              self[0].type.split()[0]=='NLO' else self[0].type))
+        replacement_dic['set_ylabel'] = 'set ylabel "rel. unc."'
         replacement_dic['set_yscale'] = "unset logscale y"
         replacement_dic['set_format_y'] = 'unset format'
                                 
         replacement_dic['set_histo_label'] = \
-         'set label "Relative uncertainties (scale is dashed; PDF is dotted)" font ",9" at graph 0.03, graph 0.13'
+         'set label "Relative uncertainties w.r.t. central value(s) (scale is dashed; PDF is dotted)" font ",9" at graph 0.03, graph 0.13'
 #        'set label "Relative uncertainties" font ",9" at graph 0.79, graph 0.13'
         # Simply don't add these lines if there are no uncertainties.
         # This meant uncessary extra work, but I no longer car at this point
@@ -1843,6 +1894,7 @@ plot \\"""
         n=-1
         for i, histo in enumerate(self[:n_histograms]):
             n=n+1
+            k=n
             color_index = n%self.number_line_colors_defined+1
             if 'statistical' in uncertainties:
                plot_lines.append(
@@ -1851,25 +1903,33 @@ plot \\"""
         # Then the scale variations
             if not mu_var_pos is None:
                 for j,mu_var in enumerate(mu_var_pos):
-                    if j!=0: n=n+1
+                    if j==0:
+                        color_index = k%self.number_line_colors_defined+1
+                    else:
+                        n=n+1
+                        color_index = n%self.number_line_colors_defined+1
                     plot_lines.extend([
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,mu_var+3,color_index+j),
+%(HwU_name,block_position+i,mu_var+3,color_index),
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,mu_var+4,color_index+10+j),
+%(HwU_name,block_position+i,mu_var+4,color_index+10),
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,mu_var+5,color_index+10+j)
+%(HwU_name,block_position+i,mu_var+5,color_index+10)
                 ])
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
-                    if j!=0: n=n+1
+                    if j==0: 
+                        color_index = k%self.number_line_colors_defined+1
+                    else:
+                        n=n+1
+                        color_index = n%self.number_line_colors_defined+1
                     plot_lines.extend([
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var+3,color_index+j),
+%(HwU_name,block_position+i,PDF_var+3,color_index),
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var+4,color_index+20+j),
+%(HwU_name,block_position+i,PDF_var+4,color_index+20),
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
-%(HwU_name,block_position+i,PDF_var+5,color_index+20+j)
+%(HwU_name,block_position+i,PDF_var+5,color_index+20)
                 ])
         
         # Add the plot lines
@@ -1930,6 +1990,7 @@ plot \\"""
                 if j!=0: n=n+1
         for i_histo_ratio, histo_ration in enumerate(self[n_histograms:]):
             n=n+1
+            k=n
             block_ratio_pos = block_position+n_histograms+i_histo_ratio
             color_index     = n%self.number_line_colors_defined+1
             # Now add the subhistograms
@@ -1943,25 +2004,33 @@ plot \\"""
             # Then the scale variations
             if not mu_var_pos is None:
                 for j,mu_var in enumerate(mu_var_pos):
-                    if j!=0: n=n+1
+                    if j==0:
+                        color_index = k%self.number_line_colors_defined+1
+                    else:
+                        n=n+1
+                        color_index = n%self.number_line_colors_defined+1
                     plot_lines.extend([
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,mu_var+3,color_index+j),
+    %(HwU_name,block_ratio_pos,mu_var+3,color_index),
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,mu_var+4,10+color_index+j),
+    %(HwU_name,block_ratio_pos,mu_var+4,10+color_index),
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,mu_var+5,10+color_index+j)
+    %(HwU_name,block_ratio_pos,mu_var+5,10+color_index)
                 ])
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
-                    if j!=0: n=n+1
+                    if j==0: 
+                        color_index = k%self.number_line_colors_defined+1
+                    else:
+                        n=n+1
+                        color_index = n%self.number_line_colors_defined+1
                     plot_lines.extend([
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDF_var+3,color_index+j),
+    %(HwU_name,block_ratio_pos,PDF_var+3,color_index),
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDF_var+4,20+color_index+j),
+    %(HwU_name,block_ratio_pos,PDF_var+4,20+color_index),
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
-    %(HwU_name,block_ratio_pos,PDF_var+5,20+color_index+j)
+    %(HwU_name,block_ratio_pos,PDF_var+5,20+color_index)
                 ])
         
         # Add the plot lines
@@ -1997,11 +2066,12 @@ if __name__ == "__main__":
            '--assign_types=<type1>,<type2>,...' to assign a type to all histograms of the first, second, etc... files loaded.
            '--multiply=<fact1>,<fact2>,...' to multiply all histograms of the first, second, etc... files by the fact1, fact2, etc...
            '--no_suffix'     Do no add any suffix (like '#1, #2, etc..) to the histograms types.
+           '--lhapdf-config=<PATH_TO_LHAPDF-CONFIG>' give path to lhapdf-config to compute PDF certainties using LHAPDF (only for lhapdf6)
     """
 
     possible_options=['--help', '--gnuplot', '--HwU', '--types','--n_ratios','--no_scale','--no_pdf','--no_stat',\
                       '--no_open','--show_full','--show_short','--simple_ratios','--sum','--average','--rebin',  \
-                      '--assign_types','--multiply','--no_suffix', '--out']
+                      '--assign_types','--multiply','--no_suffix', '--out', '--lhapdf-config']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical']
     auto_open = True
@@ -2037,6 +2107,11 @@ if __name__ == "__main__":
         if arg.startswith('--assign_types='):
             assigned_types = [(type if type!='None' else None) for type in \
                                                              arg[15:].split(',')]
+
+    lhapdfconfig = []
+    for arg in sys.argv[1:]:
+        if arg.startswith('--lhapdf-config='):
+            lhapdfconfig = arg[16:]
 
     no_suffix = False
     if '--no_suffix' in sys.argv:
@@ -2129,14 +2204,14 @@ if __name__ == "__main__":
             hist.rebin(n_rebin)
 
     if '--gnuplot' in sys.argv or all(arg not in ['--HwU'] for arg in sys.argv):
-        histo_list.output(OutName, format='gnuplot', number_of_ratios = n_ratios, 
-            uncertainties=uncertainties, ratio_correlations=ratio_correlations,arg_string=arg_string)
+        histo_list.output(OutName, format='gnuplot', number_of_ratios = n_ratios, \
+                          uncertainties=uncertainties, ratio_correlations=ratio_correlations, \
+                          arg_string=arg_string,lhapdfconfig=lhapdfconfig)
         log("%d histograms have been output in " % len(histo_list)+\
                 "the gnuplot format at '%s.[HwU|gnuplot]'." % OutName)
         if auto_open:
             command = 'gnuplot %s.gnuplot'%OutName
             try:
-                import subprocess
                 subprocess.call(command,shell=True)
             except:
                 log("Automatic processing of the gnuplot card failed. Try the"+\
