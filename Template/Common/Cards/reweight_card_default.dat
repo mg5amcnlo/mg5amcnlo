@@ -5,10 +5,10 @@
 # Reweighting by Leading Order (tree-level / loop-induced) matrix
 # elements
 #
-# Warning: To have NLO accurate reweighting, you need to specify in the 
-#          run_card (at the time of the NLO sample generation) 
-#          keep_rwgt_info on "True". If it is on False a LO type of
-#          reweighting will be performed (not assuring NLO accuracy)
+# Warning: To insure NLO accuracy in the reweighting procedure, you must set the
+#          run_card parameter 'keep_rwgt_info' to '.true.'(when doing event generation).
+#          If it is set to '.false.', then and approximate reweighting based on
+#          LO matrix element only will be performed (hence losing formal NLO accuracy)
 #          
 # Note: 
 #   1) the value of alpha_s will be used from the event so the value in

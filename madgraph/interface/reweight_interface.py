@@ -67,7 +67,7 @@ class ReweightInterface(extended_cmd.Cmd):
     debug_output = 'Reweight_debug'
     
     @misc.mute_logger()
-    def __init__(self, event_path=None, allow_madspin=False, *completekey, **stdin):
+    def __init__(self, event_path=None, allow_madspin=False, mother=None,*completekey, **stdin):
         """initialize the interface with potentially an event_path"""
         
         if not event_path:
@@ -80,6 +80,8 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.model = None
         self.has_standalone_dir = False
+        self.mother= mother # calling interface
+            
         
         self.options = {'curr_dir': os.path.realpath(os.getcwd())}
         
@@ -95,6 +97,10 @@ class ReweightInterface(extended_cmd.Cmd):
         self.has_nlo = False
         self.rwgt_dir = None
         self.exitted = False # Flag to know if do_quit was already called.
+        
+        if not mother.options['lhapdf']:
+            logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
+            self.rwgt_mode = 'LO'
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -174,6 +180,9 @@ class ReweightInterface(extended_cmd.Cmd):
             if not self.banner.get_detail('run_card', 'keep_rwgt_info'):
                 logger.warning("The information to perform a proper NLO reweighting is not present in the event file.\n" +\
                                "       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
+                self.rwgt_mode = 'LO'
+            if self.mother.options['OLP'].lower() != 'madloop':
+                logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
                 self.rwgt_mode = 'LO'
                 
         if not process:
@@ -325,7 +334,15 @@ class ReweightInterface(extended_cmd.Cmd):
         elif args[0] == "helicity":
             self.helicity_reweighting = banner.ConfigFile.format_variable(args[1], bool, "helicity")
         elif args[0] == "mode":
-            self.rwgt_mode = args[1]
+            if args[1] != 'LO':
+                if self.mother.options['OLP'].lower() != 'madloop':
+                    logger.warning("Only LO reweighting is allowed for OLP!=MadLoop. Keeping the mode to LO.")
+                elif not self.banner.get_detail('run_card','keep_rwgt_info'):
+                    logger.warning("Missing information for NLO type of reweighitng. Keeping the mode to LO.")
+                else:
+                    self.rwgt_mode = args[1]
+            else:
+                self.rwgt_mode = args[1]
         elif args[0] == "rwgt_dir":
             self.rwgt_dir = args[1]
             if not os.path.exists(self.rwgt_dir):
@@ -436,11 +453,11 @@ class ReweightInterface(extended_cmd.Cmd):
 
         # Find new tag in the banner and add information if needed
         if 'initrwgt' in self.banner:
-            if 'type=\'mg_reweighting\'' in self.banner['initrwgt']:
-                blockpat = re.compile(r'''<weightgroup type=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
+            if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
+                blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)(?P<rwgttype>\s*|_\w+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'rwgt_(?P<id>\d+)(?P<rwgttype>\s*|_\w+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
                 for i, nlotype, diff in mg_rwgt_info:
@@ -457,8 +474,6 @@ class ReweightInterface(extended_cmd.Cmd):
             header_rwgt_other = ''
             mg_rwgt_info = []
             rewgtid = 1
-
-        misc.sprint("set rewgtid to ", rewgtid)
 
                     
         # add the reweighting in the banner information:
@@ -500,9 +515,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
-        self.banner['initrwgt'] += '\n<weightgroup type=\'mg_reweighting\'>\n'
+        self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:
-            self.banner['initrwgt'] += '<weight id=\'mg_reweight_%s%s\'>%s</weight>\n' % \
+            self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
                                        (tag, rwgttype, diff)
         self.banner['initrwgt'] += '\n</weightgroup>\n'
         self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
@@ -548,7 +563,7 @@ class ReweightInterface(extended_cmd.Cmd):
             ff.close()
         
         # Loop over all events
-        tag_name = 'mg_reweight_%s' % rewgtid
+        tag_name = 'rwgt_%s' % rewgtid
                 
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
@@ -1259,7 +1274,7 @@ class ReweightInterface(extended_cmd.Cmd):
             mgcmd.exec_cmd(commandline, precmd=True) 
             # update make_opts
             m_opts = {}
-            if mgcmd.options['lhapdf']:# and self.banner.get_detail('run_card','pdlabel') == 'lhapdf':
+            if mgcmd.options['lhapdf']:
                 #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
                 #        stdout = subprocess.PIPE).stdout.read().strip()[0]
                 m_opts['lhapdf'] = True
@@ -1270,8 +1285,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 # need to check if LHAPDF file is present
                          
             else:
-                raise Exception
-                m_opts['lhapdf'] = True
+                raise Exception, "NLO reweighting requires LHAPDF to work correctly"
  
             path = pjoin(path_me,'rw_mevirt', 'Source', 'make_opts')             
             common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)
@@ -1378,7 +1392,7 @@ class ReweightInterface(extended_cmd.Cmd):
                           if re.search('^\s*add\s+process', line)]   
         mgcmd.exec_cmd("set group_subprocesses False")
 
-        logger.info('generating the square matrix element for reweighting')
+        logger.info('generating the squared matrix element for reweighting')
         start = time.time()
         commandline=''
         for proc in processes:

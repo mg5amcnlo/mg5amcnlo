@@ -1235,7 +1235,7 @@ To be able to merge samples of various multiplicities without double counting,
 you have to remove some events after showering 'by hand'.
 Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
-
+        self.store_result()
         #check if the param_card defines a scan.
         if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
@@ -3320,6 +3320,17 @@ RESTART = %(mint_mode)s
 
         if not self.to_store:
             return 
+
+        if 'event' in self.to_store:
+            if os.path.exists(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')):
+                if not  os.path.exists(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz')):
+                    self.update_status('gzipping output file: events.lhe', level='parton', error=True)
+                    misc.gzip(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+                else:
+                    os.remove(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+            if os.path.exists(pjoin(self.me_dir,'Events','reweight.lhe')):
+                os.remove(pjoin(self.me_dir,'Events', 'reweight.lhe'))
+                
         
         tag = self.run_card['run_tag']
         

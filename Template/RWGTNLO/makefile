@@ -4,8 +4,8 @@ LIBDIR = ../lib/
 LINKLIBS =  -L../lib/ -lpdf $(llhapdf)
 LIBS = $(LIBDIR)libpdf.$(libext) 
 
-RWGT=rwgt.f alfas_functions_lhapdf.f
-
+#note only support lhapdf=True
+RWGT=rwgt.f $(alphas_functions)
 
 rwgt2py.so: rwgt.f makefile $(LIBS)
 	touch __init__.py	

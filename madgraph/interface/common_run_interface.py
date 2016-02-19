@@ -1058,15 +1058,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = self.split_arg(line) 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
-        reweight_cmd = reweight_interface.ReweightInterface(args[0])
-        reweight_cmd.mother = self
-        self.update_status('Running Reweight', level='madspin')
-        
+        reweight_cmd = reweight_interface.ReweightInterface(args[0], mother=self)
+        #reweight_cmd.mother = self
+        wgt_names = reweight_cmd.get_weight_names()
+        if wgt_names == [''] and reweight_cmd.has_nlo:
+            self.update_status('Running Reweighting (LO approximate)', level='madspin')
+        else:
+            self.update_status('Running Reweighting', level='madspin')
         
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
+        
+        
+        
         # re-define current run
         try:
             self.results.def_current(self.run_name, self.run_tag)
