@@ -5281,7 +5281,6 @@ This implies that with decay chains:
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
                                         stdout=subprocess.PIPE).communicate()[0]
 
-        misc.sprint(args[0], name)
         # For Delphes edit the makefile to add the proper link to correct library
         if args[0] == 'Delphes3':
             #change in the makefile 

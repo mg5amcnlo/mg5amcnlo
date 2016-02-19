@@ -12,7 +12,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u u~ > d d~  [ QCD QED ] WEIGHTED^2<=10 QED^2>2
+C     Process: u u~ > d d~ QED<=2 [ QCD QED ] WEIGHTED^2<=10 QED^2>2
 C     
       IMPLICIT NONE
 C     
@@ -2286,9 +2286,9 @@ C         Coefficient construction for loop diagram with ID 88
      $     ,176))
           CALL VVV1L3_2(PL(0,176),W(1,6),GC_4,MDL_MW,MDL_WW,PL(0,177)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,176),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,176),4,COEFS,4,4,WL(1,0,1
      $     ,177))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,177),5,4,30,1,1,282,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,177),6,4,30,1,1,282,H)
 C         Coefficient construction for loop diagram with ID 89
           CALL FFS1_3L2_3(PL(0,175),W(1,4),GC_31,GC_40,MDL_MW,MDL_WW
      $     ,PL(0,178),COEFS)
@@ -2296,9 +2296,9 @@ C         Coefficient construction for loop diagram with ID 89
      $     ,178))
           CALL VVS1L3_2(PL(0,178),W(1,6),GC_92,MDL_MW,MDL_WW,PL(0,179)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,178),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,178),4,COEFS,1,4,WL(1,0,1
      $     ,179))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,179),2,4,30,1,1,283,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,179),3,4,30,1,1,283,H)
 C         Coefficient construction for loop diagram with ID 90
           CALL FFS1_3L3_1(PL(0,0),W(1,3),GC_13,GC_22,MDL_MU,ZERO,PL(0
      $     ,180),COEFS)
@@ -2326,15 +2326,15 @@ C         Coefficient construction for loop diagram with ID 91
 C         Coefficient construction for loop diagram with ID 92
           CALL VVV1L2_1(PL(0,176),W(1,7),GC_71,MDL_MW,MDL_WW,PL(0,185)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,176),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,176),4,COEFS,4,4,WL(1,0,1
      $     ,185))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,185),5,4,30,1,1,286,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,185),6,4,30,1,1,286,H)
 C         Coefficient construction for loop diagram with ID 93
           CALL VVS1L3_1(PL(0,178),W(1,7),GC_85,MDL_MW,MDL_WW,PL(0,186)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,178),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,178),4,COEFS,1,4,WL(1,0,1
      $     ,186))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,186),2,4,30,1,1,287,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,186),3,4,30,1,1,287,H)
 C         Coefficient construction for loop diagram with ID 94
           CALL VVS1L1_3(PL(0,181),W(1,7),GC_84,MDL_MW,MDL_WW,PL(0,187)
      $     ,COEFS)
@@ -2594,9 +2594,9 @@ C         Coefficient construction for loop diagram with ID 124
      $     ,235))
           CALL VVV1L2_3(PL(0,235),W(1,10),GC_71,MDL_MZ,MDL_WZ,PL(0
      $     ,236),COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,235),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,235),4,COEFS,4,4,WL(1,0,1
      $     ,236))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,236),5,4,37,1,1,318,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,236),6,4,37,1,1,318,H)
 C         Coefficient construction for loop diagram with ID 125
           CALL FFS1_3L2_3(PL(0,234),W(1,4),GC_31,GC_40,MDL_MW,MDL_WW
      $     ,PL(0,237),COEFS)
@@ -2604,9 +2604,9 @@ C         Coefficient construction for loop diagram with ID 125
      $     ,237))
           CALL VVS1L3_2(PL(0,237),W(1,10),GC_85,MDL_MZ,MDL_WZ,PL(0
      $     ,238),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,237),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,237),4,COEFS,1,4,WL(1,0,1
      $     ,238))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,238),2,4,37,1,1,319,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,238),3,4,37,1,1,319,H)
 C         Coefficient construction for loop diagram with ID 126
           CALL FFS2L3_1(PL(0,0),W(1,2),GC_123,MDL_MU,ZERO,PL(0,239)
      $     ,COEFS)
@@ -2794,9 +2794,9 @@ C         Coefficient construction for loop diagram with ID 148
      $     ,273))
           CALL VVV1L1_3(PL(0,273),W(1,12),GC_71,MDL_MZ,MDL_WZ,PL(0
      $     ,274),COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,273),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,273),4,COEFS,4,4,WL(1,0,1
      $     ,274))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,274),5,4,42,1,1,342,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,274),6,4,42,1,1,342,H)
 C         Coefficient construction for loop diagram with ID 149
           CALL FFS1_3L1_3(PL(0,55),W(1,3),GC_13,GC_22,MDL_MW,MDL_WW
      $     ,PL(0,275),COEFS)
@@ -2804,9 +2804,9 @@ C         Coefficient construction for loop diagram with ID 149
      $     ,275))
           CALL VVS1L3_2(PL(0,275),W(1,12),GC_84,MDL_MZ,MDL_WZ,PL(0
      $     ,276),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,275),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,275),4,COEFS,1,4,WL(1,0,1
      $     ,276))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,276),2,4,42,1,1,343,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,276),3,4,42,1,1,343,H)
 C         Coefficient construction for loop diagram with ID 150
           CALL VVS1L1_2(PL(0,273),W(1,13),GC_85,MDL_MZ,MDL_WZ,PL(0
      $     ,277),COEFS)
@@ -3270,9 +3270,9 @@ C         Coefficient construction for loop diagram with ID 191
 C         Coefficient construction for loop diagram with ID 192
           CALL VVS1L3_1(PL(0,324),W(1,15),GC_99,MDL_MZ,MDL_WZ,PL(0
      $     ,371),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,324),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,324),4,COEFS,1,4,WL(1,0,1
      $     ,371))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,371),2,4,53,1,1,386,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,371),3,4,53,1,1,386,H)
 C         Coefficient construction for loop diagram with ID 193
           CALL VSS1L3_1(PL(0,324),W(1,16),GC_78,MDL_MZ,MDL_WZ,PL(0
      $     ,372),COEFS)
@@ -4056,9 +4056,9 @@ C         Coefficient construction for loop diagram with ID 279
      $     ,523))
           CALL VVV1L3_2(PL(0,523),W(1,6),GC_4,MDL_MW,MDL_WW,PL(0,524)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,523),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,523),4,COEFS,4,4,WL(1,0,1
      $     ,524))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,524),5,4,66,1,1,473,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,524),6,4,66,1,1,473,H)
 C         Coefficient construction for loop diagram with ID 280
           CALL FFS1_3L2_3(PL(0,522),W(1,4),GC_34,GC_43,MDL_MW,MDL_WW
      $     ,PL(0,525),COEFS)
@@ -4066,9 +4066,9 @@ C         Coefficient construction for loop diagram with ID 280
      $     ,525))
           CALL VVS1L3_2(PL(0,525),W(1,6),GC_92,MDL_MW,MDL_WW,PL(0,526)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,525),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,525),4,COEFS,1,4,WL(1,0,1
      $     ,526))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,526),2,4,66,1,1,474,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,526),3,4,66,1,1,474,H)
 C         Coefficient construction for loop diagram with ID 281
           CALL FFS1_3L3_1(PL(0,0),W(1,3),GC_14,GC_23,MDL_MC,ZERO,PL(0
      $     ,527),COEFS)
@@ -4096,15 +4096,15 @@ C         Coefficient construction for loop diagram with ID 282
 C         Coefficient construction for loop diagram with ID 283
           CALL VVV1L2_1(PL(0,523),W(1,7),GC_71,MDL_MW,MDL_WW,PL(0,532)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,523),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,523),4,COEFS,4,4,WL(1,0,1
      $     ,532))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,532),5,4,66,1,1,477,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,532),6,4,66,1,1,477,H)
 C         Coefficient construction for loop diagram with ID 284
           CALL VVS1L3_1(PL(0,525),W(1,7),GC_85,MDL_MW,MDL_WW,PL(0,533)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,525),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,525),4,COEFS,1,4,WL(1,0,1
      $     ,533))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,533),2,4,66,1,1,478,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,533),3,4,66,1,1,478,H)
 C         Coefficient construction for loop diagram with ID 285
           CALL VVS1L1_3(PL(0,528),W(1,7),GC_84,MDL_MW,MDL_WW,PL(0,534)
      $     ,COEFS)
@@ -4540,9 +4540,9 @@ C         Coefficient construction for loop diagram with ID 341
      $     ,613))
           CALL VVV1L3_2(PL(0,613),W(1,6),GC_4,MDL_MW,MDL_WW,PL(0,614)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,613),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,613),4,COEFS,4,4,WL(1,0,1
      $     ,614))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,614),5,4,74,1,1,535,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,614),6,4,74,1,1,535,H)
 C         Coefficient construction for loop diagram with ID 342
           CALL FFS1_3L2_3(PL(0,612),W(1,4),GC_37,GC_46,MDL_MW,MDL_WW
      $     ,PL(0,615),COEFS)
@@ -4550,9 +4550,9 @@ C         Coefficient construction for loop diagram with ID 342
      $     ,615))
           CALL VVS1L3_2(PL(0,615),W(1,6),GC_92,MDL_MW,MDL_WW,PL(0,616)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,615),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,615),4,COEFS,1,4,WL(1,0,1
      $     ,616))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,616),2,4,74,1,1,536,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,616),3,4,74,1,1,536,H)
 C         Coefficient construction for loop diagram with ID 343
           CALL FFS1_3L3_1(PL(0,0),W(1,3),GC_15,GC_24,MDL_MT,MDL_WT
      $     ,PL(0,617),COEFS)
@@ -4580,15 +4580,15 @@ C         Coefficient construction for loop diagram with ID 344
 C         Coefficient construction for loop diagram with ID 345
           CALL VVV1L2_1(PL(0,613),W(1,7),GC_71,MDL_MW,MDL_WW,PL(0,622)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,613),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,613),4,COEFS,4,4,WL(1,0,1
      $     ,622))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,622),5,4,74,1,1,539,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,622),6,4,74,1,1,539,H)
 C         Coefficient construction for loop diagram with ID 346
           CALL VVS1L3_1(PL(0,615),W(1,7),GC_85,MDL_MW,MDL_WW,PL(0,623)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,615),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,615),4,COEFS,1,4,WL(1,0,1
      $     ,623))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,623),2,4,74,1,1,540,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,623),3,4,74,1,1,540,H)
 C         Coefficient construction for loop diagram with ID 347
           CALL VVS1L1_3(PL(0,618),W(1,7),GC_84,MDL_MW,MDL_WW,PL(0,624)
      $     ,COEFS)
@@ -5072,9 +5072,9 @@ C         Coefficient construction for loop diagram with ID 411
      $     ,711))
           CALL VVS1L3_1(PL(0,711),W(1,7),GC_99,MDL_MZ,MDL_WZ,PL(0,712)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,711),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,711),4,COEFS,1,4,WL(1,0,1
      $     ,712))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,712),2,4,82,1,1,605,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,712),3,4,82,1,1,605,H)
 C         Coefficient construction for loop diagram with ID 412
           CALL FFS2L3_1(PL(0,0),W(1,3),GC_104,MDL_MD,ZERO,PL(0,713)
      $     ,COEFS)
@@ -5198,9 +5198,9 @@ C         Coefficient construction for loop diagram with ID 424
      $     ,736))
           CALL VVV1L1_3(PL(0,736),W(1,10),GC_4,MDL_MW,MDL_WW,PL(0,737)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,736),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_3(WL(1,0,1,736),4,COEFS,4,4,WL(1,0,1
      $     ,737))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,737),3,4,86,1,1,618,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,737),4,4,86,1,1,618,H)
 C         Coefficient construction for loop diagram with ID 425
           CALL FFV2_3L2_3(PL(0,735),W(1,4),GC_68,GC_76,MDL_MZ,MDL_WZ
      $     ,PL(0,738),COEFS)
@@ -5208,9 +5208,9 @@ C         Coefficient construction for loop diagram with ID 425
      $     ,738))
           CALL VVV1L3_2(PL(0,738),W(1,10),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,739),COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,738),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,738),4,COEFS,4,4,WL(1,0,1
      $     ,739))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,739),5,4,87,1,1,619,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,739),6,4,87,1,1,619,H)
 C         Coefficient construction for loop diagram with ID 426
           CALL FFS4L2_3(PL(0,735),W(1,4),GC_105,MDL_MH,MDL_WH,PL(0
      $     ,740),COEFS)
@@ -5218,9 +5218,9 @@ C         Coefficient construction for loop diagram with ID 426
      $     ,740))
           CALL VVS1L3_2(PL(0,740),W(1,10),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,741),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,740),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,740),4,COEFS,1,4,WL(1,0,1
      $     ,741))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,741),2,4,88,1,1,620,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,741),3,4,88,1,1,620,H)
 C         Coefficient construction for loop diagram with ID 427
           CALL FFS1_3L3_1(PL(0,0),W(1,2),GC_31,GC_40,MDL_MD,ZERO,PL(0
      $     ,742),COEFS)
@@ -5314,21 +5314,21 @@ C         Coefficient construction for loop diagram with ID 437
 C         Coefficient construction for loop diagram with ID 438
           CALL VVV1L1_2(PL(0,430),W(1,12),GC_4,MDL_MW,MDL_WW,PL(0,759)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,430),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_3(WL(1,0,1,430),4,COEFS,4,4,WL(1,0,1
      $     ,759))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,759),3,4,89,1,1,632,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,759),4,4,89,1,1,632,H)
 C         Coefficient construction for loop diagram with ID 439
           CALL VVV1L3_1(PL(0,436),W(1,12),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,760),COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,436),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,436),4,COEFS,4,4,WL(1,0,1
      $     ,760))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,760),5,4,90,1,1,633,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,760),6,4,90,1,1,633,H)
 C         Coefficient construction for loop diagram with ID 440
           CALL VVS1L3_1(PL(0,448),W(1,12),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,761),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,448),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,448),4,COEFS,1,4,WL(1,0,1
      $     ,761))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,761),2,4,91,1,1,634,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,761),3,4,91,1,1,634,H)
 C         Coefficient construction for loop diagram with ID 441
           CALL VVS1L1_2(PL(0,430),W(1,13),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,762),COEFS)
@@ -5398,15 +5398,15 @@ C         Coefficient construction for loop diagram with ID 451
 C         Coefficient construction for loop diagram with ID 452
           CALL VVV1L3_2(PL(0,454),W(1,14),GC_4,MDL_MW,MDL_WW,PL(0,773)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,454),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,454),4,COEFS,4,4,WL(1,0,1
      $     ,773))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,773),5,4,92,1,1,646,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,773),6,4,92,1,1,646,H)
 C         Coefficient construction for loop diagram with ID 453
           CALL VVV1L2_1(PL(0,454),W(1,15),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,774),COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,454),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,454),4,COEFS,4,4,WL(1,0,1
      $     ,774))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,774),5,4,92,1,1,647,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,774),6,4,92,1,1,647,H)
 C         Coefficient construction for loop diagram with ID 454
           CALL VVS1L2_1(PL(0,454),W(1,17),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,775),COEFS)
@@ -5416,15 +5416,15 @@ C         Coefficient construction for loop diagram with ID 454
 C         Coefficient construction for loop diagram with ID 455
           CALL VVS1L3_2(PL(0,476),W(1,14),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,776),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,476),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,476),4,COEFS,1,4,WL(1,0,1
      $     ,776))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,776),2,4,92,1,1,649,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,776),3,4,92,1,1,649,H)
 C         Coefficient construction for loop diagram with ID 456
           CALL VVS1L3_1(PL(0,476),W(1,15),GC_85,MDL_MW,MDL_WW,PL(0
      $     ,777),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,476),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,476),4,COEFS,1,4,WL(1,0,1
      $     ,777))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,777),2,4,92,1,1,650,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,777),3,4,92,1,1,650,H)
 C         Coefficient construction for loop diagram with ID 457
           CALL VSS1L3_1(PL(0,476),W(1,16),GC_57,MDL_MW,MDL_WW,PL(0
      $     ,778),COEFS)
@@ -5722,15 +5722,15 @@ C         Coefficient construction for loop diagram with ID 497
 C         Coefficient construction for loop diagram with ID 498
           CALL VVV1L3_2(PL(0,458),W(1,14),GC_4,MDL_MW,MDL_WW,PL(0,831)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,458),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,458),4,COEFS,4,4,WL(1,0,1
      $     ,831))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,831),5,4,96,1,1,692,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,831),6,4,96,1,1,692,H)
 C         Coefficient construction for loop diagram with ID 499
           CALL VVV1L2_1(PL(0,458),W(1,15),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,832),COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,458),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,458),4,COEFS,4,4,WL(1,0,1
      $     ,832))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,832),5,4,96,1,1,693,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,832),6,4,96,1,1,693,H)
 C         Coefficient construction for loop diagram with ID 500
           CALL VVS1L2_1(PL(0,458),W(1,17),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,833),COEFS)
@@ -5740,15 +5740,15 @@ C         Coefficient construction for loop diagram with ID 500
 C         Coefficient construction for loop diagram with ID 501
           CALL VVS1L3_2(PL(0,479),W(1,14),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,834),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,479),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,479),4,COEFS,1,4,WL(1,0,1
      $     ,834))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,834),2,4,96,1,1,695,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,834),3,4,96,1,1,695,H)
 C         Coefficient construction for loop diagram with ID 502
           CALL VVS1L3_1(PL(0,479),W(1,15),GC_85,MDL_MW,MDL_WW,PL(0
      $     ,835),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,479),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,479),4,COEFS,1,4,WL(1,0,1
      $     ,835))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,835),2,4,96,1,1,696,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,835),3,4,96,1,1,696,H)
 C         Coefficient construction for loop diagram with ID 503
           CALL VSS1L3_1(PL(0,479),W(1,16),GC_57,MDL_MW,MDL_WW,PL(0
      $     ,836),COEFS)
@@ -5966,15 +5966,15 @@ C         Coefficient construction for loop diagram with ID 535
 C         Coefficient construction for loop diagram with ID 536
           CALL VVV1L3_2(PL(0,462),W(1,14),GC_4,MDL_MW,MDL_WW,PL(0,873)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,462),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,462),4,COEFS,4,4,WL(1,0,1
      $     ,873))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,873),5,4,98,1,1,730,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,873),6,4,98,1,1,730,H)
 C         Coefficient construction for loop diagram with ID 537
           CALL VVV1L2_1(PL(0,462),W(1,15),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,874),COEFS)
-          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,462),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,462),4,COEFS,4,4,WL(1,0,1
      $     ,874))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,874),5,4,98,1,1,731,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,874),6,4,98,1,1,731,H)
 C         Coefficient construction for loop diagram with ID 538
           CALL VVS1L2_1(PL(0,462),W(1,17),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,875),COEFS)
@@ -5984,15 +5984,15 @@ C         Coefficient construction for loop diagram with ID 538
 C         Coefficient construction for loop diagram with ID 539
           CALL VVS1L3_2(PL(0,482),W(1,14),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,876),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,482),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,482),4,COEFS,1,4,WL(1,0,1
      $     ,876))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,876),2,4,98,1,1,733,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,876),3,4,98,1,1,733,H)
 C         Coefficient construction for loop diagram with ID 540
           CALL VVS1L3_1(PL(0,482),W(1,15),GC_85,MDL_MW,MDL_WW,PL(0
      $     ,877),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,482),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,482),4,COEFS,1,4,WL(1,0,1
      $     ,877))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,877),2,4,98,1,1,734,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,877),3,4,98,1,1,734,H)
 C         Coefficient construction for loop diagram with ID 541
           CALL VSS1L3_1(PL(0,482),W(1,16),GC_57,MDL_MW,MDL_WW,PL(0
      $     ,878),COEFS)
@@ -6098,13 +6098,13 @@ C         Coefficient construction for loop diagram with ID 557
 C         Coefficient construction for loop diagram with ID 558
           CALL VVV1L1_3(PL(0,0),W(1,10),GC_4,MDL_MW,MDL_WW,PL(0,895)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_3(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,895))
           CALL VVV1L2P0_1(PL(0,895),W(1,12),GC_4,ZERO,ZERO,PL(0,896)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_2_1(WL(1,0,1,895),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_1(WL(1,0,1,895),4,COEFS,4,4,WL(1,0,1
      $     ,896))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,896),3,4,99,1,1,752,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,896),4,4,99,1,1,752,H)
 C         Coefficient construction for loop diagram with ID 559
           CALL VVS1L1_3(PL(0,0),W(1,10),GC_92,MDL_MW,MDL_WW,PL(0,897)
      $     ,COEFS)
@@ -6118,9 +6118,9 @@ C         Coefficient construction for loop diagram with ID 559
 C         Coefficient construction for loop diagram with ID 560
           CALL VVS1L2P0_1(PL(0,895),W(1,13),GC_92,ZERO,ZERO,PL(0,899)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_2_0(WL(1,0,1,895),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_0(WL(1,0,1,895),4,COEFS,4,4,WL(1,0,1
      $     ,899))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,899),2,4,99,1,1,754,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,899),3,4,99,1,1,754,H)
 C         Coefficient construction for loop diagram with ID 561
           CALL VSS1L2P0_1(PL(0,897),W(1,13),GC_3,ZERO,ZERO,PL(0,900)
      $     ,COEFS)
@@ -6166,9 +6166,9 @@ C         Coefficient construction for loop diagram with ID 566
      $     ,907))
           CALL VVS1L3_1(PL(0,907),W(1,15),GC_99,MDL_MZ,MDL_WZ,PL(0
      $     ,908),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,907),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,907),4,COEFS,1,4,WL(1,0,1
      $     ,908))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,908),1,4,101,1,1,760,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,908),2,4,101,1,1,760,H)
 C         Coefficient construction for loop diagram with ID 567
           CALL VSS1L3_1(PL(0,907),W(1,16),GC_78,MDL_MZ,MDL_WZ,PL(0
      $     ,909),COEFS)
@@ -6182,9 +6182,9 @@ C         Coefficient construction for loop diagram with ID 568
      $     ,910))
           CALL VVS1L3_1(PL(0,910),W(1,15),GC_99,MDL_MZ,MDL_WZ,PL(0
      $     ,911),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,910),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,910),4,COEFS,1,4,WL(1,0,1
      $     ,911))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,911),2,4,101,1,1,762,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,911),3,4,101,1,1,762,H)
 C         Coefficient construction for loop diagram with ID 569
           CALL VVSS1L2_1(PL(0,0),W(1,8),W(1,16),GC_83,MDL_MZ,MDL_WZ
      $     ,PL(0,912),COEFS)
@@ -6232,13 +6232,13 @@ C         Coefficient construction for loop diagram with ID 574
 C         Coefficient construction for loop diagram with ID 575
           CALL VVV1L3_2(PL(0,0),W(1,10),GC_71,MDL_MW,MDL_WW,PL(0,920)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_3(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,920))
           CALL VVV1L1_3(PL(0,920),W(1,12),GC_71,MDL_MZ,MDL_WZ,PL(0
      $     ,921),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,920),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,920),4,COEFS,4,4,WL(1,0,1
      $     ,921))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,921),4,4,103,1,1,769,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,921),6,4,103,1,1,769,H)
 C         Coefficient construction for loop diagram with ID 576
           CALL VVS1L2_3(PL(0,0),W(1,10),GC_85,MDL_MW,MDL_WW,PL(0,922)
      $     ,COEFS)
@@ -6246,15 +6246,15 @@ C         Coefficient construction for loop diagram with ID 576
      $     ,922))
           CALL VVS1L3_2(PL(0,922),W(1,12),GC_84,MDL_MZ,MDL_WZ,PL(0
      $     ,923),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,922),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,922),4,COEFS,1,4,WL(1,0,1
      $     ,923))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,923),1,4,103,1,1,770,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,923),2,4,103,1,1,770,H)
 C         Coefficient construction for loop diagram with ID 577
           CALL VVS1L1_2(PL(0,920),W(1,13),GC_85,MDL_MZ,MDL_WZ,PL(0
      $     ,924),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,920),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,920),4,COEFS,4,4,WL(1,0,1
      $     ,924))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,924),4,4,103,1,1,771,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,924),5,4,103,1,1,771,H)
 C         Coefficient construction for loop diagram with ID 578
           CALL VSS1L2_1(PL(0,922),W(1,13),GC_79,MDL_MZ,MDL_WZ,PL(0
      $     ,925),COEFS)
@@ -6268,9 +6268,9 @@ C         Coefficient construction for loop diagram with ID 579
      $     ,926))
           CALL VVS1L3_2(PL(0,926),W(1,12),GC_84,MDL_MZ,MDL_WZ,PL(0
      $     ,927),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,926),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,926),4,COEFS,1,4,WL(1,0,1
      $     ,927))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,927),2,4,103,1,1,773,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,927),3,4,103,1,1,773,H)
 C         Coefficient construction for loop diagram with ID 580
           CALL VVS1L2_1(PL(0,0),W(1,11),GC_84,MDL_MW,MDL_WW,PL(0,928)
      $     ,COEFS)
@@ -6278,9 +6278,9 @@ C         Coefficient construction for loop diagram with ID 580
      $     ,928))
           CALL VVV1L1_3(PL(0,928),W(1,12),GC_71,MDL_MZ,MDL_WZ,PL(0
      $     ,929),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,928),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_2_3(WL(1,0,1,928),4,COEFS,4,4,WL(1,0,1
      $     ,929))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,929),4,4,103,1,1,774,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,929),5,4,103,1,1,774,H)
 C         Coefficient construction for loop diagram with ID 581
           CALL VVSS1L2_1(PL(0,0),W(1,11),W(1,13),GC_82,MDL_MZ,MDL_WZ
      $     ,PL(0,930),COEFS)
@@ -6308,13 +6308,13 @@ C         Coefficient construction for loop diagram with ID 584
 C         Coefficient construction for loop diagram with ID 585
           CALL VVV1L3_2(PL(0,0),W(1,6),GC_4,MDL_MW,MDL_WW,PL(0,934)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_3(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,934))
           CALL VVV1L3_2(PL(0,934),W(1,14),GC_4,MDL_MW,MDL_WW,PL(0,935)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,934),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,934),4,COEFS,4,4,WL(1,0,1
      $     ,935))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,935),4,4,105,1,1,779,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,935),6,4,105,1,1,779,H)
 C         Coefficient construction for loop diagram with ID 586
           CALL VVS1L2_3(PL(0,0),W(1,6),GC_93,MDL_MW,MDL_WW,PL(0,936)
      $     ,COEFS)
@@ -6322,9 +6322,9 @@ C         Coefficient construction for loop diagram with ID 586
      $     ,936))
           CALL VVS1L3_2(PL(0,936),W(1,14),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,937),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,936),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,936),4,COEFS,1,4,WL(1,0,1
      $     ,937))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,937),1,4,105,1,1,780,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,937),2,4,105,1,1,780,H)
 C         Coefficient construction for loop diagram with ID 587
           CALL VVS1L2_3(PL(0,0),W(1,6),GC_92,MDL_MW,MDL_WW,PL(0,938)
      $     ,COEFS)
@@ -6332,9 +6332,9 @@ C         Coefficient construction for loop diagram with ID 587
      $     ,938))
           CALL VVS1L3_2(PL(0,938),W(1,14),GC_93,MDL_MW,MDL_WW,PL(0
      $     ,939),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,938),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,938),4,COEFS,1,4,WL(1,0,1
      $     ,939))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,939),1,4,105,1,1,781,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,939),2,4,105,1,1,781,H)
 C         Coefficient construction for loop diagram with ID 588
           CALL VVVV5L3_2(PL(0,0),W(1,6),W(1,15),GC_75,MDL_MW,MDL_WW
      $     ,PL(0,940),COEFS)
@@ -6344,21 +6344,21 @@ C         Coefficient construction for loop diagram with ID 588
 C         Coefficient construction for loop diagram with ID 589
           CALL VVV1L2_1(PL(0,934),W(1,15),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,941),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,934),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,934),4,COEFS,4,4,WL(1,0,1
      $     ,941))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,941),4,4,105,1,1,783,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,941),6,4,105,1,1,783,H)
 C         Coefficient construction for loop diagram with ID 590
           CALL VVS1L3_1(PL(0,936),W(1,15),GC_85,MDL_MW,MDL_WW,PL(0
      $     ,942),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,936),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,936),4,COEFS,1,4,WL(1,0,1
      $     ,942))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,942),1,4,105,1,1,784,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,942),2,4,105,1,1,784,H)
 C         Coefficient construction for loop diagram with ID 591
           CALL VVS1L3_1(PL(0,938),W(1,15),GC_84,MDL_MW,MDL_WW,PL(0
      $     ,943),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,938),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,938),4,COEFS,1,4,WL(1,0,1
      $     ,943))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,943),1,4,105,1,1,785,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,943),2,4,105,1,1,785,H)
 C         Coefficient construction for loop diagram with ID 592
           CALL VSS1L3_1(PL(0,936),W(1,16),GC_57,MDL_MW,MDL_WW,PL(0
      $     ,944),COEFS)
@@ -6374,9 +6374,9 @@ C         Coefficient construction for loop diagram with ID 593
 C         Coefficient construction for loop diagram with ID 594
           CALL VVS1L2_1(PL(0,934),W(1,17),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,946),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,934),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,934),4,COEFS,4,4,WL(1,0,1
      $     ,946))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,946),4,4,105,1,1,788,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,946),5,4,105,1,1,788,H)
 C         Coefficient construction for loop diagram with ID 595
           CALL VSS1L2_1(PL(0,936),W(1,17),GC_55,MDL_MW,MDL_WW,PL(0
      $     ,947),COEFS)
@@ -6398,13 +6398,13 @@ C         Coefficient construction for loop diagram with ID 597
 C         Coefficient construction for loop diagram with ID 598
           CALL VVV1L2_1(PL(0,0),W(1,7),GC_71,MDL_MW,MDL_WW,PL(0,950)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_3(WL(1,0,1,0),4,COEFS,4,4,WL(1,0,1
      $     ,950))
           CALL VVV1L3_2(PL(0,950),W(1,14),GC_4,MDL_MW,MDL_WW,PL(0,951)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,950),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,950),4,COEFS,4,4,WL(1,0,1
      $     ,951))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,951),4,4,105,1,1,792,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,951),6,4,105,1,1,792,H)
 C         Coefficient construction for loop diagram with ID 599
           CALL VVS1L1_3(PL(0,0),W(1,7),GC_84,MDL_MW,MDL_WW,PL(0,952)
      $     ,COEFS)
@@ -6412,9 +6412,9 @@ C         Coefficient construction for loop diagram with ID 599
      $     ,952))
           CALL VVS1L3_2(PL(0,952),W(1,14),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,953),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,952),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,952),4,COEFS,1,4,WL(1,0,1
      $     ,953))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,953),1,4,105,1,1,793,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,953),2,4,105,1,1,793,H)
 C         Coefficient construction for loop diagram with ID 600
           CALL VVS1L1_3(PL(0,0),W(1,7),GC_85,MDL_MW,MDL_WW,PL(0,954)
      $     ,COEFS)
@@ -6422,9 +6422,9 @@ C         Coefficient construction for loop diagram with ID 600
      $     ,954))
           CALL VVS1L3_2(PL(0,954),W(1,14),GC_93,MDL_MW,MDL_WW,PL(0
      $     ,955),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,954),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,954),4,COEFS,1,4,WL(1,0,1
      $     ,955))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,955),1,4,105,1,1,794,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,955),2,4,105,1,1,794,H)
 C         Coefficient construction for loop diagram with ID 601
           CALL VVVV2L2_1(PL(0,0),W(1,7),W(1,15),GC_54,MDL_MW,MDL_WW
      $     ,PL(0,956),COEFS)
@@ -6434,21 +6434,21 @@ C         Coefficient construction for loop diagram with ID 601
 C         Coefficient construction for loop diagram with ID 602
           CALL VVV1L2_1(PL(0,950),W(1,15),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,957),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,950),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_3(WL(1,0,1,950),4,COEFS,4,4,WL(1,0,1
      $     ,957))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,957),4,4,105,1,1,796,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,957),6,4,105,1,1,796,H)
 C         Coefficient construction for loop diagram with ID 603
           CALL VVS1L3_1(PL(0,952),W(1,15),GC_85,MDL_MW,MDL_WW,PL(0
      $     ,958),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,952),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,952),4,COEFS,1,4,WL(1,0,1
      $     ,958))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,958),1,4,105,1,1,797,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,958),2,4,105,1,1,797,H)
 C         Coefficient construction for loop diagram with ID 604
           CALL VVS1L3_1(PL(0,954),W(1,15),GC_84,MDL_MW,MDL_WW,PL(0
      $     ,959),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,954),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,954),4,COEFS,1,4,WL(1,0,1
      $     ,959))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,959),1,4,105,1,1,798,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,959),2,4,105,1,1,798,H)
 C         Coefficient construction for loop diagram with ID 605
           CALL VSS1L3_1(PL(0,952),W(1,16),GC_57,MDL_MW,MDL_WW,PL(0
      $     ,960),COEFS)
@@ -6464,9 +6464,9 @@ C         Coefficient construction for loop diagram with ID 606
 C         Coefficient construction for loop diagram with ID 607
           CALL VVS1L2_1(PL(0,950),W(1,17),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,962),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,950),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_3_2(WL(1,0,1,950),4,COEFS,4,4,WL(1,0,1
      $     ,962))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,962),4,4,105,1,1,801,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,962),5,4,105,1,1,801,H)
 C         Coefficient construction for loop diagram with ID 608
           CALL VSS1L2_1(PL(0,952),W(1,17),GC_55,MDL_MW,MDL_WW,PL(0
      $     ,963),COEFS)
@@ -6486,9 +6486,9 @@ C         Coefficient construction for loop diagram with ID 610
      $     ,965))
           CALL VVS1L3_2(PL(0,965),W(1,14),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,966),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,965),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,965),4,COEFS,1,4,WL(1,0,1
      $     ,966))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,966),2,4,105,1,1,804,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,966),3,4,105,1,1,804,H)
 C         Coefficient construction for loop diagram with ID 611
           CALL VSS1L1_3(PL(0,0),W(1,8),GC_57,MDL_MW,MDL_WW,PL(0,967)
      $     ,COEFS)
@@ -6496,21 +6496,21 @@ C         Coefficient construction for loop diagram with ID 611
      $     ,967))
           CALL VVS1L3_2(PL(0,967),W(1,14),GC_93,MDL_MW,MDL_WW,PL(0
      $     ,968),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,967),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,967),4,COEFS,1,4,WL(1,0,1
      $     ,968))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,968),2,4,105,1,1,805,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,968),3,4,105,1,1,805,H)
 C         Coefficient construction for loop diagram with ID 612
           CALL VVS1L3_1(PL(0,965),W(1,15),GC_85,MDL_MW,MDL_WW,PL(0
      $     ,969),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,965),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,965),4,COEFS,1,4,WL(1,0,1
      $     ,969))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,969),2,4,105,1,1,806,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,969),3,4,105,1,1,806,H)
 C         Coefficient construction for loop diagram with ID 613
           CALL VVS1L3_1(PL(0,967),W(1,15),GC_84,MDL_MW,MDL_WW,PL(0
      $     ,970),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,967),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,967),4,COEFS,1,4,WL(1,0,1
      $     ,970))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,970),2,4,105,1,1,807,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,970),3,4,105,1,1,807,H)
 C         Coefficient construction for loop diagram with ID 614
           CALL VVSS1L2_1(PL(0,0),W(1,8),W(1,16),GC_52,MDL_MW,MDL_WW
      $     ,PL(0,971),COEFS)
@@ -6548,9 +6548,9 @@ C         Coefficient construction for loop diagram with ID 619
      $     ,976))
           CALL VVS1L3_2(PL(0,976),W(1,14),GC_92,MDL_MW,MDL_WW,PL(0
      $     ,977),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,976),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,976),4,COEFS,1,4,WL(1,0,1
      $     ,977))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,977),2,4,105,1,1,813,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,977),3,4,105,1,1,813,H)
 C         Coefficient construction for loop diagram with ID 620
           CALL VVS1L2_1(PL(0,0),W(1,9),GC_90,MDL_MW,MDL_WW,PL(0,978)
      $     ,COEFS)
@@ -6558,9 +6558,9 @@ C         Coefficient construction for loop diagram with ID 620
      $     ,978))
           CALL VVV1L3_2(PL(0,978),W(1,14),GC_4,MDL_MW,MDL_WW,PL(0,979)
      $     ,COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,978),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_2_3(WL(1,0,1,978),4,COEFS,4,4,WL(1,0,1
      $     ,979))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,979),4,4,105,1,1,814,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,979),5,4,105,1,1,814,H)
 C         Coefficient construction for loop diagram with ID 621
           CALL VSS1L1_2(PL(0,0),W(1,9),GC_55,MDL_MW,MDL_WW,PL(0,980)
      $     ,COEFS)
@@ -6568,27 +6568,27 @@ C         Coefficient construction for loop diagram with ID 621
      $     ,980))
           CALL VVS1L3_2(PL(0,980),W(1,14),GC_93,MDL_MW,MDL_WW,PL(0
      $     ,981),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,980),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,980),4,COEFS,1,4,WL(1,0,1
      $     ,981))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,981),2,4,105,1,1,815,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,981),3,4,105,1,1,815,H)
 C         Coefficient construction for loop diagram with ID 622
           CALL VVS1L3_1(PL(0,976),W(1,15),GC_85,MDL_MW,MDL_WW,PL(0
      $     ,982),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,976),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,976),4,COEFS,1,4,WL(1,0,1
      $     ,982))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,982),2,4,105,1,1,816,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,982),3,4,105,1,1,816,H)
 C         Coefficient construction for loop diagram with ID 623
           CALL VVV1L2_1(PL(0,978),W(1,15),GC_71,MDL_MW,MDL_WW,PL(0
      $     ,983),COEFS)
-          CALL ML5_0_UPDATE_WL_2_2(WL(1,0,1,978),4,COEFS,4,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_2_3(WL(1,0,1,978),4,COEFS,4,4,WL(1,0,1
      $     ,983))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,983),4,4,105,1,1,817,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,983),5,4,105,1,1,817,H)
 C         Coefficient construction for loop diagram with ID 624
           CALL VVS1L3_1(PL(0,980),W(1,15),GC_84,MDL_MW,MDL_WW,PL(0
      $     ,984),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,980),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,980),4,COEFS,1,4,WL(1,0,1
      $     ,984))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,984),2,4,105,1,1,818,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,984),3,4,105,1,1,818,H)
 C         Coefficient construction for loop diagram with ID 625
           CALL VSS1L3_1(PL(0,976),W(1,16),GC_57,MDL_MW,MDL_WW,PL(0
      $     ,985),COEFS)
@@ -6638,9 +6638,9 @@ C         Coefficient construction for loop diagram with ID 632
      $     ,992))
           CALL VVS1L3_1(PL(0,992),W(1,12),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,993),COEFS)
-          CALL ML5_0_UPDATE_WL_0_1(WL(1,0,1,992),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_0_2(WL(1,0,1,992),4,COEFS,1,4,WL(1,0,1
      $     ,993))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,993),1,4,107,1,1,826,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,993),2,4,107,1,1,826,H)
 C         Coefficient construction for loop diagram with ID 633
           CALL VSS1L3_1(PL(0,992),W(1,13),GC_55,MDL_MW,MDL_WW,PL(0
      $     ,994),COEFS)
@@ -6654,9 +6654,9 @@ C         Coefficient construction for loop diagram with ID 634
      $     ,995))
           CALL VVS1L3_1(PL(0,995),W(1,12),GC_90,MDL_MW,MDL_WW,PL(0
      $     ,996),COEFS)
-          CALL ML5_0_UPDATE_WL_1_1(WL(1,0,1,995),4,COEFS,1,4,WL(1,0,1
+          CALL ML5_0_UPDATE_WL_1_2(WL(1,0,1,995),4,COEFS,1,4,WL(1,0,1
      $     ,996))
-          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,996),2,4,107,1,1,828,H)
+          CALL ML5_0_CREATE_LOOP_COEFS(WL(1,0,1,996),3,4,107,1,1,828,H)
 C         Coefficient construction for loop diagram with ID 635
           CALL VVSS1L2_1(PL(0,0),W(1,11),W(1,13),GC_52,MDL_MW,MDL_WW
      $     ,PL(0,997),COEFS)
@@ -7885,6 +7885,10 @@ C     MadLoop jumps to this label during stability checks when it
 C      recomputes the same PS point with a different CTMode
  300  CONTINUE
 
+C     Make sure that the loop calls are performed since this is new
+C      evaluation.
+      CTCALL_REQ_SO_DONE=.FALSE.
+
 C     Free cache when using IREGI
       IF(IREGIRECY.AND.MLREDUCTIONLIB(I_LIB).EQ.3) THEN
         CALL IREGI_FREE_PS()
@@ -8026,10 +8030,10 @@ C        QED=2), i.e. of split order ID=1, are computed.
 C       CutTools call for loop numbers 57,58,59,60,61,62,63,64,65,66,67
 C       ,68,69,70,71,72
         CALL ML5_0_LOOP_2(6,14,DCMPLX(MDL_MU),DCMPLX(MDL_MU),2,I_SO,29)
-C       CutTools call for loop numbers 81,85,91,89,90,92,93,83,87,82,84
-C       ,86,88,94
+C       CutTools call for loop numbers 81,85,91,89,90,92,93,82,83,86,87
+C       ,84,88,94
         CALL ML5_0_LOOP_3(3,4,6,DCMPLX(MDL_MU),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MW),5,I_SO,30)
+     $   ,DCMPLX(MDL_MW),6,I_SO,30)
 C       CutTools call for loop numbers 95,98,101,104
         CALL ML5_0_LOOP_2(10,12,DCMPLX(MDL_MU),DCMPLX(MDL_MD),2,I_SO
      $   ,31)
@@ -8050,7 +8054,7 @@ C       CutTools call for loop numbers 115,122,123,116
      $   ,DCMPLX(ZERO),4,I_SO,36)
 C       CutTools call for loop numbers 117,124,125,126,118,119
         CALL ML5_0_LOOP_3(2,4,10,DCMPLX(MDL_MU),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MZ),5,I_SO,37)
+     $   ,DCMPLX(MDL_MZ),6,I_SO,37)
 C       CutTools call for loop numbers 127,120,121,128
         CALL ML5_0_LOOP_3(2,4,11,DCMPLX(MDL_MU),DCMPLX(MDL_MW)
      $   ,DCMPLX(MDL_MH),4,I_SO,38)
@@ -8065,7 +8069,7 @@ C       CutTools call for loop numbers 137,139,140,138
      $   ,DCMPLX(ZERO),4,I_SO,41)
 C       CutTools call for loop numbers 141,143,144,146,142,145
         CALL ML5_0_LOOP_3(1,3,12,DCMPLX(MDL_MU),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MZ),5,I_SO,42)
+     $   ,DCMPLX(MDL_MZ),6,I_SO,42)
 C       CutTools call for loop numbers 149,147,148,150
         CALL ML5_0_LOOP_3(1,3,13,DCMPLX(MDL_MU),DCMPLX(MDL_MW)
      $   ,DCMPLX(MDL_MH),4,I_SO,43)
@@ -8135,10 +8139,10 @@ C       CutTools call for loop numbers 238,241,244,247
 C       CutTools call for loop numbers 248,249,250,251,252,253,254,255,
 C       256,257,258,259,260,261,262,263
         CALL ML5_0_LOOP_2(6,14,DCMPLX(MDL_MC),DCMPLX(MDL_MC),2,I_SO,65)
-C       CutTools call for loop numbers 272,276,282,280,281,283,284,274,
-C       278,273,275,277,279,285
+C       CutTools call for loop numbers 272,276,282,280,281,283,284,273,
+C       274,277,278,275,279,285
         CALL ML5_0_LOOP_3(3,4,6,DCMPLX(MDL_MC),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MW),5,I_SO,66)
+     $   ,DCMPLX(MDL_MW),6,I_SO,66)
 C       CutTools call for loop numbers 286,289,292,295
         CALL ML5_0_LOOP_2(10,12,DCMPLX(MDL_MC),DCMPLX(MDL_MD),2,I_SO
      $   ,67)
@@ -8160,10 +8164,10 @@ C       CutTools call for loop numbers 300,303,306,309
 C       CutTools call for loop numbers 310,311,312,313,314,315,316,317,
 C       318,319,320,321,322,323,324,325
         CALL ML5_0_LOOP_2(6,14,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,I_SO,73)
-C       CutTools call for loop numbers 334,338,344,342,343,345,346,336,
-C       340,335,337,339,341,347
+C       CutTools call for loop numbers 334,338,344,342,343,345,346,335,
+C       336,339,340,337,341,347
         CALL ML5_0_LOOP_3(3,4,6,DCMPLX(MDL_MT),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MW),5,I_SO,74)
+     $   ,DCMPLX(MDL_MW),6,I_SO,74)
 C       CutTools call for loop numbers 348,351,354,357
         CALL ML5_0_LOOP_2(10,12,DCMPLX(MDL_MT),DCMPLX(MDL_MD),2,I_SO
      $   ,75)
@@ -8199,26 +8203,26 @@ C       CutTools call for loop numbers 416
      $   ,DCMPLX(MDL_MH),1,I_SO,85)
 C       CutTools call for loop numbers 417,424,428,420
         CALL ML5_0_LOOP_3(2,4,10,DCMPLX(MDL_MD),DCMPLX(ZERO),DCMPLX(MDL
-     $   _MW),3,I_SO,86)
+     $   _MW),4,I_SO,86)
 C       CutTools call for loop numbers 418,425,426,429,421,422
         CALL ML5_0_LOOP_3(2,4,10,DCMPLX(MDL_MD),DCMPLX(MDL_MZ)
-     $   ,DCMPLX(MDL_MW),5,I_SO,87)
+     $   ,DCMPLX(MDL_MW),6,I_SO,87)
 C       CutTools call for loop numbers 427,419,423,430
         CALL ML5_0_LOOP_3(2,4,11,DCMPLX(MDL_MD),DCMPLX(MDL_MH)
      $   ,DCMPLX(MDL_MW),4,I_SO,88)
 C       CutTools call for loop numbers 431,434,442,438
         CALL ML5_0_LOOP_3(1,3,12,DCMPLX(MDL_MD),DCMPLX(ZERO),DCMPLX(MDL
-     $   _MW),3,I_SO,89)
+     $   _MW),4,I_SO,89)
 C       CutTools call for loop numbers 432,435,436,443,439,440
         CALL ML5_0_LOOP_3(1,3,12,DCMPLX(MDL_MD),DCMPLX(MDL_MZ)
-     $   ,DCMPLX(MDL_MW),5,I_SO,90)
+     $   ,DCMPLX(MDL_MW),6,I_SO,90)
 C       CutTools call for loop numbers 437,433,441,444
         CALL ML5_0_LOOP_3(1,3,13,DCMPLX(MDL_MD),DCMPLX(MDL_MH)
      $   ,DCMPLX(MDL_MW),4,I_SO,91)
-C       CutTools call for loop numbers 445,446,447,450,451,454,455,452,
-C       453,448,449,456,457,458
+C       CutTools call for loop numbers 445,446,447,450,451,454,455,448,
+C       449,452,453,456,457,458
         CALL ML5_0_LOOP_3(1,2,14,DCMPLX(MDL_MD),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MW),5,I_SO,92)
+     $   ,DCMPLX(MDL_MW),6,I_SO,92)
 C       CutTools call for loop numbers 468,469,472,473
         CALL ML5_0_LOOP_4(1,2,4,3,DCMPLX(MDL_MW),DCMPLX(MDL_MD)
      $   ,DCMPLX(MDL_MZ),DCMPLX(MDL_MD),6,I_SO,93)
@@ -8228,20 +8232,20 @@ C       CutTools call for loop numbers 470,474
 C       CutTools call for loop numbers 475,476,477,478,479,480,481,482,
 C       483,484,485,486,487,488,489,490
         CALL ML5_0_LOOP_2(6,14,DCMPLX(MDL_MS),DCMPLX(MDL_MS),2,I_SO,95)
-C       CutTools call for loop numbers 491,492,493,496,497,500,501,498,
-C       499,494,495,502,503,504
+C       CutTools call for loop numbers 491,492,493,496,497,500,501,494,
+C       495,498,499,502,503,504
         CALL ML5_0_LOOP_3(1,2,14,DCMPLX(MDL_MS),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MW),5,I_SO,96)
+     $   ,DCMPLX(MDL_MW),6,I_SO,96)
 C       CutTools call for loop numbers 513,514,515,516,517,518,519,520,
 C       521,522,523,524,525,526,527,528
         CALL ML5_0_LOOP_2(6,14,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,97)
-C       CutTools call for loop numbers 529,530,531,534,535,538,539,536,
-C       537,532,533,540,541,542
+C       CutTools call for loop numbers 529,530,531,534,535,538,539,532,
+C       533,536,537,540,541,542
         CALL ML5_0_LOOP_3(1,2,14,DCMPLX(MDL_MB),DCMPLX(MDL_MW)
-     $   ,DCMPLX(MDL_MW),5,I_SO,98)
-C       CutTools call for loop numbers 551,556,553,557,558,631,632,554,
+     $   ,DCMPLX(MDL_MW),6,I_SO,98)
+C       CutTools call for loop numbers 551,553,556,557,558,631,632,554,
 C       555,633,634,552
-        CALL ML5_0_LOOP_2(10,12,DCMPLX(MDL_MW),DCMPLX(ZERO),3,I_SO,99)
+        CALL ML5_0_LOOP_2(10,12,DCMPLX(MDL_MW),DCMPLX(ZERO),4,I_SO,99)
 C       CutTools call for loop numbers 562,564,567,574,750,751,752,754,
 C       756
         CALL ML5_0_LOOP_1_2(2,8,16,DCMPLX(MDL_MZ),2,I_SO,100)
@@ -8251,20 +8255,20 @@ C       CutTools call for loop numbers 563,560,561,559
 C       CutTools call for loop numbers 565,566,635,753
         CALL ML5_0_LOOP_2(9,17,DCMPLX(MDL_MZ),DCMPLX(MDL_MZ),4,I_SO
      $   ,102)
-C       CutTools call for loop numbers 568,570,573,575,576,571,572,636,
-C       637,755,569,638,639,640,641,642,643
-        CALL ML5_0_LOOP_2(10,12,DCMPLX(MDL_MW),DCMPLX(MDL_MZ),4,I_SO
+C       CutTools call for loop numbers 568,570,573,575,576,571,572,569,
+C       636,637,755,638,639,640,641,642,643
+        CALL ML5_0_LOOP_2(10,12,DCMPLX(MDL_MW),DCMPLX(MDL_MZ),6,I_SO
      $   ,103)
 C       CutTools call for loop numbers 577,581,590,594,607,620,624,628,
 C       757,759,762,764,767,770,772,773
         CALL ML5_0_LOOP_1_2(2,6,14,DCMPLX(MDL_MW),2,I_SO,104)
-C       CutTools call for loop numbers 578,582,587,591,595,600,608,609,
-C       610,611,613,616,618,619,621,622,623,585,586,588,589,598,599,601
-C       ,602,603,604,605,606,612,614,615,617,644,645,648,649,660,661,66
-C       4,665,758,760,763,765,579,580,583,584,592,593,596,597,646,647,6
+C       CutTools call for loop numbers 578,582,591,595,587,600,613,616,
+C       608,609,610,611,618,619,621,622,623,585,586,588,589,598,599,601
+C       ,602,603,604,605,606,612,614,615,617,579,580,583,584,592,593,59
+C       6,597,644,645,648,649,660,661,664,665,758,760,763,765,646,647,6
 C       50,651,652,653,656,657,662,663,666,667,668,669,672,673,761,766,
 C       768,769,654,655,658,659,670,671,674,771
-        CALL ML5_0_LOOP_2(6,14,DCMPLX(MDL_MW),DCMPLX(MDL_MW),4,I_SO
+        CALL ML5_0_LOOP_2(6,14,DCMPLX(MDL_MW),DCMPLX(MDL_MW),6,I_SO
      $   ,105)
 C       CutTools call for loop numbers 629
         CALL ML5_0_LOOP_2(11,13,DCMPLX(MDL_MZ),DCMPLX(MDL_MW),4,I_SO

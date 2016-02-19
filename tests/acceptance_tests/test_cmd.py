@@ -1421,7 +1421,7 @@ P1_qq_wp_wp_lvl
         self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('generate mu+ mu- > ta+ ta-') 
         self.assertEqual(len(self.cmd._curr_amps), 1)
-        nicestring = """Process: mu+ mu- > ta+ ta-  QCD+2*QED<=4
+        nicestring = """Process: mu+ mu- > ta+ ta- WEIGHTED<=4
 2 diagrams:
 1  ((1(13),2(-13)>1(22),id:35),(3(-15),4(15),1(22),id:36)) (QCD=0,QED=2,WEIGHTED=4)
 2  ((1(13),2(-13)>1(23),id:41),(3(-15),4(15),1(23),id:42)) (QCD=0,QED=2,WEIGHTED=4)"""

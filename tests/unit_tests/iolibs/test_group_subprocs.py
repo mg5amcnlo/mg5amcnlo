@@ -745,21 +745,21 @@ Decay groups:
 
         self.assertEqual(len(subproc_groups[0].get('matrix_elements')),3)
 
-        me_strings = ["""Process: g g > go go  QCD+2*QED<=2
-  Decay: go > d dl~  QCD+2*QED<=1
-    Decay: dl~ > d~ n1  QCD+2*QED<=2
-  Decay: go > d dl~  QCD+2*QED<=1
-    Decay: dl~ > d~ n1  QCD+2*QED<=2""",
-                      """Process: g g > go go  QCD+2*QED<=2
-  Decay: go > d dl~  QCD+2*QED<=1
-    Decay: dl~ > d~ n1  QCD+2*QED<=2
-  Decay: go > d~ dl  QCD+2*QED<=1
-    Decay: dl > d n1  QCD+2*QED<=2""",
-                      """Process: g g > go go  QCD+2*QED<=2
-  Decay: go > d~ dl  QCD+2*QED<=1
-    Decay: dl > d n1  QCD+2*QED<=2
-  Decay: go > d~ dl  QCD+2*QED<=1
-    Decay: dl > d n1  QCD+2*QED<=2"""]
+        me_strings = ["""Process: g g > go go WEIGHTED<=2
+  Decay: go > d dl~ WEIGHTED<=1
+    Decay: dl~ > d~ n1 WEIGHTED<=2
+  Decay: go > d dl~ WEIGHTED<=1
+    Decay: dl~ > d~ n1 WEIGHTED<=2""",
+                      """Process: g g > go go WEIGHTED<=2
+  Decay: go > d dl~ WEIGHTED<=1
+    Decay: dl~ > d~ n1 WEIGHTED<=2
+  Decay: go > d~ dl WEIGHTED<=1
+    Decay: dl > d n1 WEIGHTED<=2""",
+                      """Process: g g > go go WEIGHTED<=2
+  Decay: go > d~ dl WEIGHTED<=1
+    Decay: dl > d n1 WEIGHTED<=2
+  Decay: go > d~ dl WEIGHTED<=1
+    Decay: dl > d n1 WEIGHTED<=2"""]
         
 
         for i,me in enumerate(subproc_groups[0].get('matrix_elements')):
@@ -1139,16 +1139,16 @@ Decay groups:
 
         self.assertEqual(len(subproc_groups[0].get('matrix_elements')),2)
 
-        me_strings = ["""Process: d d~ > ~n1 ~n1  QED<=2
-  Decay: ~n1 > e- W+  QED<=1
-    Decay: W+ > u d~  QED<=1
-  Decay: ~n1 > e- W+  QED<=1
-    Decay: W+ > t b~  QED<=1""",
-                      """Process: d~ d > ~n1 ~n1  QED<=2
-  Decay: ~n1 > e- W+  QED<=1
-    Decay: W+ > u d~  QED<=1
-  Decay: ~n1 > e- W+  QED<=1
-    Decay: W+ > t b~  QED<=1"""]
+        me_strings = ["""Process: d d~ > ~n1 ~n1 WEIGHTED<=2
+  Decay: ~n1 > e- W+ WEIGHTED<=1
+    Decay: W+ > u d~ WEIGHTED<=1
+  Decay: ~n1 > e- W+ WEIGHTED<=1
+    Decay: W+ > t b~ WEIGHTED<=1""",
+                      """Process: d~ d > ~n1 ~n1 WEIGHTED<=2
+  Decay: ~n1 > e- W+ WEIGHTED<=1
+    Decay: W+ > u d~ WEIGHTED<=1
+  Decay: ~n1 > e- W+ WEIGHTED<=1
+    Decay: W+ > t b~ WEIGHTED<=1"""]
         
 
         for i,me in enumerate(subproc_groups[0].get('matrix_elements')):
@@ -1606,10 +1606,10 @@ Decay groups:
 
         self.assertEqual(len(subproc_groups[0].get('matrix_elements')),1)
 
-        me_strings = ["""Process: d d~ > t t~  QCD+2*QED<=2
-  Decay: t > u z  QCD+2*QED<=2""",
-                      """Process: d d~ > t t~  QCD+2*QED<=2
-  Decay: t~ > u~ z  QCD+2*QED<=2"""]
+        me_strings = ["""Process: d d~ > t t~ WEIGHTED<=2
+  Decay: t > u z WEIGHTED<=2""",
+                      """Process: d d~ > t t~ WEIGHTED<=2
+  Decay: t~ > u~ z WEIGHTED<=2"""]
         
 
         for i, group in enumerate(subproc_groups):
