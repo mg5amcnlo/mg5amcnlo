@@ -25,6 +25,7 @@ import optparse
 import subprocess
 import shutil
 import multiprocessing
+import signal
 import tempfile
 import itertools
 import os
@@ -61,7 +62,7 @@ logger_stderr = logging.getLogger('fatalerror') # ->stderr
 # a new function for the improved NLO generation
 glob_directories_map = []
 def generate_directories_fks_async(i):
-    
+        
     arglist = glob_directories_map[i]
     
     curr_exporter = arglist[0]
@@ -669,8 +670,22 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                              path, self.options['OLP']])
 
             if self.options['low_mem_multicore_nlo_generation']:
-                pool = multiprocessing.Pool(maxtasksperchild=1)
-                diroutputmap = pool.map(generate_directories_fks_async,range(len(glob_directories_map)))
+                # start the pool instance with a signal instance to catch ctr+c
+                logger.info('Writing directories...')
+                original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+                if self.ncores_for_proc_gen < 0: # use all cores
+                    pool = multiprocessing.Pool(maxtasksperchild=1)
+                else:
+                    pool = multiprocessing.Pool(processes=self.ncores_for_proc_gen,maxtasksperchild=1)
+                signal.signal(signal.SIGINT, original_sigint_handler)
+                try:
+                    # the very large timeout passed to get is to be able to catch
+                    # KeyboardInterrupts
+                    diroutputmap = pool.map_async(generate_directories_fks_async,
+                                                  range(len(glob_directories_map))).get(9999999)
+                except KeyboardInterrupt:
+                    pool.terminate()
+                    raise KeyboardInterrupt 
     
                 pool.close()
                 pool.join()

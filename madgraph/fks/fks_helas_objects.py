@@ -279,6 +279,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                 pool = multiprocessing.Pool(processes=fksmulti['ncores_for_proc_gen'],maxtasksperchild=1)
             signal.signal(signal.SIGINT, original_sigint_handler)
 
+            logger.info('Generating real matrix elements...')
             try:
                 # the very large timeout passed to get is to be able to catch
                 # KeyboardInterrupts
@@ -291,6 +292,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             for realout in realmapout:
                 realmapfiles.append(realout[0])
 
+            logger.info('Generating born and virtual matrix elements...')
             #now loop over born and consume reals, generate virtuals
             bornmapin = []
             for i,born in enumerate(born_procs):
@@ -306,6 +308,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             for realtmp in realmapout:
                 os.remove(realtmp[0])
                 
+            logger.info('Collecting infos and finalizing matrix elements...')
             unique_me_list = []
             duplicate_me_lists = []
             for bornout in bornmapout:
@@ -399,6 +402,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         self['has_isr'] = fksmulti['has_isr']
         self['has_fsr'] = fksmulti['has_fsr']
+
+        logger.info('... Done')
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])

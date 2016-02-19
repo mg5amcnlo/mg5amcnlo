@@ -3,6 +3,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.3.4(XX/XX/XX)
         MZ: new NLO generation mode. It is more efficient from the memory and CPU point of 
             view. Many thanks to Josh Bendavid for his fundamental contribution for this
+            The mode can be enabled with
+            > set low_mem_multicore_nlo_generation True
+            before generating the process.
         RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
         OM: In MLM matching, fix a bug where the alpha_s reweighting was not fully applied on some events. 
             (This was leading to effects smaller than the theoretical uncertainty)
