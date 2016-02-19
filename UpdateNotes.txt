@@ -1,6 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.3.4(XX/XX/XX)
+2.4.0(XX/XX/XX)
+        OM: Adding the possibility to use new syntax for tree-level processes:
+            QED==2 and QCD>2: The first allows to select exactly a power of the coupling (at amplitude level
+            While the second ask for a minimum value.   
         RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
         OM: In MLM matching, fix a bug where the alpha_s reweighting was not fully applied on some events. 
             (This was leading to effects smaller than the theoretical uncertainty)
