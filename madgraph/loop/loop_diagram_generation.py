@@ -751,7 +751,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # based on the minimum weighted order of the loop contributions, if it
         # was not specified by the user.
         if not self['process']['has_born'] and not \
-                                self['process']['squared_orders'] and hierarchy: 
+                                self['process']['squared_orders'] and not\
+                                self['process']['orders'] and hierarchy: 
             pert_order_weights=[hierarchy[order] for order in \
                                       self['process']['perturbation_couplings']]
             self['process']['squared_orders']['WEIGHTED']=2*(\

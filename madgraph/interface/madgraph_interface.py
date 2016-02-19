@@ -5288,6 +5288,19 @@ This implies that with decay chains:
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
                                         stdout=subprocess.PIPE).communicate()[0]
 
+        misc.sprint(args[0], name)
+        # For Delphes edit the makefile to add the proper link to correct library
+        if args[0] == 'Delphes3':
+            #change in the makefile 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)
+            # to 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,/Applications/root_v6.04.08/lib/
+            rootsys = os.environ['ROOTSYS']
+            text = open('./Delphes/Makefile').read()
+            text = text.replace('DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)', 
+                         'DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,%s/lib/' % rootsys)
+            open('./Delphes/Makefile','w').write(text)
+            
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
             if self.options['lhapdf']:
