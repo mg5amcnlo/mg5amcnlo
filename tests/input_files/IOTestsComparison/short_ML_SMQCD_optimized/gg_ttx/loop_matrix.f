@@ -12,7 +12,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > t t~ QED=0 QCD=2 [ virt = QCD ]
+C     Process: g g > t t~ QED=0 QCD<=2 [ virt = QCD ]
 C     
       IMPLICIT NONE
       INCLUDE 'coef_specs.inc'
@@ -1416,6 +1416,10 @@ C      LOOPCOEFS.
 C     MadLoop jumps to this label during stability checks when it
 C      recomputes the same PS point with a different CTMode
  300  CONTINUE
+
+C     Make sure that the loop calls are performed since this is new
+C      evaluation.
+      CTCALL_REQ_SO_DONE=.FALSE.
 
 
 

@@ -841,10 +841,16 @@ class Amplitude(base_objects.PhysicsObject):
         list in argument."""
 
         res = copy.copy(diag_list)                  
+        
+        # Apply the filtering  on constrained amplitude (== and >)
+        # No need to iterate on this one
+        for name, (value, operator) in self['process'].get('constrained_orders').items():
+            res.filter_constrained_orders(name, value, operator)
+            
         # Iterate the filtering since the applying the constraint on one
         # type of coupling order can impact what the filtering on a previous
         # one (relevant for the '==' type of constraint).
-        while True:   
+        while True: 
             new_res = res.apply_positive_sq_orders(res, 
                                           self['process'].get('squared_orders'), 
                                               self['process']['sqorders_types'])
@@ -856,6 +862,8 @@ class Amplitude(base_objects.PhysicsObject):
                  'Inconsistency in function apply_squared_order_constraints().')
             # Actualizing the list of diagram for the next iteration
             res = new_res
+            
+
 
         # Now treat the negative squared order constraint (at most one)
         neg_orders = [(order, value) for order, value in \
@@ -1862,11 +1870,21 @@ class MultiProcess(base_objects.PhysicsObject):
         max_WEIGHTED_order = \
                         (len(fsids + isids) - 2)*int(model.get_max_WEIGHTED())
 
+        # get the definition of the WEIGHTED
+        hierarchydef = process_definition['model'].get('order_hierarchy')
+        tmp = []
+        hierarchy = hierarchydef.items()
+        hierarchy.sort()
+        for key, value in hierarchydef.items():
+            if value>1:
+                tmp.append('%s*%s' % (value,key))
+            else:
+                tmp.append('%s' % key)
+        wgtdef = '+'.join(tmp)
         # Run diagram generation with increasing max_order_now until
         # we manage to get diagrams
         while max_order_now < max_WEIGHTED_order:
-
-            logger.info("Trying coupling order WEIGHTED=%d" % max_order_now)
+            logger.info("Trying coupling order WEIGHTED<=%d: WEIGTHED IS %s" % (max_order_now, wgtdef))
 
             oldloglevel = logger.level
             logger.setLevel(logging.WARNING)

@@ -599,7 +599,6 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # consider loop perturbation, in this case 2*2 wich gives us a 
         # target_weighted_order of 8. based on this we will now keep all born 
         # contributions and exclude the NLO contributions (QED=6) and (QED=4,QCD=2)        
-
         logger.debug("Generating %s "\
                    %self['process'].nice_string().replace('Process', 'process'))
 
