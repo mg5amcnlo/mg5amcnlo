@@ -696,13 +696,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             param_card.write_inc_file(outfile, ident_card, default)
 
 
-    def ask_edit_cards(self, cards, mode='fixed', plot=True):
+    def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
         """ """
         if not self.options['madanalysis_path']:
             plot = False
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
-                                  self.ask)
+                                  self.ask, first_cmd=first_cmd)
 
     @staticmethod
     def ask_edit_card_static(cards, mode='fixed', plot=True,
@@ -2221,18 +2221,37 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
+        local_path = pjoin(self.me_dir, 'lib', 'PDFsets')
+        return self.install_lhapdfset_static(self.options['lhapdf'],
+                                             pdfsets_dir, filename,
+                                             lhapdf_version=lhapdf_version,
+                                             alternate_path=local_path)
+                                                 
+
+    @staticmethod
+    def install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, filename, 
+                                        lhapdf_version=None, alternate_path=None):
+        """idownloads and install the pdfset filename in the pdfsets_dir.
+        Version which can be used independently of the class.
+        local path is used if the global installation fails.
+        """
+           
+        if not lhapdf_version:
+            lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
+
         logger.info('Trying to download %s' % filename)
 
         if lhapdf_version.startswith('5.'):
             # use the lhapdf-getdata command, which is in the same path as
             # lhapdf-config
-            getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf-getdata'))
+            getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf-getdata'))
             misc.call([getdata, filename], cwd = pdfsets_dir)
 
         elif lhapdf_version.startswith('6.'):
             # use the "lhapdf install xxx" command, which is in the same path as
             # lhapdf-config
-            getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf'))
+            getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf'))
 
             misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
@@ -2248,11 +2267,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif lhapdf_version.startswith('5.'):
             logger.warning('Could not download %s into %s. Trying to save it locally' \
                     % (filename, pdfsets_dir))
-            self.install_lhapdf_pdfset(pjoin(self.me_dir, 'lib', 'PDFsets'), filename)
+            CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, alternate_path, filename,
+                                                      lhapdf_version=lhapdf_version)
         else:
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)
+
 
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):

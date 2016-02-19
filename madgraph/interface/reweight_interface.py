@@ -352,6 +352,24 @@ class ReweightInterface(extended_cmd.Cmd):
         All scale are kept fix for this re-weighting.''')
 
 
+    def get_weight_names(self):
+        """ return the various name for the computed weights """
+        
+        if self.rwgt_mode == 'LO':
+            return ['']
+        elif self.rwgt_mode == 'NLO':
+            return ['_virt', '_basic']
+        elif self.rwgt_mode == 'NLO_basic':
+            return ['_basic']
+        elif self.rwgt_mode == 'NLO_virttrick':
+            return ['_virt']
+        elif self.rwgt_mode == 'LO+NLO':
+            return ['_virt', '_basic', '_lo']
+        elif not self.rwgt_mode and self.has_nlo :
+            return ['_virt', '_basic']
+        else:
+            return ['']
+
     #@misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
@@ -393,6 +411,9 @@ class ReweightInterface(extended_cmd.Cmd):
                                    ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
             self.stored_line = None
         
+        # get the names of type of reweighting requested
+        type_rwgt = self.get_weight_names()
+        
         # check for potential scan in the new card 
         new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
         pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
@@ -419,10 +440,10 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup type=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)(?P<rwgttype>\s*|_\w+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 maxid = 0
-                for i, diff in mg_rwgt_info:
+                for i, nlotype, diff in mg_rwgt_info:
                     if int(i) > maxid:
                         maxid = int(i)
                 maxid += 1
@@ -436,6 +457,9 @@ class ReweightInterface(extended_cmd.Cmd):
             header_rwgt_other = ''
             mg_rwgt_info = []
             rewgtid = 1
+
+        misc.sprint("set rewgtid to ", rewgtid)
+
                     
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
@@ -459,35 +483,50 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.debug("error in check of alphas: %s" % str(error))
                 pass #this is a security                
             if not self.second_process:
-                mg_rwgt_info.append((str(rewgtid), card_diff))
+                for name in type_rwgt:
+                    mg_rwgt_info.append((str(rewgtid), name, card_diff))
             else:
                 str_proc = "\n change process  ".join([""]+self.second_process)
-                mg_rwgt_info.append((str(rewgtid), str_proc + '\n'+ card_diff))
+                for name in type_rwgt:
+                    mg_rwgt_info.append((str(rewgtid), name, str_proc + '\n'+ card_diff))
         else:
             str_info = "change model %s" % self.second_model
             if self.second_process:
                 str_info += "\n change process  ".join([""]+self.second_process)
             card_diff = str_info
             str_info += '\n' + s_new
-            mg_rwgt_info.append((str(rewgtid), str_info))
+            for name in type_rwgt:
+                mg_rwgt_info.append((str(rewgtid), name, str_info))
 
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         self.banner['initrwgt'] += '\n<weightgroup type=\'mg_reweighting\'>\n'
-        for tag, diff in mg_rwgt_info:
-            self.banner['initrwgt'] += '<weight id=\'mg_reweight_%s\'>%s</weight>\n' % \
-                                       (tag, diff)
+        for tag, rwgttype, diff in mg_rwgt_info:
+            self.banner['initrwgt'] += '<weight id=\'mg_reweight_%s%s\'>%s</weight>\n' % \
+                                       (tag, rwgttype, diff)
         self.banner['initrwgt'] += '\n</weightgroup>\n'
         self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
-            
-        output = open( self.lhe_input.name +'rw', 'w')
-        
+
+
+        start = time.time()
+        cross, ratio, ratio_square,error = {},{},{}, {}
+        for name in type_rwgt:
+            cross[name], error[name] = 0.,0.
+            ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
+
+        if self.output_type == "default":
+            output = open( self.lhe_input.name +'rw', 'w')
+            #write the banner to the output file
+            self.banner.write(output, close_tag=False)
+        else:
+            output = {}
+            for name in type_rwgt:
+                output[name] = open( self.lhe_input.name +'rw'+name, 'w')
+                #write the banner to the output file
+                self.banner.write(output[name], close_tag=False)
         
         logger.info('starts to compute weight for events with the following modification to the param_card:')
         logger.info(card_diff)
-        
-        #write the banner to the output file
-        self.banner.write(output, close_tag=False)
         # prepare the output file for the weight plot
         if self.mother:
             out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
@@ -510,10 +549,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         # Loop over all events
         tag_name = 'mg_reweight_%s' % rewgtid
-        start = time.time()
-        cross = 0
-        ratio, ratio_square = 0, 0 # to compute the variance and associate error
-        
+                
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
             misc.sprint("using", self.lhe_input.name)
@@ -543,38 +579,56 @@ class ReweightInterface(extended_cmd.Cmd):
                 continue
             else:
                 weight = self.calculate_weight(event)
-                cross += weight
-                ratio += weight/event.wgt
-                ratio_square += (weight/event.wgt)**2
+                if not isinstance(weight, dict):
+                    weight = {'':weight}
+                
+                for name in weight:
+                    cross[name] += weight[name]
+                    ratio[name] += weight[name]/event.wgt
+                    ratio_square[name] += (weight[name]/event.wgt)**2
+                    
                 if self.output_type == "default":
-                    event.reweight_data[tag_name] = weight
-                    #write this event with weight
+                    for name in weight:             
+                        event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
+                        #write this event with weight
                     output.write(str(event))
                     if self.mother:
-                        event.wgt = weight
+                        event.wgt = weight[type_rwgt[0]]
                         event.reweight_data = {}
                         output2.write(str(event))
-    
                 else:
-                    event.wgt = weight
-                    event.reweight_data = {}
-                    if self.mother:
-                        output2.write(str(event))
-                    else:
-                        output.write(str(event))
+                    for i,name in enumerate(weight):
+                        event.wgt = weight[name]
+                        event.reweight_data = {}
+                        if self.mother and len(weight)==1:
+                            output2.write(str(event))
+                        elif self.mother and i == 0:
+                            output[name].write(str(event))
+                            output2.write(str(event))
+                        else:
+                            output[name].write(str(event))
                 
         # check normalisation of the events:
         if 'event_norm' in self.run_card:
             if self.run_card['event_norm'] == 'average':
-                cross /= event_nb+1
+                for key, value in cross.items():
+                    cross[key] = value / (event_nb+1)
 
                 
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
         
-        output.write('</LesHouchesEvents>\n')
-        output.close()
+        
+        if self.output_type == "default":
+            output.write('</LesHouchesEvents>\n')
+            output.close()
+        else:
+            for key in output:
+                output[key].write('</LesHouchesEvents>\n')
+                output.close()
+            
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'n'
+        
         if self.mother:
             output2.write('</LesHouchesEvents>\n')
             output2.close()        
@@ -584,13 +638,14 @@ class ReweightInterface(extended_cmd.Cmd):
                 results = self.mother.results
                 results.add_run(run_name, self.run_card, current=True)
                 results.add_detail('nb_event', event_nb+1)
-                results.add_detail('cross', cross)
+                name = type_rwgt[0]
+                results.add_detail('cross', cross[name])
                 event_nb +=1
-                variance = ratio_square/event_nb - (ratio/event_nb)**2
-                orig_cross, orig_error = self.orig_cross
-                error = variance/math.sqrt(event_nb) * orig_cross + ratio/event_nb * orig_error
-                
-                results.add_detail('error', error)
+                for name in type_rwgt:
+                    variance = ratio_square[name]/event_nb - (ratio[name]/event_nb)**2
+                    orig_cross, orig_error = self.orig_cross
+                    error[name] = variance/math.sqrt(event_nb) * orig_cross + ratio[name]/event_nb * orig_error
+                results.add_detail('error', error[type_rwgt[0]])
                 self.mother.create_plot(mode='reweight', event_path=output2.name,
                                         tag=self.run_card['run_tag'])
                 #modify the html output to add the original run
@@ -624,6 +679,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if self.output_type == "default":
             files.mv(output.name, target)
+            logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         elif self.output_type == "unweight":
             output2.close()
             lhe = lhe_parser.EventFile(output2.name)
@@ -632,18 +688,22 @@ class ReweightInterface(extended_cmd.Cmd):
                 results = self.mother.results
                 results.add_detail('nb_event', nb_event)
                 results.current.parton.append('lhe')
-                
+            logger.info('Event %s is now unweighted under the new theory' % output2.name)                
         else:
             files.mv(output2.name, self.lhe_input.name)     
             if self.mother and  hasattr(self.mother, 'results'):
                 results = self.mother.results
-                results.current.parton.append('lhe')   
-
-        logger.info('Event %s have now the additional weight' % self.lhe_input.name)
-        logger.info('new cross-section is : %g pb (indicative error: %g pb)' % (cross,error))
+                results.current.parton.append('lhe')       
+            logger.info('Event %s is now created with new central weight' % output2.name)
+        
+        for name in cross:
+            logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
+                        ('(%s)' %name if name else '',cross[name], error[name]))
+            
         self.terminate_fortran_executables(new_card_only=True)
         #store result
-        self.all_cross_section[rewgtid] = (cross, error)
+        for name in cross:
+            self.all_cross_section[(rewgtid,name)] = (cross[name], error[name])
         
         # perform the scanning
         if param_card_iterator:
@@ -721,12 +781,18 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(w_orig, w_new)
             misc.sprint(event)
             raise Exception, "Invalid matrix element for original computation (weight=0)"
+        
         return w_new/w_orig*event.wgt
      
     def calculate_nlo_weight(self, event, space=None):
 
+
+        type_nlo = self.get_weight_names()
+        final_weight = {}
+        
         if not space: 
-            space = self
+            space = self #for multicore: not use so far
+            
         event.parse_reweight()
         event.parse_nlo_weight() 
 
@@ -734,7 +800,8 @@ class ReweightInterface(extended_cmd.Cmd):
         scales2 = []
         pdg = []
         bjx = []
-        wgt= []
+        wgt_basic = [] #reweight b and V independently
+        wgt_virt  = [] #reweight b+v together
         base_wgt = []
         gs=[]
         qcdpower = []
@@ -745,8 +812,10 @@ class ReweightInterface(extended_cmd.Cmd):
             #check if we need to compute the virtual for that cevent
             need_V = False # the real is nothing else than the born for a N+1 config
             all_ctype = [w.type for w in cevent.wgts]
-            if any(c in all_ctype for c in [2,14,15]):
+            if any(c in all_ctype for c in [14]):
                 need_V =True
+            elif '_virt' in type_nlo and any(c in all_ctype for c in [2,15]):
+                need_V = True
                 
             w_orig = self.calculate_matrix_element(cevent, 0, space)
             w_new =  self.calculate_matrix_element(cevent, 1, space)
@@ -769,31 +838,60 @@ class ReweightInterface(extended_cmd.Cmd):
                 gs.append(c_wgt.gs)
                 ref_wgts.append(c_wgt.ref_wgt)
                 
-                if c_wgt.type in  [2,14,15]:
-                    R = ratio_V
-                else:
-                    R = ratio_T
-                
-                new_wgt = [c_wgt.pwgt[0] * R,
-                           c_wgt.pwgt[1] * ratio_T,
-                           c_wgt.pwgt[2] * ratio_T]
-                wgt.append(new_wgt)
+                if '_virt' in type_nlo:
+                    if c_wgt.type in  [2,14,15]:
+                        R = ratio_V
+                    else:
+                        R = ratio_T
+                    
+                    new_wgt = [c_wgt.pwgt[0] * R,
+                               c_wgt.pwgt[1] * ratio_T,
+                               c_wgt.pwgt[2] * ratio_T]
+                    wgt_virt.append(new_wgt)
+                if '_basic' in type_nlo:
+                    if c_wgt.type in  [14]:
+                        R = ratio_V
+                    else:
+                        R = ratio_T
+                    
+                    new_wgt = [c_wgt.pwgt[0] * R,
+                               c_wgt.pwgt[1] * ratio_T,
+                               c_wgt.pwgt[2] * ratio_T]
+                    wgt_basic.append(new_wgt)                    
+                    
                 base_wgt.append(c_wgt.pwgt[:3])
         
         #change the ordering to the fortran one:
         scales2 = self.invert_momenta(scales2)
         pdg = self.invert_momenta(pdg)
         bjx = self.invert_momenta(bjx)
-        wgt = self.invert_momenta(wgt)
+        # re-compute original weight to reduce numerical inacurracy
         base_wgt = self.invert_momenta(base_wgt)
-        out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
         orig_wgt_check, partial_check = self.combine_wgt(scales2, pdg, bjx, base_wgt, gs, qcdpower, 1., 1.)
-        # try to correct for precision issue
-        avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
-        new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
-                         for i in range(len(avg)))
+        
+        if '_virt' in type_nlo:
+            wgt = self.invert_momenta(wgt_virt)
+            out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+            # try to correct for precision issue
+            avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
+            new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
+                          for i in range(len(avg)))
+            final_weight['_virt'] = new_out/orig_wgt*event.wgt
+        if '_basic' in type_nlo:
+            wgt = self.invert_momenta(wgt_basic)
+            out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+            # try to correct for precision issue
+            avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
+            new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
+                          for i in range(len(avg)))
+            final_weight['_basic'] = new_out/orig_wgt*event.wgt        
+        
+        if '_lo' in type_nlo:
+            w_orig = self.calculate_matrix_element(event, 0, space)
+            w_new =  self.calculate_matrix_element(event, 1, space)            
+            final_weight['_lo'] = w_new/w_orig*event.wgt
             
-        return new_out/orig_wgt*event.wgt
+        return final_weight 
         
      
     @staticmethod   
@@ -991,7 +1089,8 @@ class ReweightInterface(extended_cmd.Cmd):
         keys = self.all_cross_section.keys()
         keys.sort()
         for key in keys:
-            logger.info('%s : %s +- %s pb' % (key,self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
+            logger.info('%s : %s +- %s pb' % (key[0] if not key[1] else '%s%s' % key,
+                self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
         self.terminate_fortran_executables()
     
         if self.rwgt_dir:
@@ -1160,16 +1259,19 @@ class ReweightInterface(extended_cmd.Cmd):
             mgcmd.exec_cmd(commandline, precmd=True) 
             # update make_opts
             m_opts = {}
-            if mgcmd.options['lhapdf']:
+            if mgcmd.options['lhapdf']:# and self.banner.get_detail('run_card','pdlabel') == 'lhapdf':
                 #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
                 #        stdout = subprocess.PIPE).stdout.read().strip()[0]
                 m_opts['lhapdf'] = True
                 m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
                 m_opts['llhapdf'] = subprocess.Popen([mgcmd.options['lhapdf'], '--libs'], 
                          stdout = subprocess.PIPE).stdout.read().strip().split()[0]
+                         
+                # need to check if LHAPDF file is present
+                         
             else:
-                lhapdf = False
-                lhapdfversion = 0
+                raise Exception
+                m_opts['lhapdf'] = True
  
             path = pjoin(path_me,'rw_mevirt', 'Source', 'make_opts')             
             common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)

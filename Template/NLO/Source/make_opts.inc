@@ -73,7 +73,7 @@ endif
 ifdef lhapdf
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  llhapdf=-lLHAPDF 
+  llhapdf+=-lLHAPDF 
   reweight_xsec_events_pdf_dummy=
 else
   alfas_functions=alfas_functions

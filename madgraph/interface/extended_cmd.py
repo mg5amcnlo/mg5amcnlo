@@ -689,8 +689,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                    mother_interface=self, **opt)
         
         if first_cmd:
-            question_instance.onecmd(first_cmd)
-        
+            if isinstance(first_cmd, str):
+                question_instance.onecmd(first_cmd)
+            else:
+                for line in first_cmd:
+                    question_instance.onecmd(line)
         if not self.haspiping:
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
