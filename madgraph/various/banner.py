@@ -2036,6 +2036,7 @@ class RunCardNLO(RunCard):
             self['muf1_ref_fixed']=self['muf_ref_fixed']
         if self['muf2_ref_fixed'] == -1.0:
             self['muf2_ref_fixed']=self['muf_ref_fixed']
+        # overwrite rw_rscale and rw_fscale when rw_(r/f)scale_(down/up) are explicitly given in the run_card for backward compatibility.
         if (self['rw_rscale_down'] != -1.0 and ['rw_rscale_down'] not in self['rw_rscale']) or\
            (self['rw_rscale_up'] != -1.0 and ['rw_rscale_up'] not in self['rw_rscale']):
             self['rw_rscale']=[1.0,self['rw_rscale_up'],self['rw_rscale_down']]

@@ -62,9 +62,9 @@
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
  %(pdlabel)s = pdlabel ! PDF set
- %(lhaid)s  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Can be
-                   ! a list; PDF sets beyond the first are included via
-                   ! reweighting.
+ %(lhaid)s  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
+              ! numbers for central PDF sets are allowed. Can be a list; 
+              ! PDF sets beyond the first are included via reweighting.
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
 # shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
@@ -92,12 +92,15 @@
 #*********************************************************************** 
 # Reweight variables for scale dependence and PDF uncertainty          *
 #***********************************************************************
- %(reweight_scale)s = reweight_scale ! Reweight to get scale dependence. Should be a
-                       ! list of equal length to dynamical_scale_choice
  %(rw_rscale)s = rw_rscale ! muR factors to be included by reweighting
  %(rw_fscale)s = rw_fscale ! muF factors to be included by reweighting
+ %(reweight_scale)s = reweight_scale ! Reweight to get scale dependence using the 
+            ! rw_rscale and rw_fscale factors. Should be a list of equal
+            ! length to dynamical_scale_choice to specify for which
+            ! choice to include scale dependence.
  %(reweight_pdf)s = reweight_PDF  ! Reweight to get PDF uncertainty. Should be a
-                       ! list of equal length to lhaid
+            ! list of equal length to lhaid to specify for which PDF set
+            ! to include the uncertainties.
 #***********************************************************************
 # ickkw parameter:                                                     *
 #   0: No merging                                                      *
