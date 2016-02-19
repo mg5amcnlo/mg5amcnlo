@@ -34,6 +34,8 @@ import madgraph.iolibs.files as files
 import tests.IOTests as IOTests
 import madgraph.interface.master_interface as MGCmd
 
+import madgraph.fks.fks_common as fks_common
+
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
@@ -93,7 +95,8 @@ class TestFKSOutput(unittest.TestCase):
     """
 
     def test_w_nlo_gen(self):
-        """check p p > w [QCD]
+        """check that the new (memory and cpu efficient) and old generation
+        mode at NLO give the same results for p p > w [QCD]
         """
         path = tempfile.mkdtemp('', 'TMPWTest', None)
 
@@ -113,7 +116,8 @@ class TestFKSOutput(unittest.TestCase):
         # the P0 dirs
         for oldf in \
           (glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.inc')) + \
-           glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.f'))):
+           glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.f')) + \
+           [os.path.join(path, 'W-oldway', 'SubProcesses', 'proc_characteristics')]):
             
             if os.path.islink(oldf): 
                 continue
@@ -135,6 +139,31 @@ class TestFKSOutput(unittest.TestCase):
 
             for old_l, new_l in zip(open(oldf), open(newf)):
                 self.assertEqual(old_l, new_l)
+
+
+    def test_w_nlo_gen_gosam(self):
+        """check that the new generation mode works when gosam is set 
+        for p p > w [QCD] 
+        """
+        path = tempfile.mkdtemp('', 'TMPWTest', None)
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        interface = MGCmd.MasterCmd()
+        
+        run_cmd('set low_mem_multicore_nlo_generation True')
+        run_cmd('set OLP GoSam')
+        run_cmd('generate p p > w+ [QCD]')
+        try:
+            run_cmd('output %s' % os.path.join(path, 'W-newway'))
+        except fks_common.FKSProcessError, err:
+            # catch the error if gosam is not there
+            if not 'Generation of the virtuals with GoSam failed' in err:
+                raise Exception, err
+        run_cmd('set low_mem_multicore_nlo_generation False')
+        run_cmd('set OLP MadLoop')
 
         shutil.rmtree(path)
 

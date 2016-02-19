@@ -78,13 +78,15 @@ def generate_directories_fks_async(i):
     infile.close()      
     
     calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
+    nexternal = curr_exporter.proc_characteristic['nexternal']
+    ninitial = curr_exporter.proc_characteristic['ninitial']
     
     #only available after export has been done, so has to be returned from here
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
     
-    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank]
+    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal]
 
 
 class CheckFKS(mg_interface.CheckValidForCmd):
@@ -693,7 +695,16 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                 #clean up tmp files containing final matrix elements
                 for mefile in self._curr_matrix_elements.get('matrix_elements'):
                     os.remove(mefile)
-    
+
+                for charac in ['nexternal', 'ninitial']:
+                    proc_charac[charac] = self._curr_exporter.proc_characteristic[charac]
+                # ninitial and nexternal
+                proc_charac['nexternal'] = max([diroutput[4] for diroutput in diroutputmap])
+                ninitial_set = set([diroutput[3] for diroutput in diroutputmap])
+                if len(ninitial_set) != 1:
+                    raise MadGraph5Error, ("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
+                proc_charac['ninitial'] = list(ninitial_set)[0]
+
                 max_loop_vertex_ranks = []
                 
                 for diroutput in diroutputmap:
