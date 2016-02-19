@@ -80,13 +80,14 @@ def generate_directories_fks_async(i):
     calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
     nexternal = curr_exporter.proc_characteristic['nexternal']
     ninitial = curr_exporter.proc_characteristic['ninitial']
+    processes = me.born_matrix_element.get('processes')
     
     #only available after export has been done, so has to be returned from here
     max_loop_vertex_rank = -99
     if me.virt_matrix_element:
         max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
     
-    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal]
+    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes]
 
 
 class CheckFKS(mg_interface.CheckValidForCmd):
@@ -553,7 +554,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Generate the virtuals if from OLP
         if self.options['OLP']!='MadLoop':
             self._curr_exporter.generate_virtuals_from_OLP(
-              self._curr_matrix_elements,self._export_dir,self.options['OLP'])
+              self.born_processes_for_olp,self._export_dir,self.options['OLP'])
                 
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
@@ -705,12 +706,16 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                     raise MadGraph5Error, ("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
                 proc_charac['ninitial'] = list(ninitial_set)[0]
 
+                self.born_processes = []
+                self.born_processes_for_olp = []
                 max_loop_vertex_ranks = []
                 
                 for diroutput in diroutputmap:
                     calls = calls + diroutput[0]
                     self._fks_directories.extend(diroutput[1])
                     max_loop_vertex_ranks.append(diroutput[2])
+                    self.born_processes.extend(diroutput[5])
+                    self.born_processes_for_olp.append(diroutput[5][0])
 
             else:
                 max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for \

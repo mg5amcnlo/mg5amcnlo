@@ -160,7 +160,7 @@ class TestFKSOutput(unittest.TestCase):
             run_cmd('output %s' % os.path.join(path, 'W-newway'))
         except fks_common.FKSProcessError, err:
             # catch the error if gosam is not there
-            if not 'Generation of the virtuals with GoSam failed' in err:
+            if not 'Generation of the virtuals with GoSam failed' in str(err):
                 raise Exception, err
         run_cmd('set low_mem_multicore_nlo_generation False')
         run_cmd('set OLP MadLoop')

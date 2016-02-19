@@ -459,7 +459,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # likely also generate it for each subproc.
         if OLP=='NJET':
             filename = 'OLE_order.lh'
-            self.write_lh_order(filename, matrix_element, OLP)
+            self.write_lh_order(filename, [matrix_element.born_matrix_element.get('processes')[0]], OLP)
         
         if matrix_element.virt_matrix_element:
                     calls += self.generate_virt_directory( \
@@ -1343,7 +1343,8 @@ end
                          matrix_element, i,
                          fortran_model)
 
-    def generate_virtuals_from_OLP(self,FKSHMultiproc,export_path, OLP):
+
+    def generate_virtuals_from_OLP(self,process_list,export_path, OLP):
         """Generates the library for computing the loop matrix elements
         necessary for this process using the OLP specified."""
         
@@ -1352,7 +1353,7 @@ end
         if not os.path.exists(virtual_path):
             os.makedirs(virtual_path)
         filename = os.path.join(virtual_path,'OLE_order.lh')
-        self.write_lh_order(filename, FKSHMultiproc.get('matrix_elements'),OLP)
+        self.write_lh_order(filename, process_list, OLP)
 
         fail_msg='Generation of the virtuals with %s failed.\n'%OLP+\
             'Please check the virt_generation.log file in %s.'\
@@ -1421,20 +1422,19 @@ end
         proc_to_label = self.parse_contract_file(
                                             pjoin(virtual_path,'OLE_order.olc'))
 
-        self.write_BinothLHA_inc(FKSHMultiproc,proc_to_label,\
+        self.write_BinothLHA_inc(process_list,proc_to_label,\
                                               pjoin(export_path,'SubProcesses'))
         
         # Link the contract file to within the SubProcess directory
         ln(pjoin(virtual_path,'OLE_order.olc'),pjoin(export_path,'SubProcesses'))
         
-    def write_BinothLHA_inc(self, FKSHMultiproc, proc_to_label, SubProcPath):
+    def write_BinothLHA_inc(self, processes, proc_to_label, SubProcPath):
         """ Write the file Binoth_proc.inc in each SubProcess directory so as 
         to provide the right process_label to use in the OLP call to get the
         loop matrix element evaluation. The proc_to_label is the dictionary of
         the format of the one returned by the function parse_contract_file."""
         
-        for matrix_element in FKSHMultiproc.get('matrix_elements'):
-            proc = matrix_element.get('processes')[0]
+        for proc in processes:
             name = "P%s"%proc.shell_string()
             proc_pdgs=(tuple([leg.get('id') for leg in proc.get('legs') if \
                                                          not leg.get('state')]),
@@ -1610,26 +1610,19 @@ end
     # write_lh_order
     #===============================================================================
     #test written
-    def write_lh_order(self, filename, matrix_elements, OLP='MadLoop'):
+    def write_lh_order(self, filename, process_list, OLP='MadLoop'):
         """Creates the OLE_order.lh file. This function should be edited according
         to the OLP which is used. For now it is generic."""
         
-        if isinstance(matrix_elements,fks_helas_objects.FKSHelasProcess):
-            fksborns=fks_helas_objects.FKSHelasProcessList([matrix_elements])
-        elif isinstance(matrix_elements,fks_helas_objects.FKSHelasProcessList):
-            fksborns= matrix_elements
-        else:
-            raise fks_common.FKSProcessError('Wrong type of argument for '+\
-                                  'matrix_elements in function write_lh_order.')
         
-        if len(fksborns)==0:
+        if len(process_list)==0:
             raise fks_common.FKSProcessError('No matrix elements provided to '+\
                                                  'the function write_lh_order.')
             return
         
         # We assume the orders to be common to all Subprocesses
         
-        orders = fksborns[0].orders 
+        orders = process_list[0].get('orders') 
         if 'QED' in orders.keys() and 'QCD' in orders.keys():
             QED=orders['QED']
             QCD=orders['QCD']
@@ -1641,12 +1634,12 @@ end
             QCD=orders['QCD']
         else:
             QED, QCD = self.get_qed_qcd_orders_from_weighted(\
-                    fksborns[0].get_nexternal_ninitial()[0]-1, # -1 is because the function returns nexternal of the real emission
+                    len(process_list[0].get('legs')),
                     orders['WEIGHTED'])
 
         replace_dict = {}
         replace_dict['mesq'] = 'CHaveraged'
-        replace_dict['corr'] = ' '.join(matrix_elements[0].get('processes')[0].\
+        replace_dict['corr'] = ' '.join(process_list[0].\
                                                   get('perturbation_couplings'))
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
@@ -1654,8 +1647,10 @@ end
         replace_dict['modelfile'] = './param_card.dat'
         replace_dict['params'] = 'alpha_s'
         proc_lines=[]
-        for fksborn in fksborns:
-            proc_lines.append(fksborn.get_lh_pdg_string())
+        for proc in process_list:
+            proc_lines.append('%s -> %s' % \
+                    (' '.join(str(l['id']) for l in proc['legs'] if not l['state']),
+                     ' '.join(str(l['id']) for l in proc['legs'] if l['state'])))
         replace_dict['pdgs'] = '\n'.join(proc_lines)
         replace_dict['symfin'] = 'Yes'
         content = \
