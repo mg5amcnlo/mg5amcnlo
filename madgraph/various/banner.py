@@ -2061,7 +2061,19 @@ class RunCardNLO(RunCard):
             raise InvalidRunCard, "Length of list for 'rw_rscale' too long: max is 9."
         if len(self['rw_fscale']) > 9 :
             raise InvalidRunCard, "Length of list for 'rw_fscale' too long: max is 9."
-
+    # make sure that the first element of rw_rscale and rw_fscale is the 1.0
+        if 1.0 not in self['rw_rscale']:
+            logger.warning("'1.0' has to be part of 'rw_rscale', adding it")
+            self['rw_rscale'].insert(0,1.0)
+        if 1.0 not in self['rw_fscale']:
+            logger.warning("'1.0' has to be part of 'rw_fscale', adding it")
+            self['rw_fscale'].insert(0,1.0)
+        if self['rw_rscale'][0] != 1.0 and 1.0 in self['rw_rscale']:
+            a=self['rw_rscale'].index(1.0)
+            self['rw_rscale'][0],self['rw_rscale'][a]=self['rw_rscale'][a],self['rw_rscale'][0]
+        if self['rw_fscale'][0] != 1.0 and 1.0 in self['rw_fscale']:
+            a=self['rw_fscale'].index(1.0)
+            self['rw_fscale'][0],self['rw_fscale'][a]=self['rw_fscale'][a],self['rw_fscale'][0]
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

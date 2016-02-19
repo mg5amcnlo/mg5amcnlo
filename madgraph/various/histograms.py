@@ -1016,7 +1016,7 @@ class HwU(Histogram):
                 label_to_consider.append('none')
         if len(wgts_to_consider)==0:
             # No envelope can be constructed, it is not worth adding the weights
-            return (None,None)
+            return (None,[None])
         else:
 
 
