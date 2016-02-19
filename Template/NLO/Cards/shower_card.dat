@@ -100,6 +100,10 @@ njmax      = 0        # Maximal multiplicity in the merging
 # t -> ve e+ b with BR = 1, PYTHIA6                                    *
 # DM_5 = 6 > 24 5 @ 1d0 @ 100
 # DM_6 = 24 > 12 -11 @ 1d0 @ 100
+# W+ -> ve e+, W- -> vm~ mu-, PYTHIA8                                  *
+# DM_1 = 24:onMode = off
+# DM_2 = 24:onPosIfAny = 11 12
+# DM_3 = 24:onNegIfAny = 13 14
 # W+ -> ve e+, W- -> ve~ e- and vm~ mu-, PYTHIA8                       *
 # DM_1 = 24:onMode = off
 # DM_2 = 24:onIfAny = 11 12
