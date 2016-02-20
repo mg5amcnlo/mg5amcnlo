@@ -3867,7 +3867,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 5 in MLoptions["MLReductionLib"]:
-                    logger.info('Samurai not available on your system; it will be skipped.')
+                    logger_check.warning('Samurai not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(5)
         
         if 'ninja' in self.options and isinstance(self.options['ninja'],str):
@@ -3875,7 +3875,7 @@ This implies that with decay chains:
         else:
             if "MLReductionLib" in MLoptions:
                 if 6 in MLoptions["MLReductionLib"]:
-                    logger.info('Ninja not available on your system; it will be skipped.')
+                    logger_check.warning('Ninja not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(6)
         
         if args[0] in ['timing']:

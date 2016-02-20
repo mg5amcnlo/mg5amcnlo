@@ -1251,7 +1251,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                 temp_dir_prefix+"_%s"%proc_name)
 
         res_timings = self.setup_process(matrix_element,export_dir, \
-            reusing, param_card,MLOptions = MLOptions,clean=(not make_it_quick))
+            reusing, param_card,MLOptions = MLOptions,clean=True)
         
         if res_timings == None:
             return None
@@ -1315,7 +1315,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if not make_it_quick:
             target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,50)
         else:
-            target_pspoints_number = 5
+            target_pspoints_number = 3
         
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
