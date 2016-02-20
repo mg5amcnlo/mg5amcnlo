@@ -5,14 +5,21 @@ ifeq ($(origin FFLAGS),undefined)
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
 
+ifdef f2pymode
+    MACFLAG= 
+else
+    MACFLAG= -mmacosx-version-min=10.7
+endif
+
+
 ifeq ($(origin CXXFLAGS),undefined)
   #CXXFLAGS= -g 
-  CXXFLAGS= -O -stdlib=libc++ -mmacosx-version-min=10.7
+  CXXFLAGS= -O -stdlib=libc++ $(MACFLAG)
 endif
 
 ifeq ($(origin CFLAGS),undefined)
   #CFLAGS= -g 
-  CFLAGS= -O -stdlib=libc++ -mmacosx-version-min=10.7
+  CFLAGS= -O -stdlib=libc++ $(MACFLAG)
 endif
 
 # Increase the number of allowed charcters in a Fortran line
@@ -28,7 +35,7 @@ endif
 
 UNAME := $(shell uname -s)
 ifeq ($(origin LDFLAGS), undefined)
-LDFLAGS=-lc++  -mmacosx-version-min=10.7
+LDFLAGS=-lc++  $(MACFLAG)
 endif
 
 # Options: dynamic, lhapdf
@@ -69,7 +76,7 @@ endif
 ifdef lhapdf
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  llhapdf=-lLHAPDF
+  llhapdf+= -lLHAPDF
 else
   alfas_functions=alfas_functions
   llhapdf=

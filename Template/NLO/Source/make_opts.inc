@@ -6,6 +6,12 @@ ifeq ($(origin FFLAGS),undefined)
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
 
+ifdef f2pymode
+      MACFLAG=
+else
+     MACFLAG=-mmacosx-version-min=10.7
+endif
+
 ifeq ($(origin CXXFLAGS),undefined)
   #CXXFLAGS= -g 
   CXXFLAGS = -O 

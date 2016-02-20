@@ -1278,6 +1278,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
                 #        stdout = subprocess.PIPE).stdout.read().strip()[0]
                 m_opts['lhapdf'] = True
+                m_opts['f2pymode'] = True
                 m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
                 m_opts['llhapdf'] = subprocess.Popen([mgcmd.options['lhapdf'], '--libs'], 
                          stdout = subprocess.PIPE).stdout.read().strip().split()[0]
