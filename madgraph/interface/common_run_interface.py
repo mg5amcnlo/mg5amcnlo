@@ -1110,7 +1110,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 # If they are NaN's around for the reweighting weights, then
                 # setting consider_reweights to False will disregard them.
                 # run_id = None means that the first run is considered
-                histos = histograms.HwUList(djr_path, consider_reweights=True,
+                histos = histograms.HwUList(djr_path, consider_reweights='ALL',
                                                                        run_id=0)
                 
                 if len(histos)==0:
