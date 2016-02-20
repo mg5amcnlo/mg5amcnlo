@@ -3298,8 +3298,8 @@ Please install this tool with the following MG5_aMC command:
     'It would be better/safer to use a larger qCut or a smaller xqcut.')
                
             # Automatically set qCutMin to xqcut if not defined by the user.
-            if PY8_Card['SysCalc:qCutMin']==-1.0:
-                PY8_Card.MadGraphSet('JetMatching:qCutMin',self.run_card['xqcut'])
+#            if PY8_Card['SysCalc:qCutMin']==-1.0:
+#                PY8_Card.MadGraphSet('JetMatching:qCutMin',self.run_card['xqcut'])
 
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:

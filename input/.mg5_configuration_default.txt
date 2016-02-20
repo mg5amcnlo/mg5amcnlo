@@ -56,8 +56,8 @@
 # timeout = 60
 
 #! Pythia8 path.
-#!  Defines the path to the main pythia8 directory (i.e. that containing
-#!  the pythia8 configure script) .
+#!  Defines the path to the pythia8 installation directory (i.e. the
+#!  on containing the lib, bin and include directories) .
 #!  If using a relative path, that starts from the mg5 directory
 # pythia8_path =
 
