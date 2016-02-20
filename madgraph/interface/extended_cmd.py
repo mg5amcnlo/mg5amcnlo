@@ -707,13 +707,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 answer = alias[answer]
             if ask_class:
                 answer = question_instance.default(answer)
+            if hasattr(question_instance, 'check_answer_consistency'):
+                question_instance.check_answer_consistency()
             return answer
         
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
-
         
         try:
             if value in alias:

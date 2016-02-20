@@ -1,14 +1,8 @@
 #*************************************************************************
-#                       Reweight Module                                  *
+#                          Reweight Module                               *
+#                Matrix-Element reweighting at LO/NLO                    *
+#  Mattelaer Olivier                                    arxiv:xxxx.xxxx  *  
 #*************************************************************************
-#
-# Reweighting by Leading Order (tree-level / loop-induced) matrix
-# elements
-#
-# Warning: To insure NLO accuracy in the reweighting procedure, you must set the
-#          run_card parameter 'keep_rwgt_info' to '.true.'(when doing event generation).
-#          If it is set to '.false.', then and approximate reweighting based on
-#          LO matrix element only will be performed (hence losing formal NLO accuracy)
 #          
 # Note: 
 #   1) the value of alpha_s will be used from the event so the value in
@@ -18,6 +12,21 @@
 #      (For example, changing a particle's mass by much more than its
 #      width leads to very inaccurate result). In such a case, separate 
 #      event generation runs are needed.
+#
+#************************************************************************
+# ENTER YOUR COMMANDS BELOW. 
+#************************************************************************
+
+change mode NLO    # Do nothing on LO sample.
+launch
+#  SPECIFY A PATH OR USE THE SET COMMAND LIKE THIS:
+# set sminputs 1 130 # modify 1/alpha_EW
+
+
+
+#************************************************************************
+# Manual:      https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
+#************************************************************************
 #
 # Example of (standard) code for the computation of two weights:
 #
@@ -44,10 +53,13 @@
 #        matrix-elements even if the events have been written with a 
 #        single helicity state.
 #        
-#*************************************************************************
-# ENTER YOUR COMMANDS BELOW. 
-#*************************************************************************
+# change mode XXX: change the type of reweighting performed.
+#        allowed values: LO, NLO, LO+NLO, NLO_basic, NLO_VT
+#        - For LO sample only LO mode is allowed.
+#        - NLO runs both NLO_basic and NLO_VT reweighting methods.
+#        - Read the online manual to check the difference between those modes.
+#        - all NLO modes requires 'keep_rwgt_info' equals True (run_card.dat)
+#          If the reweighting is done at generation level this parameter will
+#          automatically be set on True.
+#************************************************************************
 
-launch
-#  SPECIFY A PATH OR USE THE SET COMMAND LIKE THIS:
-# set sminputs 1 130 # modify 1/alpha_EW

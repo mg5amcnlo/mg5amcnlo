@@ -378,7 +378,7 @@ class ReweightInterface(extended_cmd.Cmd):
             return ['_virt', '_basic']
         elif self.rwgt_mode == 'NLO_basic':
             return ['_basic']
-        elif self.rwgt_mode == 'NLO_virttrick':
+        elif self.rwgt_mode == 'NLO_VT':
             return ['_virt']
         elif self.rwgt_mode == 'LO+NLO':
             return ['_virt', '_basic', '_lo']
@@ -838,10 +838,11 @@ class ReweightInterface(extended_cmd.Cmd):
             if need_V:
                 w_origV = self.calculate_matrix_element(cevent, 'V0', space)
                 w_newV =  self.calculate_matrix_element(cevent, 'V1', space)                    
-                ratio_V = (w_newV + w_new) / (w_origV + w_orig)
+                ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
+                ratio_V = w_newV/w_origV
             else:
                 ratio_V = "should not be used"
-            
+                ratio_BV = "should not be used"
             for c_wgt in cevent.wgts:
                 orig_wgt += c_wgt.ref_wgt
                 #add the information to the input
@@ -855,7 +856,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 
                 if '_virt' in type_nlo:
                     if c_wgt.type in  [2,14,15]:
-                        R = ratio_V
+                        R = ratio_BV
                     else:
                         R = ratio_T
                     
@@ -983,9 +984,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 try:
                     mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
                 except:
-                    os.system('install_name_tool -change libMadLoop.dylib %s/libMadLoop.dylib matrix%spy.so' % (Pdir,2*metag))
-                    mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
-
+                    import platform
+                    if platform.system() == 'Darwin':
+                        os.system('install_name_tool -change libMadLoop.dylib %s/libMadLoop.dylib matrix%spy.so' % (Pdir,2*metag))
+                        mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
+                    else:
+                        raise
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
                 mymod = getattr(P, 'matrix%spy' % (2*metag))
@@ -1266,12 +1270,22 @@ class ReweightInterface(extended_cmd.Cmd):
                 else:
                     proc = proc.replace('[', '[ virt=')
                     commandline += "add process %s ;" % proc
+
+            # deactivate golem since it creates troubles
+            old_options = dict(mgcmd.options)
+            if mgcmd.options['golem']:
+                logger.info("We will not use GOLEM for the reweighting.")
+            mgcmd.options['golem'] = None            
             
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
             commandline = 'output standalone_rw %s -f' % pjoin(path_me,'rw_mevirt')
             mgcmd.exec_cmd(commandline, precmd=True) 
+            
+            #put back golem to original value
+            mgcmd.options['golem'] = old_options['golem']
+            
             # update make_opts
             m_opts = {}
             if mgcmd.options['lhapdf']:
@@ -1294,7 +1308,7 @@ class ReweightInterface(extended_cmd.Cmd):
          
             
             
-            mgcmd.exec_cmd(commandline, precmd=True)        
+            #mgcmd.exec_cmd(commandline, precmd=True)        
             logger.info('Done %.4g' % (time.time()-start))
 
             # now store the id information             

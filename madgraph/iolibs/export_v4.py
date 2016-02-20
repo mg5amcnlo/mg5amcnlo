@@ -6299,6 +6299,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
 
     opt = cmd.options
 
+
     # First treat the MadLoop5 standalone case       
     MadLoop_SA_options = {'clean': not noclean, 
       'complex_mass':cmd.options['complex_mass_scheme'],
@@ -6318,7 +6319,7 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'cluster_local_path': cmd.options['cluster_local_path']
       }
 
-    if output_type.startswith('madloop'):
+    if output_type.startswith('madloop'):        
         import madgraph.loop.loop_exporters as loop_exporters
         if os.path.isdir(os.path.join(cmd._mgme_dir, 'Template/loop_material')):
             ExporterClass=None

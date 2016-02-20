@@ -1026,8 +1026,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         pass
     ############################################################################
     def do_reweight(self, line):
-        """ Allow to reweight the events generated with a new choices of model
-            parameter.
+        """ syntax: reweight RUN_NAME
+            Allow to reweight the events generated with a new choices of model
+            parameter. Description of the methods are available here:
+            https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
         """
         
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
@@ -2045,6 +2047,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return self.path_completion(text,
                                         os.path.join('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
+
+    def complete_reweight(self,text, line, begidx, endidx):
+        "Complete the pythia command"
+        args = self.split_arg(line[0:begidx], error=False)
+
+        #return valid run_name
+        data = glob.glob(pjoin(self.me_dir, 'Events', '*','*events.lhe*'))
+        data = [n.rsplit('/',2)[1] for n in data]
+        if not '-f' in args:
+            data.append('-f')
+        tmp1 =  self.list_completion(text, data)
+        return tmp1 
+
+
 
     def complete_compute_widths(self, text, line, begidx, endidx):
         "Complete the compute_widths command"
@@ -3116,12 +3132,39 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     (block, lhaid, value), '$MG:color:BLACK')
         self.param_card[block].param_dict[lhaid].value = value
     
+    def check_card_consistency(self):
+        """This is run on quitting the class. Apply here all the self-consistency
+        rule that you want. Do the modification via the set command."""
+
+        # if NLO reweighting is ON: ensure that we keep the rwgt information
+        if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
+            isinstance(self.run_card,banner_mod.RunCardNLO) and \
+            not self.run_card['keep_rwgt_info']:
+            #check if a NLO reweighting is required
+                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO|NLO|LO+NLO)''', re.M+re.I)
+                text = open(pjoin(self.me_dir,'Cards','reweight_card.dat')).read()
+                options = re_pattern.findall(text)
+                if any(o in ['NLO', 'LO+NLO'] for o in options):
+                    logger.info('NLO reweighting is on ON. Automatically set keep_rwgt_info to True', '$MG:color:BLACK' )
+                    self.do_set('run_card keep_rwgt_info True')
+    
+    
     def reask(self, *args, **opt):
         
         cmd.OneLinePathCompletion.reask(self,*args, **opt)
         if self.has_mw and not os.path.exists(pjoin(self.me_dir,'Cards','transfer_card.dat')):
             logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
-            
+    
+    def postcmd(self, stop, line):
+        
+        ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+        if ending_question:
+            self.check_card_consistency()
+            return ending_question
+    
+    def check_answer_consistency(self):
+        """function called if the code reads a file"""
+        self.check_card_consistency() 
       
     def help_set(self):
         '''help message for set'''
