@@ -2050,6 +2050,11 @@ class RunCardNLO(RunCard):
             if self['pdlabel'] != "lhapdf":
                 raise InvalidRunCard, 'Reweight PDF option requires to use pdf sets associated to lhapdf. Please either change the pdlabel to use LHAPDF or set reweight_pdf to False.'
 
+        # make sure set have reweight_pdf and lhaid of length 1 when not including lhapdf
+        if self['pdlabel'] != "lhapdf":
+            self['reweight_pdf']=[self['reweight_pdf'][0]]
+            self['lhaid']=[self['lhaid'][0]]
+            
         if len(self['reweight_pdf']) != len(self['lhaid']):
             raise InvalidRunCard, "'reweight_pdf' and 'lhaid' lists should have the same length"
         if len(self['reweight_scale']) != len(self['dynamical_scale_choice']):

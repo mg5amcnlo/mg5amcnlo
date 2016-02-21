@@ -1018,25 +1018,27 @@ class HwU(Histogram):
             # No envelope can be constructed, it is not worth adding the weights
             return (None,[None])
         else:
-
-
             # find and import python version of lhapdf if doing PDF uncertainties
             if type=='PDF':
                 use_lhapdf=False
-                lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
-                                              stdout=subprocess.PIPE).stdout.read().strip() 
-                candidates=[x[0] for x in os.walk(lhapdf_libdir)]
-                for candidate in candidates:
-                    if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
-                        sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
-                        try:
-                            import lhapdf
-                            use_lhapdf=True
-                            break
-                        except ImportError:
-                            sys.path.pop(0)
-                            break
-                   
+                try:
+                    lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
+                                                   stdout=subprocess.PIPE).stdout.read().strip()
+                except:
+                    use_lhapdf=False
+                else:
+                    candidates=[x[0] for x in os.walk(lhapdf_libdir)]
+                    for candidate in candidates:
+                        if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                            sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
+                            try:
+                                import lhapdf
+                                use_lhapdf=True
+                                break
+                            except ImportError:
+                                sys.path.pop(0)
+                                break
+                       
                 if not use_lhapdf:
                     try:
                         import lhapdf
@@ -1084,12 +1086,16 @@ class HwU(Histogram):
                                                       for label in wgts)
                         bin.wgts[new_wgt_labels[2]] = max(bin.wgts[label] \
                                                       for label in wgts)
-                    elif type=='PDF' and use_lhapdf and label != 'none':
+                    elif type=='PDF' and use_lhapdf and label != 'none' and len(wgts) > 1:
                         pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
                         ep=p.uncertainty(pdfs,-1)
                         bin.wgts[new_wgt_labels[0]] = ep.central
                         bin.wgts[new_wgt_labels[1]] = ep.central-ep.errminus
                         bin.wgts[new_wgt_labels[2]] = ep.central+ep.errplus
+                    elif type=='PDF' and use_lhapdf and label != 'none' and len(bin.wgts) == 1:
+                        bin.wgts[new_wgt_labels[0]] = bin.wgts[wgts[0]]
+                        bin.wgts[new_wgt_labels[1]] = bin.wgts[wgts[0]]
+                        bin.wgts[new_wgt_labels[2]] = bin.wgts[wgts[0]]
                     else:
                         pdfs   = [bin.wgts[pdf] for pdf in sorted(wgts)]
                         pdf_up     = 0.0
@@ -2110,7 +2116,7 @@ if __name__ == "__main__":
             assigned_types = [(type if type!='None' else None) for type in \
                                                              arg[15:].split(',')]
 
-    lhapdfconfig = []
+    lhapdfconfig = ['lhapdf-config']
     for arg in sys.argv[1:]:
         if arg.startswith('--lhapdf-config='):
             lhapdfconfig = arg[16:]
