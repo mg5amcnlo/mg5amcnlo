@@ -1024,6 +1024,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Dummy routine, to be overwritten by daughter classes"""
 
         pass
+    
     ############################################################################
     def do_reweight(self, line):
         """ syntax: reweight RUN_NAME
@@ -1072,6 +1073,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+            del reweight_cmd
+            
+        logger.info("quit rwgt")
         
         
         

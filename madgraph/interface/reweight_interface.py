@@ -567,7 +567,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
-            misc.sprint("using", self.lhe_input.name)
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
 
 #        Multicore option not really stable -> not use it
@@ -836,13 +835,16 @@ class ReweightInterface(extended_cmd.Cmd):
             w_new =  self.calculate_matrix_element(cevent, 1, space)
             ratio_T = w_new/w_orig
             if need_V:
-                w_origV = self.calculate_matrix_element(cevent, 'V0', space)
-                w_newV =  self.calculate_matrix_element(cevent, 'V1', space)                    
+                scale2 = cevent.wgts[0].scales2[1]
+                #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
+                w_origV = self.calculate_matrix_element(cevent, 'V0', space, scale2=scale2)
+                w_newV =  self.calculate_matrix_element(cevent, 'V1', space, scale2=scale2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
                 ratio_V = w_newV/w_origV
             else:
                 ratio_V = "should not be used"
                 ratio_BV = "should not be used"
+                
             for c_wgt in cevent.wgts:
                 orig_wgt += c_wgt.ref_wgt
                 #add the information to the input
@@ -883,11 +885,13 @@ class ReweightInterface(extended_cmd.Cmd):
         bjx = self.invert_momenta(bjx)
         # re-compute original weight to reduce numerical inacurracy
         base_wgt = self.invert_momenta(base_wgt)
+        
         orig_wgt_check, partial_check = self.combine_wgt(scales2, pdg, bjx, base_wgt, gs, qcdpower, 1., 1.)
         
         if '_virt' in type_nlo:
             wgt = self.invert_momenta(wgt_virt)
-            out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
             new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
@@ -930,7 +934,7 @@ class ReweightInterface(extended_cmd.Cmd):
             open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
                                         ).read().replace('matrix2py', 'matrix%spy' % tag))
     
-    def calculate_matrix_element(self, event, hypp_id, space):
+    def calculate_matrix_element(self, event, hypp_id, space, scale2=0):
         """routine to return the matrix element"""
 
         tag, order = event.get_tag_and_order()
@@ -994,7 +998,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 P = getattr(S, Pname)
                 mymod = getattr(P, 'matrix%spy' % (2*metag))
                 with misc.chdir(Pdir):
-                    mymod.initialise('param_card_orig.dat')
+                    with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                        mymod.initialise('param_card_orig.dat')
                     
             if hypp_id == 1:
                 #incorrect line
@@ -1014,7 +1019,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 P = getattr(S, Pname)
                 mymod = getattr(P, 'matrix%spy' % newtag)
                 with misc.chdir(Pdir):
-                    mymod.initialise('param_card.dat') 
+                    with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                        mymod.initialise('param_card.dat') 
                     
             space.calculator[run_id] = mymod.get_me
             space.calculator[(run_id,'module')] = mymod
@@ -1051,8 +1057,9 @@ class ReweightInterface(extended_cmd.Cmd):
             S = mymod.SubProcesses
             P = getattr(S, Pname)
             mymod = getattr(P, 'matrix%spy' % metag)
-            with misc.chdir(Pdir):      
-                mymod.initialise('param_card.dat')              
+            with misc.chdir(Pdir):   
+                with misc.stdchannel_redirected(sys.stdout, os.devnull):   
+                    mymod.initialise('param_card.dat')              
             space.calculator[run_id] = mymod.get_me
             space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                
@@ -1070,7 +1077,11 @@ class ReweightInterface(extended_cmd.Cmd):
 
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                me_value = external(p,event.aqcd, nhel)
+                if 'V'  not in tag:
+                    me_value = external(p,event.aqcd, nhel)
+                else:                  
+                    me_value = external(p,event.aqcd, math.sqrt(scale2), nhel)
+
         # for NLO we have also the stability status code
         if isinstance(me_value, tuple):
             me_value, code = me_value
@@ -1114,6 +1125,12 @@ class ReweightInterface(extended_cmd.Cmd):
     
         if self.rwgt_dir:
             self.save_to_pickle()
+        
+        with misc.stdchannel_redirected(sys.stdout, os.devnull):
+            for run_id in self.calculator:
+                del self.calculator[run_id]
+            del self.calculator
+        
             
     def __del__(self):
         self.do_quit('')
@@ -1352,7 +1369,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     sys.path.insert(0, path_me)
                 mymod = __import__('rw_mevirt.Source.rwgt2py', globals(), locals(), [],-1)
                 mymod =  mymod.Source.rwgt2py
-                mymod.initialise([self.banner.run_card['lpp1'], 
+                with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                    mymod.initialise([self.banner.run_card['lpp1'], 
                                   self.banner.run_card['lpp2']],
                                  self.banner.run_card.get_lhapdf_id())
                 self.combine_wgt = mymod.get_wgt

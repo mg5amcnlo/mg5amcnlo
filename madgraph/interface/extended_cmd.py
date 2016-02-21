@@ -765,8 +765,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.warning('The answer to the previous question is not set in your input file')
-                logger.warning('Use %s value' % default)
+                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
+                logger.info('Use %s value' % default, '$MG:color:BLACK')
                 return str(default)
         
         line = line.replace('\n','').strip()
