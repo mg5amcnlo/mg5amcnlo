@@ -18,6 +18,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Update the TopEffTh model
         MZ: Fix problem with slurm cluster
         OM: Improve scan functionalities
+        PT: New way of handling Pythia8 decays
 
 2.3.3(25/10/15)
         OM: Allow new syntax for the param_card: instead of an entry you can enter "scan:[val1, val2,...]"
