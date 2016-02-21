@@ -1764,8 +1764,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path=config_path, final=final)
-                return
+                self.set_configuration(config_path=config_path, final=False)
             if 'HOME' in os.environ:
                 config_path = pjoin(os.environ['HOME'],'.mg5',
                                                         'mg5_configuration.txt')
