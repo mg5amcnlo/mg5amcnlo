@@ -387,7 +387,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             return ['']
 
-    #@misc.mute_logger()
+    @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
@@ -1274,7 +1274,7 @@ class ReweightInterface(extended_cmd.Cmd):
             # deactivate golem since it creates troubles
             old_options = dict(mgcmd.options)
             if mgcmd.options['golem'] or mgcmd.options['pjfry']:
-                logger.info("We will not use GOLEM/PJFRY for the reweighting.")
+                logger.info(" When doing NLO reweighting, MG5aMC cannot use the loop reduction algorithms Golem and/or PJFry++")
             mgcmd.options['golem'] = None            
             mgcmd.options['pjfry'] = None 
             commandline = commandline.replace('add process', 'generate',1)
