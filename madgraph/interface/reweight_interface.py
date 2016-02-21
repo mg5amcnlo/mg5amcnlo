@@ -1273,10 +1273,10 @@ class ReweightInterface(extended_cmd.Cmd):
 
             # deactivate golem since it creates troubles
             old_options = dict(mgcmd.options)
-            if mgcmd.options['golem']:
-                logger.info("We will not use GOLEM for the reweighting.")
+            if mgcmd.options['golem'] or mgcmd.options['pjfry']:
+                logger.info("We will not use GOLEM/PJFRY for the reweighting.")
             mgcmd.options['golem'] = None            
-            
+            mgcmd.options['pjfry'] = None 
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
@@ -1285,7 +1285,7 @@ class ReweightInterface(extended_cmd.Cmd):
             
             #put back golem to original value
             mgcmd.options['golem'] = old_options['golem']
-            
+            mgcmd.options['pjfry'] = old_options['pjfry']
             # update make_opts
             m_opts = {}
             if mgcmd.options['lhapdf']:
