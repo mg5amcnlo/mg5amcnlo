@@ -585,81 +585,117 @@ class FKSProcess(object):
         """
         #copy the born process
         born_proc = copy.copy(self.born_amp['process'])
-        #and generate also a born amplitude keeping strictly the born orders
-        born_proc_strict = copy.copy(self.born_amp['process'])
-        born_proc_strict['orders'] = copy.copy(born_proc_strict['born_orders'])
-        born_amp_strict = diagram_generation.Amplitude(born_proc_strict)
         born_pdgs = self.get_pdg_codes()
         leglist = self.get_leglist()
         extra_cnt_pdgs = []
         for i, real_list in enumerate(self.reals):
             # keep track of the id of the mother (will be used to constrct the
-            # spin-correlated borns
+            # spin-correlated borns)
             ij_id = leglist[i].get('id')
             ij = leglist[i].get('number')
             for real_dict in real_list:
                 nmom = 0
+
                 # check first if other counterterms need to be generated
                 # (e.g. g/a > q qbar)
+                # this is quite a tricky business, as double counting
+                # the singular configuration must be avoided. 
+                # Let real, born, cnt be the real emission, the born process
+                # (that will give the name to the P0_** dir) and the 
+                # extra counterterm (obtained by the born process replacing
+                # ij with the extra mother). 
+                # If there are extra mothers, first check that
+                # 1) born, at order born[squared_orders] - 
+                #    2 * (the perturbation type of the real emission) has diagrams
+                # 2) cnt at order born[squared_orders] - 
+                #    2 * (the perturbation type of the extra mom) has diagrams
+
                 cnt_amp = diagram_generation.Amplitude()
                 born_cnt_amp = diagram_generation.Amplitude()
                 mom_cnt = 0
                 cnt_ord = None
+
+                # check condition 1) above (has_coll_sing_born)
+                born_proc_coll_sing = copy.copy(born_proc)
+                born_proc_coll_sing['squared_orders'] = copy.copy(born_proc['squared_orders'])
+                if born_proc_coll_sing['squared_orders'][real_dict['perturbation'][0]] < 2:
+                    has_coll_sing_born = False
+                else:
+                    born_proc_coll_sing['squared_orders'][real_dict['perturbation'][0]] += -2
+                    has_coll_sing_born = bool(diagram_generation.Amplitude(born_proc_coll_sing)['diagrams'])
+
+                # check that there is at most one extra mother
+                allmothers = []
                 for order, mothers in real_dict['extra_mothers'].items():
-                    nmom += len(mothers)
-                    for mom in mothers:
-                        # generate a new process with the mother particle 
-                        # replaced by the new mother and with the
-                        # squared orders changed accordingly
-                        cnt_process = copy.copy(born_proc)
-                        cnt_process['legs'] = copy.deepcopy(born_proc['legs'])
-                        cnt_process['legs'][i]['id'] = mom
-                        cnt_process['legs'] = fks_common.to_fks_legs(
-                                cnt_process['legs'], cnt_process['model'])
-                                                                    
-                        cnt_process['squared_orders'] = \
-                                copy.copy(born_proc['squared_orders'])
+                    allmothers += mothers
+                    if mothers:
+                        cnt_ord = order
 
-                        if cnt_process['squared_orders'][order] < 2:
-                            continue
-                        # check if we need to include the counterterm
-                        try:
-                            cnt_process['squared_orders'][order] += -2
-                        except KeyError:
-                            cnt_process['squared_orders']['WEIGHTED'] += \
-                                    -2 * cnt_process['model'].get('order_hierarchy')[order]
-
-
-                        # MZMZ17062014 beware that the Amplitude reorders the legs
-                        cnt_amp = diagram_generation.Amplitude(cnt_process)
-                        if cnt_amp['diagrams']:
-                            #check if cnt_amp also fits the born_orders 
-                            # i.e. if we need to integrate it
-                            mom_cnt = mom
-                            cnt_ord = order
-                            born_cnt_process = copy.copy(cnt_process)
-                            born_cnt_process['squared_orders'] = \
-                                    copy.deepcopy(cnt_process['squared_orders']) 
-                            born_cnt_process['orders'] = \
-                                    copy.deepcopy(cnt_process['orders']) 
-                            born_cnt_process['orders'] = born_proc['born_orders']
-                            born_cnt_amp = diagram_generation.Amplitude(born_cnt_process)
-
-                if nmom > 1:
+                if len(allmothers) > 1:
                     raise fks_common.FKSProcessError(\
-                            'Error, more than one extra mother has been found: %d', nmom)
+                            'Error, more than one extra mother has been found: %d', len(allmothers))
+                # here we are sure to have just one extra mother
+                    
+                has_coll_sing_cnt = False
+                if allmothers:
+                    mom_cnt = allmothers[0]
 
-                # if mom_cnt has been found AND the born_cnt_amp is non-trivial
-                # in order to avoid double counting, integrate only the configuration
-                # which has ij_id mimimum, i.e. only if mom > ij_id
-                # in practice this means not to integrate splittings when the mother 
-                # is a photon but only when it is a gluon
-                # also, take into account that if born_amp_strict (i.e. the born amplitude 
-                # generated with orders = born_orders) has no diagrams, this real emission
-                # will be included in the process having as a born the extra_cnt
-                if born_cnt_amp['diagrams'] and ( mom_cnt < ij_id or not born_amp_strict['diagrams']):
+                    # generate a new process with the mother particle 
+                    # replaced by the new mother and with the
+                    # squared orders changed accordingly
+
+                    cnt_process = copy.copy(born_proc)
+                    cnt_process['legs'] = copy.deepcopy(born_proc['legs'])
+                    cnt_process['legs'][i]['id'] = mom_cnt
+                    cnt_process['legs'] = fks_common.to_fks_legs(
+                            cnt_process['legs'], cnt_process['model'])
+                    cnt_process['squared_orders'] = \
+                            copy.copy(born_proc['squared_orders'])
+
+                    # check if the cnt amplitude exists with the current 
+                    # squared orders (i.e. if it will appear as a P0 dir)
+                    # if it does not exist, then no need to worry about anything, as all further
+                    # checks will have stricter orders than here
+
+                    if bool(diagram_generation.Amplitude(copy.copy(cnt_process))['diagrams']) and \
+                       cnt_process['squared_orders'][cnt_ord] >= 2:
+
+                        # check condition 2) above (has_coll_sing_cnt)
+                        # MZMZ17062014 beware that the Amplitude reorders the legs
+                        cnt_process['squared_orders'][cnt_ord] += -2
+                        born_cnt_amp = diagram_generation.Amplitude(cnt_process)
+                        has_coll_sing_cnt = bool(born_cnt_amp['diagrams'])
+
+                # remember there is at most one mom
+                # now, one of these cases can occur
+                #  a) no real collinear singularity exists (e.g. just the interference
+                #     has to be integrated for the real emission). Add the real process to
+                #     this born process if ij_id < mom_cnt. No extra_cnt is needed
+                #  b) a collinear singularity exists, with the underlying born being the born
+                #     process of this dir, while no singularity is there for the extra_cnt.
+                #     In this case keep the real emission in this directory, without any 
+                #     extra_cnt
+                #  c) a collinear singularity exists, with the underlying born being the 
+                #     extra_cnt, while no singularity is there for the born of the dir.
+                #     In this case skip the real emission, it will be included in the
+                #     directory of the extra cnt 
+                #  d) a collinear singularity exists, and both the process-dir born and
+                #     the extra cnt are needed to subtract it. Add the real process to
+                #     this born process if ij_id < mom_cnt and keeping the extra_cnt 
+                #
+                # in all cases, remember that mom_cnt is set to 0 if no extra mother is there
+
+                # the real emission has to be skipped if mom_cnt(!=0) < ij_id and either a) or d)
+                if mom_cnt and mom_cnt < ij_id:
+                    if ((not has_coll_sing_born and not has_coll_sing_cnt) or \
+                        (has_coll_sing_born and has_coll_sing_cnt)):
+                        continue
+
+                # the real emission has also to be skipped in case of c)
+                if has_coll_sing_cnt and not has_coll_sing_born:
                     continue
 
+                # if we arrive here, we need to keep this real mession
                 ij = leglist[i].get('number')
                 self.real_amps.append(FKSRealProcess( \
                         born_proc, real_dict['leglist'], ij, ij_id, \
@@ -667,7 +703,9 @@ class FKSProcess(object):
                         real_dict['perturbation'], \
                         perturbed_orders = born_proc['perturbation_couplings']))
 
-                if mom_cnt:
+                # keep the extra_cnt if needed
+                if has_coll_sing_cnt:
+
                     # for the moment we jsut theck the pdgs, regardless of any
                     # permutation in the final state
                     try:
@@ -740,7 +778,8 @@ class FKSProcess(object):
                     for pert in pert_orders:
                         extra_mothers[pert] = fks_common.find_mothers(split[0], split[1], model, pert=pert,
                                         mom_mass=model.get('particle_dict')[i['id']]['mass'].lower())
-                        
+
+                    #remove the current mother from the extra mothers    
                     if i['state']:
                         extra_mothers[pert_order].remove(i['id'])
                     else:
@@ -771,9 +810,14 @@ class FKSProcess(object):
 
                 i_m = real_m.fks_infos[0]['i']
                 j_m = real_m.fks_infos[0]['j']
-                i_n = real_n.fks_infos[0]['i']
+                i_n = real_n.fks_infos[-1]['i']
                 j_n = real_n.fks_infos[0]['j']
+                ij_id_m = real_m.fks_infos[0]['ij_id']
+                ij_id_n = real_n.fks_infos[0]['ij_id']
                 if j_m > self.nincoming and j_n > self.nincoming:
+                    # make sure i and j in the two real emissions have the same mother 
+                    if (ij_id_m != ij_id_n):
+                        continue
                     if (real_m.get_leg_i()['id'] == real_n.get_leg_i()['id'] \
                         and \
                         real_m.get_leg_j()['id'] == real_n.get_leg_j()['id']) \
@@ -782,13 +826,11 @@ class FKSProcess(object):
                         and \
                         real_m.get_leg_j()['id'] == real_n.get_leg_i()['id']):
                         if i_m > i_n:
-                            print real_m.get_leg_i()['id'], real_m.get_leg_j()['id']
                             if real_m.get_leg_i()['id'] == -real_m.get_leg_j()['id']:
                                 self.real_amps[m].is_to_integrate = False
                             else:
                                 self.real_amps[n].is_to_integrate = False
                         elif i_m == i_n and j_m > j_n:
-                            print real_m.get_leg_i()['id'], real_m.get_leg_j()['id']
                             if real_m.get_leg_i()['id'] == -real_m.get_leg_j()['id']:
                                 self.real_amps[m].is_to_integrate = False
                             else:
