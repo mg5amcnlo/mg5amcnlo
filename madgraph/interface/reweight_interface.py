@@ -181,9 +181,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 logger.warning("The information to perform a proper NLO reweighting is not present in the event file.\n" +\
                                "       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
-            if self.mother.options['OLP'].lower() != 'madloop':
-                logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
-                self.rwgt_mode = 'LO'
+            
+            if 'OLP' in self.mother.options:
+                if self.mother.options['OLP'].lower() != 'madloop':
+                    logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
+                    self.rwgt_mode = 'LO'
                 
         if not process:
             msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
@@ -335,7 +337,7 @@ class ReweightInterface(extended_cmd.Cmd):
             self.helicity_reweighting = banner.ConfigFile.format_variable(args[1], bool, "helicity")
         elif args[0] == "mode":
             if args[1] != 'LO':
-                if self.mother.options['OLP'].lower() != 'madloop':
+                if 'OLP' in self.mother.options and self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Only LO reweighting is allowed for OLP!=MadLoop. Keeping the mode to LO.")
                 elif not self.banner.get_detail('run_card','keep_rwgt_info'):
                     logger.warning("Missing information for NLO type of reweighitng. Keeping the mode to LO.")

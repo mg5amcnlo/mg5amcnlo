@@ -298,7 +298,7 @@ c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
             ENDDO
             nwgt=nwgt+numPDFpairs
             numPDFpairs=numPDFpairs/2
-         ELSEIF( INDEX(STRING,"<weightgroup type='mg_reweighting'").ne.0
+         ELSEIF( INDEX(STRING,"<weightgroup name='mg_reweighting'").ne.0
      $           .and.STRING(1:1).ne.'#') then
             DO WHILE (.TRUE.)
                READ(61,'(a)') STRING
