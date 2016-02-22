@@ -1045,8 +1045,11 @@ class HwU(Histogram):
                         use_lhapdf=True
                     except ImportError:
                         logger.warning("Failed to access python version of LHAPDF: "\
-                                      "cannot compute PDF uncertainty from the "\
-                                      "weights in the events.")
+                                       "cannot compute PDF uncertainty from the "\
+                                       "weights in the histograms. The weights in the HwU data files " \
+                                       "still cover all PDF set members, "\
+                                       "but the automatic computation of the uncertainties from "\
+                                       "those weights might not be correct.")
                         use_lhapdf=False
 
             # Place the new weight label last before the first tuple

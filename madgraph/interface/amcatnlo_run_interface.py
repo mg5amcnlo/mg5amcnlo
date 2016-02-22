@@ -3645,7 +3645,9 @@ RESTART = %(mint_mode)s
                 except ImportError:
                     logger.warning("Failed to access python version of LHAPDF: "\
                                    "cannot compute PDF uncertainty from the "\
-                                   "weights in the events.")
+                                   "weights in the events. The weights in the LHE " \
+                                   "event files will still cover all PDF set members, "\
+                                   "but there will be no PDF uncertainty printed in the run summary.")
                     use_lhapdf=False
 
         pdf_info=[]
