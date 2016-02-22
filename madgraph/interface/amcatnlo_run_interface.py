@@ -184,11 +184,11 @@ class CmdExtended(common_run.CommonRunCmd):
     }
     
     debug_output = 'ME5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
 
     keyboard_stop_msg = """stopping all operation

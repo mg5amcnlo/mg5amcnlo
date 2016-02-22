@@ -408,8 +408,8 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         error_text += 'The compilation fails with the following output message:\n'
         error_text += '    '+out.replace('\n','\n    ')+'\n'
         error_text += 'Please try to fix this compilations issue and retry.\n'
-        error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
-        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
+        error_text += 'Help might be found at https://answers.launchpad.net/mg5amcnlo.\n'
+        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/mg5amcnlo'
         raise MadGraph5Error, error_text
     return p.returncode
 
