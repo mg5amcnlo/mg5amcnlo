@@ -17,8 +17,7 @@ C
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=1)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=15)
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       LOGICAL CHECKPCONSERVATION
@@ -455,9 +454,6 @@ C       DP EVALUATION
 C     No TIR caching implemented, this is dummy. (The subroutine is
 C      kept as it might be called by the MC).
       CONTINUE
-
-C     General cache clearing for other reduction methods:
-      CALL NINJA_CLEAR_INTEGRAL_CACHE()
       END SUBROUTINE
 
 
@@ -465,10 +461,11 @@ C     General cache clearing for other reduction methods:
       SUBROUTINE MG5_1_CONVERT_IREGI_COEFFS(RANK,IREGICOEFS,TIRCOEFS)
 C     GLOABLE VARIABLES
       INCLUDE 'coef_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
 C     ARGUMENTS
       INTEGER RANK
-      COMPLEX*16 IREGICOEFS(0:LOOP_MAXCOEFS-1,3)
-      COMPLEX*16 TIRCOEFS(0:LOOP_MAXCOEFS-1,3)
+      COMPLEX*16 IREGICOEFS(0:LOOPMAXCOEFS-1,3)
+      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3)
 C     Reduction Coefficient 1
       TIRCOEFS(0,1:3)=IREGICOEFS(0,1:3)
       IF(RANK.LE.0)RETURN

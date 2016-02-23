@@ -218,10 +218,10 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
     order constraints and differentiation of different "split orders" 
     combinations."""
     
+    @IOTests.set_global(unitary=False)
     def setUp(self):
        """Loading the different writers, exporters and model used for these
        IOTests"""
-
        if not hasattr(self, 'model'):
            self.model=import_ufo.import_model('loop_qcd_qed_sm-full')
            
@@ -238,6 +238,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                                    'SubProc_prefix': '',
                                    'compute_color_flows': False})
 
+    @IOTests.set_global(unitary=False)
     @IOTests.createIOTest(groupName='LoopSquaredOrder_IOTest')
     def testIO_Loop_sqso_uux_ddx(self):
         """ target: [loop_matrix(.*)\.f]
@@ -246,7 +247,6 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
                     [helas_calls(.*)\.f]
                     [loop_CT_calls(.*)\.f]
         """
-    
         myleglist = base_objects.LegList()
         myleglist.append(base_objects.Leg({'id':2,'state':False}))
         myleglist.append(base_objects.Leg({'id':-2,'state':False}))

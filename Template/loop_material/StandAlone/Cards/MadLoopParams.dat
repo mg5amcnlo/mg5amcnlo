@@ -26,10 +26,10 @@
 !     is disabled by default in this case.
 #UseQPIntegrandForCutTools
 !.TRUE.
-! Defaul :: .TRUE.
+! Default :: .TRUE.
 #UseQPIntegrandForNinja
 !.FALSE.
-! Defaul :: .FALSE.
+! Default :: .FALSE.
 !
 !     =================================================================================
 !     The parameters below set the parameters for IREGI

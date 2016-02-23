@@ -1263,7 +1263,8 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         return masterfile
 
-    def write_loopmatrix(self, writer, matrix_element, fortran_model):
+    def write_loopmatrix(self, writer, matrix_element, fortran_model,
+                                                                 noSplit=False):
         """Create the loop_matrix.f file."""
         
         if not matrix_element.get('processes') or \

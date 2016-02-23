@@ -366,7 +366,19 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         
 
         if job_id not in self.retry_args:
-            return True
+            if job_id in self.id_to_packet:
+                nb_in_packet = self.id_to_packet[job_id].remove_one()
+                if nb_in_packet == 0:
+                    # packet done run the associate function
+                    packet = self.id_to_packet[job_id]
+                    # fully ensure that the packet is finished (thread safe)
+                    packet.queue.join()
+                    #running the function
+                    packet.fct(*packet.args)                    
+                del self.id_to_packet[job_id]
+                return 'resubmit'
+            else:
+                return True
 
         args = self.retry_args[job_id]
         if 'time_check' in args:

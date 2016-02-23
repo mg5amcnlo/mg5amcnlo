@@ -7,10 +7,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u u~ > t t~ WEIGHTED=2 [ LOonly = QCD ]
-C     Process: c c~ > t t~ WEIGHTED=2 [ LOonly = QCD ]
-C     Process: d d~ > t t~ WEIGHTED=2 [ LOonly = QCD ]
-C     Process: s s~ > t t~ WEIGHTED=2 [ LOonly = QCD ]
+C     Process: u u~ > t t~ WEIGHTED<=2 [ LOonly = QCD ]
+C     Process: c c~ > t t~ WEIGHTED<=2 [ LOonly = QCD ]
+C     Process: d d~ > t t~ WEIGHTED<=2 [ LOonly = QCD ]
+C     Process: s s~ > t t~ WEIGHTED<=2 [ LOonly = QCD ]
 C     
 C     ****************************************************            
 C         

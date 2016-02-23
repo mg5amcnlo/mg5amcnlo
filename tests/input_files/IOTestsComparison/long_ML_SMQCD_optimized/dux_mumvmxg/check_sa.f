@@ -337,7 +337,7 @@ C
             WRITE (69,'(a2,1x,5ES30.15E3)') 'PS',P(0,I),P(1,I),P(2,I)
      $       ,P(3,I)
           ENDDO
-          WRITE (69,'(a3,1x,i2)') 'EXP',-(2*NEXTERNAL-8)
+          WRITE (69,'(a3,1x,i3)') 'EXP',-(2*NEXTERNAL-8)
           WRITE (69,'(a4,1x,1ES30.15E3)') 'BORN',MATELEM(0,0)
           IF (MATELEM(0,0).NE.0.0D0) THEN
             WRITE (69,'(a3,1x,1ES30.15E3)') 'FIN',MATELEM(1,0)

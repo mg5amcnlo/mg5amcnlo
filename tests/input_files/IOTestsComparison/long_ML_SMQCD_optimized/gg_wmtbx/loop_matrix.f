@@ -12,7 +12,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > w- t b~ QED=1 QCD=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -52,10 +52,8 @@ C
       PARAMETER (NEXTERNAL=5)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=28,NLOOPWAVEFUNCS=267)
-      INTEGER MAXLWFSIZE
-      PARAMETER (MAXLWFSIZE=4)
-      INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=70, VERTEXMAXCOEFS=5)
+      INCLUDE 'loop_max_coefs.inc'
+      INCLUDE 'coef_specs.inc'
       INTEGER    NCOMB
       PARAMETER (NCOMB=48)
       REAL*8     ZERO
@@ -172,9 +170,9 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       DATA ((LOOPFILTERBUFF(J,I),J=1,NSQUAREDSO),I=1,NLOOPGROUPS)
      $ /NSQSOXNLG*.FALSE./
 
-      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
-      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
-      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+      LOGICAL AUTOMATIC_CACHE_CLEARING
+      DATA AUTOMATIC_CACHE_CLEARING/.TRUE./
+      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_CACHE_CLEARING
 
       INTEGER IDEN
       DATA IDEN/256/
@@ -408,6 +406,10 @@ C     y by each SubProcess.
       DATA WARNED_LORENTZ_STAB_TEST_OFF/.FALSE./
       INTEGER NROTATIONS_DP_BU,NROTATIONS_QP_BU
 
+      LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
+      DATA FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION/.FALSE.,.FALSE./
+      COMMON/ML5_0_FPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDU
+     $ CTION
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -424,12 +426,12 @@ C     ----------
         ENDIF
 
 C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
-C        if AUTOMATIC_TIR_CACHE_CLEARING is disabled.
-        IF(.NOT.AUTOMATIC_TIR_CACHE_CLEARING) THEN
+C        if AUTOMATIC_CACHE_CLEARING is disabled.
+        IF(.NOT.AUTOMATIC_CACHE_CLEARING) THEN
           IF(NROTATIONS_DP.NE.0.OR.NROTATIONS_QP.NE.0) THEN
-            WRITE(*,*) '##INFO: AUTOMATIC_TIR_CACHE_CLEARING i'
-     $       //'s disabled, so MadLoop automatically resets NROTATIONS'
-     $       //'_DP and NROTATIONS_QP to 0.'
+            WRITE(*,*) '##INFO: AUTOMATIC_CACHE_CLEARING is disable'
+     $       //'d, so MadLoop automatically resets NROTATIONS_DP an'
+     $       //'d NROTATIONS_QP to 0.'
             NROTATIONS_QP=0
             NROTATIONS_DP=0
           ENDIF
@@ -756,6 +758,10 @@ C        trust the evaluation for checks.
         ENDDO
       ENDDO
 
+C     Make sure we start with empty caches
+      IF (AUTOMATIC_CACHE_CLEARING) THEN
+        CALL ML5_0_CLEAR_CACHES()
+      ENDIF
 
       IF (IMPROVEPSPOINT.GE.0) THEN
 C       Make the input PS more precise (exact onshell and energy-moment
@@ -788,9 +794,12 @@ C     MadLoop jumps to this label during stability checks when it
 C      recomputes a rotated PS point
  200  CONTINUE
 C     For the computation of a rotated version of this PS point we
-C      must reset the TIR cache since this changes the definition of
-C      the loop denominators.
-      CALL ML5_0_CLEAR_TIR_CACHE()
+C      must reset the all MadLoop cache since this changes the
+C      definition of the loop denominators.
+C     We don't check for AUTOMATIC_CACHE_CLEARING here because the
+C      Lorentz test should anyway be disabled if the flag is turned
+C      off.
+      CALL ML5_0_CLEAR_CACHES()
  208  CONTINUE
 
 C     MadLoop jumps to this label during initialization when it goes
@@ -921,6 +930,10 @@ C     MadLoop jumps to this label during stability checks when it
 C      recomputes the same PS point with a different CTMode
  300  CONTINUE
 
+C     Make sure that the loop calls are performed since this is new
+C      evaluation.
+      CTCALL_REQ_SO_DONE=.FALSE.
+
 
 
 
@@ -961,6 +974,19 @@ C      recomputes the same PS point with a different CTMode
         IF((CTMODERUN.NE.-1).AND..NOT.CHECKPHASE.AND.(.NOT.LTEMP)) THEN
           WRITE(*,*) '##W03 WARNING Contribution ',I,' is unstable.'
         ENDIF
+      ENDDO
+
+C     Make sure that no NaN is present in the result
+      DO K=1,NSQUAREDSO
+        DO J=1,3
+          IF (.NOT.(ANS(J,K).EQ.ANS(J,K))) THEN
+            IF (DOING_QP_EVALS) THEN
+              FPE_IN_QP_REDUCTION = .TRUE.
+            ELSE
+              FPE_IN_DP_REDUCTION = .TRUE.
+            ENDIF
+          ENDIF
+        ENDDO
       ENDDO
 
  1226 CONTINUE
@@ -1268,6 +1294,15 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
         IF(DOING_QP_EVALS.AND.LOOPLIBS_QPAVAILABLE(MLREDUCTIONLIB(I_LIB
      $   ))) THEN
           CALL ML5_0_COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
+C         If a floating point exception was encountered during the
+C          reduction,
+C         the result cannot be trusted at all and we hardset all
+C          accuracies to 1.0
+          IF(FPE_IN_QP_REDUCTION) THEN
+            DO I=0,NSQUAREDSO
+              ACC(I)=1.0D0
+            ENDDO
+          ENDIF
           DO I=0,NSQUAREDSO
             ACCURACY(I)=ACC(I)
           ENDDO
@@ -1283,9 +1318,15 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
      $         ,.FALSE.)
               NEPS=NEPS+1
               CALL ML5_0_COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)
+              CALL ML5_0_COMPUTE_ACCURACY(QP_RES,N_QP_EVAL,ACC,ANS)
               IF(NEPS.LE.10) THEN
                 WRITE(*,*) '##W03 WARNING An unstable PS point was'
      $           ,       ' detected.'
+                IF(FPE_IN_QP_REDUCTION) THEN
+                  WRITE(*,*) '## The last QP reduction was deeme'
+     $             //'d unstable because a floating point exceptio'
+     $             //'n was encountered.'
+                ENDIF
                 IF (NSQUAREDSO.NE.1) THEN
                   WRITE(*,*) '##Accuracies for each split orde'
      $             //'r, starting with the summed case'
@@ -1325,6 +1366,10 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
      $           //'e unstable PS points will now be suppressed.'
               ENDIF
             ELSE
+C             A new reduction tool will be used. Reinitialize the FPE
+C              flags.
+              FPE_IN_DP_REDUCTION=.FALSE.
+              FPE_IN_QP_REDUCTION=.FALSE.
               I_LIB=INDEX_QP_TOOLS(I_QP_LIB)
               EVAL_DONE(1)=.TRUE.
               DO I=2,MAXSTABILITYLENGTH
@@ -1340,11 +1385,24 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
           ENDIF
         ELSEIF(.NOT.DOING_QP_EVALS)THEN
           CALL ML5_0_COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS)
+C         If a floating point exception was encountered during the
+C          reduction,
+C         the result cannot be trusted at all and we hardset all
+C          accuracies to 1.0
+          IF(FPE_IN_DP_REDUCTION) THEN
+            DO I=0,NSQUAREDSO
+              ACC(I)=1.0D0
+            ENDDO
+          ENDIF
           IF(MAXVAL(ACC).GE.MLSTABTHRES) THEN
             I_LIB=I_LIB+1
             IF((I_LIB.GT.NLOOPLIB.OR.MLREDUCTIONLIB(I_LIB).EQ.0
      $       ).AND.QP_TOOLS_AVAILABLE)THEN
               I_LIB=INDEX_QP_TOOLS(1)
+C             A new reduction tool will be used. Reinitialize the FPE
+C              flags.
+              FPE_IN_DP_REDUCTION=.FALSE.
+              FPE_IN_QP_REDUCTION=.FALSE.
               I_QP_LIB=1
               DOING_QP_EVALS=.TRUE.
               EVAL_DONE(1)=.TRUE.
@@ -1356,6 +1414,10 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
               GOTO 200
             ELSEIF(I_LIB.LE.NLOOPLIB.AND.MLREDUCTIONLIB(I_LIB).GT.0
      $       )THEN
+C             A new reduction tool will be used. Reinitialize the FPE
+C              flags.
+              FPE_IN_DP_REDUCTION=.FALSE.
+              FPE_IN_QP_REDUCTION=.FALSE.
               EVAL_DONE(1)=.TRUE.
               DO I=2,MAXSTABILITYLENGTH
                 EVAL_DONE(I)=.FALSE.
@@ -1379,6 +1441,12 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
      $           ,       ' detected.'
                 WRITE(*,*) '##W03 WARNING No quadruple precision wil'
      $           //'l be used.'
+                IF(FPE_IN_DP_REDUCTION) THEN
+                  WRITE(*,*) '## The last DP reduction was deeme'
+     $             //'d unstable because a floating point exceptio'
+     $             //'n was encountered.'
+                ENDIF
+                CALL ML5_0_COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,ACC,ANS)
                 IF (NSQUAREDSO.NE.1) THEN
                   WRITE(*,*) 'Accuracies for each split orde'
      $             //'r, starting with the summed case'
@@ -1490,6 +1558,16 @@ C      bypassed
           ENDDO
         ENDDO
       ENDIF
+
+C     Make sure that we finish by emptying caches
+      IF (AUTOMATIC_CACHE_CLEARING) THEN
+        CALL ML5_0_CLEAR_CACHES()
+      ENDIF
+      END
+
+      SUBROUTINE ML5_0_CLEAR_CACHES()
+C     Clears all the caches used at some point in MadLoop
+      CALL ML5_0_CLEAR_TIR_CACHE()
       END
 
 C     --=========================================--
@@ -2055,7 +2133,7 @@ C
 
       END SUBROUTINE
 
-      SUBROUTINE ML5_0_SET_AUTOMATIC_TIR_CACHE_CLEARING(ONOFF)
+      SUBROUTINE ML5_0_SET_AUTOMATIC_CACHE_CLEARING(ONOFF)
 C     
 C     This function can be called by the MadLoop user so as to
 C      manually chose when
@@ -2067,15 +2145,15 @@ C
 
       LOGICAL ONOFF
 
-      LOGICAL AUTOMATIC_TIR_CACHE_CLEARING
-      DATA AUTOMATIC_TIR_CACHE_CLEARING/.TRUE./
-      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_TIR_CACHE_CLEARING
+      LOGICAL AUTOMATIC_CACHE_CLEARING
+      DATA AUTOMATIC_CACHE_CLEARING/.TRUE./
+      COMMON/ML5_0_RUNTIME_OPTIONS/AUTOMATIC_CACHE_CLEARING
 
       INTEGER N_DP_EVAL, N_QP_EVAL
       COMMON/ML5_0_N_EVALS/N_DP_EVAL,N_QP_EVAL
 
       WRITE(*,*) 'Warning: No TIR caching implemented. Call t'
-     $ //'o SET_AUTOMATIC_TIR_CACHE_CLEARING did nothing.'
+     $ //'o SET_AUTOMATIC_CACHE_CLEARING did nothing.'
       END SUBROUTINE
 
       SUBROUTINE ML5_0_SET_COUPLINGORDERS_TARGET(SOTARGET)
@@ -2238,6 +2316,12 @@ C     U == 3
 C     Stable with IREGI.
 C     U == 4
 C     Stable with Golem95
+C     U == 5
+C     Stable with Samurai
+C     U == 6
+C     Stable with Ninja in double precision
+C     U == 8
+C     Stable with Ninja in quadruple precision
 C     U == 9
 C     Stable with CutTools in quadruple precision.         
 C     
@@ -2303,5 +2387,4 @@ C     arrays
       SUBROUTINE ML5_0_EXIT_MADLOOP()
       CONTINUE
       END
-
 

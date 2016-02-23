@@ -105,6 +105,12 @@
           else if (buff .eq. '#WriteOutFilters') then
              read(666,*,end=999) WriteOutFilters
 
+          else if (buff .eq. '#UseQPIntegrandForNinja') then
+             read(666,*,end=999) UseQPIntegrandForNinja
+
+          else if (buff .eq. '#UseQPIntegrandForCutTools') then
+             read(666,*,end=999) UseQPIntegrandForCutTools
+
           else if (buff .eq. '#ImprovePSPoint') then
              read(666,*,end=999) ImprovePSPoint
              if (ImprovePSPoint .lt. -1 .or.
@@ -232,7 +238,11 @@ C     a non existing or malformed parameter file
       write(*,*) ' > HelInitStartOver          = ',HelInitStartOver
       write(*,*) ' > ZeroThres                 = ',ZeroThres
       write(*,*) ' > OSThres                   = ',OSThres
-      write(*,*) ' > WriteOutFilters           = ',WriteOutFilters      
+      write(*,*) ' > WriteOutFilters           = ',WriteOutFilters
+      write(*,*) ' > UseQPIntegrandForNinja    = ',
+     &UseQPIntegrandForNinja
+      write(*,*) ' > UseQPIntegrandForCutTools = ',
+     &UseQPIntegrandForCutTools
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -248,7 +258,7 @@ C     a non existing or malformed parameter file
       
       include "MadLoopParams.inc"
 
-      MLReductionLib(1)=1
+      MLReductionLib(1)=6
       MLReductionLib(2:6)=0
       IREGIMODE=2
       IREGIRECY=.TRUE.
@@ -270,5 +280,7 @@ C     a non existing or malformed parameter file
       ZeroThres=1.0d-9
       OSThres=1.0d-13
       ImprovePSPoint=2
+      UseQPIntegrandForCutTools=.True.
+      UseQPIntegrandForNinja=.False.
 
       end

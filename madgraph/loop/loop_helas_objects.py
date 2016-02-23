@@ -1585,7 +1585,7 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                         keys = sorted(inter.get('couplings').keys())
                         pdg_codes = [p.get_pdg_code() for p in \
                                      inter.get('particles')]
-                        mothers.sort_by_pdg_codes(pdg_codes, 0)[0]
+                        mothers = mothers.sort_by_pdg_codes(pdg_codes, 0)[0]
                         # Need to check for clashing fermion flow due to
                         # Majorana fermions, and modify if necessary
                         wfNumber = mothers.check_and_fix_fermion_flow(wavefunctions,

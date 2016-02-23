@@ -1734,7 +1734,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 is_lc = True
             else:
                 v = float(v.rsplit('.')[1])
-                misc.sprint( v)
                 if v >= 9:
                     is_lc = True
                 else:

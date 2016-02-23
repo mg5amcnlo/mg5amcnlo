@@ -7,7 +7,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and TIR.
 C     
-C     Process: g g > t t~ QED=0 QCD=2 [ virt = QCD ]
+C     Process: g g > t t~ QED=0 QCD<=2 [ virt = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -17,8 +17,7 @@ C
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=0)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=35)
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       LOGICAL CHECKPCONSERVATION
@@ -446,8 +445,6 @@ C       DP EVALUATION
 C     No TIR caching implemented, this is dummy. (The subroutine is
 C      kept as it might be called by the MC).
       CONTINUE
-
-C     General cache clearing for other reduction methods:
       END SUBROUTINE
 
 
