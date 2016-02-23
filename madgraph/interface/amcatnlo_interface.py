@@ -656,6 +656,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             global glob_directories_map
             glob_directories_map = []
 
+            self.born_processes_for_olp = []
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 if not self.options['low_mem_multicore_nlo_generation']:
@@ -666,6 +667,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                             ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                             path,self.options['OLP'])
                     self._fks_directories.extend(self._curr_exporter.fksdirs)
+                    self.born_processes_for_olp.append(me.born_matrix_element.get('processes')[0])
                 else:
                     glob_directories_map.append(\
                             [self._curr_exporter, me, self._curr_fortran_model, 

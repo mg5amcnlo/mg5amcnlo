@@ -85,7 +85,8 @@ def async_generate_born(args):
     loop_orders = args[3]
     pdg_list = args[4]
     loop_optimized = args[5]
-    realmapout = args[6]
+    OLP = args[6]
+    realmapout = args[7]
 
     logger.info('Generating born %s' % \
             born.born_proc.nice_string(print_weighted=False).replace('Process', 'process'))
@@ -106,15 +107,17 @@ def async_generate_born(args):
     for amp in born.real_amps:
         amp.find_fks_j_from_i(born_pdg_list)        
     
-    myproc = copy.copy(born.born_proc)
-    # take the orders that are actually used by the matrix element
-    myproc['orders'] = loop_orders
-    myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
-    myamp = loop_diagram_generation.LoopAmplitude(myproc)
+    # generate the virtuals if needed
     has_loops = False
-    if myamp.get('diagrams'):
-        has_loops = True
-        born.virt_amp = myamp
+    if born.born_proc.get('NLO_mode') == 'all' and OLP == 'MadLoop':
+        myproc = copy.copy(born.born_proc)
+        # take the orders that are actually used by the matrix element
+        myproc['orders'] = loop_orders
+        myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+        myamp = loop_diagram_generation.LoopAmplitude(myproc)
+        if myamp.get('diagrams'):
+            has_loops = True
+            born.virt_amp = myamp
         
     helasfull = FKSHelasProcess(born, helasreal_list,
                                 loop_optimized = loop_optimized,
@@ -295,8 +298,9 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             logger.info('Generating born and virtual matrix elements...')
             #now loop over born and consume reals, generate virtuals
             bornmapin = []
+            OLP=fksmulti['OLP']
             for i,born in enumerate(born_procs):
-                bornmapin.append([i,born,born_pdg_list,loop_orders,pdg_list,loop_optimized,realmapfiles])
+                bornmapin.append([i,born,born_pdg_list,loop_orders,pdg_list,loop_optimized,OLP,realmapfiles])
 
             try:
                 bornmapout = pool.map_async(async_generate_born,bornmapin).get(9999999)

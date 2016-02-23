@@ -2375,7 +2375,8 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
-                           'loop_optimized_output', 'loop_color_flows']:
+                           'loop_optimized_output', 'loop_color_flows',\
+                           'low_mem_multicore_nlo_generation']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
