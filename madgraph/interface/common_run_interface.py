@@ -2265,10 +2265,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not lhapdf_version:
             lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
-
+        if not pdfsets_dir:
+            pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
+                                
+        if isinstance(filename, int):
+            pdf_info = CommonRunCmd.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
+            filename = pdf_info[filename]['filename']
+        
+        if os.path.exists(pjoin(pdfsets_dir, filename)):
+            logger.debug('%s is already present in %s', (filename, pdfsets_dir))
+            return
+             
         logger.info('Trying to download %s' % filename)
 
         if lhapdf_version.startswith('5.'):
+
             # use the lhapdf-getdata command, which is in the same path as
             # lhapdf-config
             getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf-getdata'))
@@ -2307,6 +2319,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         place as pdfsets_dir, and return a list of dictionaries with the information
         about each pdf set"""
         lhapdf_version = self.get_lhapdf_version()
+        return self.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
+
+    @staticmethod
+    def get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version):
 
         if lhapdf_version.startswith('5.'):
             if os.path.exists('%s.index' % pdfsets_dir):

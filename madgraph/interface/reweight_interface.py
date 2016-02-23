@@ -33,6 +33,7 @@ import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
 import madgraph.interface.common_run_interface as common_run_interface
+import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.iolibs.files as files
 import MadSpin.interface_madspin as madspin_interface
 import madgraph.various.misc as misc
@@ -98,7 +99,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.rwgt_dir = None
         self.exitted = False # Flag to know if do_quit was already called.
         
-        if not mother.options['lhapdf']:
+        if 'lhapdf' in self.mother.options and not mother.options['lhapdf']:
             logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
             self.rwgt_mode = 'LO'
         if event_path:
@@ -339,8 +340,13 @@ class ReweightInterface(extended_cmd.Cmd):
             if args[1] != 'LO':
                 if 'OLP' in self.mother.options and self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Only LO reweighting is allowed for OLP!=MadLoop. Keeping the mode to LO.")
+                    self.rwgt_mode = 'LO'
                 elif not self.banner.get_detail('run_card','keep_rwgt_info'):
                     logger.warning("Missing information for NLO type of reweighitng. Keeping the mode to LO.")
+                    self.rwgt_mode = 'LO'
+                elif 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
+                    logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
+                    self.rwgt_mode = 'LO'
                 else:
                     self.rwgt_mode = args[1]
             else:
@@ -1002,6 +1008,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 with misc.chdir(Pdir):
                     with misc.stdchannel_redirected(sys.stdout, os.devnull):
                         mymod.initialise('param_card_orig.dat')
+                    if 'V' in tag:
+                        madevent_interface.MadLoopInitializer.run_initialization(\
+                                                run_dir=Pdir)
                     
             if hypp_id == 1:
                 #incorrect line
@@ -1023,6 +1032,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 with misc.chdir(Pdir):
                     with misc.stdchannel_redirected(sys.stdout, os.devnull):
                         mymod.initialise('param_card.dat') 
+                    if 'V'  in tag:
+                        misc.sprint("try init")
+                        madevent_interface.MadLoopInitializer.run_initialization(\
+                                            run_dir=Pdir)
+                        misc.sprint("done init")
                     
             space.calculator[run_id] = mymod.get_me
             space.calculator[(run_id,'module')] = mymod
@@ -1323,12 +1337,17 @@ class ReweightInterface(extended_cmd.Cmd):
  
             path = pjoin(path_me,'rw_mevirt', 'Source', 'make_opts')             
             common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)
- 
-         
-            
-            
+             
+             
             #mgcmd.exec_cmd(commandline, precmd=True)        
             logger.info('Done %.4g' % (time.time()-start))
+
+            # Download LHAPDF SET
+            common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
+                mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
+            
+            
+            self.banner.run_card.get_lhapdf_id()
 
             # now store the id information             
             matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()            
