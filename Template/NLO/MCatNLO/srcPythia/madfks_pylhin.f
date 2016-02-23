@@ -77,56 +77,7 @@ c Avoids rounding problems for zero-mass particles
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(jwgtinfo.ge.1.and.jwgtinfo.le.4)then
-          read(iunit,'(a)')string
-          read(iunit,401)wgtref,wgtqes2(2)
-          read(iunit,402)wgtxbj(1,1),wgtxbj(2,1),
-     #                   wgtxbj(1,2),wgtxbj(2,2),
-     #                   wgtxbj(1,3),wgtxbj(2,3),
-     #                   wgtxbj(1,4),wgtxbj(2,4)
-          if(jwgtinfo.eq.1)then
-            read(iunit,403)wgtmuR2(1),wgtmuF12(1),wgtmuF22(1),
-     #                     wgtmuR2(2),wgtmuF12(2),wgtmuF22(2)
-          elseif(jwgtinfo.eq.2)then
-            ii=iSorH_lhe+1
-            if(ii.eq.3)ii=1
-            read(iunit,404)wgtmuR2(ii),wgtmuF12(ii),wgtmuF22(ii)
-            do i=1,mexternal
-              read(iunit,405)(wgtkinE(j,i,iSorH_lhe),j=0,3)
-            enddo
-          elseif(jwgtinfo.eq.3 .or. jwgtinfo.eq.4)then
-            do i=1,mexternal
-              read(iunit,405)(wgtkinE(j,i,1),j=0,3)
-            enddo
-            do i=1,mexternal
-              read(iunit,405)(wgtkinE(j,i,2),j=0,3)
-            enddo
-          endif
-          read(iunit,441)wgtwreal(1),wgtwreal(2),
-     #                   wgtwreal(3),wgtwreal(4)
-          read(iunit,441)wgtwdeg(3),wgtwdeg(4),
-     #                   wgtwdegmuf(3),wgtwdegmuf(4)
-          read(iunit,405)wgtwborn(2),wgtwns(2),
-     #                    wgtwnsmuf(2),wgtwnsmur(2)
-          do i=1,iwgtnumpartn
-            read(iunit,442)wgtwmcxsecE(i),
-     #                     wgtmcxbjE(1,i),wgtmcxbjE(2,i)
-          enddo
-          if(jwgtinfo.eq.4) read(iunit,'(1x,e14.8)') wgtbpower
-          read(iunit,'(a)')string
-        elseif(jwgtinfo.eq.8)then
-          read(iunit,'(a)')string
-          read(iunit,406)wgtref,wgtxsecmu(1,1),numscales,numPDFpairs
-          do i=1,numscales
-            read(iunit,404)(wgtxsecmu(i,j),j=1,numscales)
-          enddo
-          do i=1,numPDFpairs
-            nps=2*i-1
-            nng=2*i
-            read(iunit,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
-          enddo
-          read(iunit,'(a)')string
-        elseif(jwgtinfo.eq.9)then
+        if(jwgtinfo.eq.9)then
            if (nwgt.gt.1) then
               read(iunit,'(a)')string ! <rwgt>
               wgtref=XWGTUP/MQQ
@@ -191,6 +142,7 @@ C--Les Houches Common Blocks
      &              ICOLUP(2,MAXNUP),PUP(5,MAXNUP),VTIMUP(MAXNUP),
      &              SPINUP(MAXNUP)
 c Hard event file (to be entered in Herwig driver)
+      integer i
       CHARACTER*50 QQIN
       COMMON/VVJIN/QQIN
       CHARACTER*80 STRING
@@ -226,8 +178,8 @@ c     information
      &              string(1:1).eq.'#') cycle
                if (INDEX(STRING,"<weight id").ne.0)then
                   nwgt=nwgt+1
-                  read(string(index(string,"'>")+2:
-     $                 index(string,"</weight>")-1),*)weights_info(nwgt)
+                  read(string(index(string,"'>")+2: index(string
+     $                 ,"</weight>")-1),'(a)')weights_info(nwgt)
                   if (nwgt.gt.max_weight_shower) then
                      write (*,*) 'Too many weights in event file. '/
      $                    /'Increase max_weight_shower'

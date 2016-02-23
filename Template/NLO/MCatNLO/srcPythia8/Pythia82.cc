@@ -141,7 +141,7 @@ int main() {
     for (; iLHEFread<nTry ; ++iLHEFread) {
       read.lhef_read_wgts_(cwgt_ww);
     }
-    cwgt_ww[0]=cevwgt.EVWGT
+    cwgt_ww[0]=cevwgt.EVWGT;
     pyanal_(cwgtinfo_nn,cwgt_ww);
 
     if (iEvent % nstep == 0 && iEvent >= 100){

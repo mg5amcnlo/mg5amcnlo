@@ -21,25 +21,28 @@ class MyReader {
     // Read header of event file
     std::stringstream hss;
     std::string hs;
-    cwgtinfo_nn=0;
-    cwgtinfo_weights_info[0]="central value"
+    sprintf(cwgtinfo_weights_info[0], "%50s","central value");
+    cwgtinfo_nn=1;
     while (true){
       hss << reader.headerBlock;
       std::getline(hss,hs,'\n');
-      if (hs.find("</initrwgt>") != std::string::npos) break;
+      if (hs.find("</header>") != std::string::npos) break;
       // Read the wgt information
       if (hs.find("<initrwgt>") != std::string::npos) {
 	while (true) {
 	  std::getline(hss,hs,'\n');
+	  if (hs.find("</initrwgt>") != std::string::npos) break;
 	  if (hs.find("<weightgroup") != std::string::npos) continue;
 	  if (hs.find("</weightgroup>") != std::string::npos) continue;
 	  if (hs.find("<weight id") != std::string::npos) {
+	    std::string sRWGT = hs.substr(hs.find("'>")+2,hs.find("</w")-3);
+	    sRWGT = sRWGT.substr(0,sRWGT.find("<"));
+	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn],"%50s",sRWGT.c_str());
 	    ++cwgtinfo_nn;
-	    std::string cwgtinfo_weights_info[cwgtinfo_nn] = hs.substr(hs.find("'>")+2,hs.find("</weight>"));
 	  }
 	}
       }
-
+      
     }
   }
 
