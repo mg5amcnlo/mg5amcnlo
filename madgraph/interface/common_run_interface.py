@@ -65,6 +65,8 @@ except ImportError:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
+    import internal.save_load_object as save_load_object
+    import internal.gen_crossxhtml as gen_crossxhtml
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True    
 else:
@@ -75,7 +77,10 @@ else:
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
+    import madgraph.iolibs.save_load_object as save_load_object
+    import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
+    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
 
@@ -615,6 +620,30 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return args
 
+    def load_results_db(self):
+        """load the current results status"""
+        
+        # load the current status of the directory
+        if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
+            try:
+                self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
+            except Exception:
+                #the pickle fail -> need to recreate the library
+                model = self.find_model_name()
+                process = self.process # define in find_model_name
+                self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+                self.results.resetall(self.me_dir)
+            else:                                
+                self.results.resetall(self.me_dir)
+            self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
+        else:
+            model = self.find_model_name()
+            process = self.process # define in find_model_name
+            self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+            self.results.resetall(self.me_dir)
+            self.last_mode=''
+        return self.results
+
     ############################################################################
     def do_treatcards(self, line, amcatnlo=False):
         """Advanced commands: create .inc files from param_card.dat/run_card.dat"""
@@ -1054,17 +1083,70 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             raise self.ConfigurationError, '''Can\'t load Reweight module.
             The variable mg5_path might not be correctly configured.'''
         
-        self.to_store.append('event')
+
+                        
+
         if not '-from_cards' in line:
             self.keep_cards(['reweight_card.dat'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
 
+        # load the name of the event file
+        args = self.split_arg(line) 
+
+        if not self.force_run:
+            # forbid this function to create an empty item in results.
+            if self.results.current['cross'] == 0 and self.run_name:
+                self.results.delete_run(self.run_name, self.run_tag)
+            self.results.save()
+            # we want to run this in a separate shell to avoid hard f2py crash
+            command =  [sys.executable]
+            if os.path.exists(pjoin(self.me_dir, 'bin', 'madevent')):
+                command.append(pjoin(self.me_dir, 'bin', 'internal','madevent_interface.py'))
+            else:
+                command.append(pjoin(self.me_dir, 'bin', 'internal', 'amcatnlo_run_interface.py'))
+            if not isinstance(self, cmd.CmdShell):
+                command.append('--web')
+            command.append('reweight')
+            if self.run_name:
+                command.append(self.run_name)
+            else:
+                command += args
+            command.append('-from_cards')
+
+            p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            while p.poll() is None:
+                line = p.stdout.readline()
+                if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:']) and \
+                   not '***********' in line:
+                        print line[:-1].replace('INFO', 'REWEIGTH')
+                elif __debug__ and line:
+                    logger.debug(line[:-1])
+                self.results = self.load_results_db()
+            if p.returncode !=0:
+                logger.error("Reweighting failed")
+
+            # forbid this function to create an empty item in results.
+            
+            if self.results[self.run_name][-2]['cross']==0:
+                self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
+            if self.results.current['cross'] == 0 and self.run_name:
+                self.results.delete_run(self.run_name, self.run_tag)
+            # re-define current run     
+            try:
+                self.results.def_current(self.run_name, self.run_tag)
+            except Exception:
+                pass
+            return              
+
+        self.to_store.append('event')
         # forbid this function to create an empty item in results.
         if self.results.current['cross'] == 0 and self.run_name:
             self.results.delete_run(self.run_name, self.run_tag)
 
-        # load the name of the event file
-        args = self.split_arg(line) 
+
+
+
+
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
         reweight_cmd = reweight_interface.ReweightInterface(args[0], mother=self)
@@ -1079,8 +1161,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
-        with misc.stdchannel_redirected(sys.stdout, os.devnull):
-            del reweight_cmd
             
         logger.info("quit rwgt")
         

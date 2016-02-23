@@ -341,7 +341,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 if 'OLP' in self.mother.options and self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Only LO reweighting is allowed for OLP!=MadLoop. Keeping the mode to LO.")
                     self.rwgt_mode = 'LO'
-                elif not self.banner.get_detail('run_card','keep_rwgt_info'):
+                elif not self.banner.get_detail('run_card','keep_rwgt_info', default=False):
                     logger.warning("Missing information for NLO type of reweighitng. Keeping the mode to LO.")
                     self.rwgt_mode = 'LO'
                 elif 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
@@ -533,7 +533,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         start = time.time()
         cross, ratio, ratio_square,error = {},{},{}, {}
-        for name in type_rwgt:
+        for name in type_rwgt + ['orig']:
             cross[name], error[name] = 0.,0.
             ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
 
@@ -668,7 +668,9 @@ class ReweightInterface(extended_cmd.Cmd):
                     orig_cross, orig_error = self.orig_cross
                     error[name] = variance/math.sqrt(event_nb) * orig_cross + ratio[name]/event_nb * orig_error
                 results.add_detail('error', error[type_rwgt[0]])
-                self.mother.create_plot(mode='reweight', event_path=output2.name,
+                import madgraph.interface.madevent_interface as ME_interface
+                if isinstance(self.mother, ME_interface.MadEventCmd):
+                    self.mother.create_plot(mode='reweight', event_path=output2.name,
                                         tag=self.run_card['run_tag'])
                 #modify the html output to add the original run
                 if 'plot' in results.current.reweight:
@@ -719,13 +721,18 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info('Event %s is now created with new central weight' % output2.name)
         
         for name in cross:
+            if name == 'orig':
+                continue
             logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
                         ('(%s)' %name if name else '',cross[name], error[name]))
             
         self.terminate_fortran_executables(new_card_only=True)
         #store result
         for name in cross:
-            self.all_cross_section[(rewgtid,name)] = (cross[name], error[name])
+            if name == 'orig':
+                self.all_cross_section[name] = (cross[name], error[name])
+            else:
+                self.all_cross_section[(rewgtid,name)] = (cross[name], error[name])
         
         # perform the scanning
         if param_card_iterator:
@@ -810,7 +817,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
 
         type_nlo = self.get_weight_names()
-        final_weight = {}
+        final_weight = {'orig': event.wgt}
         
         if not space: 
             space = self #for multicore: not use so far
@@ -1129,12 +1136,16 @@ class ReweightInterface(extended_cmd.Cmd):
                 split = line.split()
                 if len(split) == 4:
                     cross, error = float(split[0]), float(split[1])
+        if 'orig' not in self.all_cross_section:
             logger.info('Original cross-section: %s +- %s pb' % (cross, error))
-        
+        else: 
+            logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
         logger.info('Computed cross-section:')
         keys = self.all_cross_section.keys()
         keys.sort()
         for key in keys:
+            if key == 'orig':
+                continue
             logger.info('%s : %s +- %s pb' % (key[0] if not key[1] else '%s%s' % key,
                 self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
         self.terminate_fortran_executables()
@@ -1347,8 +1358,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
             
             
-            self.banner.run_card.get_lhapdf_id()
-
             # now store the id information             
             matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()            
             for me in matrix_elements:
