@@ -5097,3 +5097,108 @@ class MadLoopInitializer(object):
 
 AskforEditCard = common_run.AskforEditCard
 
+
+if '__main__' == __name__:
+    # Launch the interface without any check if one code is already running.
+    # This can ONLY run a single command !!
+    import sys
+    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
+               'Please upgrate your version of python.')
+
+    import os
+    import optparse
+    # Get the directory of the script real path (bin)                                                                                                                                                           
+    # and add it to the current PYTHONPATH                                                                                                                                                                      
+    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    sys.path.insert(0, root_path)
+
+    class MyOptParser(optparse.OptionParser):    
+        class InvalidOption(Exception): pass
+        def error(self, msg=''):
+            raise MyOptParser.InvalidOption(msg)
+    # Write out nice usage message if called with -h or --help                                                                                                                                                  
+    usage = "usage: %prog [options] [FILE] "
+    parser = MyOptParser(usage=usage)
+    parser.add_option("-l", "--logging", default='INFO',
+                      help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+    parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                     help='force toce to be in secure mode')
+    parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                     help='force to launch debug mode')
+    parser_error = ''
+    done = False
+    
+    for i in range(len(sys.argv)-1):
+        try:
+            (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
+            done = True
+        except MyOptParser.InvalidOption, error:
+            pass
+        else:
+            args += sys.argv[len(sys.argv)-i:]
+    if not done:
+        # raise correct error:                                                                                                                                                                                  
+        try:
+            (options, args) = parser.parse_args()
+        except MyOptParser.InvalidOption, error:
+            print error
+            sys.exit(2)
+
+    if len(args) == 0:
+        args = ''
+
+    import subprocess
+    import logging
+    import logging.config
+    # Set logging level according to the logging level given by options                                                                                                                                         
+    #logging.basicConfig(level=vars(logging)[options.logging])                                                                                                                                                  
+    import internal.coloring_logging
+    try:
+        if __debug__ and options.logging == 'INFO':
+            options.logging = 'DEBUG'
+        if options.logging.isdigit():
+            level = int(options.logging)
+        else:
+            level = eval('logging.' + options.logging)
+        print os.path.join(root_path, 'internal', 'me5_logging.conf')
+        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        logging.root.setLevel(level)
+        logging.getLogger('madgraph').setLevel(level)
+    except:
+        raise
+        pass
+
+    # Call the cmd interface main loop                                                                                                                                                                          
+    try:
+        if args:
+            # a single command is provided                                                                                                                                                                      
+            cmd_line = MadEventCmd(force_run=True)
+            if not hasattr(cmd_line, 'do_%s' % args[0]):
+                if parser_error:
+                    print parser_error
+                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                else:
+                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+            else:
+                cmd_line.use_rawinput = False
+                cmd_line.run_cmd(' '.join(args))
+                cmd_line.run_cmd('quit')
+
+    except KeyboardInterrupt:
+        print 'quit on KeyboardInterrupt'
+        pass
+    except MadEventAlreadyRunning, error:
+        raise
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+
+

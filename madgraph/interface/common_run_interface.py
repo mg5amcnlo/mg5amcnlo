@@ -523,6 +523,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def __init__(self, me_dir, options, *args, **opts):
         """common"""
 
+        self.force_run = False # this flag force the run even if RunWeb is present
+        if 'force_run' in opts and opts['force_run']:
+            self.force_run = True
+            del opts['force_run']
+
         cmd.Cmd.__init__(self, *args, **opts)
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
@@ -538,21 +543,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.error =  pjoin(self.me_dir, 'error')
         self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
 
-        # Check that the directory is not currently running
-        if os.path.exists(pjoin(me_dir,'RunWeb')): 
-            message = '''Another instance of the program is currently running.
-            (for this exact same directory) Please wait that this is instance is 
-            closed. If no instance is running, you can delete the file
-            %s and try again.''' % pjoin(me_dir,'RunWeb')
-            raise AlreadyRunning, message
-        else:
-            pid = os.getpid()
-            fsock = open(pjoin(me_dir,'RunWeb'),'w')
-            fsock.write(`pid`)
-            fsock.close()
-
-            misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
-                        cwd=me_dir)
+        # Check that the directory is not currently running_in_idle
+        if not self.force_run:
+            if os.path.exists(pjoin(me_dir,'RunWeb')): 
+                message = '''Another instance of the program is currently running.
+                (for this exact same directory) Please wait that this is instance is 
+                closed. If no instance is running, you can delete the file
+                %s and try again.''' % pjoin(me_dir,'RunWeb')
+                raise AlreadyRunning, message
+            else:
+                pid = os.getpid()
+                fsock = open(pjoin(me_dir,'RunWeb'),'w')
+                fsock.write(`pid`)
+                fsock.close()
+    
+                misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
+                            cwd=me_dir)
 
         self.to_store = []
         self.run_name = None
@@ -1435,44 +1441,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 else:
                     self.pdffile = " "
                 return self.pdffile
-                
-    def do_quit(self, line):
-        """Not in help: exit """
-  
-  
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception, error:
-            pass
-        
-        try:
-            self.store_result()
-        except Exception:
-            # If nothing runs they they are no result to update
-            pass
-        
-        try:
-            self.update_status('', level=None)
-        except Exception, error:        
-            pass
-        try:
-            devnull = open(os.devnull, 'w') 
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-        try:
-            devnull.close()
-        except Exception:
-            pass
-        
-        return super(CommonRunCmd, self).do_quit(line)
-
-    
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
-      
+                      
     ############################################################################
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
@@ -1690,10 +1659,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_quit(self, line):
         """Not in help: exit """
 
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception:
-            pass
+        if not self.force_run:
+            try:
+                os.remove(pjoin(self.me_dir,'RunWeb'))
+            except Exception:
+                pass
         try:
             self.store_result()
         except Exception:
