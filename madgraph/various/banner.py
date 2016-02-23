@@ -2055,6 +2055,11 @@ class RunCardNLO(RunCard):
             self['reweight_pdf']=[self['reweight_pdf'][0]]
             self['lhaid']=[self['lhaid'][0]]
             
+        # make sure set have reweight_scale and dyn_scale_choice of length 1 when fixed scales:
+        if self['fixed_ren_scale'] and self['fixed_fac_scale']:
+            self['reweight_scale']=[self['reweight_scale'][0]]
+            self['dynamical_scale_choice']=[0]
+            
         if len(self['reweight_pdf']) != len(self['lhaid']):
             raise InvalidRunCard, "'reweight_pdf' and 'lhaid' lists should have the same length"
         if len(self['reweight_scale']) != len(self['dynamical_scale_choice']):
