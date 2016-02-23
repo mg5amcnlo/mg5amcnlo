@@ -579,7 +579,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         # Check if the line is complete
         if line.endswith('\\'):
-            self.save_line = line[:-1]
+            self.save_line = line[:-1] + ' '
             return '' # do nothing   
                 
         # Remove comment
