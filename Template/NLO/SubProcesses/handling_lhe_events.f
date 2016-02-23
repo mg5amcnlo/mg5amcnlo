@@ -26,6 +26,7 @@ c
       integer idwgt,kk,ii,jj,nn,n
       integer ifile,nevents
       character*10 MonteCarlo
+      character*13 temp
 c Scales
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
       common/cscales_id_string/muR_id_str,muF1_id_str,
@@ -47,15 +48,18 @@ c
                   do ii=1,nint(scalevarF(0))
                      do jj=1,nint(scalevarR(0))
                         idwgt=idwgt+1
-                        write(ifile,602) "      <weight id='",idwgt,"'>"
-     $                       //" muR=",scalevarR(jj)," muF="
+                        write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> dyn=",
+     $                       dyn_scale(kk)," muR=",scalevarR(jj)," muF="
      $                       ,scalevarF(ii)," </weight>"
                      enddo
                   enddo
                else
                   idwgt=idwgt+1
-                  write(ifile,602) "      <weight id='",idwgt,"'>"/
-     $                 /" muR=",1d0," muF=",1d0," </weight>"
+                  write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
+     $                 "      <weight id='",idwgt,"'> dyn=",
+     $                 dyn_scale(kk)," muR=",1d0 ," muF=",1d0
+     $                 ," </weight>"
                endif
                write(ifile,'(a)') "    </weightgroup>"
             enddo
@@ -69,16 +73,20 @@ c
      &                 /"' combine='unknown'>"
                   do n=0,nmemPDF(nn)
                      idwgt=idwgt+1
-                     write(ifile,'(a,i4,a,i7,a)') "      <weight id='"
-     $                    ,idwgt,"'> pdfset=",lhaPDFid(nn)+n
-     $                    ," </weight>"
+                     write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                    ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+     $                    /" </weight>"
                   enddo
                else
                   write(ifile,'(a)') "    <weightgroup "/
      &                 /"type='PDF_variation' combine='none'>"
                   idwgt=idwgt+1
-                  write(ifile,'(a,i4,a,i7,a)') "      <weight id='"
-     $                 ,idwgt,"'> pdfset=",lhaPDFid(nn)," </weight>"
+                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
+                  write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
                endif
                write(ifile,'(a)') "    </weightgroup>"
             enddo
@@ -101,7 +109,6 @@ c
       write(ifile,'(a)')
      #     '  </header>'
  250  format(1x,i8)
- 602  format(a,i4,a,e11.5,a,e11.5,a)
       return
       end
 
@@ -117,6 +124,7 @@ c     parameter to allow to include run_card.inc
       character*20 pdlabel
       integer iappl
       character*7 event_norm
+      character*13 temp
 c     other parameter
       integer nevents_old
       character*80 muR_id_str,muF1_id_str,muF2_id_str,QES_id_str
@@ -225,15 +233,18 @@ c Write here the reweight information if need be
                   do ii=1,nint(scalevarF(0))
                      do jj=1,nint(scalevarR(0))
                         idwgt=idwgt+1
-                        write(ifile,602) "      <weight id='",idwgt,"'>"
-     $                       //" muR=",scalevarR(jj)," muF="
+                        write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
+     $                       "      <weight id='",idwgt,"'> dyn=",
+     $                       dyn_scale(kk)," muR=",scalevarR(jj)," muF="
      $                       ,scalevarF(ii)," </weight>"
                      enddo
                   enddo
                else
                   idwgt=idwgt+1
-                  write(ifile,602) "      <weight id='",idwgt,"'>"/
-     $                 /" muR=",1d0," muF=",1d0," </weight>"
+                  write(ifile,'(a,i4,a,i4,a,e11.5,a,e11.5,a)')
+     $                 "      <weight id='",idwgt,"'> dyn=",
+     $                 dyn_scale(kk)," muR=",1d0 ," muF=",1d0
+     $                 ," </weight>"
                endif
                write(ifile,'(a)') "    </weightgroup>"
             enddo
@@ -247,16 +258,20 @@ c Write here the reweight information if need be
      &                 /"' combine='unknown'>"
                   do n=0,nmemPDF(nn)
                      idwgt=idwgt+1
-                     write(ifile,'(a,i4,a,i7,a)') "      <weight id='"
-     $                    ,idwgt,"'> pdfset=",lhaPDFid(nn)+n
-     $                    ," </weight>"
+                     write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
+                     write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                    ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                    //trim(adjustl(lhaPDFsetname(nn)))/
+     $                    /" </weight>"
                   enddo
                else
                   write(ifile,'(a)') "    <weightgroup "/
      &                 /"type='PDF_variation' combine='none'>"
                   idwgt=idwgt+1
-                  write(ifile,'(a,i4,a,i7,a)') "      <weight id='"
-     $                 ,idwgt,"'> pdfset=",lhaPDFid(nn)," </weight>"
+                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
+                  write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
+     $                 ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
                endif
                write(ifile,'(a)') "    </weightgroup>"
             enddo
@@ -278,7 +293,6 @@ c Write here the reweight information if need be
      &     /' run_card.dat not found   :',path(1:index(path," ")-1)
      &     //'run_card.dat'
       stop
- 602  format(a,i4,a,e11.5,a,e11.5,a)
       end
 
 
@@ -340,6 +354,8 @@ c     find the start of a weightgroup
                  do_rwgt_scale=.true.
                  dyn_scale(0)=dyn_scale(0)+1
                  read(ifile,'(a)')string
+                 read(string(index(string,'dyn=')+4:),*)
+     $                dyn_scale(dyn_scale(0))
                  read(string(index(string,'muR=')+4:),*) scalevarR(1)
                  read(string(index(string,'muF=')+4:),*) scalevarF(1)
                  scalevarR(0)=1d0
@@ -379,6 +395,13 @@ c     find the start of a weightgroup
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
                     nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
+                    if (nmemPDF(lhaPDFid(0)).eq.0) then
+                       read(string(index(string,'pdfset=')+7:),*)
+     $                      lhaPDFid(lhaPDFid(0))
+     $                      ,lhaPDFsetname(lhaPDFid(0))
+                       lhaPDFsetname(lhaPDFid(0))
+     $                      =trim(adjustl(lhaPDFsetname(lhaPDFid(0))))
+                    endif
                  enddo
                  if (nmemPDF(lhaPDFid(0)).gt.0) then
                     lpdfvar(lhaPDFid(0))=.true.

@@ -561,6 +561,10 @@ c         m^2+pt^2=p(0)^2-p(3)^2=(p(0)+p(3))*(p(0)-p(3))
 c         \sqrt(s), partonic energy
           tmp=dsqrt(2d0*dot(pp(0,1),pp(0,2)))
           temp_scale_id='\sqrt(s), partonic energy'
+      elseif(dynamical_scale_choice.eq.5) then
+c         fixed scale
+          tmp=91.188d0
+          temp_scale_id='fixed scale equal to 91.188'
       elseif(dynamical_scale_choice.eq.0) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: ENTER YOUR CODE HERE                                 cc

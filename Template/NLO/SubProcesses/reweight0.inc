@@ -148,3 +148,8 @@ c NLO+NNLL jet veto stuff
       character*1024 n_ctr_str(max_n_ctr)
       double precision momenta_str(0:3,maxparticles,max_n_ctr)
       common /c_rwgt_lines/n_ctr_str,momenta_str,n_ctr_found,n_mom_conf
+
+      integer max_weight_shower
+      parameter (max_weight_shower=1024)
+      
+      

@@ -75,13 +75,13 @@ c set the weights_info string for PDF variation
             if (lpdfvar(nn)) then
                do n=0,nmemPDF(nn)
                   nwgt=nwgt+1
-                  write(temp,'(a4,i8,x)') "PDF=",lhaPDFid(nn)+n
+                  write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
                   write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $                 /' '//trim(adjustl(lhaPDFsetname(nn)))
                enddo
             else
                nwgt=nwgt+1
-               write(temp,'(a4,i8,x)') "PDF=",lhaPDFid(nn)
+               write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
                write(weights_info(nwgt),'(a)') trim(adjustl(temp))/
      $              /' '//trim(adjustl(lhaPDFsetname(nn)))
             endif

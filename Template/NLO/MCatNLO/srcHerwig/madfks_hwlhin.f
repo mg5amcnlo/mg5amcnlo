@@ -35,15 +35,11 @@ c evwgt_lh is meant to be passed to stdhep
       DOUBLE PRECISION EVWGT_LH
       COMMON/CEVWGT_LH/EVWGT_LH
       include 'reweight0.inc'
-      integer iww,max_weight
-      integer maxRWGT
-      parameter (maxRWGT=100)
-      double precision wgtxsecRWGT(maxRWGT)
-      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
-      double precision ww(max_weight)
+      integer iww
+      double precision ww(max_weight_shower)
       common/cww/ww
-      integer numRWGTS
-      common/cnrwgts/numRWGTS
+      integer nwgt
+      common/cnwgt/nwgt
 C
       IF (IERROR.NE.0) RETURN
 c
@@ -128,54 +124,14 @@ c Avoids rounding problems for zero-mass particles
           enddo
           read(iunit,'(a)')string
         elseif(jwgtinfo.eq.9)then
-          if (numscales.eq.0 .and. numPDFpairs.eq.0) then
-             write (*,*) 'event file not correct format'
-             write(*,*)'FATAL ERROR #3 IN UPEVNT'
-             stop
-          endif
-          read(iunit,'(a)')string
-          wgtref=XWGTUP/MQQ
-          do i=1,numscales
-             do j=1,numscales
-                call read_rwgt_line(iunit,idwgt,wgtxsecmu(i,j))
-                if (numscales.ne.3) then
-                   write (*,*) 'ERROR #1 in UPEVNT:',numscales
-                   stop
-                endif
-                if(idwgt.eq.1001.and.(i.ne.1.or.j.ne.1).or.
-     &             idwgt.eq.1002.and.(i.ne.1.or.j.ne.2).or.
-     &             idwgt.eq.1003.and.(i.ne.1.or.j.ne.3).or.
-     &             idwgt.eq.1004.and.(i.ne.2.or.j.ne.1).or.
-     &             idwgt.eq.1005.and.(i.ne.2.or.j.ne.2).or.
-     &             idwgt.eq.1006.and.(i.ne.2.or.j.ne.3).or.
-     &             idwgt.eq.1007.and.(i.ne.3.or.j.ne.1).or.
-     &             idwgt.eq.1008.and.(i.ne.3.or.j.ne.2).or.
-     &             idwgt.eq.1009.and.(i.ne.3.or.j.ne.3))then
-                   write(*,*)'incorrect event wgt id',idwgt,i,j
-                   stop
-                endif
-c 1 = central,
-c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
-c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
-c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
-                iww=iww+1
-                ww(iww)=wgtxsecmu(i,j)
+          if (nwgt.gt.1) then
+             read(iunit,'(a)')string ! <rwgt>
+             wgtref=XWGTUP/MQQ
+             do iww=2,nwgt      ! start at 2, because 'central value' is not part of the extra weights
+                call read_rwgt_line_wgt(iunit,ww(iww))
              enddo
-          enddo
-          do i=1,2*numPDFpairs
-             call read_rwgt_line(iunit,idwgt,wgtxsecPDF(i))
-             iww=iww+1
-             ww(iww)=wgtxsecPDF(i)
-          enddo
-          do i=1,numRWGTS
-             call read_rwgt_line_RWGT(iunit,cidwgt,wgtxsecRWGT(i))
-             iww=iww+1
-             ww(iww)=wgtxsecRWGT(i)
-          enddo
-          if (numscales.eq.0) then
-             wgtxsecmu(1,1)=wgtref
+             read(iunit,'(a)')string ! </rwgt>
           endif
-          read(iunit,'(a)')string
         else
           do while(index(string,'</event>').eq.0)
              read(iunit,'(a)')string
@@ -237,76 +193,43 @@ c Hard event file (to be entered in Herwig driver)
       COMMON/VVJIN/QQIN
       CHARACTER*80 STRING
       include 'reweight0.inc'
-      integer nwgt,max_weight
+      integer nwgt
       common/cnwgt/nwgt
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*50 weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
-      double precision xmuR,xmuF
-      integer iPDF,i,numRWGTS
-      common/cnrwgts/numRWGTS
-      character*20 sRWGT
-C
-      numscales=0
-      numPDFpairs=0
-      numRWGTS=0
+      
       nwgt=1
-      weights_info(nwgt)="central value  "
+      weights_info(nwgt)="central value"
       IF (IERROR.NE.0) RETURN
 C--SET UP INPUT FILES
       OPEN(UNIT=61,FILE=QQIN,STATUS='UNKNOWN')
-C--Read (non compulsory) headers here if need be
-      DO WHILE(.TRUE.)
+C--Read (non compulsory) headers here if need be. Look for extra
+C--weights.
+      do
          READ(61,'(a)')STRING
-c --> see if we have the new format for the weights
-         IF ( INDEX(STRING,"<weightgroup type='scale_variation'").ne.0
-     $        .and.STRING(1:1).ne.'#') then
-            DO WHILE (.TRUE.)
-               READ(61,'(a)') STRING
-               if (INDEX(STRING,"</weightgroup>").ne.0 .and.
-     $              STRING(1:1).ne.'#') exit
-               numscales=numscales+1
-               read(string(index(string,"muR")+4:index(string,"muF")-1),*)xmuR
-               read(string(index(string,"muF")+4:index(string,"</w")-1),*)xmuF
-c 1 = central,
-c 2 = (muR0,muF0),    3 = (muR0,muFup),     4 = (muR0,muFdown)
-c 5 = (muRup,muF0),   6 = (muRup,muFup),    7 = (muRup,muFdown)
-c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
-               write(weights_info(numscales+1), 111)"muR=",xmuR,"muF=",xmuF
-            ENDDO
-            nwgt=nwgt+numscales
-            numscales=nint(sqrt(dble(numscales)))
-            if (numscales.ne.3) then
-               write (*,*) 'ERROR #1 in UPINIT:',numscales
-               stop
-            endif
-         ELSEIF( INDEX(STRING,"<weightgroup type='PDF_variation'").ne.0
-     $           .and.STRING(1:1).ne.'#') then
-            DO WHILE (.TRUE.)
-               READ(61,'(a)') STRING
-               if (INDEX(STRING,"</weightgroup>").ne.0 .and.
-     $              STRING(1:1).ne.'#') exit
-               numPDFpairs=numPDFpairs+1
-               read(string(index(string,"pdf")+7:index(string,"</w")-1),*)iPDF
-               write(weights_info(numscales**2+numPDFpairs+1),112)
-     &              'PDF=',iPDF,'   '
-            ENDDO
-            nwgt=nwgt+numPDFpairs
-            numPDFpairs=numPDFpairs/2
-         ELSEIF( INDEX(STRING,"<weightgroup type='mg_reweighting'").ne.0
-     $           .and.STRING(1:1).ne.'#') then
-            DO WHILE (.TRUE.)
-               READ(61,'(a)') STRING
-               if (INDEX(STRING,"<weight id").ne.0 .and.
-     $              STRING(1:1).ne.'#')then
-                  numRWGTS=numRWGTS+1
-                  read(string(index(string,"weight id")+11:index(string,"'>")-1),*)sRWGT
-                  write(weights_info(numscales**2+2*numPDFpairs+numRWGTS+1),113)sRWGT
+         if (index(string,'<initrwgt>').ne.0) then
+c Found extra weight labels:  
+            do
+               READ(61,'(a)')STRING
+c     exit when end of weight information is found
+               IF ( INDEX(STRING,'</initrwgt>').ne.0 .and.
+     &              STRING(1:1).ne.'#' ) exit
+c     skip comments and weightgroup lines. We just need to copy this
+c     information
+               if ( index(string,"<weightgroup").ne.0 .or.
+     &              index(string,"</weightgroup>").ne.0 .or.
+     &              string(1:1).eq.'#') cycle
+               if (INDEX(STRING,"<weight id").ne.0)then
+                  nwgt=nwgt+1
+                  read(string(index(string,"'>")+2:
+     $                 index(string,"</weight>")-1),*)weights_info(nwgt)
+                  if (nwgt.gt.max_weight_shower) then
+                     write (*,*) 'Too many weights in event file. '/
+     $                    /'Increase max_weight_shower'
+                     stop
+                  endif
                endif
-               if (INDEX(STRING,"</weightgroup>").ne.0 .and.
-     $              STRING(1:1).ne.'#') exit
-            ENDDO
-            nwgt=nwgt+numRWGTS
+            enddo
          ELSEIF ( INDEX(STRING,'</header>').ne.0 .and.
      &        STRING(1:1).ne.'#' ) then
             EXIT
@@ -396,43 +319,18 @@ C--CONVERGED: RESCALE 3-MOMENTA AND BOOST BACK
       END
 
 
-      subroutine read_rwgt_line(unit,id,wgt)
+      subroutine read_rwgt_line_wgt(unit,wgt)
 c read a line in the <rwgt> tag. The syntax should be
 c  <wgt id='1001'> 0.1234567e+01 </wgt>
 c The id should be exactly 4 digits long.
       implicit none
-      integer unit,id,wgt_start,id_start
+      integer unit,wgt_start
       double precision wgt
       character*100 buff
       read (unit,'(a)') buff
 c Use char() to make sure that the non-standard characters are compiler
 c independent (char(62)=">", char(61)="=", char(39)="'")
       wgt_start=index(buff,CHAR(39)//CHAR(62))+2
-      id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
-      read (buff(id_start:100),'(i4)') id
       read (buff(wgt_start:100),*) wgt
-      return
-      end
-
-
-      subroutine read_rwgt_line_RWGT(unit,cid,wgt)
-c read a line in the <rwgt> tag. The syntax should be
-c  <wgt id='1001'> 0.1234567e+01 </wgt>
-c The id should be exactly 4 digits long.
-      implicit none
-      integer unit,wgt_start,id_start,id_end
-      double precision wgt
-      character*100 buff
-      character*20 cid
-      read (unit,'(a)') buff
-c Use char() to make sure that the non-standard characters are compiler
-c independent (char(62)=">", char(61)="=", char(39)="'")
-      wgt_start=index(buff,CHAR(39)//CHAR(62))+2
-      id_start=index(buff,'id'//CHAR(61)//CHAR(39))+4
-      id_end=wgt_start-3
-
-      read (buff(id_start:id_end),*) cid
-      read (buff(wgt_start:100),*) wgt
-
       return
       end

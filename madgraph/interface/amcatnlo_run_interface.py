@@ -3626,7 +3626,12 @@ RESTART = %(mint_mode)s
             use_lhapdf=False
             lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
                                            stdout=subprocess.PIPE).stdout.read().strip() 
-            candidates=[x[0] for x in os.walk(lhapdf_libdir)]
+
+            try:
+                candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
+                            if os.path.isdir(pjoin(lhapdf_libdir,path))]
+            except OSError:
+                candidates=[]
             for candidate in candidates:
                 if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
                     sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
@@ -3636,7 +3641,24 @@ RESTART = %(mint_mode)s
                         break
                     except ImportError:
                         sys.path.pop(0)
-                        break
+                        continue
+                
+            if not use_lhapdf:
+                try:
+                    candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
+                                if os.path.isdir(pjoin(lhapdf_libdir+'64',path))]
+                except OSError:
+                    candidates=[]
+                for candidate in candidates:
+                    if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                        sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
+                        try:
+                            import lhapdf
+                            use_lhapdf=True
+                            break
+                        except ImportError:
+                            sys.path.pop(0)
+                            continue
                 
             if not use_lhapdf:
                 try:
@@ -3647,7 +3669,9 @@ RESTART = %(mint_mode)s
                                    "cannot compute PDF uncertainty from the "\
                                    "weights in the events. The weights in the LHE " \
                                    "event files will still cover all PDF set members, "\
-                                   "but there will be no PDF uncertainty printed in the run summary.")
+                                   "but there will be no PDF uncertainty printed in the run summary. \n "\
+                                   "If the python interface to LHAPDF is available on your system, try "\
+                                   "adding its location to the PYTHONPATH environment variable.")
                     use_lhapdf=False
 
         pdf_info=[]

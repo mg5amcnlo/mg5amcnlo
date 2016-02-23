@@ -1027,7 +1027,11 @@ class HwU(Histogram):
                 except:
                     use_lhapdf=False
                 else:
-                    candidates=[x[0] for x in os.walk(lhapdf_libdir)]
+                    try:
+                        candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
+                                    if os.path.isdir(pjoin(lhapdf_libdir,path))]
+                    except OSError:
+                        candidates=[]
                     for candidate in candidates:
                         if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
                             sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
@@ -1037,8 +1041,25 @@ class HwU(Histogram):
                                 break
                             except ImportError:
                                 sys.path.pop(0)
-                                break
+                                continue
                        
+                    if not use_lhapdf:
+                        try:
+                            candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
+                                        if os.path.isdir(pjoin(lhapdf_libdir+'64',path))]
+                        except OSError:
+                            candidates=[]
+                        for candidate in candidates:
+                            if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                                sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
+                                try:
+                                    import lhapdf
+                                    use_lhapdf=True
+                                    break
+                                except ImportError:
+                                    sys.path.pop(0)
+                                    continue
+                
                 if not use_lhapdf:
                     try:
                         import lhapdf
@@ -1049,7 +1070,9 @@ class HwU(Histogram):
                                        "weights in the histograms. The weights in the HwU data files " \
                                        "still cover all PDF set members, "\
                                        "but the automatic computation of the uncertainties from "\
-                                       "those weights might not be correct.")
+                                       "those weights might not be correct. \n "\
+                                       "If the python interface to LHAPDF is available on your system, try "\
+                                       "adding its location to the PYTHONPATH environment variable.")
                         use_lhapdf=False
 
             # Place the new weight label last before the first tuple
