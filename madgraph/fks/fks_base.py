@@ -589,6 +589,7 @@ class FKSProcess(object):
         leglist = self.get_leglist()
         extra_cnt_pdgs = []
         for i, real_list in enumerate(self.reals):
+            # i is the born leg which splits
             # keep track of the id of the mother (will be used to constrct the
             # spin-correlated borns)
             ij_id = leglist[i].get('id')
@@ -656,8 +657,12 @@ class FKSProcess(object):
                     # squared orders (i.e. if it will appear as a P0 dir)
                     # if it does not exist, then no need to worry about anything, as all further
                     # checks will have stricter orders than here
+                    
+                    cnt_process_for_amp = copy.copy(cnt_process)
+                    cnt_process_for_amp['squared_orders'] = copy.copy(cnt_process['squared_orders'])
+                    cnt_amp = diagram_generation.Amplitude(cnt_process_for_amp)
 
-                    if bool(diagram_generation.Amplitude(copy.copy(cnt_process))['diagrams']) and \
+                    if bool(cnt_amp['diagrams']) and \
                        cnt_process['squared_orders'][cnt_ord] >= 2:
 
                         # check condition 2) above (has_coll_sing_cnt)
@@ -705,13 +710,13 @@ class FKSProcess(object):
 
                 # keep the extra_cnt if needed
                 if has_coll_sing_cnt:
-
-                    # for the moment we jsut theck the pdgs, regardless of any
+                    # for the moment we just check the pdgs, regardless of any
                     # permutation in the final state
                     try:
                         indx = extra_cnt_pdgs.index([l['id'] for l in cnt_process['legs']])
                     except ValueError:
                         extra_cnt_pdgs.append([l['id'] for l in cnt_process['legs']])
+                        assert cnt_amp != None
                         self.extra_cnt_amp_list.append(cnt_amp)
                         indx = len(self.extra_cnt_amp_list) - 1
                       
