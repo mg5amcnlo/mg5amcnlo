@@ -673,7 +673,7 @@ class HwU(Histogram):
         # Explicitly close the opened stream for clarity.
         if isinstance(file_path, str):
             stream.close()
-    
+
     def addEvent(self, x_value, weights = 1.0):
         """ Add an event to the current plot. """
         

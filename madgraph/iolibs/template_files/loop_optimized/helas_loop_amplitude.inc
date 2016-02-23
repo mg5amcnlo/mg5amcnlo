@@ -33,6 +33,7 @@ C
 C LOCAL VARIABLES 
 C
       %(real_dp_format)s PL(0:3,NLOOPLINE)
+      %(real_mp_format)s MP_PL(0:3,NLOOPLINE)	  
       %(mass_dp_format)s M2L(NLOOPLINE)
       INTEGER PAIRING(NLOOPLINE),WE(%(nwfsargs)d)
       INTEGER I, J, K, TEMP,I_LIB
@@ -70,16 +71,22 @@ C
 ## }
 
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
-	  common/%(proc_prefix)sW/W 
+	  common/%(proc_prefix)sW/W
+      %(complex_mp_format)s MP_W(20,NWAVEFUNCS)
+      common/%(proc_prefix)sMP_W/MP_W
+
 	  %(real_dp_format)s LSCALE 
 	  INTEGER CTMODE
-          common/%(proc_prefix)sCT/LSCALE,CTMODE
+      common/%(proc_prefix)sCT/LSCALE,CTMODE
 	  INTEGER LIBINDEX
 	  common/%(proc_prefix)sI_LIB/LIBINDEX
 
 C ----------
 C BEGIN CODE
 C ----------
+
+C Determine it uses qp or not
+      DOING_QP = (CTMODE.GE.4)
 
 ## if(not AmplitudeReduction){
 	  IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOINDEX,LOOPNUM)) THEN
@@ -103,8 +110,14 @@ C For loop-induced processes, we must reduce this loop amplitude if it contribut
         TEMP=1
         DO J=1,NLOOPLINE
 		  PL(I,J)=0.D0
+		  IF (DOING_QP) THEN
+		    MP_PL(I,J)=0.0e+0_16		    
+		  ENDIF
           DO K=TEMP,(TEMP+PAIRING(J)-1)
             PL(I,J)=PL(I,J)-DBLE(W(1+I,WE(K)))
+			IF (DOING_QP) THEN
+		      MP_PL(I,J)=MP_PL(I,J)-REAL(MP_W(1+I,WE(K)),KIND=16)	    
+		    ENDIF
           ENDDO
           TEMP=TEMP+PAIRING(J)
         ENDDO
@@ -120,22 +133,56 @@ C not able to deal with complex masses
 	   EXIT
 	 ENDIF
       ENDDO
-C Determine it uses qp or not
-      doing_qp=.FALSE.
-      IF(CTMODE.GE.4)doing_qp=.TRUE.
 C Choose the correct loop library
-      CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
+      CALL %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,ID,doing_qp,I_LIB)
       IF(MLReductionLib(I_LIB).EQ.1)THEN
-C USE CUTTOOLS
+C CutTools is used
 ## if(not AmplitudeReduction){
 	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+## if(samurai_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.5) THEN
+C Samurai is used
+	CALL %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+##	}
+## if(ninja_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.6) THEN
+C Ninja is used
+    IF (.NOT.DOING_QP) THEN
+	  CALL %(proc_prefix)sNINJA_LOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+	ELSE
+## if(ninja_supports_quad_prec){
+	  CALL %(proc_prefix)sMP_NINJA_LOOP(NLOOPLINE,MP_PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+## } else {
+      WRITE(*,*) 'ERROR: Ninja should not be called in quadruple precision since the installed version considered does not support it.'
+	  STOP 9
+## }
+	ENDIF
+##	}
       ELSE
-C USE TIR
+C Tensor Integral Reduction is used 
 	CALL %(proc_prefix)sTIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
 ## }else{
 	CALL %(proc_prefix)sCTLOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
+## if(samurai_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.5) THEN
+	CALL %(proc_prefix)sSAMURAI_LOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
+##	}
+## if(ninja_available){
+	  ELSEIF (MLReductionLib(I_LIB).EQ.6) THEN
+        IF (.NOT.DOING_QP) THEN
+	      CALL %(proc_prefix)sNINJA_LOOP(NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
+	    ELSE
+## if(ninja_supports_quad_prec){
+	      CALL %(proc_prefix)sMP_NINJA_LOOP(NLOOPLINE,MP_PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
+## } else {
+          WRITE(*,*) 'ERROR: Ninja should not be called in quadruple precision since the installed version considered does not support it.'
+	      STOP 9
+## }
+	    ENDIF
+
+##	}
       ELSE
-C USE TIR
+C Tensor Integral Reduction is used 
 	CALL %(proc_prefix)sTIRLOOP(1,LOOPNUM,I_LIB,NLOOPLINE,PL,M2L,RANK,AMPL(1,NCTAMPS+LOOPNUM),S(1,LOOPNUM))
 ## }
       ENDIF

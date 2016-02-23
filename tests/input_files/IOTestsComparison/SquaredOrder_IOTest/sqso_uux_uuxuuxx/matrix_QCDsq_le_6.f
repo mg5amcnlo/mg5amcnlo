@@ -180,6 +180,23 @@ C     ----------
       DO I=1,NSQAMPSO
         ANS(I) = 0D0
       ENDDO
+C     When spin-2 particles are involved, the Helicity filtering is
+C      dangerous for the 2->1 topology.
+C     This is because depending on the MC setup the initial PS points
+C      have back-to-back initial states
+C     for which some of the spin-2 helicity configurations are zero.
+C      But they are no longer zero
+C     if the point is boosted on the z-axis. Remember that HELAS
+C      helicity amplitudes are no longer
+C     lorentz invariant with expternal spin-2 particles (only the
+C      helicity sum is).
+C     For this reason, we simply remove the filterin when there is
+C      only three external particles.
+      IF (NEXTERNAL.LE.3) THEN
+        DO IHEL=1,NCOMB
+          GOODHEL(IHEL)=.TRUE.
+        ENDDO
+      ENDIF
       DO IHEL=1,NCOMB
         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN

@@ -17,10 +17,8 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
 	  %(complex_format)s CMPLX_ZERO
 	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-	  INTEGER MAXLWFSIZE
-	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-	  INTEGER LOOPMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+      include 'loop_max_coefs.inc'
+      include 'coef_specs.inc'
       INTEGER    NCOLORROWS
 	  PARAMETER (NCOLORROWS=%(nloopamps)d)
 	  INTEGER    NLOOPGROUPS
@@ -109,10 +107,8 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
 	  %(complex_format)s CMPLX_ZERO
 	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-	  INTEGER MAXLWFSIZE
-	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-	  INTEGER LOOPMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+      include 'loop_max_coefs.inc'
+      include 'coef_specs.inc'
 	  INTEGER    NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 	  INTEGER    NCOMB
@@ -140,4 +136,28 @@ C
       CALL %(mp_prefix)s%(proc_prefix)sMERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST,LOOPCOEFS(0,LOOP_GROUP_NUMBER))
 
 	  END
+## }
+
+## if(ninja_available){
+      SUBROUTINE %(mp_prefix)s%(proc_prefix)sINVERT_MOMENTA_IN_POLYNOMIAL(NCOEFS,POLYNOMIAL)
+C       Just a handy subroutine to modify the coefficients for the
+C       tranformation q_loop -> -q_loop
+C       It is only used for the NINJA interface
+        IMPLICIT NONE
+
+      	include 'loop_max_coefs.inc'
+        INTEGER I, NCOEFS
+
+		%(complex_format)s POLYNOMIAL(0:NCOEFS-1)
+
+        INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)
+		%(coef_to_rank_map_definition)s
+
+        DO I=0,NCOEFS-1
+          IF (MOD(COEFTORANK_MAP(I),2).eq.1) then
+            POLYNOMIAL(I)=-POLYNOMIAL(I)
+          ENDIF
+        ENDDO
+
+      END
 ## }

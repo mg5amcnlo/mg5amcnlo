@@ -882,7 +882,7 @@ class MECmdShell(IOTests.IOTestManager):
         try:
             self.assertAlmostEqual(6700.0, cross_section,delta=50)
         except TypeError:
-            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
+            self.assertTrue(cross_section < 6750.0 and cross_section > 6650.0)
 
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+4])

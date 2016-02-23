@@ -44,6 +44,9 @@ import math
 import madgraph.core.drawing as draw
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_objects
+import logging
+
+logger = logging.getLogger('madgraph.drawing_eps')
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 
@@ -199,9 +202,37 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
             curvature = 4
         else:
             curvature = 5
-        
-        #add the code in the correct format
-        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+            
+        is_tadpole = line.begin.pos_x==line.end.pos_x and \
+                                                line.begin.pos_y==line.end.pos_y
+                                                
+        if is_tadpole:
+            # Obtain the direction of the propagator supporting the tadpole
+            direction = None
+            for l in line.begin.lines:
+                new_direction = (l.end.pos_x-l.begin.pos_x, l.end.pos_y-l.begin.pos_y)
+                if new_direction==(0.0,0.0):
+                    continue
+                norm = math.sqrt(new_direction[0]**2+new_direction[1]**2)
+                new_direction = (new_direction[0]/norm, new_direction[1]/norm)
+
+                if not direction:
+                    direction = new_direction
+                else:
+                    if direction not in \
+                         [new_direction, (-new_direction[0],-new_direction[1])]:
+                        pass
+#                        logger.debug('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                continue
+
+            #add the code in the correct format
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+             line.end.pos_x+0.01*direction[0], line.end.pos_y+0.01*direction[1],
+                                   '%s Ffermionl' % (curvature*7))
+        else:
+            #add the code in the correct format
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Ffermionl' %\
                          curvature)
     def draw_dashed(self, line):
@@ -219,8 +250,37 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         else:
             curvature = 5
 
-        #add the code in the correct format
-        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+        is_tadpole = line.begin.pos_x==line.end.pos_x and \
+                                                line.begin.pos_y==line.end.pos_y
+                                                
+        if is_tadpole:
+            # Obtain the direction of the propagator supporting the tadpole
+            direction = None
+            for l in line.begin.lines:
+                new_direction = (l.end.pos_x-l.begin.pos_x, l.end.pos_y-l.begin.pos_y)
+                if new_direction==(0.0,0.0):
+                    continue
+                norm = math.sqrt(new_direction[0]**2+new_direction[1]**2)
+                new_direction = (new_direction[0]/norm, new_direction[1]/norm)
+
+                if not direction:
+                    direction = new_direction
+                else:
+                    if direction not in \
+                         [new_direction, (-new_direction[0],-new_direction[1])]:
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass
+
+            #add the code in the correct format
+            x, y = self.rescale(line.begin.pos_x, line.begin.pos_y)
+            self.text += '%s %s moveto'%(x, y)
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+             line.end.pos_x+0.01*direction[0], line.end.pos_y+0.01*direction[1],
+                                   '%s Fhiggsl' % (curvature*7))
+        else:
+            #add the code in the correct format
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
                          line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fhiggsl'% curvature)
 
     def draw_dotted(self,line):
@@ -250,8 +310,35 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         else:
             curvature = 5
 
-        #add the code in the correct format
-        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
+        is_tadpole = line.begin.pos_x==line.end.pos_x and \
+                                                line.begin.pos_y==line.end.pos_y
+                                                
+        if is_tadpole:
+            # Obtain the direction of the propagator supporting the tadpole
+            direction = None
+            for l in line.begin.lines:
+                new_direction = (l.end.pos_x-l.begin.pos_x, l.end.pos_y-l.begin.pos_y)
+                if new_direction==(0.0,0.0):
+                    continue
+                norm = math.sqrt(new_direction[0]**2+new_direction[1]**2)
+                new_direction = (new_direction[0]/norm, new_direction[1]/norm)
+
+                if not direction:
+                    direction = new_direction
+                else:
+                    if direction not in \
+                         [new_direction, (-new_direction[0],-new_direction[1])]:
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass           
+            
+            #add the code in the correct format
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+             line.end.pos_x+0.01*direction[0], line.end.pos_y+0.01*direction[1],
+                                   '%s Fghostl' % (curvature*7))
+        else:
+            #add the code in the correct format
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,\
               line.end.pos_x+0.01, line.end.pos_y+0.01, '%s Fghostl'% curvature)
 
     def draw_wavy(self, line, opt=0, type=''):
@@ -275,14 +362,43 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
     def draw_circled_wavy(self, line, cercle, opt=0, type=''):
         """ADD the EPS code for this photon line."""
+
         if not cercle:
             curvature = 4
         else:
             curvature = 5
+        
+        is_tadpole = line.begin.pos_x==line.end.pos_x and \
+                                                line.begin.pos_y==line.end.pos_y
+                                                
+        if is_tadpole:
+            # Obtain the direction of the propagator supporting the tadpole
+            direction = None
+            for l in line.begin.lines:
+                new_direction = (l.end.pos_x-l.begin.pos_x, l.end.pos_y-l.begin.pos_y)
+                if new_direction==(0.0,0.0):
+                    continue
+                norm = math.sqrt(new_direction[0]**2+new_direction[1]**2)
+                new_direction = (new_direction[0]/norm, new_direction[1]/norm)
 
-        #add the code in the correct format
-        self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
-                         line.end.pos_x+0.01, line.end.pos_y+0.01, '%d %s Fphotonl%s' % (opt,curvature,type))
+                if not direction:
+                    direction = new_direction
+                else:
+                    if direction not in \
+                         [new_direction, (-new_direction[0],-new_direction[1])]:
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass            
+            
+            #add the code in the correct format
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+             line.end.pos_x+0.01*direction[0], line.end.pos_y+0.01*direction[1],
+                                   '%d %s Fphotonl%s' % (opt,curvature*7,type))
+        else:
+            #add the code in the correct format
+            self.text += self.line_format(line.begin.pos_x, line.begin.pos_y,
+                         line.end.pos_x+0.01, line.end.pos_y+0.01, 
+                                      '%d %s Fphotonl%s' % (opt,curvature,type))
 
     def draw_curly(self, line, type=''):
         """ADD the EPS code for this gluon line."""
@@ -423,14 +539,40 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
         to the center of the line.
         """
 
+        is_tadpole = line.begin.pos_x==line.end.pos_x and \
+                                                line.begin.pos_y==line.end.pos_y
+        if is_tadpole:
+            # Obtain the direction of the propagator supporting the tadpole
+            direction = None
+            for l in line.begin.lines:
+                new_direction = (l.end.pos_x-l.begin.pos_x, l.end.pos_y-l.begin.pos_y)
+                if new_direction==(0.0,0.0):
+                    continue
+                norm = math.sqrt(new_direction[0]**2+new_direction[1]**2)
+                new_direction = (new_direction[0]/norm, new_direction[1]/norm)
+
+                if not direction:
+                    direction = new_direction
+                else:
+                    if direction not in \
+                         [new_direction, (-new_direction[0],-new_direction[1])]:
+#                        logger.error('The case of a five-point vertex'+
+#                                          'yielding a tadpole is not supported')            
+                        pass           
+            
+            # Compute the orthogonal the
+            orthogonal = (-direction[1],direction[0])
+
         # Put alias for vertex positions
         x1, y1 = line.begin.pos_x, line.begin.pos_y
         x2, y2 = line.end.pos_x, line.end.pos_y
 
         d = line.get_length()
-        
+        if is_tadpole:
+            scale = 0.08
+            dx, dy = scale*orthogonal[0], scale*orthogonal[1]
         # compute gap from middle point
-        if abs(x1 - x2) < 1e-3:
+        elif abs(x1 - x2) < 1e-3:
             dx = 0.015
             dy = -0.01
         elif abs(y1 - y2) < 1e-3:

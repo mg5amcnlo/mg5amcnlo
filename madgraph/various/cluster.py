@@ -641,7 +641,7 @@ class MultiCore(Cluster):
                         # the error message otherwise
                         returncode = exe(*arg, **opt)
                         if returncode != 0:
-                            logger.warning("fct %s does not return 0. Starts to stop the code in a clean way.", exe)
+                            logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
                             self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
                 except Exception,error:
