@@ -1662,8 +1662,9 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Link the coef_specs.inc for aloha to define the coefficient
         # general properties (of course necessary in the optimized mode only)
-        ln(os.path.join(self.dir_path, 'SubProcesses', proc_name,
-                 'coef_specs.inc'),os.path.join(self.dir_path,'Source/DHELAS/'))
+        ln(os.path.join(self.dir_path,'Source','DHELAS','coef_specs.inc'),
+           os.path.join(self.dir_path, 'SubProcesses', proc_name),
+           abspath=False, cwd=None)
 
 
     def link_TIR(self, targetPath,libpath,libname,tir_name='TIR'):
@@ -2042,16 +2043,25 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ Subroutine to create all the subroutines relevant for handling
         the polynomials representing the loop numerator """
         
-        # First create 'coef_specs.inc'
-        IncWriter=writers.FortranWriter('coef_specs.inc','w')
-        IncWriter.writelines("""INTEGER MAXLWFSIZE
+        # First create 'loop_max_coefs.inc'
+        IncWriter=writers.FortranWriter('loop_max_coefs.inc','w')
+        IncWriter.writelines("""INTEGER LOOPMAXCOEFS
+                           PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)"""
+                                                       %matrix_element.rep_dict)
+        
+        # Then coef_specs directly in DHELAS if it does not exist already
+        # 'coef_specs.inc'. If several processes exported different files there,
+        # it is fine because the overall maximum value will overwrite it in the
+        # end
+        coef_specs_path = pjoin(self.dir_path, 'Source','DHELAS','coef_specs.inc')
+        if not os.path.isfile(coef_specs_path):
+            IncWriter=writers.FortranWriter(coef_specs_path,'w')
+            IncWriter.writelines("""INTEGER MAXLWFSIZE
                            PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-                           INTEGER LOOP_MAXCOEFS
-                           PARAMETER (LOOP_MAXCOEFS=%(loop_max_coefs)d)
                            INTEGER VERTEXMAXCOEFS
                            PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
                            %matrix_element.rep_dict)
-        IncWriter.close()
+            IncWriter.close()
         
         # List of all subroutines to place there
         subroutines=[]

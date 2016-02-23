@@ -3223,6 +3223,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         
+        # We need a link to coefs.inc from DHELAS
+        ln(pjoin(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc'),
+                                                        abspath=False, cwd=None)
+    
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(

@@ -1232,7 +1232,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         # If True, then force three PS points only and skip the test on
         # unpolarized PS point 
-        make_it_quick=False
+        make_it_quick=True
 
         if options and 'split_orders' in options.keys():
             split_orders = options['split_orders']
@@ -1315,7 +1315,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         if not make_it_quick:
             target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,50)
         else:
-            target_pspoints_number = 3
+            target_pspoints_number = 10
         
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)

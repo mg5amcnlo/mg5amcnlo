@@ -107,10 +107,9 @@ C
 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      include 'loop_max_coefs.inc'
 
 ## if(not AmplitudeReduction){	  
       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)

@@ -600,8 +600,7 @@ C
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+      include 'loop_max_coefs.inc'
 C  
 C ARGUMENTS 
 C
@@ -812,8 +811,7 @@ C
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+      include 'loop_max_coefs.inc'
 C  
 C ARGUMENTS 
 C
