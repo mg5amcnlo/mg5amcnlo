@@ -7,10 +7,10 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: g d~ > t t~ d~ WEIGHTED=3 [ real = QCD ]
-C     Process: g s~ > t t~ s~ WEIGHTED=3 [ real = QCD ]
-C     Process: g u~ > t t~ u~ WEIGHTED=3 [ real = QCD ]
-C     Process: g c~ > t t~ c~ WEIGHTED=3 [ real = QCD ]
+C     Process: g d~ > t t~ d~ WEIGHTED<=3 [ real = QCD ]
+C     Process: g s~ > t t~ s~ WEIGHTED<=3 [ real = QCD ]
+C     Process: g u~ > t t~ u~ WEIGHTED<=3 [ real = QCD ]
+C     Process: g c~ > t t~ c~ WEIGHTED<=3 [ real = QCD ]
 C     
 C     ****************************************************            
 C         

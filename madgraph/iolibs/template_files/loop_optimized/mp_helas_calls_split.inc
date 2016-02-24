@@ -19,10 +19,8 @@ C
 	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-	  INTEGER MAXLWFSIZE
-	  PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)
-	  INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
-	  PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d, VERTEXMAXCOEFS=%(vertex_max_coefs)d)
+      include 'loop_max_coefs.inc'
+      include 'coef_specs.inc'
 	  %(real_mp_format)s     ZERO
       PARAMETER (ZERO=0.0e0_16)
 	  %(complex_mp_format)s     IZERO

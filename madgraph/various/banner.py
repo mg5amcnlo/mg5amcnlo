@@ -2020,7 +2020,7 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "1|3|2")
+        self.add_param("MLReductionLib", "6|1|3|2")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)
@@ -2041,6 +2041,8 @@ class MadLoopParam(ConfigFile):
         self.add_param("HelicityFilterLevel", 2)
         self.add_param("LoopInitStartOver", False)
         self.add_param("HelInitStartOver", False)
+        self.add_param("UseQPIntegrandForNinja", False)        
+        self.add_param("UseQPIntegrandForCutTools", True)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

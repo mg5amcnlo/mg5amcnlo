@@ -67,9 +67,11 @@ C     ----------
       DATA ML_INIT/.TRUE./
       COMMON/ML_INIT/ML_INIT
 
-      LOGICAL CTINIT,TIRINIT,GOLEMINIT
-      DATA CTINIT,TIRINIT,GOLEMINIT/.TRUE.,.TRUE.,.TRUE./
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT/.TRUE.
+     $ ,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
+     $ , NINJAINIT
 
       CHARACTER(512) MLPATH
       DATA MLPATH/'[[NA]]'/
@@ -164,7 +166,13 @@ C     Stable with PJFry++.
 C     U == 3
 C     Stable with IREGI.
 C     U == 4
-C     Stable with Golem95
+C     Stable with Golem95.
+C     U == 5
+C     Stable with Samurai.
+C     U == 6
+C     Stable with Ninja in double precision.
+C     U == 8
+C     Stable with Ninja in quadruple precision.
 C     U == 9
 C     Stable with CutTools in quadruple precision.
 C     
@@ -194,19 +202,23 @@ C
         IF(MLRED.EQ.1)THEN
           SET_RET_CODE_U=9
           RETURN
+        ELSEIF(MLRED.EQ.6)THEN
+          SET_RET_CODE_U=8
+          RETURN
         ELSE
-          STOP 'Only CutTools can use quardruple precision'
+          STOP 'Only CutTools and Ninja can use quardruple precision'
         ENDIF
       ENDIF
-      IF(MLRED.GE.1.AND.MLRED.LE.4)THEN
+      IF(MLRED.GE.1.AND.MLRED.LE.6)THEN
         SET_RET_CODE_U=MLRED
       ELSE
-        STOP 'Only CutTools,PJFry++,IREGI,Golem95 are available'
+        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai an'
+     $   //'d Ninja are available'
       ENDIF
       END
 
       SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,COMPLEX_MASS
-     $ ,LPASS)
+     $ ,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 C     
 C     DETECT WHICH LOOP LIB PASSED
 C     
@@ -217,8 +229,10 @@ C
 C     
 C     ARGUMENTS
 C     
-      INTEGER LIBNUM,NLOOPLINE,RANK
-      LOGICAL COMPLEX_MASS,LPASS
+      INTEGER LIBNUM,NLOOPLINE,RANK,MAX_SPIN_CONNECTED_TO_LOOP
+C     The argument HAS_HEFT_VERTEX is only to implement correctly
+C      CutTools limitation
+      LOGICAL COMPLEX_MASS,LPASS,HAS_HEFT_VERTEX
 C     
 C     LOCAL VARIABLES
 C     
@@ -230,7 +244,8 @@ C     BEGIN CODE
 C     ----------
       IF(LIBNUM.EQ.1)THEN
 C       CutTools
-        CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+        CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,HAS_HEFT_VERTE
+     $   X,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
       ELSEIF(LIBNUM.EQ.2)THEN
 C       PJFry++
         CALL DETECT_PJFRY(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
@@ -240,15 +255,67 @@ C       IREGI
       ELSEIF(LIBNUM.EQ.4)THEN
 C       Golem95
         CALL DETECT_GOLEM(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+      ELSEIF(LIBNUM.EQ.5)THEN
+C       Samurai
+        CALL DETECT_SAMURAI(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+      ELSEIF(LIBNUM.EQ.6)THEN
+C       Ninja 
+        CALL DETECT_NINJA(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSE
-        STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 are provided'
+        STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai ar'
+     $   //'e available'
       ENDIF
       RETURN
       END
 
-      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,HAS_HEFT_V
+     $ ERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 C     
-C     DETECT THE CUTTOOLS CAN BE USED OR NOT
+C     DETECT whether CUTTOOLS CAN BE USED OR NOT
+C     
+      IMPLICIT NONE
+
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER NLOOPLINE,RANK
+      INTEGER MAX_SPIN_CONNECTED_TO_LOOP
+      LOGICAL COMPLEX_MASS,LPASS,HAS_HEFT_VERTEX
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER MAX_RANK
+C     ----------
+C     BEGIN CODE
+C     ----------
+      LPASS=.TRUE.
+C     The limit of 10 loop lines is just a parameter hardcoded in
+C      CutTools sources.
+C     It can easily be increased if necessary.
+C     Also in the presence of spin2 particles, RANK=NLOOPLINE+1 is not
+C      supported,
+C     or in general whenever the higher rank doesn't come from the
+C      Higgs effective vertex.
+
+      IF (MAX_SPIN_CONNECTED_TO_LOOP.LE.3.AND.HAS_HEFT_VERTEX) THEN
+        MAX_RANK = NLOOPLINE+1
+      ELSE
+        MAX_RANK = NLOOPLINE
+      ENDIF
+
+      IF( (RANK.GT.MAX_RANK).OR.(NLOOPLINE.GT.10) ) THEN
+        LPASS=.FALSE.
+      ENDIF
+
+      RETURN
+      END
+
+      SUBROUTINE DETECT_SAMURAI(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+C     
+C     DETECT whether Samurai CAN BE USED OR NOT
 C     
       IMPLICIT NONE
 C     
@@ -269,13 +336,50 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE+1.LT.RANK)LPASS=.FALSE.
+C     The limit of 8 loop lines is just a parameter hardcoded in
+C      Samurai sources.
+C     It can easily be increased if necessary.
+      IF((NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.GT.8)) THEN
+        LPASS=.FALSE.
+      ENDIF
+      RETURN
+      END
+
+      SUBROUTINE DETECT_NINJA(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+C     
+C     Detect whether Ninja can be used or not
+C     
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER NLOOPLINE,RANK
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+C     
+C     GLOBAL VARIABLES
+C     
+C     ----------
+C     BEGIN CODE
+C     ----------
+      LPASS=.TRUE.
+C     The limit of rank 20 is just a parameter hardcoded in Ninja
+C      sources.
+C     It can easily be increased if necessary.
+      IF((NLOOPLINE+1.LT.RANK).OR.(RANK.GE.20)) THEN
+        LPASS=.FALSE.
+      ENDIF
       RETURN
       END
 
       SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
 C     
-C     DETECT THE PJFRY++ CAN BE USED OR NOT
+C     DETECT whether PJFRY++ CAN BE USED OR NOT
 C     
       IMPLICIT NONE
 C     
@@ -305,7 +409,7 @@ C     ----------
 
       SUBROUTINE DETECT_IREGI(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
 C     
-C     DETECT THE IREGI CAN BE USED OR NOT
+C     DETECT whether IREGI CAN BE USED OR NOT
 C     
       IMPLICIT NONE
 C     
@@ -325,14 +429,16 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
+C     Stability studies show that IREGI is completely unstable at rank
+C      7 and above.
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.8.OR.RANK.GE.8)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
       RETURN
       END
 
       SUBROUTINE DETECT_GOLEM(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
 C     
-C     DETECT THE Golem95 CAN BE USED OR NOT
+C     DETECT whether Golem95 CAN BE USED OR NOT
 C     
       IMPLICIT NONE
 C     

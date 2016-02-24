@@ -1764,8 +1764,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path=config_path, final=final)
-                return
+                self.set_configuration(config_path=config_path, final=False)
             if 'HOME' in os.environ:
                 config_path = pjoin(os.environ['HOME'],'.mg5',
                                                         'mg5_configuration.txt')
@@ -2654,7 +2653,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if '=' in args:
             args.remove('=')
         # do not set lowercase the case-sensitive parameters from the shower_card
-        if args[0].lower() not in ['analyse', 'extralibs', 'extrapaths', 'includepaths']:
+        if not ( args[0].lower() in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or \
+                 args[0].lower().startswith('dm_') ):
             args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
@@ -2951,10 +2951,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
 
         #### SHOWER CARD
-        elif self.has_shower and args[start] in [l.lower() for l in \
+        elif self.has_shower and args[start].lower() in [l.lower() for l in \
                        self.shower_card.keys()] and card in ['', 'shower_card']:
             if args[start] not in self.shower_card:
-                args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
+                args[start] = [l for l in self.shower_card if l.lower() == args[start].lower()][0]
 
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'

@@ -323,7 +323,7 @@ class MatrixElementEvaluator(object):
             return {'m2': m2, output:getattr(data, output)}
     
     @staticmethod
-    def pass_isolation_cuts(pmoms, ptcut=50.0, drcut=0.5):
+    def pass_isolation_cuts(pmoms, ptcut=50.0e-03, drcut=0.5):
         """ Check whether the specified kinematic point passes isolation cuts
         """
 
@@ -618,7 +618,10 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                     for c in l]))
             FortranExporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
-            FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
+            FortranExporter.finalize_v4_directory(None,"",False,False,compiler=
+                       {'fortran':self.cmd.options['fortran_compiler'],
+                        'f2py':self.cmd.options['fortran_compiler'],
+                        'cpp':self.cmd.options['fortran_compiler']})
 
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                                                       split_orders=split_orders)
@@ -704,7 +707,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             elif key == 'ForceMP':
                 mode = 4
             elif key in MLCard:
-                MLCard.set(key,value)    
+                MLCard.set(key,value)
             else:
                 raise Exception, 'The MadLoop options %s specified in function'%key+\
                   ' fix_MadLoopParamCard does not correspond to an option defined'+\
@@ -714,6 +717,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             MLCard.set('CTModeInit',mode)
         MLCard.set('UseLoopFilter',loop_filter)
         MLCard.set('DoubleCheckHelicityFilter',DoubleCheckHelicityFilter)
+        
         MLCard.write(pjoin(dir_name,os.pardir,'SubProcesses','MadLoopParams.dat'))
 
     @classmethod
@@ -1068,6 +1072,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         MLcard = bannermod.MadLoopParam(MLCardPath)
         for key,value in params.items():
             MLcard.set(key, value, ifnotdefault=False)
+
         MLcard.write(MLCardPath, commentdefault=True)
 
     def skip_loop_evaluation_setup(self, dir_name, skip=True):
@@ -1158,7 +1163,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             FortranExporter.convert_model_to_mg4(self.full_model,wanted_lorentz,wanted_couplings)
             infos['Process_output'] = time.time()-start
             start=time.time()
-            FortranExporter.finalize_v4_directory(None,"",False,False,'gfortran')
+            FortranExporter.finalize_v4_directory(None,"",False,False,compiler=
+                       {'fortran':self.cmd.options['fortran_compiler'],
+                        'f2py':self.cmd.options['fortran_compiler'],
+                        'cpp':self.cmd.options['fortran_compiler']})
             infos['HELAS_MODEL_compilation'] = time.time()-start
         
         # Copy the parameter card if provided
@@ -1171,8 +1179,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                 
         # First Initialize filters (in later versions where this will hopefully
         # be done at generation time, then it will be able to skip it)
-        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
-                                                   read_ps = False, npoints = 4)
+        MadLoopInitializer.fix_PSPoint_in_check(
+                 pjoin(export_dir,'SubProcesses'), read_ps = False, npoints = 4)
+
         self.fix_MadLoopParamCard(pjoin(export_dir,'Cards'),
                             mp = False, loop_filter = True,MLOptions=MLOptions)
         
@@ -1183,6 +1192,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         dir_name = pjoin(export_dir, 'SubProcesses', shell_name)
         infos['dir_path']=dir_name
 
+        # Do not refresh the filter automatically as this is very often a waste
+        # of time
+        if not MadLoopInitializer.need_MadLoopInit(
+                                                export_dir, subproc_prefix='P'):
+            return infos
+
         attempts = [3,15]
         # remove check and check_sa.o for running initialization again
         try:
@@ -1190,7 +1205,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             os.remove(pjoin(dir_name,'check_sa.o'))
         except OSError:
             pass
-        
+
         nPS_necessary = MadLoopInitializer.run_initialization(dir_name,
                                 pjoin(export_dir,'SubProcesses'),infos,\
                                 req_files = ['HelFilter.dat','LoopFilter.dat'],
@@ -1215,6 +1230,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         """ Output the matrix_element in argument and give detail information
         about the timing for its output and running"""
 
+        # If True, then force three PS points only and skip the test on
+        # unpolarized PS point 
+        make_it_quick=True
+
         if options and 'split_orders' in options.keys():
             split_orders = options['split_orders']
         else:
@@ -1232,7 +1251,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                 temp_dir_prefix+"_%s"%proc_name)
 
         res_timings = self.setup_process(matrix_element,export_dir, \
-                                    reusing, param_card,MLOptions = MLOptions)
+            reusing, param_card,MLOptions = MLOptions,clean=True)
         
         if res_timings == None:
             return None
@@ -1248,11 +1267,14 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['du_source']=check_disk_usage(pjoin(\
                                                  export_dir,'Source','*','*.f'))
         res_timings['du_process']=check_disk_usage(pjoin(dir_name,'*.f'))
-        res_timings['du_color']=check_disk_usage(pjoin(dir_name,'*.dat'))
+        res_timings['du_color']=check_disk_usage(pjoin(dir_name,
+                                                  'MadLoop5_resources','*.dat'))
         res_timings['du_exe']=check_disk_usage(pjoin(dir_name,'check'))
 
         if not res_timings['Initialization']==None:
             time_per_ps_estimate = (res_timings['Initialization']/4.0)/2.0
+        elif make_it_quick:
+            time_per_ps_estimate = -1.0            
         else:
             # We cannot estimate from the initialization, so we run just a 3
             # PS point run to evaluate it.
@@ -1289,9 +1311,12 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         res_timings['n_contrib_hel']=n_contrib_hel
         res_timings['n_tot_hel']=len(helicities)
         
-        # We aim at a 15 sec run
-        target_pspoints_number = max(int(15.0/time_per_ps_estimate)+1,5)
-
+        # We aim at a 30 sec run
+        if not make_it_quick:
+            target_pspoints_number = max(int(30.0/time_per_ps_estimate)+1,50)
+        else:
+            target_pspoints_number = 10
+        
         logger.info("Checking timing for process %s "%proc_name+\
                                     "with %d PS points."%target_pspoints_number)
         
@@ -1299,19 +1324,26 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                           read_ps = False, npoints = target_pspoints_number*2, \
                        hel_config = contributing_hel, split_orders=split_orders)
         compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
+        
         if compile_time == None: return None
+        
         res_timings['run_polarized_total']=\
                (run_time-res_timings['Booting_time'])/(target_pspoints_number*2)
 
-        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number, hel_config = -1,
-                                                      split_orders=split_orders)
-        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name, 
-                                                                  checkRam=True)
-        if compile_time == None: return None
-        res_timings['run_unpolarized_total']=\
-                   (run_time-res_timings['Booting_time'])/target_pspoints_number
-        res_timings['ram_usage'] = ram_usage
+        if make_it_quick:
+            res_timings['run_unpolarized_total'] = 1.0
+            res_timings['ram_usage'] = 0.0
+        else:
+            MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+                 read_ps = False, npoints = target_pspoints_number, hel_config = -1,
+                                                          split_orders=split_orders)
+            compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name, 
+                                                                      checkRam=True)
+
+            if compile_time == None: return None
+            res_timings['run_unpolarized_total']=\
+                       (run_time-res_timings['Booting_time'])/target_pspoints_number
+            res_timings['ram_usage'] = ram_usage       
         
         if not self.loop_optimized_output:
             return res_timings
@@ -1322,13 +1354,16 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         # So we modify loop_matrix.f in order to skip the loop evaluation phase.
         self.skip_loop_evaluation_setup(dir_name,skip=True)
 
-        MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
-             read_ps = False, npoints = target_pspoints_number, hel_config = -1,
-                                                      split_orders=split_orders)
-        compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
-        if compile_time == None: return None
-        res_timings['run_unpolarized_coefs']=\
-                   (run_time-res_timings['Booting_time'])/target_pspoints_number
+        if make_it_quick:
+            res_timings['run_unpolarized_coefs'] = 1.0
+        else:
+            MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
+                 read_ps = False, npoints = target_pspoints_number, hel_config = -1,
+                                                          split_orders=split_orders)
+            compile_time, run_time, ram_usage = MadLoopInitializer.make_and_run(dir_name)
+            if compile_time == None: return None
+            res_timings['run_unpolarized_coefs']=\
+                       (run_time-res_timings['Booting_time'])/target_pspoints_number
         
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                           read_ps = False, npoints = target_pspoints_number*2, \
@@ -1412,7 +1447,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # For 2>1 process, we don't check the cuts of course
             while (not MatrixElementEvaluator.pass_isolation_cuts(p) and  len(p)>3):
                 p, w_rambo = self.get_momenta(proc, options)
-                
+             
             # For a 2>1 process, it would always be the same PS point,
             # so here we bring in so boost along the z-axis, just for the sake
             # of it.
@@ -1434,9 +1469,10 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         else:
             tools=MLOptions["MLReductionLib"]
             tools=list(set(tools)) # remove the duplication ones
+            
         # not self-contained tir libraries
-        tool_var={'pjfry':2,'golem':4}
-        for tool in ['pjfry','golem']:
+        tool_var={'pjfry':2,'golem':4,'samurai':5,'ninja':6}
+        for tool in ['pjfry','golem','samurai','ninja']:
             tool_dir='%s_dir'%tool
             if not tool_dir in self.tir_dir:
                 continue
@@ -1448,6 +1484,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                     tools.remove(tool_var[tool])
         if not tools:
             return None
+        
         # Normally, this should work for loop-induced processes as well
         if not reusing:
             process = matrix_element['processes'][0]
@@ -1457,7 +1494,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         export_dir=pjoin(self.mg_root,("SAVED" if keep_folder else "")+\
                                                 temp_dir_prefix+"_%s"%proc_name)
         
-        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95'}
+        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95',5:'Samurai',
+                    6:'Ninja'}
         return_dict={}
         return_dict['Stability']={}
         infos_save={'Process_output': None,
@@ -1465,7 +1503,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                'dir_path' : None,
                'Initialization' : None,
                'Process_compilation' : None} 
-
+       
         for tool in tools:
             tool_name=tools_name[tool]
             # Each evaluations is performed in different ways to assess its stability.
@@ -1482,7 +1520,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
             MLoptions={}
             MLoptions["MLReductionLib"]=tool
-            clean=(tool==tools[0])
+            clean = (tool==tools[0]) and not nPoints==0
             if infos_IN==None or (tool_name not in infos_IN):
                 infos=infos_IN
             else:
@@ -1547,7 +1585,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                              savefile%'_0'),return_dict['Stability'][tool_name])
                     continue
                 else:
-                    logger.info("ERROR: Not reusing a directory and the number"+\
+                    logger.info("ERROR: Not reusing a directory or any pickled"+
+                                " result for tool %s and the number"%tool_name+\
                                              " of point for the check is zero.")
                     return None
 
@@ -1683,8 +1722,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                    abs(sum(dp_res)/len(dp_res)))
                     dp_dict['Accuracy'] = dp_accuracy
                     if dp_accuracy>accuracy_threshold:
-                        if tool==1:
-                            # Only CutTools can use QP
+                        if tool in [1,6]:
+                            # Only CutTools or Ninja can use QP
                             UPS = [i,p]
                             qp_res=[]
                             PSPoint = format_PS_point(p,0)
@@ -1801,16 +1840,41 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         try:
             while True:
-                output = StabChecker.stdout.readline()  
+                output = StabChecker.stdout.readline()
+                if output != '':
+                    last_non_empty = output
                 if output==' ##TAG#RESULT_START#TAG##\n':
                     break
+                # Break if the checker has crashed for some reason.
+                ret_code = StabChecker.poll()
+                if not ret_code is None:
+                    output = StabChecker.stdout.readline()
+                    if output != '':
+                        last_non_empty = output
+                    error = StabChecker.stderr.readline()
+                    raise MadGraph5Error, \
+ "The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
+                                               (ret_code, last_non_empty, error)
+                    
             res = ""
             while True:
                 output = StabChecker.stdout.readline()
+                if output != '':
+                    last_non_empty = output
                 if output==' ##TAG#RESULT_STOP#TAG##\n':
                     break
                 else:
                     res += output
+                ret_code = StabChecker.poll()                
+                if not ret_code is None:
+                    output = StabChecker.stdout.readline()
+                    if output != '':
+                        last_non_empty = output
+                    error = StabChecker.stderr.readline()
+                    raise MadGraph5Error, \
+ "The MadLoop stability checker crashed with return code = %d, and last output:\n\nstdout: %s\nstderr: %s\n"%\
+                                               (ret_code, last_non_empty, error)
+
             return cls.parse_check_output(res,format='tuple')[0][0]
         except IOError as e:
             logging.warning("Error while running MadLoop. Exception = %s"%str(e))
@@ -2059,6 +2123,7 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
         MLoptions={}
     else:
         MLoptions=MLOptions
+
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
                             param_card, keep_folder=keep_folder,options=options,
                             MLOptions = MLoptions)
@@ -2087,7 +2152,7 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                                cmd = FakeInterface(), MLOptions = {}):
     """For a single loop process, give a detailed summary of the generation and
     execution timing."""
-    
+
     if "reuse" in options:
         reuse=options['reuse']
     else:
@@ -2118,6 +2183,10 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                 MLoptions["MLReductionLib"].extend([2])
             if "golem_dir" in tir:
                 MLoptions["MLReductionLib"].extend([4])
+            if "samurai_dir" in tir:
+                MLoptions["MLReductionLib"].extend([5])
+            if "ninja_dir" in tir:
+                MLoptions["MLReductionLib"].extend([6])
 
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 
@@ -2607,7 +2676,10 @@ The loop direction test power P is computed as follow:
         EPS_stability_DP = [DP_stability[E[0]] for E in EPS]
         EPS_stability_QP = [QP_stability[E[0]] for E in EPS]
         res_str_i = ""
-        
+        # Use nicer name for the XML tag in the log file
+        xml_toolname = {'GOLEM95':'GOLEM','IREGI':'IREGI',
+                        'CUTTOOLS':'CUTTOOLS','PJFRY++':'PJFRY',
+                        'NINJA':'NINJA','SAMURAI':'SAMURAI'}[toolname.upper()]
         if len(UPS)>0:
             res_str_i = "\nDetails of the %d/%d UPS encountered by %s\n"\
                                                         %(len(UPS),nPS,toolname)
@@ -2675,25 +2747,30 @@ The loop direction test power P is computed as follow:
         if len(EPS)>0:
             logFile.write('\nFull details of the %i EPS encountered by %s.\n'\
                                                            %(len(EPS),toolname))
+            logFile.write('<EPS_data reduction=%s>\n'%xml_toolname.upper())
             for i, eps in enumerate(EPS):
                 logFile.write('\nEPS #%i\n'%(i+1))
                 logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
                                                               for p in eps[1]]))
-                logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[eps[0]])
-                logFile.write('  QP accuracy :  %.3e\n'%QP_stability[eps[0]])
+                logFile.write('\n  DP accuracy :  %.4e\n'%DP_stability[eps[0]])
+                logFile.write('  QP accuracy :  %.4e\n'%QP_stability[eps[0]])
+            logFile.write('</EPS_data>\n')
         if len(UPS)>0:
             logFile.write('\nFull details of the %i UPS encountered by %s.\n'\
                                                            %(len(UPS),toolname))
+            logFile.write('<UPS_data reduction=%s>\n'%xml_toolname.upper())
             for i, ups in enumerate(UPS):
                 logFile.write('\nUPS #%i\n'%(i+1))
                 logFile.write('\n'.join(['  '+' '.join(['%.16E'%pi for pi in p]) \
                                                               for p in ups[1]]))
-                logFile.write('\n  DP accuracy :  %.3e\n'%DP_stability[ups[0]])
-                logFile.write('  QP accuracy :  %.3e\n'%QP_stability[ups[0]])
+                logFile.write('\n  DP accuracy :  %.4e\n'%DP_stability[ups[0]])
+                logFile.write('  QP accuracy :  %.4e\n'%QP_stability[ups[0]])
+            logFile.write('</UPS_data>\n')
 
         logFile.write('\nData entries for the stability plot.\n')
         logFile.write('First row is a maximal accuracy delta, second is the '+\
-                  'fraction of events with DP accuracy worse than delta.\n\n')
+                  'fraction of events with DP accuracy worse than delta.\n')
+        logFile.write('<plot_data reduction=%s>\n'%xml_toolname.upper())
     # Set the x-range so that it spans [10**-17,10**(min_digit_accuracy)]
         if max(DP_stability)>0.0:
             min_digit_acc=int(math.log(max(DP_stability))/math.log(10))
@@ -2701,6 +2778,9 @@ The loop direction test power P is computed as follow:
                 min_digit_acc = min_digit_acc+1
             accuracies=[10**(-17+(i/5.0)) for i in range(5*(17+min_digit_acc)+1)]
         else:
+            logFile.writelines('%.4e  %.4e\n'%(accuracies[i], 0.0) for i in \
+                                                         range(len(accuracies)))      
+            logFile.write('</plot_data>\n')
             res_str_i += '\nPerfect accuracy over all the trial PS points. No plot'+\
                                                               ' is output then.'
             logFile.write('Perfect accuracy over all the trial PS points.')
@@ -2716,13 +2796,16 @@ The loop direction test power P is computed as follow:
                                                       /float(len(DP_stability)))
         data_plot_dict[toolname]=data_plot
         
-        logFile.writelines('%.3e  %.3e\n'%(accuracies[i], data_plot[i]) for i in \
+        logFile.writelines('%.4e  %.4e\n'%(accuracies[i], data_plot[i]) for i in \
                                                          range(len(accuracies)))
+        logFile.write('</plot_data>\n')
         logFile.write('\nList of accuracies recorded for the %i evaluations with %s\n'\
                                                                 %(nPS,toolname))
         logFile.write('First row is DP, second is QP (if available).\n\n')
-        logFile.writelines('%.3e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
-                             else '%.3e\n'%QP_stability[i]) for i in range(nPS))
+        logFile.write('<accuracies reduction=%s>\n'%xml_toolname.upper())
+        logFile.writelines('%.4e  '%DP_stability[i]+('NA\n' if QP_stability[i]==-1.0 \
+                             else '%.4e\n'%QP_stability[i]) for i in range(nPS))
+        logFile.write('</accuracies>\n')
         res_str+=res_str_i
     logFile.close()
     res_str += "\n= Stability details of the run are output to the file"+\
@@ -2737,7 +2820,7 @@ The loop direction test power P is computed as follow:
 
     try:
         import matplotlib.pyplot as plt
-        colorlist=['b','r','g','y']
+        colorlist=['b','r','g','y','m','c']
         for i,key in enumerate(data_plot_dict.keys()):
             color=colorlist[i]
             data_plot=data_plot_dict[key]
@@ -4737,6 +4820,7 @@ def output_lorentz_inv_loop(comparison_results, output='text'):
     if len(transfo_name_header) + 1 > transfo_col_size:
         transfo_col_size = len(transfo_name_header) + 1
     
+    misc.sprint(results)
     for transfo_name, value in results:
         if len(transfo_name) + 1 > transfo_col_size:
             transfo_col_size = len(transfo_name) + 1
@@ -5216,6 +5300,7 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
     def check_stability(ME_values, lambda_values, lambda_scaling, values_name):
         """ Checks if the values passed in argument are stable and return the 
         stability check outcome warning if it is not precise enough. """
+
         values = sorted([
             abs(val*(lambda_values[0]/lambda_values[i])**lambda_scaling) for \
                                                 i, val in enumerate(ME_values)])
