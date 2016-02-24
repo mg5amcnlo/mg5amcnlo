@@ -639,7 +639,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     if lhaid in pdfsets:
                         lhapdfsetname.append(pdfsets[lhaid]['filename'])
                     else:
-                        raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
+                        raise MadGraph5Error("lhaid %s is not a valid PDF identification number. This can be due to the use of an outdated version of LHAPDF, or %s is not a LHAGlue number corresponding to a central PDF set (but rather one of the error sets)." % (lhaid,lhaid))
                 run_card['lhapdfsetname']=lhapdfsetname
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
 
