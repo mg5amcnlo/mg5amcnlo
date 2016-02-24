@@ -88,7 +88,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                                                      
         return super(FKSMultiProcess,self).filter(name, value)
     
-    def __init__(self, *arguments, **options):
+    def __init__(self, procdef=None, options={}):
         """Initializes the original multiprocess, then generates the amps for the 
         borns, then generate the born processes and the reals.
         Real amplitudes are stored in real_amplitudes according on the pdgs of their
@@ -119,7 +119,7 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         try:
             # Now generating the borns for the first time.
-            super(FKSMultiProcess, self).__init__(*arguments,**options)
+            super(FKSMultiProcess, self).__init__(procdef, **options)
 
         except diagram_generation.NoDiagramException as error:
             # If no born, then this process most likely does not have any.
@@ -132,17 +132,6 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
 
         self['OLP'] = olp
         self['ncores_for_proc_gen'] = ncores_for_proc_gen
-
-        #check limitation of FKS
-        if arguments and isinstance(arguments, MG.Process):
-            myprocdef = arguments[0]
-            misc.sprint( myprocdef.keys())
-            if myprocdef['perturbation_couplings']!=['QCD']:
-                raise InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
-                            % ', '.join(myprocdef['perturbation_couplings']))
-            elif myprocdef.get_ninitial()==1:
-                raise InvalidCmd("At this stage aMC@NLO cannot handle decay process.\n"+\
-                 "   Only Leading Order (loop-induced and tree level) decay are supported.") 
             
         #check process definition(s):
         # a process such as g g > g g will lead to real emissions 

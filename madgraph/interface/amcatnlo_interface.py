@@ -485,18 +485,14 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         else:
             self.ncores_for_proc_gen = 0
 
+        # this is the options dictionary to pass to the FKSMultiProcess
+        fks_options = {'OLP': self.options['OLP'],
+                       'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
+                       'ncores_for_proc_gen': self.ncores_for_proc_gen}
         try:
-            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
-                                   collect_mirror_procs,
-                                   ignore_six_quark_processes,
-                                   OLP=self.options['OLP'],
-                                   ncores_for_proc_gen=self.ncores_for_proc_gen))
+            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,fks_options))
         except AttributeError: 
-            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
-                                   collect_mirror_procs,
-                                   ignore_six_quark_processes,
-                                   OLP=self.options['OLP'],
-                                   ncores_for_proc_gen=self.ncores_for_proc_gen)
+            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,fks_options)
 
 
     def do_output(self, line):
