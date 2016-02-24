@@ -959,7 +959,10 @@ class ConfigFile(dict):
                 
             if isinstance(value, str):
                 # split for each comma/space
-                value = filter(None, re.split('\s|,', value)) 
+                value = value.strip()
+                if value.startswith('[') and value.endswith(']'):
+                    value = value[1:-1]
+                value = filter(None, re.split(r'(?:(?<!\\)\s)|,', value, re.VERBOSE)) 
             elif not hasattr(value, '__iter__'):
                 value = [value]
             elif isinstance(value, dict):
@@ -999,8 +1002,6 @@ class ConfigFile(dict):
         dict.__setitem__(self, lower_name, value)
         self.lower_to_case[lower_name] = name
         if isinstance(value, list):
-            if isinstance(value[0], str):
-                raise Exception, """A string cannot be allowed to be seen as a list"""
             if any([type(value[0]) != type(v) for v in value]):
                 raise Exception, "All entry should have the same type"
             self.list_parameter.add(lower_name)
@@ -1340,14 +1341,11 @@ class RunCard(ConfigFile):
                 if len(nline) != 2:
                     text += line
                 elif nline[1].strip() in self:
-                    name = nline[1].strip()
+                    name = nline[1].strip().lower()
                     value = self[name]
                     if name in self.list_parameter:
                         value = ', '.join([str(v) for v in value])
-                        
                     if python_template:
-                        if 'parton' in line:
-                            misc.sprint(line)
                         text += line % {name:value}
                     else:
                         if not comment or comment[-1]!='\n':
@@ -1471,8 +1469,6 @@ class RunCard(ConfigFile):
             value = self.get_default(key)
             # Special treatment for strings containing a list of
             # strings. Convert it to a list of strings
-            if isinstance(value,basestring) and value[0] =='[' and value[-1] == ']':
-                value=value[2:-2].split("', '")
             if isinstance(value, list):
                 # in case of a list, add the length of the list as 0th
                 # element in fortran. Only in case of integer or float
@@ -1923,6 +1919,7 @@ class RunCardNLO(RunCard):
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo')                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
+        self.add_param('lhapdfsetname', ['NNPDF23_nlo_as_0118_qed'], hidden=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)

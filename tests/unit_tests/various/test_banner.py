@@ -131,7 +131,7 @@ class TestConfigFileCase(unittest.TestCase):
         # check that it fail for invalid input:
         self.assertRaises(Exception, self.config.__setitem__, 'list', [1,'a'])
         self.assertRaises(Exception, self.config.add_param, "list2", [1, 2.0])
-        self.assertRaises(Exception, self.config.add_param, 'list3', ['a'])
+        #self.assertRaises(Exception, self.config.add_param, 'list3', ['a'])
         
         #check that we can go back to non list format:
         self.config['list'] = '-2'
@@ -152,6 +152,17 @@ class TestConfigFileCase(unittest.TestCase):
         
         self.assertRaises(Exception, self.config.__setitem__, 'list', {1:2,3:4})
         
+
+        # add a parameter which can be a list of string
+        self.config.add_param("list_s", ['1'])
+        self.assertEqual(self.config['list_s'], ['1'])
+        self.config['list_s'] = " 1 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
+        self.config['list_s'] = " 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
+        # Fail to have the correct behavior for that one. Should be ok in general       
+        #self.config['list_s'] = " 1\\ 2, 3, 5d1 "        
+        #self.assertEqual(self.config['list_s'],['1\\', '2','3', '5d1'])
 
         
     def test_for_loop(self):
