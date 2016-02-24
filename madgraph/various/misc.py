@@ -49,7 +49,75 @@ else:
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
+
+#===============================================================================
+# Return a warning (if applicable) on the consistency of the current Pythia8
+# and MG5_aMC version specified. It is placed here because it should be accessible
+# from both madgraph5_interface and madevent_interface
+#===============================================================================
+def mg5amc_py8_interface_consistency_warning(options):
+    """ Check the consistency of the mg5amc_py8_interface installed with
+    the current MG5 and Pythia8 versions. """
+
+    # All this is only relevant is Pythia8 is interfaced to MG5
+    if not options['pythia8_path']:
+        return None
+    
+    if not options['mg5amc_py8_interface_path']:
+        return \
+"""
+A Pythia8 path is specified via the option 'pythia8_path' but no path for option
+'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
+leading order simulations with MadEvent.
+Consider installing the MG5_aMC-PY8 interface with the following command:
+ MG5_aMC>install mg5amc_py8_interface
+"""
+    
+    # Retrieve all the on-install and current versions  
+    MG5_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                       'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+    if MG5_version_on_install == 'UNSPECIFIED':
+        MG5_version_on_install = None
+    PY8_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                          'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+    MG5_curr_version = get_pkg_info()['version']
+    try:
+        p = subprocess.Popen(['./get_pythia8_version.py',options['pythia8_path']],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                   cwd=options['mg5amc_py8_interface_path'])
+        (out, err) = p.communicate()
+        out = out.replace('\n','')
+        PY8_curr_version = out
+        # In order to test that the version is correctly formed, we try to cast
+        # it to a float
+        float(out)
+    except:
+        PY8_curr_version = None
+
+    if not MG5_version_on_install is None and not MG5_curr_version is None:
+        if MG5_version_on_install != MG5_curr_version:
+            return \
+"""
+The current version of MG5_aMC (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(MG5_curr_version, MG5_version_on_install)
+
+    if not PY8_version_on_install is None and not PY8_curr_version is None:
+        if PY8_version_on_install != PY8_curr_version:
+            return \
+"""
+The current version of Pythia8 (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(PY8_curr_version,PY8_version_on_install)
+
+    return None
    
+
+
 #===============================================================================
 # parse_info_str
 #===============================================================================
@@ -153,8 +221,33 @@ def find_includes_path(start_path, extension):
             if os.path.basename(subdir).endswith(extension):
                 return start_path
         elif os.path.isdir(subdir):
-            return find_includes_path(subdir, extension)
+            path = find_includes_path(subdir, extension)
+            if path:
+                return path
     return None
+
+#===============================================================================
+# Given the path of a ninja installation, this function determines if it 
+# supports quadruple precision or not. 
+#===============================================================================
+def get_ninja_quad_prec_support(ninja_lib_path):
+    """ Get whether ninja supports quad prec in different ways"""
+    
+    # First try with the ninja-config executable if present
+    ninja_config = os.path.abspath(pjoin(
+                                 ninja_lib_path,os.pardir,'bin','ninja-config'))
+    if os.path.exists(ninja_config):
+        try:    
+            p = Popen([ninja_config, '-quadsupport'], stdout=subprocess.PIPE, 
+                                                         stderr=subprocess.PIPE)
+            output, error = p.communicate()
+            return 'TRUE' in output.upper()
+        except Exception:
+            pass
+    
+    # If no ninja-config is present, then simply use the presence of
+    # 'quadninja' in the include
+    return False
 
 #===============================================================================
 # find a executable
@@ -208,12 +301,12 @@ def deactivate_dependence(dependency, cmd=None, log = None):
             log(msg)
     
 
-    if dependency in ['pjfry','golem']:
+    if dependency in ['pjfry','golem','samurai','ninja']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
-            cmd.options[dependency] = 'None'
+            cmd.options[dependency] = None
 
-def activate_dependence(dependency, cmd=None, log = None):
+def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     """ Checks whether the specfieid MG dependency can be activated if it was
     not turned off in MG5 options."""
     
@@ -240,6 +333,16 @@ def activate_dependence(dependency, cmd=None, log = None):
             tell("Installing Golem95...")
             cmd.do_install('Golem95')
     
+    if dependency=='samurai':
+        raise MadGraph5Error, 'Samurai cannot yet be automatically installed.' 
+
+    if dependency=='ninja':
+        if cmd.options['ninja'] in ['None',None,''] or\
+         (cmd.options['ninja'] == './HEPTools/lib' and not MG5dir is None and\
+         which_lib(pjoin(MG5dir,cmd.options['ninja'],'libninja.a')) is None):
+            tell("Installing ninja...")
+            cmd.do_install('ninja')
+ 
 #===============================================================================
 # find a library
 #===============================================================================
@@ -1101,6 +1204,39 @@ class open_file(object):
             # not shell program
             os.system('open -a %s %s' % (program, file_path))
 
+def get_HEPTools_location_setter(HEPToolsDir,type):
+    """ Checks whether mg5dir/HEPTools/<type> (which is 'lib', 'bin' or 'include')
+    is in the environment paths of the user. If not, it returns a preamble that
+    sets it before calling the exectuable, for example:
+       <preamble> ./my_exe
+    with <preamble> -> DYLD_LIBRARY_PATH='blabla;$DYLD_LIBRARY_PATH'"""
+    
+    assert(type in ['bin','include','lib'])
+    
+    target_env_var = 'PATH' if type in ['bin','include'] else \
+          ('DYLD_LIBRARY_PATH' if sys.platform=='darwin' else 'LD_LIBRARY_PATH')
+    
+    target_path = os.path.abspath(pjoin(HEPToolsDir,type))
+    
+    if target_env_var not in os.environ or \
+                target_path not in os.environ[target_env_var].split(os.pathsep):
+        return "%s='%s;$%s' "%(target_env_var,target_path,target_env_var)
+    else:
+        return ''
+
+def get_shell_type():
+    """ Try and guess what shell type does the user use."""
+    try:
+        if os.environ['SHELL'].endswith('bash'):
+            return 'bash'
+        elif os.environ['SHELL'].endswith('tcsh'):
+            return 'tcsh'
+        else:
+            # If unknown, return None
+            return None 
+    except KeyError:
+        return None
+
 def is_executable(path):
     """ check if a path is executable"""
     try: 
@@ -1183,6 +1319,9 @@ def equal(a,b,sig_fig=6, zero_limit=True):
 
 ################################################################################
 # class to change directory with the "with statement"
+# Exemple:
+# with chdir(path) as path:
+#     pass
 ################################################################################
 class chdir:
     def __init__(self, newPath):
@@ -1287,8 +1426,11 @@ class ProcessTimer:
       return False
 
     self.t1 = time.time()
+    # I redirect stderr to void, because from MacOX snow leopard onward, this
+    # ps -p command writes a million times the following stupid warning
+    # dyld: DYLD_ environment variables being ignored because main executable (/bin/ps) is setuid or setgid
     flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
-                                              shell=True,stdout=subprocess.PIPE)
+                  shell=True,stdout=subprocess.PIPE,stderr=open(os.devnull,"w"))
     stdout_list = flash.communicate()[0].split('\n')
     rss_memory = int(stdout_list[1])
     # for now we ignore vms

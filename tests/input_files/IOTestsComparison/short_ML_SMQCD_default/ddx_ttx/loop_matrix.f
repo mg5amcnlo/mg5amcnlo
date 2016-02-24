@@ -73,7 +73,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d d~ > t t~ QED=0 QCD=2 [ virt = QCD ]
+C     Process: d d~ > t t~ QED=0 QCD<=2 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -167,6 +167,8 @@ C     the previous points
       DATA NEXTREF/ZERO/
       INTEGER NPSPOINTS
       DATA NPSPOINTS/0/
+      LOGICAL FOUND_VALID_REDUCTION_METHOD
+      DATA FOUND_VALID_REDUCTION_METHOD/.FALSE./
 
       REAL*8 ACC
       REAL*8 DP_RES(3,MAXSTABILITYLENGTH)
@@ -205,6 +207,7 @@ C
 C     
 C     GLOBAL VARIABLES
 C     
+      INCLUDE 'process_info.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'mp_coupl.inc'
       INCLUDE 'MadLoopParams.inc'
@@ -307,6 +310,19 @@ C      subroutine of MadLoopCommons.dat
       LOGICAL ML_INIT
       COMMON/ML_INIT/ML_INIT
 
+C     This variable controls the *local* initialization of this
+C      particular SubProcess.
+C     For example, the reading of the filters must be done independentl
+C     y by each SubProcess.
+      LOGICAL LOCAL_ML_INIT
+      DATA LOCAL_ML_INIT/.TRUE./
+
+C     Variables related to turning off the Lorentz rotation test when
+C      spin-2 particles are external
+      LOGICAL WARNED_LORENTZ_STAB_TEST_OFF
+      DATA WARNED_LORENTZ_STAB_TEST_OFF/.FALSE./
+      INTEGER NROTATIONS_DP_BU,NROTATIONS_QP_BU
+
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -321,53 +337,106 @@ C     ----------
           DOUBLECHECKHELICITYFILTER = .FALSE.
         ENDIF
         ML_INIT = .FALSE.
+C       For now only CutTools is interfaced in the default mode.
+C        Samurai could follow.
+        DO I=1,SIZE(MLREDUCTIONLIB)
+          IF (MLREDUCTIONLIB(I).EQ.1) THEN
+            FOUND_VALID_REDUCTION_METHOD = .TRUE.
+          ENDIF
+        ENDDO
+        IF (.NOT.FOUND_VALID_REDUCTION_METHOD) THEN
+          WRITE(*,*) 'ERROR:: For now, only CutTools is interfaced t'
+     $     //'o MadLoop in the non-optimized output.'
+          WRITE(*,*) 'ERROR:: Make sure to include 1 in the paramete'
+     $     //'r MLReductionLib of the card MadLoopParams.dat'
+          STOP 1
+        ENDIF
+      ENDIF
+      IF (LOCAL_ML_INIT) THEN
+C       Setup the file paths
+        CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
+        CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
+        CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
+        CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
+        CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
+        CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
+        CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
+
+C       Make sure that the loop filter is disabled when there is
+C        spin-2 particles for 2>1 or 1>2 processes
+        IF(MAX_SPIN_EXTERNAL_PARTICLE.GT.3.AND.(NEXTERNAL.LE.3.AND.HELI
+     $   CITYFILTERLEVEL.NE.0)) THEN
+          WRITE(*,*) '##INFO: Helicity filter deactivated for 2>'
+     $     //'1 processes involving spin 2 particles.'
+          HELICITYFILTERLEVEL = 0
+C         We write a dummy filter for structural reasons here
+          OPEN(1, FILE=HELFILTERFN, ERR=6116, STATUS='NEW',ACTION='WRI'
+     $     //'TE')
+          DO I=1,NCOMB
+            WRITE(1,*) 'T'
+          ENDDO
+ 6116     CONTINUE
+          CLOSE(1)
+        ENDIF
+
+        OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
+     $    ACTION='READ')
+        DO I=1,NLOOPAMPS
+          READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
+        ENDDO
+        GOTO 105
+ 104    CONTINUE
+        STOP 'Color factors could not be initialized from fil'
+     $   //'e ML5_0_ColorNumFactors.dat. File not found'
+ 105    CONTINUE
+        CLOSE(1)
+        OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
+     $    ACTION='READ')
+        DO I=1,NLOOPAMPS
+          READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
+        ENDDO
+        GOTO 107
+ 106    CONTINUE
+        STOP 'Color factors could not be initialized from fil'
+     $   //'e ML5_0_ColorDenomFactors.dat. File not found'
+ 107    CONTINUE
+        CLOSE(1)
+        OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',              
+     $       ACTION='READ')
+        DO H=1,NCOMB
+          READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
+        ENDDO
+        GOTO 109
+ 108    CONTINUE
+        STOP 'Color helictiy configurations could not be initialize'
+     $   //'d from file ML5_0_HelConfigs.dat. File not found'
+ 109    CONTINUE
+        CLOSE(1)
+        IF(BOOTANDSTOP) THEN
+          WRITE(*,*) '##Stopped by user request.'
+          STOP
+        ENDIF
+        LOCAL_ML_INIT = .FALSE.
       ENDIF
 
-C     Setup the file paths
-      CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
-      CALL JOINPATH(MLPATH,PROC_PREFIX,TMP)
-      CALL JOINPATH(TMP,HELCONFIGFNAME,HELCONFIGFN)
-      CALL JOINPATH(TMP,LOOPFILTERFNAME,LOOPFILTERFN)
-      CALL JOINPATH(TMP,COLORNUMFNAME,COLORNUMFN)
-      CALL JOINPATH(TMP,COLORDENOMFNAME,COLORDENOMFN)
-      CALL JOINPATH(TMP,HELFILTERFNAME,HELFILTERFN)
-
-      OPEN(1, FILE=COLORNUMFN, ERR=104, STATUS='OLD',          
-     $  ACTION='READ')
-      DO I=1,NLOOPAMPS
-        READ(1,*,END=105) (CF_N(I,J),J=1,NBORNAMPS)
-      ENDDO
-      GOTO 105
- 104  CONTINUE
-      STOP 'Color factors could not be initialized from file ML5_0_Col'
-     $ //'orNumFactors.dat. File not found'
- 105  CONTINUE
-      CLOSE(1)
-      OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
-     $  ACTION='READ')
-      DO I=1,NLOOPAMPS
-        READ(1,*,END=107) (CF_D(I,J),J=1,NBORNAMPS)
-      ENDDO
-      GOTO 107
- 106  CONTINUE
-      STOP 'Color factors could not be initialized from file ML5_0_Col'
-     $ //'orDenomFactors.dat. File not found'
- 107  CONTINUE
-      CLOSE(1)
-      OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',                
-     $   ACTION='READ')
-      DO H=1,NCOMB
-        READ(1,*,END=109) (HELC(I,H),I=1,NEXTERNAL)
-      ENDDO
-      GOTO 109
- 108  CONTINUE
-      STOP 'Color helictiy configurations could not be initialize'
-     $ //'d from file ML5_0_HelConfigs.dat. File not found'
- 109  CONTINUE
-      CLOSE(1)
-      IF(BOOTANDSTOP) THEN
-        WRITE(*,*) '##Stopped by user request.'
-        STOP
+C     Make sure that lorentz rotation tests are not used if there is
+C      external loop wavefunction of spin 2 and that one specific
+C      helicity is asked
+      NROTATIONS_DP_BU = NROTATIONS_DP
+      NROTATIONS_QP_BU = NROTATIONS_QP
+      IF(MAX_SPIN_EXTERNAL_PARTICLE.GT.3.AND.USERHEL.NE.-1) THEN
+        IF(.NOT.WARNED_LORENTZ_STAB_TEST_OFF) THEN
+          WRITE(*,*) '##WARNING: Evaluation of a specific helicity wa'
+     $     //'s asked for this PS point, and there is a spin-2 (o'
+     $     //'r higher) particle in the external states.'
+          WRITE(*,*) '##WARNING: As a result, MadLoop disabled th'
+     $     //'e Lorentz rotation test for this phase-space point only.'
+          WRITE(*,*) '##WARNING: Further warning of that typ'
+     $     //'e suppressed.'
+          WARNED_LORENTZ_STAB_TEST_OFF = .FALSE.
+        ENDIF
+        NROTATIONS_QP=0
+        NROTATIONS_DP=0
       ENDIF
 
       IF(NTRY.EQ.0) THEN
@@ -988,6 +1057,11 @@ C      user
         MLSTABTHRES=MLSTABTHRES_BU
         CTMODEINIT=CTMODEINIT_BU
       ENDIF
+
+C     Reinitialize the Lorentz test if it had been disabled because
+C      spin-2 particles are in the external states.
+      NROTATIONS_DP = NROTATIONS_DP_BU
+      NROTATIONS_QP = NROTATIONS_QP_BU
 
 C     Conform to the returned synthax of split orders even though the
 C      default output does not support it (this then done only for

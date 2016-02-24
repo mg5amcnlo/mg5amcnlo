@@ -26,6 +26,7 @@ import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
 import models.import_ufo as import_ufo
 import models.usermod as usermod
+import models as ufomodels
 import models.model_reader as model_reader
 import madgraph.iolibs.export_v4 as export_v4
 
@@ -296,7 +297,23 @@ class FormFactor(UFOBaseClass):
         global all_form_factors
         all_form_factors.append(self)
 
-
+class Model(object):
+    """ """
+    def __init__(self):
+        global all_form_factors, all_particles, all_decays,all_orders, all_functions,\
+               all_lorentz,all_couplings, all_vertices, all_parameters
+               
+        self.all_form_factors = all_form_factors
+        self.all_particles = all_particles
+        self.all_decays = all_decays
+        self.all_orders = all_orders
+        self.all_functions = all_functions
+        self.all_lorentz = all_lorentz
+        self.all_couplings = all_couplings
+        self.all_vertices = all_vertices
+        self.all_parameters = all_parameters
+        
+    
 
 #===============================================================================
 # Test The UFO usermod package 
@@ -492,6 +509,11 @@ class Test_ADDON_UFO(unittest.TestCase):
         #Read the full SM
         self.sm_path = import_ufo.find_ufo_path('sm')
         self.base_model = usermod.UFOModel(self.sm_path)
+        self.mymodel = Model()
+        for key in self.mymodel.__dict__:
+            obj = getattr(self.mymodel, key)
+            for o in obj[:]:
+                obj.pop()
         
     def tearDown(self):
         
@@ -869,12 +891,94 @@ class Test_ADDON_UFO(unittest.TestCase):
              color = [ '1' ],
              lorentz = [ L ],
              couplings = {(0,0): GC_1})
+
+        # check the size for avoiding border effect
+        self.assertEqual(len(all_particles),1)
+        self.assertEqual(len(self.mymodel.all_particles),1)
+        self.assertEqual(len(self.mymodel.all_vertices),1)
         
-        self.base_model.add_interaction(V_2)
-        
+        orig = len(self.base_model.vertices)
+        self.base_model.add_interaction(V_2, self.mymodel)
+        self.assertEqual(orig+1, len(self.base_model.vertices))
         added = self.base_model.vertices[-1]
         self.assertEqual(added.name, 'V_2__1')
         self.assertNotEqual(id(added.particles[0]), id(B))
+        
+        # check the size for avoiding border effect
+        self.assertEqual(len(all_particles),1)
+        self.assertEqual(len(self.mymodel.all_particles),1)
+        self.assertEqual(len(self.mymodel.all_vertices),1)        
+        
+         
+        
+        ## add a second time the interaction to check that she is not added
+        orig = len(self.base_model.vertices)
+        self.base_model.add_interaction(V_2, self.mymodel)
+        self.assertEqual(orig, len(self.base_model.vertices))
+        
+    def test_identify_particle(self):
+        
+        GC_1 = Coupling(name = 'GC_1',
+                  value = '(ee*complex(0,1)*complexconjugate(CKM3x100))/(sw*cmath.sqrt(2))',
+                  order = {'QED':1})        
+        #self.base_model.add_coupling(GC_1)
+        M5 = Parameter(name = 'M5',
+               nature = 'external',
+               type = 'real',
+               value = 125,
+               texname = '\\text{MH}',
+               lhablock = 'MASS',
+               lhacode = [ 105 ]) 
+        W5 = Parameter(name = 'W5',
+               nature = 'external',
+               type = 'real',
+               value = 125,
+               texname = '\\text{MH}',
+               lhablock = 'DECAY',
+               lhacode = [ 105 ]) 
+        #self.base_model.add_parameter(M5)
+        #self.base_model.add_parameter(W5)
+        
+        L = Lorentz(name = 'FFS2',
+               spins = [ 2, 2, 1 ],
+               structure = 'Identity(2,1)')
+        #self.base_model.add_lorentz(L)
+
+        B = Particle(pdg_code = 105,
+             name = 'B',
+             antiname = 'B',
+             spin = 1,
+             color = 1,
+             mass = M5,
+             width = W5,
+             texname = 'H',
+             antitexname = 'H',
+             charge = 0,
+             GhostNumber = 0,
+             LeptonNumber = 0,
+             Y = 0) 
+        #self.base_model.add_particle(B)
+        
+        V_2 = Vertex(name = 'V_2',
+             particles = [ B, B, B, B ],
+             color = [ '1' ],
+             lorentz = [ L ],
+             couplings = {(0,0): GC_1})
+        self.mymodel.__path__ = '.'
+        self.base_model.add_model(self.mymodel, identify_particles={'B':'H'})
+        
+        # check that the B object still has is name/pdg_code
+        self.assertEqual(B.pdg_code, 105)
+        self.assertEqual(B.name, 'B')
+        # check that the original model still has the H particles
+        model = ufomodels.load_model(self.sm_path)
+        particles_name = [p.name for p in model.all_particles]
+        self.assertTrue('H' in particles_name)
+        self.assertFalse('B' in particles_name)
+        # check the mass
+        parameters_name = [p.name for p in model.all_parameters]
+        self.assertTrue('MH' in parameters_name)
+        self.assertFalse('M5' in parameters_name)        
         
         
         

@@ -229,7 +229,7 @@ class TestCmdLoop(unittest.TestCase):
             res = open(self.tmp_path['madgraph.check_cmd']).read()
             self.assertTrue('Generation time total' in res)
             self.assertTrue('Executable size' in res)
-            self.assertTrue(res.count('NA')<=8)
+            self.assertTrue(res.count('NA')<=10)
         except:
             self.setup_logFile_for_logger('madgraph.check_cmd',restore=True)
             if path.isdir(pjoin(MG5DIR,'SAVEDTMP_CHECK_epem_ttx')):
@@ -487,7 +487,9 @@ class TestCmdMatchBox(IOTests.IOTestManager):
 
         # Select the Tensor Integral to include in the test
         misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
+        misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
         misc.activate_dependence('golem', cmd = self.interface, log='stdout')
+        misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -525,7 +527,9 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
         
         # Select the Tensor Integral to include in the test
         misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
+        misc.deactivate_dependence('samurai', cmd = interface, log='stdout')        
         misc.activate_dependence('golem', cmd = interface, log='stdout')
-        
+        misc.activate_dependence('ninja', cmd = interface, log='stdout',MG5dir=MG5DIR)
+
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))

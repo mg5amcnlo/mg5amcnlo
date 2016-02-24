@@ -1520,6 +1520,7 @@ class ProcessTest(unittest.TestCase):
                        'decay_chains': base_objects.ProcessList(),
                        'legs_with_decays': self.myleglist,
                        'squared_orders': {},
+                       'constrained_orders':{},
                        'sqorders_types': {},
                        'has_born': True,
                        'overall_orders': {},
@@ -1598,6 +1599,7 @@ class ProcessTest(unittest.TestCase):
         goal = goal + "    \'overall_orders\': %s,\n" % \
                repr(self.myprocess['overall_orders'])
         goal = goal + "    \'squared_orders\': %s,\n" % repr(self.myprocess['squared_orders'])
+        goal = goal + "    \'constrained_orders\': %s,\n" % repr(self.myprocess['constrained_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.myprocess['model'])
         goal = goal + "    \'id\': 1,\n"
         goal = goal + "    \'required_s_channels\': [],\n"
@@ -1619,7 +1621,7 @@ class ProcessTest(unittest.TestCase):
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c QED=1 QCD=5 @1"
+        goal_str = "Process: c c > c c c QED<=1 QCD<=5 @1"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 
@@ -1872,6 +1874,7 @@ class ProcessDefinitionTest(unittest.TestCase):
                        'is_decay_chain': False,
                        'decay_chains': base_objects.ProcessList(),
                        'squared_orders':{},
+                       'constrained_orders':{},
                        'has_born': True,
                        'overall_orders':{},
                        'sqorders_types':{},
@@ -1949,6 +1952,7 @@ class ProcessDefinitionTest(unittest.TestCase):
         goal = goal + "    \'orders\': %s,\n" % repr(self.my_process_definition['orders'])
         goal = goal + "    \'overall_orders\': %s,\n" % repr(self.my_process_definition['overall_orders'])
         goal = goal + "    \'squared_orders\': %s,\n" % repr(self.my_process_definition['squared_orders'])
+        goal = goal + "    \'constrained_orders\': %s,\n" % repr(self.my_process_definition['constrained_orders'])
         goal = goal + "    \'model\': %s,\n" % repr(self.my_process_definition['model'])
         goal = goal + "    \'id\': %s,\n" % repr(self.my_process_definition['id'])
         goal = goal + "    \'required_s_channels\': [],\n"

@@ -384,7 +384,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             if args[0] == 'ms_dir':
                 self.options['curr_dir'] = self.options['ms_dir']
         elif args[0] == 'seed':
-            import random
             random.seed(int(args[1]))
             self.seed = int(args[1])
         elif args[0] == 'BW_cut':
@@ -523,7 +522,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.seed:
-            import random
             self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)
@@ -785,7 +783,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Handle the banner of the output file
         if not self.seed:
-            import random
             self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)

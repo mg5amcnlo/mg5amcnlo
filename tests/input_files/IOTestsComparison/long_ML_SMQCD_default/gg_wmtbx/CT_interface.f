@@ -6,7 +6,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and CutTools.
 C     
-C     Process: g g > w- t b~ QED=1 QCD=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -33,8 +33,9 @@ C     LOCAL VARIABLES
 C     
       COMPLEX*16 R1, ACC
       INTEGER I, J, K
-      LOGICAL CTINIT, TIRINIT, GOLEMINIT
-      COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
+      LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
+     $ ,NINJAINIT
 C     
 C     EXTERNAL FUNCTIONS
 C     

@@ -1076,7 +1076,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     def do_pgs(self, line):
         """launch pgs"""
-
+        
         args = self.split_arg(line)
         # Check argument's validity
         if '--no_default' in args:
@@ -1085,19 +1085,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             no_default = False
 
+        if no_default and not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+            logger.info('No pgs_card detected, so not run pgs')
+            return
+
         # Check all arguments
         # This might launch a gunzip in another thread. After the question
         # This thread need to be wait for completion. (This allow to have the
         # question right away and have the computer working in the same time)
         # if lock is define this a locker for the completion of the thread
-        lock = self.check_pgs(args)
+        lock = self.check_pgs(args,  no_default=no_default)
 
         # Check that the pgs_card exists. If not copy the default
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
-            if no_default:
-                logger.info('No pgs_card detected, so not run pgs')
-                return
-
             files.cp(pjoin(self.me_dir, 'Cards', 'pgs_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'pgs_card.dat'))
             logger.info('No pgs card found. Take the default one.')
@@ -1273,6 +1273,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             args.remove('--no_default')
         else:
             no_default = False
+            
+        if no_default and  not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
+            logger.info('No delphes_card detected, so not run Delphes')
+            return
+            
         # Check all arguments
         # This might launch a gunzip in another thread. After the question
         # This thread need to be wait for completion. (This allow to have the
@@ -1759,8 +1764,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path=config_path, final=final)
-                return
+                self.set_configuration(config_path=config_path, final=False)
             if 'HOME' in os.environ:
                 config_path = pjoin(os.environ['HOME'],'.mg5',
                                                         'mg5_configuration.txt')
@@ -2058,6 +2062,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         return self.deal_multiple_categories(completion)
         
 
+    def update_make_opts(self):
+        """update the make_opts file writing the environmental variables
+        stored in make_opts_var"""
+        make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
+        tag = '#end_of_make_opts_variables\n'
+        content = open(make_opts).read()
+
+        # if this is not the first time that the file is updated, there
+        # should be a line #end_of_make_opts_variables
+        if tag in content:
+            content = content.split(tag)[1]
+
+        variables = '\n'.join('%s=%s' % (k,v) for k, v in self.make_opts_var.items())
+        variables += '\n%s' % tag
+
+        open(make_opts, 'w').write(variables + content)
+        return
+
+
+
 # lhapdf-related functions
     def link_lhapdf(self, libdir, extra_dirs = []):
         """links lhapdf into libdir"""
@@ -2084,8 +2108,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # just create the PDFsets dir, the needed PDF set will be copied at run time
         if not os.path.isdir(pjoin(libdir, 'PDFsets')):
             os.mkdir(pjoin(libdir, 'PDFsets'))
-        os.environ['lhapdf'] = 'True'
-        os.environ['lhapdf_config'] = self.options['lhapdf']
+        self.make_opts_var['lhapdf'] = self.options['lhapdf']
+        self.make_opts_var['lhapdfversion'] = lhapdf_version[0]
+        self.make_opts_var['lhapdf_config'] = self.options['lhapdf']
 
 
     def get_characteristics(self, path=None):
@@ -2628,7 +2653,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if '=' in args:
             args.remove('=')
         # do not set lowercase the case-sensitive parameters from the shower_card
-        if args[0].lower() not in ['analyse', 'extralibs', 'extrapaths', 'includepaths']:
+        if not ( args[0].lower() in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or \
+                 args[0].lower().startswith('dm_') ):
             args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
@@ -2925,10 +2951,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
 
         #### SHOWER CARD
-        elif self.has_shower and args[start] in [l.lower() for l in \
+        elif self.has_shower and args[start].lower() in [l.lower() for l in \
                        self.shower_card.keys()] and card in ['', 'shower_card']:
             if args[start] not in self.shower_card:
-                args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
+                args[start] = [l for l in self.shower_card if l.lower() == args[start].lower()][0]
 
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
