@@ -2059,11 +2059,22 @@ class RunCardNLO(RunCard):
         if self['fixed_ren_scale'] and self['fixed_fac_scale']:
             self['reweight_scale']=[self['reweight_scale'][0]]
             self['dynamical_scale_choice']=[0]
-            
+
+        # If there is only one reweight_pdf/reweight_scale, but
+        # lhaid/dynamical_scale_choice are longer, expand the
+        # reweight_pdf/reweight_scale list to have the same length
+        if len(self['reweight_pdf']) == 1 and len(self['lhaid']) != 1:
+            self['reweight_pdf']=self['reweight_pdf']*len(self['lhaid'])
+            logger.warning("Setting 'reweight_pdf' for all 'lhaid' to %s" % self['reweight_pdf'][0])
+        if len(self['reweight_scale']) == 1 and len(self['dynamical_scale_choice']) != 1:
+            self['reweight_scale']=self['reweight_scale']*len(self['dynamical_scale_choice']) 
+            logger.warning("Setting 'reweight_scale' for all 'dynamical_scale_choice' to %s" % self['reweight_pdf'][0])
+
+        # Check that lenght of lists are consistent
         if len(self['reweight_pdf']) != len(self['lhaid']):
             raise InvalidRunCard, "'reweight_pdf' and 'lhaid' lists should have the same length"
         if len(self['reweight_scale']) != len(self['dynamical_scale_choice']):
-            raise InvalidRunCard, "'reweight_scale' and 'lhaid' lists should have the same length"
+            raise InvalidRunCard, "'reweight_scale' and 'dynamical_scale_choice' lists should have the same length"
         if len(self['dynamical_scale_choice']) > 10 :
             raise InvalidRunCard, "Length of list for 'dynamical_scale_choice' too long: max is 10."
         if len(self['lhaid']) > 10 :
