@@ -75,7 +75,7 @@ c
                      idwgt=idwgt+1
                      write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
                      write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
-     $                    ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                    ,"'> "//trim(adjustl(temp))//' '
      $                    //trim(adjustl(lhaPDFsetname(nn)))/
      $                    /" </weight>"
                   enddo
@@ -85,7 +85,7 @@ c
                   idwgt=idwgt+1
                   write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
                   write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
-     $                 ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                 ,"'> "//trim(adjustl(temp))//' '
      $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
                endif
                write(ifile,'(a)') "    </weightgroup>"
@@ -260,7 +260,7 @@ c Write here the reweight information if need be
                      idwgt=idwgt+1
                      write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)+n
                      write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
-     $                    ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                    ,"'> "//trim(adjustl(temp))//' '
      $                    //trim(adjustl(lhaPDFsetname(nn)))/
      $                    /" </weight>"
                   enddo
@@ -270,7 +270,7 @@ c Write here the reweight information if need be
                   idwgt=idwgt+1
                   write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
                   write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
-     $                 ,"'> pdfset=",trim(adjustl(temp))//' '
+     $                 ,"'> "//trim(adjustl(temp))//' '
      $                 //trim(adjustl(lhaPDFsetname(nn)))//" </weight>"
                endif
                write(ifile,'(a)') "    </weightgroup>"
@@ -396,7 +396,7 @@ c     find the start of a weightgroup
                     if (index(string,'</weightgroup>').ne.0) exit
                     nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
                     if (nmemPDF(lhaPDFid(0)).eq.0) then
-                       read(string(index(string,'pdfset=')+7:),*)
+                       read(string(index(string,'PDF=')+4:),*)
      $                      lhaPDFid(lhaPDFid(0))
      $                      ,lhaPDFsetname(lhaPDFid(0))
                        lhaPDFsetname(lhaPDFid(0))

@@ -3629,7 +3629,7 @@ RESTART = %(mint_mode)s
 
             try:
                 candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
-                            if os.path.isdir(pjoin(lhapdf_libdir,path))]
+                            if os.path.isdir(pjoin(lhapdf_libdir,dirname))]
             except OSError:
                 candidates=[]
             for candidate in candidates:
@@ -3646,7 +3646,7 @@ RESTART = %(mint_mode)s
             if not use_lhapdf:
                 try:
                     candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
-                                if os.path.isdir(pjoin(lhapdf_libdir+'64',path))]
+                                if os.path.isdir(pjoin(lhapdf_libdir+'64',dirname))]
                 except OSError:
                     candidates=[]
                 for candidate in candidates:

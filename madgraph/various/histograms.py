@@ -1029,7 +1029,7 @@ class HwU(Histogram):
                 else:
                     try:
                         candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
-                                    if os.path.isdir(pjoin(lhapdf_libdir,path))]
+                                    if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
                     except OSError:
                         candidates=[]
                     for candidate in candidates:
@@ -1046,12 +1046,12 @@ class HwU(Histogram):
                     if not use_lhapdf:
                         try:
                             candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
-                                        if os.path.isdir(pjoin(lhapdf_libdir+'64',path))]
+                                        if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
                         except OSError:
                             candidates=[]
                         for candidate in candidates:
-                            if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
-                                sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
+                            if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
                                 try:
                                     import lhapdf
                                     use_lhapdf=True

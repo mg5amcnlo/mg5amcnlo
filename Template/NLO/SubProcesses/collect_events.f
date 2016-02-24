@@ -256,8 +256,6 @@ c
       logical get_xsec_from_res1
       common/total_xsec/xsec,xerr,xsecABS,proc_id_tot,get_xsec_from_res1
 c
-      call setrun
-c
       if(debug) then
          write (*,*) ioutput,numoffiles,(junit(ii),ii=1,numoffiles)
          write(ioutput,*)'test test test'

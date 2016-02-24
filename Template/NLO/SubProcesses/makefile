@@ -1,8 +1,5 @@
 include ../Source/make_opts
 
-LIBDIR = ../lib/
-LINKLIBS = -L$(LIBDIR) -ldhelas -lgeneric -lmodel -lpdf -lcernlib $(llhapdf)
-
 # Files for the read40 combiner of top drawer files
 READ40=read40.o
 
@@ -27,6 +24,6 @@ split40: $(SPLIT40)
 	$(FC) $(LDFLAGS) -o split40 $(SPLIT40)
 
 collect_events: $(COLLECT_EVENTS)
-	$(FC) $(LDFLAGS) -o collect_events $(COLLECT_EVENTS) $(LINKLIBS)
+	$(FC) $(LDFLAGS) -o collect_events $(COLLECT_EVENTS)
 	rm handling_lhe_events.o
 
