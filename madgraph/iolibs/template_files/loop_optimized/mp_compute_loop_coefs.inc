@@ -181,7 +181,7 @@ C This flag is used to prevent the re-computation of the OpenLoop coefficients w
 	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
       INTEGER LIBINDEX
-      COMMON/ML5_0_I_LIB/LIBINDEX
+      COMMON/%(proc_prefix)sI_LIB/LIBINDEX
 
 C ----------
 C BEGIN CODE
