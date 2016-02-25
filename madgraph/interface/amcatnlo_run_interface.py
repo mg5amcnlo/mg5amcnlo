@@ -1909,8 +1909,9 @@ RESTART = %(mint_mode)s
 
     def collect_scale_pdf_info(self,options,jobs):
         """read the scale_pdf_dependence.dat files and collects there results"""
-        scale_pdf_info={}
-        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']):
+        scale_pdf_info=[]
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
             data_files=[]
             for job in jobs:
                 data_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
@@ -2735,7 +2736,8 @@ RESTART = %(mint_mode)s
         Event dir. Return the name of the event file created
         """
         scale_pdf_info=[]
-        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']):
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
@@ -3679,7 +3681,7 @@ RESTART = %(mint_mode)s
             p_cen=pdfset[0]
             if p_cen != 0.0 and self.run_card['reweight_pdf'][j]:
                 if use_lhapdf:
-                    pdfsetname=self.run_card['lhapdfsetname'][2:-2].split("', '")[j]
+                    pdfsetname=self.run_card['lhapdfsetname'][j]
                     try:
                         p=lhapdf.getPDFSet(pdfsetname)
                         ep=p.uncertainty(pdfset,-1)

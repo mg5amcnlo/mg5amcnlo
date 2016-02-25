@@ -64,7 +64,11 @@ c     Load all the PDF sets (the 1st one has already by loaded by the call
 c     to "setrun")
             if (nn.gt.1) then
                call initpdfsetbynamem(nn,lhaPDFsetname(nn))
-               call numberPDFm(nn,nmemPDF(nn))
+               if (lpdfvar(nn)) then
+                  call numberPDFm(nn,nmemPDF(nn))
+               else
+                  nmemPDF(nn)=0
+               endif
             endif
             if(nmemPDF(nn)+1.gt.maxPDFs)then
                write(*,*)'Too many PDFs: increase maxPDFs in '/
