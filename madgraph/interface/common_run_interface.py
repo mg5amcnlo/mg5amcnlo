@@ -1160,10 +1160,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 # merging scale available.
                 if not min_merging_scale is None:
                     min_scale_histos = histograms.HwUList(djr_path, 
-                                       consider_reweights=False, run_id=0, 
+                                       consider_reweights=[], run_id=0, 
                                                 merging_scale=min_merging_scale)
                     max_scale_histos = histograms.HwUList(djr_path, 
-                                       consider_reweights=False, run_id=0, 
+                                       consider_reweights=[], run_id=0, 
                                                 merging_scale=max_merging_scale)
     
                     # Give the histos types so that the plot labels look good
