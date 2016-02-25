@@ -124,7 +124,11 @@ c and not be part of the plots nor computation of the cross section.
       virt_wgt_mint(0)=virt_wgt*f_nb
       born_wgt_mint(0)=born_wgt*f_b
       do iamp=1, amp_split_size
-        if (amp_split_virt(iamp).eq.0d0) cycle
+        if (amp_split_virt(iamp).eq.0d0) then
+           virt_wgt_mint(iamp)=0d0
+           born_wgt_mint(iamp)=0d0
+           cycle
+        endif
         call amp_split_pos_to_orders(iamp, orders)
         QCD_power=orders(qcd_pos)
         wgtcpower=0d0
@@ -2041,18 +2045,23 @@ c Fills the function that is returned to the MINT integrator
       enddo
       f(1)=abs(sigint)
       f(2)=sigint
-      f(4)=virtual_over_born
-      f(5)=abs(virt_wgt_mint(0))
+      f(4)=virtual_over_born    ! not used for anything
       do iamp=0,amp_split_size
          if (iamp.eq.0) then
-            ithree=3
-            isix=6
+            f(3)=0d0
+            f(6)=0d0
+            f(5)=0d0
+            do i=1,amp_split_size
+               f(3)=f(3)+virt_wgt_mint(i)
+               f(6)=f(6)+born_wgt_mint(i)
+               f(5)=f(5)+abs(virt_wgt_mint(i))
+            enddo
          else
             ithree=2*iamp+5
             isix=2*iamp+6
+            f(ithree)=virt_wgt_mint(iamp)
+            f(isix)=born_wgt_mint(iamp)
          endif
-         f(ithree)=virt_wgt_mint(iamp)
-         f(isix)=born_wgt_mint(iamp)
       enddo
       return
       end

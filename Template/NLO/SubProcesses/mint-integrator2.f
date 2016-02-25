@@ -75,7 +75,7 @@ c others: same as 1 (for now)
       real * 8 fun,xgrid(0:nintervals,ndimmax),xint,ymax(nintervals
      $     ,ndimmax),ans(nintegrals),unc(nintegrals),ans3(nintegrals,3)
      $     ,unc3(nintegrals,3),ans_l3(nintegrals),unc_l3(nintegrals)
-     $     ,chi2_l3(nintegrals)
+     $     ,chi2_l3(nintegrals),error_virt
       real * 8 xint_virt,ymax_virt
       real * 8 x(ndimmax),vol
       real * 8 xacc(0:nintervals,ndimmax)
@@ -544,8 +544,13 @@ c double the number of points for the next iteration
 c Update the fraction of the events for which we include the virtual corrections
 c in the calculation
       if (imode.eq.0) then
-         virtual_fraction=max(min(virtual_fraction*max(min(2d0*etot(3)
-     $        /etot(1),2d0),0.25d0),1d0),Min_virt_fraction)
+         error_virt=0d0
+         do k_ord_virt=1,n_ord_virt
+            error_virt=error_virt+etot(2*k_ord_virt+5)**2
+         enddo
+         error_virt=sqrt(error_virt)
+         virtual_fraction=max(min(virtual_fraction*max(min(2d0
+     $        *error_virt/etot(1),2d0),0.25d0),1d0),Min_virt_fraction)
          write (*,'(a,1x,f7.3)') 'update virtual fraction to:'
      $        ,virtual_fraction
       elseif (imode.eq.1) then
