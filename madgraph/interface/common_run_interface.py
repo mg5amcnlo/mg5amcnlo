@@ -620,6 +620,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return args
 
+    @misc.multiple_try(nb_try=5, sleep=2)
     def load_results_db(self):
         """load the current results status"""
         
@@ -1121,16 +1122,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         print line[:-1].replace('INFO', 'REWEIGTH')
                 elif __debug__ and line:
                     logger.debug(line[:-1])
-                self.results = self.load_results_db()
             if p.returncode !=0:
                 logger.error("Reweighting failed")
-
+                return
+            self.results = self.load_results_db()
             # forbid this function to create an empty item in results.
-            
-            if self.results[self.run_name][-2]['cross']==0:
-                self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
-            if self.results.current['cross'] == 0 and self.run_name:
-                self.results.delete_run(self.run_name, self.run_tag)
+            try:
+                if self.results[self.run_name][-2]['cross']==0:
+                    self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
+            except:
+                pass
+            try:
+                if self.results.current['cross'] == 0 and self.run_name:
+                    self.results.delete_run(self.run_name, self.run_tag)
+            except:
+                pass                    
             # re-define current run     
             try:
                 self.results.def_current(self.run_name, self.run_tag)

@@ -1,7 +1,7 @@
       Subroutine Initialise(path)
 
       CHARACTER(128) path
-CF2PY intent(in):path
+CF2PY intent(in)::path
  
 C     INCLUDE FILES
 C     

@@ -185,7 +185,7 @@ class FortranWriter(FileWriter):
     comment_char = 'c'
     downcase = False
     line_length = 71
-    max_split = 10
+    max_split = 20
     split_characters = "+-*/,) "
     comment_split_characters = " "
 
@@ -341,9 +341,17 @@ class FortranWriter(FileWriter):
                     break
             newline = res_lines[-1][split_at:]
             nquotes = self.count_number_of_quotes(newline)
-            res_lines.append(line_start + 
-              ('//\''+res_lines[-1][(split_at-1):] if nquotes%2==1 else 
-               ''+res_lines[-1][split_at:]))
+#            res_lines.append(line_start + 
+#              ('//\''+res_lines[-1][(split_at-1):] if nquotes%2==1 else 
+#               ''+res_lines[-1][split_at:])                        
+            if nquotes%2==1: 
+                res_lines.append(line_start +('//\''+res_lines[-1][(split_at):]))
+            elif res_lines[-1][(split_at-1)] in self.split_characters:
+                res_lines.append(line_start +res_lines[-1][(split_at):])
+            else:
+                l_start = line_start.rstrip()
+                res_lines.append(l_start +res_lines[-1][(split_at):])
+
             res_lines[-2] = (res_lines[-2][:(split_at-1)]+'\'' if nquotes%2==1 \
                                                   else res_lines[-2][:split_at])
         return res_lines
