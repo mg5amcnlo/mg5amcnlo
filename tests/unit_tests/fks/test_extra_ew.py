@@ -240,6 +240,725 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_set('include_initial_leptons_split False')
 
 
+# other tests for the extra cnts for dijet
+# integrate one LO contribution with one kind of correction
+    def test_generate_fks_ew_dijet_qed0qcd2_qcd(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QCD corrections to the leftmost blob.
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        self.interface.do_generate('u u~ > jj jj QED=0 QCD=2 [real=QCD]')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+        # just one born processes u u~ > g g
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 1)
+        for proc in self.interface._fks_multi_proc['born_processes']:
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(final_id, [21, 21])
+
+            # there should never be extra cnts
+            self.assertEqual(len(proc.extra_cnt_amp_list), 0) #( 21, 22)
+            # make sure there are qqbar splittings in the fs
+            foundqq = False
+            for real in proc.real_amps:
+                final_real_id = real.pdgs[2:]
+                # the gluon has to split in order to need for an extra cnt
+                if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                    foundqq = True
+                self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            self.assertTrue(foundqq)
+
+
+    def test_generate_fks_ew_dijet_qed2qcd0_qed(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED corrections to the rightmost blob.
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        self.interface.do_generate('u u~ > jj jj QED=2 QCD=0 [real=QED]')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+        # just one born processes u u~ > a a 
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 1)
+        for proc in self.interface._fks_multi_proc['born_processes']:
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(final_id, [22, 22])
+
+            # there should never be extra cnts
+            self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+            # make sure there are qqbar splittings in the fs
+            foundqq = False
+            for real in proc.real_amps:
+                final_real_id = real.pdgs[2:]
+                # the gluon has to split in order to need for an extra cnt
+                if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                    foundqq = True
+                self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+            self.assertTrue(foundqq)
+
+
+    def test_generate_fks_ew_dijet_qed0qcd2_qed(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED corrections to the leftmost blob,
+        or, equivalently, QCD corrections to the central blob
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        for orders in ['QED=0 QCD=2 [real=QED]', 'QED=1 QCD=1 [real=QCD]']:
+            self.interface.do_generate('u u~ > jj jj %s' % orders) 
+            # two born processes u u~ > g g and g a
+            self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
+            target_ids = [[21,21], [22,21]]
+            for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+                final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+                self.assertEqual(ids, final_id)
+
+                # there should never be extra cnts
+                if final_id == [21, 21]:
+                    # there should never be extra cnts
+                    self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                    # make sure there are qqbar splittings in the fs
+                    foundqq = False
+                    for real in proc.real_amps:
+                        final_real_id = real.pdgs[2:]
+                        # the gluon has to split
+                        if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                            foundqq = True
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    self.assertTrue(foundqq)
+
+                elif final_id == [22, 21]:
+                    self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                    # make sure there are qqbar splittings in the fs
+                    foundqq = False
+                    for real in proc.real_amps:
+                        # check that real emissions with qqbar splitting has only one fks info
+                        if len(real.fks_infos) > 1:
+                            self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                        final_real_id = real.pdgs[2:]
+                        # the gluon has to split
+                        if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                            foundqq=True
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                        # make sure no qqbar splitting comes from the photon. 
+                        if real.fks_infos[0]['ij'] == 3:
+                            self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                            self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+                    self.assertTrue(foundqq)
+
+
+    def test_generate_fks_ew_dijet_qed1qcd1_qed(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED corrections to the central blob,
+        or, equivalently, QCD corrections to the rightmost blob
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        for orders in ['QED=1 QCD=1 [real=QED]', 'QED=2 QCD=0 [real=QCD]']:
+            self.interface.do_generate('u u~ > jj jj %s' % orders) 
+            # two born processes u u~ > g a and a a
+            self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
+            target_ids = [[22,21], [22,22]]
+            for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+                final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+                self.assertEqual(ids, final_id)
+
+                # there should never be extra cnts
+                if final_id == [22, 21]:
+                    # there should never be extra cnts
+                    self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                    # make sure there are qqbar splittings in the fs
+                    foundqq = False
+                    for real in proc.real_amps:
+                        final_real_id = real.pdgs[2:]
+                        # the gluon has to split
+                        if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                            foundqq = True
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    self.assertTrue(foundqq)
+
+                elif final_id == [22, 22]:
+                    self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                    # make sure there are qqbar splittings in the fs
+                    foundqq = False
+                    for real in proc.real_amps:
+                        # check that real emissions with qqbar splitting has only one fks info
+                        if len(real.fks_infos) > 1:
+                            self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                        # make sure no qqbar splitting comes from the photon. 
+                        if real.fks_infos[0]['ij'] > 2:
+                            self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                            self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+
+
+# integrate one LO contribution with both corrections
+    def test_generate_fks_ew_dijet_qed0qcd2_qedqcd(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED and QCD corrections to the leftmost blob
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=0 QCD=2 [real=QED QCD]') 
+        # two born processes u u~ > g g and g a
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
+        target_ids = [[21,21], [22,21]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            # there should never be extra cnts
+            if final_id == [21, 21]:
+                # there should never be extra cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 21]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                        foundqq=True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from the photon. 
+                    if real.fks_infos[0]['ij'] == 3:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+                self.assertTrue(foundqq)
+
+
+    def test_generate_fks_ew_dijet_qed1qcd1_qedqcd(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED and QCD corrections to the central blob
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=1 QCD=1 [real=QED QCD]') 
+        # all three born processes u u~ > g g, g a and a a
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
+        target_ids = [[21,21], [22,21], [22,22]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            # there should never be extra cnts
+            # for g g and a a no qqbar splitting should be there
+            if final_id in [[21, 21], [22, 22]]:
+                # there should never be extra cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                # make sure there are no qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                self.assertTrue(not foundqq)
+
+            elif final_id == [22, 21]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # make sure there are qqbar splittings in the fs
+                foundqqg = False
+                foundqqa = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 3:
+                        foundqqa=True
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                        foundqqg=True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                # make sure qqbar splittings come from both the photon and the gluon
+                self.assertTrue(foundqqg)
+                self.assertTrue(foundqqa)
+
+
+    def test_generate_fks_ew_dijet_qed2qcd0_qedqcd(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED and QCD corrections to the rightmost blob,
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=2 QCD=0 [real=QCD QED]') 
+        # two born processes u u~ > g a and a a
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
+        target_ids = [[22,21], [22,22]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            # there should never be extra cnts
+            if final_id == [22, 21]:
+                # there should never be extra cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from the gluon. 
+                    if real.fks_infos[0]['ij'] == 4:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 22]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+
+
+# integrate two LO contributions together with one kind of correction 
+    def test_generate_fks_ew_dijet_qed1qcd2_qcd(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QCD corrections to the leftmost and central blobs
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=1 QCD=2 [real=QCD]') 
+        # two born processes u u~ > g g and g a
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
+        target_ids = [[21,21], [22,21]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            # there should never be extra cnts
+            if final_id == [21, 21]:
+                # there should never be extra cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 21]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                        foundqq=True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from the photon. 
+                    if real.fks_infos[0]['ij'] == 3:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+                self.assertTrue(foundqq)
+
+
+    def test_generate_fks_ew_dijet_qed1qcd2_qed(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED corrections to the leftmost and central blobs
+        or, equivalently, QCD corrections to the rightmost and central blob
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        for orders in ['QED=1 QCD=2 [real=QED]', 'QED=2 QCD=1 [real=QCD]']:
+            self.interface.do_generate('u u~ > jj jj %s' % orders) 
+            # all three born processes u u~ > g g , g a , aa
+            self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
+            target_ids = [[21,21], [22,21], [22,22]]
+            for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+                final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+                self.assertEqual(ids, final_id)
+
+                # there should never be extra cnts
+                if final_id == [21, 21]:
+                    # there should never be extra cnts
+                    self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                    # make sure there  are no qqbar splittings in the fs
+                    foundqq = False
+                    for real in proc.real_amps:
+                        final_real_id = real.pdgs[2:]
+                        # there should not be any g > qq splitting here (it should be inside g a)
+                        if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                            foundqq = True
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    self.assertTrue(not foundqq)
+
+                elif final_id == [22, 21]:
+                    # there should never be extra cnts
+                    self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                    # make sure there are qqbar splittings in the fs
+                    foundqq = False
+                    for real in proc.real_amps:
+                        # check that real emissions with qqbar splitting has only one fks info
+                        if len(real.fks_infos) > 1:
+                            self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                        final_real_id = real.pdgs[2:]
+                        # both the gluon and photon have to split
+                        if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 3:
+                            foundqqa=True
+                        if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                            foundqqg=True
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    self.assertTrue(foundqqa)
+                    self.assertTrue(foundqqg)
+
+                elif final_id == [22, 22]:
+                    # there should never be extra cnts
+                    self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                    foundqq = False
+                    for real in proc.real_amps:
+                        final_real_id = real.pdgs[2:]
+                        # there should not be any g > qq splitting here (it should be inside g a)
+                        if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                            foundqq = True
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    self.assertTrue(not foundqq)
+
+
+    def test_generate_fks_ew_dijet_qed2qcd1_qed(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QED corrections to the rightmost and central blobs,
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=2 QCD=1 [real=QED]') 
+        # two born processes u u~ > g a and a a
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 2)
+        target_ids = [[22,21], [22,22]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            # there should never be extra cnts
+            if final_id == [22, 21]:
+                # there should never be extra cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from the gluon. 
+                    if real.fks_infos[0]['ij'] == 4:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 22]:
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+
+
+# integrate three LO contributions together with one kind of correction 
+    def test_generate_fks_ew_dijet_qed2qcd2_qcd(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QCD corrections to the three blobs
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=2 QCD=2 [real=QCD]') 
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
+        target_ids = [[21,21], [22,21], [22,22]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            if final_id == [21, 21]:
+                # gg state, should have extra_cnts with g a in the final state
+                self.assertEqual(len(proc.extra_cnt_amp_list), 1) #( 21, 22)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                        self.assertNotEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    else:
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 21]:
+                # ag state, should not have extra_cnts with a a in the final state 
+                #(it should appear at order alpha^3, which is not inlcuded here
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) #( 21, 22)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                        foundqq=True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from the photon. 
+                    if real.fks_infos[0]['ij'] == 3:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 22]:
+                # aa state, should have no extra_cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) #( 22, 22)
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from final state photons. 
+                    if real.fks_infos[0]['ij'] in [3, 4]:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+
+
+    def test_generate_fks_ew_dijet_qed2qcd2_qed(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        considering the NLO QCD corrections to the tree blobs
+        No extra cnts should be there"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=2 QCD=2 [real=QED]') 
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
+        target_ids = [[21,21], [22,21], [22,22]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            if final_id == [22, 22]:
+                # aa state, should have no extra_cnts (it goes into g a)
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) #( 21, 22)
+                # make sure there are no qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                self.assertTrue(not foundqq)
+
+            elif final_id == [22, 21]:
+                # ag state, should not have extra_cnts with a a in the final state 
+                #(it should appear at order alpha^3, which is not inlcuded here
+                self.assertEqual(len(proc.extra_cnt_amp_list), 1) #( 21, 22)
+                # make sure there are qqbar splittings in the fs
+                foundqqg = False
+                foundqqa = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                        foundqqg=True
+                        self.assertNotEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from the photon. 
+                    if real.fks_infos[0]['ij'] == 3:
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                        if any([idd in quarks for idd in final_real_id]):
+                            foundqqa=True
+                self.assertTrue(foundqqg)
+                self.assertTrue(foundqqa)
+
+            elif final_id == [21, 21]:
+                # gg state, should have no extra_cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) 
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from final state photons. 
+                    if real.fks_infos[0]['ij'] in [3, 4]:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+
+
+# integrate all LO and NLO contributions together
+    def test_generate_fks_ew_dijet_qed2qcd2_qedqcd(self):
+        """check that the generate command works as expected.
+        for processes which feature g/a > qqbar splitting.
+        Check if the extra countertersm are found when needed.
+        Here we will use a simplified dijet case, u u~ > g/a g/a
+        with all born orders and all corrections"""
+
+        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_define('jj = g a')
+        quarks = [-1,-2,-3,-4,1,2,3,4]
+
+        self.interface.do_generate('u u~ > jj jj QED=2 QCD=2 [real=QCD QED]')
+        # three born processes u u~ > g g ; a g ; a a
+        self.assertEqual(len(self.interface._fks_multi_proc['born_processes']), 3)
+        target_ids = [[21,21], [22,21], [22,22]]
+        for ids, proc in zip(target_ids, self.interface._fks_multi_proc['born_processes']):
+            final_id = [l['id'] for l in proc.born_amp['process']['legs'] if l['state']]
+            self.assertEqual(ids, final_id)
+
+            if final_id == [21, 21]:
+                # gg state, should have extra_cnts with g a in the final state
+                self.assertEqual(len(proc.extra_cnt_amp_list), 1) #( 21, 22)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] > 2:
+                        foundqq = True
+                        self.assertNotEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    else:
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 21]:
+                # ag state, should have extra_cnts with a a in the final state
+                self.assertEqual(len(proc.extra_cnt_amp_list), 1) #( 21, 22)
+                # make sure there are qqbar splittings in the fs
+                foundqq = False
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    # the gluon has to split in order to need for an extra cnt
+                    if any([idd in quarks for idd in final_real_id]) and real.fks_infos[0]['ij'] == 4:
+                        self.assertNotEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                        foundqq=True
+                    else:
+                        self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from the photon. 
+                    if real.fks_infos[0]['ij'] == 3:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+                self.assertTrue(foundqq)
+
+            elif final_id == [22, 22]:
+                # aa state, should have no extra_cnts
+                self.assertEqual(len(proc.extra_cnt_amp_list), 0) #( 22, 22)
+                for real in proc.real_amps:
+                    # check that real emissions with qqbar splitting has only one fks info
+                    if len(real.fks_infos) > 1:
+                        self.assertTrue(not any([real.pdgs[ii['i']-1] in quarks for ii in real.fks_infos]))
+                    final_real_id = real.pdgs[2:]
+                    self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
+                    # make sure no qqbar splitting comes from final state photons. 
+                    if real.fks_infos[0]['ij'] in [3, 4]:
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['i']-1] in quarks)
+                        self.assertTrue(not real.pdgs[real.fks_infos[0]['j']-1] in quarks)
+
+
+
+
     def test_combine_equal_processes_qcd_qed(self):
         """check that two processes with the same matrix-elements are equal
         and check that the add_process function works as expected"""
@@ -296,9 +1015,6 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_generate('b b~ > g g QED=0 QCD=2 [QCD QED]')
         fksproc4 = copy.copy(self.interface._fks_multi_proc)
 
-        # this is to avoid effects on other tests
-        self.interface.do_import('model sm')
-
         fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
         fksme2 = fks_helas.FKSHelasMultiProcess(fksproc2)['matrix_elements'][0]
         fksme3 = fks_helas.FKSHelasMultiProcess(fksproc3)['matrix_elements'][0]
@@ -314,6 +1030,9 @@ class TestAMCatNLOEW(unittest.TestCase):
         
         # check that the u and c initiated are equal
         self.assertEqual(fksme1, fksme2)
+
+        # this is to avoid effects on other tests
+        self.interface.do_import('model sm')
 
 
     def test_combine_equal_processes_dy_qed_virt(self):
@@ -340,9 +1059,6 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.interface.do_generate('s s~ > e+ e- QED=2 QCD=0 [QED]')
         fksproc5 = copy.copy(self.interface._fks_multi_proc)
 
-        # this is to avoid effects on other tests
-        self.interface.do_import('model sm')
-
         fksme1 = fks_helas.FKSHelasMultiProcess(fksproc1)['matrix_elements'][0]
         fksme2 = fks_helas.FKSHelasMultiProcess(fksproc2)['matrix_elements'][0]
         fksme3 = fks_helas.FKSHelasMultiProcess(fksproc3)['matrix_elements'][0]
@@ -363,6 +1079,8 @@ class TestAMCatNLOEW(unittest.TestCase):
         # check that the d and s initiated are equal
         self.assertEqual(fksme3, fksme5)
 
+        # this is to avoid effects on other tests
+        self.interface.do_import('model sm')
 
 
     def test_combine_equal_processes_qcd(self):
