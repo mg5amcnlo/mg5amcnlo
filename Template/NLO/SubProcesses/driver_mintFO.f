@@ -613,8 +613,8 @@ c
 c     try to find the process that has the same j_fks but with i_fks a
 c     gluon
                do iiFKS=1,fks_configs
-                  if ( (need_color_links_D(iFKS) .or.
-     &                  need_charge_links_D(iFKS)) .and.
+                  if ( (need_color_links_D(iiFKS) .or.
+     &                  need_charge_links_D(iiFKS)) .and.
      &                 fks_j_D(iFKS).eq.fks_j_D(iiFKS) ) then
                      nFKSprocessBorn(iFKS)=iiFKS
                      exit
@@ -623,8 +623,8 @@ c     gluon
             endif
             if (nFKSprocessBorn(iFKS).eq.0) then
                do iiFKS=1,fks_configs
-                  if ( need_color_links_D(iFKS) .or.
-     &                 need_charge_links_D(iFKS) ) then
+                  if ( need_color_links_D(iiFKS) .or.
+     &                 need_charge_links_D(iiFKS) ) then
                      if ( fks_j_D(iiFKS).le.nincoming .and.
      &                    fks_j_D(iFKS).le.nincoming ) then
                         nFKSprocessBorn(iFKS)=iiFKS
