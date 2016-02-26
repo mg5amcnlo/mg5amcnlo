@@ -1,5 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.4.0(XX/XX/XX)
+        VH+OM: Adding an official interface to PY8 for the parton-shower
+        VH: extend install command to install: lhapdf/pythia8
+        VH+SP: extend support for CKKWL
+        OM: Adding the possiblity of having detailled help at the time of the edition of the cards.
+            help mass / help mt / help nevents provided some information on the parameters.
+
 2.3.3(XX/XX/XX)
         OM: Allow new syntax for the param_card: instead of an entry you can enter scan:[val1, val2,...]
             To perform a scan on this parameter.

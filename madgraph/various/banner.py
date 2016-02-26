@@ -989,6 +989,20 @@ class ConfigFile(dict):
         dict.__setitem__(self, lower_name, value)
         self.lower_to_case[lower_name] = name
 
+    def do_help(self, name):
+        """return a minimal help for the parameter"""
+        
+        out = "## Information on parameter %s from class %s\n" % (name, self.__class__.__name__)
+        if name.lower() in self:
+            out += "## current value: %s (parameter should be of type %s)\n" % (self[name], type(self[name]))
+        else:
+            out += "## Unknown for this class\n"
+        if name.lower() in self.user_set:
+            out += "## This value is considered as been set by the user\n" 
+        else:
+            out += "## This value is considered as been set by the system\n"
+        logger.info(out)
+
     @staticmethod
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""

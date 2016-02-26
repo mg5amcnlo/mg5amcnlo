@@ -2645,6 +2645,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
                         }
     
+    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
+                     'madweight_card', 'MadLoopParams', 'shower_card']
+    
+    
+    special_shortcut_help = {              
+    'ebeam' : 'syntax: set ebeam VALUE:\n      This parameter sets the energy to both beam to the value in GeV',
+    'lpp'   : 'syntax: set ebeam  VALUE:\n'+\
+              '   Set the type of beam to a given value for both beam\n'+\
+              '   0 : means no PDF\n'+\
+              '   1 : means proton PDF\n'+\
+              '  -1 : means proton PDF\n'+\
+              '   2 : means PDF for elastic photon emited from a proton\n'+\
+              '   3 : means PDF for elastic photon emited from an electron',
+    'lhc'   : 'syntax: set lhc VALUE:\n      Set for a proton-proton collision with that given center of mass energy (in TeV)',
+    'lep'   : 'syntax: set lep VALUE:\n      Set for a electron-positron collision with that given center of mass energy (in GeV)',
+    'fixed_scale' : 'syntax: set fixed_scale VALUE:\n      Set all scales to the give value (in GeV)',              
+    }
+    
+    
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
         # Initiation
@@ -2669,7 +2688,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
-        
+        self.param_card_default = default_param
         
         try:
             self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
@@ -2774,7 +2793,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if var in self.run_card:
                     self.conflict.append(var)
 
-       #check if pythia8_card.dat is present:
+        #check if pythia8_card.dat is present:
         self.has_PY8 = False
         if 'pythia8_card.dat' in cards:
             self.has_PY8 = True
@@ -2795,11 +2814,129 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if self.has_ml and var in self.ml_vars:
                     self.conflict.append(var)
     
-    def do_help(self, line):    
+    def do_help(self, line, conflict_raise=False, banner=True):    
+     try:       
+         
+        if banner:                      
+            logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
+         
+        args = self.split_arg(line)
+        # handle comand related help
+        if len(args) == 1 and hasattr(self, 'do_%s' % args[0]):
+            out = cmd.BasicCmd.do_help(self, line)
+            if banner:
+                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+            return out      
+        # check for special shortcut.
+        # special shortcut:
+        if args[0] in self.special_shortcut:    
+            if args[0] in self.special_shortcut_help:
+                print self.special_shortcut_help[args[0]]
+            if banner:
+                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+            return       
         
-        return cmd.BasicCmd.do_help(self, line)
-        
-    def complete_set(self, text, line, begidx, endidx):
+        start = 0
+        card = ''
+        if args[0] in self.all_card_name:
+            start += 1
+            card = args[0]
+            if len(args) == 1:
+                if args[0] == 'param_card':
+                    logger.info("Param_card information: ", '$MG:color:BLUE')
+                    print "File to define the various model parameter"
+                    logger.info("List of the Block defined:",'$MG:color:BLUE')
+                    print "\t".join(self.param_card.keys())
+                else:
+                    logger.info("%s information: " % args[0], '$MG:color:BLUE')
+                    print(eval('self.%s' % args[0]).__doc__)
+                    logger.info("List of parameter associated", '$MG:color:BLUE')
+                    print "\t".join(eval('self.%s' % args[0]).keys())
+            if banner:
+                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+            return 
+                    
+                
+        #### RUN CARD
+        if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
+            if args[start] not in self.run_set:
+                args[start] = [l for l in self.run_set if l.lower() == args[start]][0]
+
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
+
+            self.run_card.do_help(args[start])
+        ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
+        elif (args[start] in self.param_card or args[start] == 'width') \
+                                                  and card in ['','param_card']:
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                 
+            if args[start] == 'width':
+                args[start] = 'decay'
+                
+            if len(args) == start+1:
+                self.param_card.do_help(args[start], tuple())
+                key = None
+            elif args[start+1] in self.pname2block:
+                all_var = self.pname2block[args[start+1]]
+                key = None
+                for bname, lhaid in all_var:
+                    if bname == args[start]:
+                        key = lhaid
+                        break
+                else:
+                    logger.warning('%s is not part of block "%s" but "%s". please correct.' %
+                                    (args[start+1], args[start], bname))
+            else:
+                try:
+                    key = tuple([int(i) for i in args[start+1:]])
+                except ValueError:
+                    logger.warning('Failed to identify LHA information')
+                    return            
+            
+            if key in self.param_card[args[start]].param_dict:
+                self.param_card.do_help(args[start], key, default=self.param_card_default)
+            elif key:
+                logger.warning('invalid information: %s not defined in the param_card' % (key,))
+        # PARAM_CARD NO BLOCK NAME ---------------------------------------------
+        elif args[start] in self.pname2block and card in ['','param_card']:                
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                 
+            all_var = self.pname2block[args[start]]
+            for bname, lhaid in all_var:
+                new_line = 'param_card %s %s %s' % (bname,
+                   ' '.join([ str(i) for i in lhaid]), ' '.join(args[start+1:]))
+                self.do_help(new_line, conflict_raise=True, banner=False) 
+        else:
+            print "no help available" 
+          
+        if banner:                      
+            logger.info('*** END HELP ***', '$MG:color:BLACK')    
+        #raw_input('press enter to quit the help')
+        return        
+     except Exception, error:
+         import traceback
+         traceback.print_exc()
+         print error    
+    def complete_help(self, text, line, begidx, endidx):
+     try:
+        possibilities = self.complete_set(text, line, begidx, endidx,return_cat=True)
+        if line == '':
+            possibilities['Defined command'] = cmd.BasicCmd.completenames(self, text, line)#, begidx, endidx)
+        return self.deal_multiple_categories(possibilities)
+     except Exception, error:
+         import traceback
+         traceback.print_exc()
+         print error
+    def complete_set(self, text, line, begidx, endidx, return_cat=False):
         """ Complete the set command"""
 
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -2989,8 +3126,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
 
-        return self.deal_multiple_categories(possibilities)
-
+        if return_cat:
+            return possibilities
+        else:
+            return self.deal_multiple_categories(possibilities)
+        
+        
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
@@ -3253,7 +3394,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
         # PARAM_CARD NO BLOCK NAME ---------------------------------------------
-        elif args[start] in self.pname2block and card != 'run_card':
+        elif args[start] in self.pname2block and card in ['','param_card']:
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 text += ' in the format < set card parameter value>'
