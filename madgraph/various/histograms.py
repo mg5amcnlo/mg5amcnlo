@@ -1075,8 +1075,8 @@ class HwU(Histogram):
                                        "adding its location to the PYTHONPATH environment variable.")
                         use_lhapdf=False
 
-                else:
-                    lhapdf.setVerbosity(0)
+
+            if type=='PDF' and use_lhapdf: lhapdf.setVerbosity(0)
 
             # Place the new weight label last before the first tuple
             position=[]

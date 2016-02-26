@@ -3677,7 +3677,7 @@ RESTART = %(mint_mode)s
                     use_lhapdf=False
 
         # turn off lhapdf printing any messages
-        if use_lhapdf: lhapdf.setVerbosity(0)
+        if any(self.run_card['reweight_pdf']) and use_lhapdf: lhapdf.setVerbosity(0)
 
         pdf_info=[]
         for j,pdfset in enumerate(pdfs):
