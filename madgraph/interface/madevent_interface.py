@@ -5155,8 +5155,13 @@ if '__main__' == __name__:
     # Call the cmd interface main loop                                                                                                                                                                          
     try:
         if args:
-            # a single command is provided                                                                                                                                                                      
-            cmd_line = MadEventCmd(force_run=True)
+            # a single command is provided
+            if '--web' in args:
+                i = args.index('--web') 
+                args.pop(i)                                                                                                                                                                     
+                cmd_line = MadEventCmd(force_run=True)
+            else:
+                cmd_line = MadEventCmdShell(force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print parser_error

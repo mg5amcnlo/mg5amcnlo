@@ -179,8 +179,8 @@ class ReweightInterface(extended_cmd.Cmd):
         process = self.banner.get_detail('proc_card', 'generate')
         if '[' in process:
             if not self.banner.get_detail('run_card', 'keep_rwgt_info'):
-                logger.warning("The information to perform a proper NLO reweighting is not present in the event file.\n" +\
-                               "       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
+                logger.warning("The information to perform a proper NLO reweighting is not present in the event file.")
+                logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
             
             if 'OLP' in self.mother.options:
@@ -444,8 +444,14 @@ class ReweightInterface(extended_cmd.Cmd):
         pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
         param_card_iterator = []
         if pattern_scan.search(new_card):
+            try:
+                import internal.extended_cmd as extended_internal
+                Shell_internal = extended_internal.CmdShell
+            except:
+                Shell_internal = None
             import madgraph.interface.extended_cmd as extended_cmd
-            if not isinstance(self.mother, extended_cmd.CmdShell): 
+            misc.sprint(type(self.mother), hasattr(self.mother, 'do_shell'), self.mother.__class__.__bases__)
+            if not isinstance(self.mother, (extended_cmd.CmdShell, Shell_internal)): 
                 raise Exception, "scan are not allowed on the Web"
             # at least one scan parameter found. create an iterator to go trough the cards
             main_card = check_param_card.ParamCardIterator(new_card)

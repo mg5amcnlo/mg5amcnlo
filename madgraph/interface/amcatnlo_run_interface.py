@@ -4786,8 +4786,16 @@ if '__main__' == __name__:
     # Call the cmd interface main loop                                                                                                                                                                          
     try:
         if args:
-            # a single command is provided                                                                                                                                                                      
-            cmd_line = aMCatNLOCmd(force_run=True)
+            # a single command is provided   
+            if '--web' in args:
+                i = args.index('--web') 
+                args.pop(i)                                                                                                                                                                     
+                cmd_line =  aMCatNLOCmd(force_run=True)
+            else:
+                misc.sprint("Use Shell mode")
+                cmd_line =  aMCatNLOCmdShell(force_run=True)
+            
+            misc.sprint(hasattr(cmd_line, 'do_shell'))
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print parser_error

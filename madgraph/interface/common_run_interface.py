@@ -1112,8 +1112,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 command.append(self.run_name)
             else:
                 command += args
-            command.append('-from_cards')
-
             p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
             while p.poll() is None:
                 line = p.stdout.readline()
