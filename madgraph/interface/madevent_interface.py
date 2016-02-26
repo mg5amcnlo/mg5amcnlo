@@ -4758,13 +4758,15 @@ Please install this tool with the following MG5_aMC command:
                                          in valid_options[key] else switch[key])
 
         valid_options = dict((k, ['OFF']) for k in switch_order) # track of all possible input for an entry
-        
+        options =  ['auto', 'done']
+                
         # Init the switch value according to the current status
         if self.options['pythia-pgs_path']:
             available_mode.append('1')
             available_mode.append('2')
             valid_options['shower'].append('PYTHIA6')
             valid_options['detector'].append('PGS')
+            options += ['pythia', 'pgs', 'pythia=ON', 'pythia=OFF', 'pgs=ON', 'pgs=OFF']
             if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
                 switch['shower'] = 'PYTHIA6'
             else:
@@ -4788,7 +4790,8 @@ Please install this tool with the following MG5_aMC command:
                 available_mode.append('2')
                 valid_options['detector'].append('DELPHES')
                 valid_options['detector'].append('DELPHES-CMS')
-                valid_options['detector'].append('DELPHES-ATLAS')                
+                valid_options['detector'].append('DELPHES-ATLAS')  
+                options += ['delphes',   'delphes=ON', 'delphes=OFF']             
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['detector'] = 'DELPHES'
                 else:
@@ -4825,14 +4828,14 @@ Please install this tool with the following MG5_aMC command:
             elif switch['madspin'] != 'ON':
                 logger.critical("Cannot run madspin: %s", switch['reweight'])            
         
-        options =  ['auto', 'done']
+
         for id, key in enumerate(switch_order):
             if len(valid_options[key]) >1:
                 options += ['%s=%s' % (key, s) for s in valid_options[key]]
                 options.append(key)
                 
-        options += ['parton', 'pythia', 'pgs', 'delphes'] + sorted(list(set(available_mode)))    
-        options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
+        options += ['parton'] + sorted(list(set(available_mode)))    
+        #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
         if mode or not self.force:
             answer = ''
@@ -4914,7 +4917,7 @@ Please install this tool with the following MG5_aMC command:
                                     switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                elif answer in ['parton', 'pythia','pgs','madspin','reweight']:
+                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
@@ -4929,6 +4932,8 @@ Please install this tool with the following MG5_aMC command:
                         switch_assign('detector', 'PGS')
                     elif answer == 'delphes':
                         switch_assign('shower', 'PYTHIA6')
+                        if switch['shower'] == 'OFF':
+                            switch_assign('shower', 'PYTHIA8')
                         switch_assign('detector', 'DELPHES')
                     elif answer == 'madspin':
                         switch_assign('madspin', 'ON')

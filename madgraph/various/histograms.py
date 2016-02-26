@@ -721,7 +721,6 @@ class HwU(Histogram):
     def get(self, name):
         
         if name == 'bins':
-            print [b.boundaries[0] for b in self.bins]
             return [b.boundaries[0] for b in self.bins]
         else:
             return [b.wgts[name] for b in self.bins]
