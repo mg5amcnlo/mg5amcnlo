@@ -2027,7 +2027,7 @@ class HwUList(histograms_PhysicsObjectList):
                 self.append(new_histo)
         
     def output(self, path, format='gnuplot',number_of_ratios = -1, 
-          uncertainties=['scale','pdf','statitistical','merging','alpsfact'],
+          uncertainties=['scale','pdf','statitistical','merging_scale','alpsfact'],
           use_band = None,
           ratio_correlations=True, arg_string='', 
           jet_samples_to_keep=None,
@@ -2309,7 +2309,7 @@ set style data histeps
 
     def output_group(self, HwU_out, gnuplot_out, block_position, HwU_name,
           number_of_ratios = -1, 
-          uncertainties = ['scale','pdf','statitistical','merging','alpsfact'],
+          uncertainties = ['scale','pdf','statitistical','merging_scale','alpsfact'],
           use_band = None,
           ratio_correlations = True, 
           jet_samples_to_keep=None,
