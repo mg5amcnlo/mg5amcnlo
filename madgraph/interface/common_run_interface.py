@@ -1129,11 +1129,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
                 histo_output_options = {
                   'format':'gnuplot', 
-                  'uncertainties':['scale','pdf','statistical','merging','alpsfact'], 
+                  'uncertainties':['scale','pdf','statistical',
+                                   'merging_scale','alpsfact'], 
                   'ratio_correlations':True,
                   'arg_string':'Automatic plotting from MG5aMC', 
                   'jet_samples_to_keep':None,
-                  'use_band':['merging','alpsfact'],
+                  'use_band':['merging_scale','alpsfact'],
                   'auto_open':False
                 }
                 # alpsfact variation only applies to MLM
