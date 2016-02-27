@@ -102,7 +102,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [1.2793e-15:3.7328e-11]
+set yrange [1.3539e-15:3.7328e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -112,11 +112,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 0 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):6 ls 11 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):8 ls 21 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):13 ls 31 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):7 ls 11 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):10 ls 21 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'MLM_djrs_output.HwU' index 3 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'MLM_djrs_output.HwU' index 2 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -128,7 +129,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.2224e-01:3.3234e-01]
+set yrange [-1.9800e-01:2.1396e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -136,13 +137,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 0 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'MLM_djrs_output.HwU' index 0 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 
@@ -179,11 +181,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 4 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):6 ls 11 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):8 ls 21 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):13 ls 31 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):7 ls 11 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):10 ls 21 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'MLM_djrs_output.HwU' index 7 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'MLM_djrs_output.HwU' index 6 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -195,7 +198,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.0598e-01:2.6097e-01]
+set yrange [-1.9551e-01:2.0762e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -203,13 +206,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 4 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'MLM_djrs_output.HwU' index 4 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 
@@ -236,7 +240,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [1.0773e-15:2.4993e-11]
+set yrange [1.1733e-15:2.4993e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -246,11 +250,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 8 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):6 ls 11 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):8 ls 21 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):13 ls 31 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):7 ls 11 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):10 ls 21 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'MLM_djrs_output.HwU' index 11 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'MLM_djrs_output.HwU' index 10 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -262,7 +267,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.3159e+00:5.7948e-01]
+set yrange [-2.1261e-01:2.3059e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -270,13 +275,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 8 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'MLM_djrs_output.HwU' index 8 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 
@@ -303,7 +309,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [1.0250e-15:2.6431e-11]
+set yrange [1.1525e-15:2.6431e-11]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -313,11 +319,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 12 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):6 ls 11 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):8 ls 21 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):13 ls 31 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):7 ls 11 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):10 ls 21 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'MLM_djrs_output.HwU' index 15 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'MLM_djrs_output.HwU' index 14 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -329,7 +336,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-1.3235e+00:6.1734e-01]
+set yrange [-2.6022e-01:2.8412e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -337,13 +344,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' MLM_djrs_output.HwU" index 12 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'MLM_djrs_output.HwU' index 12 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 

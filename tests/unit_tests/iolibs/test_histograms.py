@@ -55,7 +55,7 @@ class IOHistogramTest(IOTests.IOTestManager):
                                              consider_reweights='ALL', run_id=0)
         histo_output_options = {
           'format':'gnuplot', 
-          'uncertainties':['scale','pdf','statistical','merging','alpsfact'], 
+          'uncertainties':['scale','pdf','statistical','merging_scale','alpsfact'], 
           'ratio_correlations':True,
           'arg_string':'Automatic plotting from MG5aMC', 
           'jet_samples_to_keep':None,
@@ -73,7 +73,7 @@ class IOHistogramTest(IOTests.IOTestManager):
                                               consider_reweights='ALL', run_id=0)
         histo_output_options = {
           'format':'gnuplot', 
-          'uncertainties':['scale','pdf','statistical','merging'], 
+          'uncertainties':['scale','pdf','statistical','merging_scale'], 
           'ratio_correlations':True,
           'arg_string':'Automatic plotting from MG5aMC', 
           'jet_samples_to_keep':None,

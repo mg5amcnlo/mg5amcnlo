@@ -102,7 +102,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [7.3061e-11:4.0170e-07]
+set yrange [8.3799e-11:4.0170e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -112,11 +112,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 0 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):6 ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):8 ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):13 ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):7 ls 11 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):10 ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'CKKWL_djrs_output.HwU' index 3 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'CKKWL_djrs_output.HwU' index 3 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'CKKWL_djrs_output.HwU' index 2 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -128,7 +129,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.7419e-01:2.7553e-01]
+set yrange [-2.3218e-01:2.4954e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -136,13 +137,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 0 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'CKKWL_djrs_output.HwU' index 0 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 
@@ -169,7 +171,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [7.3558e-11:5.2950e-07]
+set yrange [7.7524e-11:5.2950e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -179,11 +181,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 4 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):6 ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):8 ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):13 ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):7 ls 11 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):10 ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'CKKWL_djrs_output.HwU' index 7 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'CKKWL_djrs_output.HwU' index 7 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'CKKWL_djrs_output.HwU' index 6 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -195,7 +198,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-4.6665e-01:1.2366e+00]
+set yrange [-2.5008e-01:3.0001e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -203,13 +206,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 4 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'CKKWL_djrs_output.HwU' index 4 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 
@@ -236,7 +240,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [7.3558e-11:5.4483e-07]
+set yrange [8.3880e-11:5.4483e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -246,11 +250,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 8 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):6 ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):8 ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):13 ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):7 ls 11 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):10 ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'CKKWL_djrs_output.HwU' index 11 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'CKKWL_djrs_output.HwU' index 11 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'CKKWL_djrs_output.HwU' index 10 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -262,7 +267,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.3920e-01:2.7084e-01]
+set yrange [-2.1679e-01:2.7482e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -270,13 +275,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 8 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'CKKWL_djrs_output.HwU' index 8 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 
@@ -303,7 +309,7 @@ set label front 'MadGraph5\_aMC\@NLO' font "Courier,11" rotate by 90 at graph 1.
 #-- rendering subhistograms 'None and None results'
 
 set format y '10^{%%T}'
-set yrange [7.3558e-11:6.0376e-07]
+set yrange [8.4280e-11:6.0376e-07]
 set origin 0.0000e+00, 5.0000e-01
 set size 1.0000e+00, 4.0000e-01
 set mytics 10
@@ -313,11 +319,12 @@ set logscale y
 set ylabel "{/Symbol s} per bin [pb]"
 
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 12 using 1:9:10 with filledcurve ls 31 fs transparent solid 0.2 title 'all jet samples, merging scale variation',\
-'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):6 ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):5 ls 11 title 'all jet samples, scale variation',\
-'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):8 ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):7 ls 21 title 'all jet samples, PDF variation',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):13 ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):12 ls 31 title 'all jet samples, merging scale variation',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):7 ls 11 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):6 ls 11 title 'all jet samples, scale variation',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):10 ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):9 ls 21 title 'all jet samples, PDF variation',\
 'CKKWL_djrs_output.HwU' index 15 using (($1+$2)/2):3:4 w yerrorbar ls 4 title '',\
 'CKKWL_djrs_output.HwU' index 15 using (($1+$2)/2):3 ls 4 title 'jet sample 2',\
 'CKKWL_djrs_output.HwU' index 14 using (($1+$2)/2):3:4 w yerrorbar ls 3 title '',\
@@ -329,7 +336,7 @@ plot \
 #-- rendering subhistograms 'Relative scale and PDF uncertainty'
 unset label
 unset format
-set yrange [-2.1786e-01:2.2683e-01]
+set yrange [-2.0692e-01:2.3076e-01]
 set origin 0.0000e+00, 3.5000e-01
 set size 1.0000e+00, 1.5000e-01
 set mytics 2
@@ -337,13 +344,14 @@ set ytics auto
 set format x
 unset logscale y
 set ylabel "(1) rel.unc."
-set label "Relative uncertainties" font ",9" at graph 0.03, graph 0.13
+set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13
 plot \
- "<perl -pe 's/^\\s*(?<x1>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)\\s*(?<x2>[\\+|-]?\\d+(\\.\\d*)?([EeDd][\\+|-]?\\d+)?)(?<rest>.*)\\n/ $+{x1} $+{x2} $+{rest}\\n$+{x2} $+{x1} $+{rest}\\n/g' CKKWL_djrs_output.HwU" index 12 using 1:(safe($9,$3,1.0)-1.0):(safe($10,$3,1.0)-1.0) with filledcurve ls 31 fs transparent solid 0.2 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($13,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($12,$3,1.0)-1.0) ls 31 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 11 title '',\
 'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($6,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($5,$3,1.0)-1.0) ls 11 title '',\
-'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($8,$3,1.0)-1.0) ls 21 title '',\
-'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($7,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($10,$3,1.0)-1.0) ls 21 title '',\
+'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(safe($9,$3,1.0)-1.0) ls 21 title '',\
 0.0 ls 999 title '',\
 'CKKWL_djrs_output.HwU' index 12 using (($1+$2)/2):(0.0):(safe($4,$3,0.0)) w yerrorbar ls 1 title ''
 
