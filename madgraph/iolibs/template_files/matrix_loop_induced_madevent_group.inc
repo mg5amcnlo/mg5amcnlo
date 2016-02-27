@@ -144,7 +144,7 @@ C So that TIR integrals can be reused accross helicity configuration.
 C Notice that ITR integrals for rotated PS points (i.e. which is part of MadLoop's default stabiliy test procedure), will not work. This is why one should always keep the MadLoop parameter 'NRotations_DP' set to 0 in this case.
 C Of course this is only necessary when using MadLoop for several helicity for the same PS point
       IF ((.not.FORCE_ML_Helicity_Sum).and.ISUM_HEL.eq.0) THEN
-	    CALL %(ml_prefix)sSET_AUTOMATIC_TIR_CACHE_CLEARING(.FALSE.)
+	    CALL %(ml_prefix)sSET_AUTOMATIC_CACHE_CLEARING(.FALSE.)
 	  ENDIF
       CALL %(ml_prefix)sGET_ANSWER_DIMENSION(ML_ANS_DIMENSION)
 C In case there is an initialization phase for MadLoop (i.e. everytime except when MC over helicity and disabling the Loop filter, which is the default.
@@ -156,7 +156,7 @@ C In case there is an initialization phase for MadLoop (i.e. everytime except wh
     IF ((.not.FORCE_ML_Helicity_Sum).and.ISUM_HEL.eq.0) THEN
 C     But then we must clear the cache by hand at the beginning of the computation of each new PS point
 C     This is of course only necessary if the automatic TIR Cache clearing was turned off.
-	  CALL %(ml_prefix)sCLEAR_TIR_CACHE()
+	  CALL %(ml_prefix)sCLEAR_CACHES()
     ENDIF
 
     NTRY(IMIRROR)=NTRY(IMIRROR)+1

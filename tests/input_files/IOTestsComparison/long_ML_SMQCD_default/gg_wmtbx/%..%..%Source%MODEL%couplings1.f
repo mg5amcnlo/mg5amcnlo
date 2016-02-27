@@ -18,8 +18,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       INCLUDE 'mp_input.inc'
       INCLUDE 'mp_coupl.inc'
 
-      GC_47 = (MDL_EE*MDL_COMPLEXI*MDL_CONJG__CKM33)/(MDL_SW*MDL_SQRT__
-     $ 2)
+      GC_47 = (MDL_EE*MDL_COMPLEXI*MDL_CONJG__CKM33)/(MDL_SW
+     $ *MDL_SQRT__2)
       MP__GC_47 = (MP__MDL_EE*MP__MDL_COMPLEXI*MP__MDL_CONJG__CKM33)
      $ /(MP__MDL_SW*MP__MDL_SQRT__2)
       END

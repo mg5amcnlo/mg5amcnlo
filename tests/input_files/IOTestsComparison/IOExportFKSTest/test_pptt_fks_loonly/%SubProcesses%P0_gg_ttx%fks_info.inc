@@ -12,8 +12,8 @@
 C     
 C     Particle type:
 C     octet = 8, triplet = 3, singlet = 1
-      DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, 
-     $ -3, 8 /
+      DATA (PARTICLE_TYPE_D(1, IPOS), IPOS=1, NEXTERNAL) / 8, 8, 3, -3
+     $ , 8 /
 
 C     
 C     Particle type according to PDG:
@@ -25,6 +25,7 @@ C
 C     Particle charge:
 C     charge is set 0. with QCD corrections, which is irrelevant
       DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) /  
-     $  0.000000000000000D0,   0.000000000000000D0,   0.000000000000000
-     $ D0,   0.000000000000000D0,   0.000000000000000D0 /
+     $  0.000000000000000D0,   0.000000000000000D0,  
+     $  0.000000000000000D0,   0.000000000000000D0,  
+     $  0.000000000000000D0 /
 

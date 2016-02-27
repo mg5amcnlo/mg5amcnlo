@@ -938,7 +938,7 @@ class CheckValidForCmd(object):
     
     def check_pythia(self, args):
         """Check the argument for pythia command
-        syntax: pythia [NAME] 
+        syntax is  "pythia [NAME]" 
         Note that other option are already remove at this point
         """
         
@@ -1124,7 +1124,7 @@ class CheckValidForCmd(object):
     
     def check_pgs(self, arg, no_default=False):
         """Check the argument for pythia command
-        syntax: pgs [NAME] 
+        syntax is  "pgs [NAME]" 
         Note that other option are already remove at this point
         """
         
@@ -1182,7 +1182,7 @@ class CheckValidForCmd(object):
 
     def check_delphes(self, arg):
         """Check the argument for pythia command
-        syntax: delphes [NAME] 
+        syntax is "delphes [NAME]" 
         Note that other option are already remove at this point
         """
         
@@ -1239,7 +1239,7 @@ class CheckValidForCmd(object):
 
     def check_display(self, args):
         """check the validity of line
-        syntax: display XXXXX
+        syntax is "display XXXXX"
         """
             
         if len(args) < 1 or args[0] not in self._display_opts:
@@ -2544,19 +2544,21 @@ Beware that this can be dangerous for local multicore runs.""")
                 run_card = self.run_card
             if run_card['nhel'] == 0:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
-                            self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    (self.MadLoopparam.get('MLReductionLib').startswith('1') or
+                     self.MadLoopparam.get('MLReductionLib').startswith('6')):
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|3|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','2|3|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
-                    not self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
+                         self.MadLoopparam.get('MLReductionLib').startswith('6')):
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','1|2|3|4', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|1|2|3', ifnotdefault=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
@@ -4868,7 +4870,7 @@ class MadLoopInitializer(object):
                 my_req_files.remove('LoopFilter.dat')
             except ValueError:
                 pass
-        
+
         if MLCard['HelicityFilterLevel']==0:
             try:
                 my_req_files.remove('HelFilter.dat')

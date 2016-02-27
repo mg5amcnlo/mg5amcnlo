@@ -4,8 +4,6 @@ C     MULTIPLY BY THE BORN
       SUBROUTINE ML5_0_CREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE
      $ ,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER,COLOR_ID,HELCONFIG)
       IMPLICIT NONE
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
 C     
 C     CONSTANTS 
 C     
@@ -17,6 +15,8 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
       COMPLEX*16 CMPLX_ZERO
       PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
+      INCLUDE 'loop_max_coefs.inc'
+      INCLUDE 'coef_specs.inc'
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=40)
       INTEGER    NLOOPGROUPS
@@ -42,7 +42,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP, ML5_0_ML5SOINDEX_FOR_LOOP_
-     $ AMP, ML5_0_ML5SQSOINDEX
+     $AMP, ML5_0_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -77,23 +77,24 @@ C
      $   ,KIND=8)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5_0_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL ML5_0_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I,ML5_0_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
       END
+
 
 
 C     THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
@@ -102,8 +103,6 @@ C     MULTIPLY BY THE BORN
       SUBROUTINE MP_ML5_0_CREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE
      $ ,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER,COLOR_ID,HELCONFIG)
       IMPLICIT NONE
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
 C     
 C     CONSTANTS 
 C     
@@ -115,6 +114,8 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
       COMPLEX*32 CMPLX_ZERO
       PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
+      INCLUDE 'loop_max_coefs.inc'
+      INCLUDE 'coef_specs.inc'
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=40)
       INTEGER    NLOOPGROUPS
@@ -140,7 +141,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP, ML5_0_ML5SOINDEX_FOR_LOOP_
-     $ AMP, ML5_0_ML5SQSOINDEX
+     $AMP, ML5_0_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -175,28 +176,29 @@ C
      $   ,KIND=16)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5_0_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL MP_ML5_0_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I,ML5_0_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
       END
 
 
+
       SUBROUTINE ML5_0_EVAL_POLY(C,R,Q,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       COMPLEX*16 C(0:LOOPMAXCOEFS-1)
       INTEGER R
       COMPLEX*16 Q(0:3)
@@ -208,14 +210,14 @@ C
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 
       SUBROUTINE MP_ML5_0_EVAL_POLY(C,R,Q,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       COMPLEX*32 C(0:LOOPMAXCOEFS-1)
       INTEGER R
       COMPLEX*32 Q(0:3)
@@ -227,14 +229,14 @@ C
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 
       SUBROUTINE ML5_0_ADD_COEFS(A,RA,B,RB)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I
       COMPLEX*16 A(0:LOOPMAXCOEFS-1),B(0:LOOPMAXCOEFS-1)
       INTEGER RA,RB
@@ -249,7 +251,7 @@ C
 
       SUBROUTINE MP_ML5_0_ADD_COEFS(A,RA,B,RB)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I
       COMPLEX*32 A(0:LOOPMAXCOEFS-1),B(0:LOOPMAXCOEFS-1)
       INTEGER RA,RB
@@ -264,7 +266,7 @@ C
 
       SUBROUTINE ML5_0_MERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J
       COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       INTEGER R,LCUT_SIZE
@@ -283,7 +285,7 @@ C
 
       SUBROUTINE MP_ML5_0_MERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J
       COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       INTEGER R,LCUT_SIZE
@@ -303,7 +305,7 @@ C
       SUBROUTINE ML5_0_UPDATE_WL_0_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -329,7 +331,7 @@ C
       SUBROUTINE MP_ML5_0_UPDATE_WL_0_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -355,7 +357,7 @@ C
       SUBROUTINE ML5_0_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -391,7 +393,7 @@ C
       SUBROUTINE MP_ML5_0_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -427,7 +429,7 @@ C
       SUBROUTINE ML5_0_UPDATE_WL_1_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -453,7 +455,7 @@ C
       SUBROUTINE MP_ML5_0_UPDATE_WL_1_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -479,7 +481,7 @@ C
       SUBROUTINE ML5_0_UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -501,7 +503,7 @@ C
       SUBROUTINE MP_ML5_0_UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -523,7 +525,7 @@ C
       SUBROUTINE ML5_0_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -559,7 +561,7 @@ C
       SUBROUTINE MP_ML5_0_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
       INCLUDE 'coef_specs.inc'
-      INCLUDE 'polynomial_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)

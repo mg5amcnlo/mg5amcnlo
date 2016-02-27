@@ -26,7 +26,6 @@ C
 C  
 C CONSTANTS 
 C  
-      include 'polynomial_specs.inc'
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       LOGICAL checkPConservation
@@ -103,13 +102,14 @@ C
 	  common/%(proc_prefix)sLOOP/ID,R
 ## }
 
-      LOGICAL CTINIT, TIRINIT, GOLEMINIT
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT
+      LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      include 'loop_max_coefs.inc'
 
 ## if(not AmplitudeReduction){	  
       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
@@ -121,7 +121,13 @@ C ----------
 C BEGIN CODE
 C ----------
 
-C INITIALIZE CUTTOOLS IF NEEDED
+C The CT initialization is also performed here if not done already because it calls MPINIT of OneLOop which is necessary on some system
+      IF (CTINIT) THEN
+	    CTINIT=.FALSE.
+		CALL %(proc_prefix)sINITCT()
+      ENDIF
+
+C INITIALIZE GOLEM IF NEEDED
       IF (GOLEMINIT) THEN
 	    GOLEMINIT=.FALSE.
 	    CALL %(proc_prefix)sINITGOLEM()
@@ -454,54 +460,21 @@ C
      INTEGER NLOOPLINE
      REAL(KI) PGOLEM(NLOOPLINE,0:3)
      COMPLEX(KI) M2L(NLOOPLINE)
-
-C    
-C    GLOBAL VARIABLES
-C
-     include 'MadLoopParams.inc'
-     INTEGER CTMODE
-     %(real_dp_format)s LSCALE
-     COMMON/%(proc_prefix)sCT/LSCALE,CTMODE
-     %(real_dp_format)s REF_NORMALIZATION
 C
 C    LOCAL VARIABLES
 C
-     INTEGER I,J,K
-     COMPLEX(KI) DIFFSQ
-C     ----------
-C     BEGIN CODE
-C     ----------
+     INTEGER I,J
+     %(complex_dp_format)s S_MAT_FROM_MG(NLOOPLINE,NLOOPLINE)
+C    ----------
+C    BEGIN CODE
+C    ----------
 
-     do i=1,NLOOPLINE
-       do j=1,NLOOPLINE
-          if(i.eq.j)then
-	    s_mat(i,j)=-(M2L(i)+M2L(j))
-	  else
-	    DIFFSQ = (CMPLX(PGOLEM(i,0),0.0_KI,kind=KI)-CMPLX(PGOLEM(j,0),0.0_KI,KIND=KI))**2
-	    do k=1,3
-	      DIFFSQ = DIFFSQ-(CMPLX(PGOLEM(i,k),0.0_KI,KIND=KI)-CMPLX(PGOLEM(j,k),0.0_KI,KIND=KI))**2
-	    enddo
-	    s_mat(i,j)=DIFFSQ-M2L(i)-M2L(j)
-	    IF(M2L(i).NE.0.0D0)THEN
-	      IF(ABS((DIFFSQ-M2L(i))/M2L(i)).LT.OSThres)THEN
-	         s_mat(i,j)=-M2L(j)
- 	      ENDIF
-	    ENDIF
-	    IF(M2L(j).NE.0.0D0)THEN
-	      IF(ABS((DIFFSQ-M2L(j))/M2L(j)).LT.OSThres)THEN
-	         s_mat(i,j)=-M2L(i)
-	      ENDIF
-            ENDIF
-C           Chose what seems the most appropriate way to compare
-C           massless onshellness. (here we pick the energy component)
-            REF_NORMALIZATION=(PGOLEM(i,0)+PGOLEM(j,0))**2
-	    IF(REF_NORMALIZATION.NE.0.0D0)THEN
-               IF(ABS(DIFFSQ/REF_NORMALIZATION).LT.OSThres)THEN
-	          s_mat(i,j)=-(M2L(i)+M2L(j))
-	       ENDIF
-            ENDIF
-         ENDIF
-        ENDDO
+   	   CALL %(proc_prefix)sBUILD_KINEMATIC_MATRIX(NLOOPLINE,PGOLEM,M2L,S_MAT_FROM_MG) 
+
+       do i=1,NLOOPLINE
+         do j=1,NLOOPLINE
+	       s_mat(i,j)=S_MAT_FROM_MG(i,j)
+         ENDDO
        ENDDO
        
       END

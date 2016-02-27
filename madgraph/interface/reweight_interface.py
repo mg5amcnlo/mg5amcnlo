@@ -450,7 +450,6 @@ class ReweightInterface(extended_cmd.Cmd):
             except:
                 Shell_internal = None
             import madgraph.interface.extended_cmd as extended_cmd
-            misc.sprint(type(self.mother), hasattr(self.mother, 'do_shell'), self.mother.__class__.__bases__)
             if not isinstance(self.mother, (extended_cmd.CmdShell, Shell_internal)): 
                 raise Exception, "scan are not allowed on the Web"
             # at least one scan parameter found. create an iterator to go trough the cards

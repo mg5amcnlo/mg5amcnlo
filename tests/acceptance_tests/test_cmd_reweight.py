@@ -56,7 +56,7 @@ class TestMECmdRWGT(unittest.TestCase):
     
     def setUp(self):
         
-        debugging = False
+        debugging = True
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -95,6 +95,7 @@ class TestMECmdRWGT(unittest.TestCase):
             m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
             m_opts['llhapdf'] = subprocess.Popen([interface.options['lhapdf'], '--libs'], 
                     stdout = subprocess.PIPE).stdout.read().strip().split()[0]
+            m_opts['f2pymode'] = True
         else:
             raise Exception, "need LHAPDF"
             lhapdf = False

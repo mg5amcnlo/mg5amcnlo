@@ -20,7 +20,7 @@ all : $(PROG)
 OLP    = OLP
 STABCHECKDRIVER = StabilityCheckDriver
 CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders
-LINKLIBS =  -L$(LIBDIR) -ldhelas -lmodel $(LINK_LOOP_LIBS)
+LINKLIBS =  $(LDFLAGS) -L$(LIBDIR) -ldhelas -lmodel $(LINK_LOOP_LIBS)
 LIBS =  $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext) $(LOOP_LIBS)
 
 PROCESS= MadLoopParamReader.o MadLoopCommons.o \
@@ -111,4 +111,4 @@ ifeq ($(origin MENUM),undefined)
 endif
 matrix$(MENUM)py.so: libMadLoop.$(libext) check_sa.f  
 	touch __init__.py
-	$(F2PY) libMadLoop.$(libext) -m matrix$(MENUM)py -c check_sa.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel -L../../lib/ -lcts -liregi
+	$(F2PY) libMadLoop.$(libext) -m matrix$(MENUM)py -c check_sa.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS)

@@ -9,8 +9,6 @@ C
 %(process_lines)s
 C  
       IMPLICIT NONE
-      include 'coef_specs.inc'
-      include 'polynomial_specs.inc'
 C  
 C CONSTANTS
 C
@@ -30,6 +28,8 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
+      include 'loop_max_coefs.inc'
+      include 'coef_specs.inc'
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
 	  %(real_mp_format)s    ZERO
@@ -56,6 +56,7 @@ C
 C LOCAL VARIABLES 
 C  
       LOGICAL DPW_COPIED
+	  LOGICAL COMPUTE_INTEGRAND_IN_QP
       INTEGER I,J,K,H,HEL_MULT,ITEMP
 ## if(not AmplitudeReduction){
 	  %(real_mp_format)s TEMP2
@@ -63,7 +64,9 @@ C
 	  %(real_mp_format)s TEMP2(3)
 ## }
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-      %(real_mp_format)s P(0:3,NEXTERNAL)
+      %(real_mp_format)s MP_P(0:3,NEXTERNAL)
+	  %(real_dp_format)s P(0:3,NEXTERNAL)
+
 	  DATA IC/NEXTERNAL*1/
 	  %(real_mp_format)s ANS(3,0:NSQUAREDSO)
 ## if(ComputeColorFlows) {
@@ -81,6 +84,8 @@ C
 C GLOBAL VARIABLES
 C  
 	  include 'mp_coupl_same_name.inc'
+
+	  include 'MadLoopParams.inc'
 
 	  LOGICAL CHECKPHASE, HELDOUBLECHECKED
       common/%(proc_prefix)sINIT/CHECKPHASE, HELDOUBLECHECKED
@@ -118,12 +123,23 @@ C
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
+      %(complex_dp_format)s DP_WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s DP_PL(0:3,0:NLOOPWAVEFUNCS)
+	  common/%(proc_prefix)sWL/DP_WL,DP_PL
+
 ## if(not AmplitudeReduction){
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
 ## } else {
 	  %(complex_mp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
 ## }
 	  common/%(proc_prefix)sMP_LCOEFS/LOOPCOEFS
+
+## if(not AmplitudeReduction){
+	  %(complex_dp_format)s DP_LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+## } else {
+	  %(complex_dp_format)s DP_LOOPCOEFS(0:LOOPMAXCOEFS-1,NLOOPGROUPS)
+## }
+	  common/%(proc_prefix)sLCOEFS/DP_LOOPCOEFS
 
 ## if(AmplitudeReduction) {
 C This flag is used to prevent the re-computation of the OpenLoop coefficients when changing the CTMode for the stability test.
@@ -138,10 +154,14 @@ C This flag is used to prevent the re-computation of the OpenLoop coefficients w
 ## } 
 	  common/%(proc_prefix)sMP_AMPL/AMPL
 
-## if(AmplitudeReduction){
+## if(not AmplitudeReduction){	  
+      %(complex_dp_format)s DP_AMPL(3,NCTAMPS)
+## } else {
       %(complex_dp_format)s DP_AMPL(3,NLOOPAMPS)
+## } 
 	  common/%(proc_prefix)sAMPL/DP_AMPL
 
+## if(AmplitudeReduction){
       %(complex_dp_format)s LOOPRES(3,NSQUAREDSO,NLOOPGROUPS)
 	  LOGICAL S(NSQUAREDSO,NLOOPGROUPS)
 	  common/%(proc_prefix)sLOOPRES/LOOPRES,S
@@ -160,9 +180,15 @@ C This flag is used to prevent the re-computation of the OpenLoop coefficients w
 	  LOGICAL MP_DONE_ONCE
 	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
+      INTEGER LIBINDEX
+      COMMON/%(proc_prefix)sI_LIB/LIBINDEX
+
 C ----------
 C BEGIN CODE
 C ----------
+
+C Decide whether to really compute the integrand in quadruple precision or to fake it and copy the double precision computation in the quadruple precision variables.
+COMPUTE_INTEGRAND_IN_QP = ((MLREDUCTIONLIB(LIBINDEX).eq.6.AND.UseQPIntegrandForNinja) .OR. (MLREDUCTIONLIB(LIBINDEX).eq.1.AND.UseQPIntegrandForCutTools))
 
 C To be on the safe side, we always update the MP params here.
 C It can be redundant as this routine can be called a couple of times for the same PS point during the stability checks.
@@ -174,7 +200,8 @@ MP_DONE_ONCE = .TRUE.
 C AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
 DO I=1,NEXTERNAL
   DO J=0,3
-    P(J,I)=PS(J,I)
+    MP_P(J,I)=PS(J,I)
+	P(J,I) = REAL(PS(J,I),KIND=8)
   ENDDO
 ENDDO
 
@@ -187,11 +214,18 @@ IF (.NOT.SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
 DO I=1,MAXLWFSIZE
   DO J=0,LOOPMAXCOEFS-1
     DO K=1,MAXLWFSIZE
-      IF(I.EQ.K.AND.J.EQ.0) THEN
+      IF (I.EQ.K.AND.J.EQ.0) THEN
         WL(I,J,K,0)=(1.0e0_16,ZERO)
       ELSE
         WL(I,J,K,0)=(ZERO,ZERO)
       ENDIF
+	  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+        IF (I.EQ.K.AND.J.EQ.0) THEN
+          DP_WL(I,J,K,0)=(1.0d0,0.0d0)
+        ELSE
+          DP_WL(I,J,K,0)=(0.0d0,0.0d0)
+        ENDIF
+	  ENDIF
     ENDDO
   ENDDO
 ENDDO
@@ -203,6 +237,9 @@ DO K=1, 3
   DO I=1,NLOOPAMPS
 ## }
     AMPL(K,I)=(ZERO,ZERO)
+	IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+      DP_AMPL(K,I)=(0.0d0,0.0d0)
+	ENDIF
   ENDDO
 ENDDO
 
@@ -220,8 +257,11 @@ ENDDO
 ## if(not AmplitudeReduction){
 DO I=1,NLOOPGROUPS
   DO J=0,LOOPMAXCOEFS-1
-    DO K=1,NSQUAREDSO  
+    DO K=1,NSQUAREDSO
       LOOPCOEFS(J,K,I)=(ZERO,ZERO)
+      IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+        DP_LOOPCOEFS(J,K,I)=(0.0d0,0.0d0)	  
+	  ENDIF
 	ENDDO
   ENDDO
 ENDDO
@@ -262,21 +302,56 @@ C The coefficient were already computed previously with another CTMode, so we ca
   DO I=1,NLOOPGROUPS
     DO J=0,LOOPMAXCOEFS-1
       LOOPCOEFS(J,I)=(ZERO,ZERO)
+      IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+        DP_LOOPCOEFS(J,I)=(0.0d0,0.0d0)
+	  ENDIF
     ENDDO
   ENDDO
   
  DO K=1, 3
   DO I=1,NLOOPAMPS
     AMPL(K,I)=(ZERO,ZERO)
+    IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+      DP_AMPL(K,I)=(0.0d0,0.0d0)
+	ENDIF
   ENDDO
 ENDDO
 ## }
 
-  %(mp_born_ct_helas_calls)s
+  IF (COMPUTE_INTEGRAND_IN_QP) THEN
+    %(mp_born_ct_helas_calls)s
+  ELSE
+    %(born_ct_helas_calls)s
+  ENDIF
+
 2000 CONTINUE
   MP_CT_REQ_SO_DONE=.TRUE.
 
-  %(mp_uvct_helas_calls)s
+  IF (COMPUTE_INTEGRAND_IN_QP) THEN
+    %(mp_uvct_helas_calls)s
+  ELSE
+    %(uvct_helas_calls)s    
+  ENDIF
+
+  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+C   Copy back to the quantities computed in DP in the QP containers (but only those needed)
+## if(not LoopInduced) {
+    DO I=1,NBORNAMPS
+      AMP(I)=CMPLX(DP_AMP(I),KIND=16)
+    ENDDO
+## }
+    DO I=1,NCTAMPS
+      DO K=1,3
+        AMPL(K,I)=CMPLX(DP_AMPL(K,I),KIND=16)
+      ENDDO
+    ENDDO
+    DO I=1,NWAVEFUNCS
+      DO J=1,MAXLWFSIZE+4
+        W(J,I)=CMPLX(DPW(J,I),KIND=16)
+      ENDDO
+    ENDDO
+  ENDIF
+
 3000 CONTINUE
   MP_UVCT_REQ_SO_DONE=.TRUE.
 
@@ -297,32 +372,56 @@ ENDDO
   ENDDO
 ## }
 
-  %(mp_coef_construction)s  
+  IF (COMPUTE_INTEGRAND_IN_QP) THEN
+    
+    %(mp_coef_construction)s  
+
+  ELSE
+
+    %(coef_construction)s
+
+C   Copy back to the coefficients computed in DP in the QP containers
+	DO I=0,LOOPMAXCOEFS-1
+	  DO K=1,NLOOPGROUPS
+## if(not AmplitudeReduction){
+	    DO J=1,NSQUAREDSO
+	      LOOPCOEFS(I,J,K)=CMPLX(DP_LOOPCOEFS(I,J,K),KIND=16) 
+        ENDDO
+## } else {
+	      LOOPCOEFS(I,K)=CMPLX(DP_LOOPCOEFS(I,K),KIND=16)        
+## }
+      ENDDO
+	ENDDO
+  ENDIF
+
   4000 CONTINUE
   MP_LOOP_REQ_SO_DONE=.TRUE.
 
 ## if(AmplitudeReduction) {
+  IF (COMPUTE_INTEGRAND_IN_QP) THEN
 ## if(not LoopInduced) {
 C Copy the multiple precision Born amplitudes computed to the AMP double precision array for its use later if necessary (i.e. color flows for example.)
   DO I=1,NBORNAMPS
-    DP_AMP(I)=AMP(I)
+    DP_AMP(I)=CMPLX(AMP(I),KIND=8)
   ENDDO
 ## }
 
 C Copy the multiple precision CT amplitudes computed to the AMPL double precision array for its use later if necessary (i.e. color flows for example.)
   DO I=1,NCTAMPS
     DO K=1,3
-      DP_AMPL(K,I)=AMPL(K,I)
+      DP_AMPL(K,I)=CMPLX(AMPL(K,I),KIND=8)
     ENDDO
   ENDDO
+
+  ENDIF
 ## }
 
 c Copy the qp wfs to the dp ones as they are used to setup the CT calls.
 C This needs to be done once since only the momenta of these WF matters.
-  IF(.NOT.DPW_COPIED) THEN
+  IF(.NOT.DPW_COPIED.AND.COMPUTE_INTEGRAND_IN_QP) THEN
     DO I=1,NWAVEFUNCS
       DO J=1,MAXLWFSIZE+4
-        DPW(J,I)=DBLE(W(J,I))
+        DPW(J,I)=CMPLX(W(J,I),KIND=8)
       ENDDO
     ENDDO
     DPW_COPIED=.True.
@@ -346,7 +445,7 @@ C Copy the loop amplitudes computed (whose final result was stored in a double
 C precision variable) to the AMPL multiple precision array.
   DO I=NCTAMPS+1,NLOOPAMPS
     DO K=1,3
-      AMPL(K,I)=DP_AMPL(K,I)
+      AMPL(K,I)=CMPLX(DP_AMPL(K,I),KIND=16)
     ENDDO
   ENDDO
 
@@ -451,12 +550,13 @@ ENDDO
 
 DO I=1,3
   DO J=0,NSQUAREDSO
-    ANSDP(I,J)=ANS(I,J)
+    ANSDP(I,J)=REAL(ANS(I,J),KIND=8)
   ENDDO
 ENDDO
 
 ## if(not AmplitudeReduction) {
 %(mp_coef_merging)s
+C If some kind of coefficient merging was done above, do not forget to copy back the LOOPCOEFS merged into DP_LOOPCOEFS if COMPUTE_INTEGRAND_IN_QP is False.
 ## }
 
 END

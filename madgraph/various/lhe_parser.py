@@ -791,7 +791,6 @@ class MultiEventFile(EventFile):
         #define the weighting such that we have built-in the scaling
         
         if 'event_target' in opts and opts['event_target']:
-            misc.sprint(opts['event_target'])
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt

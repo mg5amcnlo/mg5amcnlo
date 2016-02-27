@@ -3082,32 +3082,30 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         link_tir_libs=[]
         tir_libs=[]
         tir_include=[]
-        # special for PJFry++/Golem95
-        link_pjfry_lib=""
-        pjfry_lib=""
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
             libpath=getattr(self,tir_dir)
-            libname="lib%s.a"%tir
-            tir_name=tir
             libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
-                                              libpath,libname,tir_name=tir_name)
+                                              libpath,"lib%s.a"%tir,tir_name=tir)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir in ['pjfry','golem']:
-                    # Apparently it is necessary to link against the original 
-                    # location of the pjfry/golem library, so it needs a special treatment.
+                if tir in ['pjfry','ninja','golem', 'samurai']:
+                    # We should link dynamically when possible, so we use the original
+                    # location of these libraries.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
-                    if tir=='golem':
+                    # We must add the corresponding includes for golem, samurai
+                    # and ninja
+                    if tir in ['golem','samurai','ninja']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
-                        golem_include = misc.find_includes_path(trg_path,'.mod')
-                        if golem_include is None:
+                        to_include = misc.find_includes_path(trg_path,
+                                                        self.include_names[tir])
+                        if to_include is None:
                             logger.error(
-'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Could not find the include directory for %s, looking in %s.\n' % (tir ,str(trg_path))+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
-                            golem_include = '<Not_found_define_it_yourself>'
-                        tir_include.append('-I %s'%golem_include)
+                            to_include = '<Not_found_define_it_yourself>'
+                        tir_include.append('-I %s'%to_include)
                 else:
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
@@ -3228,6 +3226,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         
+        # We need a link to coefs.inc from DHELAS
+        ln(pjoin(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc'),
+                                                        abspath=False, cwd=None)
+    
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(

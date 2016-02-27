@@ -396,7 +396,7 @@ class CheckValidForCmd(object):
 
     def check_decay_events(self,args):
         """Check the argument for decay_events command
-        syntax: decay_events [NAME]
+        syntax is "decay_events [NAME]"
         Note that other option are already remove at this point
         """
 
@@ -423,7 +423,7 @@ class CheckValidForCmd(object):
 
     def check_check_events(self,args):
         """Check the argument for decay_events command
-        syntax: decay_events [NAME]
+        syntax is "decay_events [NAME]"
         Note that other option are already remove at this point
         """
 
@@ -446,9 +446,7 @@ class CheckValidForCmd(object):
 
 
     def get_events_path(self, run_name):
-        """Check the argument for decay_events command
-        syntax: decay_events [NAME]
-        Note that other option are already remove at this point
+        """return the path to the output events
         """
 
 
@@ -1063,10 +1061,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     
     ############################################################################
     def do_reweight(self, line):
-        """ syntax: reweight RUN_NAME
+        """ syntax is "reweight RUN_NAME"
             Allow to reweight the events generated with a new choices of model
-            parameter. Description of the methods are available here:
-            https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
+            parameter. Description of the methods are available here
+            cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
         """
         
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):

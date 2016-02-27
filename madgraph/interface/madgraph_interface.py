@@ -37,7 +37,7 @@ import traceback
 import time
 import inspect
 import urllib
-
+import random
 
 #useful shortcut
 pjoin = os.path.join
@@ -745,6 +745,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
+        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
+        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
         logger.info("OLP ProgramName",'$MG:color:GREEN')
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
@@ -863,6 +865,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_check(self, args):
         """check the validity of args"""
+
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
@@ -906,7 +909,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4','--CTModeRun':'-1','--helicity':'-1'}
+                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
+                   '--helicity':'-1','--seed':'-1'}
         
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -955,6 +959,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--name']='auto'
             # Select what resonances must be run
             user_options['--resonances']='1'
+        
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
                 parsed = arg.split('=')
@@ -2622,6 +2627,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
                                                                       'QCDLoop']
+    # The targets below are installed using the HEPToolsInstaller.py script
+    _advanced_install_opts = ['ninja']
+    
+    # The options below are commented for now but already available
+#    _advanced_install_opts += ['pythia8','zlib','boost','lhapdf6','lhapdf5','hepmc','mg5amc_py8_interface','oneloop']
+    
+    _install_opts.extend(_advanced_install_opts)
+
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
                           'matrix', 'standalone_rw', 'madweight'] 
     _export_formats = _v4_export_formats + ['standalone_cpp', 'pythia8', 'aloha',
@@ -2663,17 +2676,19 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cpp_compiler':None,
                        'auto_update':7,
                        'cluster_type': 'condor',
-                       'cluster_temp_path': None,
                        'cluster_queue': None,
                        'cluster_status_update': (600, 30),
                        'fastjet':'fastjet-config',
                        'pjfry':'auto',
                        'golem':'auto',
+                       'samurai':'auto',
+                       'ninja':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'cluster_local_path': None,
+                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -3450,6 +3465,7 @@ This implies that with decay chains:
                 lCMS_values.append(lower_bound)
                 
             return lCMS_values
+        
         ###### BEGIN do_check
 
         args = self.split_arg(line)
@@ -3510,7 +3526,7 @@ This implies that with decay chains:
             elif option[0]=='--report':
                 options['report'] = option[1].lower()
             elif option[0]=='--seed':
-                CMS_options['seed'] = int(option[1])
+                options['seed'] = int(option[1])
             elif option[0]=='--name':
                 if '.' in option[1]:
                     raise self.InvalidCmd("Do not specify the extension in the"+
@@ -3735,6 +3751,14 @@ This implies that with decay chains:
                 logger_check.info("{:<20} =   {}".format('--%s'%key,str(value)))
             return        
         
+        # Set the seed here if not in cms check and if specified
+        if args[0]!='cms' and options['seed']!=-1:
+            # Not necessarily optimal as there could be additional call to
+            # random() as the code develops, but at least it will encompass
+            # everything in this way.
+            logger_check.info('Setting random seed to %d.'%options['seed'])
+            random.seed(options['seed'])
+        
         proc_line = " ".join(args[1:])
         # Don't try to extract the process if just re-analyzing a saved run
         if not (args[0]=='cms' and options['analyze']!='None'):
@@ -3839,6 +3863,22 @@ This implies that with decay chains:
                 if 4 in MLoptions["MLReductionLib"]:
                     logger_check.warning('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
+        
+        if 'samurai' in self.options and isinstance(self.options['samurai'],str):
+            TIR_dir['samurai_dir']=self.options['samurai']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 5 in MLoptions["MLReductionLib"]:
+                    logger_check.warning('Samurai not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(5)
+        
+        if 'ninja' in self.options and isinstance(self.options['ninja'],str):
+            TIR_dir['ninja_dir']=self.options['ninja']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 6 in MLoptions["MLReductionLib"]:
+                    logger_check.warning('Ninja not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(6)
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
@@ -5125,8 +5165,272 @@ This implies that with decay chains:
         line = 'all =' + ' '.join(line)
         self.do_define(line)
 
-    def do_install(self, line, paths=None):
-        """Install optional package from the MG suite."""
+    def advanced_install(self, tool_to_install, 
+                                            HepToolsInstaller_web_address=None,
+                                            additional_options=[]):
+        """ Uses the HEPToolsInstaller.py script maintened online to install
+        HEP tools with more complicated dependences.
+        Additional options will be added to the list when calling HEPInstaller"""
+
+        # Always refresh the installer if already present
+        if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
+            if HepToolsInstaller_web_address is None:
+                raise MadGraph5Error, "The option 'HepToolsInstaller_web_address'"+\
+                             " must be specified in function advanced_install"+\
+                                " if the installers are not already downloaded."
+            if not os.path.isdir(pjoin(MG5DIR,'HEPTools')):
+                os.mkdir(pjoin(MG5DIR,'HEPTools'))
+        elif not HepToolsInstaller_web_address is None:
+            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+        if not HepToolsInstaller_web_address is None:
+            logger.info('Downloading the HEPToolInstaller at:\n   %s'%
+                                                  HepToolsInstaller_web_address)
+            # Guess if it is a local or web address
+            if '//' in HepToolsInstaller_web_address:
+                if sys.platform == "darwin":
+                    misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
+                      %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
+                      stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                                                                         cwd=MG5DIR)
+                else:
+                    misc.call(['wget', HepToolsInstaller_web_address, 
+                      '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
+                      'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
+                                           stdout=open(os.devnull, 'w'), cwd=MG5DIR)
+            else:
+                # If it is a local tarball, then just copy it
+                shutil.copyfile(HepToolsInstaller_web_address,
+                           pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
+
+            # Untar the file
+            returncode = misc.call(['tar', '-xzpf', 'HEPToolsInstallers.tar.gz'],
+                     cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
+            
+            # Remove the tarball
+            os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
+            
+############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
+#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+################################################################################
+            
+        # Potential change in naming convention
+        name_map = {}
+        try:
+            tool = name_map[tool_to_install]
+        except:
+            tool = tool_to_install
+     
+        # Compiler options
+        compiler_options = []
+        if not self.options['cpp_compiler'] is None:
+            compiler_options.append('--cpp_compiler=%s'%
+                                                   self.options['cpp_compiler'])
+        if not self.options['fortran_compiler'] is None:
+            compiler_options.append('--fortran_compiler=%s'%
+                                               self.options['fortran_compiler'])
+
+        # Add the path of pythia8 if known and the MG5 path
+        if tool=='mg5amc_py8_interface':
+            additional_options.append('--mg5_path=%s'%MG5DIR)
+            # Warn about the soft dependency to gnuplot
+            if misc.which('gnuplot') is None:
+                logger.warning("==========")
+                logger.warning("The optional dependency 'gnuplot' for the tool"+\
+                 " 'mg5amc_py8_interface' was not found. We recommend that you"+\
+                 " install it so as to be able to view the plots related to "+\
+                                                      " merging with Pythia 8.")
+                logger.warning("==========")
+            if self.options['pythia8_path']:
+                additional_options.append(
+                               '--with_pythia8=%s'%self.options['pythia8_path'])
+
+##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
+#            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
+#                    pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
+#                                                 'MG5aMC_PY8_interface.tar.gz'))
+################################################################################
+
+        # Special rules for certain tools  
+        if tool=='pythia8':
+            # All what's below is to handle the lhapdf dependency of Pythia8
+            lhapdf_config  = misc.which(self.options['lhapdf'])
+            lhapdf_version = None
+            if lhapdf_config is None:
+                lhapdf_version = None
+            else:
+                try:
+                    version = misc.Popen(
+                           [lhapdf_config,'--version'], stdout=subprocess.PIPE)
+                    lhapdf_version = int(version.stdout.read()[0])
+                    if lhapdf_version not in [5,6]:
+                        raise 
+                except:
+                    raise self.InvalidCmd('Could not detect LHAPDF version. Make'+
+                           " sure '%s --version ' runs properly."%lhapdf_config)
+        
+            if lhapdf_version is None:
+                answer = self.ask(question=
+"\033[33;34mLHAPDF was not found. Do you want to install LHPADF6? "+
+"(recommended) \033[0m \033[33;32my\033[0m/\033[33;31mn\033[0m >",
+                                                default='y',text_format='33;32')
+                if not answer.lower() in ['y','']:
+                    lhapdf_path = None
+                else:
+                    self.advanced_install('lhapdf6',
+                                          additional_options=additional_options)
+                    lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf6')
+                    lhapdf_version = 6
+            else:
+                lhapdf_path = os.path.abspath(pjoin(os.path.dirname(\
+                                                 lhapdf_config),os.path.pardir))
+            if lhapdf_version is None:
+                logger.warning('You decided not to link the Pythia8 installation'+
+                  ' to LHAPDF. Beware that only built-in PDF sets can be used then.')
+            else:
+                logger.info('Pythia8 will be linked to LHAPDF v%d.'%lhapdf_version)
+            logger.info('Now installing Pythia8. Be patient...','$MG:color:GREEN')
+            lhapdf_option = []
+            if lhapdf_version is None:
+                lhapdf_option.append('--with_lhapdf6=OFF')
+                lhapdf_option.append('--with_lhapdf5=OFF')                
+            elif lhapdf_version==5:
+                lhapdf_option.append('--with_lhapdf5=%s'%lhapdf_path)
+                lhapdf_option.append('--with_lhapdf6=OFF')
+            elif lhapdf_version==6:
+                lhapdf_option.append('--with_lhapdf5=OFF')
+                lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
+            # Make sure each otion in additional_options appears only once
+            additional_options = list(set(additional_options))
+             # And that the option '--force' is placed last.
+            additional_options = [opt for opt in additional_options if opt!='--force']+\
+                        (['--force'] if '--force' in additional_options else [])
+            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+             'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
+             '--prefix=%s'%pjoin(MG5DIR,'HEPTools')]
+                        + lhapdf_option + compiler_options + additional_options)
+        else:
+            logger.info('Now installing %s. Be patient...'%tool)
+            # Make sure each otion in additional_options appears only once
+            additional_options = list(set(additional_options))
+             # And that the option '--force' is placed last.
+            additional_options = [opt for opt in additional_options if opt!='--force']+\
+                        (['--force'] if '--force' in additional_options else [])
+            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+              'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
+              pjoin(MG5DIR,'HEPTools')] + compiler_options + additional_options)
+
+        if return_code == 0:
+            logger.info("%s successfully installed in %s."%(
+                   tool_to_install, pjoin(MG5DIR,'HEPTools')),'$MG:color:GREEN')
+        elif return_code == 66:
+            answer = self.ask(question=
+"""\033[33;34mTool %s already installed in %s."""%(tool_to_install, pjoin(MG5DIR,'HEPTools'))+
+""" Do you want to overwrite its installation?\033[0m \033[33;32my\033[0m/\033[33;31mn\033[0m >"""
+    ,default='y',text_format='33;32')
+            if not answer.lower() in ['y','']:
+                logger.info("Installation of %s aborted."%tool_to_install,
+                                                              '$MG:color:GREEN')
+                return
+            else:
+                return self.advanced_install(tool_to_install,
+                              additional_options=additional_options+['--force'])            
+        else:
+            raise self.InvalidCmd("Installation of %s failed."%tool_to_install)
+
+        # Post-installation treatment
+        if tool == 'pythia8':
+            self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
+            self.exec_cmd('save options')
+            # Automatically re-install the mg5amc_py8_interface after a fresh
+            # Pythia8 installation
+            self.advanced_install('mg5amc_py8_interface',
+                              additional_options=additional_options+['--force'])          
+        elif tool == 'lhapdf6':
+            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf6','bin',
+                                                                'lhapdf-config')
+            self.exec_cmd('save options')
+        elif tool == 'lhapdf5':
+            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf5','bin',
+                                                                'lhapdf-config')
+            self.exec_cmd('save options')            
+
+        elif tool == 'mg5amc_py8_interface':
+            self.options['mg5amc_py8_interface_path'] = \
+                                 pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
+            self.exec_cmd('save options')      
+
+        elif tool == 'ninja':
+            if not misc.get_ninja_quad_prec_support(pjoin(
+                                              MG5DIR,'HEPTools','ninja','lib')):
+                logger.warning(
+"""Successful installation of Ninja, but without support for quadruple precision
+arithmetics. If you want to enable this (hence improving the treatment of numerically
+unstable points in the loop matrix elements) you can try to reinstall Ninja with:
+  MG5aMC>install ninja
+After having made sure to have selected a C++ compiler in the 'cpp' option of
+MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
+            self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
+            self.exec_cmd('save options')
+            
+        # Now warn the user if he didn't add HEPTools first in his environment
+        # variables.
+        path_to_be_set = []
+        if sys.platform == "darwin":
+            library_variables = ["DYLD_LIBRARY_PATH"]
+        else:
+            library_variables = ["LD_LIBRARY_PATH"]
+        for variable in library_variables:
+            if (variable not in os.environ) or \
+                not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','lib'))==\
+                os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
+                path_to_be_set.append((variable,
+                               os.path.abspath(pjoin(MG5DIR,'HEPTools','lib'))))
+        for variable in ["PATH"]:
+            if (variable not in os.environ) or \
+                not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','bin'))==\
+                os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
+                path_to_be_set.append((variable,
+                               os.path.abspath(pjoin(MG5DIR,'HEPTools','bin'))))
+            if (variable not in os.environ) or \
+                not any(os.path.abspath(pjoin(MG5DIR,'HEPTools','include'))==\
+                os.path.abspath(path) for path in os.environ[variable].split(os.pathsep)):
+                path_to_be_set.append((variable,
+                               os.path.abspath(pjoin(MG5DIR,'HEPTools','include'))))
+       
+        if len(path_to_be_set)>0:
+            shell_type = misc.get_shell_type()
+            if shell_type in ['bash',None]:
+                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.bashrc"%\
+                (r'\n'.join('export %s=%s%s'%
+                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '') 
+                                                for var,path in path_to_be_set))
+            elif shell_type=='tcsh':
+                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.cshrc"%\
+                (r'\n'.join('setenv %s %s%s'%
+                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '')
+                                                for var,path in path_to_be_set))
+
+            logger.warning("==========")
+            logger.warning("We recommend that you add to the following paths"+\
+             " to your environment variables, so that you are guaranteed that"+\
+             " at runtime, MG5_aMC will use the tools you have just installed"+\
+             " and not some other versions installed elsewhere on your system.\n"+\
+             "You can do so by running the following command in your terminal:"
+             "\n   %s"%modification_line) 
+            logger.warning("==========")
+    
+        # Return true for successful installation
+        return True
+    
+    def do_install(self, line, paths=None, additional_options=[]):
+        """Install optional package from the MG suite.
+        The argument 'additional_options' will be passed to the advanced_install
+        functions. If it contains the option '--force', then the advanced_install
+        function will overwrite any existing installation of the tool without 
+        warnings.
+        """
 
         args = self.split_arg(line)
         #check the validity of the arguments
@@ -5142,6 +5446,31 @@ This implies that with decay chains:
             self.install_update(args, wget=program)
             return
 
+        advertisements = {'pythia-pgs':['arXiv:0603175'],
+                          'Delphes':['arXiv:1307.6346'],
+                          'Delphes2':['arXiv:0903.2225'],
+                          'SysCalc':['arXiv:XXXX.YYYYY'],
+                          'Golem95':['arXiv:0807.0605'],
+                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
+                          'QCDLoop':['arXiv:0712.1851'],
+                          'pythia8':['arXiv:1410.3012'],
+                          'lhapdf6':['arXiv:1412.7420'],
+                          'lhapdf5':['arXiv:0605240'],
+                          'hepmc':['CPC 134 (2001) 41-46'],
+                          'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
+                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:XXXX.YYYYY'],
+                          'oneloop':['arXiv:1007.4716']}
+
+        if args[0] in advertisements:
+            logger.info("------------------------------------------------------", '$MG:color:GREEN')
+            logger.info("   You are installing '%s', please cite ref(s): "%args[0], '$MG:color:BLACK')
+            for ad in advertisements[args[0]]:
+              logger.info("                 %s"%ad, '$MG:color:GREEN')
+            logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
+            logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
+            logger.info("------------------------------------------------------", '$MG:color:GREEN')
+
+
         # Load file with path of the different program:
         import urllib
         if paths:
@@ -5153,6 +5482,11 @@ This implies that with decay chains:
                          'http://madgraph.hep.uiuc.edu/package_info.dat']
             r = random.randint(0,1)
             r = [r, (1-r)]
+################################################################################
+#           Force her to choose one particular server
+#            r = [0]
+################################################################################
+
             for index in r:
                 cluster_path = data_path[index]
                 try:
@@ -5168,6 +5502,24 @@ This implies that with decay chains:
                 split = line.split()
                 path[split[0]] = split[1]
 
+################################################################################
+# TEMPORARY HACK WHERE WE ADD ENTRIES TO WHAT WILL BE EVENTUALLY ON THE WEB
+################################################################################
+#            path['XXX'] = 'YYY'
+################################################################################
+
+        if args[0] in self._advanced_install_opts:
+            # Now launch the advanced installation of the tool args[0]
+            # path['HEPToolsInstaller'] is the online adress where to downlaod
+            # the installers if necessary.
+            # Specify the path of the MG5_aMC_interface
+            MG5aMC_PY8_interface_path = path['MG5aMC_PY8_interface'] if \
+                                        'MG5aMC_PY8_interface' in path else 'NA'
+            additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
+                                                      MG5aMC_PY8_interface_path)
+            return self.advanced_install(args[0], path['HEPToolsInstaller'],
+                                        additional_options = additional_options)
+
         if args[0] == 'PJFry' and not os.path.exists(
                                  pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
             logger.info("Installing PJFRY's dependence QCDLoop...")
@@ -5176,12 +5528,16 @@ This implies that with decay chains:
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
 
-        name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
+        try:
+            name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop'}
-        name = name[args[0]]
+                'PJFry':'PJFry','QCDLoop':'QCDLoop',
+                }
+            name = name[args[0]]
+        except:
+            pass
 
         #check outdated install
         if args[0] in ['Delphes2', 'pythia-pgs']:
@@ -5230,6 +5586,7 @@ This implies that with decay chains:
             if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
                 os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
 
+        make_flags = [] #flags for the compilation        
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
@@ -5309,7 +5666,10 @@ This implies that with decay chains:
                     if misc.which('lhapdf-config') != os.path.realpath(self.options['lhapdf']):
                         os.environ['PATH'] = '%s:%s' % (os.path.realpath(self.options['lhapdf']),os.environ['PATH']) 
             else:
-                raise self.InvalidCmd('lhapdf is required to compile/use SysCalc')
+                raise self.InvalidCmd('lhapdf is required to compile/use SysCalc. Specify his path or install it via install lhapdf6')
+            if self.options['cpp_compiler']:
+                make_flags.append('CXX=%s' % self.options['cpp_compiler'])
+            
 
         if logger.level <= logging.INFO:
             devnull = open(os.devnull,'w')
@@ -5324,7 +5684,7 @@ This implies that with decay chains:
                 status = misc.call(['make','install'], 
                                                cwd = os.path.join(MG5DIR, name))
             else:
-                status = misc.call(['make'], cwd = os.path.join(MG5DIR, name))
+                status = misc.call(['make']+make_flags, cwd = os.path.join(MG5DIR, name))
         else:
             try:
                 misc.compile(['clean'], mode='', cwd = os.path.join(MG5DIR, name))
@@ -5337,7 +5697,8 @@ This implies that with decay chains:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
-                status = self.compile(mode='', cwd = os.path.join(MG5DIR, name))
+                status = self.compile(make_flags, mode='',
+                                               cwd = os.path.join(MG5DIR, name))
 
         if not status:
             logger.info('Compilation succeeded')
@@ -5749,11 +6110,12 @@ This implies that with decay chains:
             else:
                 fsock.write("version_nb   %s\n" % fail)
             fsock.write("last_check   %s\n" % int(time.time()))
-            fsock.close()
+            fsock.close()            
+            logger.info('Refreshing installation of MG5aMC_PY8_interface.')
+            self.do_install('mg5amc_py8_interface',additional_options=['--force'])
             logger.info('Checking current version. (type ctrl-c to bypass the check)')
             subprocess.call([os.path.join('tests','test_manager.py')],
-                                                                  cwd=MG5DIR)
-
+                                                                  cwd=MG5DIR)            
             print 'new version installed, please relaunch mg5'
             sys.exit(0)
         elif answer == 'n':
@@ -5829,7 +6191,8 @@ This implies that with decay chains:
         # 1: Pythia8_path and hewrig++ paths
         # try absolute and relative path
         for key in self.options:
-            if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path']:
+            if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path',
+                       'mg5amc_py8_interface_path']:
                 if self.options[key] in ['None', None]:
                     self.options[key] = None
                     continue
@@ -5840,6 +6203,13 @@ This implies that with decay chains:
                         self.options['pythia8_path'] = None
                     else:
                         continue
+                #this is for mg5amc_py8_interface_path
+                if key == 'mg5amc_py8_interface_path' and not os.path.isfile(pjoin(MG5DIR, path, 'MG5aMC_PY8_interface')):
+                    if not os.path.isfile(pjoin(path, 'MG5aMC_PY8_interface')):
+                        self.options['pythia8_path'] = None
+                    else:
+                        continue
+
                 #this is for hw++
                 elif key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                     if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
@@ -5859,7 +6229,7 @@ This implies that with decay chains:
                     else:
                         continue
 
-            elif key in ['pjfry','golem']:
+            elif key in ['pjfry','golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -5869,11 +6239,32 @@ This implies that with decay chains:
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
-                        local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
+                        local_install = {'pjfry':'PJFRY', 'golem':'golem95',
+                                         'samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
                             self.options[key]=None
+                    # Make sure that samurai version is recent enough
+                    if key=='samurai' and \
+                       isinstance(self.options[key],str) and \
+                       self.options[key].lower() != 'auto':
+                        if os.path.isfile(pjoin(self.options[key],os.pardir,'AUTHORS')):
+                            try:
+                                version = open(pjoin(self.options[key],os.pardir,
+                                                          'VERSION'),'r').read()
+                            except IOError:
+                                version = None
+                            if version is None:
+                                self.options[key] = None
+                                logger.info('--------')
+                                logger.info(
+"""The version of 'samurai' automatically detected seems too old to be compatible
+with MG5aMC and it will be turned off. Ask the authors for the latest version if
+you want to use samurai. 
+If you want to enforce its use as-it-is, then specify directly its library folder
+in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto').""")
+                                logger.info('--------')
 
             elif key.endswith('path'):
                 pass
@@ -5896,6 +6287,11 @@ This implies that with decay chains:
                 else:
                     if key in self.options_madgraph:
                         self.history.append('set %s %s' % (key, self.options[key]))
+        
+        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+        if warnings:
+            logger.warning(warnings)
+
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
         return self.options
@@ -6426,19 +6822,23 @@ This implies that with decay chains:
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ["pjfry","golem"]:
-            program = misc.which_lib(os.path.join(args[1],"lib%s.a"%args[0]))
-            if program!=None:
-                res = 0
-                logger.info('set %s to %s' % (args[0],args[1]))
-                self.options[args[0]] = args[1]
+        elif args[0] in ['pjfry','golem','samurai','ninja'] and \
+                           not (args[0]=='ninja' and args[1]=='./HEPTools/lib'):
+            if args[1] in ['None',"''",'""']:
+                self.options[args[0]] = None
             else:
-                res = 1
-
-            if res != 0 :
-                logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
-                        '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
-                        'You will NOT be able to run %s otherwise.\n'%args[0])
+                program = misc.which_lib(os.path.join(args[1],'lib%s.a'%args[0]))
+                if program!=None:
+                    res = 0
+                    logger.info('set %s to %s' % (args[0],args[1]))
+                    self.options[args[0]] = args[1]
+                else:
+                    res = 1
+    
+                if res != 0 :
+                    logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
+                            '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
+                            'You will NOT be able to run %s otherwise.\n'%args[0])
                 
         elif args[0] == 'lhapdf':
             try:

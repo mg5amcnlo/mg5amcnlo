@@ -56,13 +56,16 @@ import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 from madgraph.iolibs.files import cp, ln, mv
 
+from madgraph import InvalidCmd
+
 pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
 
 default_compiler= {'fortran': 'gfortran',
-                       'f2py': 'f2py'}
+                       'f2py': 'f2py',
+                       'cpp':'g++'}
 
 #===============================================================================
 # ProcessExporterFortran
@@ -1910,7 +1913,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
         
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
+                                             history, makejpg, online, compiler)
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
 
@@ -2601,7 +2605,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
 
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements,
+                                             history, makejpg, online, compiler)
 
 
     #===========================================================================
@@ -3575,7 +3580,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.create_proc_charac(matrix_elements, history)
 
         # create the run_card
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
+                                             history, makejpg, online, compiler)
 
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
@@ -5020,7 +5026,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
 
         
-        super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args, **opts)
+        super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args,
+                                                                         **opts)
         #ensure that the grouping information is on the correct value
         self.proc_characteristic['grouped_matrix'] = True        
 
@@ -6299,7 +6306,46 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
 
     opt = cmd.options
 
+    # ==========================================================================
+    # First check whether Ninja must be installed.
+    # Ninja would only be required if:
+    #  a) Loop optimized output is selected
+    #  b) We are attempting to output in:
+    #      > MadLoop standalone mode
+    #      > aMC@NLO mode
+    #      > LoopInduced mode
+    requires_ninja = opt['loop_optimized_output'] and \
+                      (output_type.startswith('madloop') or \
+                       output_type=='amcatnlo' or 
+                       (output_type=='default' and cmd._export_format in ['madevent']))
+    # An installation is required then, but only if the specified path is the
+    # default local one and that the Ninja library appears missing.
+    if requires_ninja and (not opt['ninja'] is None) and\
+            os.path.abspath(opt['ninja'])==pjoin(MG5DIR,'HEPTools','lib') and\
+            not os.path.isfile(pjoin(MG5DIR,'HEPTools','lib','libninja.a')):
+                # Then install Ninja here from the tarballs in the vendor
+                # directory so that it would work offline too.
+                logger.info(
+"""MG5aMC will now install the loop reduction tool 'Ninja' from the local offline installer.
+Use the command 'install ninja' if you want to update to the latest online version.
+This installation can take some time but only needs to be performed once.""",'$MG:color:GREEN')
+                try:
+                    cmd.do_install('ninja',paths={'HEPToolsInstaller':
+                        pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
+                  additional_options=[
+                  '--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','ninja.tar.gz'),
+                  '--oneloop_tarball=%s'%pjoin(MG5DIR,'vendor','oneloop.tar.gz')])
+                except InvalidCmd:
+                    logger.warning(
+"""The offline installation of Ninja was unsuccessful, and MG5aMC disabled it.
+In the future, if you want to reactivate Ninja, you can do so by re-attempting
+its online installation with the command 'install ninja' or install it on your
+own and set the path to its library in the MG5aMC option 'ninja'.""")
+                    cmd.exec_cmd('set ninja None')
+                    cmd.exec_cmd('save options')  
 
+
+    # ==========================================================================
     # First treat the MadLoop5 standalone case       
     MadLoop_SA_options = {'clean': not noclean, 
       'complex_mass':cmd.options['complex_mass_scheme'],
@@ -6308,8 +6354,10 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
       'cuttools_dir': cmd._cuttools_dir,
       'iregi_dir':cmd._iregi_dir,
-      'pjfry_dir':cmd.options["pjfry"],
-      'golem_dir':cmd.options["golem"],
+      'pjfry_dir':cmd.options['pjfry'],
+      'golem_dir':cmd.options['golem'],
+      'samurai_dir':cmd.options['samurai'],
+      'ninja_dir':cmd.options['ninja'],
       'fortran_compiler':cmd.options['fortran_compiler'],
       'f2py_compiler':cmd.options['f2py_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],
