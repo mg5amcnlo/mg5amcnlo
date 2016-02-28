@@ -615,7 +615,9 @@ class ReweightInterface(extended_cmd.Cmd):
                     ratio_square[name] += (weight[name]/event.wgt)**2
                     
                 if self.output_type == "default":
-                    for name in weight:             
+                    for name in weight:
+                        if 'orig' in name:
+                            continue             
                         event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
                         #write this event with weight
                     output.write(str(event))

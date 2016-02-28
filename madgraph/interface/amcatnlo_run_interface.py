@@ -4813,6 +4813,4 @@ if '__main__' == __name__:
     except KeyboardInterrupt:
         print 'quit on KeyboardInterrupt'
         pass
-    except MadEventAlreadyRunning, error:
-        raise
 
