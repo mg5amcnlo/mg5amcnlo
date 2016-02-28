@@ -1110,7 +1110,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 command.append(self.run_name)
             else:
                 command += args
-            p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+            p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
             while p.poll() is None:
                 line = p.stdout.readline()
                 if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:']) and \
