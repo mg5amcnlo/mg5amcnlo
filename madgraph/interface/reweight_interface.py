@@ -613,7 +613,8 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[name] += weight[name]
                     ratio[name] += weight[name]/event.wgt
                     ratio_square[name] += (weight[name]/event.wgt)**2
-                    
+                # ensure to have a consistent order of the weights
+                event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
                 if self.output_type == "default":
                     for name in weight:
                         if 'orig' in name:
