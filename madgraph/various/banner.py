@@ -897,6 +897,7 @@ class ConfigFile(dict):
         
         # Initialize it with all the default value
         self.user_set = set()
+        self.system_only = set()
         self.lower_to_case = {}
         self.list_parameter = set()
         self.default_setup()
@@ -947,9 +948,14 @@ class ConfigFile(dict):
         if  not len(self):
             #Should never happen but when deepcopy/pickle
             self.__init__()
-            
+        
+        
         name = name.strip()
         lower_name = name.lower() 
+        # 0. check if this parameter is a system only one
+        if change_userdefine and lower_name in self.system_only:
+            logger.critical('%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name]))
+        
         # 1. Find the type of the attribute that we want
         if name in self.list_parameter:
             if isinstance(self[name], list):
@@ -991,7 +997,7 @@ class ConfigFile(dict):
         if change_userdefine:
             self.user_set.add(lower_name)
 
-    def add_param(self, name, value):
+    def add_param(self, name, value, system=False):
         """add a default parameter to the class"""
 
         lower_name = name.lower()
@@ -1005,6 +1011,8 @@ class ConfigFile(dict):
             if any([type(value[0]) != type(v) for v in value]):
                 raise Exception, "All entry should have the same type"
             self.list_parameter.add(lower_name)
+        if system:
+            self.system_only.add(lower_name)
 
     @staticmethod
     def format_variable(value, targettype, name="unknown"):
@@ -1919,7 +1927,7 @@ class RunCardNLO(RunCard):
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo')                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
-        self.add_param('lhapdfsetname', ['NNPDF23_nlo_as_0118_qed'], hidden=True)
+        self.add_param('lhapdfsetname', ['NNPDF23_nlo_as_0118_qed'], system=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)

@@ -28,7 +28,7 @@ endif
 
 UNAME := $(shell uname -s)
 ifeq ($(origin LDFLAGS), undefined)
-LDFLAGS=-lstdc++
+LDFLAGS=-lc++  -mmacosx-version-min=10.7
 endif
 
 # Options: dynamic, lhapdf
