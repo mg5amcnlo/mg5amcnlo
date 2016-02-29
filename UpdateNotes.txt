@@ -1,6 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.4.0(XX/XX/XX)
+        MZ: new NLO generation mode. It is more efficient from the memory and CPU point of 
+            view, in particular for high-multiplicity processes. 
+            Many thanks to Josh Bendavid for his fundamental contribution for this.
+            The mode can be enabled with
+            > set low_mem_multicore_nlo_generation True
+            before generating the process.
         VH: Interfaced MadLoop to Samurai and Ninja (the latter is now the default)
         OM: Adding the possibility to use new syntax for tree-level processes:
             QED==2 and QCD>2: The first allows to select exactly a power of the coupling (at amplitude level
