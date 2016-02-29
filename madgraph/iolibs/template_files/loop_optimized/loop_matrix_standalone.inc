@@ -11,7 +11,11 @@ c and helicities for the point in phase space P(0:3,NEXTERNAL)
 c and external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
-C  
+C
+C Modules
+C
+      use vertex_polynomial
+C
       IMPLICIT NONE
 C
 C USER CUSTOMIZABLE OPTIONS
@@ -189,7 +193,10 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 ## if(ComputeColorFlows) {
 	  %(real_dp_format)s BUFFRES(0:3,0:NSQUAREDSO)
 ## }
-	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+C ##TOBEREMOVEDLATER##
+	  %(complex_dp_format)s RAW_COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+C ##TOBEREMOVEDLATER##
+      TYPE(V_COEF) COEFS(MAXLWFSIZE,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
 	  DATA FOUNDHELFILTER/.TRUE./

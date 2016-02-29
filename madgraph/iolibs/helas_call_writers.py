@@ -1512,7 +1512,9 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         # First WaveFunction
         if isinstance(argument, helas_objects.HelasWavefunction):
             if argument['is_loop']:
-                arg['out'] = 'PL(0,%(out)d),COEFS'
+##TOBEREMOVEDLATER##
+                arg['out'] = 'PL(0,%(out)d),RAW_COEFS'
+##TOBEREMOVEDLATER##
             else:
                 arg['out']=self.format_helas_object('W(1,','%(out)d')                   
             if aloha.complex_mass:
@@ -1540,6 +1542,10 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
         if (isinstance(argument, helas_objects.HelasWavefunction) and \
            argument.get('is_loop')):
             # We add here the call to the UPDATE_COEF subroutine
+##TOBEREMOVEDLATER##
+            call = "RAW_COEFS(:,:,:)=DCMPLX(0.0d0,0.0d0)\n%s\n"%call
+            call += "CALL filter_all_coefs(RAW_COEFS,COEFS)"
+##TOBEREMOVEDLATER##
             call += "\nCALL {0}UPDATE_WL_%(loop_mother_rank)d_%(vertex_rank)d("
             call += "WL(1,0,1,%(loop_mother_number)d),%(lcut_size)d,COEFS,"
             call += "%(in_size)d,%(out_size)d,WL(1,0,1,%(out)d))"

@@ -786,11 +786,22 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
         if any([any(['L' in tag for tag in d[1]]) for d in wanted_lorentz]):
-            cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', write_dir+'/aloha_functions.f')
+            cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', 
+                                                 write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
         else:
-            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
+            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+                                                 write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
+
+
+        # Write the vertex coefficient module which is used by both HELAS
+        # and MadLoop for passing the information about the vertex polynomial
+        # in the loop optimized output.
+        # For now, the two modes are 'FKS5_optimized' and 'madloop_optimized'
+        if 'optimized' in self.opt['export_format']:
+            cp(pjoin(MG5DIR,'aloha','template_files','vertex_polynomial.f'),
+                                        pjoin(write_dir,'vertex_polynomial.f'))
 
         # Make final link in the Process
         self.make_model_symbolic_link()
@@ -5217,7 +5228,6 @@ class UFO_model_to_mg4(object):
         if self.opt['mp']:
             self.create_intparam_def(dp=False,mp=True)
         
-        
         # definition of the coupling.
         self.create_actualize_mp_ext_param_inc()
         self.create_coupl_inc()
@@ -5245,7 +5255,6 @@ class UFO_model_to_mg4(object):
 
     def copy_standard_file(self):
         """Copy the standard files for the fortran model."""
-    
         
         #copy the library files
         file_to_link = ['formats.inc','printout.f', \
