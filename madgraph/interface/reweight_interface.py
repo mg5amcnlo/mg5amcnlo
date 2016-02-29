@@ -405,7 +405,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # Find new tag in the banner and add information if needed
         if 'initrwgt' in self.banner:
             if 'type=\'mg_reweighting\'' in self.banner['initrwgt']:
-                blockpat = re.compile(r'''<weightgroup type=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
+                blockpat = re.compile(r'''<weightgroup (?:type|name)=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
                 pattern = re.compile('<weight id=\'mg_reweight_(?P<id>\d+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
@@ -459,7 +459,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
-        self.banner['initrwgt'] += '\n<weightgroup type=\'mg_reweighting\'>\n'
+        self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\' combine=off>\n'
         for tag, diff in mg_rwgt_info:
             self.banner['initrwgt'] += '<weight id=\'mg_reweight_%s\'>%s</weight>\n' % \
                                        (tag, diff)

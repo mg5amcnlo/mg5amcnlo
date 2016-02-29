@@ -42,7 +42,7 @@ c
          if (do_rwgt_scale) then
             do kk=1,dyn_scale(0)
                write(ifile,'(a,i4,a)') 
-     &              "    <weightgroup type='scale_variation ",
+     &              "    <weightgroup name='scale_variation ",
      &              dyn_scale(kk),"' combine='envelope'>"
                if (lscalevar(kk)) then
                   do ii=1,nint(scalevarF(0))
@@ -68,7 +68,7 @@ c
             do nn=1,lhaPDFid(0)
                if (lpdfvar(nn)) then
                   write(ifile,'(a)') "    <weightgroup "/
-     &                 /"type='PDF_variation "/
+     &                 /"name='PDF_variation "/
      &                 /trim(adjustl(lhaPDFsetname(nn)))/
      &                 /"' combine='unknown'>"
                   do n=0,nmemPDF(nn)
@@ -81,7 +81,7 @@ c
                   enddo
                else
                   write(ifile,'(a)') "    <weightgroup "/
-     &                 /"type='PDF_variation' combine='none'>"
+     &                 /"name='PDF_variation' combine='none'>"
                   idwgt=idwgt+1
                   write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
                   write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
@@ -227,7 +227,7 @@ c Write here the reweight information if need be
          if (do_rwgt_scale) then
             do kk=1,dyn_scale(0)
                write(ifile,'(a,i4,a)') 
-     &              "    <weightgroup type='scale_variation ",
+     &              "    <weightgroup name='scale_variation ",
      &              dyn_scale(kk),"' combine='envelope'>"
                if (lscalevar(kk)) then
                   do ii=1,nint(scalevarF(0))
@@ -253,7 +253,7 @@ c Write here the reweight information if need be
             do nn=1,lhaPDFid(0)
                if (lpdfvar(nn)) then
                   write(ifile,'(a)') "    <weightgroup "/
-     &                 /"type='PDF_variation "/
+     &                 /"name='PDF_variation "/
      &                 /trim(adjustl(lhaPDFsetname(nn)))/
      &                 /"' combine='unknown'>"
                   do n=0,nmemPDF(nn)
@@ -266,7 +266,7 @@ c Write here the reweight information if need be
                   enddo
                else
                   write(ifile,'(a)') "    <weightgroup "/
-     &                 /"type='PDF_variation' combine='none'>"
+     &                 /"name='PDF_variation' combine='none'>"
                   idwgt=idwgt+1
                   write(temp,'(a4,i8)') "PDF=",lhaPDFid(nn)
                   write(ifile,'(a,i4,a)') "      <weight id='" ,idwgt
@@ -350,7 +350,7 @@ c     find the start of a weightgroup
                  if (index(string,'<weightgroup').ne.0) exit
                  if (index(string,'</initrwgt').ne.0) exit
               enddo
-              if (index(string,"type='scale_variation").ne.0) then
+              if (index(string,"name='scale_variation").ne.0) then
                  do_rwgt_scale=.true.
                  dyn_scale(0)=dyn_scale(0)+1
                  read(ifile,'(a)')string
@@ -387,7 +387,7 @@ c     find the start of a weightgroup
                  else
                     lscalevar(dyn_scale(0))=.false.
                  endif
-              elseif (index(string,"type='PDF_variation").ne.0) then
+              elseif (index(string,"name='PDF_variation").ne.0) then
                  do_rwgt_pdf=.true.
                  lhaPDFid(0)=lhaPDFid(0)+1
                  nmemPDF(lhaPDFid(0))=-1
@@ -493,13 +493,13 @@ c Find the reweight information for scale and PDF uncertainties
                  if (index(string,'<weightgroup').ne.0) exit
                  if (index(string,'</initrwgt').ne.0) exit
               enddo
-              if (index(string,"type='scale_variation").eq.0) then
+              if (index(string,"name='scale_variation").eq.0) then
                  do
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
                     itempsc=itempsc+1
                  enddo
-              elseif (index(string,"type='PDF_variation").eq.0) then
+              elseif (index(string,"name='PDF_variation").eq.0) then
                  do 
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit

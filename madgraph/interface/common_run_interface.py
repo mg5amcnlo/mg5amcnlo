@@ -1059,7 +1059,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         self.to_store.append('event')
         if not '-from_cards' in line:
-            self.keep_cards(['reweight_card.dat'])
+            self.keep_cards(['reweight_card.dat'], ignore=['*'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
 
         # forbid this function to create an empty item in results.
@@ -1753,15 +1753,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
-            if card in ignore:
+            if card in ignore or (ignore == ['*'] and card not in need_card):
                 continue
             if card not in need_card:
                 if os.path.exists(pjoin(cards_path, card)):
-                    os.remove(pjoin(cards_path, card))
+                    files.mv(pjoin(cards_path, card), pjoin(cards_path, '.%s' % card))
             else:
                 if not os.path.exists(pjoin(cards_path, card)):
-                    default = card.replace('.dat', '_default.dat')
-                    files.cp(pjoin(cards_path, default),pjoin(cards_path, card))
+                    if os.path.exists(pjoin(cards_path, '.%s' % card)):
+                        files.mv(pjoin(cards_path, '.%s' % card), pjoin(cards_path, card))
+                    else:
+                        default = card.replace('.dat', '_default.dat')
+                        files.cp(pjoin(cards_path, default),pjoin(cards_path, card))
 
     ############################################################################
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
@@ -1919,7 +1922,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.update_status('Running MadSpin', level='madspin')
         if not '-from_cards' in line:
-            self.keep_cards(['madspin_card.dat'])
+            self.keep_cards(['madspin_card.dat'], ignore=['*'])
             self.ask_edit_cards(['madspin_card.dat'], 'fixed', plot=False)
         self.help_decay_events(skip_syntax=True)
 
