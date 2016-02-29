@@ -1525,7 +1525,6 @@ c must do MC over FKS directories.
          appl_event_weight=appl_event_weight+wgts(1,i)/vegas_wgt
          final_state_rescaling = dble(iproc_save(nFKS(i))) /
      &        dble(appl_nproc(flavour_map(nFKS(i))))
-         write(*,*) "fks_singular:1510", itype(i)
          if (itype(i).eq.1) then
 c     real
             appl_w0(1)=appl_w0(1)+wgt(1,i)*final_state_rescaling
