@@ -1280,7 +1280,7 @@ class RunCard(ConfigFile):
         cut: defines the list of cut parameter to allow to set them all to off.
         """
 
-        super(RunCard, self).add_param(name, value, **opts)
+        super(RunCard, self).add_param(name, value, system=system,**opts)
         name = name.lower()
         if fortran_name:
             self.fortran_name[name] = fortran_name
