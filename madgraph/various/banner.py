@@ -1270,7 +1270,7 @@ class RunCard(ConfigFile):
         super(RunCard, self).__init__(*args, **opts)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
-                  hidden=False, legacy=False, cut=False, **opts):
+                  hidden=False, legacy=False, cut=False, system=False, **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
         fortran_name defines what is the associate name in the f77 code
@@ -1286,7 +1286,7 @@ class RunCard(ConfigFile):
             self.fortran_name[name] = fortran_name
         if not include:
             self.not_in_include.append(name)
-        if hidden:
+        if hidden or system:
             self.hidden_param.append(name)
         if legacy:
             self.legacy_parameter[name] = value
@@ -1927,7 +1927,7 @@ class RunCardNLO(RunCard):
         self.add_param('ebeam2', 6500.0, fortran_name='ebeam(2)')        
         self.add_param('pdlabel', 'nn23nlo')                
         self.add_param('lhaid', [244600],fortran_name='lhaPDFid')
-        self.add_param('lhapdfsetname', ['NNPDF23_nlo_as_0118_qed'], system=True)
+        self.add_param('lhapdfsetname', ['internal_use_only'], system=True)
         #shower and scale
         self.add_param('parton_shower', 'HERWIG6', fortran_name='shower_mc')        
         self.add_param('shower_scale_factor',1.0)
