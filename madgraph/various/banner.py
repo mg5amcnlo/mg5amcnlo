@@ -2067,6 +2067,13 @@ class RunCardNLO(RunCard):
             self['reweight_scale']=self['reweight_scale']*len(self['dynamical_scale_choice']) 
             logger.warning("Setting 'reweight_scale' for all 'dynamical_scale_choice' to %s" % self['reweight_pdf'][0])
 
+
+        # Check that there are no identical elements in lhaid or dynamical_scale_choice
+        if len(self['lhaid']) != len(set(self['lhaid'])):
+                raise InvalidRunCard, "'lhaid' has two or more identical entries. They have to be all different for the code to work correctly."
+        if len(self['dynamical_scale_choice']) != len(set(self['dynamical_scale_choice'])):
+                raise InvalidRunCard, "'dynamical_scale_choice' has two or more identical entries. They have to be all different for the code to work correctly."
+            
         # Check that lenght of lists are consistent
         if len(self['reweight_pdf']) != len(self['lhaid']):
             raise InvalidRunCard, "'reweight_pdf' and 'lhaid' lists should have the same length"
