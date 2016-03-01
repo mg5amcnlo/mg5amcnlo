@@ -477,6 +477,64 @@ C        ARGUMENTS
           """SUBROUTINE %(sub_prefix)sUPDATE_WL(A,RA,LCUT_SIZE,B,RB,IN_SIZE,OUT_SIZE,OUT)
                         USE VERTEX_POLYNOMIAL
                         USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+                        implicit none
+                        INTEGER I,J,K,L,M
+                        INTEGER RA,RB
+                        %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+                        TYPE(%(mp_prefix)sV_COEF) B(MAXLWFSIZE,MAXLWFSIZE)
+                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+                        INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+                        INTEGER NEW_POSITION,UPDATER_COEF_POS
+                        %(coef_format)s UPDATER_COEF
+                        """%self.rep_dict)
+        
+        # Start the loop on the elements i,j of the vector OUT(i,coef,j)
+        lines.append("C Welcome to the computational heart of MadLoop...")
+        lines.append("OUT(:,:,:)=%s"%self.czero)
+        lines.append(
+"""DO J=1,OUT_SIZE
+  DO K=1,IN_SIZE
+    DO M=1,B(J,K)%N_NON_ZERO_IDS
+      UPDATER_COEF_POS = B(J,K)%NON_ZERO_IDS(M)
+      UPDATER_COEF = B(J,K)%COEFS(UPDATER_COEF_POS)
+      DO L=0,NCOEF_R(RA)-1
+        NEW_POSITION = COMB_COEF_POS(L,UPDATER_COEF_POS)
+        DO I=1,LCUT_SIZE
+          OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)*UPDATER_COEF
+        ENDDO
+      ENDDO
+    ENDDO
+  ENDDO
+ENDDO
+""")
+        
+        lines.append("END")
+        # return the subroutine
+        return '\n'.join(lines)
+
+
+    def write_too_slow_wl_updater(self):
+        """ Give out the subroutine to update a polynomial of rank r_1 with
+        one of rank r_2 """
+        
+        # The update is basically given by 
+        # OUT(j,coef,i) = A(k,*,i) x B(j,*,k)
+        # with k a summed index and the 'x' operation is equivalent to 
+        # putting together two regular polynomial in q with scalar coefficients
+        # The complexity of this subroutine is therefore 
+        # MAXLWFSIZE**3 * NCoef(r_1) * NCoef(r_2)
+        # Which is for example 22'400 when updating a rank 4 loop wavefunction
+        # with a rank 1 updater.
+        # The situation is slightly improved by a smarter handling of the 
+        # coefficients equal to zero
+        
+        lines=[]
+        
+        # Start by writing out the header:
+        lines.append(
+          """SUBROUTINE %(sub_prefix)sUPDATE_WL(A,RA,LCUT_SIZE,B,RB,IN_SIZE,OUT_SIZE,OUT)
+                        USE VERTEX_POLYNOMIAL
+                        USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
                         USE %(sub_prefix)sLOOP_POLYNOMIAL
                         implicit none
                         INTEGER I,J,K,L,M
@@ -644,9 +702,7 @@ ENDDO
         
         # Start by writing out the header:
         lines.append("""SUBROUTINE %(sub_prefix)sEVAL_POLY(C,R,Q,OUT)
-                        USE VERTEX_POLYNOMIAL
                         USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-                        USE %(sub_prefix)sLOOP_POLYNOMIAL
                         %(coef_format)s C(0:LOOPMAXCOEFS-1)
                         INTEGER R
                         %(coef_format)s Q(0:3)
@@ -681,22 +737,22 @@ ENDDO
         lines=[]
         
         # Start by writing out the header:
-        lines.append("""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
-                        USE VERTEX_POLYNOMIAL
-                        USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-                        USE %(sub_prefix)sLOOP_POLYNOMIAL
-                        INTEGER I,J
-                        TYPE(%(mp_prefix)sL_COEF) WL(MAXLWFSIZE,MAXLWFSIZE)
-                        INTEGER R,LCUT_SIZE
-                        %(coef_format)s CONST
-                        %(coef_format)s OUT(0:LOOPMAXCOEFS-1)
-                        """%self.rep_dict)                    
+        lines.append(
+"""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
+  USE VERTEX_POLYNOMIAL
+  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+  INTEGER I,J
+  %(coef_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  INTEGER R,LCUT_SIZE
+  %(coef_format)s CONST
+  %(coef_format)s OUT(0:LOOPMAXCOEFS-1)
+"""%self.rep_dict)                    
      
         # Now scan them all progressively
         lines.append("DO I=1,LCUT_SIZE")
         lines.append("  DO J=0,NCOEF_R(R)-1")
 ##        lines.append("    IF (.NOT.WL(I,I)%IS_ZERO(J)) THEN")        
-        lines.append("      OUT(J)=OUT(J)+WL(I,I)%COEFS(J)*CONST")               
+        lines.append("      OUT(J)=OUT(J)+WL(I,J,I)*CONST")               
  ##       lines.append("    ENDIF")
 #        lines.append("  DO J=1,WL(I,I)%N_NON_ZERO_IDS")
 #        lines.append("    OUT(WL(I,I)%NON_ZERO_IDS(J))="+

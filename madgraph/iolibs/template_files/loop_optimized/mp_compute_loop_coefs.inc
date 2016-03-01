@@ -12,8 +12,6 @@ C Modules
 C
       use vertex_polynomial
       use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-      use %(proc_prefix)sLOOP_POLYNOMIAL
-      use MP_%(proc_prefix)sLOOP_POLYNOMIAL
 C
       IMPLICIT NONE
 C  
@@ -127,11 +125,11 @@ C
 	  %(complex_dp_format)s DPW(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/DPW
 
-	  TYPE(MP_L_COEF) WL(MAXLWFSIZE,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
-      TYPE(L_COEF) DP_WL(MAXLWFSIZE,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+      %(complex_dp_format)s DP_WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s DP_PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/DP_WL,DP_PL
 
@@ -223,19 +221,23 @@ ENDDO
 ## if(AmplitudeReduction){
 IF (.NOT.SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
 ## }
-CALL %(proc_prefix)sINITIALIZE_ALL_LOOP_COEFS(DP_WL(1,1,0))
-CALL MP_%(proc_prefix)sINITIALIZE_ALL_LOOP_COEFS(WL(1,1,0))
 DO I=1,MAXLWFSIZE
-  WL(I,I,0)%%COEFS(0)=CMPLX(1.0e0_16,ZERO,KIND=16)
-  WL(I,I,0)%%IS_ZERO(0)=.FALSE.
-  WL(I,I,0)%%N_NON_ZERO_IDS=1
-  WL(I,I,0)%%NON_ZERO_IDS(1)=0
-  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
-    DP_WL(I,I,0)%%COEFS(0)=DCMPLX(1.0d0,0.0d0)
-    DP_WL(I,I,0)%%IS_ZERO(0)=.FALSE.
-    DP_WL(I,I,0)%%N_NON_ZERO_IDS=1
-    DP_WL(I,I,0)%%NON_ZERO_IDS(1)=0
-  ENDIF
+  DO J=0,LOOPMAXCOEFS-1
+    DO K=1,MAXLWFSIZE
+      IF (I.EQ.K.AND.J.EQ.0) THEN
+        WL(I,J,K,0)=(1.0e0_16,ZERO)
+      ELSE
+        WL(I,J,K,0)=(ZERO,ZERO)
+      ENDIF
+	  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+        IF (I.EQ.K.AND.J.EQ.0) THEN
+          DP_WL(I,J,K,0)=(1.0d0,0.0d0)
+        ELSE
+          DP_WL(I,J,K,0)=(0.0d0,0.0d0)
+        ENDIF
+	  ENDIF
+    ENDDO
+  ENDDO
 ENDDO
 
 DO K=1, 3

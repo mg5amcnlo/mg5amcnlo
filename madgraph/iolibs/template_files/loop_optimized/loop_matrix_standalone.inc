@@ -16,7 +16,6 @@ C Modules
 C
       use vertex_polynomial
       use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-      use %(proc_prefix)sLOOP_POLYNOMIAL
 C
       IMPLICIT NONE
 C
@@ -365,7 +364,7 @@ C UTIL NOW, ONLY CUTTOOLS PROVIDE QP
       %(complex_mp_format)s MPW(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sMP_W/MPW
 
-	  TYPE(L_COEF) WL(MAXLWFSIZE,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 
@@ -570,12 +569,16 @@ C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   DO I=0,3
     PL(I,0)=DCMPLX(0.0d0,0.0d0)
   ENDDO
-  CALL %(proc_prefix)sINITIALIZE_ALL_LOOP_COEFS(WL(1,1,0))
   DO I=1,MAXLWFSIZE
-    WL(I,I,0)%%COEFS(0)=DCMPLX(1.0d0,0.0d0)
-    WL(I,I,0)%%IS_ZERO(0)=.FALSE.
-    WL(I,I,0)%%N_NON_ZERO_IDS=1
-    WL(I,I,0)%%NON_ZERO_IDS(1)=0
+    DO J=0,LOOPMAXCOEFS-1
+	  DO K=1,MAXLWFSIZE
+	    IF(I.EQ.K.AND.J.EQ.0) then
+        	WL(I,J,K,0)=(1.0d0,0.0d0)
+		ELSE
+        	WL(I,J,K,0)=(0.0d0,0.0d0)
+		ENDIF
+	  ENDDO
+	ENDDO
   ENDDO
   IF(BOOTANDSTOP) THEN
     WRITE(*,*) '##Stopped by user request.'

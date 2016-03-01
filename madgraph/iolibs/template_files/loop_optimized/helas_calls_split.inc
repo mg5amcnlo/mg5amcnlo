@@ -4,7 +4,6 @@ C Modules
 C
       use vertex_polynomial
       use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-      use %(proc_prefix)sLOOP_POLYNOMIAL
 C 
       IMPLICIT NONE
 C  
@@ -81,7 +80,7 @@ C
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W
 
-	  TYPE(L_COEF) WL(MAXLWFSIZE,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 
