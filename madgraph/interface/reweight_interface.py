@@ -1101,10 +1101,14 @@ class ReweightInterface(extended_cmd.Cmd):
 
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                if 'V'  not in tag:
-                    me_value = external(p,event.aqcd, nhel)
-                else:                  
+                if 'V' in tag or \
+                   (hypp_id ==1 and any('sqrvirt' in l for l in self.second_process)):
                     me_value = external(p,event.aqcd, math.sqrt(scale2), nhel)
+                else:
+                    try:
+                        me_value = external(p,event.aqcd, nhel)
+                    except TypeError:
+                        me_value = external(p,event.aqcd, math.sqrt(scale2), nhel)                    
 
         # for NLO we have also the stability status code
         if isinstance(me_value, tuple):
