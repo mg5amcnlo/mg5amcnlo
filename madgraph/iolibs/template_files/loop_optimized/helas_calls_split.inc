@@ -1,5 +1,11 @@
       SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
-C  
+C
+C Modules
+C
+      use vertex_polynomial
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+      use %(proc_prefix)sLOOP_POLYNOMIAL
+C 
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -18,8 +24,6 @@ C
 	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
       %(real_dp_format)s     ZERO
       PARAMETER (ZERO=0D0)
 	  %(real_mp_format)s     MP__ZERO
@@ -37,7 +41,10 @@ C
 C LOCAL VARIABLES
 C
       INTEGER I,J,K
-	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+C ##TOBEREMOVEDLATER##
+	  %(complex_dp_format)s RAW_COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+C ##TOBEREMOVEDLATER##
+	  TYPE(V_COEF) COEFS(MAXLWFSIZE,MAXLWFSIZE)
 
 	  LOGICAL DUMMYFALSE
 	  DATA DUMMYFALSE/.FALSE./
@@ -74,7 +81,7 @@ C
 	  %(complex_dp_format)s W(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/W
 
-	  %(complex_dp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  TYPE(L_COEF) WL(MAXLWFSIZE,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/WL,PL
 

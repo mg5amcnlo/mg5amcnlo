@@ -1347,7 +1347,7 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
                     lamp.set('loop_group_id',i)
                     i=i+1
                 create_coef=[
-                     'CREATE_LOOP_COEFS(WL(1,0,1,%(number)d)',
+                     'CREATE_LOOP_COEFS(WL(1,1,%(number)d)',
                      '%(loop_rank)d','%(lcut_size)d',
                      '%(loop_number)d','%(LoopSymmetryFactor)d',
                      '%(LoopMultiplier)d']
@@ -1544,11 +1544,11 @@ class FortranUFOHelasCallWriterOptimized(FortranUFOHelasCallWriter):
             # We add here the call to the UPDATE_COEF subroutine
 ##TOBEREMOVEDLATER##
             call = "RAW_COEFS(:,:,:)=DCMPLX(0.0d0,0.0d0)\n%s\n"%call
-            call += "CALL filter_all_coefs(RAW_COEFS,COEFS)"
+            call += "CALL filter_all_v_coefs(RAW_COEFS,COEFS)"
 ##TOBEREMOVEDLATER##
-            call += "\nCALL {0}UPDATE_WL_%(loop_mother_rank)d_%(vertex_rank)d("
-            call += "WL(1,0,1,%(loop_mother_number)d),%(lcut_size)d,COEFS,"
-            call += "%(in_size)d,%(out_size)d,WL(1,0,1,%(out)d))"
+            call += "\nCALL {0}UPDATE_WL("
+            call += "WL(1,1,%(loop_mother_number)d),%(loop_mother_rank)d,%(lcut_size)d,COEFS,"
+            call += "%(vertex_rank)d,%(in_size)d,%(out_size)d,WL(1,1,%(out)d))"
         # Now we have a line correctly formatted, with the proc_prefix
         call_function = lambda wf:\
                         (call%wf.get_helas_call_dict(OptimizedOutput=True, 

@@ -2069,18 +2069,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Start from the routine in the template
         replace_dict = copy.copy(matrix_element.rep_dict)
-        
-        # Write the definition of the coef_to_rank_map
-        coef_to_rank_map_definition = []
-        for rank in range(replace_dict['maxrank']+1):
-            start = q_polynomial.get_number_of_coefs_for_rank(rank-1)
-            end   = q_polynomial.get_number_of_coefs_for_rank(rank)-1
-            coef_to_rank_map_definition.append(
-'DATA (COEFTORANK_MAP(I),I=%(start)d,%(end)d)/%(n_entries)d*%(rank)d/'%
-{'start': start,'end': end,'n_entries': end-start+1,'rank': rank})
-        replace_dict['coef_to_rank_map_definition']=\
-                                          '\n'.join(coef_to_rank_map_definition)
-        
+                
         dp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
         mp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
         # The double precision version of the basic polynomial routines, such as
@@ -2105,11 +2094,19 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
-                                         matrix_element.get_max_loop_rank(),
-                                         sub_prefix=replace_dict['proc_prefix'])
+            matrix_element.get_max_loop_rank(),
+            updater_max_rank = matrix_element.get_max_loop_vertex_rank(), 
+            sub_prefix=replace_dict['proc_prefix'],
+            proc_prefix=replace_dict['proc_prefix'],
+            mp_prefix='')
+        # Write the polynomial constant module common to all
+        writer.writelines(poly_writer.write_polynomial_constant_module()+'\n')
+
         mp_poly_writer=q_polynomial.FortranPolynomialRoutines(
-                    matrix_element.get_max_loop_rank(),coef_format='complex*32',
-                                   sub_prefix='MP_'+replace_dict['proc_prefix'])
+            matrix_element.get_max_loop_rank(),
+            updater_max_rank = matrix_element.get_max_loop_vertex_rank(),        
+            coef_format='complex*32', sub_prefix='MP_'+replace_dict['proc_prefix'],
+            proc_prefix=replace_dict['proc_prefix'], mp_prefix='MP_')
         # The eval subroutine
         subroutines.append(poly_writer.write_polynomial_evaluator())
         subroutines.append(mp_poly_writer.write_polynomial_evaluator())
@@ -2120,11 +2117,13 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         subroutines.append(poly_writer.write_wl_merger())
         subroutines.append(mp_poly_writer.write_wl_merger())
         # Now the udpate subroutines
-        for wl_update in matrix_element.get_used_wl_updates():
-            subroutines.append(poly_writer.write_wl_updater(\
-                                                     wl_update[0],wl_update[1]))
-            subroutines.append(mp_poly_writer.write_wl_updater(\
-                                                     wl_update[0],wl_update[1]))
+        subroutines.append(poly_writer.write_wl_updater())
+        subroutines.append(mp_poly_writer.write_wl_updater())
+#        for wl_update in matrix_element.get_used_wl_updates():
+#            subroutines.append(poly_writer.write_old_wl_updater(\
+#                                                     wl_update[0],wl_update[1]))
+#            subroutines.append(mp_poly_writer.write_old_wl_updater(\
+#                                                     wl_update[0],wl_update[1]))
         writer.writelines('\n\n'.join(subroutines),
                                        context=self.get_context(matrix_element))
 

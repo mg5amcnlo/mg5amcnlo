@@ -23,12 +23,12 @@ LINKLIBS =  $(LDFLAGS) -L$(LIBDIR) -ldhelas -lmodel $(LINK_LOOP_LIBS)
 LIBS =  $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext) $(LOOP_LIBS)
 
 PROCESS= MadLoopParamReader.o MadLoopCommons.o \
+ $(patsubst $(DOTF),$(DOTO),$(wildcard polynomial.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard loop_matrix.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard improve_ps.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard born_matrix.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard CT_interface.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard loop_num.f)) \
- $(patsubst $(DOTF),$(DOTO),$(wildcard polynomial.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard helas_calls*.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard jamp?_calls_*.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard mp_born_amps_and_wfs.f)) \
@@ -42,12 +42,12 @@ PROCESS= MadLoopParamReader.o MadLoopCommons.o \
  $(patsubst $(DOTF),$(DOTO),$(wildcard compute_color_flows.f))
 
 OLP_PROCESS= MadLoopParamReader.o MadLoopCommons.o \
+ $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/polynomial.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/loop_matrix.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/improve_ps.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/born_matrix.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/CT_interface.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/loop_num.f)) \
- $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/polynomial.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/helas_calls*.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/jamp?_calls_*.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/mp_born_amps_and_wfs.f)) \

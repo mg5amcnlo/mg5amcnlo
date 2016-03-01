@@ -1,8 +1,94 @@
+MODULE %(mp_prefix)s%(proc_prefix)sLOOP_POLYNOMIAL
+  use %(proc_prefix)spolynomial_constants
+  use vertex_polynomial
+  implicit none
+  
+  TYPE %(mp_prefix)sL_COEF
+    sequence
+    %(complex_format)s COEFS(0:LOOPMAXCOEFS-1)
+    LOGICAL IS_ZERO(0:LOOPMAXCOEFS-1)
+    INTEGER NON_ZERO_IDS(LOOPMAXCOEFS)
+    INTEGER N_NON_ZERO_IDS
+  ENDTYPE %(mp_prefix)sL_COEF
+
+  interface %(mp_prefix)s%(proc_prefix)sinitialize_loop_coefs
+    module procedure %(mp_prefix)s%(proc_prefix)sinitialize_one_loop_coef, %(mp_prefix)s%(proc_prefix)sinitialize_all_loop_coefs
+  end interface %(mp_prefix)s%(proc_prefix)sinitialize_loop_coefs
+
+  interface %(mp_prefix)s%(proc_prefix)sprint_coefs
+    module procedure %(mp_prefix)s%(proc_prefix)sprint_one_coefs, %(mp_prefix)s%(proc_prefix)sprint_all_coefs
+  end interface %(mp_prefix)s%(proc_prefix)sprint_coefs
+
+CONTAINS
+
+  SUBROUTINE %(mp_prefix)s%(proc_prefix)sinitialize_one_loop_coef(this)
+      TYPE(%(mp_prefix)sL_COEF), INTENT(inout) :: this
+      this%%COEFS(:)        = (%(zero_def)s,%(zero_def)s)
+      this%%IS_ZERO(:)      = .TRUE.
+      this%%NON_ZERO_IDS(:) = -1
+      this%%N_NON_ZERO_IDS  = 0
+  END SUBROUTINE %(mp_prefix)s%(proc_prefix)sinitialize_one_loop_coef
+
+  SUBROUTINE %(mp_prefix)s%(proc_prefix)sinitialize_all_loop_coefs(this)
+      TYPE(%(mp_prefix)sL_COEF), INTENT(inout) :: this(MAXLWFSIZE,MAXLWFSIZE)
+	  INTEGER I,J
+	  DO I=1,MAXLWFSIZE
+        DO J=1,MAXLWFSIZE
+		  CALL %(mp_prefix)s%(proc_prefix)sinitialize_one_loop_coef(this(I,J))
+		ENDDO
+	  ENDDO
+  END SUBROUTINE %(mp_prefix)s%(proc_prefix)sinitialize_all_loop_coefs
+
+  SUBROUTINE %(mp_prefix)s%(proc_prefix)sPRINT_ONE_COEFS(COEFS)
+      TYPE(%(mp_prefix)sL_COEF),INTENT(in)    :: COEFS
+	  double complex TMP      
+	  INTEGER I
+      WRITE(*,*) 'n_non_zero_IDs =',COEFS%%N_NON_ZERO_IDS
+	  IF (COEFS%%N_NON_ZERO_IDS.eq.0) THEN
+	    WRITE(*,*) 'Empty loop coefs.'
+	  ELSE
+        DO I=1,COEFS%%N_NON_ZERO_IDS
+C Cast in double precision to avoid problems with the known gfortran bug on quadprec writeout
+	      TMP = DCMPLX(COEFS%%COEFS(COEFS%%NON_ZERO_IDS(I)))
+          WRITE(*,*) 'Loop COEFS(',COEFS%%NON_ZERO_IDS(I),')=',TMP
+        ENDDO
+	  ENDIF
+  END SUBROUTINE %(mp_prefix)s%(proc_prefix)sPRINT_ONE_COEFS
+
+  SUBROUTINE %(mp_prefix)s%(proc_prefix)sPRINT_ALL_COEFS(COEFS)
+      TYPE(%(mp_prefix)sL_COEF),INTENT(in)    :: COEFS(MAXLWFSIZE,MAXLWFSIZE)
+	  double complex TMP      
+	  INTEGER I,J,K
+	  logical foundSome
+	  foundSome = .False.
+	  DO J=1,MAXLWFSIZE
+	    DO K=1,MAXLWFSIZE
+	      IF (COEFS(J,K)%%N_NON_ZERO_IDS.ne.0) THEN
+		    foundSome = .True.
+            WRITE(*,*) 'For (',J,',',K,'), n_non_zero_IDs =',COEFS(J,K)%%N_NON_ZERO_IDS
+            DO I=1,COEFS(J,K)%%N_NON_ZERO_IDS
+C Cast in double precision to avoid problems with the known gfortran bug on quadprec writeout
+	          TMP = DCMPLX(COEFS(J,K)%%COEFS(COEFS(J,K)%%NON_ZERO_IDS(I)))
+              WRITE(*,*) 'Loop COEFS(',COEFS(J,K)%%NON_ZERO_IDS(I),')=',TMP
+            ENDDO
+		  ENDIF
+		ENDDO
+	  ENDDO
+      IF(.NOT.foundSome) THEN
+	    WRITE(*,*) 'Empty list of loop coefs.' 
+	  ENDIF
+  END SUBROUTINE %(mp_prefix)s%(proc_prefix)sPRINT_ALL_COEFS
+
+END MODULE %(mp_prefix)s%(proc_prefix)sLOOP_POLYNOMIAL
+
 ## if(not AmplitudeReduction){
 C THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
 C MULTIPLY BY THE BORN
 
       SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER,COLOR_ID,HELCONFIG)
+	  USE VERTEX_POLYNOMIAL
+	  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS	  
+	  USE %(mp_prefix)s%(proc_prefix)sLOOP_POLYNOMIAL
 	  implicit none
 C  
 C CONSTANTS 
@@ -17,8 +103,6 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
 	  %(complex_format)s CMPLX_ZERO
 	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
       INTEGER    NCOLORROWS
 	  PARAMETER (NCOLORROWS=%(nloopamps)d)
 	  INTEGER    NLOOPGROUPS
@@ -31,7 +115,7 @@ C     These are constants related to the split orders
 C  
 C ARGUMENTS 
 C  
-      %(complex_format)s LOOP_WF(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      TYPE(%(mp_prefix)sL_COEF) LOOP_WF(MAXLWFSIZE,MAXLWFSIZE)
 	  INTEGER RANK, COLOR_ID, SYMFACT, MULTIPLIER, LCUT_SIZE, HELCONFIG, LOOP_GROUP_NUMBER
 C  
 C LOCAL VARIABLES 
@@ -97,6 +181,9 @@ C In this case of loop-induced process, the reduction is performed at the loop
 C amplitude level so that no multiplication is performed.
 
       SUBROUTINE %(mp_prefix)s%(proc_prefix)sCREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER)
+	  USE VERTEX_POLYNOMIAL
+	  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS	  
+	  USE %(mp_prefix)s%(proc_prefix)sLOOP_POLYNOMIAL
 	  implicit none
 C  
 C CONSTANTS 
@@ -107,8 +194,6 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
 	  %(complex_format)s CMPLX_ZERO
 	  PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
 	  INTEGER    NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 	  INTEGER    NCOMB
@@ -116,7 +201,7 @@ C
 C  
 C ARGUMENTS 
 C  
-      %(complex_format)s LOOP_WF(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+      TYPE(%(mp_prefix)sL_COEF) LOOP_WF(MAXLWFSIZE,MAXLWFSIZE)
 	  INTEGER RANK, SYMFACT, LCUT_SIZE, LOOP_GROUP_NUMBER, MULTIPLIER
 C  
 C LOCAL VARIABLES 
@@ -143,15 +228,12 @@ C
 C       Just a handy subroutine to modify the coefficients for the
 C       tranformation q_loop -> -q_loop
 C       It is only used for the NINJA interface
+        USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS
         IMPLICIT NONE
 
-      	include 'loop_max_coefs.inc'
         INTEGER I, NCOEFS
 
 		%(complex_format)s POLYNOMIAL(0:NCOEFS-1)
-
-        INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)
-		%(coef_to_rank_map_definition)s
 
         DO I=0,NCOEFS-1
           IF (MOD(COEFTORANK_MAP(I),2).eq.1) then
@@ -161,3 +243,6 @@ C       It is only used for the NINJA interface
 
       END
 ## }
+
+C Now the routines to update the wavefunctions
+

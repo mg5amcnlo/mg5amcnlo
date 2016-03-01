@@ -8,6 +8,13 @@ c and external lines W(0:6,NEXTERNAL)
 C 
 %(process_lines)s
 C  
+C Modules
+C
+      use vertex_polynomial
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+      use %(proc_prefix)sLOOP_POLYNOMIAL
+      use MP_%(proc_prefix)sLOOP_POLYNOMIAL
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -28,8 +35,6 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
 	  %(real_mp_format)s    ZERO
@@ -72,7 +77,10 @@ C
 ## if(ComputeColorFlows) {
 	  %(real_dp_format)s BUFFRES(0:3,0:NSQUAREDSO)
 ## }
-	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+C ##TOBEREMOVEDLATER##
+	  %(complex_mp_format)s RAW_COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+C ##TOBEREMOVEDLATER##
+	  TYPE(MP_V_COEF) COEFS(MAXLWFSIZE,MAXLWFSIZE)
       %(complex_mp_format)s CFTOT
 C
 C FUNCTIONS
@@ -119,11 +127,11 @@ C
 	  %(complex_dp_format)s DPW(20,NWAVEFUNCS)
 	  common/%(proc_prefix)sW/DPW
 
-	  %(complex_mp_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+	  TYPE(MP_L_COEF) WL(MAXLWFSIZE,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_mp_format)s PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sMP_WL/WL,PL
 
-      %(complex_dp_format)s DP_WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
+      TYPE(L_COEF) DP_WL(MAXLWFSIZE,MAXLWFSIZE,0:NLOOPWAVEFUNCS)
 	  %(complex_dp_format)s DP_PL(0:3,0:NLOOPWAVEFUNCS)
 	  common/%(proc_prefix)sWL/DP_WL,DP_PL
 
@@ -206,28 +214,28 @@ DO I=1,NEXTERNAL
 ENDDO
 
 DO I=0,3
-  PL(I,0)=(ZERO,ZERO)
+  PL(I,0)=CMPLX(ZERO,ZERO,KIND=16)
+  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+    DP_PL(I,0)=DCMPLX(0.0d0,0.0d0)
+  ENDIF
 ENDDO
+
 ## if(AmplitudeReduction){
 IF (.NOT.SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
 ## }
+CALL %(proc_prefix)sINITIALIZE_ALL_LOOP_COEFS(DP_WL(1,1,0))
+CALL MP_%(proc_prefix)sINITIALIZE_ALL_LOOP_COEFS(WL(1,1,0))
 DO I=1,MAXLWFSIZE
-  DO J=0,LOOPMAXCOEFS-1
-    DO K=1,MAXLWFSIZE
-      IF (I.EQ.K.AND.J.EQ.0) THEN
-        WL(I,J,K,0)=(1.0e0_16,ZERO)
-      ELSE
-        WL(I,J,K,0)=(ZERO,ZERO)
-      ENDIF
-	  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
-        IF (I.EQ.K.AND.J.EQ.0) THEN
-          DP_WL(I,J,K,0)=(1.0d0,0.0d0)
-        ELSE
-          DP_WL(I,J,K,0)=(0.0d0,0.0d0)
-        ENDIF
-	  ENDIF
-    ENDDO
-  ENDDO
+  WL(I,I,0)%%COEFS(0)=CMPLX(1.0e0_16,ZERO,KIND=16)
+  WL(I,I,0)%%IS_ZERO(0)=.FALSE.
+  WL(I,I,0)%%N_NON_ZERO_IDS=1
+  WL(I,I,0)%%NON_ZERO_IDS(1)=0
+  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+    DP_WL(I,I,0)%%COEFS(0)=DCMPLX(1.0d0,0.0d0)
+    DP_WL(I,I,0)%%IS_ZERO(0)=.FALSE.
+    DP_WL(I,I,0)%%N_NON_ZERO_IDS=1
+    DP_WL(I,I,0)%%NON_ZERO_IDS(1)=0
+  ENDIF
 ENDDO
 
 DO K=1, 3
