@@ -816,7 +816,7 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(w_orig, w_new)
             misc.sprint(event)
             raise Exception, "Invalid matrix element for original computation (weight=0)"
-        
+
         return w_new/w_orig*event.wgt
      
     def calculate_nlo_weight(self, event, space=None):
@@ -1102,7 +1102,7 @@ class ReweightInterface(extended_cmd.Cmd):
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 if 'V' in tag or \
-                   (hypp_id ==1 and any('sqrvirt' in l for l in self.second_process)):
+                   (hypp_id ==1  and self.second_process and any('sqrvirt' in l for l in self.second_process)):
                     me_value = external(p,event.aqcd, math.sqrt(scale2), nhel)
                 else:
                     try:
