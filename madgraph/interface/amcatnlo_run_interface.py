@@ -1973,7 +1973,7 @@ RESTART = %(mint_mode)s
         
         # And now output the finalized list
         histogram_list.output(pjoin(self.me_dir,'SubProcesses',"MADatNLO"),
-                              format = 'gnuplot',lhapdfconfig=self.options['lhapdf'])
+                              format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
 
     def applgrid_combine(self,cross,error,jobs):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
@@ -3097,7 +3097,7 @@ RESTART = %(mint_mode)s
                         histogram_list=histograms.HwUList(pjoin(rundir,file))
                         histogram_list.output(pjoin(self.me_dir,'Events',
                                                     self.run_name,'%s%d'% (filename,i)),
-                                              format = 'gnuplot',lhapdfconfig=self.options['lhapdf'])
+                                              format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
                         try:
                             misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
                                       stdout=os.open(os.devnull, os.O_RDWR),\
@@ -3169,7 +3169,7 @@ RESTART = %(mint_mode)s
                             # And now output the finalized list
                             histogram_list.output(pjoin(self.me_dir,'Events',
                                                         self.run_name,'%s%d'% (filename, i)),
-                                                  format = 'gnuplot',lhapdfconfig=self.options['lhapdf'])
+                                                  format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
                             try:
                                 misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
                                           stdout=os.open(os.devnull, os.O_RDWR),\
