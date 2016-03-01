@@ -55,17 +55,14 @@ launch
 #        matrix-elements even if the events have been written with a 
 #        single helicity state.       
 # change mode XXX: change the type of reweighting performed.
-#        allowed values: LO, NLO, LO+NLO, NLO_basic, NLO_VT
+#        allowed values: LO, NLO, LO+NLO
 #        - This command has no effect for reweighting an .lhe event file with LO accuracy. 
-#          In that case LO mode is always used.
+#          In that case LO mode is always used (whatever entry is set).
 #        - When the .lhe file reweighted is at NLO accuracy, then all modes are allowed.
 #          * "LO" is an approximate leading order method
-#          * "NLO_basic" and "NLO_VT" are two NLO accurate method.  
-#            Read about their definition @ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
-#            The difference in results should be consider as one systematical error.
-#          * "NLO" request both "NLO_basic" and "NLO_VT".
-#          * "LO+NLO" request the three mode of reweighting "LO", "NLO_basic", "NLO_VT"
-#       - all NLO modes requires 'keep_rwgt_info' equals True (run_card.dat)
+#          * "NLO" is the NLO accurate method
+#          * "LO+NLO" runs both
+#       - "NLO" and "LO+NLO" modes requires 'keep_rwgt_info' equals True (run_card.dat)
 #          If the reweighting is done at generation level this parameter will
 #          automatically be set on True.
 #************************************************************************

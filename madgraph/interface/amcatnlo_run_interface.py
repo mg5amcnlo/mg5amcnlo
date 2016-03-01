@@ -4795,10 +4795,8 @@ if '__main__' == __name__:
                 args.pop(i)                                                                                                                                                                     
                 cmd_line =  aMCatNLOCmd(force_run=True)
             else:
-                misc.sprint("Use Shell mode")
                 cmd_line =  aMCatNLOCmdShell(force_run=True)
-            
-            misc.sprint(hasattr(cmd_line, 'do_shell'))
+
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print parser_error

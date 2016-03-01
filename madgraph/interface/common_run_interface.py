@@ -1084,7 +1084,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
 
                         
-
         if not '-from_cards' in line:
             self.keep_cards(['reweight_card.dat'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
@@ -1110,12 +1109,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 command.append(self.run_name)
             else:
                 command += args
+            if '-from_cards' not in command:
+                command.append('-from_cards')
             p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
             while p.poll() is None:
                 line = p.stdout.readline()
                 if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:']) and \
                    not '***********' in line:
-                        print line[:-1].replace('INFO', 'REWEIGTH')
+                        print line[:-1].replace('INFO', 'REWEIGHT')
                 elif __debug__ and line:
                     logger.debug(line[:-1])
             if p.returncode !=0:
@@ -1152,6 +1153,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
         reweight_cmd = reweight_interface.ReweightInterface(args[0], mother=self)
+        #reweight_cmd.use_rawinput = False
         #reweight_cmd.mother = self
         wgt_names = reweight_cmd.get_weight_names()
         if wgt_names == [''] and reweight_cmd.has_nlo:
@@ -1160,6 +1162,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.update_status('Running Reweighting', level='madspin')
         
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
@@ -3214,7 +3217,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             isinstance(self.run_card,banner_mod.RunCardNLO) and \
             not self.run_card['keep_rwgt_info']:
             #check if a NLO reweighting is required
-                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO|NLO|LO+NLO)''', re.M+re.I)
+                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO)\s*(?:#|$)''', re.M+re.I)
                 text = open(pjoin(self.me_dir,'Cards','reweight_card.dat')).read()
                 options = re_pattern.findall(text)
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
