@@ -481,7 +481,7 @@ C        ARGUMENTS
                         INTEGER I,J,K,L,M
                         INTEGER RA,RB
                         %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        TYPE(%(mp_prefix)sV_COEF) B(MAXLWFSIZE,MAXLWFSIZE)
+                        %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
                         %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
                         INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
                         INTEGER NEW_POSITION,UPDATER_COEF_POS
@@ -493,12 +493,12 @@ C        ARGUMENTS
         lines.append("OUT(:,:,:)=%s"%self.czero)
         lines.append(
 """DO J=1,OUT_SIZE
-  DO K=1,IN_SIZE
-    DO M=1,B(J,K)%N_NON_ZERO_IDS
-      UPDATER_COEF_POS = B(J,K)%NON_ZERO_IDS(M)
-      UPDATER_COEF = B(J,K)%COEFS(UPDATER_COEF_POS)
+  DO M=0,NCOEF_R(RB)-1
+    DO K=1,IN_SIZE
+      UPDATER_COEF = B(J,M,K)
+      IF (UPDATER_COEF.EQ.%s) CYCLE
       DO L=0,NCOEF_R(RA)-1
-        NEW_POSITION = COMB_COEF_POS(L,UPDATER_COEF_POS)
+        NEW_POSITION = COMB_COEF_POS(L,M)
         DO I=1,LCUT_SIZE
           OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)*UPDATER_COEF
         ENDDO
@@ -506,7 +506,7 @@ C        ARGUMENTS
     ENDDO
   ENDDO
 ENDDO
-""")
+"""%self.czero)
         
         lines.append("END")
         # return the subroutine
