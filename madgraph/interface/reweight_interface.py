@@ -342,7 +342,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     logger.warning("Only LO reweighting is allowed for OLP!=MadLoop. Keeping the mode to LO.")
                     self.rwgt_mode = 'LO'
                 elif not self.banner.get_detail('run_card','keep_rwgt_info', default=False):
-                    logger.warning("Missing information for NLO type of reweighitng. Keeping the mode to LO.")
+                    logger.warning("Missing information for NLO type of reweighting. Keeping the mode to LO.")
                     self.rwgt_mode = 'LO'
                 elif 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
                     logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
@@ -424,12 +424,13 @@ class ReweightInterface(extended_cmd.Cmd):
             ff.write(self.banner['slha'])
             ff.close()
             if self.has_nlo and self.rwgt_mode != "LO":
-                files.ln(ff.name, starting_dir=pjoin(self.me_dir, 'rw_mevirt','Cards'))
+                rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
+                files.ln(ff.name, starting_dir=pjoin(rwdir_virt, 'Cards')) 
             ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
             ff.write(self.banner['slha'])
             ff.close()      
             if self.has_nlo and self.rwgt_mode != "LO":
-                files.ln(ff.name, starting_dir=pjoin(self.me_dir, 'rw_mevirt','Cards'))
+                files.ln(ff.name, starting_dir=pjoin(path_me, 'rw_mevirt', 'Cards'))
             cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
                                    ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
             self.stored_line = None
@@ -468,8 +469,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'rwgt_(?P<id>\d+)(?P<rwgttype>\s*|_\w+)\'>(?P<info>[^<]*)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'rwgt_(?P<id>\d+)(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
+                
                 maxid = 0
                 for i, nlotype, diff in mg_rwgt_info:
                     if int(i) > maxid:
@@ -486,7 +488,6 @@ class ReweightInterface(extended_cmd.Cmd):
             mg_rwgt_info = []
             rewgtid = 1
 
-                    
         # add the reweighting in the banner information:
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
@@ -523,7 +524,6 @@ class ReweightInterface(extended_cmd.Cmd):
             str_info += '\n' + s_new
             for name in type_rwgt:
                 mg_rwgt_info.append((str(rewgtid), name, str_info))
-
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
@@ -847,7 +847,7 @@ class ReweightInterface(extended_cmd.Cmd):
             #check if we need to compute the virtual for that cevent
             need_V = False # the real is nothing else than the born for a N+1 config
             all_ctype = [w.type for w in cevent.wgts]
-            if '_nlo' in type_nlo and any(c in all_ctype for c in [2,14,15])
+            if '_nlo' in type_nlo and any(c in all_ctype for c in [2,14,15]):
                 need_V =True
                 
             w_orig = self.calculate_matrix_element(cevent, 0, space)
@@ -996,7 +996,6 @@ class ReweightInterface(extended_cmd.Cmd):
                     if old_module != nb_f2py_module:
                         metag += 1
                         dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
-                
                 os.environ['MENUM'] = '2'
                 if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
                     misc.compile(['matrix2py.so'], cwd=Pdir)                
@@ -1009,6 +1008,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         os.system('install_name_tool -change libMadLoop.dylib %s/libMadLoop.dylib matrix%spy.so' % (Pdir,2*metag))
                         mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
                     else:
+                        misc.sprint("fail compilation")
                         raise
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
@@ -1019,6 +1019,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     if 'V' in tag:
                         madevent_interface.MadLoopInitializer.run_initialization(\
                                                 run_dir=Pdir)
+                
                     
             if hypp_id == 1:
                 #incorrect line
@@ -1087,7 +1088,6 @@ class ReweightInterface(extended_cmd.Cmd):
             space.calculator[run_id] = mymod.get_me
             space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                
-        
         
         p = self.invert_momenta(event.get_momenta(orig_order))
 
@@ -1168,10 +1168,6 @@ class ReweightInterface(extended_cmd.Cmd):
         """Adding one element to the list based on the matrix element"""
         
 
-
-
-        
-    
     @misc.mute_logger()
     def create_standalone_directory(self, second=False):
         """generate the various directory for the weight evaluation"""
