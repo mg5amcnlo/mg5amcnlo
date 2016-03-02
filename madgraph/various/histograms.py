@@ -2691,9 +2691,9 @@ plot \\"""
                     major_title.append('central value')
                 major_title = ', '.join(major_title)                    
             
-            if not mu[0] is 'none':
+            if not mu[0] in ['none',None]:
                 major_title += ', dynamical\_scale\_choice=%s'%mu[0]
-            if not pdf[0] is 'none':
+            if not pdf[0] in ['none',None]:
                 major_title += ', PDF=%s'%pdf[0].replace('_','\_')
 
             # Do not show uncertainties for individual jet samples (unless first
