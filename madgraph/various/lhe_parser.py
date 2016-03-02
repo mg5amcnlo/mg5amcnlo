@@ -149,15 +149,17 @@ class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
 
     def __new__(self, path, mode='r', *args, **opt):
-
         if  path.endswith(".gz"):
-            try:
-                return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
-            except IOError, error:
-                raise
-            except Exception, error:
-                if mode == 'r':
-                    misc.gunzip(path)
+            if os.path.exists(path):
+                try:
+                    return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+                except IOError, error:
+                    raise
+                except Exception, error:
+                    if mode == 'r':
+                        misc.gunzip(path)
+                    return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
+            else:
                 return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
         else:
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
@@ -165,7 +167,14 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
-        super(EventFile, self).__init__(path, mode, *args, **opt)
+        try:
+            super(EventFile, self).__init__(path, mode, *args, **opt)
+        except IOError:
+            if '.gz' in path and isinstance(self, EventFileNoGzip):
+                super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
+            else:
+                raise
+            
         self.banner = ''
         if mode == 'r':
             line = ''

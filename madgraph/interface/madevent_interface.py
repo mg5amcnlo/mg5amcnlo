@@ -3001,6 +3001,7 @@ Beware that this can be dangerous for local multicore runs.""")
             
             self.results.add_detail('nb_event', nb_event)
         
+        self.to_store.append('event')
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
@@ -3590,7 +3591,8 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('storring files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
-            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
+            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and
+               os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe')):
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
         
         if 'pythia' in self.to_store:
