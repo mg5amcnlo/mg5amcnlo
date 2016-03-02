@@ -25,11 +25,173 @@ import madgraph.core.color_algebra as color_algebra
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.loop.loop_helas_objects as loop_helas_objects
+import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import copy
 import logging
 import array
+import multiprocessing
+import signal
+import tempfile
+import cPickle
+import itertools
+import os
 
 logger = logging.getLogger('madgraph.fks_helas_objects')
+
+
+#functions to be used in the ncores_for_proc_gen mode
+def async_generate_real(args):
+    i = args[0]
+    real_amp = args[1]
+
+    #amplitude generation
+    amplitude = real_amp.generate_real_amplitude()
+    helasreal = helas_objects.HelasMatrixElement(amplitude)
+    logger.info('Generating real %s' % \
+            real_amp.process.nice_string(print_weighted=False).replace('Process', 'process'))
+
+    # Keep track of already generated color objects, to reuse as
+    # much as possible
+    list_colorize = []
+    list_color_basis = []
+    list_color_matrices = []
+    
+    # Now this keeps track of the color matrices created from the loop-born
+    # color basis. Keys are 2-tuple with the index of the loop and born basis
+    # in the list above and the value is the resulting matrix.
+    dict_loopborn_matrices = {}
+    # The dictionary below is simply a container for convenience to be 
+    # passed to the function process_color.
+    color_information = { 'list_colorize' : list_colorize,
+                          'list_color_basis' : list_color_basis,
+                          'list_color_matrices' : list_color_matrices,
+                          'dict_loopborn_matrices' : dict_loopborn_matrices}
+
+    helas_objects.HelasMultiProcess.process_color(helasreal,color_information)
+
+    outdata = [amplitude,helasreal]
+
+    output = tempfile.NamedTemporaryFile(delete = False)   
+    cPickle.dump(outdata,output,protocol=2)
+    output.close()
+    
+    return [output.name,helasreal.get_num_configs(),helasreal.get_nexternal_ninitial()[0]]
+
+
+def async_generate_born(args):
+    i = args[0]
+    born = args[1]
+    born_pdg_list = args[2]
+    loop_orders = args[3]
+    pdg_list = args[4]
+    loop_optimized = args[5]
+    OLP = args[6]
+    realmapout = args[7]
+
+    logger.info('Generating born %s' % \
+            born.born_proc.nice_string(print_weighted=False).replace('Process', 'process'))
+    
+    #load informations on reals from temp files
+    helasreal_list = []
+    for amp in born.real_amps:
+        idx = pdg_list.index(amp.pdgs)
+        infilename = realmapout[idx]
+        infile = open(infilename,'rb')
+        realdata = cPickle.load(infile)
+        infile.close()
+        amp.amplitude = realdata[0]
+        helasreal_list.append(realdata[1])
+        
+    born.link_born_reals()
+        
+    for amp in born.real_amps:
+        amp.find_fks_j_from_i(born_pdg_list)        
+    
+    # generate the virtuals if needed
+    has_loops = False
+    if born.born_proc.get('NLO_mode') == 'all' and OLP == 'MadLoop':
+        myproc = copy.copy(born.born_proc)
+        # take the orders that are actually used by the matrix element
+        myproc['orders'] = loop_orders
+        myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
+        myamp = loop_diagram_generation.LoopAmplitude(myproc)
+        if myamp.get('diagrams'):
+            has_loops = True
+            born.virt_amp = myamp
+        
+    helasfull = FKSHelasProcess(born, helasreal_list,
+                                loop_optimized = loop_optimized,
+                                decay_ids=[],
+                                gen_color=False)
+
+    processes = helasfull.born_matrix_element.get('processes')
+    
+    metag = helas_objects.IdentifyMETag.create_tag(helasfull.born_matrix_element.get('base_amplitude'))
+    
+    outdata = helasfull
+    
+    output = tempfile.NamedTemporaryFile(delete = False)   
+    cPickle.dump(outdata,output,protocol=2)
+    output.close()
+    
+    return [output.name,metag,has_loops,processes]
+
+
+def async_finalize_matrix_elements(args):
+
+    i = args[0]
+    mefile = args[1]
+    duplist = args[2]
+    
+    infile = open(mefile,'rb')
+    me = cPickle.load(infile)
+    infile.close()    
+
+    #set unique id based on position in unique me list
+    me.get('processes')[0].set('uid', i)
+
+    # Always create an empty color basis, and the
+    # list of raw colorize objects (before
+    # simplification) associated with amplitude
+    col_basis = color_amp.ColorBasis()
+    new_amp = me.born_matrix_element.get_base_amplitude()
+    me.born_matrix_element.set('base_amplitude', new_amp)
+    colorize_obj = col_basis.create_color_dict_list(new_amp)
+
+    col_basis.build()
+    col_matrix = color_amp.ColorMatrix(col_basis)
+
+    me.born_matrix_element.set('color_basis',col_basis)
+    me.born_matrix_element.set('color_matrix',col_matrix)
+    
+    for iother,othermefile in enumerate(duplist):
+        infileother = open(othermefile,'rb')
+        otherme = cPickle.load(infileother)
+        infileother.close()
+        me.add_process(otherme)
+        
+    me.set_color_links()    
+        
+    initial_states=[]
+    for fksreal in me.real_processes:
+        # Pick out all initial state particles for the two beams
+            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                              p in fksreal.matrix_element.get('processes')))))
+    
+    if me.virt_matrix_element:
+        has_virtual = True
+    else:
+        has_virtual = False
+     
+    #data to write to file
+    outdata = me
+
+    output = tempfile.NamedTemporaryFile(delete = False)   
+    cPickle.dump(outdata,output,protocol=2)
+    output.close()
+    
+    #data to be returned to parent process (filename plus small objects only)
+    return [output.name,initial_states,me.get_used_lorentz(),me.get_used_couplings(),has_virtual]
 
 
 class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
@@ -38,7 +200,8 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     def get_sorted_keys(self):
         """Return particle property names as a nicely sorted list."""
         keys = super(FKSHelasMultiProcess, self).get_sorted_keys()
-        keys += ['real_matrix_elements', ['has_isr'], ['has_fsr']]
+        keys += ['real_matrix_elements', ['has_isr'], ['has_fsr'], 
+                 'used_lorentz', 'used_couplings', 'max_configs', 'max_particles', 'processes']
         return keys
 
     def filter(self, name, value):
@@ -61,23 +224,190 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
         self.loop_optimized = loop_optimized
 
-        # generate the real ME's if they are needed.
-        # note that it may not be always the case, e.g. it the NLO_mode is LOonly
-        if fksmulti['real_amplitudes']:
-            logger.info('Generating real emission matrix-elements...')
-            self['real_matrix_elements'] = self.generate_matrix_elements(
-                    copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
-        else:
-            self['real_matrix_elements'] = helas_objects.HelasMatrixElementList()
+        self['used_lorentz'] = []
+        self['used_couplings'] = []
+        self['processes'] = []
 
-        self['matrix_elements'] = self.generate_matrix_elements_fks(
-                                fksmulti, 
-                                gen_color, decay_ids)
-        self['initial_states']=[]
+        self['max_particles'] = -1
+        self['max_configs'] = -1
+
+        if not fksmulti['ncores_for_proc_gen']:
+            # generate the real ME's if they are needed.
+            # note that it may not be always the case, e.g. it the NLO_mode is LOonly
+            if fksmulti['real_amplitudes']:
+                logger.info('Generating real emission matrix-elements...')
+                self['real_matrix_elements'] = self.generate_matrix_elements(
+                        copy.copy(fksmulti['real_amplitudes']), combine_matrix_elements = False)
+            else:
+                self['real_matrix_elements'] = helas_objects.HelasMatrixElementList()
+
+            self['matrix_elements'] = self.generate_matrix_elements_fks(
+                                    fksmulti, 
+                                    gen_color, decay_ids)
+            self['initial_states']=[]
+            self['has_loops'] = len(self.get_virt_matrix_elements()) > 0 
+
+        else: 
+            self['has_loops'] = False
+            #more efficient generation
+            born_procs = fksmulti.get('born_processes')
+            born_pdg_list = [[l['id'] for l in born.born_proc['legs']] \
+            for born in born_procs ]
+            loop_orders = {}
+            for  born in born_procs:
+                for coup, val in fks_common.find_orders(born.born_amp).items():
+                    try:
+                        loop_orders[coup] = max([loop_orders[coup], val])
+                    except KeyError:
+                        loop_orders[coup] = val        
+            pdg_list = []        
+            real_amp_list = []
+            for born in born_procs:
+                for amp in born.real_amps:
+                    if not pdg_list.count(amp.pdgs):
+                        pdg_list.append(amp.pdgs)
+                        real_amp_list.append(amp)
+                        
+            #generating and store in tmp files all output corresponding to each real_amplitude
+            real_out_list = []
+            realmapin = []
+            for i,real_amp in enumerate(real_amp_list):
+                realmapin.append([i,real_amp])
+
+            # start the pool instance with a signal instance to catch ctr+c
+            original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+            if fksmulti['ncores_for_proc_gen'] < 0: # use all cores
+                pool = multiprocessing.Pool(maxtasksperchild=1)
+            else:
+                pool = multiprocessing.Pool(processes=fksmulti['ncores_for_proc_gen'],maxtasksperchild=1)
+            signal.signal(signal.SIGINT, original_sigint_handler)
+
+            logger.info('Generating real matrix elements...')
+            try:
+                # the very large timeout passed to get is to be able to catch
+                # KeyboardInterrupts
+                realmapout = pool.map_async(async_generate_real,realmapin).get(9999999)
+            except KeyboardInterrupt:
+                pool.terminate()
+                raise KeyboardInterrupt 
+
+            realmapfiles = []
+            for realout in realmapout:
+                realmapfiles.append(realout[0])
+
+            logger.info('Generating born and virtual matrix elements...')
+            #now loop over born and consume reals, generate virtuals
+            bornmapin = []
+            OLP=fksmulti['OLP']
+            for i,born in enumerate(born_procs):
+                bornmapin.append([i,born,born_pdg_list,loop_orders,pdg_list,loop_optimized,OLP,realmapfiles])
+
+            try:
+                bornmapout = pool.map_async(async_generate_born,bornmapin).get(9999999)
+            except KeyboardInterrupt:
+                pool.terminate()
+                raise KeyboardInterrupt 
+
+            #remove real temp files
+            for realtmp in realmapout:
+                os.remove(realtmp[0])
+                
+            logger.info('Collecting infos and finalizing matrix elements...')
+            unique_me_list = []
+            duplicate_me_lists = []
+            for bornout in bornmapout:
+                mefile = bornout[0]
+                metag = bornout[1]
+                has_loops = bornout[2]
+                self['has_loops'] = self['has_loops'] or has_loops
+                processes = bornout[3]
+                self['processes'].extend(processes)
+                unique = True
+                for ime2,bornout2 in enumerate(unique_me_list):
+                    mefile2 = bornout2[0]
+                    metag2 = bornout2[1]
+                    if metag==metag2:
+                        duplicate_me_lists[ime2].append(mefile)
+                        unique = False
+                        break;
+                if unique:
+                    unique_me_list.append(bornout)
+                    duplicate_me_lists.append([])
+            
+            memapin = []
+            for i,bornout in enumerate(unique_me_list):
+                mefile = bornout[0]
+                memapin.append([i,mefile, duplicate_me_lists[i]])
+
+            try:
+                memapout = pool.map_async(async_finalize_matrix_elements,memapin).get(9999999)
+            except KeyboardInterrupt:
+                pool.terminate()
+                raise KeyboardInterrupt 
+
+            #remove born+virtual temp files
+            for bornout in bornmapout:
+                mefile = bornout[0]
+                os.remove(mefile)
+
+            pool.close()
+            pool.join()
+
+            #set final list of matrix elements (paths to temp files)
+            matrix_elements = []
+            for meout in memapout:
+                matrix_elements.append(meout[0])
+  
+            self['matrix_elements']=matrix_elements
+  
+            #cache information needed for output which will not be available from
+            #the matrix elements later
+            initial_states = []
+            for meout in memapout:
+                me_initial_states = meout[1]
+                for state in me_initial_states:
+                    initial_states.append(state)
+                              
+            # remove doubles from the list
+            checked = []
+            for e in initial_states:
+                if e not in checked:
+                    checked.append(e)
+            initial_states=checked
+
+            self['initial_states']=initial_states
+            
+            helas_list = []
+            for meout in memapout:
+                helas_list.extend(meout[2])
+            self['used_lorentz']=list(set(helas_list))        
+            
+            coupling_list = []
+            for meout in memapout:
+                coupling_list.extend([c for l in meout[3] for c in l])
+            self['used_couplings'] = list(set(coupling_list)) 
+            
+            has_virtuals = False
+            for meout in memapout:
+                if meout[4]:
+                    has_virtuals = True
+                    break
+            self['has_virtuals'] = has_virtuals
+            
+            configs_list = []
+            for meout in realmapout:
+                configs_list.append(meout[1])
+            self['max_configs'] = max(configs_list)
+            
+            nparticles_list = []
+            for meout in realmapout:
+                nparticles_list.append(meout[2])
+            self['max_particles'] = max(nparticles_list)        
 
         self['has_isr'] = fksmulti['has_isr']
         self['has_fsr'] = fksmulti['has_fsr']
-        self['has_loops'] = len(self.get_virt_matrix_elements()) > 0 
+
+        logger.info('... Done')
 
         for i, logg in enumerate(loggers_off):
             logg.setLevel(old_levels[i])
@@ -85,19 +415,66 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
     def get_used_lorentz(self):
         """Return a list of (lorentz_name, conjugate, outgoing) with
         all lorentz structures used by this HelasMultiProcess."""
-        helas_list = []
-        for me in self.get('matrix_elements'):
-            helas_list.extend(me.get_used_lorentz())
-        return list(set(helas_list))
+
+        if not self['used_lorentz']:
+            helas_list = []
+            for me in self.get('matrix_elements'):
+                helas_list.extend(me.get_used_lorentz())
+            self['used_lorentz'] = list(set(helas_list))
+
+        return self['used_lorentz']
+
 
     def get_used_couplings(self):
         """Return a list with all couplings used by this
         HelasMatrixElement."""
-        coupling_list = []
-        for me in self.get('matrix_elements'):
-            coupling_list.extend([c for l in me.get_used_couplings() for c in l])
-        return list(set(coupling_list))
+
+        if not self['used_couplings']:
+            coupling_list = []
+            for me in self.get('matrix_elements'):
+                coupling_list.extend([c for l in me.get_used_couplings() for c in l])
+            self['used_couplings'] = list(set(coupling_list))
+
+        return self['used_couplings']
+
+
+    def get_processes(self):
+        """Return a list with all couplings used by this
+        HelasMatrixElement."""
+
+        if not self['processes']:
+            process_list = []
+            for me in self.get('matrix_elements'):
+                process_list.extend(me.born_matrix_element.get('processes'))
+            self['processes'] = process_list
+
+        return self['processes']
+
+
+    def get_max_configs(self):
+        """Return max_configs"""
+
+        if self['max_configs'] < 0:
+            try:
+                self['max_configs'] = max([me.get_num_configs() \
+                                  for me in self['real_matrix_elements']])
+            except ValueError:
+                self['max_configs'] = max([me.born_matrix_element.get_num_configs() \
+                                  for me in self['matrix_elements']])
+
+        return self['max_configs']
+
+
+    def get_max_particles(self):
+        """Return max_paricles"""
+
+        if self['max_particles'] < 0:
+            self['max_particles'] = max([me.get_nexternal_ninitial()[0] \
+                                for me in self['matrix_elements']])
+
+        return self['max_particles']
     
+
     def get_matrix_elements(self):
         """Extract the list of matrix elements"""
         return self.get('matrix_elements')        
@@ -240,17 +617,32 @@ class FKSHelasProcess(object):
             self.perturbation = fksproc.perturbation
             real_amps_new = []
             # combine for example u u~ > t t~ and d d~ > t t~
-            for proc in fksproc.real_amps:
-                fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
-                try:
-                    other = self.real_processes[self.real_processes.index(fksreal_me)]
-                    other.matrix_element.get('processes').extend(\
-                            fksreal_me.matrix_element.get('processes') )
-                except ValueError:
-                    if fksreal_me.matrix_element.get('processes') and \
-                            fksreal_me.matrix_element.get('diagrams'):
-                        self.real_processes.append(fksreal_me)
-                        real_amps_new.append(proc)
+            if fksproc.ncores_for_proc_gen:
+                # new NLO (multicore) generation mode 
+                for real_me, proc in itertools.izip(real_me_list,fksproc.real_amps):
+                    fksreal_me = FKSHelasRealProcess(proc, real_me, **opts)
+                    try:
+                        other = self.real_processes[self.real_processes.index(fksreal_me)]
+                        other.matrix_element.get('processes').extend(\
+                                fksreal_me.matrix_element.get('processes') )
+                    except ValueError:
+                        if fksreal_me.matrix_element.get('processes') and \
+                                fksreal_me.matrix_element.get('diagrams'):
+                            self.real_processes.append(fksreal_me)
+                            real_amps_new.append(proc)
+            else:
+                #old mode
+                for proc in fksproc.real_amps:
+                    fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
+                    try:
+                        other = self.real_processes[self.real_processes.index(fksreal_me)]
+                        other.matrix_element.get('processes').extend(\
+                                fksreal_me.matrix_element.get('processes') )
+                    except ValueError:
+                        if fksreal_me.matrix_element.get('processes') and \
+                                fksreal_me.matrix_element.get('diagrams'):
+                            self.real_processes.append(fksreal_me)
+                            real_amps_new.append(proc)
             fksproc.real_amps = real_amps_new
             if fksproc.virt_amp:
                 self.virt_matrix_element = \
@@ -410,23 +802,35 @@ class FKSHelasRealProcess(object): #test written
             self.fks_infos = fksrealproc.fks_infos
             self.is_to_integrate = fksrealproc.is_to_integrate
 
-            if len(real_me_list) != len(real_amp_list):
+            # real_me_list is a list in the old NLO generation mode;
+            # in the new one it is a matrix element
+            if type(real_me_list) == list and len(real_me_list) != len(real_amp_list):
                 raise fks_common.FKSProcessError(
                         'not same number of amplitudes and matrix elements: %d, %d' % \
                                 (len(real_amp_list), len(real_me_list)))
-            if real_me_list and real_amp_list:
+            if type(real_me_list) == list and real_me_list and real_amp_list:
                 self.matrix_element = copy.deepcopy(real_me_list[real_amp_list.index(fksrealproc.amplitude)])
                 self.matrix_element['processes'] = copy.deepcopy(self.matrix_element['processes'])
+
+            elif type(real_me_list) == helas_objects.HelasMatrixElement: 
+                #new NLO generation mode
+                self.matrix_element = real_me_list
+
             else:
-                logger.info('generating matrix element...')
-                self.matrix_element = helas_objects.HelasMatrixElement(
-                                                  fksrealproc.amplitude, **opts)
-                #generate the color for the real
-                self.matrix_element.get('color_basis').build(
-                                    self.matrix_element.get('base_amplitude'))
-                self.matrix_element.set('color_matrix',
-                                 color_amp.ColorMatrix(
-                                    self.matrix_element.get('color_basis')))
+
+                if real_me_list and real_amp_list:
+                    self.matrix_element = copy.deepcopy(real_me_list[real_amp_list.index(fksrealproc.amplitude)])
+                    self.matrix_element['processes'] = copy.deepcopy(self.matrix_element['processes'])
+                else:
+                    logger.info('generating matrix element...')
+                    self.matrix_element = helas_objects.HelasMatrixElement(
+                                                      fksrealproc.amplitude, **opts)
+                    #generate the color for the real
+                    self.matrix_element.get('color_basis').build(
+                                        self.matrix_element.get('base_amplitude'))
+                    self.matrix_element.set('color_matrix',
+                                     color_amp.ColorMatrix(
+                                        self.matrix_element.get('color_basis')))
             #self.fks_j_from_i = fksrealproc.find_fks_j_from_i()
             self.fks_j_from_i = fksrealproc.fks_j_from_i
 
