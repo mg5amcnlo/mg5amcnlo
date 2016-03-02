@@ -6301,14 +6301,19 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
     # First check whether Ninja must be installed.
     # Ninja would only be required if:
     #  a) Loop optimized output is selected
-    #  b) We are attempting to output in:
-    #      > MadLoop standalone mode
-    #      > aMC@NLO mode
-    #      > LoopInduced mode
-    requires_ninja = opt['loop_optimized_output'] and \
-                      (output_type.startswith('madloop') or \
-                       output_type=='amcatnlo' or 
-                       (output_type=='default' and cmd._export_format in ['madevent']))
+    #  b) the process gathered from the amplitude generated use loops
+
+    if len(cmd._curr_amps)>0:
+        curr_proc = cmd._curr_amps[0].get('process')
+    elif hasattr(cmd,'_fks_multi_proc') and \
+                          len(cmd._fks_multi_proc.get('process_definitions'))>0:
+        curr_proc = cmd._fks_multi_proc.get('process_definitions')[0]
+    else:
+        curr_proc = None
+
+    requires_ninja = opt['loop_optimized_output'] and (not curr_proc is None) and \
+      (curr_proc.get('perturbation_couplings') != [] and \
+      not curr_proc.get('NLO_mode') in [None,'real','tree','LO','LOonly'])
     # An installation is required then, but only if the specified path is the
     # default local one and that the Ninja library appears missing.
     if requires_ninja and (not opt['ninja'] is None) and\
