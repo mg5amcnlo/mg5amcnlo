@@ -179,8 +179,11 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         if not hasattr(self,'multiparticles_ms'):
             for key, value in self.banner.get_detail('proc_card','multiparticles'):
-                self.do_define('%s = %s' % (key, value))
-
+                try:
+                    self.do_define('%s = %s' % (key, value))
+                except self.mg5cmd.InvalidCmd:  
+                    pass
+                
         # Read the final state of the production process:
         #     "_full" means with the complete decay chain syntax 
         #     "_compact" means without the decay chain syntax 
@@ -381,7 +384,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             if args[0] == 'ms_dir':
                 self.options['curr_dir'] = self.options['ms_dir']
         elif args[0] == 'seed':
-            import random
             random.seed(int(args[1]))
             self.seed = int(args[1])
         elif args[0] == 'BW_cut':
@@ -520,7 +522,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.seed:
-            import random
             self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)
@@ -782,7 +783,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Handle the banner of the output file
         if not self.seed:
-            import random
             self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)

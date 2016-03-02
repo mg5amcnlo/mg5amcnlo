@@ -56,13 +56,16 @@ import models.check_param_card as check_param_card
 from madgraph import MadGraph5Error, MG5DIR, ReadWrite
 from madgraph.iolibs.files import cp, ln, mv
 
+from madgraph import InvalidCmd
+
 pjoin = os.path.join
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_v4')
 
 default_compiler= {'fortran': 'gfortran',
-                       'f2py': 'f2py'}
+                       'f2py': 'f2py',
+                       'cpp':'g++'}
 
 #===============================================================================
 # ProcessExporterFortran
@@ -1586,7 +1589,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
     def set_fortran_compiler(self, default_compiler, force=False):
         """Set compiler based on what's available on the system"""
-                
+               
         # Check for compiler
         if default_compiler['fortran'] and misc.which(default_compiler['fortran']):
             f77_compiler = default_compiler['fortran']
@@ -1685,7 +1688,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         f2py_compiler = compilers['f2py']
         if not f2py_compiler:
             f2py_compiler = 'f2py'
-    
+
+            
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
         lines = open(make_opts).read().split('\n')
         FC_re = re.compile('^(\s*)(FC|F2PY)\s*=\s*(.+)\s*$')
@@ -1700,7 +1704,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 elif 'F2PY' ==  FC_result.group(2):
                     if f2py_compiler != FC_result.group(3):
                         mod = True
-                    lines[iline] = FC_result.group(1) + "F2PY=" + f2py_compiler                    
+                    lines[iline] = FC_result.group(1) + "F2PY=" + f2py_compiler
+                                    
         if not mod:
             return
         
@@ -1717,13 +1722,24 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Set CXX=compiler in Source/make_opts.
         The version is also checked, in order to set some extra flags
         if the compiler is clang (on MACOS)"""
-
-        
+       
         p = misc.Popen([compiler, '--version'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
         is_clang = 'LLVM' in output
-
+        is_lc = False
+        if is_clang:
+            import platform
+            v, _,_ = platform.mac_ver()
+            if not v:
+                is_lc = True
+            else:
+                v = float(v.rsplit('.')[1])
+                if v >= 9:
+                    is_lc = True
+                else:
+                    is_lc = False
+    
         mod = False #avoid to rewrite the file if not needed
         if not root_dir:
             root_dir = self.dir_path
@@ -1736,18 +1752,34 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                 if compiler != CC_result.group(2):
                     mod = True
                 lines[iline] = CC_result.group(1) + "CXX=" + compiler
+            if 'LDFLAGS=-lc++' in line:
+                if not is_lc:
+                    lines[iline] = 'LDFLAGS=-lstdc++'
+                    mod = True
+                elif is_clang and not 'mmacosx-version' in line:
+                    lines[iline] += " -mmacosx-version-min=10.7"
+                    mod=True
+                elif not is_clang and 'mmacosx-version' in line:
+                    lines[iline] = lines[iline].replace('-mmacosx-version-min=10.7', '')
+                    mod = True
+            elif 'LDFLAGS=-lstdc++' in line:
+                if is_lc and is_clang:
+                    lines[iline] = 'LDFLAGS=-lc++  -mmacosx-version-min=10.7'
+                    mod = True
 
-        if is_clang:
+        if is_clang and is_lc:
             CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
             CXXFLAGS_re=re.compile('^(\s*)CXXFLAGS\s*=\s*(.+)\s*$')
-            flags= '-O -stdlib=libstdc++ -mmacosx-version-min=10.6'
+            flags= '-O -stdlib=libc++ -mmacosx-version-min=10.7'
             for iline, line in enumerate(lines):
                 CF_result = CFLAGS_re.match(line)
                 CXXF_result = CXXFLAGS_re.match(line)
-                if CF_result:
+                if CF_result and CF_result.group(2) != flags:
                     lines[iline] = CF_result.group(1) + "CFLAGS= " + flags
-                if CXXF_result:
+                    mod=True
+                if CXXF_result and CXXF_result.group(1)!= flags:
                     lines[iline] = CXXF_result.group(1) + "CXXFLAGS= " + flags
+                    mod=True                    
         if not mod:
             return
         try:
@@ -1882,7 +1914,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
         
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
+                                             history, makejpg, online, compiler)
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
 
@@ -2564,7 +2597,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
 
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements,
+                                             history, makejpg, online, compiler)
 
 
     #===========================================================================
@@ -3489,6 +3523,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # Check for compiler
         self.set_compiler(compiler)
+        self.set_cpp_compiler(compiler['cpp'])
+        
 
         old_pos = os.getcwd()
         subpath = pjoin(self.dir_path, 'SubProcesses')
@@ -3536,7 +3572,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.create_proc_charac(matrix_elements, history)
 
         # create the run_card
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
+                                             history, makejpg, online, compiler)
 
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
@@ -4981,7 +5018,8 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
 
         
-        super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args, **opts)
+        super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args,
+                                                                         **opts)
         #ensure that the grouping information is on the correct value
         self.proc_characteristic['grouped_matrix'] = True        
 
@@ -6266,6 +6304,45 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
 
     opt = cmd.options
 
+    # ==========================================================================
+    # First check whether Ninja must be installed.
+    # Ninja would only be required if:
+    #  a) Loop optimized output is selected
+    #  b) We are attempting to output in:
+    #      > MadLoop standalone mode
+    #      > aMC@NLO mode
+    #      > LoopInduced mode
+    requires_ninja = opt['loop_optimized_output'] and \
+                      (output_type.startswith('madloop') or \
+                       output_type=='amcatnlo' or 
+                       (output_type=='default' and cmd._export_format in ['madevent']))
+    # An installation is required then, but only if the specified path is the
+    # default local one and that the Ninja library appears missing.
+    if requires_ninja and (not opt['ninja'] is None) and\
+            os.path.abspath(opt['ninja'])==pjoin(MG5DIR,'HEPTools','lib') and\
+            not os.path.isfile(pjoin(MG5DIR,'HEPTools','lib','libninja.a')):
+                # Then install Ninja here from the tarballs in the vendor
+                # directory so that it would work offline too.
+                logger.info(
+"""MG5aMC will now install the loop reduction tool 'Ninja' from the local offline installer.
+Use the command 'install ninja' if you want to update to the latest online version.
+This installation can take some time but only needs to be performed once.""",'$MG:color:GREEN')
+                try:
+                    cmd.do_install('ninja',paths={'HEPToolsInstaller':
+                        pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
+                  additional_options=[
+                  '--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','ninja.tar.gz'),
+                  '--oneloop_tarball=%s'%pjoin(MG5DIR,'vendor','oneloop.tar.gz')])
+                except InvalidCmd:
+                    logger.warning(
+"""The offline installation of Ninja was unsuccessful, and MG5aMC disabled it.
+In the future, if you want to reactivate Ninja, you can do so by re-attempting
+its online installation with the command 'install ninja' or install it on your
+own and set the path to its library in the MG5aMC option 'ninja'.""")
+                    cmd.exec_cmd('set ninja None')
+                    cmd.exec_cmd('save options')  
+    # ==========================================================================
+
     # First treat the MadLoop5 standalone case       
     MadLoop_SA_options = {'clean': not noclean, 
       'complex_mass':cmd.options['complex_mass_scheme'],
@@ -6274,8 +6351,10 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'loop_dir': os.path.join(cmd._mgme_dir,'Template','loop_material'),
       'cuttools_dir': cmd._cuttools_dir,
       'iregi_dir':cmd._iregi_dir,
-      'pjfry_dir':cmd.options["pjfry"],
-      'golem_dir':cmd.options["golem"],
+      'pjfry_dir':cmd.options['pjfry'],
+      'golem_dir':cmd.options['golem'],
+      'samurai_dir':cmd.options['samurai'],
+      'ninja_dir':cmd.options['ninja'],
       'fortran_compiler':cmd.options['fortran_compiler'],
       'f2py_compiler':cmd.options['f2py_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],

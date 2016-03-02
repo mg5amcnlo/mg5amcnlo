@@ -192,10 +192,11 @@ class FortranPolynomialRoutines(PolynomialRoutines):
                 """SUBROUTINE %(sub_prefix)sCONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
 C      GLOABLE VARIABLES
                 include 'coef_specs.inc'
+                include 'loop_max_coefs.inc'
 C      ARGUMENTS
                 INTEGER RANK
-                %(coef_format)s PJCOEFS(0:LOOP_MAXCOEFS-1,3)
-                %(coef_format)s TIRCOEFS(0:LOOP_MAXCOEFS-1,3)"""
+                %(coef_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
+                %(coef_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)"""
                 %{'sub_prefix':self.sub_prefix,'coef_format':self.coef_format})
         
         for R in range(self.max_rank+1):
@@ -252,10 +253,11 @@ C      ARGUMENTS
                 """SUBROUTINE %(sub_prefix)sCONVERT_IREGI_COEFFS(RANK,IREGICOEFS,TIRCOEFS)
 C        GLOABLE VARIABLES
                 include 'coef_specs.inc'
+                include 'loop_max_coefs.inc'
 C        ARGUMENTS
                 INTEGER RANK
-                %(coef_format)s IREGICOEFS(0:LOOP_MAXCOEFS-1,3)
-                %(coef_format)s TIRCOEFS(0:LOOP_MAXCOEFS-1,3)"""
+                %(coef_format)s IREGICOEFS(0:LOOPMAXCOEFS-1,3)
+                %(coef_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)"""
                 %{'sub_prefix':self.sub_prefix,'coef_format':self.coef_format})
         
         iregi_gen = FromIREGIFortranCodeGenerator(self.max_rank)
@@ -326,7 +328,8 @@ C        ARGUMENTS
                 """SUBROUTINE %(sub_prefix)sFILL_GOLEM_COEFFS_0(ML_COEFS,GOLEM_COEFS)
                             use precision_golem, only: ki
                             include 'coef_specs.inc'
-                            %(coef_format)s ML_COEFS(0:LOOP_MAXCOEFS-1)
+                            include 'loop_max_coefs.inc'
+                            %(coef_format)s ML_COEFS(0:LOOPMAXCOEFS-1)
                             complex(ki) GOLEM_COEFS"""
                 %{'sub_prefix':self.sub_prefix,'coef_format':self.coef_format})
                 lines.append("GOLEM_COEFS=ML_COEFS(0)")
@@ -339,7 +342,8 @@ C        ARGUMENTS
               """SUBROUTINE %(sub_prefix)sFILL_GOLEM_COEFFS_%(rank)d(ML_COEFS,GOLEM_COEFS)
                             use tens_rec, only: coeff_type_%(rank)d
                             include 'coef_specs.inc'
-                            %(coef_format)s ML_COEFS(0:LOOP_MAXCOEFS-1)
+                            include 'loop_max_coefs.inc'
+                            %(coef_format)s ML_COEFS(0:LOOPMAXCOEFS-1)
                             type(coeff_type_%(rank)d) GOLEM_COEFS"""
                             %{'sub_prefix':self.sub_prefix,'rank':R,
                                                 'coef_format':self.coef_format})
@@ -399,10 +403,11 @@ C        ARGUMENTS
         lines.append(
           """SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
                         include 'coef_specs.inc'
+                        include 'loop_max_coefs.inc'
                         INTEGER I,J,K
-                        %(coef_format)s A(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
+                        %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
                         %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
+                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
                         INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
                         """%{'sub_prefix':self.sub_prefix,'r_1':r_1,'r_2':r_2,
                                                 'coef_format':self.coef_format})
@@ -456,7 +461,8 @@ C        ARGUMENTS
         # Start by writing out the header:
         lines.append("""SUBROUTINE %(sub_prefix)sEVAL_POLY(C,R,Q,OUT)
                         include 'coef_specs.inc'
-                        %(coef_format)s C(0:LOOP_MAXCOEFS-1)
+                        include 'loop_max_coefs.inc'
+                        %(coef_format)s C(0:LOOPMAXCOEFS-1)
                         INTEGER R
                         %(coef_format)s Q(0:3)
                         %(coef_format)s OUT                                                 
@@ -493,11 +499,12 @@ C        ARGUMENTS
         # Start by writing out the header:
         lines.append("""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
                         include 'coef_specs.inc'
+                        include 'loop_max_coefs.inc'
                         INTEGER I,J
-                        %(coef_format)s WL(MAXLWFSIZE,0:LOOP_MAXCOEFS-1,MAXLWFSIZE)
+                        %(coef_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
                         INTEGER R,LCUT_SIZE
                         %(coef_format)s CONST
-                        %(coef_format)s OUT(0:LOOP_MAXCOEFS-1)
+                        %(coef_format)s OUT(0:LOOPMAXCOEFS-1)
                         """%{'sub_prefix':self.sub_prefix,
                              'coef_format':self.coef_format})
 
@@ -527,8 +534,9 @@ C        ARGUMENTS
         # Start by writing out the header:
         lines.append("""SUBROUTINE %(sub_prefix)sADD_COEFS(A,RA,B,RB)
                         include 'coef_specs.inc'
+                        include 'loop_max_coefs.inc'
                         INTEGER I
-                        %(coef_format)s A(0:LOOP_MAXCOEFS-1),B(0:LOOP_MAXCOEFS-1)
+                        %(coef_format)s A(0:LOOPMAXCOEFS-1),B(0:LOOPMAXCOEFS-1)
                         INTEGER RA,RB
                         """%{'sub_prefix':self.sub_prefix,
                              'coef_format':self.coef_format})

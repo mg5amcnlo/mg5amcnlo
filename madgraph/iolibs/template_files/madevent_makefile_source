@@ -49,11 +49,11 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 %(model)s
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
-	$(FC) $(FFLAGS) -o $@ $^
+	$(FC) $(LDFLAGS) -o $@ $^
 $(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc
-			 $(FC) $(FFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf)
+			 $(FC) $(LDFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf)
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
-	$(FC) $(FFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(llhapdf)
+	$(FC) $(LDFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(llhapdf)
 
 # Dependencies
 

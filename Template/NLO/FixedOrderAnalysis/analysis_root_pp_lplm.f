@@ -170,7 +170,7 @@ c
       etalb=getpseudorap(pplb(0),pplb(1),pplb(2),pplb(3))
 c
       ptpair=ptv
-      azi=getdelphi(ppl(1),pplb(1),ppl(2),pplb(2))
+      azi=getdelphi(ppl(1),ppl(2),pplb(1),pplb(2))
       azinorm=(pi-azi)/pi
       xmll=xmv
       detallb=etal-etalb

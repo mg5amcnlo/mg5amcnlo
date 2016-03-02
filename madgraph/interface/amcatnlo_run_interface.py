@@ -2357,6 +2357,9 @@ RESTART = %(mint_mode)s
                               2 : 'PJFry++',
                               3 : 'IREGI',
                               4 : 'Golem95',
+                              5 : 'Samurai',
+                              6 : 'Ninja (double precision)',
+                              8 : 'Ninja (quadruple precision)',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(
                            r"#Unit\s*(?P<unit>\d+)\s*=\s*(?P<n_occurences>\d+)")
@@ -3972,8 +3975,13 @@ RESTART = %(mint_mode)s
         reweight_log = pjoin(self.me_dir, 'compile_reweight.log')
         test_log = pjoin(self.me_dir, 'test.log')
 
-        self.update_status('Compiling the code', level=None, update_results=True)
+        # environmental variables to be included in make_opts
+        self.make_opts_var = {}
+        if self.proc_characteristics['has_loops'] and \
+                          not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
+            self.make_opts_var['madloop'] = 'true'
 
+        self.update_status('Compiling the code', level=None, update_results=True)
 
         libdir = pjoin(self.me_dir, 'lib')
         sourcedir = pjoin(self.me_dir, 'Source')
@@ -4026,15 +4034,10 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
             if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
-            try:
-                del os.environ['lhapdf']
-                del os.environ['lhapdfversion']
-            except KeyError:
-                pass
 
         # read the run_card to find if applgrid is used or not
         if self.run_card['iappl'] != 0:
-            os.environ['applgrid'] = 'True'
+            self.make_opts_var['applgrid'] = 'True'
             # check versions of applgrid and amcfast
             for code in ['applgrid','amcfast']:
                 try:
@@ -4063,18 +4066,12 @@ RESTART = %(mint_mode)s
                     line=appllibs
                 text_out.append(line)
             open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
-        else:
-            try:
-                del os.environ['applgrid']
-            except KeyError:
-                pass
 
-        try: 
-            os.environ['fastjet_config'] = self.options['fastjet']
-        except (TypeError, KeyError):
-            if 'fastjet_config' in os.environ:
-                del os.environ['fastjet_config']
-            os.unsetenv('fastjet_config')
+        if 'fastjet' in self.options.keys() and self.options['fastjet']:
+            self.make_opts_var['fastjet_config'] = self.options['fastjet']
+        
+        # add the make_opts_var to make_opts
+        self.update_make_opts()
         
         # make Source
         self.update_status('Compiling source...', level=None)
@@ -4167,11 +4164,8 @@ RESTART = %(mint_mode)s
         # check if MadLoop virtuals have been generated
         if self.proc_characteristics['has_loops'] and \
                           not os.path.exists(pjoin(self.me_dir,'OLP_virtuals')):
-            os.environ['madloop'] = 'true'
             if mode in ['NLO', 'aMC@NLO', 'noshower']:
                 tests.append('check_poles')
-        else:
-            os.unsetenv('madloop')
 
         # make and run tests (if asked for), gensym and make madevent in each dir
         self.update_status('Compiling directories...', level=None)

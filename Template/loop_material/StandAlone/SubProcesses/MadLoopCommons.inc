@@ -67,9 +67,9 @@ C ----------
       DATA ML_INIT/.TRUE./
       common/ML_INIT/ML_INIT
 
-      LOGICAL CTINIT,TIRINIT,GOLEMINIT
-      DATA CTINIT,TIRINIT,GOLEMINIT/.TRUE.,.TRUE.,.TRUE./
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT/.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
 
       character(512) MLPath
       data MLPath/'[[NA]]'/      
@@ -158,7 +158,13 @@ C         Stable with PJFry++.
 C     U == 3
 C         Stable with IREGI.
 C     U == 4
-C         Stable with Golem95
+C         Stable with Golem95.
+C     U == 5
+C         Stable with Samurai.
+C     U == 6
+C         Stable with Ninja in double precision.
+C     U == 8
+C         Stable with Ninja in quadruple precision.
 C     U == 9
 C         Stable with CutTools in quadruple precision.
 C
@@ -188,18 +194,21 @@ C
          IF(MLRed.EQ.1)THEN
             SET_RET_CODE_U=9
             RETURN
-         ELSE
-            STOP 'Only CutTools can use quardruple precision'
+         ELSEIF(MLRed.EQ.6)THEN
+            SET_RET_CODE_U=8
+            RETURN
+		 ELSE
+            STOP 'Only CutTools and Ninja can use quardruple precision'
          ENDIF
       ENDIF
-      IF(MLRed.GE.1.AND.MLRed.LE.4)THEN
+      IF(MLRed.GE.1.AND.MLRed.LE.6)THEN
          SET_RET_CODE_U=MLRed
       ELSE
-         STOP 'Only CutTools,PJFry++,IREGI,Golem95 are available'
+         STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai and Ninja are available'
       ENDIF
       END
 
-      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
+      SUBROUTINE DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 C
 C DETECT WHICH LOOP LIB PASSED
 C
@@ -210,8 +219,9 @@ C
 C
 C ARGUMENTS
 C
-      INTEGER LIBNUM,NLOOPLINE,RANK
-      LOGICAL complex_mass,LPASS
+      INTEGER LIBNUM,NLOOPLINE,RANK,MAX_SPIN_CONNECTED_TO_LOOP
+C     The argument HAS_HEFT_VERTEX is only to implement correctly CutTools limitation
+      LOGICAL complex_mass,LPASS,HAS_HEFT_VERTEX
 C     
 C LOCAL VARIABLES
 C
@@ -223,7 +233,7 @@ C BEGIN CODE
 C ----------
       IF(LIBNUM.EQ.1)THEN
 C CutTools
-         CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
+         CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
       ELSEIF(LIBNUM.EQ.2)THEN
 C PJFry++
          CALL DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
@@ -233,15 +243,62 @@ C IREGI
       ELSEIF(LIBNUM.EQ.4)THEN
 C Golem95
          CALL DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.5)THEN
+C Samurai
+         CALL DETECT_SAMURAI(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.6)THEN
+C Ninja 
+         CALL DETECT_NINJA(NLOOPLINE,RANK,complex_mass,LPASS)
       ELSE
-         STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 are provided'
+         STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai are available'
       ENDIF
       RETURN
       END
 
-      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,LPASS)
+      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,complex_mass,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 C
-C DETECT THE CUTTOOLS CAN BE USED OR NOT
+C DETECT whether CUTTOOLS CAN BE USED OR NOT
+C
+      IMPLICIT NONE
+
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+	  INTEGER MAX_SPIN_CONNECTED_TO_LOOP
+      LOGICAL complex_mass,LPASS,HAS_HEFT_VERTEX
+C
+C LOCAL VARIABLES
+C
+      INTEGER MAX_RANK
+C ----------
+C BEGIN CODE
+C ----------
+      LPASS=.TRUE.
+C     The limit of 10 loop lines is just a parameter hardcoded in CutTools sources.
+C     It can easily be increased if necessary.
+C     Also in the presence of spin2 particles, RANK=NLOOPLINE+1 is not supported,
+C     or in general whenever the higher rank doesn't come from the Higgs effective vertex.
+
+      IF (MAX_SPIN_CONNECTED_TO_LOOP.le.3.AND.HAS_HEFT_VERTEX) THEN
+	    MAX_RANK = NLOOPLINE+1
+	  ELSE
+	    MAX_RANK = NLOOPLINE
+	  ENDIF
+
+      IF( (RANK.GT.MAX_RANK).OR.(NLOOPLINE.gt.10) ) THEN
+	    LPASS=.FALSE.	  
+	  endif
+
+      RETURN
+      END
+
+      SUBROUTINE DETECT_SAMURAI(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C DETECT whether Samurai CAN BE USED OR NOT
 C
       IMPLICIT NONE
 C
@@ -262,13 +319,48 @@ C ----------
 C BEGIN CODE
 C ----------
       LPASS=.TRUE.
-      IF(NLOOPLINE+1.LT.RANK)LPASS=.FALSE.
+C     The limit of 8 loop lines is just a parameter hardcoded in Samurai sources.
+C     It can easily be increased if necessary.
+      IF((NLOOPLINE+1.LT.RANK).OR.(NLOOPLINE.gt.8)) then
+	    LPASS=.FALSE.
+      endif
+      RETURN
+      END
+
+      SUBROUTINE DETECT_NINJA(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C Detect whether Ninja can be used or not
+C
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C
+C LOCAL VARIABLES
+C
+C
+C GLOBAL VARIABLES
+C
+C ----------
+C BEGIN CODE
+C ----------
+      LPASS=.TRUE.
+C     The limit of rank 20 is just a parameter hardcoded in Ninja sources.
+C     It can easily be increased if necessary.
+      IF((NLOOPLINE+1.LT.RANK).OR.(RANK.GE.20)) then
+	    LPASS=.FALSE.
+      endif
       RETURN
       END
 
       SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
 C
-C DETECT THE PJFRY++ CAN BE USED OR NOT
+C DETECT whether PJFRY++ CAN BE USED OR NOT
 C
       IMPLICIT NONE
 C
@@ -297,7 +389,7 @@ C ----------
 
       SUBROUTINE DETECT_IREGI(NLOOPLINE,RANK,complex_mass,LPASS)
 C     
-C DETECT THE IREGI CAN BE USED OR NOT
+C DETECT whether IREGI CAN BE USED OR NOT
 C
       IMPLICIT NONE
 C
@@ -317,14 +409,15 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+C     Stability studies show that IREGI is completely unstable at rank 7 and above.
       LPASS=.TRUE.
-      IF(NLOOPLINE.GE.8.OR.RANK.GE.8)LPASS=.FALSE.
+      IF(NLOOPLINE.GE.8.OR.RANK.GE.7)LPASS=.FALSE.
       RETURN
       END
 
       SUBROUTINE DETECT_GOLEM(NLOOPLINE,RANK,complex_mass,LPASS)
 C
-C DETECT THE Golem95 CAN BE USED OR NOT
+C DETECT whether Golem95 CAN BE USED OR NOT
 C
             IMPLICIT NONE
 C
