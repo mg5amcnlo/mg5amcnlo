@@ -634,7 +634,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.results.resetall(self.me_dir)
             else:                                
                 self.results.resetall(self.me_dir)
-            self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
+            try:
+                self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
+            except:
+                self.results.resetall(self.me_dir)
+                self.last_mode = ''
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
@@ -1093,7 +1097,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if not self.force_run:
             # forbid this function to create an empty item in results.
-            if self.results.current['cross'] == 0 and self.run_name:
+            if self.run_name and self.results.current and  self.results.current['cross'] == 0:
                 self.results.delete_run(self.run_name, self.run_tag)
             self.results.save()
             # we want to run this in a separate shell to avoid hard f2py crash
@@ -2217,12 +2221,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
         into lib/PDFsets"""
 
+        if not hasattr(self, 'lhapdf_pdfsets'):
+            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsets_dir)
+
+
         pdfsetname = ''
         for lhaid in lhaid_list:
             try:
                 if not pdfsetname:
                     if lhaid in self.lhapdf_pdfsets:
                         pdfsetname = self.lhapdf_pdfsets[lhaid]['filename']
+                    elif isinstance(lhaid, str):
+                        pdfsetname = lhaid
                     else:
                         raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
                 # just check the other ids refer to the same pdfsetname
@@ -2248,7 +2258,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 os.mkdir(pdfsets_dir)
             except OSError:
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
-        else:
+        elif os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets')):
             #clean previous set of pdf used
             for name in os.listdir(pjoin(self.me_dir, 'lib', 'PDFsets')):
                 if name != pdfsetname:
@@ -2303,7 +2313,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
         local_path = pjoin(self.me_dir, 'lib', 'PDFsets')
-        return self.install_lhapdfset_static(self.options['lhapdf'],
+        return self.install_lhapdf_pdfset_static(self.options['lhapdf'],
                                              pdfsets_dir, filename,
                                              lhapdf_version=lhapdf_version,
                                              alternate_path=local_path)

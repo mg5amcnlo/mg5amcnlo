@@ -3522,7 +3522,17 @@ Beware that this can be dangerous for local multicore runs.""")
         
         self.ask_edit_cards(['run_card'], args)
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-                
+        
+        # Check that all pdfset are correctly installed
+        lhaid = [self.run_card.get_lhapdf_id()]
+        sys_pdf = self.run_card['sys_pdf'].split('&&')
+        lhaid += [l.split()[0] for l in sys_pdf]
+        pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        # Copy all the relevant PDF sets
+        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+        
+        
+            
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):

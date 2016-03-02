@@ -810,6 +810,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # LO reweighting    
         w_orig = self.calculate_matrix_element(event, 0, space)
         w_new =  self.calculate_matrix_element(event, 1, space)
+        misc.sprint(w_orig, w_new, w_new/w_orig)
         if w_orig == 0:
             tag, order = event.get_tag_and_order()
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
@@ -817,7 +818,7 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(event)
             raise Exception, "Invalid matrix element for original computation (weight=0)"
 
-        return w_new/w_orig*event.wgt
+        return {'orig': event.wgt, '': w_new/w_orig*event.wgt}
      
     def calculate_nlo_weight(self, event, space=None):
 

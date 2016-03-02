@@ -35,7 +35,7 @@ endif
 
 UNAME := $(shell uname -s)
 ifeq ($(origin LDFLAGS), undefined)
-LDFLAGS=-lstdc++
+LDFLAGS=-lc++  $(MACFLAG)
 endif
 
 # Options: dynamic, lhapdf
