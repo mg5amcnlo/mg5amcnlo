@@ -658,12 +658,7 @@ C        ARGUMENTS
         # Now scan them all progressively
         lines.append("DO I=1,LCUT_SIZE")
         lines.append("  DO J=0,NCOEF_R(R)-1")
-##        lines.append("    IF (.NOT.WL(I,I)%IS_ZERO(J)) THEN")        
         lines.append("      OUT(J)=OUT(J)+WL(I,J,I)*CONST")               
- ##       lines.append("    ENDIF")
-#        lines.append("  DO J=1,WL(I,I)%N_NON_ZERO_IDS")
-#        lines.append("    OUT(WL(I,I)%NON_ZERO_IDS(J))="+
-#           "OUT(WL(I,I)%NON_ZERO_IDS(J))+WL(I,I)%COEFS(WL(I,I)%NON_ZERO_IDS(J))*CONST")               
         lines.append("  ENDDO")
         lines.append("ENDDO")
         lines.append("END")
