@@ -10,7 +10,6 @@ C
 C  
 C Modules
 C
-      use vertex_polynomial
       use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
 C
       IMPLICIT NONE

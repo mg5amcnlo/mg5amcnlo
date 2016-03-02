@@ -794,15 +794,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                                                  write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 
-
-        # Write the vertex coefficient module which is used by both HELAS
-        # and MadLoop for passing the information about the vertex polynomial
-        # in the loop optimized output.
-        # For now, the two modes are 'FKS5_optimized' and 'madloop_optimized'
-        if 'optimized' in self.opt['export_format']:
-            cp(pjoin(MG5DIR,'aloha','template_files','vertex_polynomial.f'),
-                                        pjoin(write_dir,'vertex_polynomial.f'))
-
         # Make final link in the Process
         self.make_model_symbolic_link()
     
@@ -6315,9 +6306,9 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
     #      > aMC@NLO mode
     #      > LoopInduced mode
     requires_ninja = opt['loop_optimized_output'] and \
-                      (output_type.startswith('madloop') or \
-                       output_type=='amcatnlo' or 
-                       (output_type=='default' and cmd._export_format in ['madevent']))
+                (output_type.startswith('madloop') or \
+                 output_type=='amcatnlo' or 
+                (output_type=='default' and cmd._export_format in ['madevent']))
     # An installation is required then, but only if the specified path is the
     # default local one and that the Ninja library appears missing.
     if requires_ninja and (not opt['ninja'] is None) and\

@@ -20,16 +20,10 @@ BASIC_OBJS = aloha_functions.o
 
 include ./aloha_file.inc
 
-ADDITIONAL_FILE = $(patsubst %.f,%.o,$(wildcard vertex_polynomial.f))
-MODULE_FILE     = $(patsubst %.f,%.mod,$(wildcard vertex_polynomial.f))
-
-# Make sure to place the modules directly in the lib directory
-FFLAGS += -J$(LIBDIR)
-
 all: $(LIBDIR)$(LIBRARY)
 
-$(LIBDIR)$(LIBRARY): $(BASIC_OBJS) $(ALOHARoutine) $(ADDITIONAL_FILE)
+$(LIBDIR)$(LIBRARY): $(BASIC_OBJS) $(ALOHARoutine)
 	$(call CREATELIB, $@, $^)
 
 clean:
-	$(RM) *.o $(LIBDIR)$(LIBRARY) $(LIBDIR)vertex_polynomial.mod
+	$(RM) *.o $(LIBDIR)$(LIBRARY)

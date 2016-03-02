@@ -1,8 +1,6 @@
       SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
 C       
-      use vertex_polynomial
       use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-      use MP_%(proc_prefix)sLOOP_POLYNOMIAL 
       IMPLICIT NONE
 C  
 C CONSTANTS

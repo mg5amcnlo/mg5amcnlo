@@ -168,6 +168,7 @@ class FortranPolynomialRoutines(PolynomialRoutines):
         polynomial_constant_lines.append(
 """MODULE %sPOLYNOMIAL_CONSTANTS
 implicit none
+include 'coef_specs.inc'
 include 'loop_max_coefs.inc'
 """%self.sub_prefix)   
         # Add the N coef for rank
@@ -455,7 +456,7 @@ C        ARGUMENTS
             
         return '\n\n'.join(subroutines)
 
-    def write_wl_updater(self):
+    def write_compact_wl_updater(self,r_1,r_2,loop_over_vertex_coefs_first=True):
         """ Give out the subroutine to update a polynomial of rank r_1 with
         one of rank r_2 """
         
@@ -474,159 +475,67 @@ C        ARGUMENTS
         
         # Start by writing out the header:
         lines.append(
-          """SUBROUTINE %(sub_prefix)sUPDATE_WL(A,RA,LCUT_SIZE,B,RB,IN_SIZE,OUT_SIZE,OUT)
-                        USE VERTEX_POLYNOMIAL
-                        USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-                        implicit none
-                        INTEGER I,J,K,L,M
-                        INTEGER RA,RB
-                        %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-                        INTEGER NEW_POSITION,UPDATER_COEF_POS
-                        %(coef_format)s UPDATER_COEF
-                        """%self.rep_dict)
+          """SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
+  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+  implicit none
+  INTEGER I,J,K,L,M
+  %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+  INTEGER NEW_POSITION
+  %(coef_format)s UPDATER_COEF
+"""%{'sub_prefix':self.sub_prefix,'proc_prefix':self.proc_prefix,
+                           'r_1':r_1,'r_2':r_2,'coef_format':self.coef_format})
         
         # Start the loop on the elements i,j of the vector OUT(i,coef,j)
         lines.append("C Welcome to the computational heart of MadLoop...")
-        lines.append("OUT(:,:,:)=%s"%self.czero)
-        lines.append(
-"""DO J=1,OUT_SIZE
-  DO M=0,NCOEF_R(RB)-1
-    DO K=1,IN_SIZE
-      UPDATER_COEF = B(J,M,K)
-      IF (UPDATER_COEF.EQ.%s) CYCLE
-      DO L=0,NCOEF_R(RA)-1
-        NEW_POSITION = COMB_COEF_POS(L,M)
-        DO I=1,LCUT_SIZE
-          OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)*UPDATER_COEF
+        if loop_over_vertex_coefs_first:
+            lines.append("OUT(:,:,:)=%s"%self.czero)
+            lines.append(
+    """DO J=1,OUT_SIZE
+      DO M=0,%d
+        DO K=1,IN_SIZE
+          UPDATER_COEF = B(J,M,K)
+          IF (UPDATER_COEF.EQ.%s) CYCLE
+          DO L=0,%d
+            NEW_POSITION = COMB_COEF_POS(L,M)
+            DO I=1,LCUT_SIZE
+              OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)*UPDATER_COEF
+            ENDDO
+          ENDDO
         ENDDO
       ENDDO
     ENDDO
-  ENDDO
-ENDDO
-"""%self.czero)
+    """%(get_number_of_coefs_for_rank(r_2)-1,
+         self.czero,
+         get_number_of_coefs_for_rank(r_1)-1))
+        else:
+            lines.append("OUT(:,:,:)=%s"%self.czero)
+            lines.append(
+    """DO I=1,LCUT_SIZE
+      DO L=0,%d
+        DO K=1,IN_SIZE
+          UPDATER_COEF = A(K,L,I)
+          IF (UPDATER_COEF.EQ.%s) CYCLE
+          DO M=0,%d
+            NEW_POSITION = COMB_COEF_POS(L,M)
+            DO J=1,OUT_SIZE
+              OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + UPDATER_COEF*B(J,M,K)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    """%(get_number_of_coefs_for_rank(r_1)-1,
+         self.czero,
+         get_number_of_coefs_for_rank(r_2)-1))            
         
         lines.append("END")
         # return the subroutine
         return '\n'.join(lines)
 
-
-    def write_too_slow_wl_updater(self):
-        """ Give out the subroutine to update a polynomial of rank r_1 with
-        one of rank r_2 """
-        
-        # The update is basically given by 
-        # OUT(j,coef,i) = A(k,*,i) x B(j,*,k)
-        # with k a summed index and the 'x' operation is equivalent to 
-        # putting together two regular polynomial in q with scalar coefficients
-        # The complexity of this subroutine is therefore 
-        # MAXLWFSIZE**3 * NCoef(r_1) * NCoef(r_2)
-        # Which is for example 22'400 when updating a rank 4 loop wavefunction
-        # with a rank 1 updater.
-        # The situation is slightly improved by a smarter handling of the 
-        # coefficients equal to zero
-        
-        lines=[]
-        
-        # Start by writing out the header:
-        lines.append(
-          """SUBROUTINE %(sub_prefix)sUPDATE_WL(A,RA,LCUT_SIZE,B,RB,IN_SIZE,OUT_SIZE,OUT)
-                        USE VERTEX_POLYNOMIAL
-                        USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
-                        USE %(sub_prefix)sLOOP_POLYNOMIAL
-                        implicit none
-                        INTEGER I,J,K,L,M
-                        INTEGER RA,RB
-                        TYPE(%(mp_prefix)sL_COEF) A(MAXLWFSIZE,MAXLWFSIZE)
-                        TYPE(%(mp_prefix)sV_COEF) B(MAXLWFSIZE,MAXLWFSIZE)
-                        TYPE(%(mp_prefix)sL_COEF) OUT(MAXLWFSIZE,MAXLWFSIZE)
-                        INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-                        INTEGER NEW_POSITION,UPDATER_COEF_POS
-                        """%self.rep_dict)
-        
-        # Start the loop on the elements i,j of the vector OUT(i,coef,j)
-        lines.append("C Welcome to the computational heart of MadLoop...")
-        lines.append("CALL %(sub_prefix)sINITIALIZE_ALL_LOOP_COEFS(OUT)"%self.rep_dict)
-        lines.append(
-"""DO I=1,LCUT_SIZE
-  DO K=1,IN_SIZE
-    DO L=1,A(K,I)%N_NON_ZERO_IDS      
-      DO J=1,OUT_SIZE
-        DO M=1,B(J,K)%N_NON_ZERO_IDS
-          NEW_POSITION = COMB_COEF_POS(A(K,I)%NON_ZERO_IDS(L),B(J,K)%NON_ZERO_IDS(M)) 
-          IF (OUT(J,I)%IS_ZERO(NEW_POSITION)) THEN
-            OUT(J,I)%COEFS(NEW_POSITION) = A(K,I)%COEFS(A(K,I)%NON_ZERO_IDS(L))*B(J,K)%COEFS(B(J,K)%NON_ZERO_IDS(M))
-            OUT(J,I)%IS_ZERO(NEW_POSITION) = .FALSE.
-            OUT(J,I)%N_NON_ZERO_IDS = OUT(J,I)%N_NON_ZERO_IDS+1
-            OUT(J,I)%NON_ZERO_IDS(OUT(J,I)%N_NON_ZERO_IDS) = NEW_POSITION         
-          ELSE
-            OUT(J,I)%COEFS(NEW_POSITION) = OUT(J,I)%COEFS(NEW_POSITION) + A(K,I)%COEFS(A(K,I)%NON_ZERO_IDS(L))*B(J,K)%COEFS(B(J,K)%NON_ZERO_IDS(M))   
-          ENDIF
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
-ENDDO
-""")
-        lines[-2] = \
-"""DO I=1,MAXLWFSIZE
-  DO J=1,MAXLWFSIZE
-    OUT(I,J)%%COEFS(:)=%s
-    OUT(I,J)%%IS_ZERO(:)=.True.
-  ENDDO
-ENDDO
-"""%self.czero
-        lines[-1] = (
-"""DO I=1,LCUT_SIZE
-  DO K=1,IN_SIZE
-    DO L=0,NCOEF_R(RA)-1
-      IF (A(K,I)%IS_ZERO(L)) CYCLE
-      DO J=1,OUT_SIZE
-        DO M=1,B(J,K)%N_NON_ZERO_IDS
-          NEW_POSITION = COMB_COEF_POS(L,B(J,K)%NON_ZERO_IDS(M))
-          OUT(J,I)%IS_ZERO(NEW_POSITION)=.False.
-          OUT(J,I)%COEFS(NEW_POSITION)=OUT(J,I)%COEFS(NEW_POSITION) + A(K,I)%COEFS(L)*B(J,K)%COEFS(B(J,K)%NON_ZERO_IDS(M))
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
-ENDDO
-""")
-        
-        lines[-2] = \
-"""DO I=1,MAXLWFSIZE
-  DO J=1,MAXLWFSIZE
-    OUT(I,J)%%COEFS(:)=%s
-C    OUT(I,J)%%IS_ZERO(:)=.True.
-  ENDDO
-ENDDO
-"""%self.czero
-        lines[-1] = (
-"""DO J=1,OUT_SIZE
-  DO K=1,IN_SIZE
-    DO M=1,B(J,K)%N_NON_ZERO_IDS
-      UPDATER_COEF_POS = B(J,K)%NON_ZERO_IDS(M)
-      DO L=0,NCOEF_R(RA)-1
-        NEW_POSITION = COMB_COEF_POS(L,UPDATER_COEF_POS)
-        DO I=1,LCUT_SIZE
-C          IF (A(K,I)%IS_ZERO(L)) CYCLE
-          OUT(J,I)%COEFS(NEW_POSITION)=OUT(J,I)%COEFS(NEW_POSITION) + A(K,I)%COEFS(L)*B(J,K)%COEFS(UPDATER_COEF_POS)
-C          OUT(J,I)%IS_ZERO(NEW_POSITION)=.False.
-C          OUT(J,I)%IS_ZERO(NEW_POSITION)=(OUT(J,I)%COEFS(NEW_POSITION).EQ.(0.0d0,0.0d0))
-        ENDDO
-      ENDDO
-    ENDDO
-  ENDDO
-ENDDO
-""")
-        
-        lines.append("END")
-        # return the subroutine
-        return '\n'.join(lines)
-
-    def write_old_wl_updater(self,r_1,r_2):
+    def write_expanded_wl_updater(self,r_1,r_2):
         """ Give out the subroutine to update a polynomial of rank r_1 with
         one of rank r_2 """
         
@@ -644,15 +553,14 @@ ENDDO
         # Start by writing out the header:
         lines.append(
           """SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
-                        include 'coef_specs.inc'
-                        include 'loop_max_coefs.inc'
-                        INTEGER I,J,K
-                        %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-                        """%{'sub_prefix':self.sub_prefix,'r_1':r_1,'r_2':r_2,
-                                                'coef_format':self.coef_format})
+  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS
+  INTEGER I,J,K
+  %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+"""%{'sub_prefix':self.sub_prefix,'proc_prefix':self.proc_prefix,
+                            'r_1':r_1,'r_2':r_2,'coef_format':self.coef_format})
         
         # Start the loop on the elements i,j of the vector OUT(i,coef,j)
         lines.append("DO I=1,LCUT_SIZE")
@@ -739,7 +647,6 @@ ENDDO
         # Start by writing out the header:
         lines.append(
 """SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
-  USE VERTEX_POLYNOMIAL
   USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
   INTEGER I,J
   %(coef_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)

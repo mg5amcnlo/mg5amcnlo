@@ -9,6 +9,11 @@ else
     ROOT = ..
 endif
 
+# For the compilation of the MadLoop file polynomial.f it makes a big difference to use -O3 and
+# to turn off the bounds check. These can however be modified here if really necessary.
+POLYNOMIAL_OPTIMIZATION = -O3
+POLYNOMIAL_BOUNDS_CHECK =
+
 include $(ROOT)/Source/make_opts
 include $(ROOT)/SubProcesses/MadLoop_makefile_definitions
 SHELL = /bin/bash
@@ -69,6 +74,12 @@ $(STABCHECKDRIVER):  StabilityCheckDriver.o $(PROCESS) makefile $(LIBS)
 # The program below is not essential but just an helpful one to run the born only
 $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst $(DOTF),$(DOTO),$(wildcard *born_matrix.f)) makefile $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext)
 	$(FC) $(FFLAGS) -o $(CHECK_SA_BORN_SPLITORDERS) check_sa_born_splitOrders.o $(patsubst $(DOTF),$(DOTO),$(wildcard *born_matrix.f)) -L$(LIBDIR) -ldhelas -lmodel
+
+# This is the core of madloop computationally wise, so make sure to turn optimizations on and bound checks off.
+# We use %olynomial.o and not directly polynomial.o because we want it to match when both doing make check here
+# or make OLP one directory above
+%olynomial.o : %olynomial.f
+	$(FC) $(patsubst -O%,, $(subst -fbounds-check,,$(FFLAGS))) $(POLYNOMIAL_OPTIMIZATION) $(POLYNOMIAL_BOUNDS_CHECK) -c $< -o $@ $(LOOP_INCLUDE)
 
 $(DOTO) : $(DOTF)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)

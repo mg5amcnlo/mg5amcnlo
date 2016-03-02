@@ -2116,14 +2116,40 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # The merging one for creating the loop coefficients
         subroutines.append(poly_writer.write_wl_merger())
         subroutines.append(mp_poly_writer.write_wl_merger())
-        # Now the udpate subroutines
-        subroutines.append(poly_writer.write_wl_updater())
-        subroutines.append(mp_poly_writer.write_wl_updater())
-#        for wl_update in matrix_element.get_used_wl_updates():
-#            subroutines.append(poly_writer.write_old_wl_updater(\
-#                                                     wl_update[0],wl_update[1]))
-#            subroutines.append(mp_poly_writer.write_old_wl_updater(\
-#                                                     wl_update[0],wl_update[1]))
+        for wl_update in matrix_element.get_used_wl_updates():
+            # We pick here the most appropriate way of computing the 
+            # tensor product depending on the rank of the two tensors.
+            # The various choices below come out from a careful comparison of
+            # the different methods using the valgrind profiler
+            if wl_update[0]==wl_update[1]==1 or wl_update[0]==0 or wl_update[1]==0:
+                # If any of the rank is 0, or if they are both equal to 1, 
+                # then we are better off using the full expanded polynomial, 
+                # and let the compiler optimize it.
+                subroutines.append(poly_writer.write_expanded_wl_updater(\
+                                                     wl_update[0],wl_update[1]))
+                subroutines.append(mp_poly_writer.write_expanded_wl_updater(\
+                                                     wl_update[0],wl_update[1]))
+            elif wl_update[0] >= wl_update[1]:
+                # If the loop polynomial is larger then we will filter and loop
+                # over the vertex coefficients first. The smallest product for
+                # which the routines below could be used is then 
+                # loop_rank_2 x vertex_rank_1
+                subroutines.append(poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=True))
+                subroutines.append(mp_poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=True))
+            else:
+                # This happens only when the rank of the updater (vertex coef)
+                # is larger than the one of the loop coef and none of them is
+                # zero. This never happens in renormalizable theories but it
+                # can happen in the HEFT ones or other effective ones. In this
+                # case the typicaly use of this routine if for the product
+                # loop_rank_1 x vertex_rank_2
+                subroutines.append(poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=False))
+                subroutines.append(mp_poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=False))            
+                
         writer.writelines('\n\n'.join(subroutines),
                                        context=self.get_context(matrix_element))
 
