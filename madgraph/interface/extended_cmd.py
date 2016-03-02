@@ -573,16 +573,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         if not line:
             return line
-        line = line.lstrip()
 
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
             self.save_line = ''
-        
+            
+        line = line.lstrip()        
         # Check if the line is complete
         if line.endswith('\\'):
-            self.save_line = line[:-1] + ' '
+            self.save_line = line[:-1] 
             return '' # do nothing   
                 
         # Remove comment

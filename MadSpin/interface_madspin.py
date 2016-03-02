@@ -32,6 +32,7 @@ if '__main__' == __name__:
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
+import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.various.misc as misc
 import madgraph.iolibs.files as files
 import madgraph.iolibs.export_v4 as export_v4
@@ -701,7 +702,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                         mg5.exec_cmd("generate %s" % proc)
                         mg5.exec_cmd("output %s -f" % decay_dir)
                     
-                    import madgraph.interface.madevent_interface as madevent_interface
                     options = dict(mg5.options)
                     if self.options['ms_dir']:
                         misc.sprint("start gridpack!")
@@ -729,10 +729,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
                 # Now generate the events
 
-                
                 if not self.options['ms_dir']:
                     me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
-                                                    decay_dir), options=options)
+                                                    decay_dir), options=mg5.options)
                     me5_cmd.options["automatic_html_opening"] = False
                     if self.options["run_card"]:
                         run_card = self.options["run_card"]

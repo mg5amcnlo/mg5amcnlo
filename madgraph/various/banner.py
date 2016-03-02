@@ -732,14 +732,17 @@ class ProcCard(list):
         
         store_line = ''
         for line in init:
-            line = line.strip()
+            line = line.rstrip()
             if line.endswith('\\'):
                 store_line += line[:-1]
             else:
-                self.append(store_line + line)
+                tmp = store_line + line
+                self.append(tmp.strip())
                 store_line = ""
         if store_line:
             raise Exception, "WRONG CARD FORMAT"
+        
+        
     def move_to_last(self, cmd):
         """move an element to the last history."""
         for line in self[:]:
