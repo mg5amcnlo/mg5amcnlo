@@ -3,20 +3,7 @@ c
 c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
-c
-C************************************************************************
-c WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-C************************************************************************
-c The Born in MadFKS -- and therefore also the virtual!-- should have a
-c slightly adapted identical particle symmetry factor. The normal
-c virtual weight as coming from the OLP should be divided by the number
-c of gluons in the corresponding real-emission process (i.e.  the number
-c of gluons in the Born plus one). This factor is passed to this
-c subroutine in /numberofparticles/ common block, as "ngluons". So,
-c divided virt_wgt by dble(ngluons) to get the correct virtual to be
-c used in MadFKS. The born_wgt that is passed to this subroutine has
-c already been divided by this factor.
-C************************************************************************
+cC************************************************************************
 c
       implicit none
       include "nexternal.inc"
@@ -34,11 +21,6 @@ c general MadFKS parameters
       double precision, allocatable :: virt_wgts_hel(:,:)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
-      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
       logical firsttime_run
@@ -112,9 +94,9 @@ c splips unnoticed.
          call sloopmatrix_thres(p, virt_wgts, tolerance, accuracies,
      $        ret_code)
          prec_found = accuracies(0)
-         virt_wgt= virt_wgts(1,0)/dble(ngluons)
-         single  = virt_wgts(2,0)/dble(ngluons)
-         double  = virt_wgts(3,0)/dble(ngluons)
+         virt_wgt= virt_wgts(1,0)
+         single  = virt_wgts(2,0)
+         double  = virt_wgts(3,0)
       else
          tolerance=PrecisionVirtualAtRunTime
 c Just set the accuracy found to a positive value as it is not specified
@@ -123,9 +105,9 @@ c once the initial pole check is performed.
             call sloopmatrix_thres(p,virt_wgts,tolerance,accuracies
      $           ,ret_code)
             prec_found = accuracies(0)            
-            virt_wgt= virt_wgts(1,0)/dble(ngluons)
-            single  = virt_wgts(2,0)/dble(ngluons)
-            double  = virt_wgts(3,0)/dble(ngluons)
+            virt_wgt= virt_wgts(1,0)
+            single  = virt_wgts(2,0)
+            double  = virt_wgts(3,0)
          elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
@@ -148,14 +130,13 @@ c virtual as flat as possible
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
      $           ,tolerance,accuracies,ret_code)
             prec_found = accuracies(0)
+c Average over initial state helicities
             virt_wgt = virt_wgt + virt_wgts_hel(1,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
+     $           /volh/4d0
             single   = single   + virt_wgts_hel(2,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
+     $           /volh/4d0
             double   = double   + virt_wgts_hel(3,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
-c Average over initial state helicities (and take the ngluon factor into
-c account)
+     $           /volh/4d0
             if (nincoming.ne.2) then
                write (*,*)
      &              'Cannot do MC over helicities for 1->N processes'
