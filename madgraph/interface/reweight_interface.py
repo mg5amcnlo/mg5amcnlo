@@ -237,11 +237,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 commandline +='add process %s pert_%s %s --no_warning=duplicate;' % (process,order.replace(' ',''), final)
         elif order.startswith(('noborn=')):
             # pass in sqrvirt=
-            return "add process %s " % proc.replace('noborn=', 'sqrvirt=')
+            return "add process %s ;" % proc.replace('noborn=', 'sqrvirt=')
             
         else:
             #just return the input. since this Madloop.
-            return "add process %s " % proc                                       
+            return "add process %s ;" % proc                                       
         return commandline
 
 
@@ -552,7 +552,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.banner.write(output[name], close_tag=False)
         
         logger.info('starts to compute weight for events with the following modification to the param_card:')
-        logger.info(card_diff)
+        logger.info(card_diff.replace('\n','\nKEEP:'))
         # prepare the output file for the weight plot
         if self.mother:
             out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
@@ -810,7 +810,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # LO reweighting    
         w_orig = self.calculate_matrix_element(event, 0, space)
         w_new =  self.calculate_matrix_element(event, 1, space)
-        misc.sprint(w_orig, w_new, w_new/w_orig)
+        
         if w_orig == 0:
             tag, order = event.get_tag_and_order()
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
@@ -1376,7 +1376,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 else:
                     proc = proc.replace('[', '[ virt=')
                     commandline += "add process %s ;" % proc
-
             # deactivate golem since it creates troubles
             old_options = dict(mgcmd.options)
             if mgcmd.options['golem'] or mgcmd.options['pjfry']:

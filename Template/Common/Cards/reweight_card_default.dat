@@ -48,7 +48,7 @@ launch
 #        with. In this case you need to provide the path to a correct 
 #        param_card for the new model; you cannot modify the original one 
 #        with the 'set' command.
-# change process DEF [-add]: change the process by which you reweight. 
+# change process DEF [--add]: change the process by which you reweight. 
 #        The initial and final state particles of the new process should 
 #        be exactly identical to the ones in the original process.
 # change helicity False: perform the reweighting by helicity summed 

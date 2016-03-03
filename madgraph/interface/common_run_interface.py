@@ -1118,9 +1118,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
             while p.poll() is None:
                 line = p.stdout.readline()
-                if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:']) and \
+                if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
                    not '***********' in line:
-                        print line[:-1].replace('INFO', 'REWEIGHT')
+                        print line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:','')
                 elif __debug__ and line:
                     logger.debug(line[:-1])
             if p.returncode !=0:
