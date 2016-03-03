@@ -72,6 +72,7 @@ C
 C     
 C     BEGIN CODE
 C     
+      CALL %(proc_prefix)sFORCE_STABILITY_CHECK(.True.)
       CALL %(proc_prefix)sGET_ANSWER_DIMENSION(MATELEM_ARRAY_DIM)
       ALLOCATE(MATELEM(0:3,0:MATELEM_ARRAY_DIM))
       CALL %(proc_prefix)sGET_NSQSO_LOOP(NSQUAREDSO_LOOP)

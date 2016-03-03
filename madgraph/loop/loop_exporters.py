@@ -1034,6 +1034,14 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
                                           'check_sa_loop_induced.inc')).read()
         file=file%replace_dict
         writer.writelines(file)
+        
+        if self.opt['mode'] != 'reweight':
+            file = open(os.path.join(self.template_dir,\
+                                          'check_py.f')).read()
+            file=file%replace_dict
+            new_path = writer.name.replace('check_sa.f', 'f2py_wrapper.f')
+            new_writer = writer.__class__(new_path, 'w')
+            new_writer.writelines(file)
 
     def write_improve_ps(self, writer, matrix_element):
         """ Write out the improve_ps subroutines which modify the PS point

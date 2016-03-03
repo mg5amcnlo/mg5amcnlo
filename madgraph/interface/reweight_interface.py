@@ -1017,9 +1017,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 with misc.chdir(Pdir):
                     with misc.stdchannel_redirected(sys.stdout, os.devnull):
                         mymod.initialise('param_card_orig.dat')
-                    if 'V' in tag:
-                        madevent_interface.MadLoopInitializer.run_initialization(\
-                                                run_dir=Pdir)
                 
                     
             if hypp_id == 1:
