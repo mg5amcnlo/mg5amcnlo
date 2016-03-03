@@ -1235,7 +1235,7 @@ class HwU(Histogram):
                     label_to_consider.append(pdf_set)
             ##########: normal PDF
             wgts = [ label for label in self.bins.weight_labels if \
-                     HwU.get_HwU_wgt_label_type(label)=='pdf']   
+                     HwU.get_HwU_wgt_label_type(label)=='pdf']  
             if wgts:
                 wgts_to_consider.append(wgts)
                 label_to_consider.append('none')
@@ -1300,7 +1300,7 @@ class HwU(Histogram):
                                    "If the python interface to LHAPDF is available on your system, try "\
                                    "adding its location to the PYTHONPATH environment variable.")
             
-            if use_lhapdf:
+            if type=='PDF' and use_lhapdf:
                 lhapdf.setVerbosity(0)
 
         # Place the new weight label last before the first tuple
@@ -2167,6 +2167,7 @@ set style line 999 lt 1 lc rgb "gray" lw 2.5
 safe(x,y,a) = (y == 0.0 ? a : x/y)
 
 set style data histeps
+set key invert
 
 """%(arg_string,output_base_name)
 ]
@@ -2255,6 +2256,7 @@ set style line 999 lt 1 lc rgb "gray" lw 1.3
 safe(x,y,a) = (y == 0.0 ? a : x/y)
 
 set style data histeps
+set key invert
 
 """%(arg_string,output_base_name)
 ]
@@ -2674,25 +2676,24 @@ plot \\"""
                         
             title = ', '.join(title)
             # Label for the first curve in the upper plot
-            if i==0:
-                major_title = histo.get_HwU_histogram_name(format='human')
+            if histo.type is None and not hasattr(histo, 'jetsample'):
+                major_title = 'central value for plot (%d)'%(i+1)
             else:
-                if histo.type is None and not hasattr(histo, 'jetsample'):
-                    major_title = 'central value for plot (%d)'%(i+1)
+                major_title = []
+                if not histo.type is None:
+                    major_title.append(histo.type)
+                if hasattr(histo, 'jetsample'):
+                    if histo.jetsample!=-1:
+                        major_title.append('jet sample %d'%histo.jetsample)
+                    else:
+                        major_title.append('all jet samples')
                 else:
-                    major_title = []
-                    if not histo.type is None:
-                        major_title.append(histo.type)
-                    if hasattr(histo, 'jetsample'):
-                        if histo.jetsample!=-1:
-                            major_title.append('jet sample %d'%histo.jetsample)
-                        else:
-                            major_title.append('all jet samples')
-                    major_title = ', '.join(major_title)                    
+                    major_title.append('central value')
+                major_title = ', '.join(major_title)                    
             
-            if not mu[0] is 'none':
-                major_title += ', dyn\_scale=%s'%mu[0]
-            if not pdf[0] is 'none':
+            if not mu[0] in ['none',None]:
+                major_title += ', dynamical\_scale\_choice=%s'%mu[0]
+            if not pdf[0] in ['none',None]:
                 major_title += ', PDF=%s'%pdf[0].replace('_','\_')
 
             # Do not show uncertainties for individual jet samples (unless first
@@ -2702,27 +2703,58 @@ plot \\"""
                     jet_samples_to_keep[0] == histo.jetsample)):
                 
                 uncertainty_plot_lines.append({})
+                
+                # We decide to show uncertainties in the main plot only if they
+                # are part of a monocolor band. Otherwise, they will only be 
+                # shown in the first subplot. Notice that plotting 'sqrt(-1)' 
+                # is just a trick so as to have only the key printed with no
+                # line
+                
                 # Show scale variation for the first central value if available
                 if not mu_var_pos is None and len(mu_var_pos)>0:
-                    uncertainty_plot_lines[-1]['scale'] = get_uncertainty_lines(
+                    if 'scale' in use_band:
+                      uncertainty_plot_lines[-1]['scale'] = get_uncertainty_lines(
                         HwU_name, block_position+i, mu_var_pos[0]+4, color_index+10,
                         '%s, scale variation'%title, band='scale' in use_band)
+                    else:
+                      uncertainty_plot_lines[-1]['scale'] = \
+      ["sqrt(-1) ls %d title '%s'"%(color_index+10,'%s, scale variation'%title)]
                 # And now PDF_variation if available
                 if not PDF_var_pos is None and len(PDF_var_pos)>0:
-                    uncertainty_plot_lines[-1]['pdf'] = get_uncertainty_lines(
+                    if 'pdf' in use_band:
+                        uncertainty_plot_lines[-1]['pdf'] = get_uncertainty_lines(
                      HwU_name,block_position+i, PDF_var_pos[0]+4, color_index+20,
                              '%s, PDF variation'%title, band='pdf' in use_band)
+                    else:
+                        uncertainty_plot_lines[-1]['pdf'] = \
+        ["sqrt(-1) ls %d title '%s'"%(color_index+20,'%s, PDF variation'%title)]
                 # And now merging variation if available
                 if not merging_var_pos is None and len(merging_var_pos)>0:
-                    uncertainty_plot_lines[-1]['merging'] = get_uncertainty_lines(
+                    if 'merging_scale' in use_band:
+                        uncertainty_plot_lines[-1]['merging_scale'] = get_uncertainty_lines(
                      HwU_name,block_position+i, merging_var_pos[0]+4, color_index+30,
                 '%s, merging scale variation'%title, band='merging_scale' in use_band)
+                    else:
+                        uncertainty_plot_lines[-1]['merging_scale'] = \
+        ["sqrt(-1) ls %d title '%s'"%(color_index+30,'%s, merging scale variation'%title)]                        
                 # And now alpsfact variation if available
                 if not alpsfact_var_pos is None and len(alpsfact_var_pos)>0:
-                    uncertainty_plot_lines[-1]['alpsfact'] = get_uncertainty_lines(
+                    if 'alpsfact' in use_band:
+                        uncertainty_plot_lines[-1]['alpsfact'] = get_uncertainty_lines(
                      HwU_name,block_position+i, alpsfact_var_pos[0]+4, color_index+40,
                     '%s, alpsfact variation'%title, band='alpsfact' in use_band)
-                       
+                    else:
+                        uncertainty_plot_lines[-1]['alpsfact'] = \
+        ["sqrt(-1) ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
+
+            plot_lines.append(
+"'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
+%(HwU_name,block_position+i,color_index, major_title))
+            if 'statistical' in uncertainties:
+                plot_lines.append(
+"'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
+%(HwU_name,block_position+i,color_index))
+
             # Add additional central scale/PDF curves
             if not mu_var_pos is None:
                 for j,mu_var in enumerate(mu_var_pos):
@@ -2732,7 +2764,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,mu_var+3,color_index,\
-'%s dynamical scale choice %s' % (title,mu[j])))
+'%s dynamical\_scale\_choice=%s' % (title,mu[j])))
             # And now PDF_variation if available
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
@@ -2742,16 +2774,7 @@ plot \\"""
                         plot_lines.append(
 "'%s' index %d using (($1+$2)/2):%d ls %d title '%s'"\
 %(HwU_name,block_position+i,PDF_var+3,color_index,\
-'%s PDF set %s' % (title,pdf[j].replace('_','\_'))))
-
-
-            plot_lines.append(
-"'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
-%(HwU_name,block_position+i,color_index, major_title))
-            if 'statistical' in uncertainties:
-                plot_lines.append(
-"'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
-%(HwU_name,block_position+i,color_index))
+'%s PDF=%s' % (title,pdf[j].replace('_','\_'))))
 
         # Now add the uncertainty lines, those not using a band so that they
         # are not covered by those using a band after we reverse plo_lines
@@ -2831,9 +2854,16 @@ plot \\"""
         replacement_dic['set_yscale'] = "unset logscale y"
         replacement_dic['set_format_y'] = 'unset format'
                                 
+
+        tit='Relative uncertainties w.r.t. central value'
+        if n_histograms > 1:
+            tit=tit+'s'
+#        if (not mu_var_pos is None and 'scale' not in use_band):
+#            tit=tit+', scale is dashed'
+#        if (not PDF_var_pos is None and 'pdf' not in use_band):
+#            tit=tit+', PDF is dotted'
         replacement_dic['set_histo_label'] = \
-         'set label "Relative uncertainties w.r.t. central value(s)" font ",9" front at graph 0.03, graph 0.13'
-#        'set label "Relative uncertainties" font ",9" at graph 0.79, graph 0.13'
+         'set label "%s" font ",9" front at graph 0.03, graph 0.13' % tit
         # Simply don't add these lines if there are no uncertainties.
         # This meant uncessary extra work, but I no longer car at this point
         if not no_uncertainties:
@@ -2847,10 +2877,10 @@ plot \\"""
             n=n+1
             k=n
             color_index = n%self.number_line_colors_defined+1
-            uncertainty_plot_lines.append({})
             # Plot uncertainties
             if not mu_var_pos is None:
                 for j,mu_var in enumerate(mu_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0:
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -2866,6 +2896,7 @@ plot \\"""
                                              ratio=True, band='scale' in use_band)
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0:
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -2881,6 +2912,7 @@ plot \\"""
                                         ratio=True, band='pdf' in use_band)
             if not merging_var_pos is None:
                 for j,merging_var in enumerate(merging_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0:
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -2890,11 +2922,12 @@ plot \\"""
                        plot_lines.append(
 "'%s' index %d using (($1+$2)/2):(safe($%d,$3,1.0)-1.0) ls %d title ''"\
                        %(HwU_name,block_position+i,merging_var+3,color_index))
-                    uncertainty_plot_lines[-1]['merging'] = get_uncertainty_lines(
+                    uncertainty_plot_lines[-1]['merging_scale'] = get_uncertainty_lines(
                     HwU_name, block_position+i, merging_var+4, color_index+30,'',
                                     ratio=True, band='merging_scale' in use_band)
             if not alpsfact_var_pos is None:
                 for j,alpsfact_var in enumerate(alpsfact_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0:
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -2942,15 +2975,18 @@ plot \\"""
             return block_position+len(self)
 
         # We can finally add the last subhistograms for the ratios.
-        ratio_name_long = '%s/%s'%(
-            '(2)' if (len(self)-n_histograms)==1 else 
-            '((2) to (%d))'%(len(self)-n_histograms+1),
-            '(1)' if self[0].type==None else '%s'%('NLO' if \
-            self[0].type.split()[0]=='NLO' else self[0].type))+' central value'
+        ratio_name_long='('
+        for i, histo in enumerate(self[:n_histograms]):
+            if i==0: continue
+            ratio_name_long+='%d'%(i+1) if histo.type is None else ('NLO' if \
+                                    histo.type.split()[0]=='NLO' else histo.type)
+        ratio_name_long+=')/'
+        ratio_name_long+=('(1' if self[0].type==None else '(%s'%('NLO' if \
+            self[0].type.split()[0]=='NLO' else self[0].type))+' central value)'
 
-        ratio_name_short = ratio_name_long
+        ratio_name_short = 'ratio w.r.t. '+('1' if self[0].type==None else '%s'%('NLO' if \
+                                            self[0].type.split()[0]=='NLO' else self[0].type))
             
-        ratio_name = '%s/%s'
         replacement_dic['subhistogram_type'] = '%s ratio'%ratio_name_long
         replacement_dic['set_ylabel'] = 'set ylabel "%s"'%ratio_name_short
 
@@ -3009,10 +3045,10 @@ plot \\"""
     "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"%\
     (HwU_name,block_ratio_pos,color_index))
 
-            uncertainty_plot_lines.append({})
             # Then the scale variations
             if not mu_var_pos is None:
                 for j,mu_var in enumerate(mu_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0:
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -3028,6 +3064,7 @@ plot \\"""
                                                        band='scale' in use_band)
             if not PDF_var_pos is None:
                 for j,PDF_var in enumerate(PDF_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0: 
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -3043,6 +3080,7 @@ plot \\"""
                                                        band='pdf' in use_band)
             if not merging_var_pos is None:
                 for j,merging_var in enumerate(merging_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0: 
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -3052,11 +3090,12 @@ plot \\"""
                         plot_lines.append(
     "'%s' index %d using (($1+$2)/2):%d ls %d title ''"\
     %(HwU_name,block_ratio_pos,merging_var+3,color_index))
-                    uncertainty_plot_lines[-1]['merging'] = get_uncertainty_lines(
+                    uncertainty_plot_lines[-1]['merging_scale'] = get_uncertainty_lines(
                     HwU_name, block_ratio_pos, merging_var+4, color_index+30,'',
                                                      band='merging_scale' in use_band)
             if not alpsfact_var_pos is None:
                 for j,alpsfact_var in enumerate(alpsfact_var_pos):
+                    uncertainty_plot_lines.append({})
                     if j==0: 
                         color_index = k%self.number_line_colors_defined+1
                     else:
@@ -3082,7 +3121,7 @@ plot \\"""
                 if uncertainty_type in use_band:
                     plot_lines.extend(lines)
        
-        plot_lines.append("0.0 ls 999 title ''")
+        plot_lines.append("1.0 ls 999 title ''")
 
         # Reverse so that bands appear first
         plot_lines.reverse()

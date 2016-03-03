@@ -1295,6 +1295,7 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False) 
         self.add_param("JetMatching:etaJetMax", 10.0, hidden=True, always_write_to_card=False)
         self.add_param("JetMatching:nQmatch",4,hidden=True, always_write_to_card=False)
+        self.add_param("JetMatching:doShowerKt",False,hidden=True, always_write_to_card=False)
         # for CKKWL merging (common with UMEPS, UNLOPS)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
         self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)

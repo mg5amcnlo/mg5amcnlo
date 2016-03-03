@@ -3328,7 +3328,9 @@ Please install this tool with the following MG5_aMC command:
             # PY8 should not implement the MLM veto since the driver should do it
             # if merging scale variation is turned on
             if self.run_card['use_syst']:
-                PY8_Card.MadGraphSet('JetMatching:doVeto',False)          
+                PY8_Card.MadGraphSet('JetMatching:doVeto',False)
+            
+            PY8_Card.MadGraphSet('JetMatching:doShowerKt',self.run_card['showerkt'])          
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
             # Use the parameter maxjetflavor for JetMatching:nQmatch which specifies
