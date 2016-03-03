@@ -1,4 +1,4 @@
-// fjcore -- extracted from FastJet v3.0.5 (http://fastjet.fr)
+// fjcore -- extracted from FastJet v3.1.3 (http://fastjet.fr)
 //
 // fjcore constitutes a digest of the main FastJet functionality.
 // The files fjcore.hh and fjcore.cc are meant to provide easy access to these 
@@ -19,7 +19,7 @@
 //
 //   - access to all native pp and ee algorithms, kt, anti-kt, C/A.
 //     For C/A, the NlnN method is available, while anti-kt and kt
-//     are limited to the N^2 one (still the fastest for N < 20k particles)
+//     are limited to the N^2 one (still the fastest for N < 100k particles)
 //   - access to selectors, for implementing cuts and selections
 //   - access to all functionalities related to pseudojets (e.g. a jet's
 //     structure or user-defined information)
@@ -42,13 +42,13 @@
 // Like FastJet, fjcore is released under the terms of the GNU General Public
 // License version 2 (GPLv2). If you use this code as part of work towards a
 // scientific publication, whether directly or contained within another program
-// (e.g. Delphes, SpartyJet, Rivet, LHC collaboration software frameworks, 
+// (e.g. Delphes, MadGraph, SpartyJet, Rivet, LHC collaboration software frameworks, 
 // etc.), you should include a citation to
 // 
 //   EPJC72(2012)1896 [arXiv:1111.6097] (FastJet User Manual)
 //   and, optionally, Phys.Lett.B641 (2006) 57 [arXiv:hep-ph/0512210]
 //
-// Copyright (c) 2005-2013, Matteo Cacciari, Gavin P. Salam and Gregory Soyez
+// Copyright (c) 2005-2014, Matteo Cacciari, Gavin P. Salam and Gregory Soyez
 //
 //----------------------------------------------------------------------
 // This file is part of FastJet.
@@ -151,7 +151,6 @@ FJCORE_END_NAMESPACE
 #define FJCORE_HAVE_DLFCN_H  1 
 #endif
 #ifndef FJCORE_HAVE_EXECINFO_H 
-#define FJCORE_HAVE_EXECINFO_H  1 
 #endif
 #ifndef FJCORE_HAVE_INTTYPES_H 
 #define FJCORE_HAVE_INTTYPES_H  1 
@@ -196,19 +195,31 @@ FJCORE_END_NAMESPACE
 #define FJCORE_PACKAGE_NAME  "FastJet" 
 #endif
 #ifndef FJCORE_PACKAGE_STRING 
-#define FJCORE_PACKAGE_STRING  "FastJet 3.0.5" 
+#define FJCORE_PACKAGE_STRING  "FastJet 3.1.3" 
 #endif
 #ifndef FJCORE_PACKAGE_TARNAME 
 #define FJCORE_PACKAGE_TARNAME  "fastjet" 
 #endif
 #ifndef FJCORE_PACKAGE_VERSION 
-#define FJCORE_PACKAGE_VERSION  "3.0.5" 
+#define FJCORE_PACKAGE_VERSION  "3.1.3" 
 #endif
 #ifndef FJCORE_STDC_HEADERS 
 #define FJCORE_STDC_HEADERS  1 
 #endif
 #ifndef FJCORE_VERSION 
-#define FJCORE_VERSION  "3.0.5" 
+#define FJCORE_VERSION  "3.1.3" 
+#endif
+#ifndef FJCORE_VERSION_MAJOR 
+#define FJCORE_VERSION_MAJOR  3 
+#endif
+#ifndef FJCORE_VERSION_MINOR 
+#define FJCORE_VERSION_MINOR  1 
+#endif
+#ifndef FJCORE_VERSION_NUMBER 
+#define FJCORE_VERSION_NUMBER  30103 
+#endif
+#ifndef FJCORE_VERSION_PATCHLEVEL 
+#define FJCORE_VERSION_PATCHLEVEL  3 
 #endif
 #endif
 #ifndef __FJCORE_CONFIG_H__
@@ -359,30 +370,6 @@ inline T* get_pointer(SharedPtr<T> const & t){
 #endif // __FJCORE_USETR1SHAREDPTR
 FJCORE_END_NAMESPACE      // defined in fastjet/internal/base.hh
 #endif   // __FJCORE_SHARED_PTR_HH__
-#ifndef __FJCORE_ERROR_HH__
-#define __FJCORE_ERROR_HH__
-#include<iostream>
-#include<string>
-FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
-class Error {
-public:
-  Error() {}
-  Error(const std::string & message);
-  virtual ~Error() {}
-  std::string message() const {return _message;}
-  static void set_print_errors(bool print_errors) {_print_errors = print_errors;}
-  static void set_print_backtrace(bool enabled) {_print_backtrace = enabled;}
-  static void set_default_stream(std::ostream * ostr) {
-    _default_ostr = ostr;
-  }
-private:
-  std::string _message;                ///< error message
-  static bool _print_errors;           ///< do we print anything?
-  static bool _print_backtrace;        ///< do we print the backtrace?
-  static std::ostream * _default_ostr; ///< the output stream (cerr if not set)
-};
-FJCORE_END_NAMESPACE
-#endif // __FJCORE_ERROR_HH__
 #ifndef __FJCORE_LIMITEDWARNING_HH__
 #define __FJCORE_LIMITEDWARNING_HH__
 #include <iostream>
@@ -392,15 +379,19 @@ FJCORE_BEGIN_NAMESPACE
 class LimitedWarning {
 public:
   LimitedWarning() : _max_warn(_max_warn_default), _n_warn_so_far(0), _this_warning_summary(0) {}
-  LimitedWarning(int max_warn) : _max_warn(max_warn), _n_warn_so_far(0), _this_warning_summary(0) {}
-  void warn(const std::string & warning);
-  void warn(const std::string & warning, std::ostream * ostr);
+  LimitedWarning(int max_warn_in) : _max_warn(max_warn_in), _n_warn_so_far(0), _this_warning_summary(0) {}
+  void warn(const char * warning) {warn(warning, _default_ostr);}
+  void warn(const std::string & warning) {warn(warning.c_str(), _default_ostr);}
+  void warn(const char * warning, std::ostream * ostr);
+  void warn(const std::string & warning, std::ostream * ostr) {warn(warning.c_str(), ostr);}
   static void set_default_stream(std::ostream * ostr) {
     _default_ostr = ostr;
   }
   static void set_default_max_warn(int max_warn) {
     _max_warn_default = max_warn;
   }
+  int max_warn() const {return _max_warn;}
+  int n_warn_so_far() const {return _n_warn_so_far;}
   static std::string summary();
 private:
   int _max_warn, _n_warn_so_far;
@@ -412,6 +403,39 @@ private:
 };
 FJCORE_END_NAMESPACE
 #endif // __FJCORE_LIMITEDWARNING_HH__
+#ifndef __FJCORE_ERROR_HH__
+#define __FJCORE_ERROR_HH__
+#include<iostream>
+#include<string>
+#if (!defined(FJCORE_HAVE_EXECINFO_H)) || defined(__FJCORE__)
+#endif
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+class Error {
+public:
+  Error() {}
+  Error(const std::string & message);
+  virtual ~Error() {}
+  std::string message() const {return _message;}
+  static void set_print_errors(bool print_errors) {_print_errors = print_errors;}
+  static void set_print_backtrace(bool enabled);
+  static void set_default_stream(std::ostream * ostr) {
+    _default_ostr = ostr;
+  }
+private:
+  std::string _message;                ///< error message
+  static bool _print_errors;           ///< do we print anything?
+  static bool _print_backtrace;        ///< do we print the backtrace?
+  static std::ostream * _default_ostr; ///< the output stream (cerr if not set)
+#if (!defined(FJCORE_HAVE_EXECINFO_H)) || defined(__FJCORE__)
+  static LimitedWarning _execinfo_undefined;
+#endif
+};
+class InternalError : public Error{
+public:
+  InternalError(const std::string & message_in) : Error(std::string("*** CRITICAL INTERNAL FASTJET ERROR *** CONTACT THE AUTHORS *** ") + message_in){ }
+};
+FJCORE_END_NAMESPACE
+#endif // __FJCORE_ERROR_HH__
 #ifndef __FJCORE_PSEUDOJET_STRUCTURE_BASE_HH__
 #define __FJCORE_PSEUDOJET_STRUCTURE_BASE_HH__
 #include <vector>
@@ -611,8 +635,8 @@ class PseudoJet {
   virtual bool has_constituents() const;
   virtual std::vector<PseudoJet> constituents() const;
   virtual bool has_exclusive_subjets() const;
-  std::vector<PseudoJet> exclusive_subjets (const double & dcut) const;
-  int n_exclusive_subjets(const double & dcut) const;
+  std::vector<PseudoJet> exclusive_subjets (const double dcut) const;
+  int n_exclusive_subjets(const double dcut) const;
   std::vector<PseudoJet> exclusive_subjets (int nsub) const;
   std::vector<PseudoJet> exclusive_subjets_up_to (int nsub) const;
   double exclusive_subdmerge(int nsub) const;
@@ -639,6 +663,7 @@ class PseudoJet {
     if (_phi == pseudojet_invalid_phi) _set_rap_phi();
   }
   void _set_rap_phi() const;
+  friend PseudoJet operator*(double, const PseudoJet &);
 };
 PseudoJet operator+(const PseudoJet &, const PseudoJet &);
 PseudoJet operator-(const PseudoJet &, const PseudoJet &);
@@ -648,7 +673,9 @@ PseudoJet operator/(const PseudoJet &, double);
 bool operator==(const PseudoJet &, const PseudoJet &);
 inline bool operator!=(const PseudoJet & a, const PseudoJet & b) {return !(a==b);}
 bool operator==(const PseudoJet & jet, const double val);
-inline bool operator!=(const PseudoJet & a, const double & val) {return !(a==val);}
+inline bool operator==(const double val, const PseudoJet & jet) {return jet == val;}
+inline bool operator!=(const PseudoJet & a, const double val)  {return !(a==val);}
+inline bool operator!=( const double val, const PseudoJet & a) {return !(a==val);}
 inline double dot_product(const PseudoJet & a, const PseudoJet & b) {
   return a.E()*b.E() - a.px()*b.px() - a.py()*b.py() - a.pz()*b.pz();
 }
@@ -667,7 +694,7 @@ public:
   inline IndexedSortHelper (const std::vector<double> * reference_values) {
     _ref_values = reference_values;
   };
-  inline int operator() (const int & i1, const int & i2) const {
+  inline int operator() (const int i1, const int i2) const {
     return  (*_ref_values)[i1] < (*_ref_values)[i2];
   };
 private:
@@ -739,7 +766,6 @@ template<typename TOut>
 class FunctionOfPseudoJet{
 public:
   FunctionOfPseudoJet(){}
-  FunctionOfPseudoJet(const TOut &constant_value);
   virtual ~FunctionOfPseudoJet(){}
   virtual std::string description() const{ return "";}
   virtual TOut result(const PseudoJet &pj) const = 0;
@@ -803,6 +829,8 @@ public:
     return pass(jet);
   }
   unsigned int count(const std::vector<PseudoJet> & jets) const;
+  PseudoJet sum(const std::vector<PseudoJet> & jets) const;
+  double scalar_pt_sum(const std::vector<PseudoJet> & jets) const;
   void sift(const std::vector<PseudoJet> & jets,
 		  std::vector<PseudoJet> & jets_that_pass,
 		  std::vector<PseudoJet> & jets_that_fail) const;
@@ -892,10 +920,10 @@ Selector SelectorAbsEtaRange(double absetamin, double absetamax); ///< select ob
 Selector SelectorPhiRange(double phimin, double phimax); ///< select objects with phimin <= phi <= phimax
 Selector SelectorRapPhiRange(double rapmin, double rapmax, double phimin, double phimax);
 Selector SelectorNHardest(unsigned int n); 
-Selector SelectorCircle(const double & radius); 
-Selector SelectorDoughnut(const double & radius_in, const double & radius_out); 
-Selector SelectorStrip(const double & half_width);
-Selector SelectorRectangle(const double & half_rap_width, const double & half_phi_width);
+Selector SelectorCircle(const double radius); 
+Selector SelectorDoughnut(const double radius_in, const double radius_out); 
+Selector SelectorStrip(const double half_width);
+Selector SelectorRectangle(const double half_rap_width, const double half_phi_width);
 Selector SelectorPtFractionMin(double fraction);
 Selector SelectorIsZero();
 FJCORE_END_NAMESPACE      // defined in fastjet/internal/base.hh
@@ -908,6 +936,10 @@ FJCORE_END_NAMESPACE      // defined in fastjet/internal/base.hh
 FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
 std::string fastjet_version_string();
 enum Strategy {
+  N2MHTLazy9AntiKtSeparateGhosts   = -10, 
+  N2MHTLazy9   = -7, 
+  N2MHTLazy25   = -6, 
+  N2MHTLazy9Alt   = -5, 
   N2MinHeapTiled   = -4, 
   N2Tiled     = -3, 
   N2PoorTiled = -2, 
@@ -920,6 +952,7 @@ enum Strategy {
   NlnNCam4pi   = 14,
   NlnNCam2pi2R = 13,
   NlnNCam      = 12, // 2piMultD
+  BestFJ30     =  21, 
   plugin_strategy = 999
 };
 enum JetAlgorithm {
@@ -945,6 +978,8 @@ enum RecombinationScheme {
   Et2_scheme=4,
   BIpt_scheme=5,
   BIpt2_scheme=6,
+  WTA_pt_scheme=7,
+  WTA_modp_scheme=8,
   external_scheme = 99
 };
 class ClusterSequence;
@@ -990,9 +1025,8 @@ public:
                 double xtra_param_in,
                 const Recombiner * recombiner_in,
                 Strategy strategy_in = Best) {
-    *this = JetDefinition(jet_algorithm_in, R_in, external_scheme, strategy_in);
+    *this = JetDefinition(jet_algorithm_in, R_in, xtra_param_in, external_scheme, strategy_in);
     _recombiner = recombiner_in;
-    set_extra_param(xtra_param_in);
   }
   JetDefinition()  {
     *this = JetDefinition(undefined_jet_algorithm, 1.0);
@@ -1009,13 +1043,16 @@ public:
                 Strategy strategy_in,
                 RecombinationScheme recomb_scheme_in = E_scheme,
                 int nparameters_in = 1);
+  template <class L> 
+  std::vector<PseudoJet> operator()(const std::vector<L> & particles) const;
   static const double max_allowable_R; //= 1000.0;
   void set_recombination_scheme(RecombinationScheme);
   void set_recombiner(const Recombiner * recomb) {
-    if (_recombiner_shared()) _recombiner_shared.reset(recomb);
+    if (_shared_recombiner()) _shared_recombiner.reset(recomb);
     _recombiner = recomb;
     _default_recombiner = DefaultRecombiner(external_scheme);
   }
+  void set_recombiner(const JetDefinition &other_jet_def);
   void delete_recombiner_when_unused();
   const Plugin * plugin() const {return _plugin;};
   void delete_plugin_when_unused();
@@ -1032,7 +1069,11 @@ public:
   const Recombiner * recombiner() const {
     return _recombiner == 0 ? & _default_recombiner : _recombiner;}
   bool has_same_recombiner(const JetDefinition &other_jd) const;
+  bool is_spherical() const;
   std::string description() const;
+  std::string description_no_recombiner() const;
+  static std::string algorithm_description(const JetAlgorithm jet_alg);
+  static unsigned int n_parameters_for_algorithm(const JetAlgorithm jet_alg);
 public:
   class Recombiner {
   public:
@@ -1068,6 +1109,7 @@ public:
     virtual void set_ghost_separation_scale(double scale) const;
     virtual double ghost_separation_scale() const {return 0.0;}
     virtual bool exclusive_sequence_meaningful() const {return false;}
+    virtual bool is_spherical() const {return false;}
     virtual ~Plugin() {};
   };
 private:
@@ -1079,7 +1121,7 @@ private:
   SharedPtr<const Plugin> _plugin_shared;
   DefaultRecombiner _default_recombiner;
   const Recombiner * _recombiner;
-  SharedPtr<const Recombiner> _recombiner_shared;
+  SharedPtr<const Recombiner> _shared_recombiner;
 };
 PseudoJet join(const std::vector<PseudoJet> & pieces, const JetDefinition::Recombiner & recombiner);
 PseudoJet join(const PseudoJet & j1, 
@@ -1168,6 +1210,7 @@ template<typename T> PseudoJet join(const PseudoJet & j1,
 template<typename T> PseudoJet join(const PseudoJet & j1, const PseudoJet & j2, 
 				    const JetDefinition::Recombiner & recombiner){
   std::vector<PseudoJet> pieces;
+  pieces.reserve(2);
   pieces.push_back(j1);
   pieces.push_back(j2);
   return join<T>(pieces, recombiner);
@@ -1176,6 +1219,7 @@ template<typename T> PseudoJet join(const PseudoJet & j1, const PseudoJet & j2,
 				    const PseudoJet & j3, 
 				    const JetDefinition::Recombiner & recombiner){
   std::vector<PseudoJet> pieces;
+  pieces.reserve(3);
   pieces.push_back(j1);
   pieces.push_back(j2);
   pieces.push_back(j3);
@@ -1185,6 +1229,7 @@ template<typename T> PseudoJet join(const PseudoJet & j1, const PseudoJet & j2,
 				    const PseudoJet & j3, const PseudoJet & j4, 
 				    const JetDefinition::Recombiner & recombiner){
   std::vector<PseudoJet> pieces;
+  pieces.reserve(4);
   pieces.push_back(j1);
   pieces.push_back(j2);
   pieces.push_back(j3);
@@ -1255,13 +1300,13 @@ class ClusterSequence {
     transfer_from_sequence(cs);
   }
   virtual ~ClusterSequence (); //{}
-  std::vector<PseudoJet> inclusive_jets (const double & ptmin = 0.0) const;
-  int n_exclusive_jets (const double & dcut) const;
-  std::vector<PseudoJet> exclusive_jets (const double & dcut) const;
-  std::vector<PseudoJet> exclusive_jets (const int & njets) const;
-  std::vector<PseudoJet> exclusive_jets_up_to (const int & njets) const;
-  double exclusive_dmerge (const int & njets) const;
-  double exclusive_dmerge_max (const int & njets) const;
+  std::vector<PseudoJet> inclusive_jets (const double ptmin = 0.0) const;
+  int n_exclusive_jets (const double dcut) const;
+  std::vector<PseudoJet> exclusive_jets (const double dcut) const;
+  std::vector<PseudoJet> exclusive_jets (const int njets) const;
+  std::vector<PseudoJet> exclusive_jets_up_to (const int njets) const;
+  double exclusive_dmerge (const int njets) const;
+  double exclusive_dmerge_max (const int njets) const;
   double exclusive_ymerge (int njets) const {return exclusive_dmerge(njets) / Q2();}
   double exclusive_ymerge_max (int njets) const {return exclusive_dmerge_max(njets)/Q2();}
   int n_exclusive_jets_ycut (double ycut) const {return n_exclusive_jets(ycut*Q2());}
@@ -1270,9 +1315,9 @@ class ClusterSequence {
     return exclusive_jets(njets);
   }
   std::vector<PseudoJet> exclusive_subjets (const PseudoJet & jet, 
-                                            const double & dcut) const;
+                                            const double dcut) const;
   int n_exclusive_subjets(const PseudoJet & jet, 
-                          const double & dcut) const;
+                          const double dcut) const;
   std::vector<PseudoJet> exclusive_subjets (const PseudoJet & jet, 
                                             int nsub) const;
   std::vector<PseudoJet> exclusive_subjets_up_to (const PseudoJet & jet, 
@@ -1320,6 +1365,9 @@ class ClusterSequence {
     virtual ~Extras() {}
     virtual std::string description() const {return "This is a dummy extras class that contains no extra information! Derive from it if you want to use it to provide extra information from a plugin jet finder";}
   };
+  inline void plugin_associate_extras(Extras * extras_in) {
+    _extras.reset(extras_in);
+  }
   inline void plugin_associate_extras(std::auto_ptr<Extras> extras_in) {
     _extras.reset(extras_in.release());
   }
@@ -1374,11 +1422,26 @@ protected:
                        const bool & writeout_combinations);
   void _decant_options_partial();
   void _fill_initial_history();
-  void _do_ij_recombination_step(const int & jet_i, const int & jet_j, 
-				 const double & dij, int & newjet_k);
-  void _do_iB_recombination_step(const int & jet_i, const double & diB);
+  void _do_ij_recombination_step(const int jet_i, const int jet_j, 
+				 const double dij, int & newjet_k);
+  void _do_iB_recombination_step(const int jet_i, const double diB);
   void _set_structure_shared_ptr(PseudoJet & j);
   void _update_structure_use_count();
+  Strategy _best_strategy() const;
+  class _Parabola {
+  public:
+    _Parabola(double a, double b, double c) : _a(a), _b(b), _c(c) {}
+    inline double operator()(const double R) const {return _c*(_a*R*R + _b*R + 1);}
+  private:
+    double _a, _b, _c;
+  };
+  class _Line {
+  public:
+    _Line(double a, double b) : _a(a), _b(b) {}
+    inline double operator()(const double R) const {return _a*R + _b;}
+  private:
+    double _a, _b;
+  };
   std::vector<PseudoJet> _jets;
   std::vector<history_element> _history;
   void get_subhist_set(std::set<const history_element*> & subhist,
@@ -1407,9 +1470,9 @@ protected:
   void _CP2DChan_limited_cluster(double D);
   void _do_Cambridge_inclusive_jets();
   void _fast_NsqrtN_cluster();
-  void _add_step_to_history(const int & step_number, const int & parent1, 
-			       const int & parent2, const int & jetp_index,
-			       const double & dij);
+  void _add_step_to_history(const int step_number, const int parent1, 
+			       const int parent2, const int jetp_index,
+			       const double dij);
   void _extract_tree_children(int pos, std::valarray<bool> &, 
 		const std::valarray<int> &, std::vector<int> &) const;
   void _extract_tree_parents (int pos, std::valarray<bool> &, 
@@ -1417,11 +1480,11 @@ protected:
   typedef std::pair<int,int> TwoVertices;
   typedef std::pair<double,TwoVertices> DijEntry;
   typedef std::multimap<double,TwoVertices> DistMap;
-  void _add_ktdistance_to_map(const int & ii, 
+  void _add_ktdistance_to_map(const int ii, 
 			      DistMap & DijMap,
   			      const DynamicNearestNeighbours * DNN);
   static bool _first_time;
-  static int _n_exclusive_warnings;
+  static LimitedWarning _exclusive_warnings;
   static LimitedWarning _changed_strategy_warning;
   struct BriefJet {
     double     eta, phi, kt2, NN_dist;
@@ -1474,7 +1537,7 @@ protected:
     return (ieta-_tiles_ieta_min)*_n_tiles_phi
                   + (iphi+_n_tiles_phi) % _n_tiles_phi;
   }
-  int  _tile_index(const double & eta, const double & phi) const;
+  int  _tile_index(const double eta, const double phi) const;
   void _tj_set_jetinfo ( TiledJet * const jet, const int _jets_index);
   void  _bj_remove_from_tiles(TiledJet * const jet);
   void _initialise_tiles();
@@ -1517,6 +1580,24 @@ inline const std::vector<ClusterSequence::history_element> & ClusterSequence::hi
   return _history;
 }
 inline unsigned int ClusterSequence::n_particles() const {return _initial_n;}
+#ifndef __CINT__
+template<class L>
+std::vector<PseudoJet> JetDefinition::operator()(const std::vector<L> & particles) const {
+  ClusterSequence * cs = new ClusterSequence(particles, *this);
+  std::vector<PseudoJet> jets;
+  if (is_spherical()) {
+    jets = sorted_by_E(cs->inclusive_jets());
+  } else {
+    jets = sorted_by_pt(cs->inclusive_jets());
+  }
+  if (jets.size() != 0) {
+    cs->delete_self_when_unused();
+  } else {
+    delete cs;
+  }
+  return jets;
+}
+#endif // __CINT__
 template <class J> inline void ClusterSequence::_bj_set_jetinfo(
                             J * const jetA, const int _jets_index) const {
     jetA->eta  = _jets[_jets_index].rap();
