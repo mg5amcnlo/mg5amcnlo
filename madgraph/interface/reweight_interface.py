@@ -1505,6 +1505,8 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             to_save['second_model'] = None
         to_save['rwgt_dir'] = self.rwgt_dir
+        to_save['has_nlo'] = self.has_nlo
+        to_save['rwgt_mode'] = self.rwgt_mode
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
@@ -1535,8 +1537,20 @@ class ReweightInterface(extended_cmd.Cmd):
         self.processes = obj['processes']
         self.second_process = obj['second_process']
         self.second_model = obj['second_model']
-
-        
+        self.has_nlo = obj['has_nlo']
+        if not self.rwgt_mode:
+            self.rwgt_mode = obj['rwgt_mode']
+            logger.info("mode set to %s" % self.rwgt_mode)
+        if self.has_nlo:
+            path = pjoin(obj['rwgt_dir'], 'rw_mevirt','Source')
+            sys.path.insert(0, path)
+            mymod = __import__('rwgt2py', globals(), locals())
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                mymod.initialise([self.banner.run_card['lpp1'], 
+                              self.banner.run_card['lpp2']],
+                             self.banner.run_card.get_lhapdf_id())
+            self.combine_wgt = mymod.get_wgt
+                    
         
         
         
