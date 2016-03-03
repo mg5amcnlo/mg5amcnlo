@@ -615,7 +615,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             subproc_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'initial_states_map.dat')
             self._curr_exporter.write_init_map(subproc_path,
-                                               self._curr_matrix_elements.get('initial_states'))
+                                self._curr_matrix_elements.get('initial_states'))
             
         cpu_time1 = time.time()
 
