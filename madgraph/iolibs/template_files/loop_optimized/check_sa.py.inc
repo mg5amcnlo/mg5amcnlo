@@ -64,10 +64,11 @@ def invert_momenta(p):
 {0}
 if p[0][0] is None:
     if not os.path.isfile(pjoin(root_path,'PS.input')):
-        print "=========================================================================================================================="
-        print " No kinematics defined!"
-		print " Please either define your kinematic configuraiton directly in check_sa.py or in the file PS.input. Exiting now."
-        print "=========================================================================================================================="
+        print "\n\n==================================================================================================================="
+        print "*                                           No kinematics defined!                                                *"
+        print "*                                   -------------------------------------                                         *"
+        print "* Please either define your kinematic configuration directly in check_sa.py or in a file 'PS.input'. Exiting now. *"
+        print "===================================================================================================================\n\n"
         sys.exit(0)
     try:
         for i, line in enumerate(open(pjoin(root_path,'PS.input'),'r').readlines()):
