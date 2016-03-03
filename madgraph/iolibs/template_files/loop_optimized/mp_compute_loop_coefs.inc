@@ -74,9 +74,6 @@ C
 ## if(ComputeColorFlows) {
 	  %(real_dp_format)s BUFFRES(0:3,0:NSQUAREDSO)
 ## }
-C ##TOBEREMOVEDLATER##
-	  %(complex_mp_format)s RAW_COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-C ##TOBEREMOVEDLATER##
 	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_mp_format)s CFTOT
 C
