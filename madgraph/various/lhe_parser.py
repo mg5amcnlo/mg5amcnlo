@@ -149,32 +149,32 @@ class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
 
     def __new__(self, path, mode='r', *args, **opt):
-        if  path.endswith(".gz"):
-            if os.path.exists(path):
-                try:
-                    return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
-                except IOError, error:
-                    raise
-                except Exception, error:
-                    if mode == 'r':
-                        misc.gunzip(path)
-                    return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
-            else:
-                return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
+        
+        if not path.endswith(".gz"):
             return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
-    
+        elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
+            return EventFile.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
+        else:
+            try:
+                return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
+            except IOError, error:
+                raise
+            except Exception, error:
+                if mode == 'r':
+                    misc.gunzip(path)
+                return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
+
+
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
-            if '.gz' in path and isinstance(self, EventFileNoGzip):
+            if '.gz' in path and isinstance(self, EventFileNoGzip) and\
+                mode == 'r' and os.path.exists(path[:-3]):
                 super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
-            else:
-                raise
-            
+                
         self.banner = ''
         if mode == 'r':
             line = ''
