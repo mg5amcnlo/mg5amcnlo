@@ -3652,8 +3652,8 @@ RESTART = %(mint_mode)s
                 except OSError:
                     candidates=[]
                 for candidate in candidates:
-                    if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
-                        sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
+                    if os.path.isfile(pjoin(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+                        sys.path.insert(0,pjoin(lhapdf_libdir+'64',candidate,'site-packages'))
                         try:
                             import lhapdf
                             use_lhapdf=True
@@ -3673,7 +3673,8 @@ RESTART = %(mint_mode)s
                                    "event files will still cover all PDF set members, "\
                                    "but there will be no PDF uncertainty printed in the run summary. \n "\
                                    "If the python interface to LHAPDF is available on your system, try "\
-                                   "adding its location to the PYTHONPATH environment variable.")
+                                   "adding its location to the PYTHONPATH environment variable and the"\
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
                     use_lhapdf=False
 
         # turn off lhapdf printing any messages
