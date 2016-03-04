@@ -903,10 +903,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 else:
                     #need to select the file according to the associate cross-section
                     r = random.random()
-                    tot = sum(events.cross for events in to_event[particle.pdg])
+                    tot = sum(to_event[particle.pdg][key].cross for key in to_event[particle.pdg])
                     r = r * tot
                     cumul = 0
-                    for j,events in enumerate(to_event[particle.pdg]):
+                    for j,events in to_event[particle.pdg].items():
                         cumul += events.cross
                         if r < cumul:
                             decay_file = events

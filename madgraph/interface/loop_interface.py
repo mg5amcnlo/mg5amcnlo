@@ -26,6 +26,7 @@ import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
@@ -715,6 +716,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             for arg in args:
                 if arg.startswith('--loop_filter='):
                     loop_filter = arg[14:]
+                if not isinstance(self, extended_cmd.CmdShell):
+                    raise InvalidCmd, "loop_filter is not allowed in web mode"
             args = [a for a in args if not a.startswith('--loop_filter=')]
             # Rejoin line
             line = ' '.join(args[1:])

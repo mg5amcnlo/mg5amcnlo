@@ -6304,7 +6304,10 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
     #  b) the process gathered from the amplitude generated use loops
 
     if len(cmd._curr_amps)>0:
-        curr_proc = cmd._curr_amps[0].get('process')
+        try:
+            curr_proc = cmd._curr_amps[0].get('process')
+        except base_objects.PhysicsObject.PhysicsObjectError:
+            curr_proc = None
     elif hasattr(cmd,'_fks_multi_proc') and \
                           len(cmd._fks_multi_proc.get('process_definitions'))>0:
         curr_proc = cmd._fks_multi_proc.get('process_definitions')[0]
