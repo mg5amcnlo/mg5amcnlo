@@ -5482,7 +5482,7 @@ This implies that with decay chains:
         if args[0] in ['Delphes2', 'pythia-pgs']:
             logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
                "  You should consider using installing and unsing Pythia8 + Delphes, with:\n"+
-               "   > install mg5amc_py8_interface\n"
+               "   > install pythia8\n"
                "   > install Delphes")
 
         try:
