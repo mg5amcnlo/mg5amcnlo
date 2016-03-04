@@ -13,7 +13,6 @@ sys.path.insert(0, root_path)
 try:
     import matrix2py
 except:
-    print root_path
     if os.path.isfile(pjoin(root_path,'makefile')) and \
        os.path.isfile(pjoin(root_path,'f2py_wrapper.f')) and \
        not os.path.isfile(pjoin(root_path,'matrix2py.so')):
@@ -92,7 +91,7 @@ finite_loop_me, return_code = matrix2py.get_me(P, alphas, renormalization_scale,
 
 print '='*112
 print '* %-108s *'%' MadLoop evaluation for the process '
-print '* %-108s *'%'{1}'
+print '* %-108s *'%'  {1}'
 print '* %-108s *'%' and the kinematic configuration:'
 print '* %-108s *'%((' %-3s'+' %-25s'*4)%('#','E',' p_x',' p_y',' p_z'))
 for i,k in enumerate(p):

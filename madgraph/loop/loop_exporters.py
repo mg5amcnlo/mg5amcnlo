@@ -1051,7 +1051,7 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 """# Specify your chosen PS point below. If you leave it filled with None, then the script will attempt to read it from the file PS.input.
 p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
 
-        process_definition_string = curr_proc.nice_string()
+        process_definition_string = curr_proc.nice_string().replace('Process:','')
         file=file.format(random_PSpoint_python_formatted,process_definition_string)
         new_path = writer.name.replace('check_sa.f', 'check_sa.py')
         new_writer = open(new_path, 'w')
