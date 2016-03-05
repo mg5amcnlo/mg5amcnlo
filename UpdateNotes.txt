@@ -3,7 +3,12 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.4.0 (XX/XX/XX)
         OM: Allowing the proper NLO reweighting for NLO sample
-        OM: Allow to keep the reweight information in the final lhe file for future computation 
+        MZ: new NLO generation mode. It is more efficient from the memory and CPU point of 
+            view, in particular for high-multiplicity processes. 
+            Many thanks to Josh Bendavid for his fundamental contribution for this.
+            The mode can be enabled with
+            > set low_mem_multicore_nlo_generation True
+            before generating the process.
         VH: Interfaced MadLoop to Samurai and Ninja (the latter is now the default)
         OM: Adding the possibility to use new syntax for tree-level processes:
             QED==2 and QCD>2: The first allows to select exactly a power of the coupling (at amplitude level
@@ -20,6 +25,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         MZ: Fix problem with slurm cluster
         OM: Improve scan functionalities
         PT: New way of handling Pythia8 decays
+        OM: Allow to keep the reweight information in the final lhe file for future computation 
+        MZ: updated FJcore to version 3.1.3 (was 3.0.5)
 
 2.3.3 (15/10/15)
 	OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)

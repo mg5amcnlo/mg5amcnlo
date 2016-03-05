@@ -228,7 +228,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         r='QCD=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
-            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)?\w+))', process, 1)                    
+            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)?\w+)', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)

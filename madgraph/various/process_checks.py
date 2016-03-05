@@ -1232,7 +1232,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
 
         # If True, then force three PS points only and skip the test on
         # unpolarized PS point 
-        make_it_quick=True
+        make_it_quick=False
 
         if options and 'split_orders' in options.keys():
             split_orders = options['split_orders']

@@ -743,14 +743,17 @@ class ProcCard(list):
         
         store_line = ''
         for line in init:
-            line = line.strip()
+            line = line.rstrip()
             if line.endswith('\\'):
                 store_line += line[:-1]
             else:
-                self.append(store_line + line)
+                tmp = store_line + line
+                self.append(tmp.strip())
                 store_line = ""
         if store_line:
             raise Exception, "WRONG CARD FORMAT"
+        
+        
     def move_to_last(self, cmd):
         """move an element to the last history."""
         for line in self[:]:
@@ -2006,7 +2009,7 @@ class RunCardNLO(RunCard):
         # check for beam_id
         beam_id = set()
         for proc in proc_def:
-            for leg in proc[0]['legs']:
+            for leg in proc['legs']:
                 if not leg['state']:
                     beam_id.add(leg['id'])
         if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):

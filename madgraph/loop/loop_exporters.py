@@ -47,6 +47,7 @@ import madgraph.iolibs.export_v4 as export_v4
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.process_checks as process_checks
 import madgraph.various.progressbar as pbar
+import madgraph.various.q_polynomial as q_polynomial
 import madgraph.core.color_amp as color_amp
 import madgraph.iolibs.helas_call_writers as helas_call_writers
 import models.check_param_card as check_param_card
@@ -2339,7 +2340,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         writer.writelines(file,context=self.get_context(matrix_element))
     
-    def fix_coef_specs(self, overall_max_lwf_size, overall_max_loop_vert_rank):
+    def fix_coef_specs(self, overall_max_lwf_spin, overall_max_loop_vert_rank):
         """ If processes with different maximum loop wavefunction size or
         different maximum loop vertex rank have to be output together, then
         the file 'coef.inc' in the HELAS Source folder must contain the overall
@@ -2350,7 +2351,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         coef_specs_path=os.path.join(self.dir_path,'Source','DHELAS',\
                                                                'coef_specs.inc')
         os.remove(coef_specs_path)
-        
+       
+        spin_to_wf_size = {1:4,2:4,3:4,4:16,5:16}
+        overall_max_lwf_size = spin_to_wf_size[overall_max_lwf_spin]
+        overall_max_loop_vert_coefs = q_polynomial.get_number_of_coefs_for_rank(
+                                                     overall_max_loop_vert_rank)
         # Replace it by the appropriate value
         IncWriter=writers.FortranWriter(coef_specs_path,'w')
         IncWriter.writelines("""INTEGER MAXLWFSIZE
@@ -2358,7 +2363,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                            INTEGER VERTEXMAXCOEFS
                            PARAMETER (VERTEXMAXCOEFS=%(vertex_max_coefs)d)"""\
                            %{'max_lwf_size':overall_max_lwf_size,
-                             'vertex_max_coefs':overall_max_loop_vert_rank})
+                             'vertex_max_coefs':overall_max_loop_vert_coefs})
         IncWriter.close()
 
     def setup_check_sa_replacement_dictionary(self, matrix_element, \
