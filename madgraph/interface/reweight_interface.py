@@ -164,7 +164,6 @@ class ReweightInterface(extended_cmd.Cmd):
         
         # Check the validity of the banner:
         if 'slha' not in self.banner:
-            misc.sprint(self.banner)
             self.events_file = None
             raise self.InvalidCmd('Event file does not contain model information')
         elif 'mg5proccard' not in self.banner:
@@ -208,7 +207,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if not order:
             #NO NLO tag => nothing to do actually return input
             return proc
-        elif not order.startswith(('virt=','loonly=','noborn=')):
+        elif not order.startswith(('virt','loonly','noborn')):
             # OK this a standard NLO process
             if '=' in order:
                 # get the type NLO QCD/QED/...
@@ -229,7 +228,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         r='QCD=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
-            result = re.split('([/$@]|\w+=\w+)', process, 1)                    
+            result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)?\w+))', process, 1)                    
             if len(result) ==3:
                 process, split, rest = result
                 commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order.replace(' ','') ,split, rest, final)
@@ -855,7 +854,7 @@ class ReweightInterface(extended_cmd.Cmd):
             w_new =  self.calculate_matrix_element(cevent, 1, space)
             ratio_T = w_new/w_orig
             if need_V:
-                scale2 = cevent.wgts[0].scales2[1]
+                scale2 = cevent.wgts[0].scales2[0]
                 #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
                 w_origV = self.calculate_matrix_element(cevent, 'V0', space, scale2=scale2)
                 w_newV =  self.calculate_matrix_element(cevent, 'V1', space, scale2=scale2)                    
@@ -1017,8 +1016,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 with misc.chdir(Pdir):
                     with misc.stdchannel_redirected(sys.stdout, os.devnull):
                         mymod.initialise('param_card_orig.dat')
-                
-                    
+                 
+                     
             if hypp_id == 1:
                 #incorrect line
                 metag = dir_to_f2py_free_mod[(Pdir,0)][0]
@@ -1032,19 +1031,14 @@ class ReweightInterface(extended_cmd.Cmd):
                     os.environ['MENUM'] = newtag
                     misc.compile(['matrix%spy.so' % newtag], cwd=Pdir)
                     mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, newtag), globals(), locals(), [],-1)
-                
+                 
                 S = mymod.SubProcesses
                 P = getattr(S, Pname)
                 mymod = getattr(P, 'matrix%spy' % newtag)
                 with misc.chdir(Pdir):
                     with misc.stdchannel_redirected(sys.stdout, os.devnull):
                         mymod.initialise('param_card.dat') 
-                    if 'V'  in tag:
-                        misc.sprint("try init")
-                        madevent_interface.MadLoopInitializer.run_initialization(\
-                                            run_dir=Pdir)
-                        misc.sprint("done init")
-                    
+                     
             space.calculator[run_id] = mymod.get_me
             space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                      
@@ -1052,7 +1046,7 @@ class ReweightInterface(extended_cmd.Cmd):
             subdir = pjoin(self.me_dir,'%s_second' % base, 'SubProcesses')
             if self.me_dir not in sys.path:
                 sys.path.append(self.me_dir)
-
+ 
             assert hypp_id == 1
             Pname = os.path.basename(Pdir)
             os.environ['MENUM'] = '2'
@@ -1075,7 +1069,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 os.environ['MENUM'] = str(metag)
                 misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
                 mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))
-                    
+                     
             reload(mymod)
             S = mymod.SubProcesses
             P = getattr(S, Pname)
@@ -1088,6 +1082,7 @@ class ReweightInterface(extended_cmd.Cmd):
             external = space.calculator[run_id]                
         
         p = self.invert_momenta(event.get_momenta(orig_order))
+        
 
         # add helicity information
         
@@ -1269,7 +1264,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 mgcmd.exec_cmd("define %s = %s" % (name, content))
         
         # 2. compute the production matrix element -----------------------------
-        self.has_nlo = False  
+        has_nlo = False  
         mgcmd.exec_cmd("set group_subprocesses False")
 
         if not second:
@@ -1282,7 +1277,7 @@ class ReweightInterface(extended_cmd.Cmd):
             if '[' not in proc:
                 commandline += "add process %s ;" % proc
             else:
-                self.has_nlo = True
+                has_nlo = True
                 commandline += self.get_LO_definition_from_NLO(proc)
         
         commandline = commandline.replace('add process', 'generate',1)
@@ -1298,7 +1293,7 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline = commandline.replace('add process', 'generate',1)
             logger.info("RETRY with %s", commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
-            self.has_nlo = False
+            has_nlo = False
         except Exception, error:
             raise
         
@@ -1363,8 +1358,8 @@ class ReweightInterface(extended_cmd.Cmd):
                          commentdefault=False)
             
         # 5. create the virtual for NLO reweighting  ---------------------------
-        if self.has_nlo and self.rwgt_mode != "LO":
-            # LO is kamikaze reweighting which does not use the virtual.
+        if has_nlo and 'NLO' in self.rwgt_mode:
+            # Do not pass here for LO/NLO_tree
             start = time.time()
             commandline=''
             for proc in data['processes']:
@@ -1455,12 +1450,67 @@ class ReweightInterface(extended_cmd.Cmd):
                                   self.banner.run_card['lpp2']],
                                  self.banner.run_card.get_lhapdf_id())
                 self.combine_wgt = mymod.get_wgt
+                
+        elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
+            # We do not have any virtual reweighting to do but we still have to
+            #combine the weights.
+            #Idea:create a fake directory.
+            start = time.time()
+            commandline='import model loop_sm;generate g g > e+ ve [virt=QCD]'
+            # deactivate golem since it creates troubles
+            old_options = dict(mgcmd.options)
+            mgcmd.options['golem'] = None            
+            mgcmd.options['pjfry'] = None 
+            commandline = commandline.replace('add process', 'generate',1)
+            logger.info(commandline)
+            mgcmd.exec_cmd(commandline, precmd=True)
+            commandline = 'output standalone_rw %s -f' % pjoin(path_me, data['paths'][1])
+            mgcmd.exec_cmd(commandline, precmd=True)    
+            #put back golem to original value
+            mgcmd.options['golem'] = old_options['golem']
+            mgcmd.options['pjfry'] = old_options['pjfry']
+            # update make_opts
+            m_opts = {}
+            if mgcmd.options['lhapdf']:
+                #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
+                #        stdout = subprocess.PIPE).stdout.read().strip()[0]
+                m_opts['lhapdf'] = True
+                m_opts['f2pymode'] = True
+                m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
+                m_opts['llhapdf'] = subprocess.Popen([mgcmd.options['lhapdf'], '--libs'], 
+                         stdout = subprocess.PIPE).stdout.read().strip().split()[0]                         
+            else:
+                raise Exception, "NLO_tree reweighting requires LHAPDF to work correctly"
+ 
+            path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
+            common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
+            logger.info('Done %.4g' % (time.time()-start))
+
+            # Download LHAPDF SET
+            common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
+                mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
             
-        # 4. If we need a new model/process-------------------------------------
+            #compile the module to combine the weight
+            misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
+            #link it 
+            with misc.chdir(pjoin(path_me)):
+                if path_me not in sys.path:
+                    sys.path.insert(0, path_me)
+                mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
+                mymod =  mymod.Source.rwgt2py
+                with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                    mymod.initialise([self.banner.run_card['lpp1'], 
+                                  self.banner.run_card['lpp2']],
+                                 self.banner.run_card.get_lhapdf_id())
+                self.combine_wgt = mymod.get_wgt
+            
+             
+        # 6. If we need a new model/process-------------------------------------
         if (self.second_model or self.second_process) and not second:
             self.create_standalone_directory(second=True)    
 
-         
+        if not second:
+            self.has_nlo = has_nlo
             
         
         

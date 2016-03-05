@@ -1652,6 +1652,15 @@ class FourMomentum(object):
         self.pz += obj.pz
         return self
     
+    def __mul__(self, obj):
+        if isinstance(obj, FourMomentum):
+            return self.E*obj.E - self.px *obj.px - self.py * obj.py - self.pz * obj.pz
+        elif isinstance(obj, (float, int)):
+            return FourMomentum(obj*self.E,obj*self.px,obj*self.py,obj*self.pz )
+        else:
+            raise NotImplemented
+    __rmul__ = __mul__
+    
     def __pow__(self, power):
         assert power in [1,2]
         
@@ -1659,7 +1668,10 @@ class FourMomentum(object):
             return FourMomentum(self)
         elif power == 2:
             return self.mass_sqr()
-        
+    
+    def __repr__(self):
+        return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
+    
     def boost(self, mom):
         """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
         the output is the 4-momenta in the frame of this 4-momenta
@@ -1944,18 +1956,6 @@ class NLO_PARTIALWEIGHT(object):
         assert nb_wgt_check == int(nb_wgt)
             
             
-                
-                
-                
-        
-        
-        
-            
-        
-        
-
-        
-
 
 if '__main__' == __name__:   
     

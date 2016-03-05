@@ -31,7 +31,8 @@ C
       INTEGER I_SQSO,I_LOOPGROUP,I_LIB
       INTEGER NLOOPLINE, RANK
       %(real_dp_format)s PL(0:3,NLOOPLINE)
-      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      %(real_dp_format)s REF_P
       %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
       %(mass_dp_format)s M2L(NLOOPLINE)
       %(complex_dp_format)s M2LCT(0:NLOOPLINE-1)	  
@@ -137,6 +138,7 @@ C  CONVERT THE MASSES TO BE COMPLEX
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
+        ABSPCT(I) = 0.D0
         do J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         enddo
@@ -144,21 +146,27 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         enddo
       enddo
+      ref_p = max(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+       do I=0,3
+           ABSPCT(I) = MAX(ref_p*1e-6, ABSPCT(I))
+       enddo
+
       if (checkPConservation) then
-        if (PCT(0,0).gt.1.d-6) then
-          write(*,*) 'energy is not conserved ',PCT(0,0)
-          stop 'energy is not conserved'
-        elseif (PCT(1,0).gt.1.d-6) then
-         write(*,*) 'px is not conserved ',PCT(1,0)
-         stop 'px is not conserved'
-        elseif (PCT(2,0).gt.1.d-6) then
-         write(*,*) 'py is not conserved ',PCT(2,0)
-         stop 'py is not conserved'
-        elseif (PCT(3,0).gt.1.d-6) then
-         write(*,*) 'pz is not conserved ',PCT(3,0)
-         stop 'pz is not conserved'
+        if ((PCT(0,0)/ABSPCT(0)).gt.1.d-6) then
+          write(*,*) 'energy is not conserved (flag: TIR)',PCT(0,0)
+          stop 'energy is not conserved (flag: TIR)'
+        elseif ((PCT(1,0)/ABSPCT(1)).gt.1.d-6) then
+         write(*,*) 'px is not conserved (flag: TIR)',PCT(1,0)
+         stop 'px is not conserved (flag: TIR)'
+        elseif ((PCT(2,0)/ABSPCT(2)).gt.1.d-6) then
+         write(*,*) 'py is not conserved (flag: TIR)',PCT(2,0)
+         stop 'py is not conserved (flag: TIR)'
+        elseif ((PCT(3,0)/ABSPCT(3)).gt.1.d-6) then
+         write(*,*) 'pz is not conserved (flag: TIR)',PCT(3,0)
+         stop 'pz is not conserved (flag: TIR)'
         endif
       endif
       do I=0,3

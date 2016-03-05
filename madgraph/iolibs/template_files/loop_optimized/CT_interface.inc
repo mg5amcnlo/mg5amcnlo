@@ -23,7 +23,8 @@ C ARGUMENTS
 C
       INTEGER NLOOPLINE, RANK
       %(real_dp_format)s PL(0:3,NLOOPLINE)
-      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      %(real_dp_format)s REF_P
       %(mass_dp_format)s M2L(NLOOPLINE)
       %(complex_dp_format)s M2LCT(0:NLOOPLINE-1)	  
       %(complex_dp_format)s RES(3)
@@ -70,6 +71,7 @@ C  CONVERT THE MASSES TO BE COMPLEX
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
+        ABSPCT(I)=0.D0
         do J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         enddo
@@ -77,21 +79,26 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         enddo
       enddo
+      ref_p = max(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+       do I=0,3
+           ABSPCT(I) = MAX(ref_p*1e-6, ABSPCT(I))
+       enddo
       if (checkPConservation) then
-        if (PCT(0,0).gt.1.d-6) then
-          write(*,*) 'energy is not conserved ',PCT(0,0)
-          stop 'energy is not conserved'
-        elseif (PCT(1,0).gt.1.d-6) then
-         write(*,*) 'px is not conserved ',PCT(1,0)
-         stop 'px is not conserved'
-        elseif (PCT(2,0).gt.1.d-6) then
-         write(*,*) 'py is not conserved ',PCT(2,0)
-         stop 'py is not conserved'
-        elseif (PCT(3,0).gt.1.d-6) then
-         write(*,*) 'pz is not conserved ',PCT(3,0)
-         stop 'pz is not conserved'
+        if ((PCT(0,0)/ABSPCT(0)).gt.1.d-6) then
+          write(*,*) 'energy is not conserved (flag:CT95)',PCT(0,0)
+          stop 'energy is not conserved (flag:CT95)'
+        elseif ((PCT(1,0)/ABSPCT(1)).gt.1.d-6) then
+         write(*,*) 'px is not conserved (flag:CT95)',PCT(1,0)
+         stop 'px is not conserved (flag:CT95)'
+        elseif ((PCT(2,0)/ABSPCT(2)).gt.1.d-6) then
+         write(*,*) 'py is not conserved (flag:CT95)',PCT(2,0)
+         stop 'py is not conserved (flag:CT95)'
+        elseif ((PCT(3,0)/ABSPCT(3)).gt.1.d-6) then
+         write(*,*) 'pz is not conserved (flag:CT95)',PCT(3,0)
+         stop 'pz is not conserved (flag:CT95)'
         endif
       endif
       do I=0,3
@@ -330,7 +337,8 @@ C ARGUMENTS
 C
       INTEGER NLOOPLINE, RANK
       %(real_dp_format)s PL(0:3,NLOOPLINE)
-      %(real_dp_format)s P_TMP(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s P_TMP(0:3,0:NLOOPLINE-1), ABSP_TMP(0:3)
+      %(real_dp_format)s REF_P
       %(real_dp_format)s P_SAM(0:NLOOPLINE-1,4)
       %(mass_dp_format)s M2L(NLOOPLINE)
       %(complex_dp_format)s M2L_SAM(0:NLOOPLINE-1)	  
@@ -388,6 +396,7 @@ C  CONVERT THE MASSES TO BE COMPLEX
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO SAMURAI CONVENTIONS
       do I=0,3
+        ABSP_TMP(I)=0.D0		
         do J=0,(NLOOPLINE-1)
           P_TMP(I,J)=0.D0
         enddo
@@ -395,21 +404,26 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO SAMURAI CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+          ABSP_TMP(I)=ABSP_TMP(I)+ABS(PL(I,J))
         enddo
       enddo
+      ref_p = max(ABSP_TMP(0), ABSP_TMP(1),ABSP_TMP(2),ABSP_TMP(3))
+       do I=0,3
+           ABSP_TMP(I) = MAX(ref_p*1e-6, ABSP_TMP(I))
+       enddo
       if (checkPConservation) then
-        if (P_TMP(0,0).gt.1.d-6) then
-          write(*,*) 'energy is not conserved ',P_TMP(0,0)
-          stop 'energy is not conserved'
-        elseif (P_TMP(1,0).gt.1.d-6) then
-         write(*,*) 'px is not conserved ',P_TMP(1,0)
-         stop 'px is not conserved'
-        elseif (P_TMP(2,0).gt.1.d-6) then
-         write(*,*) 'py is not conserved ',P_TMP(2,0)
-         stop 'py is not conserved'
-        elseif (P_TMP(3,0).gt.1.d-6) then
-         write(*,*) 'pz is not conserved ',P_TMP(3,0)
-         stop 'pz is not conserved'
+        if ((P_TMP(0,0)/ABSP_TMP(0)).gt.1.d-6) then
+          write(*,*) 'energy is not conserved (flag:CT404)',P_TMP(0,0)
+          stop 'energy is not conserved (flag:CT404)'
+        elseif ((P_TMP(1,0)/ABSP_TMP(1)).gt.1.d-6) then
+         write(*,*) 'px is not conserved (flag:CT404)',P_TMP(1,0)
+         stop 'px is not conserved (flag:CT404)'
+        elseif ((P_TMP(2,0)/ABSP_TMP(2)).gt.1.d-6) then
+         write(*,*) 'py is not conserved  (flag:CT404)',P_TMP(2,0)
+         stop 'py is not conserved (flag:CT404)'
+        elseif ((P_TMP(3,0)/ABS_TMP(3)).gt.1.d-6) then
+         write(*,*) 'pz is not conserved (flag:CT404)',P_TMP(3,0)
+         stop 'pz is not conserved (flag:CT404)'
         endif
       endif
       do I=0,3
@@ -612,7 +626,8 @@ C
 C  
 C LOCAL VARIABLES 
 C
-      %(real_dp_format)s P_TMP(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s P_TMP(0:3,0:NLOOPLINE-1),ABSP_TMP(0:3)
+      %(real_dp_format)s REF_P
       %(real_dp_format)s P_NINJA(0:3,NLOOPLINE)
       %(real_dp_format)s P_S_MAT(NLOOPLINE,0:3)	  
       %(mass_dp_format)s M2L_NINJA(NLOOPLINE)
@@ -678,6 +693,7 @@ C  CONVERT THE MASSES TO BE COMPLEX
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
       do I=0,3
+        ABSP_TMP = 0.D0
         do J=0,(NLOOPLINE-1)
           P_TMP(I,J)=0.D0
         enddo
@@ -685,21 +701,27 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+	  ABSP_TMP(I) = ABSP_TMP(I)+ABS(PL(I,J))
         enddo
       enddo
+      ref_p = max(ABSP_TMP(0), ABSP_TMP(1),ABSP_TMP(2),ABSP_TMP(3))
+       do I=0,3
+           ABSP_TMP(I) = MAX(ref_p*1e-6, ABSP_TMP(I))
+       enddo 
+
       if (checkPConservation) then
-        if (P_TMP(0,0).gt.1.d-6) then
-          write(*,*) 'energy is not conserved ',P_TMP(0,0)
-          stop 'energy is not conserved'
-        elseif (P_TMP(1,0).gt.1.d-6) then
-         write(*,*) 'px is not conserved ',P_TMP(1,0)
-         stop 'px is not conserved'
-        elseif (P_TMP(2,0).gt.1.d-6) then
-         write(*,*) 'py is not conserved ',P_TMP(2,0)
-         stop 'py is not conserved'
-        elseif (P_TMP(3,0).gt.1.d-6) then
-         write(*,*) 'pz is not conserved ',P_TMP(3,0)
-         stop 'pz is not conserved'
+        if ((P_TMP(0,0)/ABSP_TMP(0)).gt.1.d-6) then
+          write(*,*) 'energy is not conserved (flag:CT692)',P_TMP(0,0)
+          stop 'energy is not conserved (flag:CT692)'
+        elseif ((P_TMP(1,0)/ABSP_TMP(1)).gt.1.d-6) then
+         write(*,*) 'px is not conserved (flag:CT692)',P_TMP(1,0)
+         stop 'px is not conserved (flag:CT692)'
+        elseif ((P_TMP(2,0)/ABSP_TMP(2)).gt.1.d-6) then
+         write(*,*) 'py is not conserved (flag:CT692)',P_TMP(2,0)
+         stop 'py is not conserved (flag:CT692)'
+        elseif ((P_TMP(3,0)/ABSP_TMP(3)).gt.1.d-6) then
+         write(*,*) 'pz is not conserved (flag:CT692)',P_TMP(3,0)
+         stop 'pz is not conserved (flag:CT692)'
         endif
       endif
       do I=0,3
@@ -824,7 +846,8 @@ C
 C LOCAL VARIABLES 
 C
       %(real_mp_format)s NINJA_SCALE
-      %(real_mp_format)s P_TMP(0:3,0:NLOOPLINE-1)
+      %(real_mp_format)s P_TMP(0:3,0:NLOOPLINE-1), ABSP_TMP(0:3)
+      %(real_dp_format)s REF_P
       real(KI_QNIN) MP_P_NINJA(0:3,NLOOPLINE)
       %(real_mp_format)s MP_P(0:3,NLOOPLINE)	  
       %(real_mp_format)s P_S_MAT(NLOOPLINE,0:3)
@@ -896,6 +919,7 @@ C INITIALIZE NINJA IF NEEDED
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
       do I=0,3
+        ABSP_TMP(I)=0.e0+0_16
         do J=0,(NLOOPLINE-1)
           P_TMP(I,J)=0.e0+0_16
         enddo
@@ -903,21 +927,26 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+          ABSP_TMP(I)=ABSP_TMP(I)+ABS(PL(I,J))
         enddo
       enddo
+      ref_p = max(ABSP_TMP(0), ABSP_TMP(1),ABSP_TMP(2),ABSP_TMP(3))
+       do I=0,3
+           ABSP_TMP(I) = MAX(ref_p*1e-6, ABSP_TMP(I))
+       enddo
       if (checkPConservation) then
-        if (P_TMP(0,0).gt.1.e-6_16) then
-          write(*,*) 'energy is not conserved ',DBLE(P_TMP(0,0))
-          stop 'energy is not conserved'
-        elseif (P_TMP(1,0).gt.1.e-6_16) then
-         write(*,*) 'px is not conserved ',DBLE(P_TMP(1,0))
-         stop 'px is not conserved'
-        elseif (P_TMP(2,0).gt.1.e-6_16) then
-         write(*,*) 'py is not conserved ',DBLE(P_TMP(2,0))
-         stop 'py is not conserved'
-        elseif (P_TMP(3,0).gt.1.e-6_16) then
-         write(*,*) 'pz is not conserved ',DBLE(P_TMP(3,0))
-         stop 'pz is not conserved'
+        if ((P_TMP(0,0)/ABSP_TMP(0)).gt.1.e-6_16) then
+          write(*,*) 'energy is not conserved (flag:CT968)',DBLE(P_TMP(0,0))
+          stop 'energy is not conserved (flag:CT968)'
+        elseif ((P_TMP(1,0)/ABSP_TMP(1)).gt.1.e-6_16) then
+         write(*,*) 'px is not conserved (flag:CT968)',DBLE(P_TMP(1,0))
+         stop 'px is not conserved (flag:CT968)'
+        elseif ((P_TMP(2,0)/ABSP_TMP(2)).gt.1.e-6_16) then
+         write(*,*) 'py is not conserved (flag:CT968)',DBLE(P_TMP(2,0))
+         stop 'py is not conserved (flag:CT968)'
+        elseif ((P_TMP(3,0)/ABSP_TMP(3)).gt.1.e-6_16) then
+         write(*,*) 'pz is not conserved (flag:CT968)',DBLE(P_TMP(3,0))
+         stop 'pz is not conserved (flag:CT968)'
         endif
       endif
       do I=0,3
