@@ -68,7 +68,7 @@ class ReweightInterface(extended_cmd.Cmd):
     debug_output = 'Reweight_debug'
     
     @misc.mute_logger()
-    def __init__(self, event_path=None, allow_madspin=False, mother=None,*completekey, **stdin):
+    def __init__(self, event_path=None, allow_madspin=False, mother=None, *completekey, **stdin):
         """initialize the interface with potentially an event_path"""
         
         if not event_path:
@@ -84,7 +84,8 @@ class ReweightInterface(extended_cmd.Cmd):
         self.mother= mother # calling interface
             
         
-        self.options = {'curr_dir': os.path.realpath(os.getcwd())}
+        self.options = {'curr_dir': os.path.realpath(os.getcwd()),
+                        'rwgt_name':None}
         
         self.events_file = None
         self.processes = {}
@@ -366,6 +367,15 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
             else:
                 raise self.InvalidCmd("No events files defined.")
+            
+        opts = {'rwgt_name':None}
+        if any(a.startswith('--') for a in args):
+            opts={}
+            for a in args[:]:
+                if a.startswith('--'):
+                    key,value = a[2:].split('=')
+                    opts[key] = value 
+        return opts
 
     def help_launch(self):
         """help for the launch command"""
@@ -397,7 +407,9 @@ class ReweightInterface(extended_cmd.Cmd):
         """end of the configuration launched the code"""
         
         args = self.split_arg(line)
-        self.check_launch(args)
+        opts = self.check_launch(args)
+        if opts['rwgt_name']:
+            self.options['rwgt_name'] = opts['rwgt_name']
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 
@@ -468,15 +480,28 @@ class ReweightInterface(extended_cmd.Cmd):
                 blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
                 before, content, after = blockpat.split(self.banner['initrwgt'])
                 header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'rwgt_(?P<id>\d+)(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
                 mg_rwgt_info = pattern.findall(content)
                 
                 maxid = 0
-                for i, nlotype, diff in mg_rwgt_info:
-                    if int(i) > maxid:
-                        maxid = int(i)
+                for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
+                    if i:
+                        if int(i) > maxid:
+                            maxid = int(i)
+                        mg_rwgt_info[k] = (i, nlotype, diff) # remove the pointless fulltag tag
+                    else:
+                        mg_rwgt_info[k] = (fulltag, nlotype, diff) # remove the pointless id tag
+                         
                 maxid += 1
                 rewgtid = maxid
+                
+                if self.options['rwgt_name']:
+                    #ensure that the entry is not already define if so overwrites it
+                    for k,(i, nlotype, diff) in enumerate(mg_rwgt_info):
+                        if 'rwgt_' % i == self.options['rwgt_name'] or \
+                            i == self.options['rwgt_name']:
+                            mg_rwgt_info.pop(k)
+                            break
             else:
                 header_rwgt_other = self.banner['initrwgt'] 
                 mg_rwgt_info = []
@@ -491,6 +516,13 @@ class ReweightInterface(extended_cmd.Cmd):
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
         s_new = new_card
+        
+        #define tag for the run
+        if self.options['rwgt_name']:
+            tag = self.options['rwgt_name']
+        else:
+            tag = str(rewgtid)
+        
         if not self.second_model:
             old_param = check_param_card.ParamCard(s_orig.splitlines())
             new_param =  check_param_card.ParamCard(s_new.splitlines())
@@ -510,11 +542,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 pass #this is a security                
             if not self.second_process:
                 for name in type_rwgt:
-                    mg_rwgt_info.append((str(rewgtid), name, card_diff))
+                    mg_rwgt_info.append((tag, name, card_diff))
             else:
                 str_proc = "\n change process  ".join([""]+self.second_process)
                 for name in type_rwgt:
-                    mg_rwgt_info.append((str(rewgtid), name, str_proc + '\n'+ card_diff))
+                    mg_rwgt_info.append((tag, name, str_proc + '\n'+ card_diff))
         else:
             str_info = "change model %s" % self.second_model
             if self.second_process:
@@ -522,12 +554,16 @@ class ReweightInterface(extended_cmd.Cmd):
             card_diff = str_info
             str_info += '\n' + s_new
             for name in type_rwgt:
-                mg_rwgt_info.append((str(rewgtid), name, str_info))
+                mg_rwgt_info.append((tag, name, str_info))
         # re-create the banner.
         self.banner['initrwgt'] = header_rwgt_other
         self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
         for tag, rwgttype, diff in mg_rwgt_info:
-            self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
+            if tag.isdigit():
+                self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
+                                       (tag, rwgttype, diff)
+            else:
+                self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
                                        (tag, rwgttype, diff)
         self.banner['initrwgt'] += '\n</weightgroup>\n'
         self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
@@ -536,6 +572,7 @@ class ReweightInterface(extended_cmd.Cmd):
         start = time.time()
         cross, ratio, ratio_square,error = {},{},{}, {}
         for name in type_rwgt + ['orig']:
+            misc.sprint(name)
             cross[name], error[name] = 0.,0.
             ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
 
@@ -573,7 +610,10 @@ class ReweightInterface(extended_cmd.Cmd):
             ff.close()
         
         # Loop over all events
-        tag_name = 'rwgt_%s' % rewgtid
+        if self.options['rwgt_name']:
+            tag_name = self.options['rwgt_name']
+        else:
+            tag_name = 'rwgt_%s' % rewgtid
                 
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
@@ -905,12 +945,13 @@ class ReweightInterface(extended_cmd.Cmd):
         if '_nlo' in type_nlo:
             wgt = self.invert_momenta(wgt_virt)
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
+                new_out, partial = self.combine_wgt(scales2, pdg, bjx, wgt, gs, qcdpower, 1., 1.)
             # try to correct for precision issue
             avg = [partial_check[i]/ref_wgts[i] for i in range(len(ref_wgts))]
-            new_out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else partial[i] \
+            out = sum(partial[i]/avg[i] if 0.85<avg[i]<1.15 else 0 \
                           for i in range(len(avg)))
-            final_weight['_nlo'] = new_out/orig_wgt*event.wgt
+            final_weight['_nlo'] = out/orig_wgt*event.wgt
+
             
         if '_tree' in type_nlo:
             wgt = self.invert_momenta(wgt_tree)
@@ -952,7 +993,7 @@ class ReweightInterface(extended_cmd.Cmd):
     
     def calculate_matrix_element(self, event, hypp_id, space, scale2=0):
         """routine to return the matrix element"""
-
+        
         tag, order = event.get_tag_and_order()
         if isinstance(hypp_id, str) and hypp_id.startswith('V'):
             tag = (tag,'V')
@@ -1400,6 +1441,7 @@ class ReweightInterface(extended_cmd.Cmd):
             common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
             logger.info('Done %.4g' % (time.time()-start))
 
+
             # Download LHAPDF SET
             common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
                 mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
@@ -1564,7 +1606,8 @@ class ReweightInterface(extended_cmd.Cmd):
         obj = save_load_object.load_from_file( pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl'))
         
         self.has_standalone_dir = True
-        self.options = {'curr_dir': os.path.realpath(os.getcwd())}
+        self.options = {'curr_dir': os.path.realpath(os.getcwd()),
+                        'rewgt_name': None}
         
         old_rwgt = obj['rwgt_dir']
            

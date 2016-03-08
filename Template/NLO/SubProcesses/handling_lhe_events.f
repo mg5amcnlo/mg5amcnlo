@@ -668,7 +668,7 @@ c
      &          ,n_mom_conf, nint(wgtcpower)
            do i=1,n_mom_conf
               do j=1,mexternal
-                 write (ifile,'(4(1x,d16.10))')
+                 write (ifile,'(4(1x,d21.15))')
      &                (momenta_str(ii,j,i),ii=0,3)
               enddo
            enddo

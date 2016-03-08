@@ -1482,7 +1482,7 @@ class RunCard(ConfigFile):
                     'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
                     'cteq5_d':19060,'cteq5_l':19070,'cteq5m1':19051,
                     'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
-                    'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244600
+                    'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
                     }[pdf]    
     
     def get_lhapdf_id(self):

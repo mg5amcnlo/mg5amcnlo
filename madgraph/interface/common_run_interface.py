@@ -1150,10 +1150,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if self.results.current['cross'] == 0 and self.run_name:
             self.results.delete_run(self.run_name, self.run_tag)
 
-
-
-
-
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
         reweight_cmd = reweight_interface.ReweightInterface(args[0], mother=self)

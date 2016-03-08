@@ -1626,6 +1626,7 @@ class FourMomentum(object):
         """return the mass"""    
         return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
 
+    @property
     def mass_sqr(self):
         """return the mass square"""    
         return self.E**2 - self.px**2 - self.py**2 - self.pz**2
@@ -1659,6 +1660,23 @@ class FourMomentum(object):
         self.px += obj.px
         self.py += obj.py
         self.pz += obj.pz
+        return self
+
+    def __sub__(self, obj):
+        
+        assert isinstance(obj, FourMomentum)
+        new = FourMomentum(self.E-obj.E,
+                           self.px - obj.px,
+                           self.py - obj.py,
+                           self.pz - obj.pz)
+        return new
+
+    def __isub__(self, obj):
+        """update the object with the sum"""
+        self.E -= obj.E
+        self.px -= obj.px
+        self.py -= obj.py
+        self.pz -= obj.pz
         return self
     
     def __mul__(self, obj):
@@ -1765,6 +1783,21 @@ class OneNLOWeight(object):
         #     I guess that for tree-level this is always okay, but when reweighting 
         #     a tree-level contribution with a one-loop squared one, as we do 
         #     for gg->Higgs, this is important). 
+        #     type=1 : real-emission:     
+        #     type=2 : Born: 
+        #     type=3 : integrated counter terms: 
+        #     type=4 : soft counter-term            : 
+        #     type=5 : collinear counter-term     : 
+        #     type=6 : soft-collinear counter-term: 
+        #     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO :  
+        #     type=8 : soft counter-term (with n+1-body kin.):     
+        #     type=9 : collinear counter-term (with n+1-body kin.): 
+        #     type=10: soft-collinear counter-term (with n+1-body kin.): 
+        #     type=11: real-emission (with n-body kin.): 
+        #     type=12: MC subtraction with n-body kin.: 
+        #     type=13: MC subtraction with n+1-body kin.: 
+        #     type=14: virtual corrections minus approximate virtual
+        #     type=15: approximate virtual corrections: 
         self.type = int(data[flag+9])
         # 11. 1 integer: The FKS configuration for this contribution (not really 
         #     relevant for anything, but is used in checking the reweighting to 
@@ -1809,17 +1842,62 @@ class NLO_PARTIALWEIGHT(object):
                 ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
                 if ind1> ind2: 
                     ind1, ind2 = ind2, ind1
-                new_p = self[ind1] + self[ind2]
-                self.pop(ind1) #-1 due to fortran convention
+                if ind1 >= sum(1 for p in event if p.status==-1):
+                    new_p = self[ind1] + self[ind2]
+                else:
+                    new_p = self[ind1] - self[ind2]
+                self.pop(ind1) 
                 self.insert(ind1, new_p)
-                self.pop(ind2) #-1 due to fortran convention
-                self.pdgs.pop(ind1) #-1 due to fortran convention
+                self.pop(ind2)
+                self.pdgs.pop(ind1) 
                 self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
-                self.pdgs.pop(ind2) #-1 due to fortran convention                
+                self.pdgs.pop(ind2)                 
                 # DO NOT update the pdgs of the partial weight!
+            elif any(w.type in [1,11] for w in wgts):
+                if any(w.type not in [1,11] for w in wgts):
+                    raise Exception
+                # check if this is too soft/colinear if so use the born
+                ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
+                if ind1> ind2: 
+                    ind1, ind2 = ind2, ind1                
+                if ind1 >= sum(1 for p in event if p.status==-1):
+                    new_p = self[ind1] + self[ind2]
+                else:
+                    new_p = self[ind1] - self[ind2]
 
-
-                    
+                if __debug__:
+                    ptot = FourMomentum()
+                    for i in xrange(len(self)):
+                        if i <2:
+                            ptot += self[i]
+                        else:
+                            ptot -= self[i]
+                    if ptot.mass_sqr > 1e-16:
+                        misc.sprint(ptot, ptot.mass_sqr)
+                
+                inv_mass = new_p.mass_sqr
+                shat = (self[0]+self[1]).mass_sqr
+                if (abs(inv_mass)/shat < 1e-6):
+                    misc.sprint(abs(inv_mass)/shat)
+                    self.pop(ind1) 
+                    self.insert(ind1, new_p)
+                    self.pop(ind2)
+                    self.pdgs.pop(ind1) 
+                    self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
+                    self.pdgs.pop(ind2)                 
+                    # DO NOT update the pdgs of the partial weight!                    
+                
+                if __debug__:
+                    ptot = FourMomentum()
+                    for i in xrange(len(self)):
+                        if i <2:
+                            ptot += self[i]
+                        else:
+                            ptot -= self[i]
+                    if ptot.mass_sqr > 1e-16:
+                        misc.sprint(ptot, ptot.mass_sqr)
+#                            raise Exception
+ 
         def get_pdg_code(self):
             return self.pdgs
         
