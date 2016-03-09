@@ -370,11 +370,10 @@ class ReweightInterface(extended_cmd.Cmd):
             
         opts = {'rwgt_name':None}
         if any(a.startswith('--') for a in args):
-            opts={}
             for a in args[:]:
-                if a.startswith('--'):
+                if a.startswith('--') and '=' in a:
                     key,value = a[2:].split('=')
-                    opts[key] = value 
+                    opts[key] = value .replace("'","") .replace('"','')
         return opts
 
     def help_launch(self):
@@ -448,7 +447,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         # get the names of type of reweighting requested
         type_rwgt = self.get_weight_names()
-        
+
         # check for potential scan in the new card 
         new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
         pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
@@ -464,6 +463,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 raise Exception, "scan are not allowed on the Web"
             # at least one scan parameter found. create an iterator to go trough the cards
             main_card = check_param_card.ParamCardIterator(new_card)
+            if self.options['rwgt_name']:
+                self.options['rwgt_name'] = '%s_0' % self.options['rwgt_name']
 
             param_card_iterator = main_card
             first_card = param_card_iterator.next(autostart=True)
@@ -473,6 +474,7 @@ class ReweightInterface(extended_cmd.Cmd):
         if "auto" in new_card.lower():            
             self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
             new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
+
 
         # Find new tag in the banner and add information if needed
         if 'initrwgt' in self.banner:
@@ -494,14 +496,16 @@ class ReweightInterface(extended_cmd.Cmd):
                          
                 maxid += 1
                 rewgtid = maxid
-                
                 if self.options['rwgt_name']:
                     #ensure that the entry is not already define if so overwrites it
                     for k,(i, nlotype, diff) in enumerate(mg_rwgt_info):
-                        if 'rwgt_' % i == self.options['rwgt_name'] or \
-                            i == self.options['rwgt_name']:
-                            mg_rwgt_info.pop(k)
-                            break
+                        for flag in type_rwgt:
+                            if 'rwgt_%s' % i == '%s%s' %(self.options['rwgt_name'],flag) or \
+                                     i == '%s%s' % (self.options['rwgt_name'], flag):
+                                    logger.warning("tag %s already defines, will replace it", self.options['rwgt_name'])
+                                    mg_rwgt_info.pop(k)
+                                    break
+                            
             else:
                 header_rwgt_other = self.banner['initrwgt'] 
                 mg_rwgt_info = []
@@ -572,7 +576,6 @@ class ReweightInterface(extended_cmd.Cmd):
         start = time.time()
         cross, ratio, ratio_square,error = {},{},{}, {}
         for name in type_rwgt + ['orig']:
-            misc.sprint(name)
             cross[name], error[name] = 0.,0.
             ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
 
@@ -777,14 +780,18 @@ class ReweightInterface(extended_cmd.Cmd):
             if name == 'orig':
                 self.all_cross_section[name] = (cross[name], error[name])
             else:
-                self.all_cross_section[(rewgtid,name)] = (cross[name], error[name])
+                self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
         
+
         # perform the scanning
         if param_card_iterator:
-            for card in param_card_iterator:
+            for i,card in enumerate(param_card_iterator):
+                if self.options['rwgt_name']:
+                    self.options['rwgt_name'] = '%s_%s' % (self.options['rwgt_name'].rsplit('_',1)[0], i+1)
                 card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
         
+        self.options['rwgt_name'] = None
     
     def do_set(self, line):
         "Not in help"
