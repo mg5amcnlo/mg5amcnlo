@@ -86,7 +86,7 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
        do I=0,3
            ABSPCT(I) = MAX(ref_p*1e-6, ABSPCT(I))
        enddo
-      if (checkPConservation) then
+      if (checkPConservation.and.ref_p.gt.1d-8) then
         if ((PCT(0,0)/ABSPCT(0)).gt.1.d-6) then
           write(*,*) 'energy is not conserved (flag:CT95)',PCT(0,0)
           stop 'energy is not conserved (flag:CT95)'
@@ -411,7 +411,7 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO SAMURAI CONVENTIONS
        do I=0,3
            ABSP_TMP(I) = MAX(ref_p*1e-6, ABSP_TMP(I))
        enddo
-      if (checkPConservation) then
+      if (checkPConservation.and.ref_p.gt.1d-8) then
         if ((P_TMP(0,0)/ABSP_TMP(0)).gt.1.d-6) then
           write(*,*) 'energy is not conserved (flag:CT404)',P_TMP(0,0)
           stop 'energy is not conserved (flag:CT404)'
@@ -709,7 +709,7 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
            ABSP_TMP(I) = MAX(ref_p*1e-6, ABSP_TMP(I))
        enddo 
 
-      if (checkPConservation) then
+      if (checkPConservation.and.ref_p.gt.1d-8) then
         if ((P_TMP(0,0)/ABSP_TMP(0)).gt.1.d-6) then
           write(*,*) 'energy is not conserved (flag:CT692)',P_TMP(0,0)
           stop 'energy is not conserved (flag:CT692)'
@@ -934,7 +934,7 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTIONS
        do I=0,3
            ABSP_TMP(I) = MAX(ref_p*1e-6, ABSP_TMP(I))
        enddo
-      if (checkPConservation) then
+      if (checkPConservation.and.ref_p.gt.1.e-8_16) then
         if ((P_TMP(0,0)/ABSP_TMP(0)).gt.1.e-6_16) then
           write(*,*) 'energy is not conserved (flag:CT968)',DBLE(P_TMP(0,0))
           stop 'energy is not conserved (flag:CT968)'

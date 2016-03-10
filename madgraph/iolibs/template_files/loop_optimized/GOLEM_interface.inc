@@ -166,7 +166,7 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
        do I=0,3
            ABSPCT(I) = MAX(ref_p*1e-6, ABSPCT(I))
        enddo
-      if (checkPConservation) then
+      if (checkPConservation.and.ref_p.gt.1d-8) then
         if ((PCT(0,0)/ABSPCT(0)).gt.1.d-6) then
           write(*,*) 'energy is not conserved ',PCT(0,0)
           stop 'energy is not conserved'
