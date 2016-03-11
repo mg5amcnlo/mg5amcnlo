@@ -96,7 +96,7 @@ ifeq ($(origin MENUM),undefined)
 endif
 matrix$(MENUM)py.so: ../$(OLP)_static f2py_wrapper.f 
 	touch __init__.py
-	$(F2PY) $(MADLOOP_LIB) -m matrix$(MENUM)py -c f2py_wrapper.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS)
+	$(F2PY) $(STDLIB) $(MADLOOP_LIB) -m matrix$(MENUM)py -c f2py_wrapper.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS)
 
 clean:
 	@rm -f *.o *.so *.$(libext) *.$(dylibext)

@@ -42,6 +42,7 @@ import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.interface.common_run_interface as common_run_interface
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
@@ -1687,35 +1688,16 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         f2py_compiler = compilers['f2py']
         if not f2py_compiler:
             f2py_compiler = 'f2py'
-
-            
+        for_update= {'DEFAULT_F_COMPILER':compiler,
+                     'DEFAULT_F2PY_COMPILER':f2py_compiler}
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
-        lines = open(make_opts).read().split('\n')
-        FC_re = re.compile('^(\s*)(FC|F2PY)\s*=\s*(.+)\s*$')
-        for iline, line in enumerate(lines):
 
-            FC_result = FC_re.match(line)
-            if FC_result:
-                if 'FC' == FC_result.group(2):
-                    if compiler != FC_result.group(3):
-                        mod = True
-                    lines[iline] = FC_result.group(1) + "FC=" + compiler
-                elif 'F2PY' ==  FC_result.group(2):
-                    if f2py_compiler != FC_result.group(3):
-                        mod = True
-                    lines[iline] = FC_result.group(1) + "F2PY=" + f2py_compiler
-                                    
-        if not mod:
-            return
-        
         try:
-            outfile = open(make_opts, 'w')
+            common_run_interface.CommonRunCmd.update_make_opts_full(
+                            make_opts, for_update)
         except IOError:
             if root_dir == self.dir_path:
-                logger.info('Fail to set compiler. Trying to continue anyway.')
-            return
-        outfile.write('\n'.join(lines))
-
+                logger.info('Fail to set compiler. Trying to continue anyway.')            
 
     def replace_make_opt_c_compiler(self, compiler, root_dir = ""):
         """Set CXX=compiler in Source/make_opts.
@@ -1738,56 +1720,26 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
                     is_lc = True
                 else:
                     is_lc = False
-    
-        mod = False #avoid to rewrite the file if not needed
+        
+        # list of the variable to set in the make_opts file
+        for_update= {'DEFAULT_CPP_COMPILER':compiler,
+                     'MACFLAG':'-mmacosx-version-min=10.7' if is_clang and is_lc else '',
+                     'STDLIB': '-lc++' if is_lc else '-lstdc++',
+                     'STDLIB_FLAG': '-stdlib=libc++' if is_lc and is_clang else ''
+                     }
+        
         if not root_dir:
             root_dir = self.dir_path
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
-        lines = open(make_opts).read().split('\n')
-        CC_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
-        for iline, line in enumerate(lines):
-            CC_result = CC_re.match(line)
-            if CC_result:
-                if compiler != CC_result.group(2):
-                    mod = True
-                lines[iline] = CC_result.group(1) + "CXX=" + compiler
-            if 'LDFLAGS=-lc++' in line:
-                if not is_lc:
-                    lines[iline] = 'LDFLAGS=-lstdc++'
-                    mod = True
-                elif is_clang and not 'MACFLAG' in line:
-                    lines[iline] += " $(MACFLAG)"
-                    mod=True
-                elif not is_clang and 'MACFLAG' in line:
-                    lines[iline] = lines[iline].replace('$(MACFLAG)', '')
-                    mod = True
-            elif 'LDFLAGS=-lstdc++' in line:
-                if is_lc and is_clang:
-                    lines[iline] = 'LDFLAGS=-lc++  $(MACFLAG)'
-                    mod = True
 
-        if is_clang and is_lc:
-            CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
-            CXXFLAGS_re=re.compile('^(\s*)CXXFLAGS\s*=\s*(.+)\s*$')
-            flags= '-O -stdlib=libc++ $(MACFLAG)'
-            for iline, line in enumerate(lines):
-                CF_result = CFLAGS_re.match(line)
-                CXXF_result = CXXFLAGS_re.match(line)
-                if CF_result and CF_result.group(2) != flags:
-                    lines[iline] = CF_result.group(1) + "CFLAGS= " + flags
-                    mod=True
-                if CXXF_result and CXXF_result.group(1)!= flags:
-                    lines[iline] = CXXF_result.group(1) + "CXXFLAGS= " + flags
-                    mod=True                    
-        if not mod:
-            return
         try:
-            outfile = open(make_opts, 'w')
+            common_run_interface.CommonRunCmd.update_make_opts_full(
+                            make_opts, for_update)
         except IOError:
             if root_dir == self.dir_path:
-                logger.info('Fail to set compiler. Trying to continue anyway.')
-            return
-        outfile.write('\n'.join(lines))
+                logger.info('Fail to set compiler. Trying to continue anyway.')  
+    
+        return
 
 #===============================================================================
 # ProcessExporterFortranSA

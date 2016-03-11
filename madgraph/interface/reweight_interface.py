@@ -498,14 +498,14 @@ class ReweightInterface(extended_cmd.Cmd):
                 rewgtid = maxid
                 if self.options['rwgt_name']:
                     #ensure that the entry is not already define if so overwrites it
-                    for k,(i, nlotype, diff) in enumerate(mg_rwgt_info):
+                    misc.sprint(mg_rwgt_info)
+                    for (i, nlotype, diff) in mg_rwgt_info[:]:
                         for flag in type_rwgt:
                             if 'rwgt_%s' % i == '%s%s' %(self.options['rwgt_name'],flag) or \
-                                     i == '%s%s' % (self.options['rwgt_name'], flag):
-                                    logger.warning("tag %s already defines, will replace it", self.options['rwgt_name'])
-                                    mg_rwgt_info.pop(k)
-                                    break
-                            
+                                i == '%s%s' % (self.options['rwgt_name'], flag):
+                                    logger.warning("tag %s%s already defines, will replace it", self.options['rwgt_name'],flag)
+                                    mg_rwgt_info.remove((i, nlotype, diff))
+                                                
             else:
                 header_rwgt_other = self.banner['initrwgt'] 
                 mg_rwgt_info = []
@@ -653,7 +653,15 @@ class ReweightInterface(extended_cmd.Cmd):
                     cross[name] += weight[name]
                     ratio[name] += weight[name]/event.wgt
                     ratio_square[name] += (weight[name]/event.wgt)**2
-                # ensure to have a consistent order of the weights
+                    
+                # ensure to have a consistent order of the weights. new one are put 
+                # at the back, remove old position if already defines
+                for tag in type_rwgt:
+                    try:
+                        event.reweight_order.remove('%s%s'  % (tag_name,tag))
+                    except ValueError:
+                        continue
+                
                 event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
                 if self.output_type == "default":
                     for name in weight:
@@ -1439,8 +1447,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 m_opts['lhapdf'] = True
                 m_opts['f2pymode'] = True
                 m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
-                m_opts['llhapdf'] = subprocess.Popen([mgcmd.options['lhapdf'], '--libs'], 
-                         stdout = subprocess.PIPE).stdout.read().strip().split()[0]                         
+                m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                       
             else:
                 raise Exception, "NLO reweighting requires LHAPDF to work correctly"
  
@@ -1526,8 +1533,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 m_opts['lhapdf'] = True
                 m_opts['f2pymode'] = True
                 m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
-                m_opts['llhapdf'] = subprocess.Popen([mgcmd.options['lhapdf'], '--libs'], 
-                         stdout = subprocess.PIPE).stdout.read().strip().split()[0]                         
+                m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                        
             else:
                 raise Exception, "NLO_tree reweighting requires LHAPDF to work correctly"
  

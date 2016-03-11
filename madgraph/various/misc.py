@@ -551,9 +551,14 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
         for iline, line in enumerate(lines):
             result = comp_re.match(line)
             if result:
-                if new != result.group(2):
+                if new != result.group(2) and '$' not in result.group(2):
                     mod = True
-                lines[iline] = result.group(1) + var + "=" + new
+                    lines[iline] = result.group(1) + var + "=" + new
+            elif compiler_type == 'gfortran' and line.startswith('DEFAULT_F_COMPILER'):
+                lines[iline] = "DEFAULT_F_COMPILER = %s" % new
+            elif compiler_type == 'cpp' and line.startswith('DEFAULT_CPP_COMPILER'):    
+                lines[iline] = "DEFAULT_CPP_COMPILER = %s" % new
+                
         if mod:
             open(name,'w').write('\n'.join(lines))
             # reset it to change the next file
@@ -708,6 +713,10 @@ def detect_current_compiler(path, compiler_type='fortran'):
         if comp.search(line):
             compiler = comp.search(line).groups()[0]
             return compiler
+        elif compiler_type == 'fortran' and line.startswith('DEFAULT_F_COMPILER'):
+            return line.split('=')[1].strip()
+        elif compiler_type == 'cpp' and line.startswith('DEFAULT_CPP_COMPILER'):
+            return line.split('=')[1].strip()
 
 def find_makefile_in_dir(directory):
     """ return a list of all file starting with makefile in the given directory"""

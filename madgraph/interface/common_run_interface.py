@@ -2153,21 +2153,51 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
 
     @staticmethod
-    def update_make_opts_full(path, def_variables):
+    def update_make_opts_full(path, def_variables, keep_old=True):
         """update the make_opts file writing the environmental variables
-        stored in make_opts_var"""
+        of def_variables.
+        if a value of the dictionary is None then it is not written.
+        """
         make_opts = path
+        pattern = re.compile(r'^(\w+)\s*=\s*(.*)$',re.DOTALL)
+        diff = False # set to True if one varible need to be updated 
+                     #if on False the file is not modify
+        
         tag = '#end_of_make_opts_variables\n'
-        content = open(make_opts).read()
+        make_opts_variable = True # flag to say if we are in edition area or not
+        content = []
+        variables = dict(def_variables)
+        need_keys = variables.keys()
+        for line in open(make_opts):
+            line = line.strip()
+            if make_opts_variable: 
+                if line.startswith('#') or not line:
+                    if line.startswith('#end_of_make_opts_variables'):
+                        make_opts_variable = False
+                    continue
+                elif pattern.search(line):
+                    key, value = pattern.search(line).groups()
+                    if key not in variables:
+                        variables[key] = value
+                    elif value !=  variables[key]:
+                        diff=True
+                    else:
+                        need_keys.remove(key)
+                else: 
+                    misc.sprint("end on line", line)
+                    make_opts_variable = False
+                    content.append(line)
+            else:                  
+                content.append(line)
+                     
+        if need_keys:
+            diff=True #This means that new definition are added to the file. 
 
-        # if this is not the first time that the file is updated, there
-        # should be a line #end_of_make_opts_variables
-        if tag in content:
-            content = content.split(tag)[1]
-        variables = '\n'.join('%s=%s' % (k,v) for k, v in def_variables.items())
-        variables += '\n%s' % tag
+        content_variables = '\n'.join('%s=%s' % (k,v) for k, v in variables.items() if v is not None)
+        content_variables += '\n%s' % tag
 
-        open(make_opts, 'w').write(variables + content)
+        if diff:
+            open(make_opts, 'w').write(content_variables + '\n'.join(content))
         return       
 
 
@@ -2450,6 +2480,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          stdout = subprocess.PIPE).stdout.read().strip()
 
         return datadir
+
+    def get_lhapdf_libdir(self):
+        lhapdf_version = self.get_lhapdf_version()
+
+        if lhapdf_version.startswith('5.'):
+            libdir = subprocess.Popen([self.options['lhapdf-config'], '--libdir'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
+
+        elif lhapdf_version.startswith('6.'):
+            libdir = subprocess.Popen([self.options['lhapdf'], '--libs'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
+
+        return libdir
 
 class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
