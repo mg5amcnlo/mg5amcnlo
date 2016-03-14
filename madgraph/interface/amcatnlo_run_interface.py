@@ -915,6 +915,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     cluster_mode = 0
     queue  = 'madgraph'
     nb_core = None
+    make_opts_var = {}
     
     next_possibility = {
         'start': ['generate_events [OPTIONS]', 'calculate_crossx [OPTIONS]', 'launch [OPTIONS]',
