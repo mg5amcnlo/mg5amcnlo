@@ -3647,7 +3647,8 @@ RESTART = %(mint_mode)s
              lhaid in range(91200, 91303) or \
              lhaid in range(91400, 91433) or \
              lhaid in range(91700, 91801) or \
-             lhaid in range(91900, 90931):
+             lhaid in range(91900, 90931) or \
+             lhaid in range(92000, 92031):
             # PDF4LHC15 Hessian sets
             pdf_stdev = 0.0
             for pdf in pdfs[1:]:
