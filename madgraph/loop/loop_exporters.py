@@ -1023,7 +1023,7 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         the information about split orders."""        
         replace_dict = copy.copy(matrix_element.rep_dict)     
         for key in ['print_so_born_results','print_so_loop_results',
-            'write_so_born_results','writ e_so_loop_results','set_coupling_target']:
+            'write_so_born_results','write_so_loop_results','set_coupling_target']:
             if key not in replace_dict.keys():
                 replace_dict[key]=''
         
@@ -1035,7 +1035,9 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         file=file%replace_dict
         writer.writelines(file)
          
-        # We can always write the f2py wrapper.
+        # We can always write the f2py wrapper if present (in loop optimized mode, it is)
+        if not os.path.isfile(pjoin(self.template_dir,'check_py.f.inc')):
+            return
         file = open(os.path.join(self.template_dir,\
                                       'check_py.f.inc')).read()
         file=file%replace_dict
