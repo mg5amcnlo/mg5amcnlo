@@ -1675,7 +1675,7 @@ RESTART = %(mint_mode)s
             jobs_to_run_new,jobs_to_collect_new= \
                     self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
-            self.write_nevents_unweighted_file(jobs_to_collect_new)
+            self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
@@ -1683,14 +1683,24 @@ RESTART = %(mint_mode)s
         return jobs_to_run_new,jobs_to_collect_new
 
 
-    def write_nevents_unweighted_file(self,jobs):
-        """writes the nevents_unweighted file in the SubProcesses directory"""
+    def write_nevents_unweighted_file(self,jobs,jobs0events):
+        """writes the nevents_unweighted file in the SubProcesses directory.
+           We also need to write the jobs that will generate 0 events,
+           because that makes sure that the cross section from those channels
+           is taken into account in the event weights (by collect_events.f).
+        """
         content=[]
         for job in jobs:
             path=pjoin(job['dirname'].split('/')[-2],job['dirname'].split('/')[-1])
             lhefile=pjoin(path,'events.lhe')
             content.append(' %s     %d     %9e     %9e' % \
                 (lhefile.ljust(40),job['nevents'],job['resultABS']*job['wgt_frac'],job['wgt_frac']))
+        for job in jobs0events:
+            if job['nevents']==0:
+                path=pjoin(job['dirname'].split('/')[-2],job['dirname'].split('/')[-1])
+                lhefile=pjoin(path,'events.lhe')
+                content.append(' %s     %d     %9e     %9e' % \
+                               (lhefile.ljust(40),job['nevents'],job['resultABS'],1.))
         with open(pjoin(self.me_dir,'SubProcesses',"nevents_unweighted"),'w') as f:
             f.write('\n'.join(content)+'\n')
 
