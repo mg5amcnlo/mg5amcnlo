@@ -93,6 +93,16 @@ c*********************************************************************
         gridrun=.false.
         gridpack=.false.
 
+
+C beam polarisation
+      if(pb1.ne.0d0.and.lpp(1).eq.0) pol(1)=sign(1+abs(pb1)/100d0,pb1)
+      if(pb2.ne.0d0.and.lpp(2).eq.0) pol(2)=sign(1+abs(pb2)/100d0,pb2)
+
+      if(pb1.ne.0.or.pb2.ne.0) write(*,*) 'Setting beam polarization ',
+     $     sign((abs(pol(1))-1)*100,pol(1)),
+     $     sign((abs(pol(2))-1)*100,pol(2))
+
+
 c************************************************************************     
 c     Renormalization and factorization scales                          *
 c************************************************************************     

@@ -22,7 +22,7 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,I,T_IDENT(NCOMB)
+      INTEGER IHEL,IDEN,I,jj,T_IDENT(NCOMB)
       REAL*8 MATRIX_%(N_me)d
       REAL*8 T,T_SAVE(NCOMB)
       SAVE T_SAVE,T_IDENT
@@ -32,6 +32,8 @@ C
       DATA GOODHEL/NCOMB*.FALSE./
       INTEGER NTRY
       DATA NTRY/0/
+      REAL*8 POL(2), polfact
+      COMMON/TO_POLARIZATION/ POL
 %(den_factor_line)s
 C ----------
 C BEGIN CODE
@@ -65,7 +67,19 @@ C if two helicity states are identical, dont recompute
             ENDIF
           ENDIF
 C add to the sum of helicities
-          ANS=ANS+T
+          if (pol(1).eq.1d0.and.pol(2).eq.1d0) then
+            ANS=ANS+T
+          else
+            polfact=1d0
+            do jj=1, nincoming
+              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,POL(JJ)))) THEN
+                polfact=polfact*abs(pol(jj))
+              ELSE IF(POL(JJ).NE.1D0) THEN
+                polfact=polfact*(2D0-ABS(POL(JJ)))
+              endif
+            enddo
+            ANS=ANS+polfact*T
+          endif
           IF (T .NE. 0D0 .AND. .NOT. GOODHEL(IHEL)) THEN
             GOODHEL(IHEL)=.TRUE.
           ENDIF

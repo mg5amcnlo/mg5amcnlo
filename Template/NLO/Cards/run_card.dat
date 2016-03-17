@@ -55,6 +55,12 @@
  %(lpp2)s   = lpp2    ! beam 2 type (0 = no PDF)
  %(ebeam1)s   = ebeam1  ! beam 1 energy in GeV
  %(ebeam2)s   = ebeam2  ! beam 2 energy in GeV
+#*********************************************************************
+# Beam polarization from -100 (left-handed) to 100 (right-handed)    *
+#   Only works for lepton collisions                                 *
+#*********************************************************************
+     %(polbeam1)s     = polbeam1 ! beam polarization for beam 1
+     %(polbeam2)s     = polbeam2 ! beam polarization for beam 2
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************

@@ -26,9 +26,11 @@ C
 C  
 C LOCAL VARIABLES 
 C  
-      INTEGER IHEL,IDEN,j
+      INTEGER IHEL,IDEN,j,jj,i
       REAL*8 B_SF_%(iborn)3.3d
+      INTEGER NHEL(NEXTERNAL-1,NCOMB)
 %(den_factor_lines)s
+%(helicity_lines)s
 C  
 C GLOBAL VARIABLES
 C  
@@ -40,6 +42,8 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      REAL*8 POL(2), polfact
+      COMMON/TO_POLARIZATION/ POL
 C ----------
 C BEGIN CODE
 C ----------
@@ -59,7 +63,19 @@ C ----------
       ANS = 0D0
       DO IHEL=1,NCOMB
          IF (GOODHEL(IHEL,nFKSprocess)) THEN
-           ANS=ANS+B_SF_%(iborn)3.3d(P1,IHEL)
+           if (pol(1).eq.1d0.and.pol(2).eq.1d0) then
+             ANS=ANS+B_SF_%(iborn)3.3d(P1,IHEL)
+           else
+             polfact=1d0
+             do jj=1, nincoming
+               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,POL(JJ)))) THEN
+                 polfact=polfact*abs(pol(jj))
+               ELSE IF(POL(JJ).NE.1D0) THEN
+                 polfact=polfact*(2D0-ABS(POL(JJ)))
+               endif
+             enddo
+             ANS=ANS+polfact*B_SF_%(iborn)3.3d(P1,IHEL)
+           endif
          ENDIF
       ENDDO
       ANS=ANS/DBLE(IDEN)

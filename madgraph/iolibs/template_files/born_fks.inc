@@ -57,11 +57,21 @@ C
       common/ccalculatedBorn/calculatedBorn
       integer nfksprocess
       common/c_nfksprocess/nfksprocess
+      REAL*8 POL(2), polfact
+      COMMON/TO_POLARIZATION/ POL
+
 C ----------
 C BEGIN CODE
 C ----------
       iden=iden_values(nfksprocess)
       glu_ij = ij_values(nfksprocess)
+
+C check: polarisation and ISR are not compatible 
+      if ((pol(1).ne.1d0.or.pol(2).ne.1d0).and.glu_ij.lt.nincoming) then
+      write(*,*) 'ERROR in SBORN: polarisation and ISR are not compatible'
+      stop 1
+      endif
+
       NTRY(nFKSprocess)=NTRY(nFKSprocess)+1
       if (NTRY(nFKSprocess).lt.2) then
          skip(nFKSprocess)=1			 
@@ -102,8 +112,21 @@ C ----------
       DO IHEL=1,NCOMB
         if (nhel(glu_ij,ihel).EQ.NHEL(GLU_IJ,1)) then
           IF ((GOODHEL(IHEL,nFKSprocess) .OR. GOODHEL(IHEL+SKIP(nFKSprocess),nFKSprocess) .OR. NTRY(nFKSprocess) .LT. 2) ) THEN
-            ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
-            ANS(2)=ANS(2)+BORNTILDE
+            if (pol(1).eq.1d0.and.pol(2).eq.1d0) then
+              ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
+              ANS(2)=ANS(2)+BORNTILDE
+            else
+              polfact=1d0
+              do jj=1, nincoming
+                IF(POL(JJ).NE.1D0.AND.NHEL(JJ,IHEL).EQ.INT(SIGN(1D0,POL(JJ)))) THEN
+                  polfact=polfact*abs(pol(jj))
+                ELSE IF(POL(JJ).NE.1D0) THEN
+                  polfact=polfact*(2D0-ABS(POL(JJ)))
+                endif
+              enddo
+              ANS(1)=ANS(1)+polfact*BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,borns)
+              ANS(2)=ANS(2)+polfact*BORNTILDE
+            endif
             if ( borns(1).ne.0d0 .AND. .NOT. GOODHEL(IHEL,nFKSprocess) ) then
               GOODHEL(IHEL,nFKSprocess)=.TRUE.
             endif

@@ -46,7 +46,7 @@ c
 c     Collider
 c
       integer                                        lpp(2)
-      double precision    ebeam(2), xbk(2),q2fact(2)
+      double precision    ebeam(2), xbk(2),q2fact(2), pb1, pb2
       common/to_collider/ ebeam   , xbk   ,q2fact,   lpp
 c
 c     BW treatment
