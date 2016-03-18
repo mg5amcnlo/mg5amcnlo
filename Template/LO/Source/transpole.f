@@ -86,17 +86,18 @@ c            write(*,*) "trans",x,y,z
 c         write(*,*) 'Transpole called',x,y
          return
       elseif(pole .ge. -2d0 .and. width .gt. 0d0) then !1/x^2   limit of width
-         if (x .lt. width) then      !No transformation below cutoff
-            y=x
-         else
+         if (width.gt.0d0.or.pole.ne.-2d0) then
+             if (x .lt. width) then      !No transformation below cutoff
+                y=x
+             else
 c---------
 c   tjs 5/1/2008  modified for any y=x^-n transformation       
 c-----------
-            z = 1d0 - x + width
-            b = ( 1d0-width) / (width**(pole+1d0) - 1d0)
-            a = width - b
-            y = a + b * z**(pole+1)
-            jac = jac * abs((pole+1d0) * b * z**(pole))
+                z = 1d0 - x + width
+                b = ( 1d0-width) / (width**(pole+1d0) - 1d0)
+                a = width - b
+                y = a + b * z**(pole+1)
+                jac = jac * abs((pole+1d0) * b * z**(pole))
 c            write(*,*) "pre-trans",x,y
 c            call untranspole(pole,width,x,y,jac)
 c            write(*,*) "post-trans",x,y
@@ -105,10 +106,16 @@ c            x = 1d0-x+width
 c            y=width/x
 c            jac = jac*width/(x*x)
 c------------------------------------
-            
+           endif
+        else
+c---------
+c     om 17/3/2016: force to always be above smin in genps.f (special case for sqrts)
+c---------
+           a = 1/(1+width)
+           y = (width -a)/width * x / (1-a/width*x)
+           jac = jac * (width -a)/width /(1-a/width*x)**2
+        endif
 
-c            write(*,*) 'trans',x,width/(x*x)
-         endif
 
       elseif(pole .gt. -1d99) then       !1/sqrt(x^2+width^2) s-channel
          zmin = log(width)
@@ -256,18 +263,18 @@ c            write(*,*) "untrans",x,y,z
          endif
 
       elseif(pole .gt. -5d0 .and. width .gt. 0d0) then !1/x^2   limit of width
-         if (y .lt. width) then      !No transformation below cutoff
-            x=y
-         else
+         if (width.gt.0.or.pole.ne.-2d0) then
+             if (y .lt. width) then      !No transformation below cutoff
+                x=y
+             else
 c---------
 c   tjs 5/1/2008  modified for any y=x^-n transformation       
 c-----------
-            b = ( 1d0-width) / (width**(pole+1d0) - 1d0)
-            a = width - b
-            z = ((y-a)/b)**(1d0/(pole+1)) 
-            x = 1d0 - z + width
-            jac = jac * abs((pole+1d0) * b * z**(pole))
-
+                b = ( 1d0-width) / (width**(pole+1d0) - 1d0)
+                a = width - b
+                z = ((y-a)/b)**(1d0/(pole+1))
+                x = 1d0 - z + width
+                jac = jac * abs((pole+1d0) * b * z**(pole))
 c-------------------
 c Uncomment below for y=1/x^2
 c-------------------
@@ -275,6 +282,14 @@ c            x=width/y
 c            write(*,*) 'untr',x,width/(x*x)
 c            jac = jac*width/(x*x)
 c            x = 1d0-x+width
+            endif
+         else
+c---------
+c     om 17/3/2016: force to always be above smin in genps.f (special case for sqrts)
+c---------
+           a = 1/(1+width)
+           x= y / (1 - a/width*(1-y))
+           jac = (1-a/width*(1-y))**2/(1-a/width)
          endif
 
       elseif(pole .gt. -5d99) then !1/sqrt(x^2+width^2)  s-channel
