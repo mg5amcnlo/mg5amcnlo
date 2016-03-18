@@ -215,6 +215,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         # check particle which can be decayed:
         self.final_state = set()
+        final_model = False
         for line in self.banner.proc_card:
             line = ' '.join(line.strip().split())
             if line.startswith('generate'):
@@ -222,9 +223,20 @@ class MadSpinInterface(extended_cmd.Cmd):
             elif line.startswith('add process'):
                 self.final_state.update(self.mg5cmd.get_final_part(line[11:]))
             elif line.startswith('define'):
-                self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)            
+                try:
+                    self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                except self.mg5cmd.InvalidCmd:
+                    if final_model:
+                        raise
+                    else:
+                        key = line.split()[1]
+                        if key in self.multiparticles_ms:
+                            del self.multiparticles_ms[key]            
             elif line.startswith('set'):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+            elif line.startswith('import model'):
+                if model_name in line:
+                    final_model = True
                     
             
                 
@@ -446,7 +458,16 @@ class MadSpinInterface(extended_cmd.Cmd):
     
     def do_define(self, line):
         """ """
-        self.mg5cmd.do_define(line)
+
+        try:
+            self.mg5cmd.do_define(line)
+        except:
+            #cleaning if the error is recover later
+            key = line.split()[0]
+            if hasattr(self, 'multiparticles_ms' and key in self.multiparticles_ms):
+                del self.multiparticles_ms[key]
+            raise
+           
         self.multiparticles_ms = dict([(k,list(pdgs)) for k, pdgs in \
                                         self.mg5cmd._multiparticles.items()])
     

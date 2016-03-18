@@ -5090,6 +5090,7 @@ This implies that with decay chains:
         removed_multiparticles = []
         # First check if the defined multiparticles are allowed in the
         # new model
+        
         for key in self._multiparticles.keys():
             try:
                 for part in self._multiparticles[key]:
@@ -5115,6 +5116,10 @@ This implies that with decay chains:
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
+                if self.history[-1] == 'define %s' % line.strip():
+                    self.history.pop(-1)
+                else:
+                    misc.sprint([self.history[-1], 'define %s' % line.strip()])
 
         scheme = "old"
         for qcd_container in ['p', 'j']:

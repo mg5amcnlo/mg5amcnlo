@@ -3236,14 +3236,16 @@ class decay_all_events(object):
                         logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
 
-        if __debug__: 
+#        if __debug__: 
         # check that all decay have a max_weight and fix it if not the case.
-            for prod in self.all_ME.values():
-                for dec in prod['decays']:
-                    if dec['decay_tag']:                                                
-                        assert 'max_weight' in dec and dec['max_weight'] ,\
-                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
-                                                  os.path.basename(prod['path']))
+        for prod in self.all_ME.values():
+            for dec in prod['decays']:
+                if dec['decay_tag'] and not 'max_weight' in dec:
+                    dec['max_weight'] = 0. 
+
+#                        assert 'max_weight' in dec and dec['max_weight'] ,\
+#                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
+#                                                  os.path.basename(prod['path']))
         self.evtfile.seek(0)
         return
 
