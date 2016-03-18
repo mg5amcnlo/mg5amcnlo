@@ -104,10 +104,11 @@ C in the LO cross section
       integer i, j, k
       logical firsttime
       data firsttime /.true./
-      double precision tf
+      double precision tf, pi
       parameter (tf=0.5d0)
+      parameter (pi=3.1415926535897932385d0)
       integer alphasbpow
-      double precision wgtborn
+      double precision wgtborn, alphas
       ! switch on/off here
       logical include_6to5_cnt 
       data include_6to5_cnt /.false./ 
@@ -129,9 +130,9 @@ c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
       if (.not.include_6to5_cnt.or.scale.lt.mdl_mt) return
 
 C the contribution is the following (if mu > mt):
-C      Add a term -alphas n TF 3pi log (muR^2/mt^2) sigma(0) 
+C      Add a term -alphas n TF/3pi log (muR^2/mt^2) sigma(0) 
 C      where n is the power of alphas for the Born xsec sigma(0)
-C      Add a term −alphas TF 3pi log (mt^2/muF^2) sigma(0) for each
+C      Add a term −alphas TF/3pi log (mt^2/muF^2) sigma(0) for each
 C      gluon in the initial state
 
       if (firsttime) then
@@ -145,6 +146,7 @@ C      gluon in the initial state
 
       ! compute the born
       call sborn(p_born,wgtborn)
+      alphas = g**2/4d0/pi
       do iamp = 1, amp_split_size
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
@@ -154,15 +156,15 @@ C      gluon in the initial state
         orders(qcd_pos) = orders(qcd_pos) + 2
 
         amp_split_6to5f_muf(orders_to_amp_split_pos(orders)) = 
-     &   g**2/4d0 * 3d0 * TF * dble(niglu) * amp_split(iamp)  
+     &   alphas / 3d0 / pi * TF * dble(niglu) * amp_split(iamp)  
 
         amp_split_6to5f_mur(orders_to_amp_split_pos(orders)) = 
-     &  - g**2/4d0 * 3d0 * TF * dble(alphasbpow) * amp_split(iamp)  
+     &  - alphas / 3d0 / pi * TF * dble(alphasbpow) * amp_split(iamp)  
         
         amp_split_6to5f(orders_to_amp_split_pos(orders)) = 
      &  dlog(qes2/mdl_mt**2) * 
-     &   (g**2/4d0 * 3d0 * TF * dble(niglu)   
-     &  - g**2/4d0 * 3d0 * TF * dble(alphasbpow)) * amp_split(iamp)  
+     &   (alphas / 3d0 / pi * TF * dble(niglu)   
+     &  - alphas / 3d0 / pi * TF * dble(alphasbpow)) * amp_split(iamp)  
       enddo
 
       return
