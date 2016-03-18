@@ -8,14 +8,15 @@ ifeq ($(wildcard ../Source/make_opts),)
 else
     ROOT = ..
 endif
+LIBDIR = $(ROOT)/lib/
+
+PROG   = check
+all : $(PROG)
 
 include $(ROOT)/Source/make_opts
 include $(ROOT)/SubProcesses/MadLoop_makefile_definitions
 SHELL = /bin/bash
 
-LIBDIR = $(ROOT)/lib/
-PROG   = check
-all : $(PROG)
 OLP    = OLP
 STABCHECKDRIVER = StabilityCheckDriver
 CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders
@@ -80,19 +81,22 @@ $(OLP)_static: $(OLP_PROCESS)
 	ar rcs libMadLoop.$(libext) $(OLP_PROCESS)
 	mv libMadLoop.$(libext) $(MADLOOP_LIB)
 
-clean:
-	@rm -f *.o *.so
-
 ../$(OLP):
-	cd ..; make $(OLP); cd -
-	rm -f libMadLoop.dylib
-	ln -s ../libMadLoop.dylib
+	rm -f libMadLoop.$(dylibext)
+	ln -s ../libMadLoop.$(dylibext)
+	cd $(ROOT)/SubProcesses; make $(OLP)
 
-libMadLoop.dylib: ../$(OLP)
+../$(OLP)_static:
+	cd $(ROOT)/SubProcesses; make $(OLP)_static
+
+libMadLoop.$(dylibext): ../$(OLP)
 
 ifeq ($(origin MENUM),undefined)
   MENUM=2
 endif
-matrix$(MENUM)py.so: ../$(OLP)
+matrix$(MENUM)py.so: ../$(OLP)_static f2py_wrapper.f 
 	touch __init__.py
-	$(F2PY) -L. -lMadLoop -m matrix$(MENUM)py -c check_sa.f --fcompiler=$(FC)
+	$(F2PY) $(STDLIB) $(MADLOOP_LIB) -m matrix$(MENUM)py -c f2py_wrapper.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS)
+
+clean:
+	@rm -f *.o *.so *.$(libext) *.$(dylibext)

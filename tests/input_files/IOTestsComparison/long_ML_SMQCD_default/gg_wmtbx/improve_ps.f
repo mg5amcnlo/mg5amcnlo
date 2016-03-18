@@ -106,16 +106,16 @@ C     Now restore the precision
       ENDIF
       IF (ERRCODE.NE.0) THEN
         IF (WARNED.LT.20) THEN
-          WRITE(*,*) 'INFO:: Attempting to rescue the precisio'
-     $     //'n improvement with an alternative method.'
+          WRITE(*,*) 'INFO:: Attempting to rescue the precision'
+     $     //' improvement with an alternative method.'
           WARNED=WARNED+1
         ENDIF
         IF (IMPROVEPSPOINT.EQ.1) THEN
-          CALL ML5_0_MP_ORIG_IMPROVE_PS_POINT_PRECISION(NEWP,ERRCODETMP
-     $     ,WARNED)
+          CALL ML5_0_MP_ORIG_IMPROVE_PS_POINT_PRECISION(NEWP
+     $     ,ERRCODETMP,WARNED)
         ELSEIF((IMPROVEPSPOINT.EQ.2).OR.(IMPROVEPSPOINT.LE.0)) THEN
-          CALL ML5_0_MP_PSMC_IMPROVE_PS_POINT_PRECISION(NEWP,ERRCODETMP
-     $     ,WARNED)
+          CALL ML5_0_MP_PSMC_IMPROVE_PS_POINT_PRECISION(NEWP
+     $     ,ERRCODETMP,WARNED)
         ENDIF
         IF (ERRCODETMP.NE.0) GOTO 100
       ENDIF
@@ -125,8 +125,8 @@ C     Report to the user or update the PS point.
       GOTO 101
  100  CONTINUE
       IF (WARNED.LT.20) THEN
-        WRITE(*,*) 'WARNING:: This PS point could not be improved'
-     $   //'. Error code = ',ERRCODE,ERRCODETMP
+        WRITE(*,*) 'WARNING:: This PS point could not be improved.'
+     $   //' Error code = ',ERRCODE,ERRCODETMP
         CALL ML5_0_MP_WRITE_MOM(P)
         WARNED = WARNED +1
       ENDIF
@@ -140,8 +140,8 @@ C     Report to the user or update the PS point.
  102  CONTINUE
 
       IF (WARNED.GE.20.AND..NOT.TOLD_SUPPRESS) THEN
-        WRITE(*,*) 'INFO:: Further warnings from the improve_p'
-     $   //'s routine will now be supressed.'
+        WRITE(*,*) 'INFO:: Further warnings from the improve_ps'
+     $   //' routine will now be supressed.'
         TOLD_SUPPRESS=.TRUE.
       ENDIF
 
@@ -188,8 +188,8 @@ C      ONE
         ML5_0_MP_IS_CLOSE = .FALSE.
         IF (WARNED.LT.20) THEN
           BUFFDP = (REF/REF2)
-          WRITE(*,*) 'WARNING:: The improved PS point is too far fro'
-     $     //'m the original one',BUFFDP
+          WRITE(*,*) 'WARNING:: The improved PS point is too far from'
+     $     //' the original one',BUFFDP
           WARNED=WARNED+1
         ENDIF
       ENDIF
@@ -264,8 +264,8 @@ C     FOR THAT WE NEED A REFERENCE SCALE
         IF ((BUFF/REF).GT.THRES_FOURMOM) THEN
           IF (WARNED.LT.20) THEN
             BUFFDPA = (BUFF/REF)
-            WRITE(*,*) 'ERROR:: Four-momentum conservation is no'
-     $       //'t accurate enough, ',BUFFDPA
+            WRITE(*,*) 'ERROR:: Four-momentum conservation is not'
+     $       //' accurate enough, ',BUFFDPA
             CALL ML5_0_MP_WRITE_MOM(P)
             WARNED=WARNED+1
           ENDIF
@@ -275,15 +275,15 @@ C     FOR THAT WE NEED A REFERENCE SCALE
       REF = REF / (ONE*NEXTERNAL)
       DO I=1,NEXTERNAL
         REF=ABS(P(0,I))+ABS(P(1,I))+ABS(P(2,I))+ABS(P(3,I))
-        IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2
-     $   -MASSES(I)**2))/REF).GT.THRES_ONSHELL) THEN
+        IF ((SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2-MASSES(I)
+     $   **2))/REF).GT.THRES_ONSHELL) THEN
           IF (WARNED.LT.20) THEN
             BUFFDPA=MASSES(I)
             BUFFDPB=(SQRT(ABS(P(0,I)**2-P(1,I)**2-P(2,I)**2-P(3,I)**2
      $       -MASSES(I)**2))/REF)
-            WRITE(*,*) 'ERROR:: Onshellness of the momentum o'
-     $       //'f particle ',I,' of mass ',BUFFDPA,' is not accurat'
-     $       //'e enough, ',BUFFDPB
+            WRITE(*,*) 'ERROR:: Onshellness of the momentum of'
+     $       //' particle ',I,' of mass ',BUFFDPA,' is not accurate'
+     $       //' enough, ',BUFFDPB
             CALL ML5_0_MP_WRITE_MOM(P)
             WARNED=WARNED+1
           ENDIF
@@ -322,8 +322,8 @@ C
       WRITE (*,*) '    ---------------------'
       WRITE (*,*) '    E | px | py | pz | m '
       DO I=1,NEXTERNAL
-        WRITE (*,'(1x,5e27.17)') P(0,I),P(1,I),P(2,I),P(3,I),SQRT(ABS(M
-     $   L5_0_MDOT(P(0,I),P(0,I))))
+        WRITE (*,'(1x,5e27.17)') P(0,I),P(1,I),P(2,I),P(3,I)
+     $   ,SQRT(ABS(ML5_0_MDOT(P(0,I),P(0,I))))
       ENDDO
       WRITE (*,*) '    Four-momentum conservation sum:'
       WRITE (*,'(1x,4e27.17)') PSUM(0),PSUM(1),PSUM(2),PSUM(3)
@@ -565,9 +565,9 @@ C      ALGORITHM
 
       IF (NINITIAL.NE.2) ERRCODE = 100
 
-      IF (ABS(P(1,1)/REF).GT.THRS_TEST.OR.ABS(P(2,1)/REF).GT.THRS_TEST.
-     $ OR.ABS(P(1,2)/REF).GT.THRS_TEST.OR.ABS(P(2,2)/REF).GT.THRS_TEST
-     $ ) ERRCODE = 200
+      IF (ABS(P(1,1)/REF).GT.THRS_TEST.OR.ABS(P(2,1)/REF)
+     $ .GT.THRS_TEST.OR.ABS(P(1,2)/REF).GT.THRS_TEST.OR.ABS(P(2,2)/REF)
+     $ .GT.THRS_TEST) ERRCODE = 200
 
       IF (MASSES(1).NE.ZERO.OR.MASSES(2).NE.ZERO) ERRCODE = 300
 
@@ -624,18 +624,18 @@ C
       DISCR = -PT(0)**2 + PT(1)**2 + PT(2)**2 + PT(3)**2
       IF (DISCR.LT.ZERO) DISCR = -DISCR
 
-      SHIFTE(1) = (PT(0)*(-TWO*P(0,P1)*PT(0) + PT(0)**2 + PT(1)**2 
-     $ + PT(2)**2) + (TWO*P(0,P1) - PT(0))*PT(3)**2 + PT(3)*DISCR)
-     $ /(TWO*(PT(0) - PT(3))*(PT(0) + PT(3)))
-      SHIFTE(2) = -(PT(0)*(TWO*P(0,P2)*PT(0) - PT(0)**2 + PT(1)**2 
-     $ + PT(2)**2) + (-TWO*P(0,P2) + PT(0))*PT(3)**2 + PT(3)*DISCR)
+      SHIFTE(1) = (PT(0)*(-TWO*P(0,P1)*PT(0) + PT(0)**2 + PT(1)**2 +
+     $  PT(2)**2) + (TWO*P(0,P1) - PT(0))*PT(3)**2 + PT(3)*DISCR)/(TWO
+     $ *(PT(0) - PT(3))*(PT(0) + PT(3)))
+      SHIFTE(2) = -(PT(0)*(TWO*P(0,P2)*PT(0) - PT(0)**2 + PT(1)**2 +
+     $  PT(2)**2) + (-TWO*P(0,P2) + PT(0))*PT(3)**2 + PT(3)*DISCR)
      $ /(TWO*(PT(0) - PT(3))*(PT(0) + PT(3)))
       SHIFTZ(1) = (-TWO*P(3,P1)*(PT(0)**2 - PT(3)**2) + PT(3)*(PT(0)*
      $ *2 + PT(1)**2 + PT(2)**2 - PT(3)**2) + PT(0)*DISCR)/(TWO*(PT(0)
      $ **2 - PT(3)**2))
-      SHIFTZ(2) = -(TWO*P(3,P2)*(PT(0)**2 - PT(3)**2) + PT(3)*(
-     $ -PT(0)**2 + PT(1)**2 + PT(2)**2 + PT(3)**2) + PT(0)*DISCR)/(TWO
-     $ *(PT(0)**2 - PT(3)**2))
+      SHIFTZ(2) = -(TWO*P(3,P2)*(PT(0)**2 - PT(3)**2) + PT(3)*(-PT(0)*
+     $ *2 + PT(1)**2 + PT(2)**2 + PT(3)**2) + PT(0)*DISCR)/(TWO*(PT(0)
+     $ **2 - PT(3)**2))
       NEWP(0,P1) = P(0,P1)+SHIFTE(1)
       NEWP(3,P1) = P(3,P1)+SHIFTZ(1)
       NEWP(0,P2) = P(0,P2)+SHIFTE(2)
@@ -768,9 +768,9 @@ C     Now find the 'x' rescaling factor
         ENDIF
       ENDDO
       IF (WARNED.LT.20) THEN
-        WRITE(*,*) 'WARNING:: Could not find the proper rescalin'
-     $   //'g factor x. Restoring precision ala PSMC will therefor'
-     $   //'e not be used.'
+        WRITE(*,*) 'WARNING:: Could not find the proper rescaling'
+     $   //' factor x. Restoring precision ala PSMC will therefore not'
+     $   //' be used.'
         WARNED=WARNED+1
       ENDIF
       IF (ERRCODE.LT.1000) THEN
@@ -809,9 +809,9 @@ C     Consistency check
       ENDDO
       IF ((ABS(BUFF)/BUFF2).GT.CONSISTENCY_THRES) THEN
         IF (WARNED.LT.20) THEN
-          WRITE(*,*) 'WARNING:: The consistency check in the a la PSM'
-     $     //'C precision restoring algorithm failed. The result wil'
-     $     //'l therefore not be used.'
+          WRITE(*,*) 'WARNING:: The consistency check in the a la PSMC'
+     $     //' precision restoring algorithm failed. The result will'
+     $     //' therefore not be used.'
           WARNED=WARNED+1
         ENDIF
         ERRCODE = 1000

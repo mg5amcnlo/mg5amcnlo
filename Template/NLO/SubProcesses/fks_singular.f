@@ -38,7 +38,7 @@ c value to the list of weights using the add_wgt subroutine
       include 'run.inc'
       include 'timing_variables.inc'
       double precision wgt1,wgt2,wgt3,bsv_wgt,virt_wgt,born_wgt,pi,g2
-     &     ,g22
+     &     ,g22,wgt4
       parameter (pi=3.1415926535897932385d0)
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
@@ -61,6 +61,7 @@ c value to the list of weights using the add_wgt subroutine
       g2=g**(nint(2*wgtbpower))
       g22=g**(nint(2*wgtbpower+2))
       wgt1=wgtnstmp*f_nb/g22
+      wgt4=wgtnstmp_avgvirt*f_nb/g22
       if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
          wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
       elseif (ickkw.eq.-1) then
@@ -78,6 +79,7 @@ c value to the list of weights using the add_wgt subroutine
       wgt2=wgtwnstmpmur*f_nb/g22
       wgt3=wgtwnstmpmuf*f_nb/g22
       call add_wgt(3,wgt1,wgt2,wgt3)
+      call add_wgt(15,wgt4,0d0,0d0)
 c Special for the soft-virtual needed for the virt-tricks. The
 c *_wgt_mint variable should be directly passed to the mint-integrator
 c and not be part of the plots nor computation of the cross section.
@@ -955,6 +957,7 @@ c     type=11: real-emission (with n-body kin.)
 c     type=12: MC subtraction with n-body kin.
 c     type=13: MC subtraction with n+1-body kin.
 c     type=14: virtual corrections
+c     type=15: virt-trick: average born contribution
 c     wgt1 : weight of the contribution not multiplying a scale log
 c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
@@ -990,6 +993,9 @@ c        to get the PDG code of the mother. The extra parton is given a
 c        PDG=21 (gluon) code.
 c     If the contribution belongs to an H-event or S-event:
 c        H_event(icontr)
+c     The weight of the born or real-emission matrix element
+c        corresponding to this contribution: wgt_ME_tree. This weight does
+c        include the 'ngluon' correction factor for the Born.
 c
 c Not set in this subroutine, but included in the c_weights common block
 c are the
@@ -1033,6 +1039,15 @@ c        the iproc contribution
       double precision    p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $                    ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
+      double precision         fkssymmetryfactor,fkssymmetryfactorBorn,
+     &                         fkssymmetryfactorDeg
+      integer                                      ngluons,nquarks(-6:6)
+      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
+     &                         fkssymmetryfactorDeg,ngluons,nquarks
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
+      double precision     iden_comp
+      common /c_iden_comp/ iden_comp
       if (wgt1.eq.0d0 .and. wgt2.eq.0d0 .and. wgt3.eq.0d0) return
 c Check for NaN's and INF's. Simply skip the contribution
       if (wgt1.ne.wgt1) return
@@ -1064,57 +1079,49 @@ c     Born contribution
 c     Anything else
          QCDpower(icontr)=nint(2*wgtbpower+2)
       endif
+c Compensate for the fact that in the Born matrix elements, we use the
+c identical particle symmetry factor of the corresponding real emission
+c matrix elements
+c IDEN_COMP STUFF NEEDS TO BE UPDATED WHEN MERGING WITH 'FKS_EW' STUFF
+      wgt_ME_tree(1,icontr)=wgt_me_born
+      wgt_ME_tree(2,icontr)=wgt_me_real
+      do i=1,nexternal
+         do j=0,3
+            if (p1_cnt(0,1,0).gt.0d0) then
+               momenta_m(j,i,1,icontr)=p1_cnt(j,i,0)
+            elseif (p1_cnt(0,1,1).gt.0d0) then
+               momenta_m(j,i,1,icontr)=p1_cnt(j,i,1)
+            elseif (p1_cnt(0,1,2).gt.0d0) then
+               momenta_m(j,i,1,icontr)=p1_cnt(j,i,2)
+            else
+               if (i.lt.fks_i_d(nFKSprocess)) then
+                  momenta_m(j,i,1,icontr)=p_born(j,i)
+               elseif(i.eq.fks_i_d(nFKSprocess)) then
+                  momenta_m(j,i,1,icontr)=0d0
+               else
+                  momenta_m(j,i,1,icontr)=p_born(j,i-1)
+               endif
+            endif
+            momenta_m(j,i,2,icontr)=p_ev(j,i)
+         enddo
+      enddo
       if(type.eq.1 .or. type.eq. 8 .or. type.eq.9 .or. type.eq.10 .or.
      &     type.eq.13) then
 c real emission and n+1-body kin. contributions to counter terms and MC
 c subtr term
          do i=1,nexternal
             do j=0,3
-c     'momenta' is the momentum configuration for this contribution;
-c     'momenta_m' is the momentum configuration that was used in the
-c     matrix elements of this contribution.
-               momenta(j,i,icontr)=p_ev(j,i)
-               if (type.eq.1) then
-                  momenta_m(j,i,icontr)=momenta(j,i,icontr)
-               else
-                  if (p1_cnt(0,1,0).gt.0d0) then
-                     momenta_m(j,i,icontr)=p1_cnt(j,i,0)
-                  elseif (p1_cnt(0,1,1).gt.0d0) then
-                     momenta_m(j,i,icontr)=p1_cnt(j,i,1)
-                  elseif (p1_cnt(0,1,2).gt.0d0) then
-                     momenta_m(j,i,icontr)=p1_cnt(j,i,2)
-                  else
-                     write (*,*) 'ERROR in add_wgt: no valid momenta'
-                     stop 1
-                  endif
-               endif
+               momenta(j,i,icontr)=momenta_m(j,i,2,icontr)
             enddo
          enddo
          H_event(icontr)=.true.
       elseif(type.ge.2 .and. type.le.7 .or. type.eq.11 .or. type.eq.12
-     $        .or. type.eq.14)then
+     $        .or. type.eq.14 .or. type.eq.15)then
 c Born, counter term, soft-virtual, or n-body kin. contributions to real
 c and MC subtraction terms.
          do i=1,nexternal
             do j=0,3
-c     'momenta' is the momentum configuration for this contribution;
-c     'momenta_m' is the momentum configuration that was used in the
-c     matrix elements of this contribution.
-               if (p1_cnt(0,1,0).gt.0d0) then
-                  momenta(j,i,icontr)=p1_cnt(j,i,0)
-               elseif (p1_cnt(0,1,1).gt.0d0) then
-                  momenta(j,i,icontr)=p1_cnt(j,i,1)
-               elseif (p1_cnt(0,1,2).gt.0d0) then
-                  momenta(j,i,icontr)=p1_cnt(j,i,2)
-               else
-                  write (*,*) 'ERROR in add_wgt: no valid momenta'
-                  stop 1
-               endif
-               if (type.eq.11) then
-                  momenta_m(j,i,icontr)=p_ev(j,i)
-               else
-                  momenta_m(j,i,icontr)=momenta(j,i,icontr)
-               endif
+               momenta(j,i,icontr)=momenta_m(j,i,1,icontr)
             enddo
          enddo
          H_event(icontr)=.false.
@@ -1494,7 +1501,7 @@ c must do MC over FKS directories.
       integer iproc_save(fks_configs),eto(maxproc,fks_configs),
      &     etoi(maxproc,fks_configs),maxproc_found
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
-      if (icontr.gt.7) then
+      if (icontr.gt.8) then
          write (*,*) 'ERROR: too many applgrid weights. '/
      &        /'Should have at most one of each itype.',icontr
          stop 1
@@ -1536,8 +1543,8 @@ c     born
             appl_QES2(2)=scales2(1,i)
             appl_muR2(2)=scales2(2,i)
             appl_muF2(2)=scales2(3,i)
-         elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14)
-     $           then
+         elseif (itype(i).eq.3 .or. itype(i).eq.4 .or. itype(i).eq.14
+     &           .or. itype(i).eq.15)then
 c     virtual, soft-virtual or soft-counter
             appl_w0(2)=appl_w0(2)+wgt(1,i)*final_state_rescaling
             appl_wR(2)=appl_wR(2)+wgt(2,i)*final_state_rescaling
@@ -1635,7 +1642,7 @@ c section
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).eq.2 .or. itype(i).eq.3 .or. itype(i).eq.14 .or.
-     &        itype(i).eq.7) then
+     &        itype(i).eq.7 .or. itype(i).eq.15) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -1654,7 +1661,7 @@ c excluding the nbody contributions.
       if (icontr.eq.0) return
       do i=1,icontr
          if (itype(i).ne.2 .and. itype(i).ne.3 .and. itype(i).ne.14
-     &        .and. itype(i).ne.7) then
+     &        .and. itype(i).ne.7 .and. itype(i).ne.15) then
             sig=sig+wgts(1,i)
          endif
       enddo
@@ -2054,8 +2061,9 @@ c n1body_wgt is used for the importance sampling over FKS directories
             tmp_wgt=0d0
             do j=1,icontr_sum(0,i)
                ict=icontr_sum(j,i)
-               if (itype(ict).ne.2 .and. itype(ict).ne.3 .and.
-     $             itype(ict).ne.14) tmp_wgt=tmp_wgt+wgts(1,ict)
+               if ( itype(ict).ne.2  .and. itype(ict).ne.3 .and.
+     $              itype(ict).ne.14 .and. itype(ict).ne.15)
+     $                              tmp_wgt=tmp_wgt+wgts(1,ict)
             enddo
             n1body_wgt=n1body_wgt+abs(tmp_wgt)
          enddo
@@ -2162,7 +2170,8 @@ c momenta in the momenta_str_l() array.
       include 'reweight0.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
-      integer i,ii,j,jj,ict,ipr,momenta_conf
+      include 'fks_info.inc'
+      integer k,i,ii,j,jj,ict,ipr,momenta_conf(2)
       logical momenta_equal,found
       double precision conv,momenta_str_l(0:3,nexternal,max_n_ctr)
       external momenta_equal
@@ -2183,24 +2192,32 @@ c is chosen in the pick_unweight_cont() subroutine)
 c Check if the current set of momenta are already available in the
 c momenta_str_l array. If not, add it.
          found=.false.
-         do j=1,n_mom_conf
-            if (momenta_equal(momenta_str_l(0,1,j),momenta_m(0,1,ict)))
-     &           then
-               momenta_conf=j
-               found=.true.
-               exit
+         do k=1,2
+            do j=1,n_mom_conf
+               if (momenta_m(0,1,k,ict).le.0d0) then
+                  momenta_conf(k)=0
+                  cycle
+               endif
+               if (momenta_equal(momenta_str_l(0,1,j),
+     &                           momenta_m(0,1,k,ict))) then
+                  momenta_conf(k)=j
+                  found=.true.
+                  exit
+               endif
+            enddo
+            if (.not. found) then
+               n_mom_conf=n_mom_conf+1
+               do ii=1,nexternal
+                  do jj=0,3
+                     momenta_str(jj,ii,n_mom_conf)=
+     &                                      momenta_m(jj,ii,k,ict)
+                     momenta_str_l(jj,ii,n_mom_conf)=
+     &                                      momenta_m(jj,ii,k,ict)
+                  enddo
+               enddo
+               momenta_conf(k)=n_mom_conf
             endif
          enddo
-         if (.not. found) then
-            n_mom_conf=n_mom_conf+1
-            do ii=1,nexternal
-               do jj=0,3
-                  momenta_str(jj,ii,n_mom_conf)=momenta_m(jj,ii,ict)
-                  momenta_str_l(jj,ii,n_mom_conf)=momenta_m(jj,ii,ict)
-               enddo
-            enddo
-            momenta_conf=n_mom_conf
-         endif
          if (.not. Hevents) then
 c For S-events, be careful to take all the IPROC that contribute to the
 c iproc_picked:
@@ -2208,15 +2225,17 @@ c iproc_picked:
             do ii=1,iproc_save(nFKS(ict))
                if (eto(ii,nFKS(ict)).ne.ipr) cycle
                n_ctr_found=n_ctr_found+1
+
                if (nincoming.eq.2) then
-                  write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
-     &                 (wgt(j,ict)*conv,j=1,3),
+                  write (n_ctr_str(n_ctr_found),'(5(1x,d18.12),1x,i2)')
+     &                 (wgt(j,ict)*conv,j=1,3),(wgt_me_tree(j,ict),j=1,2),
      &                 nexternal
                else
-                  write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
-     &                 (wgt(j,ict),j=1,3),
+                  write (n_ctr_str(n_ctr_found),'(5(1x,d18.12),1x,i2)')
+     &                 (wgt(j,ict),j=1,3),(wgt_me_tree(j,ict),j=1,2), 
      &                 nexternal
                endif
+
                procid=''
                do j=1,nexternal
                   write (str_temp,*) parton_pdg(j,ii,ict)
@@ -2226,13 +2245,18 @@ c iproc_picked:
                n_ctr_str(n_ctr_found) =
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(procid))
-               write (str_temp,'(i2,5(1x,d14.8),3(1x,i2),1x,d18.12)')
+
+               write (str_temp,'(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),
-     &              momenta_conf,
+     &              g_strong(ict),
+     &              (momenta_conf(j),j=1,2),
      &              itype(ict),
      &              nFKS(ict),
+     &              fks_i_d(nFKS(ict)),
+     &              fks_j_d(nFKS(ict)),
+     &              parton_pdg_uborn(fks_j_d(nFKS(ict)),ii,ict),
      &              parton_iproc(ii,ict)
                n_ctr_str(n_ctr_found) =
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
@@ -2242,15 +2266,17 @@ c iproc_picked:
 c H-event
             ipr=iproc_picked
             n_ctr_found=n_ctr_found+1
+
             if (nincoming.eq.2) then
-               write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
-     &              (wgt(j,ict)*conv,j=1,3),
+               write (n_ctr_str(n_ctr_found),'(5(1x,d18.12),1x,i2)')
+     &              (wgt(j,ict)*conv,j=1,3),(wgt_me_tree(j,ict),j=1,2),
      &              nexternal
             else
-               write (n_ctr_str(n_ctr_found),'(3(1x,d18.12),1x,i2)')
-     &              (wgt(j,ict),j=1,3),
+               write (n_ctr_str(n_ctr_found),'(5(1x,d18.12),1x,i2)')
+     &              (wgt(j,ict),j=1,3),(wgt_me_tree(j,ict),j=1,2),
      &              nexternal
             endif
+
             procid=''
             do j=1,nexternal
                write (str_temp,*) parton_pdg(j,ipr,ict)
@@ -2260,17 +2286,24 @@ c H-event
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(procid))
-            write (str_temp,'(i2,5(1x,d14.8),3(1x,i2),1x,d18.12)')
+
+            write (str_temp,'(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
      &           QCDpower(ict),
      &           (bjx(j,ict),j=1,2),
      &           (scales2(j,ict),j=1,3),
-     &           momenta_conf,
-     &              itype(ict),
-     &              nFKS(ict),
+     &           g_strong(ict),
+     &           (momenta_conf(j),j=1,2),
+     &           itype(ict),
+     &           nFKS(ict),
+     &           fks_i_d(nFKS(ict)),
+     &           fks_j_d(nFKS(ict)),
+     &           parton_pdg_uborn(fks_j_d(nFKS(ict)),ipr,ict),
      &           parton_iproc(ipr,ict)
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(str_temp))
+
+
          endif
          if (n_ctr_found.ge.max_n_ctr) then
             write (*,*) 'ERROR: too many contributions in <rwgt>'
@@ -2852,6 +2885,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtiny=1d-8)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -2923,7 +2958,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
          write(*,*) 'FATAL ERROR in sborncol_fsr',i_type,j_type,i_fks,j_fks
          stop
       endif
-      wgt=dble(wgt1(1)*ap+wgt1(2)*Q)
+      wgt=dble(wgt1(1)*ap+wgt1(2)*Q)*iden_comp
       return
       end
 
@@ -2971,6 +3006,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       parameter (vtiny=1d-8)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -3047,7 +3084,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
      #             wgt1(2) * dconjg(azifact)
          call Qterms_reduced_spacelike(m_type, i_type, t, z, Q)
       endif
-      wgt=dble(wgt1(1)*ap+wgt1(2)*Q)
+      wgt=dble(wgt1(1)*ap+wgt1(2)*Q)*iden_comp
       return
       end
 
@@ -3329,6 +3366,8 @@ c      include "fks.inc"
 
       double precision zero,pmass(nexternal)
       parameter(zero=0d0)
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
       include "pmass.inc"
 c
 c Call the Born to be sure that 'CalculatedBorn' is done correctly. This
@@ -3353,8 +3392,7 @@ c
             endif
          enddo
       enddo
-
-      wgt=softcontr
+      wgt=softcontr*iden_comp
 c Add minus sign to compensate the minus in the color factor
 c of the color-linked Borns (b_sf_0??.f)
 c Factor two to fix the limits.
@@ -3487,6 +3525,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       double precision one,pi
       parameter (one=1.d0)
       parameter (pi=3.1415926535897932385d0)
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 
       if(j_fks.gt.nincoming)then
 c Do not include this contribution for final-state branchings
@@ -3544,7 +3584,7 @@ c one assumes MSbar
 c The partonic flux 1/(2*s) is inserted in genps. Thus, an extra 
 c factor z (implicit in the flux of the reduced Born in FKS) 
 c has to be inserted here
-      xnorm=1.d0/z
+      xnorm=1.d0/z *iden_comp
 
       collrem_xi=oo2pi * born_wgt * collrem_xi * xnorm
       collrem_lxi=oo2pi * born_wgt * collrem_lxi * xnorm
@@ -4343,7 +4383,7 @@ c      include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
-      double precision p(0:3,nexternal),bsv_wgt,born_wgt
+      double precision p(0:3,nexternal),bsv_wgt,born_wgt,avv_wgt
       double precision pp(0:3,nexternal)
       
       double complex wgt1(2)
@@ -4441,6 +4481,7 @@ c Born contribution:
          bsv_wgt=dble(wgt1(1))
          born_wgt=dble(wgt1(1))
          virt_wgt=0d0
+         avv_wgt=0d0 
 
          if (abrv.eq.'born' .or. abrv.eq.'grid') goto 549
          if (abrv.eq.'virt' .or. abrv.eq.'viSC' .or.
@@ -4594,7 +4635,7 @@ c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
 c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
          endif
          if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1)
-     &        bsv_wgt=bsv_wgt+average_virtual*born_wgt*ao2pi
+     &        avv_wgt=average_virtual*born_wgt*ao2pi
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
@@ -4642,9 +4683,11 @@ c we need the pure NLO terms only
             wgtnstmp=bsv_wgt-born_wgt-
      #                wgtwnstmpmuf*log(q2fact(1)/QES2)-
      #                wgtwnstmpmur*log(scale**2/QES2)
+            wgtnstmp_avgvirt = avv_wgt
          else
             wgtnstmp=0d0
             wgtwnstmpmur=0.d0
+            wgtnstmp_avgvirt = 0d0
          endif
 
          if (abrv(1:2).eq.'vi') then
@@ -5376,11 +5419,15 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
      &                         fkssymmetryfactorDeg,ngluons,nquarks
 
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
+
       include 'coupl.inc'
       include 'genps.inc'
       include 'nexternal.inc'
       include 'fks_powers.inc'
       include 'nFKSconfigs.inc'
+      include 'c_weight.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -5416,13 +5463,14 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       character*1 integrate
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-      integer fac_i,fac_j,i_fks_pdg,j_fks_pdg
+      integer fac_i,fac_j,i_fks_pdg,j_fks_pdg,iden(nexternal)
 
       integer fac_i_FKS(fks_configs),fac_j_FKS(fks_configs)
-     $     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
-     $     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
+     &     ,i_type_FKS(fks_configs),j_type_FKS(fks_configs)
+     &     ,m_type_FKS(fks_configs),ngluons_FKS(fks_configs)
+     &     ,iden_real_FKS(fks_configs),iden_born_FKS(fks_configs)
       save fac_i_FKS,fac_j_FKS,i_type_FKS,j_type_FKS,m_type_FKS
-     $     ,ngluons_FKS
+     $     ,ngluons_FKS,iden_real_FKS,iden_born_FKS
 
       character*13 filename
 
@@ -5598,12 +5646,56 @@ c Set color types of i_fks, j_fks and fks_mother.
          i_type_FKS(nFKSprocess)=i_type
          j_type_FKS(nFKSprocess)=j_type
          m_type_FKS(nFKSprocess)=m_type
+
+
+c Compute the identical particle symmetry factor that is in the
+c real-emission matrix elements.
+         iden_real_FKS(nFKSprocess)=1
+         do i=1,nexternal
+            iden(i)=1
+         enddo
+         do i=nincoming+2,nexternal
+            do j=nincoming+1,i-1
+               if (pdg_type(j).eq.pdg_type(i)) then
+                  iden(j)=iden(j)+1
+                  iden_real_FKS(nFKSprocess)=
+     &                 iden_real_FKS(nFKSprocess)*iden(j)
+                  exit
+               endif
+            enddo
+         enddo
+c Compute the identical particle symmetry factor that is in the
+c Born matrix elements.
+         iden_born_FKS(nFKSprocess)=1
+         call set_pdg(0,nFKSprocess)
+         do i=1,nexternal
+            iden(i)=1
+         enddo
+         do i=nincoming+2,nexternal-1
+            do j=nincoming+1,i-1
+               if (pdg_uborn(j,0).eq.pdg_uborn(i,0)) then
+                  iden(j)=iden(j)+1
+                  iden_born_FKS(nFKSprocess)=
+     &                 iden_born_FKS(nFKSprocess)*iden(j)
+                  exit
+               endif
+            enddo
+         enddo
       endif
 
       i_type=i_type_FKS(nFKSprocess)
       j_type=j_type_FKS(nFKSprocess)
       m_type=m_type_FKS(nFKSprocess)
 
+c Difference in identical particle factor in the Born and real emission
+c matrix elements. To define wgt_ME_tree for the Born, we need to
+c include this factor, because in the current Born the symmetry factor
+c for the real is used. THIS NEEDS TO BE CHANGED WHEN MERGING WITH THE
+c 'FKS_EW' STUFF
+      iden_comp=dble(iden_born_FKS(nFKSprocess))/
+     &          dble(iden_real_FKS(nFKSprocess))
+      
+      
 c Set matrices used by MC counterterms
       if (match_to_shower) call set_mc_matrices
 
@@ -5614,7 +5706,7 @@ c Setup the FKS symmetry factors.
       if (nbody.and.pdg_type(i_fks).eq.21) then
          fkssymmetryfactor=dble(ngluons)
          fkssymmetryfactorDeg=dble(ngluons)
-         fkssymmetryfactorBorn=dble(ngluons)
+         fkssymmetryfactorBorn=1d0
       elseif(pdg_type(i_fks).eq.-21) then
          fkssymmetryfactor=1d0
          fkssymmetryfactorDeg=1d0

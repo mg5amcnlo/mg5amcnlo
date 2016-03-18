@@ -1588,6 +1588,11 @@ end
         for file in linkfiles:
             ln('../../../lib/%s' % file)
 
+        linkfiles = ['coef_specs.inc']
+
+        for file in linkfiles:        
+            ln('../../../Source/DHELAS/%s' % file)
+
         # Return to original PWD
         os.chdir(cwd)
 
@@ -2632,9 +2637,7 @@ C     charge is set 0. with QCD corrections, which is irrelevant
             lines.append('INTEGER IDEN_VALUES(%d)' % len(info_list))
             lines.append('DATA IDEN_VALUES /' + \
                          ', '.join(['%d' % ( 
-                         fks_born.born_matrix_element.get_denominator_factor() / \
-                         fks_born.born_matrix_element['identical_particle_factor'] * \
-                         fks_born.real_processes[info['n_me'] - 1].matrix_element['identical_particle_factor'] ) \
+                         fks_born.born_matrix_element.get_denominator_factor() ) \
                          for info in info_list]) + '/')
         else:
             # otherwise use the born
@@ -3286,6 +3289,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         for file in linkfiles:
             ln('../../../lib/%s' % file)
 
+        linkfiles = ['coef_specs.inc']
+
+        for file in linkfiles:        
+            ln('../../../Source/DHELAS/%s' % file)
+
         # Return to original PWD
         os.chdir(cwd)
 
@@ -3303,12 +3311,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         filename = os.path.join(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc')
 
         replace_dict = {}
-        replace_dict['max_lwf_size'] = 4 
-
+        replace_dict['max_lwf_size'] = 4
         replace_dict['vertex_max_coefs'] = max(\
                 [q_polynomial.get_number_of_coefs_for_rank(n) 
                     for n in max_loop_vertex_ranks])
-
         IncWriter=writers.FortranWriter(filename,'w')
         IncWriter.writelines("""INTEGER MAXLWFSIZE
                            PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)

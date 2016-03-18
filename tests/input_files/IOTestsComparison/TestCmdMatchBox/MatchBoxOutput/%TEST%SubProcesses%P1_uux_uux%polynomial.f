@@ -42,7 +42,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER MG5_1_ML5SOINDEX_FOR_BORN_AMP, MG5_1_ML5SOINDEX_FOR_LOOP_
-     $ AMP, MG5_1_ML5SQSOINDEX
+     $AMP, MG5_1_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -77,19 +77,19 @@ C
      $   ,KIND=8)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(MG5_1_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(MG5_1_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL MG5_1_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,MG5_1_ML5SQSOINDEX(I,MG5_1_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
@@ -164,7 +164,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER MG5_1_ML5SOINDEX_FOR_BORN_AMP, MG5_1_ML5SOINDEX_FOR_LOOP_
-     $ AMP, MG5_1_ML5SQSOINDEX
+     $AMP, MG5_1_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -199,19 +199,19 @@ C
      $   ,KIND=16)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(MG5_1_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(MG5_1_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL MP_MG5_1_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,MG5_1_ML5SQSOINDEX(I,MG5_1_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
@@ -257,8 +257,8 @@ C     It is only used for the NINJA interface
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 
@@ -276,8 +276,8 @@ C     It is only used for the NINJA interface
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 

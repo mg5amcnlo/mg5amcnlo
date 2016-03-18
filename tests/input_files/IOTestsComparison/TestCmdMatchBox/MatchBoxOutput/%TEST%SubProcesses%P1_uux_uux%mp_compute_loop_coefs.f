@@ -95,8 +95,8 @@ C
      $ ,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE
      $ ,CTCALL_REQ_SO_DONE,FILTER_SO
       COMMON/MG5_1_SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE
-     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_S
-     $ O_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE
+     $ ,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
       COMPLEX*32 AMP(NBORNAMPS)
       COMMON/MG5_1_MP_AMPS/AMP
@@ -108,8 +108,8 @@ C
       COMPLEX*16 DPW(20,NWAVEFUNCS)
       COMMON/MG5_1_W/DPW
 
-      COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEF
-     $ UNCS)
+      COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE
+     $ ,0:NLOOPWAVEFUNCS)
       COMPLEX*32 PL(0:3,0:NLOOPWAVEFUNCS)
       COMMON/MG5_1_MP_WL/WL,PL
 
@@ -143,18 +143,18 @@ C
       COMMON/MG5_1_MP_DONE_ONCE/MP_DONE_ONCE
 
       INTEGER LIBINDEX
-      COMMON/ML5_0_I_LIB/LIBINDEX
+      COMMON/MG5_1_I_LIB/LIBINDEX
 
 C     ----------
 C     BEGIN CODE
 C     ----------
 
 C     Decide whether to really compute the integrand in quadruple
-C      precision or to fake it and copy the double precision computatio
-C     n in the quadruple precision variables.
-      COMPUTE_INTEGRAND_IN_QP = ((MLREDUCTIONLIB(LIBINDEX).EQ.6.AND.USE
-     $ QPINTEGRANDFORNINJA) .OR. (MLREDUCTIONLIB(LIBINDEX).EQ.1.AND.USE
-     $ QPINTEGRANDFORCUTTOOLS))
+C      precision or to fake it and copy the double precision
+C      computation in the quadruple precision variables.
+      COMPUTE_INTEGRAND_IN_QP = ((MLREDUCTIONLIB(LIBINDEX)
+     $ .EQ.6.AND.USEQPINTEGRANDFORNINJA) .OR. (MLREDUCTIONLIB(LIBINDEX)
+     $ .EQ.1.AND.USEQPINTEGRANDFORCUTTOOLS))
 
 C     To be on the safe side, we always update the MP params here.
 C     It can be redundant as this routine can be called a couple of
@@ -230,8 +230,8 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
       DPW_COPIED = .FALSE.
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $   .NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHE
-     $   L(H).NE.0)))) THEN
+     $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
+     $   .NE.0)))) THEN
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO
@@ -240,8 +240,8 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
           MP_CT_REQ_SO_DONE=.FALSE.
           MP_LOOP_REQ_SO_DONE=.FALSE.
 
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             HEL_MULT=GOODHEL(H)
           ELSE
             HEL_MULT=1
@@ -290,7 +290,7 @@ C            containers (but only those needed)
      $         ,0.0E0_16,KIND=16)
               IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
               ITEMP = MG5_1_ML5SQSOINDEX(MG5_1_ML5SOINDEX_FOR_LOOP_AMP(
-     $         I),MG5_1_ML5SOINDEX_FOR_BORN_AMP(J))
+     $I),MG5_1_ML5SOINDEX_FOR_BORN_AMP(J))
               IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                 DO K=1,3
                   TEMP2 = HEL_MULT*2.0E0_16*REAL(CFTOT*AMPL(K,I)

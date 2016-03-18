@@ -19,6 +19,7 @@ import fractions
 import glob
 import logging
 import os
+import stat
 import sys
 import re
 import shutil
@@ -26,6 +27,7 @@ import subprocess
 import itertools
 import time
 import datetime
+
 
 import aloha
 
@@ -1024,16 +1026,41 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
             'write_so_born_results','write_so_loop_results','set_coupling_target']:
             if key not in replace_dict.keys():
                 replace_dict[key]=''
+        
         if matrix_element.get('processes')[0].get('has_born'):
             file = open(os.path.join(self.template_dir,'check_sa.inc')).read()
-        elif self.opt['mode'] == 'reweight':
-            file = open(os.path.join(self.template_dir,\
-                                          'check_py.f')).read()            
         else:
             file = open(os.path.join(self.template_dir,\
                                           'check_sa_loop_induced.inc')).read()
         file=file%replace_dict
         writer.writelines(file)
+         
+        # We can always write the f2py wrapper if present (in loop optimized mode, it is)
+        if not os.path.isfile(pjoin(self.template_dir,'check_py.f.inc')):
+            return
+        file = open(os.path.join(self.template_dir,\
+                                      'check_py.f.inc')).read()
+        file=file%replace_dict
+        new_path = writer.name.replace('check_sa.f', 'f2py_wrapper.f')
+        new_writer = writer.__class__(new_path, 'w')
+        new_writer.writelines(file)
+
+        file = open(os.path.join(self.template_dir,\
+                                      'check_sa.py.inc')).read()
+        # For now just put in an empty PS point but in the future, maybe generate
+        # a valid one already here by default
+        curr_proc = matrix_element.get('processes')[0]
+        random_PSpoint_python_formatted = \
+"""# Specify your chosen PS point below. If you leave it filled with None, then the script will attempt to read it from the file PS.input.
+p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
+
+        process_definition_string = curr_proc.nice_string().replace('Process:','')
+        file=file.format(random_PSpoint_python_formatted,process_definition_string)
+        new_path = writer.name.replace('check_sa.f', 'check_sa.py')
+        new_writer = open(new_path, 'w')
+        new_writer.writelines(file)
+        # Make it executable
+        os.chmod(new_path, os.stat(new_path).st_mode | stat.S_IEXEC)
 
     def write_improve_ps(self, writer, matrix_element):
         """ Write out the improve_ps subroutines which modify the PS point

@@ -9791,8 +9791,8 @@ C
       P1(1) = -DBLE(F1(2))
       P1(2) = -DIMAG(F1(2))
       P1(3) = -DIMAG(F1(1))
-      DENOM = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 
-     $ -CI* W1))"""
+      DENOM = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -CI
+     $ * W1))"""
 
         abstract_M = create_aloha.AbstractRoutineBuilder(FFV1).compute_routine(1)
         abstract_M.add_symmetry(2)

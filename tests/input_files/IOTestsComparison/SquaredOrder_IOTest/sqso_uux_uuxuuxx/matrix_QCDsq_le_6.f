@@ -451,48 +451,42 @@ C     Amplitude(s) for diagram number 41
 C     Amplitude(s) for diagram number 42
       CALL IOVXXX(W(1,14),W(1,2),W(1,12),GG,AMP(42))
 C     JAMPs contributing to orders QCD=4 QED=0
-      JAMP(1,1)=+1D0/4D0*(+1D0/9D0*AMP(1)+1D0/9D0*AMP(2)+1D0/3D0
-     $ *AMP(4)+1D0/3D0*AMP(5)+1D0/3D0*AMP(7)+1D0/3D0*AMP(8)+1D0/9D0
-     $ *AMP(9)+1D0/9D0*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1D0/3D0*AMP(19)
-     $ +1D0/3D0*AMP(20)+AMP(22)-AMP(23)+1D0/3D0*AMP(27)+1D0/3D0
-     $ *AMP(28)+AMP(29)+AMP(31)+1D0/3D0*AMP(33)+1D0/3D0*AMP(34)
-     $ +1D0/3D0*AMP(35)+1D0/3D0*AMP(36)+AMP(37)+1D0/9D0*AMP(39)
-     $ +1D0/9D0*AMP(40))
-      JAMP(2,1)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-1D0/9D0
-     $ *AMP(4)-1D0/9D0*AMP(5)-1D0/9D0*AMP(7)-1D0/9D0*AMP(8)-1D0/3D0
-     $ *AMP(9)-1D0/3D0*AMP(10)-AMP(12)+AMP(13)-1D0/3D0*AMP(17)
-     $ -1D0/3D0*AMP(18)-AMP(19)-AMP(25)+AMP(26)-AMP(27)-1D0/3D0
-     $ *AMP(29)-1D0/3D0*AMP(30)-1D0/3D0*AMP(31)-1D0/3D0*AMP(32)
-     $ -AMP(33)-AMP(35)-1D0/3D0*AMP(37)-1D0/3D0*AMP(38)-1D0/9D0
-     $ *AMP(41)-1D0/9D0*AMP(42))
-      JAMP(3,1)=+1D0/4D0*(-AMP(4)+AMP(6)-AMP(7)-1D0/3D0*AMP(9)
-     $ -1D0/3D0*AMP(10)-1D0/9D0*AMP(11)-1D0/9D0*AMP(12)-1D0/3D0
-     $ *AMP(14)-1D0/3D0*AMP(15)-1D0/3D0*AMP(17)-1D0/3D0*AMP(18)
-     $ -1D0/9D0*AMP(19)-1D0/9D0*AMP(20)-1D0/3D0*AMP(21)-1D0/3D0
-     $ *AMP(22)-AMP(24)-AMP(26)-AMP(28)-1D0/3D0*AMP(31)-1D0/3D0
-     $ *AMP(32)-1D0/9D0*AMP(33)-1D0/9D0*AMP(34)-AMP(36)-1D0/3D0
-     $ *AMP(39)-1D0/3D0*AMP(40)-AMP(41))
+      JAMP(1,1)=+1D0/4D0*(+1D0/9D0*AMP(1)+1D0/9D0*AMP(2)+1D0/3D0*AMP(4)
+     $ +1D0/3D0*AMP(5)+1D0/3D0*AMP(7)+1D0/3D0*AMP(8)+1D0/9D0*AMP(9)
+     $ +1D0/9D0*AMP(10)+AMP(14)-AMP(16)+AMP(17)+1D0/3D0*AMP(19)+1D0
+     $ /3D0*AMP(20)+AMP(22)-AMP(23)+1D0/3D0*AMP(27)+1D0/3D0*AMP(28)
+     $ +AMP(29)+AMP(31)+1D0/3D0*AMP(33)+1D0/3D0*AMP(34)+1D0/3D0*AMP(35)
+     $ +1D0/3D0*AMP(36)+AMP(37)+1D0/9D0*AMP(39)+1D0/9D0*AMP(40))
+      JAMP(2,1)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-1D0/9D0*AMP(4)
+     $ -1D0/9D0*AMP(5)-1D0/9D0*AMP(7)-1D0/9D0*AMP(8)-1D0/3D0*AMP(9)
+     $ -1D0/3D0*AMP(10)-AMP(12)+AMP(13)-1D0/3D0*AMP(17)-1D0/3D0*AMP(18)
+     $ -AMP(19)-AMP(25)+AMP(26)-AMP(27)-1D0/3D0*AMP(29)-1D0/3D0*AMP(30)
+     $ -1D0/3D0*AMP(31)-1D0/3D0*AMP(32)-AMP(33)-AMP(35)-1D0/3D0*AMP(37)
+     $ -1D0/3D0*AMP(38)-1D0/9D0*AMP(41)-1D0/9D0*AMP(42))
+      JAMP(3,1)=+1D0/4D0*(-AMP(4)+AMP(6)-AMP(7)-1D0/3D0*AMP(9)-1D0/3D0
+     $ *AMP(10)-1D0/9D0*AMP(11)-1D0/9D0*AMP(12)-1D0/3D0*AMP(14)-1D0
+     $ /3D0*AMP(15)-1D0/3D0*AMP(17)-1D0/3D0*AMP(18)-1D0/9D0*AMP(19)
+     $ -1D0/9D0*AMP(20)-1D0/3D0*AMP(21)-1D0/3D0*AMP(22)-AMP(24)-AMP(26)
+     $ -AMP(28)-1D0/3D0*AMP(31)-1D0/3D0*AMP(32)-1D0/9D0*AMP(33)-1D0
+     $ /9D0*AMP(34)-AMP(36)-1D0/3D0*AMP(39)-1D0/3D0*AMP(40)-AMP(41))
       JAMP(4,1)=+1D0/4D0*(+AMP(1)+AMP(3)+1D0/3D0*AMP(4)+1D0/3D0*AMP(5)
-     $ +AMP(10)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+AMP(15)+AMP(16)
-     $ +AMP(18)+1D0/9D0*AMP(21)+1D0/9D0*AMP(22)+1D0/3D0*AMP(24)
-     $ +1D0/3D0*AMP(25)+1D0/3D0*AMP(27)+1D0/3D0*AMP(28)+1D0/9D0
-     $ *AMP(29)+1D0/9D0*AMP(30)+1D0/9D0*AMP(31)+1D0/9D0*AMP(32)
-     $ +1D0/3D0*AMP(33)+1D0/3D0*AMP(34)+AMP(38)+AMP(40)+1D0/3D0
-     $ *AMP(41)+1D0/3D0*AMP(42))
+     $ +AMP(10)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+AMP(15)+AMP(16)+AMP(18)
+     $ +1D0/9D0*AMP(21)+1D0/9D0*AMP(22)+1D0/3D0*AMP(24)+1D0/3D0*AMP(25)
+     $ +1D0/3D0*AMP(27)+1D0/3D0*AMP(28)+1D0/9D0*AMP(29)+1D0/9D0*AMP(30)
+     $ +1D0/9D0*AMP(31)+1D0/9D0*AMP(32)+1D0/3D0*AMP(33)+1D0/3D0*AMP(34)
+     $ +AMP(38)+AMP(40)+1D0/3D0*AMP(41)+1D0/3D0*AMP(42))
       JAMP(5,1)=+1D0/4D0*(+AMP(2)-AMP(3)+1D0/3D0*AMP(7)+1D0/3D0*AMP(8)
-     $ +AMP(9)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+1D0/9D0*AMP(14)
-     $ +1D0/9D0*AMP(15)+1D0/9D0*AMP(17)+1D0/9D0*AMP(18)+1D0/3D0
-     $ *AMP(19)+1D0/3D0*AMP(20)+AMP(21)+AMP(23)+1D0/3D0*AMP(24)
-     $ +1D0/3D0*AMP(25)+AMP(30)+AMP(32)+1D0/3D0*AMP(35)+1D0/3D0
-     $ *AMP(36)+1D0/9D0*AMP(37)+1D0/9D0*AMP(38)+AMP(39)+1D0/3D0
-     $ *AMP(41)+1D0/3D0*AMP(42))
+     $ +AMP(9)+1D0/3D0*AMP(11)+1D0/3D0*AMP(12)+1D0/9D0*AMP(14)+1D0/9D0
+     $ *AMP(15)+1D0/9D0*AMP(17)+1D0/9D0*AMP(18)+1D0/3D0*AMP(19)+1D0
+     $ /3D0*AMP(20)+AMP(21)+AMP(23)+1D0/3D0*AMP(24)+1D0/3D0*AMP(25)
+     $ +AMP(30)+AMP(32)+1D0/3D0*AMP(35)+1D0/3D0*AMP(36)+1D0/9D0*AMP(37)
+     $ +1D0/9D0*AMP(38)+AMP(39)+1D0/3D0*AMP(41)+1D0/3D0*AMP(42))
       JAMP(6,1)=+1D0/4D0*(-1D0/3D0*AMP(1)-1D0/3D0*AMP(2)-AMP(5)-AMP(6)
      $ -AMP(8)-AMP(11)-AMP(13)-1D0/3D0*AMP(14)-1D0/3D0*AMP(15)-AMP(20)
-     $ -1D0/3D0*AMP(21)-1D0/3D0*AMP(22)-1D0/9D0*AMP(24)-1D0/9D0
-     $ *AMP(25)-1D0/9D0*AMP(27)-1D0/9D0*AMP(28)-1D0/3D0*AMP(29)
-     $ -1D0/3D0*AMP(30)-AMP(34)-1D0/9D0*AMP(35)-1D0/9D0*AMP(36)
-     $ -1D0/3D0*AMP(37)-1D0/3D0*AMP(38)-1D0/3D0*AMP(39)-1D0/3D0
-     $ *AMP(40)-AMP(42))
+     $ -1D0/3D0*AMP(21)-1D0/3D0*AMP(22)-1D0/9D0*AMP(24)-1D0/9D0*AMP(25)
+     $ -1D0/9D0*AMP(27)-1D0/9D0*AMP(28)-1D0/3D0*AMP(29)-1D0/3D0*AMP(30)
+     $ -AMP(34)-1D0/9D0*AMP(35)-1D0/9D0*AMP(36)-1D0/3D0*AMP(37)-1D0
+     $ /3D0*AMP(38)-1D0/3D0*AMP(39)-1D0/3D0*AMP(40)-AMP(42))
 
       RES = 0.D0
       DO M = 1, NAMPSO
@@ -562,8 +556,8 @@ C     This functions plays the role of the interference matrix. It can
 C      be hardcoded or 
 C     made more elegant using hashtables if its execution speed ever
 C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
+C     factor. From two split order indices, it return the
+C      corresponding index in the squared 
 C     order canonical ordering.
 C     
 C     CONSTANTS
@@ -591,7 +585,7 @@ C     BEGIN CODE
 C     
       DO I=1,NSO
         SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
+     $NDEXB,I)
       ENDDO
       SQSOINDEX=SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -685,8 +679,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOI'
-     $ //'NDEX'
+      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
+     $ //'DEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -731,8 +725,8 @@ C
 
       END SUBROUTINE
 
-C     This function is not directly useful, but included for completene
-C     ss
+C     This function is not directly useful, but included for
+C      completeness
       INTEGER FUNCTION SOINDEX_FOR_AMPORDERS(ORDERS)
 C     
 C     This functions returns the integer index identifying the

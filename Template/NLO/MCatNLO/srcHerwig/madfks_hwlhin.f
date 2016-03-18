@@ -127,13 +127,16 @@ c Avoids rounding problems for zero-mass particles
             read(iunit,404)wgtxsecPDF(nps),wgtxsecPDF(nng)
           enddo
           read(iunit,'(a)')string
-        elseif(jwgtinfo.eq.9)then
+        elseif(abs(jwgtinfo).eq.9)then
           if (numscales.eq.0 .and. numPDFpairs.eq.0) then
              write (*,*) 'event file not correct format'
              write(*,*)'FATAL ERROR #3 IN UPEVNT'
              stop
           endif
-          read(iunit,'(a)')string
+          string = ''
+          do while(index(string,'</event>').eq.0.and.index(string,'<rwgt>').eq.0)
+            read(iunit,'(a)')string
+          enddo
           wgtref=XWGTUP/MQQ
           do i=1,numscales
              do j=1,numscales
@@ -293,7 +296,7 @@ c 8 = (muRdown,muF0), 9 = (muRdown,muFup), 10 = (muRdown,muFdown)
             ENDDO
             nwgt=nwgt+numPDFpairs
             numPDFpairs=numPDFpairs/2
-         ELSEIF( INDEX(STRING,"<weightgroup type='mg_reweighting'").ne.0
+         ELSEIF( INDEX(STRING,"<weightgroup name='mg_reweighting'").ne.0
      $           .and.STRING(1:1).ne.'#') then
             DO WHILE (.TRUE.)
                READ(61,'(a)') STRING

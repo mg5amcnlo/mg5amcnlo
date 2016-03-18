@@ -397,8 +397,8 @@ C     ----------
       IF(DOING_QP)THEN
 C       QP EVALUATION, ONLY CUTTOOLS
         IF(.NOT.QP_TOOLS_AVAILABLE)THEN
-          STOP 'No qp tools available, please make sure MLReductionLi'
-     $     //'b is correct'
+          STOP 'No qp tools available, please make sure MLReductionLib'
+     $     //' is correct'
         ENDIF
         J_LIB=0
         SELECT_LIBINDEX=LIBINDEX
@@ -412,7 +412,7 @@ C       QP EVALUATION, ONLY CUTTOOLS
           IF(J_LIB.EQ.0)THEN
             SELECT_LIBINDEX=SELECT_LIBINDEX+1
             IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLREDUCTIONLIB(SELECT_LIB
-     $       INDEX).EQ.0)SELECT_LIBINDEX=1
+     $INDEX).EQ.0)SELECT_LIBINDEX=1
           ENDIF
         ENDDO
         I=J_LIB

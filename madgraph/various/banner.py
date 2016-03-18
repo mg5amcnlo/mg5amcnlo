@@ -149,6 +149,17 @@ class Banner(dict):
             elif "<event>" in line:
                 break
     
+    def __getattribute__(self, attr):
+        """allow auto-build for the run_card/param_card/... """
+        try:
+            return super(Banner, self).__getattribute__(attr)
+        except:
+            if attr not in ['run_card', 'param_card', 'slha', 'mgruncard', 'mg5proccard', 'mgshowercard', 'foanalyse']:
+                raise
+            return self.charge_card(attr)
+
+
+    
     def change_lhe_version(self, version):
         """change the lhe version associate to the banner"""
     
@@ -1452,16 +1463,6 @@ class RunCard(ConfigFile):
             else:
                 return lpp
         
-        def get_pdf_id(pdf):
-            if pdf == "lhapdf":
-                return self["lhaid"]
-            else: 
-                return {'none': 0, 'mrs02nl':20250, 'mrs02nn':20270, 'cteq4_m': 19150,
-                        'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
-                        'cteq5_d':19060,'cteq5_l':19070,'cteq5m1':19051,
-                        'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
-                        'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244600
-                        }[pdf]
             
         output["idbmup1"] = get_idbmup(self['lpp1'])
         output["idbmup2"] = get_idbmup(self['lpp2'])
@@ -1469,9 +1470,23 @@ class RunCard(ConfigFile):
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
         output["pdfgup2"] = 0
-        output["pdfsup1"] = get_pdf_id(self["pdlabel"])
-        output["pdfsup2"] = get_pdf_id(self["pdlabel"])
+        output["pdfsup1"] = self.get_pdf_id(self["pdlabel"])
+        output["pdfsup2"] = self.get_pdf_id(self["pdlabel"])
         return output
+    
+    def get_pdf_id(self, pdf):
+        if pdf == "lhapdf":
+            return self["lhaid"]
+        else: 
+            return {'none': 0, 'mrs02nl':20250, 'mrs02nn':20270, 'cteq4_m': 19150,
+                    'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
+                    'cteq5_d':19060,'cteq5_l':19070,'cteq5m1':19051,
+                    'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
+                    'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
+                    }[pdf]    
+    
+    def get_lhapdf_id(self):
+        return self.get_pdf_id(self['pdlabel'])
 
     def remove_all_cut(self): 
         """remove all the cut"""
@@ -1885,6 +1900,7 @@ class RunCardNLO(RunCard):
         self.add_param('reweight_pdf', False, fortran_name='do_rwgt_pdf')
         self.add_param('pdf_set_min', 244601)
         self.add_param('pdf_set_max', 244700)
+        self.add_param('keep_rwgt_info', False)
         #merging
         self.add_param('ickkw', 0)
         self.add_param('bwcutoff', 15.0)

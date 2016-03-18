@@ -2949,13 +2949,16 @@ class Process(PhysicsObject):
                 'legs_with_decays', 'perturbation_couplings', 'has_born', 
                 'NLO_mode','split_orders']
 
-    def nice_string(self, indent=0, print_weighted = True):
+    def nice_string(self, indent=0, print_weighted = True, prefix=True):
         """Returns a nicely formated string about current process
         content. Since the WEIGHTED order is automatically set and added to 
         the user-defined list of orders, it can be ommitted for some info
         displays."""
 
-        mystr = " " * indent + "Process: "
+        if prefix:
+            mystr = " " * indent + "Process: "
+        else:
+            mystr = ""
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
@@ -3651,11 +3654,42 @@ class ProcessDefinition(Process):
 
         return max_order_now, particles, hierarchy
 
-    def nice_string(self, indent=0, print_weighted=False):
+    def __iter__(self):
+        """basic way to loop over all the process definition. 
+           not used by MG which used some smarter version (use by ML)"""
+        
+        isids = [leg['ids'] for leg in self['legs'] \
+                 if leg['state'] == False]
+        fsids = [leg['ids'] for leg in self['legs'] \
+                 if leg['state'] == True]
+
+        red_isidlist = []
+        # Generate all combinations for the initial state
+        for prod in itertools.product(*isids):
+            islegs = [Leg({'id':id, 'state': False}) for id in prod]  
+            if tuple(sorted(prod)) in red_isidlist:
+                    continue        
+            red_isidlist.append(tuple(sorted(prod)))      
+            red_fsidlist = []
+            for prod in itertools.product(*fsids):
+                # Remove double counting between final states
+                if tuple(sorted(prod)) in red_fsidlist:
+                    continue        
+                red_fsidlist.append(tuple(sorted(prod)))
+                leg_list = [copy.copy(leg) for leg in islegs]
+                leg_list.extend([Leg({'id':id, 'state': True}) for id in prod])
+                legs = LegList(leg_list)
+                process = self.get_process_with_legs(legs)
+                yield process
+
+    def nice_string(self, indent=0, print_weighted=False, prefix=True):
         """Returns a nicely formated string about current process
         content"""
 
-        mystr = " " * indent + "Process: "
+        if prefix:
+            mystr = " " * indent + "Process: "
+        else:
+            mystr=""
         prevleg = None
         for leg in self['legs']:
             myparts = \

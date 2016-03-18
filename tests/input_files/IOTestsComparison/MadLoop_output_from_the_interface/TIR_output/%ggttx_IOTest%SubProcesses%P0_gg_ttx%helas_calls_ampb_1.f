@@ -61,8 +61,8 @@ C
      $ ,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE
      $ ,CTCALL_REQ_SO_DONE,FILTER_SO
       COMMON/ML5_0_SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE
-     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_S
-     $ O_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE
+     $ ,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
       INTEGER I_SO
       COMMON/ML5_0_I_SO/I_SO
@@ -74,8 +74,8 @@ C
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMMON/ML5_0_W/W
 
-      COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEF
-     $ UNCS)
+      COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE
+     $ ,0:NLOOPWAVEFUNCS)
       COMPLEX*16 PL(0:3,0:NLOOPWAVEFUNCS)
       COMMON/ML5_0_WL/WL,PL
 
@@ -200,8 +200,8 @@ C     Counter-term amplitude(s) for loop diagram number 20
 C     Counter-term amplitude(s) for loop diagram number 22
       CALL VVV1_0(W(1,1),W(1,2),W(1,8),R2_3GQ,AMPL(1,77))
 C     Counter-term amplitude(s) for loop diagram number 32
-      CALL R2_GG_1_R2_GG_2_0(W(1,5),W(1,8),R2_GGG_1,R2_GGG_2,AMPL(1
-     $ ,78))
+      CALL R2_GG_1_R2_GG_2_0(W(1,5),W(1,8),R2_GGG_1,R2_GGG_2,AMPL(1,78)
+     $ )
 C     Counter-term amplitude(s) for loop diagram number 33
       CALL VVV1_0(W(1,1),W(1,2),W(1,8),R2_3GG,AMPL(1,79))
 C     At this point, all CT amps needed for (QCD=6), i.e. of split

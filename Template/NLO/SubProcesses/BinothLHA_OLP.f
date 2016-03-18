@@ -5,18 +5,6 @@ c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
 c
 C************************************************************************
-c WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-C************************************************************************
-c The Born in MadFKS -- and therefore also the virtual!-- should have a
-c slightly adapted identical particle symmetry factor. The normal
-c virtual weight as coming from the OLP should be divided by the number
-c of gluons in the corresponding real-emission process (i.e.  the number
-c of gluons in the Born plus one). This factor is passed to this
-c subroutine in /numberofparticles/ common block, as "ngluons". So,
-c divided virt_wgt by dble(ngluons) to get the correct virtual to be
-c used in MadFKS. The born_wgt that is passed to this subroutine has
-c already been divided by this factor.
-C************************************************************************
 c
       implicit none
       include "nexternal.inc"
@@ -29,11 +17,6 @@ c
       double precision virt_wgt,born_wgt,double,single,born,virt_wgts(4)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
-      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
       logical firsttime_pole,firsttime_conversion,firsttime_init
       data firsttime_pole,firsttime_conversion,firsttime_init
      &     /.true.,.true.,.true./
@@ -75,18 +58,17 @@ c get the momenta in the BLHA format
 c======================================================================
 c Replace the following line with the call to the one-loop code you wish
 c to use. virt_wgts contains finite part, single and double pole and the
-c Born. To understand why we need to divide them by ngluons, read the
-c warning message at the beginning of this subroutine
+c Born. 
 c
       if (firsttime_init) then
          call BinothLHAInit()
          firsttime_init=.false.
       endif
       call OLP_EvalSubProcess(proc_label,p,mu_r,alpha_S,virt_wgts)
-      double  = virt_wgts(1)/dble(ngluons)
-      single  = virt_wgts(2)/dble(ngluons)
-      virt_wgt= virt_wgts(3)/dble(ngluons)
-      born    = virt_wgts(4)/dble(ngluons)
+      double  = virt_wgts(1)
+      single  = virt_wgts(2)
+      virt_wgt= virt_wgts(3)
+      born    = virt_wgts(4)
 c======================================================================
 
 c======================================================================

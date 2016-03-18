@@ -42,7 +42,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP, ML5_0_ML5SOINDEX_FOR_LOOP_
-     $ AMP, ML5_0_ML5SQSOINDEX
+     $AMP, ML5_0_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -77,19 +77,19 @@ C
      $   ,KIND=8)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5_0_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL ML5_0_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I,ML5_0_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
@@ -165,7 +165,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP, ML5_0_ML5SOINDEX_FOR_LOOP_
-     $ AMP, ML5_0_ML5SQSOINDEX
+     $AMP, ML5_0_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -200,19 +200,19 @@ C
      $   ,KIND=16)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(ML5_0_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(ML5_0_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL MP_ML5_0_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,ML5_0_ML5SQSOINDEX(I,ML5_0_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
@@ -259,18 +259,18 @@ C     It is only used for the NINJA interface
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       IF (R.GE.3) THEN
         OUT=OUT+C(15)*Q(0)*Q(0)*Q(0)+C(16)*Q(0)*Q(0)*Q(1)+C(17)*Q(0)
-     $   *Q(1)*Q(1)+C(18)*Q(1)*Q(1)*Q(1)+C(19)*Q(0)*Q(0)*Q(2)
-     $   +C(20)*Q(0)*Q(1)*Q(2)+C(21)*Q(1)*Q(1)*Q(2)+C(22)*Q(0)*Q(2)
-     $   *Q(2)+C(23)*Q(1)*Q(2)*Q(2)+C(24)*Q(2)*Q(2)*Q(2)+C(25)*Q(0)
-     $   *Q(0)*Q(3)+C(26)*Q(0)*Q(1)*Q(3)+C(27)*Q(1)*Q(1)*Q(3)
-     $   +C(28)*Q(0)*Q(2)*Q(3)+C(29)*Q(1)*Q(2)*Q(3)+C(30)*Q(2)*Q(2)
-     $   *Q(3)+C(31)*Q(0)*Q(3)*Q(3)+C(32)*Q(1)*Q(3)*Q(3)+C(33)*Q(2)
-     $   *Q(3)*Q(3)+C(34)*Q(3)*Q(3)*Q(3)
+     $   *Q(1)*Q(1)+C(18)*Q(1)*Q(1)*Q(1)+C(19)*Q(0)*Q(0)*Q(2)+C(20)
+     $   *Q(0)*Q(1)*Q(2)+C(21)*Q(1)*Q(1)*Q(2)+C(22)*Q(0)*Q(2)*Q(2)
+     $   +C(23)*Q(1)*Q(2)*Q(2)+C(24)*Q(2)*Q(2)*Q(2)+C(25)*Q(0)*Q(0)
+     $   *Q(3)+C(26)*Q(0)*Q(1)*Q(3)+C(27)*Q(1)*Q(1)*Q(3)+C(28)*Q(0)
+     $   *Q(2)*Q(3)+C(29)*Q(1)*Q(2)*Q(3)+C(30)*Q(2)*Q(2)*Q(3)+C(31)
+     $   *Q(0)*Q(3)*Q(3)+C(32)*Q(1)*Q(3)*Q(3)+C(33)*Q(2)*Q(3)*Q(3)
+     $   +C(34)*Q(3)*Q(3)*Q(3)
       ENDIF
       END
 
@@ -288,18 +288,18 @@ C     It is only used for the NINJA interface
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       IF (R.GE.3) THEN
         OUT=OUT+C(15)*Q(0)*Q(0)*Q(0)+C(16)*Q(0)*Q(0)*Q(1)+C(17)*Q(0)
-     $   *Q(1)*Q(1)+C(18)*Q(1)*Q(1)*Q(1)+C(19)*Q(0)*Q(0)*Q(2)
-     $   +C(20)*Q(0)*Q(1)*Q(2)+C(21)*Q(1)*Q(1)*Q(2)+C(22)*Q(0)*Q(2)
-     $   *Q(2)+C(23)*Q(1)*Q(2)*Q(2)+C(24)*Q(2)*Q(2)*Q(2)+C(25)*Q(0)
-     $   *Q(0)*Q(3)+C(26)*Q(0)*Q(1)*Q(3)+C(27)*Q(1)*Q(1)*Q(3)
-     $   +C(28)*Q(0)*Q(2)*Q(3)+C(29)*Q(1)*Q(2)*Q(3)+C(30)*Q(2)*Q(2)
-     $   *Q(3)+C(31)*Q(0)*Q(3)*Q(3)+C(32)*Q(1)*Q(3)*Q(3)+C(33)*Q(2)
-     $   *Q(3)*Q(3)+C(34)*Q(3)*Q(3)*Q(3)
+     $   *Q(1)*Q(1)+C(18)*Q(1)*Q(1)*Q(1)+C(19)*Q(0)*Q(0)*Q(2)+C(20)
+     $   *Q(0)*Q(1)*Q(2)+C(21)*Q(1)*Q(1)*Q(2)+C(22)*Q(0)*Q(2)*Q(2)
+     $   +C(23)*Q(1)*Q(2)*Q(2)+C(24)*Q(2)*Q(2)*Q(2)+C(25)*Q(0)*Q(0)
+     $   *Q(3)+C(26)*Q(0)*Q(1)*Q(3)+C(27)*Q(1)*Q(1)*Q(3)+C(28)*Q(0)
+     $   *Q(2)*Q(3)+C(29)*Q(1)*Q(2)*Q(3)+C(30)*Q(2)*Q(2)*Q(3)+C(31)
+     $   *Q(0)*Q(3)*Q(3)+C(32)*Q(1)*Q(3)*Q(3)+C(33)*Q(2)*Q(3)*Q(3)
+     $   +C(34)*Q(3)*Q(3)*Q(3)
       ENDIF
       END
 
@@ -608,47 +608,47 @@ C     It is only used for the NINJA interface
      $       +A(K,8,I)*B(J,0,K)
             OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
      $       +A(K,9,I)*B(J,0,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)+A(K,10,I)
-     $       *B(J,0,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)
-     $       *B(J,1,K)+A(K,11,I)*B(J,0,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)
-     $       *B(J,2,K)+A(K,12,I)*B(J,0,K)
-            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)
-     $       *B(J,3,K)+A(K,13,I)*B(J,0,K)
-            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,0,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)+A(K,10,I)*B(J,0
+     $       ,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+     $       +A(K,11,I)*B(J,0,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
+     $       +A(K,12,I)*B(J,0,K)
+            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
+     $       +A(K,13,I)*B(J,0,K)
+            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)+A(K,14,I)*B(J,0
+     $       ,K)
             OUT(J,15,I)=OUT(J,15,I)+A(K,5,I)*B(J,1,K)
             OUT(J,16,I)=OUT(J,16,I)+A(K,5,I)*B(J,2,K)+A(K,6,I)*B(J,1,K)
             OUT(J,17,I)=OUT(J,17,I)+A(K,6,I)*B(J,2,K)+A(K,7,I)*B(J,1,K)
             OUT(J,18,I)=OUT(J,18,I)+A(K,7,I)*B(J,2,K)
             OUT(J,19,I)=OUT(J,19,I)+A(K,5,I)*B(J,3,K)+A(K,8,I)*B(J,1,K)
-            OUT(J,20,I)=OUT(J,20,I)+A(K,6,I)*B(J,3,K)+A(K,8,I)
-     $       *B(J,2,K)+A(K,9,I)*B(J,1,K)
+            OUT(J,20,I)=OUT(J,20,I)+A(K,6,I)*B(J,3,K)+A(K,8,I)*B(J,2,K)
+     $       +A(K,9,I)*B(J,1,K)
             OUT(J,21,I)=OUT(J,21,I)+A(K,7,I)*B(J,3,K)+A(K,9,I)*B(J,2,K)
-            OUT(J,22,I)=OUT(J,22,I)+A(K,8,I)*B(J,3,K)+A(K,10,I)
-     $       *B(J,1,K)
-            OUT(J,23,I)=OUT(J,23,I)+A(K,9,I)*B(J,3,K)+A(K,10,I)
-     $       *B(J,2,K)
+            OUT(J,22,I)=OUT(J,22,I)+A(K,8,I)*B(J,3,K)+A(K,10,I)*B(J,1
+     $       ,K)
+            OUT(J,23,I)=OUT(J,23,I)+A(K,9,I)*B(J,3,K)+A(K,10,I)*B(J,2
+     $       ,K)
             OUT(J,24,I)=OUT(J,24,I)+A(K,10,I)*B(J,3,K)
-            OUT(J,25,I)=OUT(J,25,I)+A(K,5,I)*B(J,4,K)+A(K,11,I)
-     $       *B(J,1,K)
-            OUT(J,26,I)=OUT(J,26,I)+A(K,6,I)*B(J,4,K)+A(K,11,I)
-     $       *B(J,2,K)+A(K,12,I)*B(J,1,K)
-            OUT(J,27,I)=OUT(J,27,I)+A(K,7,I)*B(J,4,K)+A(K,12,I)
-     $       *B(J,2,K)
-            OUT(J,28,I)=OUT(J,28,I)+A(K,8,I)*B(J,4,K)+A(K,11,I)
-     $       *B(J,3,K)+A(K,13,I)*B(J,1,K)
-            OUT(J,29,I)=OUT(J,29,I)+A(K,9,I)*B(J,4,K)+A(K,12,I)
-     $       *B(J,3,K)+A(K,13,I)*B(J,2,K)
-            OUT(J,30,I)=OUT(J,30,I)+A(K,10,I)*B(J,4,K)+A(K,13,I)
-     $       *B(J,3,K)
-            OUT(J,31,I)=OUT(J,31,I)+A(K,11,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,1,K)
-            OUT(J,32,I)=OUT(J,32,I)+A(K,12,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,2,K)
-            OUT(J,33,I)=OUT(J,33,I)+A(K,13,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,3,K)
+            OUT(J,25,I)=OUT(J,25,I)+A(K,5,I)*B(J,4,K)+A(K,11,I)*B(J,1
+     $       ,K)
+            OUT(J,26,I)=OUT(J,26,I)+A(K,6,I)*B(J,4,K)+A(K,11,I)*B(J,2
+     $       ,K)+A(K,12,I)*B(J,1,K)
+            OUT(J,27,I)=OUT(J,27,I)+A(K,7,I)*B(J,4,K)+A(K,12,I)*B(J,2
+     $       ,K)
+            OUT(J,28,I)=OUT(J,28,I)+A(K,8,I)*B(J,4,K)+A(K,11,I)*B(J,3
+     $       ,K)+A(K,13,I)*B(J,1,K)
+            OUT(J,29,I)=OUT(J,29,I)+A(K,9,I)*B(J,4,K)+A(K,12,I)*B(J,3
+     $       ,K)+A(K,13,I)*B(J,2,K)
+            OUT(J,30,I)=OUT(J,30,I)+A(K,10,I)*B(J,4,K)+A(K,13,I)*B(J,3
+     $       ,K)
+            OUT(J,31,I)=OUT(J,31,I)+A(K,11,I)*B(J,4,K)+A(K,14,I)*B(J,1
+     $       ,K)
+            OUT(J,32,I)=OUT(J,32,I)+A(K,12,I)*B(J,4,K)+A(K,14,I)*B(J,2
+     $       ,K)
+            OUT(J,33,I)=OUT(J,33,I)+A(K,13,I)*B(J,4,K)+A(K,14,I)*B(J,3
+     $       ,K)
             OUT(J,34,I)=OUT(J,34,I)+A(K,14,I)*B(J,4,K)
           ENDDO
         ENDDO
@@ -684,47 +684,47 @@ C     It is only used for the NINJA interface
      $       +A(K,8,I)*B(J,0,K)
             OUT(J,9,I)=OUT(J,9,I)+A(K,2,I)*B(J,3,K)+A(K,3,I)*B(J,2,K)
      $       +A(K,9,I)*B(J,0,K)
-            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)+A(K,10,I)
-     $       *B(J,0,K)
-            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)
-     $       *B(J,1,K)+A(K,11,I)*B(J,0,K)
-            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)
-     $       *B(J,2,K)+A(K,12,I)*B(J,0,K)
-            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)
-     $       *B(J,3,K)+A(K,13,I)*B(J,0,K)
-            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,0,K)
+            OUT(J,10,I)=OUT(J,10,I)+A(K,3,I)*B(J,3,K)+A(K,10,I)*B(J,0
+     $       ,K)
+            OUT(J,11,I)=OUT(J,11,I)+A(K,1,I)*B(J,4,K)+A(K,4,I)*B(J,1,K)
+     $       +A(K,11,I)*B(J,0,K)
+            OUT(J,12,I)=OUT(J,12,I)+A(K,2,I)*B(J,4,K)+A(K,4,I)*B(J,2,K)
+     $       +A(K,12,I)*B(J,0,K)
+            OUT(J,13,I)=OUT(J,13,I)+A(K,3,I)*B(J,4,K)+A(K,4,I)*B(J,3,K)
+     $       +A(K,13,I)*B(J,0,K)
+            OUT(J,14,I)=OUT(J,14,I)+A(K,4,I)*B(J,4,K)+A(K,14,I)*B(J,0
+     $       ,K)
             OUT(J,15,I)=OUT(J,15,I)+A(K,5,I)*B(J,1,K)
             OUT(J,16,I)=OUT(J,16,I)+A(K,5,I)*B(J,2,K)+A(K,6,I)*B(J,1,K)
             OUT(J,17,I)=OUT(J,17,I)+A(K,6,I)*B(J,2,K)+A(K,7,I)*B(J,1,K)
             OUT(J,18,I)=OUT(J,18,I)+A(K,7,I)*B(J,2,K)
             OUT(J,19,I)=OUT(J,19,I)+A(K,5,I)*B(J,3,K)+A(K,8,I)*B(J,1,K)
-            OUT(J,20,I)=OUT(J,20,I)+A(K,6,I)*B(J,3,K)+A(K,8,I)
-     $       *B(J,2,K)+A(K,9,I)*B(J,1,K)
+            OUT(J,20,I)=OUT(J,20,I)+A(K,6,I)*B(J,3,K)+A(K,8,I)*B(J,2,K)
+     $       +A(K,9,I)*B(J,1,K)
             OUT(J,21,I)=OUT(J,21,I)+A(K,7,I)*B(J,3,K)+A(K,9,I)*B(J,2,K)
-            OUT(J,22,I)=OUT(J,22,I)+A(K,8,I)*B(J,3,K)+A(K,10,I)
-     $       *B(J,1,K)
-            OUT(J,23,I)=OUT(J,23,I)+A(K,9,I)*B(J,3,K)+A(K,10,I)
-     $       *B(J,2,K)
+            OUT(J,22,I)=OUT(J,22,I)+A(K,8,I)*B(J,3,K)+A(K,10,I)*B(J,1
+     $       ,K)
+            OUT(J,23,I)=OUT(J,23,I)+A(K,9,I)*B(J,3,K)+A(K,10,I)*B(J,2
+     $       ,K)
             OUT(J,24,I)=OUT(J,24,I)+A(K,10,I)*B(J,3,K)
-            OUT(J,25,I)=OUT(J,25,I)+A(K,5,I)*B(J,4,K)+A(K,11,I)
-     $       *B(J,1,K)
-            OUT(J,26,I)=OUT(J,26,I)+A(K,6,I)*B(J,4,K)+A(K,11,I)
-     $       *B(J,2,K)+A(K,12,I)*B(J,1,K)
-            OUT(J,27,I)=OUT(J,27,I)+A(K,7,I)*B(J,4,K)+A(K,12,I)
-     $       *B(J,2,K)
-            OUT(J,28,I)=OUT(J,28,I)+A(K,8,I)*B(J,4,K)+A(K,11,I)
-     $       *B(J,3,K)+A(K,13,I)*B(J,1,K)
-            OUT(J,29,I)=OUT(J,29,I)+A(K,9,I)*B(J,4,K)+A(K,12,I)
-     $       *B(J,3,K)+A(K,13,I)*B(J,2,K)
-            OUT(J,30,I)=OUT(J,30,I)+A(K,10,I)*B(J,4,K)+A(K,13,I)
-     $       *B(J,3,K)
-            OUT(J,31,I)=OUT(J,31,I)+A(K,11,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,1,K)
-            OUT(J,32,I)=OUT(J,32,I)+A(K,12,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,2,K)
-            OUT(J,33,I)=OUT(J,33,I)+A(K,13,I)*B(J,4,K)+A(K,14,I)
-     $       *B(J,3,K)
+            OUT(J,25,I)=OUT(J,25,I)+A(K,5,I)*B(J,4,K)+A(K,11,I)*B(J,1
+     $       ,K)
+            OUT(J,26,I)=OUT(J,26,I)+A(K,6,I)*B(J,4,K)+A(K,11,I)*B(J,2
+     $       ,K)+A(K,12,I)*B(J,1,K)
+            OUT(J,27,I)=OUT(J,27,I)+A(K,7,I)*B(J,4,K)+A(K,12,I)*B(J,2
+     $       ,K)
+            OUT(J,28,I)=OUT(J,28,I)+A(K,8,I)*B(J,4,K)+A(K,11,I)*B(J,3
+     $       ,K)+A(K,13,I)*B(J,1,K)
+            OUT(J,29,I)=OUT(J,29,I)+A(K,9,I)*B(J,4,K)+A(K,12,I)*B(J,3
+     $       ,K)+A(K,13,I)*B(J,2,K)
+            OUT(J,30,I)=OUT(J,30,I)+A(K,10,I)*B(J,4,K)+A(K,13,I)*B(J,3
+     $       ,K)
+            OUT(J,31,I)=OUT(J,31,I)+A(K,11,I)*B(J,4,K)+A(K,14,I)*B(J,1
+     $       ,K)
+            OUT(J,32,I)=OUT(J,32,I)+A(K,12,I)*B(J,4,K)+A(K,14,I)*B(J,2
+     $       ,K)
+            OUT(J,33,I)=OUT(J,33,I)+A(K,13,I)*B(J,4,K)+A(K,14,I)*B(J,3
+     $       ,K)
             OUT(J,34,I)=OUT(J,34,I)+A(K,14,I)*B(J,4,K)
           ENDDO
         ENDDO
