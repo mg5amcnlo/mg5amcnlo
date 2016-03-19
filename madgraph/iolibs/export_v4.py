@@ -6301,7 +6301,7 @@ This installation can take some time but only needs to be performed once.""",'$M
 In the future, if you want to reactivate Ninja, you can do so by re-attempting
 its online installation with the command 'install ninja' or install it on your
 own and set the path to its library in the MG5aMC option 'ninja'.""")
-                    cmd.exec_cmd('set ninja None')
+                    cmd.exec_cmd("set ninja ''")
                     cmd.exec_cmd('save options')  
 
 
