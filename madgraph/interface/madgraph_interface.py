@@ -5235,6 +5235,12 @@ This implies that with decay chains:
         if not self.options['cpp_compiler'] is None:
             compiler_options.append('--cpp_compiler=%s'%
                                                    self.options['cpp_compiler'])
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+        else:
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])

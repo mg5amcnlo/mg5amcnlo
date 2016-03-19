@@ -697,6 +697,36 @@ def get_open_fds():
         
     return nprocs
 
+def detect_cpp_std_lib_dependence(cpp_compiler):
+    """ Detects if the specified c++ compiler will normally link against the C++
+    standard library -lc++ or -libstdc++."""
+    try:
+        p = misc.Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
+        output, error = p.communicate()
+    except:
+        # Cannot probe the compiler, assume -lstdc++ then
+        return '-lstdc++'
+
+    is_clang = 'LLVM' in output
+    if is_clang:
+        try:
+            import platform
+            v, _,_ = platform.mac_ver()
+            if not v:
+                # We will not attempt to support clang elsewhere than on macs, so
+                # we venture a guess here.
+                return '-lc++'
+            else:
+                v = float(v.rsplit('.')[1])
+                if v >= 9:
+                   return '-lc++'
+                else:
+                   return '-lstdc++'
+        except:
+            return '-lstdc++'
+    return '-lstdc++'
+
 def detect_current_compiler(path, compiler_type='fortran'):
     """find the current compiler for the current directory"""
     

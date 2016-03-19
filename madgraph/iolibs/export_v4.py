@@ -1703,24 +1703,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Set CXX=compiler in Source/make_opts.
         The version is also checked, in order to set some extra flags
         if the compiler is clang (on MACOS)"""
-       
-        p = misc.Popen([compiler, '--version'], stdout=subprocess.PIPE, 
-                    stderr=subprocess.PIPE)
-        output, error = p.communicate()
-        is_clang = 'LLVM' in output
-        is_lc = False
-        if is_clang:
-            import platform
-            v, _,_ = platform.mac_ver()
-            if not v:
-                is_lc = True
-            else:
-                v = float(v.rsplit('.')[1])
-                if v >= 9:
-                    is_lc = True
-                else:
-                    is_lc = False
         
+        is_lc = misc.detect_cpp_std_lib_dependence(compiler) == '-lc++'
+
         # list of the variable to set in the make_opts file
         for_update= {'DEFAULT_CPP_COMPILER':compiler,
                      'MACFLAG':'-mmacosx-version-min=10.7' if is_clang and is_lc else '',
