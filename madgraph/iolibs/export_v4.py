@@ -1703,8 +1703,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         """Set CXX=compiler in Source/make_opts.
         The version is also checked, in order to set some extra flags
         if the compiler is clang (on MACOS)"""
-        
-        is_lc = misc.detect_cpp_std_lib_dependence(compiler) == '-lc++'
+       
+        is_clang = misc.detect_if_cpp_compiler_is_clang(compiler)
+        is_lc    = misc.detect_cpp_std_lib_dependence(compiler) == '-lc++'
 
         # list of the variable to set in the make_opts file
         for_update= {'DEFAULT_CPP_COMPILER':compiler,

@@ -697,18 +697,22 @@ def get_open_fds():
         
     return nprocs
 
-def detect_cpp_std_lib_dependence(cpp_compiler):
-    """ Detects if the specified c++ compiler will normally link against the C++
-    standard library -lc++ or -libstdc++."""
+def detect_if_cpp_compiler_is_clang(cpp_compiler):
+    """ Detects whether the specified C++ compiler is clang."""
     try:
         p = misc.Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
     except:
-        # Cannot probe the compiler, assume -lstdc++ then
-        return '-lstdc++'
+        # Cannot probe the compiler, assume not clang then
+        return False
+    return 'LLVM' in output
 
-    is_clang = 'LLVM' in output
+def detect_cpp_std_lib_dependence(cpp_compiler):
+    """ Detects if the specified c++ compiler will normally link against the C++
+    standard library -lc++ or -libstdc++."""
+
+    is_clang = detect_if_cpp_compiler_is_clang(cpp_compiler)
     if is_clang:
         try:
             import platform
