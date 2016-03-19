@@ -6600,7 +6600,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # First look at options which should be put in MG5DIR/input
             to_define = {}
             for key, default in self.options_configuration.items():
-                if  self.options_configuration[key] != self.options[key] is None:
+                if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
                     to_define[key] = self.options[key]
 
             if not '--auto' in args:
