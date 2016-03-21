@@ -66,6 +66,8 @@ except ImportError:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
+    import internal.save_load_object as save_load_object
+    import internal.gen_crossxhtml as gen_crossxhtml
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True    
 else:
@@ -76,7 +78,10 @@ else:
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
+    import madgraph.iolibs.save_load_object as save_load_object
+    import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
+    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
 
@@ -392,7 +397,7 @@ class CheckValidForCmd(object):
 
     def check_decay_events(self,args):
         """Check the argument for decay_events command
-        syntax: decay_events [NAME]
+        syntax is "decay_events [NAME]"
         Note that other option are already remove at this point
         """
 
@@ -419,7 +424,7 @@ class CheckValidForCmd(object):
 
     def check_check_events(self,args):
         """Check the argument for decay_events command
-        syntax: decay_events [NAME]
+        syntax is "decay_events [NAME]"
         Note that other option are already remove at this point
         """
 
@@ -442,9 +447,7 @@ class CheckValidForCmd(object):
 
 
     def get_events_path(self, run_name):
-        """Check the argument for decay_events command
-        syntax: decay_events [NAME]
-        Note that other option are already remove at this point
+        """return the path to the output events
         """
 
 
@@ -524,6 +527,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def __init__(self, me_dir, options, *args, **opts):
         """common"""
 
+        self.force_run = False # this flag force the run even if RunWeb is present
+        if 'force_run' in opts and opts['force_run']:
+            self.force_run = True
+            del opts['force_run']
+
         cmd.Cmd.__init__(self, *args, **opts)
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
@@ -539,21 +547,22 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.error =  pjoin(self.me_dir, 'error')
         self.dirbin = pjoin(self.me_dir, 'bin', 'internal')
 
-        # Check that the directory is not currently running
-        if os.path.exists(pjoin(me_dir,'RunWeb')): 
-            message = '''Another instance of the program is currently running.
-            (for this exact same directory) Please wait that this is instance is 
-            closed. If no instance is running, you can delete the file
-            %s and try again.''' % pjoin(me_dir,'RunWeb')
-            raise AlreadyRunning, message
-        else:
-            pid = os.getpid()
-            fsock = open(pjoin(me_dir,'RunWeb'),'w')
-            fsock.write(`pid`)
-            fsock.close()
-
-            misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
-                        cwd=me_dir)
+        # Check that the directory is not currently running_in_idle
+        if not self.force_run:
+            if os.path.exists(pjoin(me_dir,'RunWeb')): 
+                message = '''Another instance of the program is currently running.
+                (for this exact same directory) Please wait that this is instance is 
+                closed. If no instance is running, you can delete the file
+                %s and try again.''' % pjoin(me_dir,'RunWeb')
+                raise AlreadyRunning, message
+            else:
+                pid = os.getpid()
+                fsock = open(pjoin(me_dir,'RunWeb'),'w')
+                fsock.write(`pid`)
+                fsock.close()
+    
+                misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
+                            cwd=me_dir)
 
         self.to_store = []
         self.run_name = None
@@ -609,6 +618,35 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             args.remove(arg)
 
         return args
+
+    @misc.multiple_try(nb_try=5, sleep=2)
+    def load_results_db(self):
+        """load the current results status"""
+        
+        # load the current status of the directory
+        if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
+            try:
+                self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
+            except Exception:
+                #the pickle fail -> need to recreate the library
+                model = self.find_model_name()
+                process = self.process # define in find_model_name
+                self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+                self.results.resetall(self.me_dir)
+            else:                                
+                self.results.resetall(self.me_dir)
+            try:
+                self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
+            except:
+                self.results.resetall(self.me_dir)
+                self.last_mode = ''
+        else:
+            model = self.find_model_name()
+            process = self.process # define in find_model_name
+            self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+            self.results.resetall(self.me_dir)
+            self.last_mode=''
+        return self.results
 
     ############################################################################
     def do_treatcards(self, line, amcatnlo=False):
@@ -708,13 +746,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             param_card.write_inc_file(outfile, ident_card, default)
 
 
-    def ask_edit_cards(self, cards, mode='fixed', plot=True):
+    def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
         """ """
         if not self.options['madanalysis_path']:
             plot = False
 
         self.ask_edit_card_static(cards, mode, plot, self.options['timeout'],
-                                  self.ask)
+                                  self.ask, first_cmd=first_cmd)
 
     @staticmethod
     def ask_edit_card_static(cards, mode='fixed', plot=True,
@@ -1036,10 +1074,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Dummy routine, to be overwritten by daughter classes"""
 
         pass
+    
     ############################################################################
     def do_reweight(self, line):
-        """ Allow to reweight the events generated with a new choices of model
-            parameter.
+        """ syntax is "reweight RUN_NAME"
+            Allow to reweight the events generated with a new choices of model
+            parameter. Description of the methods are available here
+            cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
         """
         
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
@@ -1057,28 +1098,91 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             raise self.ConfigurationError, '''Can\'t load Reweight module.
             The variable mg5_path might not be correctly configured.'''
         
-        self.to_store.append('event')
+
+                        
         if not '-from_cards' in line:
             self.keep_cards(['reweight_card.dat'], ignore=['*'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
 
+        # load the name of the event file
+        args = self.split_arg(line) 
+
+        if not self.force_run:
+            # forbid this function to create an empty item in results.
+            if self.run_name and self.results.current and  self.results.current['cross'] == 0:
+                self.results.delete_run(self.run_name, self.run_tag)
+            self.results.save()
+            # we want to run this in a separate shell to avoid hard f2py crash
+            command =  [sys.executable]
+            if os.path.exists(pjoin(self.me_dir, 'bin', 'madevent')):
+                command.append(pjoin(self.me_dir, 'bin', 'internal','madevent_interface.py'))
+            else:
+                command.append(pjoin(self.me_dir, 'bin', 'internal', 'amcatnlo_run_interface.py'))
+            if not isinstance(self, cmd.CmdShell):
+                command.append('--web')
+            command.append('reweight')
+            if self.run_name:
+                command.append(self.run_name)
+            else:
+                command += args
+            if '-from_cards' not in command:
+                command.append('-from_cards')
+            p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
+            while p.poll() is None:
+                line = p.stdout.readline()
+                if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
+                   not '***********' in line:
+                        print line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:','')
+                elif __debug__ and line:
+                    logger.debug(line[:-1])
+            if p.returncode !=0:
+                logger.error("Reweighting failed")
+                return
+            self.results = self.load_results_db()
+            # forbid this function to create an empty item in results.
+            try:
+                if self.results[self.run_name][-2]['cross']==0:
+                    self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
+            except:
+                pass
+            try:
+                if self.results.current['cross'] == 0 and self.run_name:
+                    self.results.delete_run(self.run_name, self.run_tag)
+            except:
+                pass                    
+            # re-define current run     
+            try:
+                self.results.def_current(self.run_name, self.run_tag)
+            except Exception:
+                pass
+            return              
+
+        self.to_store.append('event')
         # forbid this function to create an empty item in results.
         if self.results.current['cross'] == 0 and self.run_name:
             self.results.delete_run(self.run_name, self.run_tag)
 
-        # load the name of the event file
-        args = self.split_arg(line) 
         self.check_decay_events(args) 
         # args now alway content the path to the valid files
-        reweight_cmd = reweight_interface.ReweightInterface(args[0])
-        reweight_cmd.mother = self
-        self.update_status('Running Reweight', level='madspin')
-        
+        reweight_cmd = reweight_interface.ReweightInterface(args[0], mother=self)
+        #reweight_cmd.use_rawinput = False
+        #reweight_cmd.mother = self
+        wgt_names = reweight_cmd.get_weight_names()
+        if wgt_names == [''] and reweight_cmd.has_nlo:
+            self.update_status('Running Reweighting (LO approximate)', level='madspin')
+        else:
+            self.update_status('Running Reweighting', level='madspin')
         
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+        reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
+            
+        logger.info("quit rwgt")
+        
+        
+        
         # re-define current run
         try:
             self.results.def_current(self.run_name, self.run_tag)
@@ -1434,44 +1538,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 else:
                     self.pdffile = " "
                 return self.pdffile
-                
-    def do_quit(self, line):
-        """Not in help: exit """
-  
-  
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception, error:
-            pass
-        
-        try:
-            self.store_result()
-        except Exception:
-            # If nothing runs they they are no result to update
-            pass
-        
-        try:
-            self.update_status('', level=None)
-        except Exception, error:        
-            pass
-        try:
-            devnull = open(os.devnull, 'w') 
-            misc.call(['./bin/internal/gen_cardhtml-pl'], cwd=self.me_dir,
-                        stdout=devnull, stderr=devnull)
-        except Exception:
-            pass
-        try:
-            devnull.close()
-        except Exception:
-            pass
-        
-        return super(CommonRunCmd, self).do_quit(line)
-
-    
-    # Aliases
-    do_EOF = do_quit
-    do_exit = do_quit
-      
+                      
     ############################################################################
     def do_open(self, line):
         """Open a text file/ eps file / html file"""
@@ -1689,10 +1756,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def do_quit(self, line):
         """Not in help: exit """
 
-        try:
-            os.remove(pjoin(self.me_dir,'RunWeb'))
-        except Exception:
-            pass
+        if not self.force_run:
+            try:
+                os.remove(pjoin(self.me_dir,'RunWeb'))
+            except Exception:
+                pass
         try:
             self.store_result()
         except Exception:
@@ -1779,8 +1847,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path=config_path, final=final)
-                return
+                self.set_configuration(config_path=config_path, final=False)
             if 'HOME' in os.environ:
                 config_path = pjoin(os.environ['HOME'],'.mg5',
                                                         'mg5_configuration.txt')
@@ -2055,6 +2122,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                         os.path.join('.',*[a for a in args \
                                                     if a.endswith(os.path.sep)]))
 
+    def complete_reweight(self,text, line, begidx, endidx):
+        "Complete the pythia command"
+        args = self.split_arg(line[0:begidx], error=False)
+
+        #return valid run_name
+        data = glob.glob(pjoin(self.me_dir, 'Events', '*','*events.lhe*'))
+        data = [n.rsplit('/',2)[1] for n in data]
+        if not '-f' in args:
+            data.append('-f')
+        tmp1 =  self.list_completion(text, data)
+        return tmp1 
+
+
+
     def complete_compute_widths(self, text, line, begidx, endidx):
         "Complete the compute_widths command"
 
@@ -2082,20 +2163,57 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """update the make_opts file writing the environmental variables
         stored in make_opts_var"""
         make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
+        
+        return self.update_make_opts_full(make_opts, self.make_opts_var)
+        
+
+    @staticmethod
+    def update_make_opts_full(path, def_variables, keep_old=True):
+        """update the make_opts file writing the environmental variables
+        of def_variables.
+        if a value of the dictionary is None then it is not written.
+        """
+        make_opts = path
+        pattern = re.compile(r'^(\w+)\s*=\s*(.*)$',re.DOTALL)
+        diff = False # set to True if one varible need to be updated 
+                     #if on False the file is not modify
+        
         tag = '#end_of_make_opts_variables\n'
-        content = open(make_opts).read()
+        make_opts_variable = True # flag to say if we are in edition area or not
+        content = []
+        variables = dict(def_variables)
+        need_keys = variables.keys()
+        for line in open(make_opts):
+            line = line.strip()
+            if make_opts_variable: 
+                if line.startswith('#') or not line:
+                    if line.startswith('#end_of_make_opts_variables'):
+                        make_opts_variable = False
+                    continue
+                elif pattern.search(line):
+                    key, value = pattern.search(line).groups()
+                    if key not in variables:
+                        variables[key] = value
+                    elif value !=  variables[key]:
+                        diff=True
+                    else:
+                        need_keys.remove(key)
+                else: 
+                    misc.sprint("end on line", line)
+                    make_opts_variable = False
+                    content.append(line)
+            else:                  
+                content.append(line)
+                     
+        if need_keys:
+            diff=True #This means that new definition are added to the file. 
 
-        # if this is not the first time that the file is updated, there
-        # should be a line #end_of_make_opts_variables
-        if tag in content:
-            content = content.split(tag)[1]
+        content_variables = '\n'.join('%s=%s' % (k,v) for k, v in variables.items() if v is not None)
+        content_variables += '\n%s' % tag
 
-        variables = '\n'.join('%s=%s' % (k,v) for k, v in self.make_opts_var.items())
-        variables += '\n%s' % tag
-
-        open(make_opts, 'w').write(variables + content)
-        return
-
+        if diff:
+            open(make_opts, 'w').write(content_variables + '\n'.join(content))
+        return       
 
 
 # lhapdf-related functions
@@ -2144,6 +2262,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """copy (if needed) the lhapdf set corresponding to the lhaid in lhaid_list 
         into lib/PDFsets"""
 
+        if not hasattr(self, 'lhapdf_pdfsets'):
+            self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsets_dir)
+
         pdfsetname=set()
         for lhaid in lhaid_list:
             try:
@@ -2168,7 +2289,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 os.mkdir(pdfsets_dir)
             except OSError:
                 pdfsets_dir = pjoin(self.me_dir, 'lib', 'PDFsets')
-        else:
+        elif os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets')):
             #clean previous set of pdf used
             for name in os.listdir(pjoin(self.me_dir, 'lib', 'PDFsets')):
                 if name not in pdfsetname:
@@ -2223,18 +2344,49 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
         lhapdf_version = self.get_lhapdf_version()
+        local_path = pjoin(self.me_dir, 'lib', 'PDFsets')
+        return self.install_lhapdf_pdfset_static(self.options['lhapdf'],
+                                             pdfsets_dir, filename,
+                                             lhapdf_version=lhapdf_version,
+                                             alternate_path=local_path)
+                                                 
+
+    @staticmethod
+    def install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, filename, 
+                                        lhapdf_version=None, alternate_path=None):
+        """idownloads and install the pdfset filename in the pdfsets_dir.
+        Version which can be used independently of the class.
+        local path is used if the global installation fails.
+        """
+           
+        if not lhapdf_version:
+            lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
+        if not pdfsets_dir:
+            pdfsets_dir = subprocess.Popen([lhapdf_config, '--datadir'], 
+                        stdout = subprocess.PIPE).stdout.read().strip()
+                                
+        if isinstance(filename, int):
+            pdf_info = CommonRunCmd.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
+            filename = pdf_info[filename]['filename']
+        
+        if os.path.exists(pjoin(pdfsets_dir, filename)):
+            logger.debug('%s is already present in %s', (filename, pdfsets_dir))
+            return
+             
         logger.info('Trying to download %s' % filename)
 
         if lhapdf_version.startswith('5.'):
+
             # use the lhapdf-getdata command, which is in the same path as
             # lhapdf-config
-            getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf-getdata'))
+            getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf-getdata'))
             misc.call([getdata, filename], cwd = pdfsets_dir)
 
         elif lhapdf_version.startswith('6.'):
             # use the "lhapdf install xxx" command, which is in the same path as
             # lhapdf-config
-            getdata = self.options['lhapdf'].replace('lhapdf-config', ('lhapdf'))
+            getdata = lhapdf_config.replace('lhapdf-config', ('lhapdf'))
 
             misc.call([getdata, 'install', filename], cwd = pdfsets_dir)
 
@@ -2250,11 +2402,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif lhapdf_version.startswith('5.'):
             logger.warning('Could not download %s into %s. Trying to save it locally' \
                     % (filename, pdfsets_dir))
-            self.install_lhapdf_pdfset(pjoin(self.me_dir, 'lib', 'PDFsets'), filename)
+            CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, alternate_path, filename,
+                                                      lhapdf_version=lhapdf_version)
         else:
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
                     % (filename, pdfsets_dir)
+
 
 
     def get_lhapdf_pdfsets_list(self, pdfsets_dir):
@@ -2262,6 +2416,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         place as pdfsets_dir, and return a list of dictionaries with the information
         about each pdf set"""
         lhapdf_version = self.get_lhapdf_version()
+        return self.get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version)
+
+    @staticmethod
+    def get_lhapdf_pdfsets_list_static(pdfsets_dir, lhapdf_version):
 
         if lhapdf_version.startswith('5.'):
             if os.path.exists('%s.index' % pdfsets_dir):
@@ -2328,6 +2486,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                          stdout = subprocess.PIPE).stdout.read().strip()
 
         return datadir
+
+    def get_lhapdf_libdir(self):
+        lhapdf_version = self.get_lhapdf_version()
+
+        if lhapdf_version.startswith('5.'):
+            libdir = subprocess.Popen([self.options['lhapdf-config'], '--libdir'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
+
+        elif lhapdf_version.startswith('6.'):
+            libdir = subprocess.Popen([self.options['lhapdf'], '--libs'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
+
+        return libdir
 
 class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
@@ -2663,7 +2834,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if '=' in args:
             args.remove('=')
         # do not set lowercase the case-sensitive parameters from the shower_card
-        if args[0].lower() not in ['analyse', 'extralibs', 'extrapaths', 'includepaths']:
+        if not ( args[0].lower() in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or \
+                 args[0].lower().startswith('dm_') ):
             args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
@@ -2956,10 +3128,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
 
         #### SHOWER CARD
-        elif self.has_shower and args[start] in [l.lower() for l in \
+        elif self.has_shower and args[start].lower() in [l.lower() for l in \
                        self.shower_card.keys()] and card in ['', 'shower_card']:
             if args[start] not in self.shower_card:
-                args[start] = [l for l in self.shower_card if l.lower() == args[start]][0]
+                args[start] = [l for l in self.shower_card if l.lower() == args[start].lower()][0]
 
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
@@ -3087,12 +3259,39 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     (block, lhaid, value), '$MG:color:BLACK')
         self.param_card[block].param_dict[lhaid].value = value
     
+    def check_card_consistency(self):
+        """This is run on quitting the class. Apply here all the self-consistency
+        rule that you want. Do the modification via the set command."""
+
+        # if NLO reweighting is ON: ensure that we keep the rwgt information
+        if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
+            isinstance(self.run_card,banner_mod.RunCardNLO) and \
+            not self.run_card['keep_rwgt_info']:
+            #check if a NLO reweighting is required
+                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO)\s*(?:#|$)''', re.M+re.I)
+                text = open(pjoin(self.me_dir,'Cards','reweight_card.dat')).read()
+                options = re_pattern.findall(text)
+                if any(o in ['NLO', 'LO+NLO'] for o in options):
+                    logger.info('NLO reweighting is on ON. Automatically set keep_rwgt_info to True', '$MG:color:BLACK' )
+                    self.do_set('run_card keep_rwgt_info True')
+    
+    
     def reask(self, *args, **opt):
         
         cmd.OneLinePathCompletion.reask(self,*args, **opt)
         if self.has_mw and not os.path.exists(pjoin(self.me_dir,'Cards','transfer_card.dat')):
             logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
-            
+    
+    def postcmd(self, stop, line):
+        
+        ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+        if ending_question:
+            self.check_card_consistency()
+            return ending_question
+    
+    def check_answer_consistency(self):
+        """function called if the code reads a file"""
+        self.check_card_consistency() 
       
     def help_set(self):
         '''help message for set'''

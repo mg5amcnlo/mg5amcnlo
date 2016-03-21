@@ -8,7 +8,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > w- t b~ QED=1 QCD=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -28,10 +28,8 @@ C
       PARAMETER (NEXTERNAL=5)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=28,NLOOPWAVEFUNCS=267)
-      INTEGER MAXLWFSIZE
-      PARAMETER (MAXLWFSIZE=4)
-      INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=70, VERTEXMAXCOEFS=5)
+      INCLUDE 'loop_max_coefs.inc'
+      INCLUDE 'coef_specs.inc'
       INTEGER    NCOMB
       PARAMETER (NCOMB=48)
       REAL*16    ZERO
@@ -52,10 +50,13 @@ C
 C     LOCAL VARIABLES 
 C     
       LOGICAL DPW_COPIED
+      LOGICAL COMPUTE_INTEGRAND_IN_QP
       INTEGER I,J,K,H,HEL_MULT,ITEMP
       REAL*16 TEMP2
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
-      REAL*16 P(0:3,NEXTERNAL)
+      REAL*16 MP_P(0:3,NEXTERNAL)
+      REAL*8 P(0:3,NEXTERNAL)
+
       DATA IC/NEXTERNAL*1/
       REAL*16 ANS(3,0:NSQUAREDSO)
       COMPLEX*32 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -70,6 +71,8 @@ C
 C     GLOBAL VARIABLES
 C     
       INCLUDE 'mp_coupl_same_name.inc'
+
+      INCLUDE 'MadLoopParams.inc'
 
       LOGICAL CHECKPHASE, HELDOUBLECHECKED
       COMMON/ML5_0_INIT/CHECKPHASE, HELDOUBLECHECKED
@@ -92,8 +95,8 @@ C
      $ ,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE
      $ ,CTCALL_REQ_SO_DONE,FILTER_SO
       COMMON/ML5_0_SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE
-     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_S
-     $ O_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE
+     $ ,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
       COMPLEX*32 AMP(NBORNAMPS)
       COMMON/ML5_0_MP_AMPS/AMP
@@ -105,17 +108,28 @@ C
       COMPLEX*16 DPW(20,NWAVEFUNCS)
       COMMON/ML5_0_W/DPW
 
-      COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEF
-     $ UNCS)
+      COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE
+     $ ,0:NLOOPWAVEFUNCS)
       COMPLEX*32 PL(0:3,0:NLOOPWAVEFUNCS)
       COMMON/ML5_0_MP_WL/WL,PL
+
+      COMPLEX*16 DP_WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE
+     $ ,0:NLOOPWAVEFUNCS)
+      COMPLEX*16 DP_PL(0:3,0:NLOOPWAVEFUNCS)
+      COMMON/ML5_0_WL/DP_WL,DP_PL
 
       COMPLEX*32 LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
       COMMON/ML5_0_MP_LCOEFS/LOOPCOEFS
 
+      COMPLEX*16 DP_LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
+      COMMON/ML5_0_LCOEFS/DP_LOOPCOEFS
+
 
       COMPLEX*32 AMPL(3,NCTAMPS)
       COMMON/ML5_0_MP_AMPL/AMPL
+
+      COMPLEX*16 DP_AMPL(3,NCTAMPS)
+      COMMON/ML5_0_AMPL/DP_AMPL
 
 
       INTEGER CF_D(NCOLORROWS,NBORNAMPS)
@@ -128,9 +142,19 @@ C
       LOGICAL MP_DONE_ONCE
       COMMON/ML5_0_MP_DONE_ONCE/MP_DONE_ONCE
 
+      INTEGER LIBINDEX
+      COMMON/ML5_0_I_LIB/LIBINDEX
+
 C     ----------
 C     BEGIN CODE
 C     ----------
+
+C     Decide whether to really compute the integrand in quadruple
+C      precision or to fake it and copy the double precision
+C      computation in the quadruple precision variables.
+      COMPUTE_INTEGRAND_IN_QP = ((MLREDUCTIONLIB(LIBINDEX)
+     $ .EQ.6.AND.USEQPINTEGRANDFORNINJA) .OR. (MLREDUCTIONLIB(LIBINDEX)
+     $ .EQ.1.AND.USEQPINTEGRANDFORCUTTOOLS))
 
 C     To be on the safe side, we always update the MP params here.
 C     It can be redundant as this routine can be called a couple of
@@ -143,7 +167,8 @@ C     But it is really not time consuming and I would rather be safe.
 C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
       DO I=1,NEXTERNAL
         DO J=0,3
-          P(J,I)=PS(J,I)
+          MP_P(J,I)=PS(J,I)
+          P(J,I) = REAL(PS(J,I),KIND=8)
         ENDDO
       ENDDO
 
@@ -153,10 +178,17 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
       DO I=1,MAXLWFSIZE
         DO J=0,LOOPMAXCOEFS-1
           DO K=1,MAXLWFSIZE
-            IF(I.EQ.K.AND.J.EQ.0) THEN
+            IF (I.EQ.K.AND.J.EQ.0) THEN
               WL(I,J,K,0)=(1.0E0_16,ZERO)
             ELSE
               WL(I,J,K,0)=(ZERO,ZERO)
+            ENDIF
+            IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+              IF (I.EQ.K.AND.J.EQ.0) THEN
+                DP_WL(I,J,K,0)=(1.0D0,0.0D0)
+              ELSE
+                DP_WL(I,J,K,0)=(0.0D0,0.0D0)
+              ENDIF
             ENDIF
           ENDDO
         ENDDO
@@ -165,6 +197,9 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
       DO K=1, 3
         DO I=1,NCTAMPS
           AMPL(K,I)=(ZERO,ZERO)
+          IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+            DP_AMPL(K,I)=(0.0D0,0.0D0)
+          ENDIF
         ENDDO
       ENDDO
 
@@ -178,6 +213,9 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
         DO J=0,LOOPMAXCOEFS-1
           DO K=1,NSQUAREDSO
             LOOPCOEFS(J,K,I)=(ZERO,ZERO)
+            IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+              DP_LOOPCOEFS(J,K,I)=(0.0D0,0.0D0)
+            ENDIF
           ENDDO
         ENDDO
       ENDDO
@@ -192,8 +230,8 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
       DPW_COPIED = .FALSE.
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $   .NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHE
-     $   L(H).NE.0)))) THEN
+     $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
+     $   .NE.0)))) THEN
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO
@@ -202,19 +240,47 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
           MP_CT_REQ_SO_DONE=.FALSE.
           MP_LOOP_REQ_SO_DONE=.FALSE.
 
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             HEL_MULT=GOODHEL(H)
           ELSE
             HEL_MULT=1
           ENDIF
 
 
-          CALL ML5_0_MP_HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
+          IF (COMPUTE_INTEGRAND_IN_QP) THEN
+            CALL ML5_0_MP_HELAS_CALLS_AMPB_1(MP_P,NHEL,H,IC)
+          ELSE
+            CALL ML5_0_HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
+          ENDIF
+
  2000     CONTINUE
           MP_CT_REQ_SO_DONE=.TRUE.
 
-          CALL ML5_0_MP_HELAS_CALLS_UVCT_1(P,NHEL,H,IC)
+          IF (COMPUTE_INTEGRAND_IN_QP) THEN
+            CALL ML5_0_MP_HELAS_CALLS_UVCT_1(MP_P,NHEL,H,IC)
+          ELSE
+            CALL ML5_0_HELAS_CALLS_UVCT_1(P,NHEL,H,IC)
+          ENDIF
+
+          IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+C           Copy back to the quantities computed in DP in the QP
+C            containers (but only those needed)
+            DO I=1,NBORNAMPS
+              AMP(I)=CMPLX(DP_AMP(I),KIND=16)
+            ENDDO
+            DO I=1,NCTAMPS
+              DO K=1,3
+                AMPL(K,I)=CMPLX(DP_AMPL(K,I),KIND=16)
+              ENDDO
+            ENDDO
+            DO I=1,NWAVEFUNCS
+              DO J=1,MAXLWFSIZE+4
+                W(J,I)=CMPLX(DPW(J,I),KIND=16)
+              ENDDO
+            ENDDO
+          ENDIF
+
  3000     CONTINUE
           MP_UVCT_REQ_SO_DONE=.TRUE.
 
@@ -224,7 +290,7 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
      $         ,0.0E0_16,KIND=16)
               IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
               ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(
-     $         I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
+     $I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
               IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
                 DO K=1,3
                   TEMP2 = HEL_MULT*2.0E0_16*REAL(CFTOT*AMPL(K,I)
@@ -236,7 +302,25 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
             ENDDO
           ENDDO
 
-          CALL ML5_0_MP_COEF_CONSTRUCTION_1(P,NHEL,H,IC)
+          IF (COMPUTE_INTEGRAND_IN_QP) THEN
+
+            CALL ML5_0_MP_COEF_CONSTRUCTION_1(MP_P,NHEL,H,IC)
+
+          ELSE
+
+            CALL ML5_0_COEF_CONSTRUCTION_1(P,NHEL,H,IC)
+
+C           Copy back to the coefficients computed in DP in the QP
+C            containers
+            DO I=0,LOOPMAXCOEFS-1
+              DO K=1,NLOOPGROUPS
+                DO J=1,NSQUAREDSO
+                  LOOPCOEFS(I,J,K)=CMPLX(DP_LOOPCOEFS(I,J,K),KIND=16)
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDIF
+
  4000     CONTINUE
           MP_LOOP_REQ_SO_DONE=.TRUE.
 
@@ -245,10 +329,10 @@ C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
 C         This needs to be done once since only the momenta of these
 C          WF matters.
-          IF(.NOT.DPW_COPIED) THEN
+          IF(.NOT.DPW_COPIED.AND.COMPUTE_INTEGRAND_IN_QP) THEN
             DO I=1,NWAVEFUNCS
               DO J=1,MAXLWFSIZE+4
-                DPW(J,I)=DBLE(W(J,I))
+                DPW(J,I)=CMPLX(W(J,I),KIND=8)
               ENDDO
             ENDDO
             DPW_COPIED=.TRUE.
@@ -263,12 +347,15 @@ C          WF matters.
 
       DO I=1,3
         DO J=0,NSQUAREDSO
-          ANSDP(I,J)=ANS(I,J)
+          ANSDP(I,J)=REAL(ANS(I,J),KIND=8)
         ENDDO
       ENDDO
 
 C     Grouping of loop diagrams now done directly when creating the
 C      LOOPCOEFS.
+C     If some kind of coefficient merging was done above, do not
+C      forget to copy back the LOOPCOEFS merged into DP_LOOPCOEFS if
+C      COMPUTE_INTEGRAND_IN_QP is False.
 
       END
 

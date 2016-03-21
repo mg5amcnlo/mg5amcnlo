@@ -5,18 +5,6 @@ c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
 c
 C************************************************************************
-c WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-C************************************************************************
-c The Born in MadFKS -- and therefore also the virtual!-- should have a
-c slightly adapted identical particle symmetry factor. The normal
-c virtual weight as coming from the OLP should be divided by the number
-c of gluons in the corresponding real-emission process (i.e.  the number
-c of gluons in the Born plus one). This factor is passed to this
-c subroutine in /numberofparticles/ common block, as "ngluons". So,
-c divided virt_wgt by dble(ngluons) to get the correct virtual to be
-c used in MadFKS. The born_wgt that is passed to this subroutine has
-c already been divided by this factor.
-C************************************************************************
 c
       implicit none
       include "nexternal.inc"
@@ -27,11 +15,6 @@ c
       double precision virt_wgt,born_wgt,double,single,virt_wgts(3)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
-      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg
-      integer ngluons,nquarks(-6:6)
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                         fkssymmetryfactorDeg,ngluons,nquarks
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
       integer           isum_hel
@@ -62,13 +45,11 @@ c Ellis-Sexton scale)
 c======================================================================
 c Replace the following line with the call to the one-loop code you 
 c wish to use. virt_wgts contains finite part, single and double pole
-c To understand why we need to divide them by ngluons, read the warning
-c message at the beginning of this subroutine
 c      
 c      call sloopmatrix(p, virt_wgts)
-c      virt_wgt= virt_wgts(1)/dble(ngluons)
-c      single  = virt_wgts(2)/dble(ngluons)
-c      double  = virt_wgts(3)/dble(ngluons)
+c      virt_wgt= virt_wgts(1)
+c      single  = virt_wgts(2)
+c      double  = virt_wgts(3)
 c
 c======================================================================
 

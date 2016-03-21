@@ -7,7 +7,7 @@ C
 C     Computes all the AMP and WFS in quadruple precision for the 
 C     phase space point P(0:3,NEXTERNAL)
 C     
-C     Process: g g > h h QED=2 QCD=2 [ sqrvirt = QCD ]
+C     Process: g g > h h QED<=2 QCD<=2 [ sqrvirt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -90,7 +90,7 @@ C     But it is really not time consuming and I would rather be safe.
 
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.((CHECKPHASE.OR.
-     $   .NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+     $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO

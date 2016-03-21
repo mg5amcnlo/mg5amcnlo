@@ -1074,4 +1074,3 @@ unset label
 ################################################################################
 unset multiplot
 !ps2pdf "HistoOut.ps" &> /dev/null
-!open "HistoOut.pdf" &> /dev/null

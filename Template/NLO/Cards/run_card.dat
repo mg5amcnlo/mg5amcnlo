@@ -101,6 +101,7 @@
  %(reweight_pdf)s = reweight_PDF  ! Reweight to get PDF uncertainty. Should be a
             ! list booleans of equal length to lhaid to specify for
             !  which PDF set to include the uncertainties.
+ %(keep_rwgt_info)s = keep_rwgt_info ! keep the information for reweighting (leads to an .lhe event file about ~5 times larger)
 #***********************************************************************
 # ickkw parameter:                                                     *
 #   0: No merging                                                      *

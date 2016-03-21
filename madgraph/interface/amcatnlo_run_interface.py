@@ -915,6 +915,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     cluster_mode = 0
     queue  = 'madgraph'
     nb_core = None
+    make_opts_var = {}
     
     next_possibility = {
         'start': ['generate_events [OPTIONS]', 'calculate_crossx [OPTIONS]', 'launch [OPTIONS]',
@@ -937,16 +938,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.nb_core = 0
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
 
-        # load the current status of the directory
-        if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
-            self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
-            self.results.resetall(self.me_dir)
-            self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
-        else:
-            model = self.find_model_name()
-            process = self.process # define in find_model_name
-            self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
-            self.last_mode = ''
+
+        self.load_results_db()
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
@@ -1235,7 +1228,7 @@ To be able to merge samples of various multiplicities without double counting,
 you have to remove some events after showering 'by hand'.
 Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
-
+        self.store_result()
         #check if the param_card defines a scan.
         if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
@@ -1674,7 +1667,7 @@ RESTART = %(mint_mode)s
             jobs_to_run_new,jobs_to_collect_new= \
                     self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
-            self.write_nevents_unweighted_file(jobs_to_collect_new)
+            self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
@@ -1682,14 +1675,24 @@ RESTART = %(mint_mode)s
         return jobs_to_run_new,jobs_to_collect_new
 
 
-    def write_nevents_unweighted_file(self,jobs):
-        """writes the nevents_unweighted file in the SubProcesses directory"""
+    def write_nevents_unweighted_file(self,jobs,jobs0events):
+        """writes the nevents_unweighted file in the SubProcesses directory.
+           We also need to write the jobs that will generate 0 events,
+           because that makes sure that the cross section from those channels
+           is taken into account in the event weights (by collect_events.f).
+        """
         content=[]
         for job in jobs:
             path=pjoin(job['dirname'].split('/')[-2],job['dirname'].split('/')[-1])
             lhefile=pjoin(path,'events.lhe')
             content.append(' %s     %d     %9e     %9e' % \
                 (lhefile.ljust(40),job['nevents'],job['resultABS']*job['wgt_frac'],job['wgt_frac']))
+        for job in jobs0events:
+            if job['nevents']==0:
+                path=pjoin(job['dirname'].split('/')[-2],job['dirname'].split('/')[-1])
+                lhefile=pjoin(path,'events.lhe')
+                content.append(' %s     %d     %9e     %9e' % \
+                               (lhefile.ljust(40),job['nevents'],job['resultABS'],1.))
         with open(pjoin(self.me_dir,'SubProcesses',"nevents_unweighted"),'w') as f:
             f.write('\n'.join(content)+'\n')
 
@@ -2360,6 +2363,9 @@ RESTART = %(mint_mode)s
                               2 : 'PJFry++',
                               3 : 'IREGI',
                               4 : 'Golem95',
+                              5 : 'Samurai',
+                              6 : 'Ninja (double precision)',
+                              8 : 'Ninja (quadruple precision)',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(
                            r"#Unit\s*(?P<unit>\d+)\s*=\s*(?P<n_occurences>\d+)")
@@ -3333,6 +3339,17 @@ RESTART = %(mint_mode)s
 
         if not self.to_store:
             return 
+
+        if 'event' in self.to_store:
+            if os.path.exists(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')):
+                if not  os.path.exists(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz')):
+                    self.update_status('gzipping output file: events.lhe', level='parton', error=True)
+                    misc.gzip(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+                else:
+                    os.remove(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+            if os.path.exists(pjoin(self.me_dir,'Events','reweight.lhe')):
+                os.remove(pjoin(self.me_dir,'Events', 'reweight.lhe'))
+                
         
         tag = self.run_card['run_tag']
         
@@ -4388,10 +4405,6 @@ RESTART = %(mint_mode)s
                                 'madspin': default_switch,
                                 'reweight': default_switch}
 
-            
-            
-        
-        
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
@@ -4594,9 +4607,17 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if mode =='onlyshower':
             cards = ['shower_card.dat']
         
+        
+        # automatically switch to keep_wgt option
+        first_cmd = [] # force to change some switch
+        #if switch['reweight'] == 'ON':
+        #    logger.info("Automatically switch \"keep_rwgt_info\" in the run_card to allow NLO reweighting", '$MG:color:BLACK')
+        #    first_cmd.append('set keep_rwgt_info T')
+        
         if not options['force'] and not self.force:
-            self.ask_edit_cards(cards, plot=False)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
 
+        
         self.banner = banner_mod.Banner()
 
         # store the cards in the banner
@@ -4645,7 +4666,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
             analyse_card_path = pjoin(self.me_dir, 'Cards','FO_analyse_card.dat')
             self.analyse_card = self.banner.charge_card('FO_analyse_card')
 
-        
         return mode
 
 
@@ -4765,4 +4785,100 @@ _shower_parser = misc.OptionParser(usage=_shower_usage)
 _shower_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the shower_card present in the directory for the launch, without editing")
 
+if '__main__' == __name__:
+    # Launch the interface without any check if one code is already running.
+    # This can ONLY run a single command !!
+    import sys
+    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
+               'Please upgrate your version of python.')
+
+    import os
+    import optparse
+    # Get the directory of the script real path (bin)                                                                                                                                                           
+    # and add it to the current PYTHONPATH                                                                                                                                                                      
+    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    sys.path.insert(0, root_path)
+
+    class MyOptParser(optparse.OptionParser):    
+        class InvalidOption(Exception): pass
+        def error(self, msg=''):
+            raise MyOptParser.InvalidOption(msg)
+    # Write out nice usage message if called with -h or --help                                                                                                                                                  
+    usage = "usage: %prog [options] [FILE] "
+    parser = MyOptParser(usage=usage)
+    parser.add_option("-l", "--logging", default='INFO',
+                      help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+    parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                     help='force toce to be in secure mode')
+    parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                     help='force to launch debug mode')
+    parser_error = ''
+    done = False
+    
+    for i in range(len(sys.argv)-1):
+        try:
+            (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
+            done = True
+        except MyOptParser.InvalidOption, error:
+            pass
+        else:
+            args += sys.argv[len(sys.argv)-i:]
+    if not done:
+        # raise correct error:                                                                                                                                                                                  
+        try:
+            (options, args) = parser.parse_args()
+        except MyOptParser.InvalidOption, error:
+            print error
+            sys.exit(2)
+
+    if len(args) == 0:
+        args = ''
+
+    import subprocess
+    import logging
+    import logging.config
+    # Set logging level according to the logging level given by options                                                                                                                                         
+    #logging.basicConfig(level=vars(logging)[options.logging])                                                                                                                                                  
+    import internal.coloring_logging
+    try:
+        if __debug__ and options.logging == 'INFO':
+            options.logging = 'DEBUG'
+        if options.logging.isdigit():
+            level = int(options.logging)
+        else:
+            level = eval('logging.' + options.logging)
+        print os.path.join(root_path, 'internal', 'me5_logging.conf')
+        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        logging.root.setLevel(level)
+        logging.getLogger('madgraph').setLevel(level)
+    except:
+        raise
+        pass
+
+    # Call the cmd interface main loop                                                                                                                                                                          
+    try:
+        if args:
+            # a single command is provided   
+            if '--web' in args:
+                i = args.index('--web') 
+                args.pop(i)                                                                                                                                                                     
+                cmd_line =  aMCatNLOCmd(force_run=True)
+            else:
+                cmd_line =  aMCatNLOCmdShell(force_run=True)
+
+            if not hasattr(cmd_line, 'do_%s' % args[0]):
+                if parser_error:
+                    print parser_error
+                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                else:
+                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+            else:
+                cmd_line.use_rawinput = False
+                cmd_line.run_cmd(' '.join(args))
+                cmd_line.run_cmd('quit')
+
+    except KeyboardInterrupt:
+        print 'quit on KeyboardInterrupt'
+        pass
 

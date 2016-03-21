@@ -107,8 +107,7 @@ class FortranWriterTest(unittest.TestCase, CheckFileCreate):
         """Test writing a fortran line"""
 
         lines = []
-        lines.append(" call aaaaaa(bbb, ccc, ddd, eee, fff, ggg, hhhhhhhhhhhhhh+asdasd, wspedfteispd)")
-
+        lines.append(" call aaaaaa(bbb, ccc, ddd, eee, fff, ggg, hhhhhhhhhhhhhhhh+asdasd, wspedfteispd)")
         lines.append('  include "test.inc"')
         lines.append(' print *, \'Hej \\"Da\\" Mo\'')
         lines.append("  IF (Test) then")
@@ -123,7 +122,7 @@ class FortranWriterTest(unittest.TestCase, CheckFileCreate):
         lines.append(" endif")
         lines.append("test")
 
-        goal_string = """      CALL AAAAAA(BBB, CCC, DDD, EEE, FFF, GGG, HHHHHHHHHHHHHH
+        goal_string = """      CALL AAAAAA(BBB, CCC, DDD, EEE, FFF, GGG, HHHHHHHHHHHHHHHH
      $ +ASDASD, WSPEDFTEISPD)
       INCLUDE 'test.inc'
       PRINT *, 'Hej \\'Da\\' Mo'

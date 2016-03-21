@@ -357,19 +357,13 @@ Main:spareWord1 = $EVENT_NORM         ! Event weights are normalized to sum
 Main:timesAllowErrors = $ERR_NUM_PY8  ! Number of allowed errors
 
 ! 2) Settings related to output in init(), next(), amd stat().
-Init:showChangedSettings = on         ! Shows all non-default settings
 Init:showChangedParticleData = off    ! Shows all non-default particle settings
-Next:numberCount = 100                ! print message every n events
-Next:numberShowInfo = 2               ! print event information n times
-Next:numberShowProcess = 1            ! print process record n times
 Next:numberShowEvent = $MAXPR_PY8     ! print event record n times
 Stat:showProcessLevel = on            ! Process statistics
 Stat:showErrors = on                  ! Error statistics
 Check:epTolErr = 0.001                ! Momentum-conservation tolerance 
 
 ! 3) Beam-parameter settings.
-Beams:idA = $iA                    ! Beam identities
-Beams:idB = $iB                    ! Beam identities
 Beams:frameType = 4                ! LHE initialization
 Beams:LHEF = events.lhe            ! Input LHE file
 
@@ -401,7 +395,7 @@ EOF
   if [ "$ISLHA5" -eq 1 ]
   then
   cat <<EOF >> $ifile
-PDF:pSet = LHAPDF5:$PDFSETN
+PDF:pSet = LHAPDF5:$PDFSETN    ! PDF set used in showers and multiparton interactions
 EOF
    if [ $PDFGROUP = "LHAPDF" ]
    then
@@ -420,7 +414,7 @@ EOF
   elif [ "$ISLHA6" -eq 1 ]
   then
   cat <<EOF >> $ifile
-PDF:pSet = LHAPDF6:$PDFSETN
+PDF:pSet = LHAPDF6:$PDFSETN    ! PDF set used in showers and multiparton interactions
 EOF
   fi
  fi
@@ -432,8 +426,7 @@ PDF:useLHAPDF = off                ! Use of LHAPDF
 EOF
  fi
  cat <<EOF >> $ifile
-#PDF:pSet = 7                       ! CTEQ6L
-PDF:pSet = 13                       ! NNPDF2.3 QCD+QED
+PDF:pSet = 13                      ! PDF set used in showers and multiparton interactions (13 = NNPDF2.3 QCD+QED)
 EOF
 fi
 
@@ -444,54 +437,31 @@ cat <<EOF >> $ifile
 EOF
 fi
 
-cat <<EOF >> $ifile
-ProcessLevel:all = on              ! Generation
-ProcessLevel:resonanceDecays = on  ! Resonance decays
-PartonLevel:all = on               ! Paron level: if off, stops after hard process generation
-EOF
 if [ $UE_PY8 = ".FALSE." ]
 then
 cat <<EOF >> $ifile
-PartonLevel:MPI = off              ! Multiple interactions
+PartonLevel:MPI = off              ! Multiparton interactions
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 EOF
 else
 cat <<EOF >> $ifile
-PartonLevel:MPI = on               ! Multiple interactions
+PartonLevel:MPI = on               ! Multiparton interactions
 EOF
 fi
-
-cat <<EOF >> $ifile
-PartonLevel:ISR = on               ! Initial state shower
-PartonLevel:FSR = on               ! Final state shower
-PartonLevel:FSRinProcess = on      ! Final state shower in association with the hard process
-PartonLevel:FSRinResonances = on   ! Final state shower in resonance decays
-HadronLevel:all = on               ! Hadron level: if off, stops before hadronization
-EOF
 
 if [ $HADRONIZE_PY8 = ".FALSE." ]
 then
 cat <<EOF >> $ifile
-HadronLevel:Hadronize = off         ! Hadronization
+HadronLevel:Hadronize = off         ! Hadronisation
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 EOF
 else
 cat <<EOF >> $ifile
-HadronLevel:Hadronize = on         ! Hadronization
+HadronLevel:Hadronize = on         ! Hadronisation
 EOF
 fi
 
 cat <<EOF >> $ifile
-#HadronLevel:Decay = on            ! Hadron decays
-PhaseSpace:mHatMin = 4.            ! Min invariant mass
-PhaseSpace:mHatMax = -1.           ! Max invariant mass
-PhaseSpace:pTHatMin = 0.           ! Min pT in 2->2
-PhaseSpace:pTHatMax = -1.          ! Max pT in 2->2
-PhaseSpace:pTHatMinDiverge = 1.    ! If massless final state, to avoid divergences
-PhaseSpace:useBreitWigners = on    ! Masses according to Breit-Wigner
-#PhaseSpace:pTHat3Min = 0.         ! Min pT for the hardest parton in 2->3
-PhaseSpace:pTHat3Max = -1.         ! Max pT for the hardest parton in 2->3
-PhaseSpace:pTHat5Min = 0.          ! Min pT for the softest parton in 2->3
-PhaseSpace:pTHat5Max = -1.         ! Max pT for the softest parton in 2->3
-PhaseSpace:RsepMin = 0.            ! Min R separation in 2->3
 
 ! 5) Final-state shower.
 TimeShower:pTmaxMatch = 1          ! Use scalup (re-check)
@@ -499,8 +469,6 @@ TimeShower:pTmaxFudge = 1.         ! Factor changing the max scale
 TimeShower:alphaSvalue = 0.118     ! Alpha_s(MZ) in final-state shower
 TimeShower:alphaSorder = 1         ! Alpha_s running order in final-state shower
 TimeShower:alphaEMorder = 0        ! Alpha_EM running order in final-state shower
-TimeShower:interleave = on         ! If on, FSR interleaved with ISR
-TimeShower:allowBeamRecoil = on    ! If off, no energy transfer to from ISR to FSR
 TimeShower:dampenBeamRecoil = off  ! Dampens the effect of beam recoil
 TimeShower:globalRecoil = on       ! All final-state particles recoil against the branching
 TimeShower:nMaxGlobalRecoil = 1    ! Number of splittings with TimeShower:globalRecoil = on
@@ -508,14 +476,15 @@ TimeShower:globalRecoilMode = 2    ! Global recoil only for S events whose first
 TimeShower:nMaxGlobalBranch = 1    ! Number of FSR splittings proposed with global recoil
 TimeShower:nPartonsInBorn = -1      ! Number of Born QCD final-state partons (to treat H and S differently)
 TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
-TimeShower:QCDshower = on          ! QCD final-state shower
-TimeShower:nGluonToQuark = 5       ! Number if flavors allowed in g->qqbar
+
 TimeShower:QEDshowerByQ = off      ! Prevent quarks from radiating photons
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 TimeShower:QEDshowerByL = off      ! Prevent leptons from radiating photons
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 TimeShower:QEDshowerByGamma = off  ! Prevent photons from branching
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
+
 TimeShower:MEcorrections = off     ! No Matrix-element corrections
-TimeShower:MEafterFirst = off      ! No Matrix-element corrections after first emission
-TimeShower:phiPolAsym = on         ! Azimuthal asymmetry induced by gluon polarization
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar
 
@@ -525,20 +494,21 @@ SpaceShower:pTmaxFudge = 1.        ! Factor changing the max scale
 SpaceShower:alphaSvalue = 0.118    ! Alpha_s(MZ) in final-state shower
 SpaceShower:alphaSorder = 1        ! Alpha_s running order in final-state shower
 SpaceShower:alphaEMorder = 0       ! Alpha_EM running order in final-state shower
-SpaceShower:QCDshower = on         ! QCD final-state shower
+
 SpaceShower:QEDshowerByQ = off     ! Prevent quarks from radiating photons
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 SpaceShower:QEDshowerByL = off     ! Prevent leptons from radiating photons
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
+
 SpaceShower:MEcorrections = off    ! No Matrix-element corrections
-SpaceShower:MEafterFirst = off     ! No Matrix-element corrections after first emission
-SpaceShower:phiPolAsym = on        ! Azimuthal asymmetry induced by gluon polarization
-SpaceShower:nQuarkIn = 5           ! Number of flavors in g->qqbar and also in incoming beams
 SpaceShower:rapidityorder = off    ! Do not order branchings in rapidity
 SpaceShower:alphaSuseCMW = false   ! Use the CMW prescription in ISR
 
 ! 7) Non-perturbative stuff.
 BeamRemnants:primordialKT = off    ! No primordial kT
+                                   ! ** USE on FOR REALISTIC SHOWER SIMULATION ** !!!
 
-! 8) Particle characteristics.
+! 8) Particle features.
 1:m0 = $DMASSPY                    ! down mass
 2:m0 = $UMASSPY                    ! up mass
 3:m0 = $SMASSPY                    ! strange mass
@@ -581,15 +551,16 @@ JetMatching:nJetMax = $NJMAX      ! max multiplicity
 JetMatching:scheme = 1            ! MadGraph MLM-type merging
 JetMatching:setMad = off          ! Don't read from LHE in MG5LO format
 
-
 EOF
 fi
+cat <<EOF >> $ifile
+! 10) Decays.
+EOF
 
 if [ $PI_STABLE_PY8 = ".TRUE." ]
 then
 cat <<EOF >> $ifile
 111:mayDecay = false               ! stable pi0
-#211:mayDecay = false              ! stable pions
 EOF
 fi
 if [ $B_STABLE_PY8 = ".TRUE." ]
@@ -659,6 +630,7 @@ Random:seed = $RNDEVSEED_PY8
 EOF
 fi
 
+
 arr=()
 numDM=0
 iDM=0
@@ -671,43 +643,11 @@ do
  fi
 done
 
-numDM=${#arr[@]}
 for DM in "${arr[@]}"
 do
- DM=( $DM )
 cat <<EOF >> ./$ifile
-${DM[0]}:onMode = off  ! First switch decays off
+$DM  ! decay mode
 EOF
-done
-
-for DM in "${arr[@]}"
-do
- let "iDM+=1"
- DM=( $DM )
- num_of_part=$(echo ${#DM[@]})
- let "num_of_part-=6"
-
- if [ $num_of_part = 2 ]
- then
-cat <<EOF >> ./$ifile
-${DM[0]}:onIfMatch = ${DM[2]} ${DM[3]}          ! Decay mode $iDM of $numDM
-EOF
- elif  [ $num_of_part = 3 ]
- then
-cat <<EOF >> ./$ifile
-${DM[0]}:onifMatch = ${DM[2]} ${DM[3]} ${DM[4]}          ! Decay mode $iDM of $numDM
-EOF
- elif  [ $num_of_part = 4 ]
- then
-cat <<EOF >> ./$ifile
-${DM[0]}:onifMatch = ${DM[2]} ${DM[3]} ${DM[4]} ${DM[5]}          ! Decay mode $iDM of $numDM
-EOF
- elif  [ $num_of_part = 5 ]
- then
-cat <<EOF >> ./$ifile
-${DM[0]}:onifMatch = ${DM[2]} ${DM[3]} ${DM[4]} ${DM[5]} ${DM[6]}         ! Decay mode $iDM of $numDM
-EOF
-  fi
 done
 
 
@@ -786,3 +726,55 @@ then
   ExtraIncl="-I""$ExtraIncl"
 fi
 }
+
+
+# Collection of Pythia8 settings that used to appear in the
+# card, and that are supefluous because overridden or default
+
+#Beams:idA = $iA                    ! Beam identities
+#Beams:idB = $iB                    ! Beam identities
+#ProcessLevel:all = on              ! Generation
+#ProcessLevel:resonanceDecays = on  ! Resonance decays
+#PartonLevel:all = on               ! Paron level: if off, stops after hard
+#                                   ! process generation
+#PartonLevel:ISR = on               ! Initial state shower
+#PartonLevel:FSR = on               ! Final state shower
+#PartonLevel:FSRinProcess = on      ! Final state shower in association with
+#                                   ! the hard process
+#PartonLevel:FSRinResonances = on   ! Final state shower in resonance decays
+#HadronLevel:all = on               ! Hadron level: if off, stops before
+#                                   ! hadronization
+#HadronLevel:Decay = on             ! Hadron decays
+#PhaseSpace:mHatMin = 4.            ! Min invariant mass
+#PhaseSpace:mHatMax = -1.           ! Max invariant mass
+#PhaseSpace:pTHatMin = 0.           ! Min pT in 2->2
+#PhaseSpace:pTHatMax = -1.          ! Max pT in 2->2
+#PhaseSpace:pTHatMinDiverge = 1.    ! If massless final state, to avoid
+#                                   ! divergences
+#PhaseSpace:useBreitWigners = on    ! Masses according to Breit-Wigner
+#PhaseSpace:pTHat3Min = 0.          ! Min pT for the hardest parton in 2->3
+#PhaseSpace:pTHat3Max = -1.         ! Max pT for the hardest parton in 2->3
+#PhaseSpace:pTHat5Min = 0.          ! Min pT for the softest parton in 2->3
+#PhaseSpace:pTHat5Max = -1.         ! Max pT for the softest parton in 2->3
+#PhaseSpace:RsepMin = 0.            ! Min R separation in 2->3
+#TimeShower:interleave = on         ! If on, FSR interleaved with ISR
+#TimeShower:allowBeamRecoil = on    ! If off, no energy transfer to from
+#                                   ! ISR to FSR
+#TimeShower:QCDshower = on          ! QCD final-state shower
+#TimeShower:nGluonToQuark = 5       ! Number if flavors allowed in g->qqbar
+#TimeShower:phiPolAsym = on         ! Azimuthal asymmetry induced by gluon
+#                                   ! polarization
+#SpaceShower:QCDshower = on         ! QCD final-state shower
+#SpaceShower:phiPolAsym = on        ! Azimuthal asymmetry induced by gluon
+#                                   ! polarization
+#SpaceShower:nQuarkIn = 5           ! Number of flavors in g->qqbar and also in
+#                                   ! incoming beams
+#Init:showChangedSettings = on      ! Shows all non-default settings
+#Next:numberCount = 100             ! print message every n events
+#Next:numberShowInfo = 2            ! print event information n times
+#Next:numberShowProcess = 1         ! print process record n times
+#TimeShower:MEafterFirst = off      ! No Matrix-element corrections after first emission
+#                                   ! it is already off if MEcorrections = off
+#SpaceShower:MEafterFirst = off     ! No Matrix-element corrections after first emission
+#                                   ! it is already off if MEcorrections = off
+

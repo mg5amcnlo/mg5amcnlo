@@ -1,7 +1,7 @@
       Subroutine Initialise(path)
 
       CHARACTER(128) path
-CF2PY intent(in):path
+CF2PY intent(in)::path
  
 C     INCLUDE FILES
 C     
@@ -12,7 +12,7 @@ C
       return 
       end
 
-      SUBROUTINE GET_ME(P, ALPHAS, NHEL , ANS,RETURNCODE)
+      SUBROUTINE GET_ME(P, ALPHAS, SCALE2, NHEL , ANS,RETURNCODE)
       IMPLICIT NONE
 C     
 C     CONSTANTS  
@@ -50,12 +50,13 @@ C     four momenta. Energy is the zeroth component.
 
       DOUBLE PRECISION ANS
       INTEGER NHEL
-      DOUBLE PRECISION ALPHAS
+      DOUBLE PRECISION ALPHAS, SCALE2
 CF2PY INTENT(OUT) :: ANS
 CF2PY INTENT(OUT) :: RETURNCODE
 CF2PY INTENT(IN) :: NHEL   
 CF2PY INTENT(IN) :: P(0:3,NEXTERNAL) 
 CF2PY INTENT(IN) :: ALPHAS
+CF2PY INTENT(IN) :: SCALE2
 
 
 C     
@@ -71,6 +72,7 @@ C
 C     
 C     BEGIN CODE
 C     
+      CALL %(proc_prefix)sFORCE_STABILITY_CHECK(.True.)
       CALL %(proc_prefix)sGET_ANSWER_DIMENSION(MATELEM_ARRAY_DIM)
       ALLOCATE(MATELEM(0:3,0:MATELEM_ARRAY_DIM))
       CALL %(proc_prefix)sGET_NSQSO_LOOP(NSQUAREDSO_LOOP)
@@ -87,8 +89,8 @@ C      chosen
         ENDIF
       ENDDO
 
-C       Update the couplings with the new MU_R
-        CALL UPDATE_AS_PARAM2(2*P(0,1)*P(0,2), ALPHAS)
+C       Update the couplings with the new ALPHAS
+        CALL UPDATE_AS_PARAM2(SCALE2, ALPHAS)
 
 C       
 C       Now we can call the matrix element

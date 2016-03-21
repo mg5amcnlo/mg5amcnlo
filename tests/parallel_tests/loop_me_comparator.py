@@ -179,7 +179,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
                 init = LoopMG5Runner.initialize_process(\
                       proc,i,os.path.join(self.mg5_path,self.temp_dir_name))
                 initializations.append(init)
-            self.fix_MadLoopParamCard(dir_name)
+            self.fix_MadLoopParamCard(dir_name, reduction_mode=('1' if self.optimized_output else '1'))
             if PSpoints==[]:
                 self.fix_energy_in_check(dir_name, energy)          
 
@@ -400,7 +400,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         file.close()
         
     @staticmethod
-    def fix_MadLoopParamCard(dir_name,mp=False):
+    def fix_MadLoopParamCard(dir_name,mp=False,reduction_mode='1'):
         """ Set parameters in MadLoopParams.dat suited for these checks."""
 
         MLCardPath = os.path.join(dir_name,'Cards','MadLoopParams.dat')
@@ -408,6 +408,7 @@ class LoopMG5Runner(me_comparator.MG5Runner):
         MLCard = banner_mod.MadLoopParam()
         MLCard['CTModeRun'] = 4 if mp else -1
         MLCard['CTModeInit'] = 4 if mp else 1
+        MLCard['MLReductionLib'] = reduction_mode 
         MLCard['UseLoopFilter'] = False
         MLCard['DoubleCheckHelicityFilter'] = False
         MLCard.write(MLCardPath)

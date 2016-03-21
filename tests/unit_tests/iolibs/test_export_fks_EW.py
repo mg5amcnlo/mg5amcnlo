@@ -109,7 +109,7 @@ class IOExportFKSEWTest(unittest.TestCase,\
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_maxconfigs_file(\
             writers.FortranWriter(self.give_pos(self.created_files[0])),\
-            self.myfkshelasmulti)
+            self.myfkshelasmulti.get_max_configs())
         self.assertFileContains(self.created_files[0], goal)
     
     @PostponeToEW
@@ -139,12 +139,15 @@ ModelFile               ./param_card.dat
 Parameters              alpha_s
 
 # process
-22 22 -> 6 -6 
+22 22 -> 6 -6
 """
+        process_list = []
+        for me in self.myfkshelasmulti['matrix_elements']:
+            process_list.append(me.born_matrix_element.get('processes')[0])
         process_exporter = export_fks.ProcessExporterFortranFKS()
         process_exporter.write_lh_order(\
             self.give_pos(self.created_files[0]),\
-            self.myfkshelasmulti['matrix_elements'])
+            process_list)
         self.assertFileContains(self.created_files[0], goal)
         
     def test_write_coloramps_file_EW(self):

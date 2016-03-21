@@ -675,78 +675,77 @@ c
      #                  VTIMUP(I),SPINUP(I)
       enddo
       if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf)) then
-        write(ifile,'(a)') buff(1:len_trim(buff))
-        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+         write(ifile,'(a)') buff(1:len_trim(buff))
+         read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(jwgtinfo.eq.-5) then
-           write(ifile,'(a)')'  <rwgt>'
-           write (ifile,'(1x,d16.10,3(1x,i4))') wgtref,n_ctr_found
-     &          ,n_mom_conf,nint(wgtcpower)
-           do i=1,n_mom_conf
-              do j=1,mexternal
-                 write (ifile,'(4(1x,d16.10))')
-     &                (momenta_str(ii,j,i),ii=0,3)
-              enddo
-           enddo
-           do i=1,n_ctr_found
-              write (ifile,'(a)') trim(adjustl(n_ctr_str(i)))
-           enddo
-           write(ifile,'(a)')'  </rwgt>'
-         elseif(jwgtinfo.eq.15) then
-           write(ifile,'(a)')'  <unlops>'
-           write(ifile,*)NUP_H
-           do i=1,NUP_H
-              write(ifile,504)IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
-     $             ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
-     $             ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
-     $             VTIMUP_H(I),SPINUP_H(I)
-           enddo
-           write(ifile,'(a)')'  </unlops>'
-        elseif(jwgtinfo.eq.9)then
-           if (do_rwgt_scale .or. do_rwgt_pdf) then
-              write(ifile,'(a)') '  <rwgt>'
-              idwgt=1000
-              if (do_rwgt_scale) then
-                 do kk=1,dyn_scale(0)
-                    if (lscalevar(kk)) then
-                       do i=1,nint(scalevarF(0))
-                          do j=1,nint(scalevarR(0))
-                             idwgt=idwgt+1
-                             write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                            ,wgtxsecmu(j,i,kk)," </wgt>"
-                          enddo
-                       enddo
-                    else
-                       idwgt=idwgt+1
-                       write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                      ,wgtxsecmu(1,1,kk)," </wgt>"
-                    endif
-                 enddo
-              endif
-              if (do_rwgt_pdf) then
-                 do j=1,lhaPDFid(0)
-                    if (lpdfvar(j)) then
-                       do i=0,nmemPDF(j)
-                          idwgt=idwgt+1
-                          write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                         ,wgtxsecPDF(i,j)," </wgt>"
-                       enddo
-                    else
-                       idwgt=idwgt+1
-                       write(ifile,601) "   <wgt id='",idwgt,"'>"
-     $                      ,wgtxsecPDF(0,j)," </wgt>"
-                    endif
-                 enddo
-              endif
-              write(ifile,'(a)') '  </rwgt>'
-           endif
-        else
-           write(*,*) 'Unknown jwgtinfo in handling_lhe_events',jwgtinfo
-           stop
-        endif
+         if(jwgtinfo.eq.-5.or.jwgtinfo.eq.-9) then
+            write(ifile,'(a)')'  <mgrwgt>'
+            write (ifile,'(1x,d16.10,3(1x,i4))') wgtref,n_ctr_found
+     &           ,n_mom_conf, nint(wgtcpower)
+            do i=1,n_mom_conf
+               do j=1,mexternal
+                  write (ifile,'(4(1x,d21.15))')
+     &                 (momenta_str(ii,j,i),ii=0,3)
+               enddo
+            enddo
+            do i=1,n_ctr_found
+               write (ifile,'(a)') trim(adjustl(n_ctr_str(i)))
+            enddo
+            write(ifile,'(a)')'  </mgrwgt>'
+         endif
+         if(jwgtinfo.eq.15) then
+            write(ifile,'(a)')'  <unlops>'
+            write(ifile,*)NUP_H
+            do i=1,NUP_H
+               write(ifile,504)IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
+     $              ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
+     $              ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
+     $              VTIMUP_H(I),SPINUP_H(I)
+            enddo
+            write(ifile,'(a)')'  </unlops>'
+         endif
+         if(abs(jwgtinfo).eq.9)then
+            if (do_rwgt_scale .or. do_rwgt_pdf) then
+               write(ifile,'(a)') '  <rwgt>'
+               idwgt=1000
+               if (do_rwgt_scale) then
+                  do kk=1,dyn_scale(0)
+                     if (lscalevar(kk)) then
+                        do i=1,nint(scalevarF(0))
+                           do j=1,nint(scalevarR(0))
+                              idwgt=idwgt+1
+                              write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                             ,wgtxsecmu(j,i,kk)," </wgt>"
+                           enddo
+                        enddo
+                     else
+                        idwgt=idwgt+1
+                        write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                       ,wgtxsecmu(1,1,kk)," </wgt>"
+                     endif
+                  enddo
+               endif
+               if (do_rwgt_pdf) then
+                  do j=1,lhaPDFid(0)
+                     if (lpdfvar(j)) then
+                        do i=0,nmemPDF(j)
+                           idwgt=idwgt+1
+                           write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                          ,wgtxsecPDF(i,j)," </wgt>"
+                        enddo
+                     else
+                        idwgt=idwgt+1
+                        write(ifile,601) "   <wgt id='",idwgt,"'>"
+     $                       ,wgtxsecPDF(0,j)," </wgt>"
+                     endif
+                  enddo
+               endif
+               write(ifile,'(a)') '  </rwgt>'
+            endif
+         endif
       endif
       write(ifile,'(a)') '  </event>'
  401  format(2(1x,e14.8))
@@ -811,72 +810,74 @@ c
       enddo
       read(ifile,'(a)')buff
       if(buff(1:1).eq.'#')then
-        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+         read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-
-        if(jwgtinfo.eq.-5) then
-           read(ifile,'(a)')string
-           read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
-           do i=1,n_mom_conf
-              do j=1,mexternal
-                 read (ifile,*) (momenta_str(ii,j,i),ii=0,3)
-              enddo
-           enddo
-           do i=1,n_ctr_found
-              read (ifile,'(a)') n_ctr_str(i)
-           enddo
-           read(ifile,'(a)')string
-        elseif(jwgtinfo.eq.15) then
-           read(ifile,'(a)') string
-           read(ifile,*)NUP_H
-           do i=1,NUP_H
-              read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
-     $             ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
-     $             ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
-     $             VTIMUP_H(I),SPINUP_H(I)
-           enddo
-           read(ifile,'(a)') string
-        elseif(jwgtinfo.eq.9)then
-           if (do_rwgt_scale .or. do_rwgt_pdf) then
-              read(ifile,'(a)')string
-              wgtref=XWGTUP
-              if (do_rwgt_scale) then
-                 do kk=1,dyn_scale(0)
-                    if (lscalevar(kk)) then
-                       do i=1,nint(scalevarF(0))
-                          do j=1,nint(scalevarR(0))
-                             call read_rwgt_line(ifile,idwgt,wgtxsecmu(j,i,kk))
-                          enddo
-                       enddo
-                    else
-                       call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1,kk))
-                    endif
-                 enddo
-              endif
-              if (do_rwgt_pdf) then
-                 do j=1,lhaPDFid(0)
-                    if (lpdfvar(j)) then
-                       do i=0,nmemPDF(j)
-                          call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i,j))
-                       enddo
-                    else
-                       call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
-                    endif
-                 enddo
-              endif
-              read(ifile,'(a)')string
-           endif
-        else
-           write(*,*) 'Unknown jwgtinfo in handling_lhe_events',jwgtinfo
-           stop
-        endif
-        read(ifile,'(a)')string
+        
+         if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
+            read(ifile,'(a)')string
+            read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
+            do i=1,n_mom_conf
+               do j=1,mexternal
+                  read (ifile,*) (momenta_str(ii,j,i),ii=0,3)
+               enddo
+            enddo
+            do i=1,n_ctr_found
+               read (ifile,'(a)') n_ctr_str(i)
+            enddo
+            read(ifile,'(a)')string
+         endif
+         if(jwgtinfo.eq.15) then
+            read(ifile,'(a)') string
+            read(ifile,*)NUP_H
+            do i=1,NUP_H
+               read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
+     $              ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
+     $              ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
+     $              VTIMUP_H(I),SPINUP_H(I)
+            enddo
+            read(ifile,'(a)') string
+         endif
+         if(abs(jwgtinfo).eq.9)then
+            if (do_rwgt_scale .or. do_rwgt_pdf) then
+               read(ifile,'(a)')string
+               wgtref=XWGTUP
+               if (do_rwgt_scale) then
+                  do kk=1,dyn_scale(0)
+                     if (lscalevar(kk)) then
+                        do i=1,nint(scalevarF(0))
+                           do j=1,nint(scalevarR(0))
+                              call read_rwgt_line(ifile,idwgt
+     $                             ,wgtxsecmu(j,i,kk))
+                           enddo
+                        enddo
+                     else
+                        call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1
+     $                       ,kk))
+                     endif
+                  enddo
+               endif
+               if (do_rwgt_pdf) then
+                  do j=1,lhaPDFid(0)
+                     if (lpdfvar(j)) then
+                        do i=0,nmemPDF(j)
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i
+     $                          ,j))
+                        enddo
+                     else
+                        call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
+                     endif
+                  enddo
+               endif
+               read(ifile,'(a)')string
+            endif
+         endif
+         read(ifile,'(a)')string
       else
-        string=buff(1:len_trim(buff))
-        buff=' '
+         string=buff(1:len_trim(buff))
+         buff=' '
       endif
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))
@@ -955,7 +956,7 @@ c
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(jwgtinfo.eq.-5) then
+        if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
            read(ifile,'(a)')string
            read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
            do i=1,n_mom_conf
@@ -967,54 +968,56 @@ c
               read (ifile,'(a)') n_ctr_str(i)
            enddo
            read(ifile,'(a)')string
-        elseif(jwgtinfo.eq.15) then
-           read(ifile,'(a)') string
-           read(ifile,*)NUP_H
-           do i=1,NUP_H
-              read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
-     $             ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
-     $             ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
-     $             VTIMUP_H(I),SPINUP_H(I)
-           enddo
-           read(ifile,'(a)') string
-        elseif(jwgtinfo.eq.9)then
-           if (do_rwgt_scale .or. do_rwgt_pdf) then
-              read(ifile,'(a)')string
-              wgtref=XWGTUP
-              if (do_rwgt_scale) then
-                 do kk=1,dyn_scale(0)
-                    if (lscalevar(kk)) then
-                       do i=1,nint(scalevarF(0))
-                          do j=1,nint(scalevarR(0))
-                             call read_rwgt_line(ifile,idwgt,wgtxsecmu(j,i,kk))
-                          enddo
-                       enddo
-                    else
-                       call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1,kk))
-                    endif
-                 enddo
-              endif
-              if (do_rwgt_pdf) then
-                 do j=1,lhaPDFid(0)
-                    if (lpdfvar(j)) then
-                       do i=0,nmemPDF(j)
-                          call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i,j))
-                       enddo
-                    else
-                       call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
-                    endif
-                 enddo
-              endif
-              read(ifile,'(a)')string
-           endif
-        else
-           write(*,*) 'Unknown jwgtinfo in handling_lhe_events',jwgtinfo
-           stop
-        endif
-        read(ifile,'(a)')string
+         endif
+         if(jwgtinfo.eq.15) then
+            read(ifile,'(a)') string
+            read(ifile,*)NUP_H
+            do i=1,NUP_H
+               read(ifile,*) IDUP_H(I),ISTUP_H(I),MOTHUP_H(1,I)
+     $              ,MOTHUP_H(2,I),ICOLUP_H(1,I),ICOLUP_H(2,I),PUP_H(1
+     $              ,I),PUP_H(2,I),PUP_H(3,I),PUP_H(4,I),PUP_H(5,I),
+     $              VTIMUP_H(I),SPINUP_H(I)
+            enddo
+            read(ifile,'(a)') string
+         endif
+         if(abs(jwgtinfo).eq.9)then
+            if (do_rwgt_scale .or. do_rwgt_pdf) then
+               read(ifile,'(a)')string
+               wgtref=XWGTUP
+               if (do_rwgt_scale) then
+                  do kk=1,dyn_scale(0)
+                     if (lscalevar(kk)) then
+                        do i=1,nint(scalevarF(0))
+                           do j=1,nint(scalevarR(0))
+                              call read_rwgt_line(ifile,idwgt
+     $                             ,wgtxsecmu(j,i,kk))
+                           enddo
+                        enddo
+                     else
+                        call read_rwgt_line(ifile,idwgt,wgtxsecmu(1,1
+     $                       ,kk))
+                     endif
+                  enddo
+               endif
+               if (do_rwgt_pdf) then
+                  do j=1,lhaPDFid(0)
+                     if (lpdfvar(j)) then
+                        do i=0,nmemPDF(j)
+                           call read_rwgt_line(ifile,idwgt,wgtxsecPDF(i
+     $                          ,j))
+                        enddo
+                     else
+                        call read_rwgt_line(ifile,idwgt,wgtxsecPDF(0,j))
+                     endif
+                  enddo
+               endif
+               read(ifile,'(a)')string
+            endif
+         endif
+         read(ifile,'(a)')string
       else
-        string=buff(1:len_trim(buff))
-        buff=' '
+         string=buff(1:len_trim(buff))
+         buff=' '
       endif
  401  format(2(1x,e14.8))
  402  format(8(1x,e14.8))

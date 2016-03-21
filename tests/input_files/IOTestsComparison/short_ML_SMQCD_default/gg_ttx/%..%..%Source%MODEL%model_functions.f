@@ -127,7 +127,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       IMPLICIT NONE
       COMPLEX*32 TWOPII
       PARAMETER (TWOPII=2.0E0_16*3.14169258478796109557151794433593750E
-     $ 0_16*(0.0E0_16,1.0E0_16))
+     $0_16*(0.0E0_16,1.0E0_16))
       COMPLEX*32 ARG
       IF(ARG.EQ.(0.0E0_16,0.0E0_16)) THEN
         MP_REGLOG=(0.0E0_16,0.0E0_16)
@@ -140,13 +140,13 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       IMPLICIT NONE
       COMPLEX*32 TWOPII
       PARAMETER (TWOPII=2.0E0_16*3.14169258478796109557151794433593750E
-     $ 0_16*(0.0E0_16,1.0E0_16))
+     $0_16*(0.0E0_16,1.0E0_16))
       COMPLEX*32 ARG
       IF(ARG.EQ.(0.0E0_16,0.0E0_16))THEN
         MP_REGLOGP=(0.0E0_16,0.0E0_16)
       ELSE
-        IF(REAL(ARG,KIND=16).LT.0.0E0_16.AND.IMAGPART(ARG).LT.0.0E0_16
-     $   )THEN
+        IF(REAL(ARG,KIND=16).LT.0.0E0_16.AND.IMAGPART(ARG).LT.0.0E0_16)
+     $   THEN
           MP_REGLOGP=LOG(ARG) + TWOPII
         ELSE
           MP_REGLOGP=LOG(ARG)
@@ -158,13 +158,13 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       IMPLICIT NONE
       COMPLEX*32 TWOPII
       PARAMETER (TWOPII=2.0E0_16*3.14169258478796109557151794433593750E
-     $ 0_16*(0.0E0_16,1.0E0_16))
+     $0_16*(0.0E0_16,1.0E0_16))
       COMPLEX*32 ARG
       IF(ARG.EQ.(0.0E0_16,0.0E0_16))THEN
         MP_REGLOGM=(0.0E0_16,0.0E0_16)
       ELSE
-        IF(REAL(ARG,KIND=16).LT.0.0E0_16.AND.IMAGPART(ARG).GT.0.0E0_16
-     $   )THEN
+        IF(REAL(ARG,KIND=16).LT.0.0E0_16.AND.IMAGPART(ARG).GT.0.0E0_16)
+     $   THEN
           MP_REGLOGM=LOG(ARG) - TWOPII
         ELSE
           MP_REGLOGM=LOG(ARG)

@@ -149,6 +149,17 @@ class Banner(dict):
             elif "<event>" in line:
                 break
     
+    def __getattribute__(self, attr):
+        """allow auto-build for the run_card/param_card/... """
+        try:
+            return super(Banner, self).__getattribute__(attr)
+        except:
+            if attr not in ['run_card', 'param_card', 'slha', 'mgruncard', 'mg5proccard', 'mgshowercard', 'foanalyse']:
+                raise
+            return self.charge_card(attr)
+
+
+    
     def change_lhe_version(self, version):
         """change the lhe version associate to the banner"""
     
@@ -732,14 +743,17 @@ class ProcCard(list):
         
         store_line = ''
         for line in init:
-            line = line.strip()
+            line = line.rstrip()
             if line.endswith('\\'):
                 store_line += line[:-1]
             else:
-                self.append(store_line + line)
+                tmp = store_line + line
+                self.append(tmp.strip())
                 store_line = ""
         if store_line:
             raise Exception, "WRONG CARD FORMAT"
+        
+        
     def move_to_last(self, cmd):
         """move an element to the last history."""
         for line in self[:]:
@@ -1517,16 +1531,6 @@ class RunCard(ConfigFile):
             else:
                 return lpp
         
-        def get_pdf_id(pdf):
-            if pdf == "lhapdf":
-                return self["lhaid"]
-            else: 
-                return {'none': 0, 'mrs02nl':20250, 'mrs02nn':20270, 'cteq4_m': 19150,
-                        'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
-                        'cteq5_d':19060,'cteq5_l':19070,'cteq5m1':19051,
-                        'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
-                        'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244600
-                        }[pdf]
             
         output["idbmup1"] = get_idbmup(self['lpp1'])
         output["idbmup2"] = get_idbmup(self['lpp2'])
@@ -1534,9 +1538,23 @@ class RunCard(ConfigFile):
         output["ebmup2"] = self["ebeam2"]
         output["pdfgup1"] = 0
         output["pdfgup2"] = 0
-        output["pdfsup1"] = get_pdf_id(self["pdlabel"])
-        output["pdfsup2"] = get_pdf_id(self["pdlabel"])
+        output["pdfsup1"] = self.get_pdf_id(self["pdlabel"])
+        output["pdfsup2"] = self.get_pdf_id(self["pdlabel"])
         return output
+    
+    def get_pdf_id(self, pdf):
+        if pdf == "lhapdf":
+            return self["lhaid"]
+        else: 
+            return {'none': 0, 'mrs02nl':20250, 'mrs02nn':20270, 'cteq4_m': 19150,
+                    'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
+                    'cteq5_d':19060,'cteq5_l':19070,'cteq5m1':19051,
+                    'cteq6_m':10000,'cteq6_l':10041,'cteq6l1':10042,
+                    'nn23lo':246800,'nn23lo1':247000,'nn23nlo':244800
+                    }[pdf]    
+    
+    def get_lhapdf_id(self):
+        return self.get_pdf_id(self['pdlabel'])
 
     def remove_all_cut(self): 
         """remove all the cut"""
@@ -1955,6 +1973,7 @@ class RunCardNLO(RunCard):
         self.add_param('reweight_pdf', [False], fortran_name='lpdfvar')
         self.add_param('pdf_set_min', 244601, hidden=True)
         self.add_param('pdf_set_max', 244700, hidden=True)
+        self.add_param('keep_rwgt_info', False)
         #merging
         self.add_param('ickkw', 0)
         self.add_param('bwcutoff', 15.0)
@@ -2135,7 +2154,7 @@ class RunCardNLO(RunCard):
         # check for beam_id
         beam_id = set()
         for proc in proc_def:
-            for leg in proc[0]['legs']:
+            for leg in proc['legs']:
                 if not leg['state']:
                     beam_id.add(leg['id'])
         if any(i in beam_id for i in [1,-1,2,-2,3,-3,4,-4,5,-5,21,22]):
@@ -2165,7 +2184,7 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "1|3|2")
+        self.add_param("MLReductionLib", "6|1|3|2")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)
@@ -2186,6 +2205,8 @@ class MadLoopParam(ConfigFile):
         self.add_param("HelicityFilterLevel", 2)
         self.add_param("LoopInitStartOver", False)
         self.add_param("HelInitStartOver", False)
+        self.add_param("UseQPIntegrandForNinja", False)        
+        self.add_param("UseQPIntegrandForCutTools", True)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

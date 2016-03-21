@@ -157,8 +157,8 @@ C       CMS energy in GEV
       DO K=1,NPSPOINTS
 
         IF(READPS) THEN
-          OPEN(967, FILE='PS.input', ERR=976, STATUS='OLD', ACTION='RE'
-     $     //'AD')
+          OPEN(967, FILE='PS.input', ERR=976, STATUS='OLD',
+     $      ACTION='READ')
           DO I=1,NEXTERNAL
             READ(967,*,END=978) P(0,I),P(1,I),P(2,I),P(3,I)
           ENDDO
@@ -168,8 +168,8 @@ C       CMS energy in GEV
  978      CONTINUE
           CLOSE(967)
         ELSE
-          IF ((NINCOMING.EQ.2).AND.((NEXTERNAL - NINCOMING .EQ.1))
-     $     ) THEN
+          IF ((NINCOMING.EQ.2).AND.((NEXTERNAL - NINCOMING .EQ.1)))
+     $      THEN
             IF (PMASS(3).EQ.0.0D0) THEN
               STOP 'Cannot generate 2>1 kin. config. with m3=0.0d0'
             ELSE
@@ -214,8 +214,8 @@ C        scale.
 C       Update the couplings with the new MU_R
         CALL UPDATE_AS_PARAM()
 
-C       Optionally the user can set where to find the MadLoop5_resource
-C       s folder.
+C       Optionally the user can set where to find the
+C        MadLoop5_resources folder.
 C       Otherwise it will look for it automatically and find it if it
 C        has not
 C       been moved
@@ -251,8 +251,8 @@ C
      $       ,DSQRT(DABS(DOT(P(0,I),P(0,I))))
           ENDDO
           WRITE (*,*) '---------------------------------'
-          WRITE (*,*) 'Detailed result for each coupling order'
-     $     //'s combination.'
+          WRITE (*,*) 'Detailed result for each coupling orders'
+     $     //' combination.'
 
 
           UNITS=MOD(RETURNCODE,10)
@@ -260,11 +260,11 @@ C
           HUNDREDS=(RETURNCODE-TENS*10-UNITS)/100
           IF (HUNDREDS.EQ.1) THEN
             IF (TENS.EQ.3.OR.TENS.EQ.4) THEN
-              WRITE(*,*) 'Unknown numerical stability because MadLoo'
-     $         //'p is in the initialization stage.'
+              WRITE(*,*) 'Unknown numerical stability because MadLoop'
+     $         //' is in the initialization stage.'
             ELSE
-              WRITE(*,*) 'Unknown numerical stability, check CTModeRu'
-     $         //'n value in MadLoopParams.dat.'
+              WRITE(*,*) 'Unknown numerical stability, check CTModeRun'
+     $         //' value in MadLoopParams.dat.'
             ENDIF
           ELSEIF (HUNDREDS.EQ.2) THEN
             WRITE(*,*) 'Stable kinematic configuration (SPS).'
@@ -273,8 +273,8 @@ C
             WRITE(*,*) 'Quadruple precision rescue successful.'
           ELSEIF (HUNDREDS.EQ.4) THEN
             WRITE(*,*) 'Exceptional kinematic configuration (EPS).'
-            WRITE(*,*) 'Both double an quadruple precision computation'
-     $       //'s, are unstable.'
+            WRITE(*,*) 'Both double an quadruple precision'
+     $       //' computations, are unstable.'
           ENDIF
           IF (TENS.EQ.2.OR.TENS.EQ.4) THEN
             WRITE(*,*) 'Quadruple precision computation used.'
@@ -284,37 +284,36 @@ C
               WRITE(*,'(1x,a23,1x,1e10.2)') 'Relative accuracy     ='
      $         ,PREC_FOUND(0)
             ELSEIF (PREC_FOUND(0).EQ.0.0D0) THEN
-              WRITE(*,'(1x,a23,1x,1e10.2,1x,a30)') 'Relative accuracy'
-     $         //'     =',PREC_FOUND(0),'(i.e. beyond double precisio'
-     $         //'n)'
+              WRITE(*,'(1x,a23,1x,1e10.2,1x,a30)') 'Relative accuracy '
+     $         //'    =',PREC_FOUND(0),'(i.e. beyond double precision)'
             ELSE
-              WRITE(*,*) 'Estimated accuracy could not be computed fo'
-     $         //'r an unknown reason.'
+              WRITE(*,*) 'Estimated accuracy could not be computed for'
+     $         //' an unknown reason.'
             ENDIF
           ENDIF
           WRITE (*,*) '---------------------------------'
           IF (NBORNCHOSEN.EQ.0) THEN
-            WRITE (*,*) 'No Born contribution satisfied the square'
-     $       //'d order constraints.'
+            WRITE (*,*) 'No Born contribution satisfied the squared'
+     $       //' order constraints.'
           ELSE IF (NBORNCHOSEN.NE.NSQSO_BORN) THEN
-            WRITE (*,*) 'Selected squared coupling orders combinatio'
-     $       //'n for the Born summed result below:'
+            WRITE (*,*) 'Selected squared coupling orders combination'
+     $       //' for the Born summed result below:'
             WRITE (*,*) (CHOSEN_BORN_SO_INDICES(I),I=1,NBORNCHOSEN)
           ENDIF
           IF (NLOOPCHOSEN.NE.NSQUAREDSO) THEN
-            WRITE (*,*) 'Selected squared coupling orders combinatio'
-     $       //'n for the loop summed result below:'
+            WRITE (*,*) 'Selected squared coupling orders combination'
+     $       //' for the loop summed result below:'
             WRITE (*,*) (CHOSEN_LOOP_SO_INDICES(I),I=1,NLOOPCHOSEN)
           ENDIF
           WRITE (*,*) '---------------------------------'
-          WRITE (*,*) 'Matrix element born   = ', MATELEM(0,0)
-     $     , ' GeV^',-(2*NEXTERNAL-8)
-          WRITE (*,*) 'Matrix element finite = ', MATELEM(1,0)
-     $     , ' GeV^',-(2*NEXTERNAL-8)
-          WRITE (*,*) 'Matrix element 1eps   = ', MATELEM(2,0)
-     $     , ' GeV^',-(2*NEXTERNAL-8)
-          WRITE (*,*) 'Matrix element 2eps   = ', MATELEM(3,0)
-     $     , ' GeV^',-(2*NEXTERNAL-8)
+          WRITE (*,*) 'Matrix element born   = ', MATELEM(0,0), 
+     $     ' GeV^',-(2*NEXTERNAL-8)
+          WRITE (*,*) 'Matrix element finite = ', MATELEM(1,0), 
+     $     ' GeV^',-(2*NEXTERNAL-8)
+          WRITE (*,*) 'Matrix element 1eps   = ', MATELEM(2,0), 
+     $     ' GeV^',-(2*NEXTERNAL-8)
+          WRITE (*,*) 'Matrix element 2eps   = ', MATELEM(3,0), 
+     $     ' GeV^',-(2*NEXTERNAL-8)
           WRITE (*,*) '---------------------------------'
           IF (MATELEM(0,0).NE.0.0D0) THEN
             WRITE (*,*) 'finite / (born*ao2pi) = ', MATELEM(1,0)
@@ -332,24 +331,24 @@ C
 
           OPEN(69, FILE='result.dat', ERR=976, ACTION='WRITE')
           DO I=1,NEXTERNAL
-            WRITE (69,'(a2,1x,5e25.15)') 'PS',P(0,I),P(1,I),P(2,I),P(3
-     $       ,I)
+            WRITE (69,'(a2,1x,5ES30.15E3)') 'PS',P(0,I),P(1,I),P(2,I)
+     $       ,P(3,I)
           ENDDO
-          WRITE (69,'(a3,1x,i2)') 'EXP',-(2*NEXTERNAL-8)
-          WRITE (69,'(a4,1x,1e25.15)') 'BORN',MATELEM(0,0)
+          WRITE (69,'(a3,1x,i3)') 'EXP',-(2*NEXTERNAL-8)
+          WRITE (69,'(a4,1x,1ES30.15E3)') 'BORN',MATELEM(0,0)
           IF (MATELEM(0,0).NE.0.0D0) THEN
-            WRITE (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)/MATELEM(0
-     $       ,0)/AO2PI
-            WRITE (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2,0)/MATELEM(0
-     $       ,0)/AO2PI
-            WRITE (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)/MATELEM(0
-     $       ,0)/AO2PI
+            WRITE (69,'(a3,1x,1ES30.15E3)') 'FIN',MATELEM(1,0)
+     $       /MATELEM(0,0)/AO2PI
+            WRITE (69,'(a4,1x,1ES30.15E3)') '1EPS',MATELEM(2,0)
+     $       /MATELEM(0,0)/AO2PI
+            WRITE (69,'(a4,1x,1ES30.15E3)') '2EPS',MATELEM(3,0)
+     $       /MATELEM(0,0)/AO2PI
           ELSE
-            WRITE (69,'(a3,1x,1e25.15)') 'FIN',MATELEM(1,0)/AO2PI
-            WRITE (69,'(a4,1x,1e25.15)') '1EPS',MATELEM(2,0)/AO2PI
-            WRITE (69,'(a4,1x,1e25.15)') '2EPS',MATELEM(3,0)/AO2PI
+            WRITE (69,'(a3,1x,1ES30.15E3)') 'FIN',MATELEM(1,0)/AO2PI
+            WRITE (69,'(a4,1x,1ES30.15E3)') '1EPS',MATELEM(2,0)/AO2PI
+            WRITE (69,'(a4,1x,1ES30.15E3)') '2EPS',MATELEM(3,0)/AO2PI
           ENDIF
-          WRITE (69,'(a6,1x,1e25.15)') 'ASO2PI',AO2PI
+          WRITE (69,'(a6,1x,1ES30.15E3)') 'ASO2PI',AO2PI
           WRITE (69,*) 'Export_Format Default'
           WRITE (69,'(a7,1x,i3)') 'RETCODE',RETURNCODE
           WRITE (69,'(a3,1x,1e10.4)') 'ACC',PREC_FOUND(0)
@@ -399,8 +398,8 @@ C
 C     CALL SLOOPMATRIX(P,MATELEM)
 C     
 C     write (*,*) "-------------------------------------------------"
-C     write (*,*) "Matrix element = ", MATELEM(1), " GeV^",-(2*nexterna
-C     l-8)      
+C     write (*,*) "Matrix element = ", MATELEM(1), "
+C      GeV^",-(2*nexternal-8)      
 C     write (*,*) "-------------------------------------------------"
 
       DEALLOCATE(MATELEM)
@@ -648,12 +647,12 @@ C     RETURN LOG OF WEIGHT
       RETURN
 C     
  1001 FORMAT(' RAMBO FAILS: # OF PARTICLES =',I5,' IS NOT ALLOWED')
- 1002 FORMAT(' RAMBO FAILS: TOTAL MASS =',D15.6,' IS NOT',' SMALLE'
-     $ //'R THAN TOTAL ENERGY =',D15.6)
+ 1002 FORMAT(' RAMBO FAILS: TOTAL MASS =',D15.6,' IS NOT',' SMALLER'
+     $ //' THAN TOTAL ENERGY =',D15.6)
  1004 FORMAT(' RAMBO WARNS: WEIGHT = EXP(',F20.9,') MAY UNDERFLOW')
  1005 FORMAT(' RAMBO WARNS: WEIGHT = EXP(',F20.9,') MAY  OVERFLOW')
- 1006 FORMAT(' RAMBO WARNS:',I3,' ITERATIONS DID NOT GIVE THE'
-     $ ,' DESIRED ACCURACY =',D15.6)
+ 1006 FORMAT(' RAMBO WARNS:',I3,' ITERATIONS DID NOT GIVE THE',
+     $ ' DESIRED ACCURACY =',D15.6)
       END
 
       FUNCTION RN(IDUMMY)
