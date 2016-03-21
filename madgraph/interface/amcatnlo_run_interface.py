@@ -184,11 +184,11 @@ class CmdExtended(common_run.CommonRunCmd):
     }
     
     debug_output = 'ME5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
 
     keyboard_stop_msg = """stopping all operation
@@ -1654,13 +1654,13 @@ RESTART = %(mint_mode)s
             return jobs_to_run_new,jobs_to_collect
         elif jobs_to_run_new:
             # print intermediate summary of results
-            scale_pdf_info={}
+            scale_pdf_info=[]
             self.print_summary(options,integration_step,mode,scale_pdf_info,done=False)
         else:
             # When we are done for (N)LO+PS runs, do not print
             # anything yet. This will be done after the reweighting
             # and collection of the events
-            scale_pdf_info={}
+            scale_pdf_info=[]
 # Prepare for the next integration/MINT step
         if (not fixed_order) and integration_step+1 == 2 :
             # next step is event generation (mint_step 2)
@@ -1884,10 +1884,10 @@ RESTART = %(mint_mode)s
         """writes the res.txt files in the SubProcess dir"""
         jobs.sort(key = lambda job: -job['errorABS'])
         content=[]
-        content.append('\n\nCross-section per integration channel:')
+        content.append('\n\nCross section per integration channel:')
         for job in jobs:
             content.append('%(p_dir)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  ' %  job)
-        content.append('\n\nABS cross-section per integration channel:')
+        content.append('\n\nABS cross section per integration channel:')
         for job in jobs:
             content.append('%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  ' %  job)
         totABS=0
@@ -1912,8 +1912,9 @@ RESTART = %(mint_mode)s
 
     def collect_scale_pdf_info(self,options,jobs):
         """read the scale_pdf_dependence.dat files and collects there results"""
-        scale_pdf_info={}
-        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF']:
+        scale_pdf_info=[]
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
             data_files=[]
             for job in jobs:
                 data_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
@@ -1975,7 +1976,7 @@ RESTART = %(mint_mode)s
         
         # And now output the finalized list
         histogram_list.output(pjoin(self.me_dir,'SubProcesses',"MADatNLO"),
-                                                             format = 'gnuplot')
+                              format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
 
     def applgrid_combine(self,cross,error,jobs):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
@@ -2160,7 +2161,7 @@ RESTART = %(mint_mode)s
         return
 
 
-    def print_summary(self, options, step, mode, scale_pdf_info={}, done=True):
+    def print_summary(self, options, step, mode, scale_pdf_info=[], done=True):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
@@ -2184,8 +2185,92 @@ RESTART = %(mint_mode)s
             self.cross_sect_dict['axsec_string']='(Partial) abs(decay width)'
         else:
             self.cross_sect_dict['unit']='pb'
-            self.cross_sect_dict['xsec_string']='Total cross-section'
-            self.cross_sect_dict['axsec_string']='Total abs(cross-section)'
+            self.cross_sect_dict['xsec_string']='Total cross section'
+            self.cross_sect_dict['axsec_string']='Total abs(cross section)'
+
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            status = ['Determining the number of unweighted events per channel',
+                      'Updating the number of unweighted events per channel',
+                      'Summary:']
+            computed='(computed from LHE events)'
+        elif mode in ['NLO', 'LO']:
+            status = ['Results after grid setup:','Current results:',
+                      'Final results and run summary:']
+            computed='(computed from histogram information)'
+
+        if step != 2 and mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            message = status[step] + '\n\n      Intermediate results:' + \
+                      ('\n      Random seed: %(randinit)d' + \
+                       '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
+                       '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
+                      % self.cross_sect_dict
+        elif mode in ['NLO','LO'] and not done:
+            if step == 0:
+                message = '\n      ' + status[0] + \
+                          '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                          self.cross_sect_dict
+            else:
+                message = '\n      ' + status[1] + \
+                          '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                          self.cross_sect_dict
+                
+        else:
+            message = '\n   --------------------------------------------------------------'
+            message = message + \
+                      '\n      ' + status[2] + proc_info + \
+                      '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                      self.cross_sect_dict
+            message = message + \
+                      '\n   --------------------------------------------------------------'
+            if scale_pdf_info and (self.run_card['nevents']>=10000 or mode in ['NLO', 'LO']):
+                if scale_pdf_info[0]:
+                        # scale uncertainties
+                    message = message + '\n      Scale variation %s:' % computed
+                    for s in scale_pdf_info[0]:
+                        if s['unc']:
+                            if self.run_card['ickkw'] != -1:
+                                message = message + \
+                                          ('\n          Dynamical_scale_choice %(label)i (envelope of %(size)s values): '\
+                                           '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % s
+                            else:
+                                message = message + \
+                                          ('\n          Soft and hard scale dependence (added in quadrature): '\
+                                           '\n              %(cen)8.3e pb  +%(max_q)0.1f%% -%(min_q)0.1f%%') % s
+                                    
+                        else:
+                            message = message + \
+                                          ('\n          Dynamical_scale_choice %(label)i: '\
+                                           '\n              %(cen)8.3e pb') % s
+                                
+                if scale_pdf_info[1]:
+                    message = message + '\n      PDF variation %s:' % computed
+                    for p in scale_pdf_info[1]:
+                        if p['unc']=='none':
+                            message = message + \
+                                          ('\n          %(name)s (central value only): '\
+                                           '\n              %(cen)8.3e pb') % p
+                            
+                        elif p['unc']=='unknown':
+                            message = message + \
+                                          ('\n          %(name)s (%(size)s members; combination method unknown): '\
+                                           '\n              %(cen)8.3e pb') % p
+                        else:
+                            message = message + \
+                                          ('\n          %(name)s (%(size)s members; using %(unc)s method): '\
+                                           '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % p
+                        # pdf uncertainties
+                message = message + \
+                          '\n   --------------------------------------------------------------'
+
+        
+        if (mode in ['NLO', 'LO'] and not done) or \
+           (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
+            logger.info(message+'\n')
+            return
+
+        # Some advanced general statistics are shown in the debug message at the
+        # end of the run
+        # Make sure it never stops a run
         # Gather some basic statistics for the run and extracted from the log files.
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
             log_GV_files =  glob.glob(pjoin(self.me_dir, \
@@ -2202,82 +2287,7 @@ RESTART = %(mint_mode)s
                                     'SubProcesses', 'P*','born_G*','log_MINT*.txt'))
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
-            
-        
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
-            status = ['Determining the number of unweighted events per channel',
-                      'Updating the number of unweighted events per channel',
-                      'Summary:']
-            if step != 2:
-                message = status[step] + '\n\n      Intermediate results:' + \
-                    ('\n      Random seed: %(randinit)d' + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
-                     '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
-                     % self.cross_sect_dict
-            else:
-        
-                message = '\n      ' + status[step] + proc_info + \
-                          '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                        self.cross_sect_dict
 
-                if self.run_card['nevents']>=10000 and self.run_card['reweight_scale']:
-                   message = message + \
-                       ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                       (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if self.run_card['nevents']>=10000 and self.run_card['reweight_PDF']:
-                   message = message + \
-                       ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
-                       (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
-
-                neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
-                       (2. * self.cross_sect_dict['xseca'])
-                message = message + \
-                    ('\n      Number of events generated: %s' + \
-                     '\n      Parton shower to be used: %s' + \
-                     '\n      Fraction of negative weights: %4.2f' + \
-                     '\n      Total running time : %s') % \
-                        (self.run_card['nevents'],
-                         self.run_card['parton_shower'].upper(),
-                         neg_frac, 
-                         misc.format_timer(time.time()-self.start_time))
-
-        elif mode in ['NLO', 'LO']:
-            status = ['Results after grid setup:','Current results:',
-                      'Final results and run summary:']
-            if (not done) and (step == 0):
-                message = '\n      ' + status[0] + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-            elif not done:
-                message = '\n      ' + status[1] + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-            elif done:
-                message = '\n      ' + status[2] + proc_info + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-                if self.run_card['reweight_scale']:
-                    if self.run_card['ickkw'] != -1:
-                        message = message + \
-                            ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                            (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                    else:
-                        message = message + \
-                            ('\n      Soft and hard scale dependence (added in quadrature): +%0.1f%% -%0.1f%%') % \
-                            (scale_pdf_info['scale_upp_quad'], scale_pdf_info['scale_low_quad'])
-                if self.run_card['reweight_PDF']:
-                    message = message + \
-                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
-                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
-        
-        if (mode in ['NLO', 'LO'] and not done) or \
-           (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
-            logger.info(message+'\n')
-            return
-
-        # Some advanced general statistics are shown in the debug message at the
-        # end of the run
-        # Make sure it never stops a run
         try:
             message, debug_msg = \
                self.compile_advanced_stats(log_GV_files, all_log_files, message)
@@ -2731,8 +2741,9 @@ RESTART = %(mint_mode)s
         """this function calls the reweighting routines and creates the event file in the 
         Event dir. Return the name of the event file created
         """
-        scale_pdf_info={}
-        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF'] :
+        scale_pdf_info=[]
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
@@ -3090,8 +3101,9 @@ RESTART = %(mint_mode)s
                         files.mv(pjoin(rundir, file), plotfile) 
                     elif out_id=='HWU':
                         histogram_list=histograms.HwUList(pjoin(rundir,file))
-                        histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,
-                                                    '%s%d'% (filename,i)),format = 'gnuplot')
+                        histogram_list.output(pjoin(self.me_dir,'Events',
+                                                    self.run_name,'%s%d'% (filename,i)),
+                                              format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
                         try:
                             misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
                                       stdout=os.open(os.devnull, os.O_RDWR),\
@@ -3161,8 +3173,9 @@ RESTART = %(mint_mode)s
                                     # Now let the histogram module do the magic and add them.
                                     histogram_list[ii] += histo*norm
                             # And now output the finalized list
-                            histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,'%s%d'% (filename, i)),
-                                                  format = 'gnuplot')
+                            histogram_list.output(pjoin(self.me_dir,'Events',
+                                                        self.run_name,'%s%d'% (filename, i)),
+                                                  format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
                             try:
                                 misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
                                           stdout=os.open(os.devnull, os.O_RDWR),\
@@ -3574,108 +3587,157 @@ RESTART = %(mint_mode)s
         and returns it in percents.  The expected format of the file
         is: n_scales xsec_scale_central xsec_scale1 ...  n_pdf
         xsec_pdf0 xsec_pdf1 ...."""
-        scale_pdf_info={}
         scales=[]
         pdfs=[]
-        numofpdf = 0
-        numofscales = 0
         for evt_file in evt_files:
             path, evt=os.path.split(evt_file)
-            data_file=open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat')).read()
-            lines = data_file.replace("D", "E").split("\n")
-            if not numofscales:
-                numofscales = int(lines[0])
-            if not numofpdf:
-                numofpdf = int(lines[2])
-            scales_this = [float(val) for val in lines[1].split()]
-            pdfs_this = [float(val) for val in lines[3].split()]
-
-            if numofscales != len(scales_this) or numofpdf !=len(pdfs_this):
-                # the +1 takes the 0th (central) set into account
-                logger.info(data_file)
-                logger.info((' Expected # of scales: %d\n'+
-                             ' Found # of scales: %d\n'+
-                             ' Expected # of pdfs: %d\n'+
-                             ' Found # of pdfs: %d\n') %
-                        (numofscales, len(scales_this), numofpdf, len(pdfs_this)))
-                raise aMCatNLOError('inconsistent scale_pdf_dependence.dat')
-            if not scales:
-                scales = [0.] * numofscales
-            if not pdfs:
-                pdfs = [0.] * numofpdf
-
-            scales = [a + b for a, b in zip(scales, scales_this)]
-            pdfs = [a + b for a, b in zip(pdfs, pdfs_this)]
-
-        # get the central value
-        if numofscales>0 and numofpdf==0:
-            cntrl_val=scales[0]
-        elif numofpdf>0 and numofscales==0:
-            cntrl_val=pdfs[0]
-        elif numofpdf>0 and numofscales>0:
-            if abs(1-scales[0]/pdfs[0])>0.0001:
-                raise aMCatNLOError('Central values for scale and PDF variation not identical')
-            else:
-                cntrl_val=scales[0]
+            with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
+                data_line=f.readline()
+                if "scale variations:" in data_line:
+                    for i,scale in enumerate(self.run_card['dynamical_scale_choice']):
+                        data_line = f.readline().split()
+                        scales_this = [float(val) for val in f.readline().replace("D", "E").split()]
+                        try:
+                            scales[i] = [a + b for a, b in zip(scales[i], scales_this)]
+                        except IndexError:
+                            scales+=[scales_this]
+                    data_line=f.readline()
+                if "pdf variations:" in data_line:
+                    for i,pdf in enumerate(self.run_card['lhaid']):
+                        data_line = f.readline().split()
+                        pdfs_this = [float(val) for val in f.readline().replace("D", "E").split()]
+                        try:
+                            pdfs[i] = [a + b for a, b in zip(pdfs[i], pdfs_this)]
+                        except IndexError:
+                            pdfs+=[pdfs_this]
 
         # get the scale uncertainty in percent
-        if numofscales>0:
-            if cntrl_val != 0.0:
-            # max and min of the full envelope
-                scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
-                scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
-            # ren and fac scale dependence added in quadrature
-                scale_pdf_info['scale_upp_quad'] = ((cntrl_val+math.sqrt(math.pow(max(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(max(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val-1)*100
-                scale_pdf_info['scale_low_quad'] = (1-(cntrl_val-math.sqrt(math.pow(min(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(min(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val)*100
+        scale_info=[]
+        for j,scale in enumerate(scales):
+            s_cen=scale[0]
+            if s_cen != 0.0 and self.run_card['reweight_scale'][j]:
+                # max and min of the full envelope
+                s_max=(max(scale)/s_cen-1)*100
+                s_min=(1-min(scale)/s_cen)*100
+                # ren and fac scale dependence added in quadrature
+                ren_var=[]
+                fac_var=[]
+                for i in range(len(self.run_card['rw_rscale'])):
+                    ren_var.append(scale[i]-s_cen) # central fac scale
+                for i in range(len(self.run_card['rw_fscale'])):
+                    fac_var.append(scale[i*len(self.run_card['rw_rscale'])]-s_cen) # central ren scale
+                s_max_q=((s_cen+math.sqrt(math.pow(max(ren_var),2)+math.pow(max(fac_var),2)))/s_cen-1)*100
+                s_min_q=(1-(s_cen-math.sqrt(math.pow(min(ren_var),2)+math.pow(min(fac_var),2)))/s_cen)*100
+                s_size=len(scale)
             else:
-                scale_pdf_info['scale_upp'] = 0.0
-                scale_pdf_info['scale_low'] = 0.0
+                s_max=0.0
+                s_min=0.0
+                s_max_q=0.0
+                s_min_q=0.0
+                s_size=len(scale)
+            scale_info.append({'cen':s_cen, 'min':s_min, 'max':s_max, \
+                               'min_q':s_min_q, 'max_q':s_max_q, 'size':s_size, \
+                               'label':self.run_card['dynamical_scale_choice'][j], \
+                               'unc':self.run_card['reweight_scale'][j]})
 
-        # get the pdf uncertainty in percent (according to the Hessian method)
-        lhaid=self.run_card['lhaid']
-        pdf_upp=0.0
-        pdf_low=0.0
-        if lhaid <= 90000:
-            # use Hessian method (CTEQ & MSTW)
-            if numofpdf>1:
-                for i in range(int(numofpdf/2)):
-                    pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
-                    pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-                if cntrl_val != 0.0:
-                    scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
-                    scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+        # check if we can use LHAPDF to compute the PDF uncertainty
+        if any(self.run_card['reweight_pdf']):
+            use_lhapdf=False
+            lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
+                                           stdout=subprocess.PIPE).stdout.read().strip() 
+
+            try:
+                candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
+                            if os.path.isdir(pjoin(lhapdf_libdir,dirname))]
+            except OSError:
+                candidates=[]
+            for candidate in candidates:
+                if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                    sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError:
+                        sys.path.pop(0)
+                        continue
+                
+            if not use_lhapdf:
+                try:
+                    candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
+                                if os.path.isdir(pjoin(lhapdf_libdir+'64',dirname))]
+                except OSError:
+                    candidates=[]
+                for candidate in candidates:
+                    if os.path.isfile(pjoin(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+                        sys.path.insert(0,pjoin(lhapdf_libdir+'64',candidate,'site-packages'))
+                        try:
+                            import lhapdf
+                            use_lhapdf=True
+                            break
+                        except ImportError:
+                            sys.path.pop(0)
+                            continue
+                
+            if not use_lhapdf:
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                except ImportError:
+                    logger.warning("Failed to access python version of LHAPDF: "\
+                                   "cannot compute PDF uncertainty from the "\
+                                   "weights in the events. The weights in the LHE " \
+                                   "event files will still cover all PDF set members, "\
+                                   "but there will be no PDF uncertainty printed in the run summary. \n "\
+                                   "If the python interface to LHAPDF is available on your system, try "\
+                                   "adding its location to the PYTHONPATH environment variable and the"\
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
+                    use_lhapdf=False
+
+        # turn off lhapdf printing any messages
+        if any(self.run_card['reweight_pdf']) and use_lhapdf: lhapdf.setVerbosity(0)
+
+        pdf_info=[]
+        for j,pdfset in enumerate(pdfs):
+            p_cen=pdfset[0]
+            if p_cen != 0.0 and self.run_card['reweight_pdf'][j]:
+                if use_lhapdf:
+                    pdfsetname=self.run_card['lhapdfsetname'][j]
+                    try:
+                        p=lhapdf.getPDFSet(pdfsetname)
+                        ep=p.uncertainty(pdfset,-1)
+                        p_cen=ep.central
+                        p_min=abs(ep.errminus/p_cen)*100
+                        p_max=abs(ep.errplus/p_cen)*100
+                        p_type=p.errorType
+                        p_size=p.size
+                        p_conf=p.errorConfLevel
+                    except:
+                        logger.warning("Could not access LHAPDF to compute uncertainties for %s" % pdfsetname)
+                        p_min=0.0
+                        p_max=0.0
+                        p_type='unknown'
+                        p_conf='unknown'
+                        p_size=len(pdfset)
                 else:
-                    scale_pdf_info['pdf_upp'] = 0.0
-                    scale_pdf_info['pdf_low'] = 0.0
-        elif lhaid in range(90200, 90303) or \
-             lhaid in range(90400, 90433) or \
-             lhaid in range(90700, 90801) or \
-             lhaid in range(90900, 90931) or \
-             lhaid in range(91200, 91303) or \
-             lhaid in range(91400, 91433) or \
-             lhaid in range(91700, 91801) or \
-             lhaid in range(91900, 90931):
-            # PDF4LHC15 Hessian sets
-            pdf_stdev = 0.0
-            for pdf in pdfs[1:]:
-                pdf_stdev += (pdf - cntrl_val)**2
-            pdf_stdev = math.sqrt(pdf_stdev)
-            if cntrl_val != 0.0:
-                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+                    p_min=0.0
+                    p_max=0.0
+                    p_type='unknown'
+                    p_conf='unknown'
+                    p_size=len(pdfset)
+                    pdfsetname=self.run_card['lhaid'][j]
             else:
-                scale_pdf_info['pdf_upp'] = 0.0
-            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
-        else:
-            # use Gaussian method (NNPDF)
-            pdf_stdev=0.0
-            for i in range(int(numofpdf-1)):
-                pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
-            pdf_stdev = math.sqrt(pdf_stdev/int(numofpdf-2))
-            if cntrl_val != 0.0:
-                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
-            else:
-                scale_pdf_info['pdf_upp'] = 0.0
-            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
+                p_min=0.0
+                p_max=0.0
+                p_type='none'
+                p_conf='unknown'
+                p_size=len(pdfset)
+                pdfsetname=self.run_card['lhaid'][j]
+            pdf_info.append({'cen':p_cen, 'min':p_min, 'max':p_max, \
+                             'unc':p_type, 'name':pdfsetname, 'size':p_size, \
+                             'label':self.run_card['lhaid'][j], 'conf':p_conf})
+
+        scale_pdf_info=[scale_info,pdf_info]
         return scale_pdf_info
 
 
@@ -4030,10 +4092,7 @@ RESTART = %(mint_mode)s
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [self.run_card['lhaid']]
-            if self.run_card['reweight_PDF']:
-                lhaid_list.append(self.run_card['PDF_set_min'])
-                lhaid_list.append(self.run_card['PDF_set_max'])
+            lhaid_list = self.run_card['lhaid']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
         else:
@@ -4629,7 +4688,7 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     computation of the total cross section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
@@ -4668,7 +4727,7 @@ _generate_events_usage = "generate_events [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     computation of the total cross section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
@@ -4698,7 +4757,7 @@ _generate_events_parser.add_option("-n", "--name", default=False, dest='run_name
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
-                "-- calculate cross-section up to ORDER.\n" + \
+                "-- calculate cross section up to ORDER.\n" + \
                 "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n"
 
 _calculate_xsect_parser = misc.OptionParser(usage=_calculate_xsect_usage)

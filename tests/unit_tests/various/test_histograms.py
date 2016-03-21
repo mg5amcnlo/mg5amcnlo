@@ -44,25 +44,25 @@ class TestHistograms(unittest.TestCase):
         my_hist = histo_list[0]+2.0
         my_hist = my_hist-2.0
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
 
         # "Testing 'Hist1 - Hist2 + Hist2 == Hist1'"
         my_hist = histo_list[0]+histo_list[1]
         my_hist = my_hist-histo_list[1]
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
         
         #"Testing 'Hist1 * 2.0 / 2.0 == Hist1'"
         my_hist = histo_list[0]*2.0
         my_hist = my_hist/2.0
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
 
         #"Testing 'Hist1 * Hist2 / Hist2 == Hist1'"
         my_hist = histo_list[0]*histo_list[1]
         my_hist = my_hist/histo_list[1]
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
     
     def test_output_reload(self):
         """ Outputs existing HwU histograms in the gnuplot format and makes sure

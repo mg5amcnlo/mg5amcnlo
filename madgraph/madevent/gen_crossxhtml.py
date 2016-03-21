@@ -819,6 +819,9 @@ class OneTagResults(dict):
                 if glob.glob(pjoin(path,"*.%s" % kind)):
                     if self['run_mode'] in ['LO', 'NLO']:
                         self.parton.append('%s' % kind)
+            if exists(pjoin(path,'summary.txt')):
+                self.parton.append('summary.txt')
+                            
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
@@ -841,7 +844,6 @@ class OneTagResults(dict):
                         self.parton.append('%s' % kind)
                     else:
                         self.shower.append('%s' % kind)
-
                 
         if level in ['pythia', 'all']:
             
@@ -967,6 +969,9 @@ class OneTagResults(dict):
                     out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
                     out += " <a href=\"%s\">%s</a> " % \
                                            (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+            if 'summary.txt' in self.parton:
+                out += ' <a href="./Events/%(run_name)s/summary.txt">summary</a>'
+
             #if 'rwt' in self.parton:
             #    out += ' <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematic variation</a>'
 

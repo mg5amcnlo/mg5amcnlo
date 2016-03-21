@@ -290,7 +290,7 @@ average = event_norm ! Normalize events to sum or average to the X sect.
       21   0.750000E+00
   </MonteCarloMasses>
   <initrwgt>
-    <weightgroup type='scale_variation' combine='envelope'>
+    <weightgroup name='scale_variation' combine='envelope'>
       <weight id='1001'> muR=0.10000E+01 muF=0.10000E+01 </weight>
       <weight id='1002'> muR=0.10000E+01 muF=0.20000E+01 </weight>
       <weight id='1003'> muR=0.10000E+01 muF=0.50000E+00 </weight>

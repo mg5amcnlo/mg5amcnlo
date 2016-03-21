@@ -17,12 +17,10 @@ C----------------------------------------------------------------------
       REAL*8 pi
       PARAMETER (PI=3.14159265358979312D0)
       integer j,kk,l,i,nnn
-      integer nwgt,max_weight,nwgt_analysis
-      common/cnwgt/nwgt
+      integer nwgt_analysis
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight),wwwi(max_weight)
-      common/cwgtsinfo/weights_info
+      character*50 weights_info(max_weight_shower)
+     $     ,wwwi(max_weight_shower)
       character*8 cc(2)
       data cc/'        ','vbfcuts '/
       real*8 vetomin, vetomax

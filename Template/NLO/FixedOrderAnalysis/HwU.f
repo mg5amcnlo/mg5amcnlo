@@ -360,16 +360,15 @@ c output by 'xnorm'
       character*4 str_nbin
       double precision xnorm
 c     column info: x_min, x_max, y (central value), dy, {extra
-c     weights}. Use columns with a width of 17 characters.
-      write (buffer( 1:17),'(a)')'##&       xmin  &'
-      write (buffer(18:34),'(a)')'            xmax '
-      write (buffer(35:51),'(a2,a15)') ' &',wgts_info(1)(1:15)
-      write (buffer(52:68),'(a)')' &            dy '
+c     weights}.
+      write (unit,'(a$)') '##& xmin'
+      write (unit,'(a$)') ' & xmax'
+      write (unit,'(a$)') ' & '//trim(adjustl(wgts_info(1)))
+      write (unit,'(a$)') ' & dy'
       do j=2,nwgts
-         write (buffer((j+2)*17+1:(j+3)*17),'(a2,a15)')
-     $        ' &',wgts_info(j)(1:15)
+         write (unit,'(a$)') ' & '//trim(adjustl(wgts_info(j)))
       enddo
-      write (unit,'(a)') buffer(1:(nwgts+3)*17)
+      write (unit,'(a)') ''
       write (unit,'(a)') ''
       do label=1,max_plots
          if (.not. booked(label)) cycle

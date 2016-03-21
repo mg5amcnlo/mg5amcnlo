@@ -216,7 +216,7 @@ c
       common /c_i_orig/i_orig
       integer ioutput,junit(80)
       integer imaxevt,maxevt,ii,numoffiles,nevents,itot,iunit,
-     # mx_of_evt(80),i0,i,j
+     # mx_of_evt(80),i0,i,j,jj,kk,n,nn
       double precision evwgt,evwgt_sign
       integer ione
       parameter (ione=1)
@@ -250,6 +250,7 @@ c
       integer lprup_l(100),nproc_l
       logical found_proc
       include 'reweight_all.inc'
+      include 'run.inc'
       integer proc_id_tot(0:100)
       double precision xsec(100),xsecABS,xerr(100)
       logical get_xsec_from_res1
@@ -412,7 +413,7 @@ c      header. Check consistency in this case
      #  IDBMUP,EBMUP,PDFGUP,PDFSUP,IDWTUP,NPRUP,
      #  XSECUP,XERRUP,abs(evwgt),LPRUP)
       itot=maxevt
-      do ii=1,maxevt
+      do i=1,maxevt
         rnd=fk88random(iseed)
         call whichone(rnd,numoffiles,itot,mx_of_evt,junit,iunit,i0)
         call read_lhef_event(iunit,
@@ -425,14 +426,32 @@ c      header. Check consistency in this case
 c Overwrite the weights. Also overwrite the weights used for PDF & scale
 c reweighting
            evwgt_sign=dsign(evwgt,XWGTUP)
-           do i=1,numscales
-              do j=1,numscales
-                 wgtxsecmu(i,j)=wgtxsecmu(i,j)*evwgt_sign/XWGTUP
+           if (do_rwgt_scale) then
+              do kk=1,dyn_scale(0)
+                 if (lscalevar(kk)) then
+                    do ii=1,nint(scalevarF(0))
+                       do jj=1,nint(scalevarR(0))
+                          wgtxsecmu(jj,ii,kk)=wgtxsecmu(jj,ii,kk)
+     $                         *evwgt_sign/XWGTUP
+                       enddo
+                    enddo
+                 else
+                    wgtxsecmu(1,1,kk)=wgtxsecmu(1,1,kk)
+     $                   *evwgt_sign/XWGTUP
+                 endif
               enddo
-           enddo
-           do i=1,numPDFpairs*2
-              wgtxsecPDF(i)=wgtxsecPDF(i)*evwgt_sign/XWGTUP
-          enddo
+           endif
+           if (do_rwgt_pdf) then
+              do nn=1,lhaPDFid(0)
+                 if (lpdfvar(nn)) then
+                    do n=0,nmemPDF(nn)
+                       wgtxsecPDF(n,nn)=wgtxsecPDF(n,nn)*evwgt_sign/XWGTUP
+                    enddo
+                 else
+                    wgtxsecPDF(0,nn)=wgtxsecPDF(0,nn)*evwgt_sign/XWGTUP
+                 endif
+              enddo
+           endif
         endif
         call write_lhef_event(ioutput,
      #    NUP,IDPRUP,evwgt_sign,SCALUP,AQEDUP,AQCDUP,
