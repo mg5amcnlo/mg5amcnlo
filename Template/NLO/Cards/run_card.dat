@@ -81,7 +81,7 @@
  %(muf1_ref_fixed)s   = muF1_ref_fixed   ! fixed fact reference scale for pdf1
  %(muf2_ref_fixed)s   = muF2_ref_fixed   ! fixed fact reference scale for pdf2
  %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
- %(keep_rwgt_info)s = keep_rwgt_info ! keep the information for reweighting (leads to an .lhe event file about ~5 times larger)
+ %(store_rwgt_info)s = store_rwgt_info   ! Store info for reweighting in the LHE file
 #***********************************************************************
 # Renormalization and factorization scales (advanced and NLO options)  *
 #***********************************************************************

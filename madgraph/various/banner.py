@@ -1900,7 +1900,7 @@ class RunCardNLO(RunCard):
         self.add_param('reweight_pdf', False, fortran_name='do_rwgt_pdf')
         self.add_param('pdf_set_min', 244601)
         self.add_param('pdf_set_max', 244700)
-        self.add_param('keep_rwgt_info', False)
+        self.add_param('store_rwgt_info', False)
         #merging
         self.add_param('ickkw', 0)
         self.add_param('bwcutoff', 15.0)

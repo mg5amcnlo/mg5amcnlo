@@ -4540,9 +4540,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
         
         # automatically switch to keep_wgt option
         first_cmd = [] # force to change some switch
-        #if switch['reweight'] == 'ON':
-        #    logger.info("Automatically switch \"keep_rwgt_info\" in the run_card to allow NLO reweighting", '$MG:color:BLACK')
-        #    first_cmd.append('set keep_rwgt_info T')
         
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)

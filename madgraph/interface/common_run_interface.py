@@ -3264,14 +3264,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # if NLO reweighting is ON: ensure that we keep the rwgt information
         if 'reweight' in self.allow_arg and 'run' in self.allow_arg and \
             isinstance(self.run_card,banner_mod.RunCardNLO) and \
-            not self.run_card['keep_rwgt_info']:
+            not self.run_card['store_rwgt_info']:
             #check if a NLO reweighting is required
                 re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO)\s*(?:#|$)''', re.M+re.I)
                 text = open(pjoin(self.me_dir,'Cards','reweight_card.dat')).read()
                 options = re_pattern.findall(text)
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
-                    logger.info('NLO reweighting is on ON. Automatically set keep_rwgt_info to True', '$MG:color:BLACK' )
-                    self.do_set('run_card keep_rwgt_info True')
+                    logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
+                    self.do_set('run_card store_rwgt_info True')
     
     
     def reask(self, *args, **opt):
