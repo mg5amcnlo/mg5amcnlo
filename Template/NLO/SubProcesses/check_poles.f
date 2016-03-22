@@ -54,7 +54,10 @@ cc
       logical first_time
       data first_time/.TRUE./
       include 'FKSParams.inc'
-      
+     
+      REAL*8 POL(2)
+      COMMON/TO_POLARIZATION/POL
+
 C-----
 C  BEGIN CODE
 C-----  
@@ -116,6 +119,14 @@ c ie. which is a Born+g real-emission process
 c Make sure that stability checks are always used by MadLoop, even for
 c initialization
       CALL FORCE_STABILITY_CHECK(.TRUE.)
+
+C Set beam polarizations in MadLoop if necessary
+      IF(POL(1).ne.1.0d0) THEN
+        CALL SET_LEG_POLARIZATION(1,INT(SIGN(1.0d0,POL(1))))
+      ENDIF
+      IF(POL(2).ne.1.0d0) THEN
+        CALL SET_LEG_POLARIZATION(2,INT(SIGN(1.0d0,POL(2))))
+      ENDIF
 
 200   continue
           calculatedborn = .false.

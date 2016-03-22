@@ -77,6 +77,7 @@ C
 C
 C FUNCTIONS
 C
+      LOGICAL %(proc_prefix)sIS_HEL_SELECTED
       INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP
 	  INTEGER %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP
 	  INTEGER %(proc_prefix)sML5SQSOINDEX
@@ -183,6 +184,11 @@ C This flag is used to prevent the re-computation of the OpenLoop coefficients w
       INTEGER LIBINDEX
       COMMON/%(proc_prefix)sI_LIB/LIBINDEX
 
+C     This array specify potential special requirements on the helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/%(proc_prefix)sBEAM_POL/POLARIZATIONS
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -277,6 +283,12 @@ ENDDO
 DPW_COPIED = .False.
 DO H=1,NCOMB
   IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
+
+C  Handle the possible requirement of specific polarizations
+  IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0).eq.0.AND.(.NOT.%(proc_prefix)sIS_HEL_SELECTED(H))) THEN
+    CYCLE
+  ENDIF
+
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
@@ -502,7 +514,7 @@ C During the evaluation of the AMPL, we had stored the stability in S(1,*) so we
 
 ## if(ComputeColorFlows){
 C We should compute the color flow either if it contributes to the final result (i.e. not used just for the filtering), or if the computation is only done from the color flows
-IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.(H.EQ.USERHEL.OR.USERHEL.EQ.-1)) THEN
+IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.((H.EQ.USERHEL.OR.USERHEL.EQ.-1).and.(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_HEL_SELECTED(H)))) THEN
 C The cumulative quantities must only be computed if that helicity contributes according to user request (second argument of the subroutine below).
   CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)  
   IF(ME_COMPUTATION_FROM_JAMP) THEN
@@ -531,15 +543,21 @@ C   In principle it is no longer necessary to compute the quantity below once th
       ENDDO
 C   The if statement below is not strictly necessary but makes it clear when it is executed.
     ELSEIF(H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-C     If both computational method is used, then we must just update RES_FROM_JAMP
-      DO K=0,3
-        DO I=0,NSQUAREDSO
-          RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)+BUFFRES(K,I)
+C     Make sure that that no polarization constraint filters out this helicity
+      IF (POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_HEL_SELECTED(H)) THEN
+C       If both computational method is used, then we must just update RES_FROM_JAMP
+        DO K=0,3
+          DO I=0,NSQUAREDSO
+            RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)+BUFFRES(K,I)
+          ENDDO
         ENDDO
-      ENDDO
+      ENDIF
     ENDIF 
     IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-	  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+C     Make sure that that no polarization constraint filters out this helicity
+      IF (POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_HEL_SELECTED(H)) THEN
+	    CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+	  ENDIF
 	ENDIF
   ENDIF
 ENDIF

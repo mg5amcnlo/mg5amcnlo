@@ -1285,6 +1285,8 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         # When the user asks for the polarized matrix element we must 
         # multiply back by the helicity averaging factor
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+        replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
+                                       matrix_element.get_beams_hel_avg_factor()
 
         # These entries are specific for the output for loop-induced processes
         # Also sets here the details of the squaring of the loop ampltiudes
@@ -2539,7 +2541,9 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         # When the user asks for the polarized matrix element we must 
         # multiply back by the helicity averaging factor
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
-        
+        replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
+                                       matrix_element.get_beams_hel_avg_factor()
+
         if write_auxiliary_files:
             # Write out the color matrix
             (CMNum,CMDenom) = self.get_color_matrix(matrix_element)
@@ -2783,7 +2787,9 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         
         #set the average over the number of initial helicities
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
-        
+        replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
+                                       matrix_element.get_beams_hel_avg_factor()
+
         # Extract helicity lines
         helicity_lines = self.get_helicity_lines(matrix_element)
         replace_dict['helicity_lines'] = helicity_lines

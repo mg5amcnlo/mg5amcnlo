@@ -59,6 +59,8 @@ c general MadFKS parameters
       double precision wgt_hel(max_bhel)
       common/c_born_hel/wgt_hel
       integer nsqso, MLResArrayDim
+      REAL*8 POL(2)
+      COMMON/TO_POLARIZATION/POL
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
@@ -103,6 +105,13 @@ c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
          CALL FORCE_STABILITY_CHECK(.TRUE.)
+C Set beam polarizations in MadLoop if necessary
+         IF(POL(1).ne.1.0d0) THEN
+           CALL SET_LEG_POLARIZATION(1,INT(SIGN(1.0d0,POL(1))))
+         ENDIF
+         IF(POL(2).ne.1.0d0) THEN
+           CALL SET_LEG_POLARIZATION(2,INT(SIGN(1.0d0,POL(2))))
+         ENDIF
          firsttime_run = .false.
       endif
       if (firsttime) then
