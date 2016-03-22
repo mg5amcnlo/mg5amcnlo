@@ -2127,6 +2127,12 @@ class RunCardNLO(RunCard):
         if self['rw_fscale'][0] != 1.0 and 1.0 in self['rw_fscale']:
             a=self['rw_fscale'].index(1.0)
             self['rw_fscale'][0],self['rw_fscale'][a]=self['rw_fscale'][a],self['rw_fscale'][0]
+    # check that all elements of rw_rscale and rw_fscale are diffent.
+        if len(self['rw_rscale']) != len(set(self['rw_rscale'])):
+                raise InvalidRunCard, "'rw_rscale' has two or more identical entries. They have to be all different for the code to work correctly."
+        if len(self['rw_fscale']) != len(set(self['rw_fscale'])):
+                raise InvalidRunCard, "'rw_fscale' has two or more identical entries. They have to be all different for the code to work correctly."
+
 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
