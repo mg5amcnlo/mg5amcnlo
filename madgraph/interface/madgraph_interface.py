@@ -2989,7 +2989,12 @@ This implies that with decay chains:
         new_model_name = output_dir
         if restrict_name:
             new_model_name = '%s-%s' % (output_dir, restrict_name)
-        self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+            
+        if 'modelname' in self.history.get('full_model_line'):
+            opts = '--modelname'
+        else:
+            opts='' 
+        self.exec_cmd('import model %s %s' % (new_model_name, opts), errorhandling=False, 
                               printcmd=False, precmd=True, postcmd=True)         
         
         
