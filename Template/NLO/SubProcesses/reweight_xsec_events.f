@@ -47,7 +47,7 @@ c
       write(*,*)'      0 otherwise'
       read(*,*)isave
       if(isave.eq.1)then
-        if (keep_rwgt_info)then
+        if (store_rwgt_info)then
            isave = -9
         else
            isave=9

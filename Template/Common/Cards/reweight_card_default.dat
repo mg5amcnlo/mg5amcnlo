@@ -62,7 +62,7 @@ launch
 #          * "LO" is an approximate leading order method
 #          * "NLO" is the NLO accurate method
 #          * "LO+NLO" runs both
-#       - "NLO" and "LO+NLO" modes requires 'keep_rwgt_info' equals True (run_card.dat)
+#       - "NLO" and "LO+NLO" modes requires 'store_rwgt_info' equals True (run_card.dat)
 #          If the reweighting is done at generation level this parameter will
 #          automatically be set on True.
 #************************************************************************

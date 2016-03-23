@@ -196,8 +196,11 @@ class TestCmdShell1(unittest.TestCase):
                     'applgrid': 'applgrid-config',
                     'cluster_size': 100,
                     'loop_color_flows': False,
-                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
-                    'max_npoint_for_channel': 0
+                    'cluster_local_path': None,
+                    'max_npoint_for_channel': 0,
+                    'low_mem_multicore_nlo_generation': False,
+                    'ninja': './HEPTools/lib',
+                    'samurai': 'auto',
                     }
 
         self.assertEqual(config, expected)

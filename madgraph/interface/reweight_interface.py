@@ -178,7 +178,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
         if '[' in process:
-            if not self.banner.get_detail('run_card', 'keep_rwgt_info'):
+            if not self.banner.get_detail('run_card', 'store_rwgt_info'):
                 logger.warning("The information to perform a proper NLO reweighting is not present in the event file.")
                 logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
@@ -341,7 +341,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 if 'OLP' in self.mother.options and self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Only LO reweighting is allowed for OLP!=MadLoop. Keeping the mode to LO.")
                     self.rwgt_mode = 'LO'
-                elif not self.banner.get_detail('run_card','keep_rwgt_info', default=False):
+                elif not self.banner.get_detail('run_card','store_rwgt_info', default=False):
                     logger.warning("Missing information for NLO type of reweighting. Keeping the mode to LO.")
                     self.rwgt_mode = 'LO'
                 elif 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
@@ -1121,7 +1121,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))
             except ImportError:
                 os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
-                metag = "L" % metag
+                metag = "L%s" % metag
                 os.environ['MENUM'] = str(metag)
                 misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
                 mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))

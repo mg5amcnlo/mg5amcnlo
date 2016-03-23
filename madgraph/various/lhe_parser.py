@@ -475,7 +475,7 @@ class EventFile(object):
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000, "maxevent":float("inf")}
+        opt= {"print_step": 2000, "maxevent":float("inf"),'no_output':False}
         opt.update(opts)
         
         nb_fct = len(fcts)
@@ -492,7 +492,10 @@ class EventFile(object):
                 else:
                     logger.info("currently at %s event" % nb_event)
             for i in range(nb_fct):
-                out[i].append(fcts[i](event))
+                if opts['no_output']:
+                    fcts[i](event)
+                else:
+                    out[i].append(fcts[i](event))
             if nb_event > opt['maxevent']:
                 break
         if nb_fct == 1:
@@ -500,6 +503,42 @@ class EventFile(object):
         else:
             return out
 
+    
+    def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
+        
+        first=True
+        def add_to_Hwu(event):
+            """function to update the HwU on the flight"""
+
+            value = fct(event)
+            
+            # initialise the curve for the first call
+            if first:
+                # register the variables
+                if isinstance(value, dict):
+                    hwu.add_line(value.keys())
+                else:
+                    hwu.add_line(name)
+                    if keep_wgt is True:
+                        hwu.add_line(['%s_%s' % (name, key)
+                                                for key in event.reweight_data])
+                first = False
+            # Fill the histograms
+            if isinstance(value, dict):
+                hwu.addEvent(value)
+            else:
+                hwu.addEvent({name:value})
+                if keep_wgt:
+                    event.parse_reweight()
+                    if keep_wgt is True:
+                        data = dict(('%s_%s' % (name, key),value)
+                                                for key in event.reweight_data)
+                        hwu.addEvent(data)
+    
+        
+        
+        self.apply_fct_on_event(add_to_Hwu, no_output=True)
+        return hwu
     
     def create_syscalc_data(self, out_path, pythia_input=None):
         """take the lhe file and add the matchscale from the pythia_input file"""
@@ -1878,7 +1917,7 @@ class NLO_PARTIALWEIGHT(object):
                 inv_mass = new_p.mass_sqr
                 shat = (self[0]+self[1]).mass_sqr
                 if (abs(inv_mass)/shat < 1e-6):
-                    misc.sprint(abs(inv_mass)/shat)
+#                    misc.sprint(abs(inv_mass)/shat)
                     self.pop(ind1) 
                     self.insert(ind1, new_p)
                     self.pop(ind2)
