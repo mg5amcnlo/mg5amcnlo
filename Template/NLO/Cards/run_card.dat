@@ -105,7 +105,7 @@
 # Store reweight information in the LHE file for off-line model-       *
 # parameter reweighting at NLO+PS accuracy                             *
 #***********************************************************************
- %(keep_rwgt_info)s = keep_rwgt_info ! Store info for reweighting in LHE file
+ %(store_rwgt_info)s = store_rwgt_info ! Store info for reweighting in LHE file
 #***********************************************************************
 # ickkw parameter:                                                     *
 #   0: No merging                                                      *

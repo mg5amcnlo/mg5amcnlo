@@ -36,6 +36,8 @@ import tarfile
 import copy
 import datetime
 import tarfile
+import traceback
+import StringIO
 
 try:
     import readline
@@ -2292,7 +2294,11 @@ RESTART = %(mint_mode)s
             message, debug_msg = \
                self.compile_advanced_stats(log_GV_files, all_log_files, message)
         except Exception as e:
-            debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
+            debug_msg = 'Advanced statistics collection failed with error "%s"\n'%str(e)
+            err_string = StringIO.StringIO()
+            traceback.print_exc(limit=4, file=err_string)
+            debug_msg += 'Please report this backtrace to a MadGraph developer:\n%s'\
+                                                          %err_string.getvalue()
 
         logger.debug(debug_msg+'\n')
         logger.info(message+'\n')

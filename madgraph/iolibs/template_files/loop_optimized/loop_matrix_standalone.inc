@@ -181,6 +181,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  LOGICAL LTEMP
 	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN),TMPR
 	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
+	  %(complex_dp_format)s CTEMP
 ## if(not AmplitudeReduction){
 	  %(real_dp_format)s TEMP2
 ## }else{
@@ -1005,14 +1006,15 @@ c FeynRules, there are none of these type of counterterms.
   UVCT_REQ_SO_DONE=.TRUE.
 
 ## if(not AmplitudeReduction) {
-  DO I=1,NCTAMPS
-    DO J=1,NBORNAMPS
+  DO J=1,NBORNAMPS
+    CTEMP = 2.0d0*HEL_MULT*DCONJG(AMP(J))
+    DO I=1,NCTAMPS	
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
 	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
         DO K=1,3
-          TEMP2 = 2.0d0*HEL_MULT*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
+          TEMP2 = DBLE(CFTOT*AMPL(K,I)*CTEMP)
           ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
           ANS(K,0)=ANS(K,0)+TEMP2
         ENDDO
