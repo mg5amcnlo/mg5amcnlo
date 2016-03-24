@@ -471,6 +471,18 @@ from object_library import all_propagators, Propagator
         if identify:
             name = identify
         old_part = next((p for p in self.particles if p.name==name), None)
+        if not old_part:
+            first = True
+            for p in self.particles:
+                if p.name.lower() == name.lower():
+                    if not first:
+                        raise Exception
+                    else:
+                        first =False
+                    old_part = p
+        
+        
+        
         if old_part:
             #Check if the two particles have the same pdgcode
             if old_part.pdg_code == particle.pdg_code:
@@ -841,8 +853,27 @@ from object_library import all_propagators, Propagator
             for new, old in identify_particles.items():
                 new_part = next((p for p in model.all_particles if p.name==new), None)
                 old_part = next((p for p in self.particles if p.name==old), None)
-                identify_pid[new_part.pdg_code] = old_part.pdg_code
-                
+                # secure agqinst lower/upper case problem
+                if not new_part:
+                    first = True
+                    for p in model.all_particles:
+                        if p.name.lower() == new.lower():
+                            if not first:
+                                raise Exception
+                            else:
+                                first =False
+                            new_part = p
+                if not old_part:
+                    first = True
+                    for p in self.particles:
+                        if p.name.lower() == old.lower():
+                            if not first:
+                                raise Exception
+                            else:
+                                first =False
+                            old_part = p
+                # end for the case security
+                identify_pid[new_part.pdg_code] = old_part.pdg_code                
                 if new_part is None:
                     raise USRMODERROR, "particle %s not in added model" % new
                 if old_part is None:
@@ -850,7 +881,6 @@ from object_library import all_propagators, Propagator
                 if new_part.antiname not in identify_particles:
                     new_anti = new_part.antiname
                     old_anti = old_part.antiname
-                    misc.sprint(old, new, new_anti, old_anti, old_part.antiname)
                     if old_anti == old:
                         raise USRMODERROR, "failed identification (one particle is self-conjugate and not the other)"
                     logger.info("adding identification for anti-particle: %s=%s" % (new_anti, old_anti))
