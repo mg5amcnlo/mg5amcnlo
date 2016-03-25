@@ -2690,7 +2690,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'cluster_local_path': None,
-                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
+#                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,

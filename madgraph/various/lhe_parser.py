@@ -174,6 +174,8 @@ class EventFile(object):
             if '.gz' in path and isinstance(self, EventFileNoGzip) and\
                 mode == 'r' and os.path.exists(path[:-3]):
                 super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
+            else:
+                raise
                 
         self.banner = ''
         if mode == 'r':
@@ -503,6 +505,61 @@ class EventFile(object):
         else:
             return out
 
+    def split(self, nb_event=0):
+        """split the file in multiple file. Do not change the weight!"""
+    
+        nb_file = -1
+        for i, event in enumerate(self):
+            if i % nb_event == 0:
+                if i:
+                    #close previous file
+                    current.write('</LesHouchesEvent>\n')
+                    current.close()
+                # create the new file
+                nb_file +=1
+                current = open('%s_%s.lhe' % (self.name, nb_file),'w')
+                current.write(self.banner)
+            current.write(str(event))
+        if i!=0:
+            current.write('</LesHouchesEvent>\n')
+            current.close()   
+        return nb_file +1
+    
+    def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
+        
+        first=True
+        def add_to_Hwu(event):
+            """function to update the HwU on the flight"""
+
+            value = fct(event)
+            
+            # initialise the curve for the first call
+            if first:
+                # register the variables
+                if isinstance(value, dict):
+                    hwu.add_line(value.keys())
+                else:
+                    hwu.add_line(name)
+                    if keep_wgt is True:
+                        hwu.add_line(['%s_%s' % (name, key)
+                                                for key in event.reweight_data])
+                first = False
+            # Fill the histograms
+            if isinstance(value, dict):
+                hwu.addEvent(value)
+            else:
+                hwu.addEvent({name:value})
+                if keep_wgt:
+                    event.parse_reweight()
+                    if keep_wgt is True:
+                        data = dict(('%s_%s' % (name, key),value)
+                                                for key in event.reweight_data)
+                        hwu.addEvent(data)
+    
+        
+        
+        self.apply_fct_on_event(add_to_Hwu, no_output=True)
+        return hwu
     
     def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
         
@@ -617,13 +674,14 @@ class MultiEventFile(EventFile):
        The number of events in each file need to be provide in advance 
        (if not provide the file is first read to find that number"""
     
-    def __new__(cls, start_list=[]):
+    def __new__(cls, start_list=[],parse=True):
         return object.__new__(MultiEventFile)
     
-    def __init__(self, start_list=[]):
+    def __init__(self, start_list=[], parse=True):
         """if trunc_error is define here then this allow
         to only read all the files twice and not three times."""
         self.files = []
+        self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
         self.initial_nb_events = []
         self.total_event_in_files = 0
@@ -633,8 +691,11 @@ class MultiEventFile(EventFile):
         self.across = []
         self.scales = []
         if start_list:
-            for p in start_list:
-                self.add(p)
+            if parse:
+                for p in start_list:
+                    self.add(p)
+            else:
+                self.files = start_list
         self._configure = False
         
     def add(self, path, cross, error, across):
@@ -845,6 +906,66 @@ class MultiEventFile(EventFile):
           
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
+    def write(self, path, random=False, banner=None, get_info=False):
+        """ """
+        
+        if isinstance(path, str):
+            out = EventFile(path, 'w')
+            if self.parsefile and not banner:    
+                banner = self.files[0].banner
+            elif not banner:
+                firstlhe = EventFile(self.files[0])
+                banner = firstlhe.banner                
+        else: 
+            out = path
+        if banner:
+            out.write(banner)
+        nb_event = 0
+        info = collections.defaultdict(float)
+        if random and self.open:
+            for event in self:
+                nb_event +=1
+                out.write(event)
+                if get_info:
+                    event.parse_reweight()
+                    for key, value in event.reweight_data.items():
+                        info[key] += value
+                    info['central'] += event.wgt
+        elif not random:
+            for i,f in enumerate(self.files):
+                #check if we need to parse the file or not
+                if not self.parsefile:
+                    if i==0:
+                        try:
+                            lhe = firstlhe
+                        except:
+                            lhe = EventFile(f)
+                    else:
+                        lhe = EventFile(f)
+                else:
+                    lhe = f
+                for event in lhe:
+                    nb_event +=1
+                    if get_info:
+                        event.parse_reweight()
+                        for key, value in event.reweight_data.items():
+                            info[key] += value
+                        info['central'] += event.wgt
+                    out.write(str(event))
+                lhe.close()
+        out.write("</LesHouchesEvents>\n") 
+        return nb_event, info
+                            
+    def remove(self):
+        """ """
+        if self.parsefile:
+            for f in self.files:
+                os.remove(f.name)
+        else:
+            for f in self.files:
+                os.remove(f)
+            
+        
            
 class Event(list):
     """Class storing a single event information (list of particles + global information)"""
