@@ -2340,6 +2340,15 @@ RESTART = %(mint_mode)s
         optimization and detection of potential error messages into a nice
         debug message to printed at the end of the run """
         
+        def safe_float(str_float):
+            try:
+                return float(str_float)
+            except ValueError:
+                logger.debug('Could not convert the following float during'+
+                             ' advanced statistics printout: %s'%str(str_float))
+                return -1.0
+        
+        
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
         stats = {'UPS':{}, 'Errors':[], 'virt_stats':{}, 'timings':{}}
@@ -2420,7 +2429,7 @@ RESTART = %(mint_mode)s
             nTot1  = [sum([chan[10][i] for chan in stats['UPS'].values()],0) \
                                                              for i in range(10)]
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
-                 float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
+              safe_float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
 
             tmpStr = ""
@@ -2450,7 +2459,7 @@ RESTART = %(mint_mode)s
             if maxUPS[1]>0.001:
                 message += tmpStr
                 message += '\n  Total number of unstable PS point detected:'+\
-                                 ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
+                        ' %d (%4.2f%%)'%(nToteps,safe_float(100*nToteps)/nTotPS)
                 message += '\n    Maximum fraction of UPS points in '+\
                           'channel %s (%4.2f%%)'%maxUPS
                 message += '\n    Please report this to the authors while '+\
@@ -2486,8 +2495,8 @@ RESTART = %(mint_mode)s
             for vf_stats in re.finditer(virt_frac_finder, log):
                 pass
             if not vf_stats is None:
-                v_frac = float(vf_stats.group('v_frac'))
-                v_average = float(vf_stats.group('v_average'))
+                v_frac = safe_float(vf_stats.group('v_frac'))
+                v_average = safe_float(vf_stats.group('v_average'))
                 try:
                     if v_frac < stats['virt_stats']['v_frac_min'][0]:
                         stats['virt_stats']['v_frac_min']=(v_frac,channel_name)
@@ -2505,7 +2514,7 @@ RESTART = %(mint_mode)s
             for ccontr_stats in re.finditer(channel_contr_finder, log):
                 pass
             if not ccontr_stats is None:
-                contrib = float(ccontr_stats.group('v_contr'))
+                contrib = safe_float(ccontr_stats.group('v_contr'))
                 try:
                     if contrib>channel_contr_list[channel_name]:
                         channel_contr_list[channel_name]=contrib
@@ -2547,10 +2556,10 @@ RESTART = %(mint_mode)s
                 pass
             if not vt_stats is None:
                 vt_stats_group = vt_stats.groupdict()
-                v_ratio = float(vt_stats.group('v_ratio'))
-                v_ratio_err = float(vt_stats.group('v_ratio_err'))
-                v_contr = float(vt_stats.group('v_abs_contr'))
-                v_contr_err = float(vt_stats.group('v_abs_contr_err'))
+                v_ratio = safe_float(vt_stats.group('v_ratio'))
+                v_ratio_err = safe_float(vt_stats.group('v_ratio_err'))
+                v_contr = safe_float(vt_stats.group('v_abs_contr'))
+                v_contr_err = safe_float(vt_stats.group('v_abs_contr_err'))
                 try:
                     if v_ratio < stats['virt_stats']['v_ratio_min'][0]:
                         stats['virt_stats']['v_ratio_min']=(v_ratio,channel_name)
@@ -2582,8 +2591,8 @@ RESTART = %(mint_mode)s
             for vf_stats in re.finditer(virt_frac_finder, log):
                 pass
             if not vf_stats is None:
-                v_frac = float(vf_stats.group('v_frac'))
-                v_average = float(vf_stats.group('v_average'))
+                v_frac = safe_float(vf_stats.group('v_frac'))
+                v_average = safe_float(vf_stats.group('v_average'))
                 try:
                     if v_average < stats['virt_stats']['v_average_min'][0]:
                         stats['virt_stats']['v_average_min']=(v_average,channel_name)
@@ -2604,7 +2613,7 @@ RESTART = %(mint_mode)s
             debug_msg += '\n    Minimum virt fraction computed         %.3f (%s)'\
                                        %tuple(stats['virt_stats']['v_frac_min'])
             debug_msg += '\n    Average virt fraction computed         %.3f'\
-              %float(stats['virt_stats']['v_frac_avg'][0]/float(stats['virt_stats']['v_frac_avg'][1]))
+              %safe_float(stats['virt_stats']['v_frac_avg'][0]/safe_float(stats['virt_stats']['v_frac_avg'][1]))
             debug_msg += '\n  Stats below exclude negligible channels (%d excluded out of %d)'%\
                  (len(excluded_channels),len(all_channels))
             debug_msg += '\n    Maximum virt ratio used                %.2f (%s)'\
@@ -2651,12 +2660,12 @@ RESTART = %(mint_mode)s
             for time_stats in re.finditer(timing_stat_finder, log):
                 try:
                     stats['timings'][time_stats.group('name')][channel_name]+=\
-                                                 float(time_stats.group('time'))
+                                                 safe_float(time_stats.group('time'))
                 except KeyError:
                     if time_stats.group('name') not in stats['timings'].keys():
                         stats['timings'][time_stats.group('name')] = {}
                     stats['timings'][time_stats.group('name')][channel_name]=\
-                                                 float(time_stats.group('time'))
+                                                 safe_float(time_stats.group('time'))
         
         # useful inline function
         Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
@@ -2696,7 +2705,7 @@ RESTART = %(mint_mode)s
             debug_msg += '\n  Timing profile for <%s> :'%name
             try:
                 debug_msg += '\n    Overall fraction of time         %.3f %%'%\
-                       float((100.0*(sum(stats['timings'][name].values())/
+                       safe_float((100.0*(sum(stats['timings'][name].values())/
                                       sum(stats['timings']['Total'].values()))))
             except KeyError, ZeroDivisionError:
                 debug_msg += '\n    Overall fraction of time unavailable.'
