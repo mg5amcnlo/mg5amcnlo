@@ -857,7 +857,7 @@ class HwU(Histogram):
             if label_type == 'UNKNOWN_TYPE':
                 others.append(label)
             elif label_type == 'scale':
-                others.append('muR=%4.2f muF=%4.2f'%(label[1],label[2]))
+                others.append('muR=%6.3f muF=%6.3f'%(label[1],label[2]))
             elif label_type == 'scale_adv':
                 others.append('dyn=%i muR=%6.3f muF=%6.3f'%(label[1],label[2],label[3]))
             elif label_type == 'merging_scale':
