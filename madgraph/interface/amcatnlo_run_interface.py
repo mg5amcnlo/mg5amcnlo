@@ -4731,7 +4731,7 @@ _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
 _launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
 _launch_parser.add_option("-R", "--reweight", default=False, dest='do_reweight', action='store_true',
-                            help="Run the reweight module (reweighting by different model parameter")
+                            help="Run the reweight module (reweighting by different model parameters)")
 _launch_parser.add_option("-M", "--madspin", default=False, dest='do_madspin', action='store_true',
                             help="Run the madspin package")
 
