@@ -870,10 +870,11 @@ class CheckValidForCmd(object):
         elif not args[0].isdigit():
             self.help_multi_run()
             raise self.InvalidCmd("The first argument of multi_run should be a integer.")
+        #pass nb run to an integer
         nb_run = args.pop(0)
-        self.check_survey(args, cmd='multi_run')
         args.insert(0, int(nb_run))
-        
+         
+
         return run
 
     def check_refine(self, args):
@@ -2330,8 +2331,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if nb_run == 1:
             logger.warn("'multi_run 1' command is not optimal. Think of using generate_events instead")
         self.ask_run_configuration(mode)
-        main_name = self.run_name
 
+        self.check_survey(args, cmd='multi_run')
+        main_name = self.run_name
         # check if the param_card requires a scan over parameter.
         path=pjoin(self.me_dir, 'Cards', 'param_card.dat')
         self.check_param_card(path, run=False)
