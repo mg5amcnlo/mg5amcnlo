@@ -1224,7 +1224,9 @@ Please, shower the Les Houches events before using them for physics analyses."""
 
 
         self.update_status('', level='all', update_results=True)
-        if self.run_card['ickkw'] == 3 and mode in ['noshower', 'aMC@NLO']:
+        if self.run_card['ickkw'] == 3 and \
+           (mode in ['noshower'] or \
+            (('PYTHIA8' not in self.run_card['parton_shower'].upper()) and (mode in ['aMC@NLO']))):
             logger.warning("""You are running with FxFx merging enabled.
 To be able to merge samples of various multiplicities without double counting,
 you have to remove some events after showering 'by hand'.
