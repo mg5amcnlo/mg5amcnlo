@@ -699,11 +699,12 @@ def get_open_fds():
 
 def detect_if_cpp_compiler_is_clang(cpp_compiler):
     """ Detects whether the specified C++ compiler is clang."""
+    
     try:
-        p = misc.Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
+        p = Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE)
         output, error = p.communicate()
-    except:
+    except Exception, error:
         # Cannot probe the compiler, assume not clang then
         return False
     return 'LLVM' in output
