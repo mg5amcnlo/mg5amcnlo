@@ -674,7 +674,7 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf)) then
+      if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf.or.jwgtinfo.lt.0)) then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,

@@ -208,7 +208,7 @@ c Do the actual reweighting.
 
          write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe,jfks_lhe,
      $        fksfather_lhe,ipartner_lhe, scale1_lhe,scale2_lhe, isave
-     $        ,izero,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
+     $        ,mexternal,izero, wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
      $        ,wgtpdfmax
 
 c renormalize all the scale & PDF weights to have the same normalization
