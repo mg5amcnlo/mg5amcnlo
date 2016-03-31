@@ -254,6 +254,7 @@ c Setup for parton-level NLO reweighting
 C check for zero cross-section
 C if restoring grids corresponding to sigma=0, just terminate the run
          if (imode.ne.0.and.ans(1).eq.0d0.and.unc(1).eq.0d0) then
+            call initplot()
             call close_run_zero_res(ncall, itmax, ndim, nintervals,
      &                              nintervals_virt)
             stop

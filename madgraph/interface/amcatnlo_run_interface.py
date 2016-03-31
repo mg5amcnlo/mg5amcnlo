@@ -1894,6 +1894,32 @@ RESTART = %(mint_mode)s
         content.append('\n\nABS cross-section per integration channel:')
         for job in jobs:
             content.append('%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  ' %  job)
+        # print also statistics for each directory
+        dir_dict={}
+        for job in jobs:
+            try:
+                dir_dict[job['p_dir']]['result'] += job['result']*job['wgt_frac']
+                dir_dict[job['p_dir']]['resultABS'] += job['resultABS']*job['wgt_frac']
+                # store the error ^2
+                dir_dict[job['p_dir']]['error'] += math.pow(job['error'], 2)*job['wgt_frac']
+                dir_dict[job['p_dir']]['errorABS'] += math.pow(job['errorABS'], 2)*job['wgt_frac']
+            except KeyError:
+                dir_dict[job['p_dir']] = {
+                        'result' : job['result']*job['wgt_frac'],
+                        'resultABS' : job['resultABS']*job['wgt_frac'],
+                        'error' : math.pow(job['error'], 2)*job['wgt_frac'],
+                        'errorABS' : math.pow(job['errorABS'], 2)*job['wgt_frac']}
+
+        for dir_res in dir_dict.values():
+            dir_res['error'] = math.sqrt(dir_res['error'])
+            dir_res['errorABS'] = math.sqrt(dir_res['errorABS'])
+        content.append('\n\nABS cross section per dir')
+        for ddir, res in dir_dict.items():
+            content.append(('%20s' % ddir) + '   %(resultABS)10.8e    %(errorABS)6.4e ' %  res)
+        content.append('\n\nCross section per dir')
+        for ddir, res in dir_dict.items():
+            content.append(('%20s' % ddir) + '   %(result)10.8e    %(error)6.4e ' %  res)
+
         totABS=0
         errABS=0
         tot=0

@@ -9,8 +9,17 @@ c to the list of weights using the add_wgt subroutine
       include 'orders.inc'
       integer orders(nsplitorders)
       integer iamp
+
+      ! stuff for the 6->5 flav scheme
+      double precision amp_split_6to5f(amp_split_size),
+     &                 amp_split_6to5f_muf(amp_split_size),
+     &                 amp_split_6to5f_mur(amp_split_size)
+      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
+     &                            amp_split_6to5f_mur
+
       double precision wgt_c
       double precision wgt1
+      double precision wgt6f1,wgt6f2,wgt6f3
       double precision p_born(0:3,nexternal-1)
       common /pborn/   p_born
       double precision   xiimax_cnt(-2:2)
@@ -21,6 +30,7 @@ c to the list of weights using the add_wgt subroutine
       common /factor_nbody/ f_b,f_nb
       double precision     xiScut_used,xiBSVcut_used
       common /cxiScut_used/xiScut_used,xiBSVcut_used
+      double precision g22
       integer get_orders_tag
       call cpu_time(tBefore)
       if (f_b.eq.0d0) return
@@ -36,10 +46,133 @@ c to the list of weights using the add_wgt subroutine
         wgt1=amp_split(iamp)*f_b/g**(qcd_power)
         call add_wgt(2,wgt1,0d0,0d0)
       enddo
+
+C This is the counterterm for the 6f->5f scheme change 
+C of parton distributions (e.g. NNPDF2.3). 
+C It is called in this function such that if is included
+C in the LO cross section
+      call compute_6to5flav_cnt()
+      do iamp=1, amp_split_size
+        if (amp_split_6to5f(iamp).eq.0d0.and.
+     $      amp_split_6to5f_mur(iamp).eq.0d0.and.
+     $      amp_split_6to5f_muf(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        QCD_power=orders(qcd_pos)
+        g22=g**(QCD_power)
+        wgtcpower=0d0
+        if (cpower_pos.gt.0) wgtcpower=dble(orders(cpower_pos))
+        orders_tag=get_orders_tag(orders)
+        wgt6f1=amp_split_6to5f(iamp)*f_b/g**(qcd_power)
+        wgt6f2=amp_split_6to5f_mur(iamp)*f_b/g**(qcd_power)
+        wgt6f3=amp_split_6to5f_muf(iamp)*f_b/g**(qcd_power)
+        call add_wgt(2,wgt6f1,wgt6f2,wgt6f3)
+      enddo
       call cpu_time(tAfter)
       tBorn=tBorn+(tAfter-tBefore)
       return
       end
+
+
+      subroutine compute_6to5flav_cnt()
+C This is the counterterm for the 6f->5f scheme change 
+C of parton distributions (e.g. NNPDF2.3). 
+C It is called in this function such that if is included
+C in the LO cross section
+      implicit none
+      include 'nexternal.inc'
+      include 'coupl.inc' 
+      include 'q_es.inc'
+      include 'run.inc'
+      include 'genps.inc'
+      double precision p_born(0:3,nexternal-1)
+      common /pborn/   p_born
+      include 'orders.inc'
+      integer orders(nsplitorders)
+      integer iamp
+      double precision amp_split_6to5f(amp_split_size),
+     &                 amp_split_6to5f_muf(amp_split_size),
+     &                 amp_split_6to5f_mur(amp_split_size)
+      common /to_amp_split_6to5f/ amp_split_6to5f, amp_split_6to5f_muf, 
+     &                            amp_split_6to5f_mur
+      integer orders_to_amp_split_pos
+      integer niglu
+      save niglu
+      integer    maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
+     $     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
+      integer i, j, k
+      logical firsttime
+      data firsttime /.true./
+      double precision tf, pi
+      parameter (tf=0.5d0)
+      parameter (pi=3.1415926535897932385d0)
+      integer alphasbpow
+      double precision wgtborn, alphas
+      ! switch on/off here
+      logical include_6to5_cnt 
+      data include_6to5_cnt /.false./ 
+
+CMZMZ REMEMBER!!!!
+c     wgt1 : weight of the contribution not multiplying a scale log
+c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
+c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
+
+      ! set everything to 0
+      do iamp = 1, amp_split_size
+        amp_split_6to5f(iamp) = 0d0
+        amp_split_6to5f_muf(iamp) = 0d0
+        amp_split_6to5f_mur(iamp) = 0d0
+      enddo
+
+      ! skip if we don't want this piece or if the scale is
+      ! below mt
+      if (.not.include_6to5_cnt.or.scale.lt.mdl_mt) return
+
+C the contribution is the following (if mu > mt):
+C      Add a term -alphas n TF/3pi log (muR^2/mt^2) sigma(0) 
+C      where n is the power of alphas for the Born xsec sigma(0)
+C      Add a term −alphas TF/3pi log (mt^2/muF^2) sigma(0) for each
+C      gluon in the initial state
+
+      if (firsttime) then
+          ! count the number of gluons
+          do i = 1, nincoming
+              if (idup(i, 1).eq.21) niglu = niglu + 1
+          enddo
+          write(*,*) 'compute_6to5flav_cnt found n initial gluons:', niglu
+          firsttime=.false.
+      endif
+
+      ! compute the born
+      call sborn(p_born,wgtborn)
+      alphas = g**2/4d0/pi
+      do iamp = 1, amp_split_size
+        if (amp_split(iamp).eq.0d0) cycle
+        call amp_split_pos_to_orders(iamp, orders)
+        alphasbpow = orders(qcd_pos)/2
+        ! this contribution will end up with one extra power
+        ! of alpha_s
+        orders(qcd_pos) = orders(qcd_pos) + 2
+
+        amp_split_6to5f_muf(orders_to_amp_split_pos(orders)) = 
+     &   alphas / 3d0 / pi * TF * dble(niglu) * amp_split(iamp)  
+
+        amp_split_6to5f_mur(orders_to_amp_split_pos(orders)) = 
+     &  - alphas / 3d0 / pi * TF * dble(alphasbpow) * amp_split(iamp)  
+        
+        amp_split_6to5f(orders_to_amp_split_pos(orders)) = 
+     &  dlog(qes2/mdl_mt**2) * 
+     &   (alphas / 3d0 / pi * TF * dble(niglu)   
+     &  - alphas / 3d0 / pi * TF * dble(alphasbpow)) * amp_split(iamp)  
+      enddo
+
+      return
+      end
+
+
+
 
       subroutine compute_nbody_noborn
 c This subroutine computes the soft-virtual matrix elements and adds its
