@@ -341,6 +341,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   a successful installation, you will need to have an up-to-date")
         logger.info("   F77 and/or C and Root compiler.")
         logger.info(" ")
+        logger.info("   When installing any of the following programs:")
+        logger.info("     %s"%(', '.join(self._advanced_install_opts)))
+        logger.info("   The following options are available:")
+        logger.info("     --force        Overwrite without asking any existing installation.")
+        logger.info("     --keep_source  Keep a local copy of the sources of the tools MG5_aMC installed from.")         
+        logger.info(" ")
         logger.info("   \"install update\"",'$MG:color:BLACK')
         logger.info("   check if your MG5 installation is the latest one.")
         logger.info("   If not it load the difference between your current version and the latest one,")
@@ -1108,10 +1114,34 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_install(self, args):
         """check that the install command is valid"""
+        
 
+        install_options = {'options_for_HEPToolsInstaller':[],
+                   'update_options':[]}
         if len(args) < 1:
             self.help_install()
             raise self.InvalidCmd('install command require at least one argument')
+        
+        if len(args) > 1:
+            for arg in args[1:]:
+                try:
+                    option, value = arg.split('=')
+                except ValueError:
+                    option = arg
+                    value = None
+                # Options related to the MadGraph installer can be treated here, i.e
+                if args[0]=='update':
+                    if value is None:
+                        install_options['update_options'].append(option)
+                    else:
+                        install_options['update_options'].append('='.join([option,value]))                        
+                else:
+                    # Other options will be directly added to the call to HEPToolsInstallers
+                    # in the advanced_install function
+                    install_options['options_for_HEPToolsInstaller'].append(arg)
+            # Now that the options have been treated keep only the target tool
+            # to install as argument.   
+            args = args[:1]
 
         if args[0] not in self._install_opts:
             if not args[0].startswith('td'):
@@ -1135,6 +1165,7 @@ This will take effect only in a NEW terminal
 ''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
 
+        return install_options
 
     def check_launch(self, args, options):
         """check the validity of the line"""
@@ -5372,17 +5403,17 @@ This implies that with decay chains:
              "\n   %s"%modification_line) 
             logger.warning("==========")
     
-    def do_install(self, line, paths=None, additional_options=[]):
+    def do_install(self, line, paths=None, user_additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
         functions. If it contains the option '--force', then the advanced_install
         function will overwrite any existing installation of the tool without 
         warnings.
         """
-
+        additional_options = list(user_additional_options)
         args = self.split_arg(line)
         #check the validity of the arguments
-        self.check_install(args)
+        install_options = self.check_install(args)
 
         if sys.platform == "darwin":
             program = "curl"
@@ -5391,7 +5422,7 @@ This implies that with decay chains:
 
         # special command for auto-update
         if args[0] == 'update':
-            self.install_update(args, wget=program)
+            self.install_update(['update']+install_options['update_options'],wget=program)
             return
 
         advertisements = {'pythia-pgs':'[arXiv:0603175]',
@@ -5456,6 +5487,7 @@ This implies that with decay chains:
             # Specify the path of the MG5_aMC_interface
             additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
                                                    path['MG5aMC_PY8_interface'])
+            additional_options.extend(install_options['options_for_HEPToolsInstaller'])
             return self.advanced_install(args[0], path['HEPToolsInstaller'],
                                         additional_options = additional_options)
 
@@ -5878,8 +5910,7 @@ This implies that with decay chains:
                 return True
             else:
                 return False
-
-        # load options
+        
         mode = [arg.split('=',1)[1] for arg in args if arg.startswith('--mode=')]
         if mode:
             mode = mode[-1]

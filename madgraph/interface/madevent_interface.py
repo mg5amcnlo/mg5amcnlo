@@ -3329,8 +3329,9 @@ Please install this tool with the following MG5_aMC command:
             # if merging scale variation is turned on
             if self.run_card['use_syst']:
                 PY8_Card.MadGraphSet('JetMatching:doVeto',False)
-            
-            PY8_Card.MadGraphSet('JetMatching:doShowerKt',self.run_card['showerkt'])          
+
+#           MUST PROPERLY SET THIS, showerkt is NOT an argument of the current LO run_card!            
+#            PY8_Card.MadGraphSet('JetMatching:doShowerKt',self.run_card['showerkt'])          
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
             # Use the parameter maxjetflavor for JetMatching:nQmatch which specifies

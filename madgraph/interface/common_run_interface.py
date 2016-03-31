@@ -1117,7 +1117,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     return False
 
                 # Now also plot the max vs min merging scale
-                merging_scales_available = [label for label in \
+                merging_scales_available = [label[1] for label in \
                           histos[0].bins.weight_labels if 
                   histograms.HwU.get_HwU_wgt_label_type(label)=='merging_scale']
                 if len(merging_scales_available)>=2:
