@@ -745,8 +745,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
-        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
-        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
+#        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
+#        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
         logger.info("OLP ProgramName",'$MG:color:GREEN')
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
@@ -2690,7 +2690,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'cluster_local_path': None,
-                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
+#                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -3307,11 +3307,18 @@ This implies that with decay chains:
             pydoc.pager(outstr)
 
         elif args[0] == 'options':
+            if len(args) == 1:
+                to_print = lambda name: True
+            else:
+                to_print = lambda name: any(poss in name for poss in args[1:])
+
             outstr = "                          MadGraph5_aMC@NLO Options    \n"
             outstr += "                          ----------------    \n"
             keys = self.options_madgraph.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madgraph[key] 
                 value = self.options[key]
                 if value == default:
@@ -3324,6 +3331,8 @@ This implies that with decay chains:
             keys = self.options_madevent.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madevent[key]
                 value = self.options[key]
                 if value == default:
@@ -3336,6 +3345,8 @@ This implies that with decay chains:
             keys = self.options_configuration.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_configuration[key]
                 value = self.options[key]
                 if value == default:
