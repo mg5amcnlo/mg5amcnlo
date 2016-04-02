@@ -2222,6 +2222,7 @@ RESTART = %(mint_mode)s
             message = '\n   --------------------------------------------------------------'
             message = message + \
                       '\n      ' + status[2] + proc_info + \
+                      '\n      Number of events generated: %s' % self.run_card['nevents'] +\
                       '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                       self.cross_sect_dict
             message = message + \

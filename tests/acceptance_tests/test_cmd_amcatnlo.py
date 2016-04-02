@@ -53,7 +53,7 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
+    debugging = True
     
     def setUp(self):
         
@@ -861,12 +861,12 @@ class MECmdShell(IOTests.IOTestManager):
             devnull =open(os.devnull,'w')
             stderr=devnull
 
-    
             
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
                          cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
+
         stdout.close()
         text = open('%s/test.log' % self.tmpdir,'r').read()
         data = text.split('\n')
@@ -876,7 +876,7 @@ class MECmdShell(IOTests.IOTestManager):
         #      Run at p-p collider (6500.0 + 6500.0 GeV)
         self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+2])
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
-        cross_section = data[i+3]
+        cross_section = data[i+4]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
         try:
@@ -885,7 +885,7 @@ class MECmdShell(IOTests.IOTestManager):
             self.assertTrue(cross_section < 6750.0 and cross_section > 6650.0)
 
         #      Number of events generated: 10000        
-        self.assertTrue('Number of events generated: 100' in data[i+4])
+        self.assertTrue('Number of events generated: 100' in data[i+3])
 
 
     def test_jet_veto_xsec(self):
