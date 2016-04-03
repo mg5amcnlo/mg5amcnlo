@@ -86,7 +86,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options = {'curr_dir': os.path.realpath(os.getcwd()),
                         'rwgt_name':None}
-        
+
         self.events_file = None
         self.processes = {}
         self.second_model = None
@@ -355,6 +355,10 @@ class ReweightInterface(extended_cmd.Cmd):
             self.rwgt_dir = args[1]
             if not os.path.exists(self.rwgt_dir):
                 os.mkdir(self.rwgt_dir)
+        elif args[0] == 'multicore':
+            pass 
+            # this line is meant to be parsed by common_run_interface and change the way this class is called.
+            #It has no direct impact on this class.
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -788,10 +792,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 results.current.parton.append('lhe')       
             logger.info('Event %s is now created with new central weight' % output2.name)
         
-        for name in cross:
-            if name == 'orig':
-                continue
-            logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
+        if self.multicore != 'create':
+            for name in cross:
+                if name == 'orig':
+                    continue
+                logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
                         ('(%s)' %name if name else '',cross[name], error[name]))
             
         self.terminate_fortran_executables(new_card_only=True)

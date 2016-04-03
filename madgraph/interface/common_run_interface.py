@@ -1077,16 +1077,33 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         def check_multicore(self):
             """ determine if the cards are save for multicore use"""
             card = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
-            
+
+            multicore = True
+            if self.options['run_mode'] in [0,1]:
+                multicore = False
+
             lines = [l.strip() for l in open(card) if not l.strip().startswith('#')]
             while lines and not lines[0].startswith('launch'):
                 line = lines.pop(0)
+                # if not standard output mode forbid multicore mode
                 if line.startswith('change') and line[6:].strip().startswith('output'):
                     return False
+                if line.startswith('change') and line[6:].strip().startswith('multicore'):
+                    split_line = line.split()
+                    if len(split_line) > 2: 
+                        multicore = bool(split_line[2])
+            # we have reached the first launch in the card ensure that no output change 
+            #are done after that point.
             lines = [line[6:].strip() for line in lines if line.startswith('change')]
-            if any(l.startswith(('process','model','output', 'rwgt_dir')) for l in lines):
-                return False
-            return True
+            for line in lines:
+                if line.startswith(('process','model','output', 'rwgt_dir')):
+                    return False
+                elif line.startswith('multicore'):
+                    split_line = line.split()
+                    if len(split_line) > 1: 
+                        multicore = bool(split_line[1])
+
+            return multicore
             
         
         
@@ -1142,8 +1159,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             command.append('reweight')
             
             #########   START SINGLE CORE MODE ############
-            if self.options['run_mode'] in [0,1] or self.options['nb_core']==1 \
-               or self.run_card['nevents'] < 10001 or not check_multicore(self):
+            if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
                 if self.run_name:
                     command.append(self.run_name)
                 else:
@@ -1181,7 +1197,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return
                 ##########    END SINGLE CORE HANDLING #############
             else:
-                ##########    START MULTI-CORE HANDLING #############                
+                ##########    START MULTI-CORE HANDLING #############
+                if not isinstance(self.cluster, cluster.MultiCore):
+                    mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
+                else:
+                    mycluster = self.cluster
+                
                 new_args=list(args)
                 self.check_decay_events(new_args) 
                 # prepare multi-core  job:
@@ -1216,8 +1237,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         stdout = devnull
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
-                    self.cluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout)
-                self.cluster.wait(self.me_dir,update_status)
+                    mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout)
+                mycluster.wait(self.me_dir,update_status)
                 devnull.close()
                 
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
