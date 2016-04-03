@@ -865,6 +865,7 @@ class Event(list):
         self.aqcd = 0
         # Weight information
         self.tag = ''
+        self.eventflag = {} # for information in <event > 
         self.comment = ''
         self.reweight_data = {}
         self.matched_scale_data = None
@@ -886,6 +887,12 @@ class Event(list):
                 self.comment += '%s\n' % line
                 continue
             if "<event" in line:
+                if '=' in line:
+                    found = re.findall(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""",line)
+                    #for '<event line=4 value=\'3\' error="5" test=" 1 and 2">\n'
+                    #return [('line', '', '4'), ('value', '3', ''), ('error', '5', ''), ('test', ' 1 and 2', '')]
+                    self.eventflag = dict((n, a1) if a1 else (n,a2) for n,a1,a2 in found)
+                    # return {'test': ' 1 and 2', 'line': '4', 'value': '3', 'error': '5'}
                 continue
             
             if 'first' == status:
@@ -1447,7 +1454,7 @@ class Event(list):
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
                 
-        out="""<event%(event_id)s>
+        out="""<event%(event_flag)s>
 %(scale)s
 %(particles)s
 %(comments)s
@@ -1456,8 +1463,13 @@ class Event(list):
 </event>
 """ 
         if event_id not in ['', None]:
-            event_id = ' event=%s' % event_id
-            
+            self.eventflag['event'] = str(event_id)
+
+        if self.eventflag:
+            event_flag = ' %s' % ' '.join('%s="%s"' % (k,v) for (k,v) in self.eventflag.items())
+        else:
+            event_flag = ''
+
         if self.nexternal:
             scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
@@ -1502,7 +1514,7 @@ class Event(list):
             sys_str += "</mgrwt>\n"
             reweight_str = sys_str + reweight_str
         
-        out = out % {'event_id': event_id,
+        out = out % {'event_flag': event_flag,
                      'scale': scale_str, 
                       'particles': '\n'.join([str(p) for p in self]),
                       'tag': tag_str,
