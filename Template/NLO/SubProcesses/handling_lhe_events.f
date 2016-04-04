@@ -435,7 +435,10 @@ c Same as read_lhef_header, except that more parameters are read.
 c Avoid overloading read_lhef_header, meant to be used in utilities
       subroutine read_lhef_header_full(ifile,nevents,itempsc,itempPDF,
      #                                 MonteCarlo)
-      implicit none 
+      implicit none
+      include 'reweight0.inc'
+      include 'run.inc'
+      logical already_found
       integer ifile,nevents,i,ii,ii2,iistr,ipart,itempsc,itempPDF
       character*10 MonteCarlo
       character*80 string,string0
@@ -487,24 +490,77 @@ c
         endif
 c Find the reweight information for scale and PDF uncertainties
         if (index(string,'<initrwgt>').ne.0) then
+           dyn_scale(0)=0
+           lhaPDFid(0)=0
+           lscalevar(1)=.false.
+           lpdfvar(1)=.false.
+           do_rwgt_scale=.false.
+           do_rwgt_pdf=.false.
            do
+c     find the start of a weightgroup
               do
                  read(ifile,'(a)')string
                  if (index(string,'<weightgroup').ne.0) exit
                  if (index(string,'</initrwgt').ne.0) exit
               enddo
-              if (index(string,"name='scale_variation").eq.0) then
+              if (index(string,"name='scale_variation").ne.0) then
+                 do_rwgt_scale=.true.
+                 dyn_scale(0)=dyn_scale(0)+1
+                 read(ifile,'(a)')string
+                 read(string(index(string,'dyn=')+4:),*)
+     $                dyn_scale(dyn_scale(0))
+                 read(string(index(string,'muR=')+4:),*) scalevarR(1)
+                 read(string(index(string,'muF=')+4:),*) scalevarF(1)
+                 scalevarR(0)=1d0
+                 scalevarF(0)=1d0
                  do
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
-                    itempsc=itempsc+1
+                    read(string(index(string,'muR=')+4:),*) temp
+                    already_found=.false.
+                    do i=1,nint(scalevarR(0))
+                       if (temp.eq.scalevarR(i)) already_found=.true.
+                    enddo
+                    if (.not.already_found) then
+                       scalevarR(0)=scalevarR(0)+1d0
+                       scalevarR(nint(scalevarR(0)))=temp
+                    endif
+                    read(string(index(string,'muF=')+4:),*) temp
+                    already_found=.false.
+                    do i=1,nint(scalevarF(0))
+                       if (temp.eq.scalevarF(i)) already_found=.true.
+                    enddo
+                    if (.not.already_found) then
+                       scalevarF(0)=scalevarF(0)+1d0
+                       scalevarF(nint(scalevarF(0)))=temp
+                    endif
                  enddo
-              elseif (index(string,"name='PDF_variation").eq.0) then
+                 if (scalevarR(0).gt.1d0 .or. scalevarF(0).gt.1d0) then
+                    lscalevar(dyn_scale(0))=.true.
+                 else
+                    lscalevar(dyn_scale(0))=.false.
+                 endif
+              elseif (index(string,"name='PDF_variation").ne.0) then
+                 do_rwgt_pdf=.true.
+                 lhaPDFid(0)=lhaPDFid(0)+1
+                 nmemPDF(lhaPDFid(0))=-1
                  do 
                     read(ifile,'(a)')string
                     if (index(string,'</weightgroup>').ne.0) exit
-                    itempsc=itempsc+1
+                    nmemPDF(lhaPDFid(0))=nmemPDF(lhaPDFid(0))+1
+                    if (nmemPDF(lhaPDFid(0)).eq.0) then
+                       read(string(index(string,'PDF=')+4:),*)
+     $                      lhaPDFid(lhaPDFid(0))
+     $                      ,lhaPDFsetname(lhaPDFid(0))
+                       lhaPDFsetname(lhaPDFid(0))
+     $                      =trim(adjustl(lhaPDFsetname(lhaPDFid(0))))
+                    endif
                  enddo
+                 if (nmemPDF(lhaPDFid(0)).gt.0) then
+                    lpdfvar(lhaPDFid(0))=.true.
+                 else
+                    lpdfvar(lhaPDFid(0))=.false.
+                 endif
               elseif (index(string,'</initrwgt').ne.0) then
                  exit
               endif
