@@ -730,7 +730,8 @@ c
      #                  PUP(1,I),PUP(2,I),PUP(3,I),PUP(4,I),PUP(5,I),
      #                  VTIMUP(I),SPINUP(I)
       enddo
-      if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf.or.jwgtinfo.lt.0)) then
+      if(buff(1:1).eq.'#' .and. (do_rwgt_scale .or. do_rwgt_pdf .or.
+     &     jwgtinfo.lt.0)) then
          write(ifile,'(a)') buff(1:len_trim(buff))
          read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
@@ -1093,20 +1094,21 @@ c
 
       subroutine copy_header(infile,outfile,nevts)
       implicit none
-      character*74 buff2
+      character*200 buff2
       integer nevts,infile,outfile
 c
       buff2=' '
       do while(.true.)
          read(infile,'(a)')buff2
-         if(index(buff2,'= nevents').eq.0)write(outfile,'(a)')buff2
-         if(index(buff2,'= nevents').ne.0)exit
+         if(index(buff2,'= nevents').eq.0)
+     &        write(outfile,'(a)') trim(buff2)
+         if(index(buff2,'= nevents').ne.0) exit
       enddo
       write(outfile,*)
-     &nevts,' = nevents    ! Number of unweighted events requested'
+     &     nevts,' = nevents    ! Number of unweighted events requested'
       do while(index(buff2,'</header>').eq.0)
          read(infile,'(a)')buff2
-         write(outfile,'(a)')buff2
+         write(outfile,'(a)')trim(buff2)
       enddo
 c
       return

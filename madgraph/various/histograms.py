@@ -3274,7 +3274,7 @@ if __name__ == "__main__":
         ratio_correlations = False
     
     for arg in sys.argv:
-        if arg.startswith('--no_'):
+        if arg.startswith('--no_') and not arg.startswith('--no_open'):
             uncertainties.remove(variation_type_map[arg[5:]])
         if arg.startswith('--only_'):
             uncertainties= [variation_type_map[arg[7:]]]
@@ -3379,7 +3379,7 @@ if __name__ == "__main__":
             arg_string=arg_string, 
             jet_samples_to_keep=jet_samples_to_keep,
             use_band=use_band,
-            auto_open=True,
+            auto_open=auto_open,
             lhapdfconfig=lhapdfconfig)
         # Tell the user that everything went for the best
         log("%d histograms have been output in " % len(histo_list)+\

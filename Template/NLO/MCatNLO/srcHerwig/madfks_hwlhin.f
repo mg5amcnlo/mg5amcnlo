@@ -143,7 +143,7 @@ c Hard event file (to be entered in Herwig driver)
       integer i
       CHARACTER*50 QQIN
       COMMON/VVJIN/QQIN
-      CHARACTER*80 STRING
+      CHARACTER*200 STRING
       include 'reweight0.inc'
       integer nwgt
       common/cnwgt/nwgt

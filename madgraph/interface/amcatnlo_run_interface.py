@@ -1938,11 +1938,8 @@ RESTART = %(mint_mode)s
             logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'hwu':
-            self.combine_plots_HwU(jobs)
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.HwU'),
-                     pjoin(self.me_dir, 'Events', self.run_name))
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
-                     pjoin(self.me_dir, 'Events', self.run_name))
+            out=pjoin(self.me_dir,'Events',self.run_name,'MADatNLO')
+            self.combine_plots_HwU(jobs,out)
             try:
                 misc.call(['gnuplot','MADatNLO.gnuplot'],\
                           stdout=devnull,stderr=devnull,\
@@ -1964,24 +1961,36 @@ RESTART = %(mint_mode)s
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
 
 
-    def combine_plots_HwU(self,jobs):
+    def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
         logger.debug('Combining HwU plots.')
-        all_histo_paths=[]
-        for job in jobs:
-            all_histo_paths.append(pjoin(job['dirname'],"MADatNLO.HwU"))
-        histogram_list = histograms.HwUList(all_histo_paths[0])
-        for histo_path in all_histo_paths[1:]:
-            for i, histo in enumerate(histograms.HwUList(histo_path)):
-                # First make sure the plots have the same weight labels and such
-                histo.test_plot_compability(histogram_list[i])
-                # Now let the histogram module do the magic and add them.
-                histogram_list[i] += histo
-        
-        # And now output the finalized list
-        histogram_list.output(pjoin(self.me_dir,'SubProcesses',"MADatNLO"),
-                              format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
 
+        command =  []
+        command.append(pjoin(self.me_dir, 'bin', 'internal','histograms.py'))
+        for job in jobs:
+            if job['dirname'].endswith('.HwU'):
+                command.append(job['dirname'])
+            else:
+                command.append(pjoin(job['dirname'],'MADatNLO.HwU'))
+        command.append("--out="+out)
+        command.append("--gnuplot")
+        command.append("--band=[]")
+        command.append("--lhapdf-config="+self.options['lhapdf'])
+        if normalisation:
+            command.append("--multiply="+(','.join([str(n) for n in normalisation])))
+        command.append("--sum")
+        command.append("--no_open")
+
+        p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
+
+        while p.poll() is None:
+            line = p.stdout.readline()
+            if any(t in line for t in ['INFO:','WARNING:','CRITICAL:','ERROR:','KEEP:']):
+                print line[:-1]
+            elif __debug__ and line:
+                logger.debug(line[:-1])
+
+            
     def applgrid_combine(self,cross,error,jobs):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
         logger.debug('Combining APPLgrids \n')
@@ -3118,10 +3127,10 @@ RESTART = %(mint_mode)s
                                          '%s%d.top' % (filename, i))
                         files.mv(pjoin(rundir, file), plotfile) 
                     elif out_id=='HWU':
-                        histogram_list=histograms.HwUList(pjoin(rundir,file))
-                        histogram_list.output(pjoin(self.me_dir,'Events',
-                                                    self.run_name,'%s%d'% (filename,i)),
-                                              format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
+                        out=pjoin(self.me_dir,'Events',
+                                  self.run_name,'%s%d'% (filename,i))
+                        histos=[{'dirname':pjoin(rundir,file)}]
+                        self.combine_plots_HwU(histos,out)
                         try:
                             misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
                                       stdout=os.open(os.devnull, os.O_RDWR),\
@@ -3181,24 +3190,19 @@ RESTART = %(mint_mode)s
                             files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
                                      pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
                         elif out_id=='HWU':
-                            histogram_list=histograms.HwUList(plotfiles[0])
-                            for ii, histo in enumerate(histogram_list):
-                                histogram_list[ii] = histo*norm
-                            for histo_path in plotfiles[1:]:
-                                for ii, histo in enumerate(histograms.HwUList(histo_path)):
-                                    # First make sure the plots have the same weight labels and such
-                                    histo.test_plot_compability(histogram_list[ii])
-                                    # Now let the histogram module do the magic and add them.
-                                    histogram_list[ii] += histo*norm
-                            # And now output the finalized list
-                            histogram_list.output(pjoin(self.me_dir,'Events',
-                                                        self.run_name,'%s%d'% (filename, i)),
-                                                  format = 'gnuplot',use_band=[],lhapdfconfig=self.options['lhapdf'])
+                            out=pjoin(self.me_dir,'Events',
+                                      self.run_name,'%s%d'% (filename,i))
+                            histos=[]
+                            norms=[]
+                            for plotfile in plotfiles:
+                                histos.append({'dirname':plotfile})
+                                norms.append(norm)
+                            self.combine_plots_HwU(histos,out,normalisation=norms)
                             try:
                                 misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
                                           stdout=os.open(os.devnull, os.O_RDWR),\
                                           stderr=os.open(os.devnull, os.O_RDWR),\
-                                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                                          cwd=pjoin(self.me_dir, 'Events',self.run_name))
                             except Exception:
                                 pass
 
