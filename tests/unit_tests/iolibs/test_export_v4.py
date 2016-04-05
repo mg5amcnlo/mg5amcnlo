@@ -2006,9 +2006,9 @@ C     Number of configs
             LO_text = open(pjoin(MG5DIR, 'Template','LO','Source','make_opts')).read()
             self.assertTrue('F2PY=f2py' in LO_text)
             self.assertTrue('FC=gfortran' in LO_text)
-            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
-            self.assertTrue('F2PY=f2py' in NLO_text)
-            self.assertTrue('FC=gfortran' in NLO_text)            
+#            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
+#            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in NLO_text)
+#            self.assertTrue('FC=gfortran' in NLO_text)            
             
             
             

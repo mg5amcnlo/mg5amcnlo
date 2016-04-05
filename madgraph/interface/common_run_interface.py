@@ -35,6 +35,7 @@ import subprocess
 import sys
 import time
 import traceback
+import sets
 
 
 try:
@@ -669,6 +670,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 run_card = self.run_card
 
+            # add the conversion from the lhaid to the pdf set names
+            if amcatnlo and run_card['pdlabel']=='lhapdf':
+                pdfsetsdir=self.get_lhapdf_pdfsetsdir()
+                pdfsets=self.get_lhapdf_pdfsets_list(pdfsetsdir)
+                lhapdfsetname=[]
+                for lhaid in run_card['lhaid']:
+                    if lhaid in pdfsets:
+                        lhapdfsetname.append(pdfsets[lhaid]['filename'])
+                    else:
+                        raise MadGraph5Error("lhaid %s is not a valid PDF identification number. This can be due to the use of an outdated version of LHAPDF, or %s is not a LHAGlue number corresponding to a central PDF set (but rather one of the error sets)." % (lhaid,lhaid))
+                run_card['lhapdfsetname']=lhapdfsetname
             run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
 
         if mode in ['MadLoop', 'all']:
@@ -825,7 +837,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if fulltext == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|ExecutionPath|Treewriter|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|QES_over_ref|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
+        text = re.findall('(<MGVersion>|ParticlePropagator|ExecutionPath|Treewriter|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|req_acc_FO|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -844,7 +856,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif 'begin minpts' in text:
             return 'plot_card.dat'
         elif ('gridpack' in text and 'ebeam1' in text) or \
-                ('qes_over_ref' in text and 'ebeam1' in text):
+                ('req_acc_fo' in text and 'ebeam1' in text):
             return 'run_card.dat'
         elif any(t.endswith('mw_run') for t in text):
             return 'madweight_card.dat'
@@ -1133,7 +1145,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
                         
         if not '-from_cards' in line:
-            self.keep_cards(['reweight_card.dat'])
+            self.keep_cards(['reweight_card.dat'], ignore=['*'])
             self.ask_edit_cards(['reweight_card.dat'], 'fixed', plot=False)        
 
         # load the name of the event file
@@ -1927,15 +1939,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
-            if card in ignore:
+            if card in ignore or (ignore == ['*'] and card not in need_card):
                 continue
             if card not in need_card:
                 if os.path.exists(pjoin(cards_path, card)):
-                    os.remove(pjoin(cards_path, card))
+                    files.mv(pjoin(cards_path, card), pjoin(cards_path, '.%s' % card))
             else:
                 if not os.path.exists(pjoin(cards_path, card)):
-                    default = card.replace('.dat', '_default.dat')
-                    files.cp(pjoin(cards_path, default),pjoin(cards_path, card))
+                    if os.path.exists(pjoin(cards_path, '.%s' % card)):
+                        files.mv(pjoin(cards_path, '.%s' % card), pjoin(cards_path, card))
+                    else:
+                        default = card.replace('.dat', '_default.dat')
+                        files.cp(pjoin(cards_path, default),pjoin(cards_path, card))
 
     ############################################################################
     def set_configuration(self, config_path=None, final=True, initdir=None, amcatnlo=False):
@@ -2092,7 +2107,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         self.update_status('Running MadSpin', level='madspin')
         if not '-from_cards' in line:
-            self.keep_cards(['madspin_card.dat'])
+            self.keep_cards(['madspin_card.dat'], ignore=['*'])
             self.ask_edit_cards(['madspin_card.dat'], 'fixed', plot=False)
         self.help_decay_events(skip_syntax=True)
 
@@ -2368,23 +2383,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if not hasattr(self, 'lhapdf_pdfsets'):
             self.lhapdf_pdfsets = self.get_lhapdf_pdfsets_list(pdfsets_dir)
 
-
-        pdfsetname = ''
+        pdfsetname=set()
         for lhaid in lhaid_list:
             try:
-                if not pdfsetname:
-                    if lhaid in self.lhapdf_pdfsets:
-                        pdfsetname = self.lhapdf_pdfsets[lhaid]['filename']
-                    elif isinstance(lhaid, str):
-                        pdfsetname = lhaid
-                    else:
-                        raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
-                # just check the other ids refer to the same pdfsetname
-                elif not \
-                  self.lhapdf_pdfsets[lhaid]['filename'] == pdfsetname:
-                    raise MadGraph5Error(\
-                        'lhaid and PDF_set_min/max in the run_card do not correspond to the' + \
-                        'same PDF set. Please check the run_card.')
+                if lhaid in self.lhapdf_pdfsets:
+                    pdfsetname.add(self.lhapdf_pdfsets[lhaid]['filename'])
+                else:
+                    raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
             except KeyError:
                 if self.lhapdf_version.startswith('5'):
                     raise MadGraph5Error(\
@@ -2405,7 +2410,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets')):
             #clean previous set of pdf used
             for name in os.listdir(pjoin(self.me_dir, 'lib', 'PDFsets')):
-                if name != pdfsetname:
+                if name not in pdfsetname:
                     try:
                         if os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', name)):
                             shutil.rmtree(pjoin(self.me_dir, 'lib', 'PDFsets', name))
@@ -2425,33 +2430,34 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             lhapdf_cluster_possibilities = []
 
+        for pdfset in pdfsetname:
         # Check if we need to copy the pdf
-        if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
-            any((os.path.exists(pjoin(d, pdfsetname)) for d in lhapdf_cluster_possibilities)):
-
-            os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfsetname))][0]
-            os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
-            # no need to copy it
-            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-                try:
-                    if os.path.isdir(pjoin(pdfsets_dir, name)):
-                        shutil.rmtree(pjoin(pdfsets_dir, name))
-                    else:
-                        os.remove(pjoin(pdfsets_dir, name))
-                except Exception, error:
-                    logger.debug('%s', error)
+            if self.options["cluster_local_path"] and self.options["run_mode"] == 1 and \
+                any((os.path.exists(pjoin(d, pdfset)) for d in lhapdf_cluster_possibilities)):
+    
+                os.environ["LHAPATH"] = [d for d in lhapdf_cluster_possibilities if os.path.exists(pjoin(d, pdfset))][0]
+                os.environ["CLUSTER_LHAPATH"] = os.environ["LHAPATH"]
+                # no need to copy it
+                if os.path.exists(pjoin(pdfsets_dir, pdfset)):
+                    try:
+                        if os.path.isdir(pjoin(pdfsets_dir, name)):
+                            shutil.rmtree(pjoin(pdfsets_dir, name))
+                        else:
+                            os.remove(pjoin(pdfsets_dir, name))
+                    except Exception, error:
+                        logger.debug('%s', error)
         
-        #check that the pdfset is not already there
-        elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)) and \
-           not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfsetname)):
-
-            if pdfsetname and not os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-                self.install_lhapdf_pdfset(pdfsets_dir, pdfsetname)
-
-            if os.path.exists(pjoin(pdfsets_dir, pdfsetname)):
-                files.cp(pjoin(pdfsets_dir, pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
-            elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfsetname)):
-                files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfsetname), pjoin(self.me_dir, 'lib', 'PDFsets'))
+            #check that the pdfset is not already there
+            elif not os.path.exists(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)) and \
+               not os.path.isdir(pjoin(self.me_dir, 'lib', 'PDFsets', pdfset)):
+    
+                if pdfset and not os.path.exists(pjoin(pdfsets_dir, pdfset)):
+                    self.install_lhapdf_pdfset(pdfsets_dir, pdfset)
+    
+                if os.path.exists(pjoin(pdfsets_dir, pdfset)):
+                    files.cp(pjoin(pdfsets_dir, pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
+                elif os.path.exists(pjoin(os.path.dirname(pdfsets_dir), pdfset)):
+                    files.cp(pjoin(os.path.dirname(pdfsets_dir), pdfset), pjoin(self.me_dir, 'lib', 'PDFsets'))
             
     def install_lhapdf_pdfset(self, pdfsets_dir, filename):
         """idownloads and install the pdfset filename in the pdfsets_dir"""
@@ -3094,12 +3100,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     logger.info('remove information %s from the run_card' % args[start])
                     del self.run_card[args[start]]
-            elif  args[start+1].lower() in ['t','.true.','true']:
-                self.setR(args[start], '.true.')
-            elif  args[start+1].lower() in ['f','.false.','false']:
-                self.setR(args[start], '.false.')
             else:
-                if args[0].startswith('sys_'):
+                if args[0].startswith('sys_') or args[0] in self.run_card.list_parameter:
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:

@@ -19,8 +19,8 @@ c handling_lhe_events.f fill_MC_mshell.f
       character*3 str
       logical back
       integer evts,leftover,loc,loc1,loc2,isc,ipdf,jmax
-      integer numscales,numPDFpairs
-      common/cwgxsec1/numscales,numPDFpairs
+      integer numscales,numPDFpairs,numPDFs
+      common/cwgxsec1/numscales,numPDFpairs,numPDFs
 c
       back=.true.
       write (*,*) 'Give the name of the original event file'

@@ -67,8 +67,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED=2 QED=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED=2 QED=1 [ all = QCD ]
+C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -129,6 +129,23 @@ C     ----------
       DO I=1,NSQAMPSO
         ANS(I) = 0D0
       ENDDO
+C     When spin-2 particles are involved, the Helicity filtering is
+C      dangerous for the 2->1 topology.
+C     This is because depending on the MC setup the initial PS points
+C      have back-to-back initial states
+C     for which some of the spin-2 helicity configurations are zero.
+C      But they are no longer zero
+C     if the point is boosted on the z-axis. Remember that HELAS
+C      helicity amplitudes are no longer
+C     lorentz invariant with expternal spin-2 particles (only the
+C      helicity sum is).
+C     For this reason, we simply remove the filterin when there is
+C      only three external particles.
+      IF (NEXTERNAL.LE.3) THEN
+        DO IHEL=1,NCOMB
+          GOODHEL(IHEL)=.TRUE.
+        ENDDO
+      ENDIF
       DO IHEL=1,NCOMB
         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN
@@ -198,8 +215,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED=2 QED=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED=2 QED=1 [ all = QCD ]
+C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -327,8 +344,8 @@ C     This functions plays the role of the interference matrix. It can
 C      be hardcoded or 
 C     made more elegant using hashtables if its execution speed ever
 C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
+C     factor. From two split order indices, it return the
+C      corresponding index in the squared 
 C     order canonical ordering.
 C     
 C     CONSTANTS
@@ -356,7 +373,7 @@ C     BEGIN CODE
 C     
       DO I=1,NSO
         SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
+     $NDEXB,I)
       ENDDO
       SQSOINDEX=SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -450,8 +467,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOI'
-     $ //'NDEX'
+      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
+     $ //'DEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -496,8 +513,8 @@ C
 
       END SUBROUTINE
 
-C     This function is not directly useful, but included for completene
-C     ss
+C     This function is not directly useful, but included for
+C      completeness
       INTEGER FUNCTION SOINDEX_FOR_AMPORDERS(ORDERS)
 C     
 C     This functions returns the integer index identifying the

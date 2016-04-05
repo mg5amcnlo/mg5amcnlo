@@ -511,8 +511,8 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         error_text += 'The compilation fails with the following output message:\n'
         error_text += '    '+out.replace('\n','\n    ')+'\n'
         error_text += 'Please try to fix this compilations issue and retry.\n'
-        error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
-        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
+        error_text += 'Help might be found at https://answers.launchpad.net/mg5amcnlo.\n'
+        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/mg5amcnlo'
         raise MadGraph5Error, error_text
     return p.returncode
 
@@ -696,6 +696,41 @@ def get_open_fds():
             procs.split( '\n' ) )
         
     return nprocs
+
+def detect_if_cpp_compiler_is_clang(cpp_compiler):
+    """ Detects whether the specified C++ compiler is clang."""
+    
+    try:
+        p = Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
+        output, error = p.communicate()
+    except Exception, error:
+        # Cannot probe the compiler, assume not clang then
+        return False
+    return 'LLVM' in output
+
+def detect_cpp_std_lib_dependence(cpp_compiler):
+    """ Detects if the specified c++ compiler will normally link against the C++
+    standard library -lc++ or -libstdc++."""
+
+    is_clang = detect_if_cpp_compiler_is_clang(cpp_compiler)
+    if is_clang:
+        try:
+            import platform
+            v, _,_ = platform.mac_ver()
+            if not v:
+                # We will not attempt to support clang elsewhere than on macs, so
+                # we venture a guess here.
+                return '-lc++'
+            else:
+                v = float(v.rsplit('.')[1])
+                if v >= 9:
+                   return '-lc++'
+                else:
+                   return '-lstdc++'
+        except:
+            return '-lstdc++'
+    return '-lstdc++'
 
 def detect_current_compiler(path, compiler_type='fortran'):
     """find the current compiler for the current directory"""

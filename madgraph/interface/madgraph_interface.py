@@ -134,11 +134,11 @@ class CmdExtended(cmd.Cmd):
     }
 
     debug_output = 'MG5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n'
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
     keyboard_stop_msg = """stopping all operation
             in order to quit mg5 please enter exit"""
@@ -745,8 +745,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
-        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
-        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
+#        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
+#        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
         logger.info("OLP ProgramName",'$MG:color:GREEN')
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
@@ -2989,7 +2989,12 @@ This implies that with decay chains:
         new_model_name = output_dir
         if restrict_name:
             new_model_name = '%s-%s' % (output_dir, restrict_name)
-        self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+            
+        if 'modelname' in self.history.get('full_model_line'):
+            opts = '--modelname'
+        else:
+            opts='' 
+        self.exec_cmd('import model %s %s' % (new_model_name, opts), errorhandling=False, 
                               printcmd=False, precmd=True, postcmd=True)         
         
         
@@ -3302,11 +3307,18 @@ This implies that with decay chains:
             pydoc.pager(outstr)
 
         elif args[0] == 'options':
+            if len(args) == 1:
+                to_print = lambda name: True
+            else:
+                to_print = lambda name: any(poss in name for poss in args[1:])
+
             outstr = "                          MadGraph5_aMC@NLO Options    \n"
             outstr += "                          ----------------    \n"
             keys = self.options_madgraph.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madgraph[key] 
                 value = self.options[key]
                 if value == default:
@@ -3319,6 +3331,8 @@ This implies that with decay chains:
             keys = self.options_madevent.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madevent[key]
                 value = self.options[key]
                 if value == default:
@@ -3331,6 +3345,8 @@ This implies that with decay chains:
             keys = self.options_configuration.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_configuration[key]
                 value = self.options[key]
                 if value == default:
@@ -5090,6 +5106,7 @@ This implies that with decay chains:
         removed_multiparticles = []
         # First check if the defined multiparticles are allowed in the
         # new model
+        
         for key in self._multiparticles.keys():
             try:
                 for part in self._multiparticles[key]:
@@ -5115,6 +5132,10 @@ This implies that with decay chains:
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
+                if self.history[-1] == 'define %s' % line.strip():
+                    self.history.pop(-1)
+                else:
+                    misc.sprint([self.history[-1], 'define %s' % line.strip()])
 
         scheme = "old"
         for qcd_container in ['p', 'j']:
@@ -5230,6 +5251,12 @@ This implies that with decay chains:
         if not self.options['cpp_compiler'] is None:
             compiler_options.append('--cpp_compiler=%s'%
                                                    self.options['cpp_compiler'])
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+        else:
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
@@ -6595,7 +6622,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # First look at options which should be put in MG5DIR/input
             to_define = {}
             for key, default in self.options_configuration.items():
-                if  self.options_configuration[key] != self.options[key] != None:
+                if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
                     to_define[key] = self.options[key]
 
             if not '--auto' in args:

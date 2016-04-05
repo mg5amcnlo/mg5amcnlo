@@ -672,14 +672,16 @@ class UFOMG5Converter(object):
                                'Parenthesis of expression %s are malformed'%expr
             return [expr[:start],expr[start+1:end],expr[end+1:]]
         
-        start_parenthesis = re.compile(r".*\s*[\+\-\*\/\)\(]\s*$")        
+        start_parenthesis = re.compile(r".*\s*[\+\-\*\/\)\(]\s*$")
+
         def is_value_zero(value):
             """Check whether an expression like ((A+B)*ZERO+C)*ZERO is zero.
             Only +,-,/,* operations are allowed and 'ZERO' is a tag for an
             analytically zero quantity."""
-            
-            parenthesis = find_parenthesis(value)
-            if parenthesis:
+
+            curr_value = value
+            parenthesis = find_parenthesis(curr_value)
+            while parenthesis:
                 # Allow the complexconjugate function
                 if parenthesis[0].endswith('complexconjugate'):
                     # Then simply remove it
@@ -692,11 +694,10 @@ class UFOMG5Converter(object):
                         new_parenthesis = 'PARENTHESIS'
                 else:
                     new_parenthesis = '_FUNCTIONARGS'
-                new_value = parenthesis[0]+new_parenthesis+parenthesis[2] 
-                return is_value_zero(new_value)
-            else:
-               return is_expr_zero(value)
-            
+                curr_value = parenthesis[0]+new_parenthesis+parenthesis[2]
+                parenthesis = find_parenthesis(curr_value)
+            return is_expr_zero(curr_value)
+
         def CTCoupling_pole(CTCoupling, pole):
             """Compute the pole of the CTCoupling in two cases:
                a) Its value is a dictionary, then just return the corresponding
@@ -741,7 +742,7 @@ class UFOMG5Converter(object):
             # Remember that when the value of a CT_coupling is not a dictionary
             # then the only operators allowed in the definition are +,-,*,/
             # and each term added or subtracted must contain *exactly one*
-            # CTParameter and never at the denominator. 
+            # CTParameter and never at the denominator.   
             if n_CTparams > 0 and is_value_zero(new_expression):
                 return 'ZERO', [], n_CTparams
             else:

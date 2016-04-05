@@ -323,7 +323,7 @@ class MatrixElementEvaluator(object):
             return {'m2': m2, output:getattr(data, output)}
     
     @staticmethod
-    def pass_isolation_cuts(pmoms, ptcut=50.0e-03, drcut=0.5):
+    def pass_isolation_cuts(pmoms, ptcut=50.0, drcut=0.5):
         """ Check whether the specified kinematic point passes isolation cuts
         """
 
@@ -3153,10 +3153,11 @@ def check_gauge_process(process, evaluator, options=None):
 
     #p, w_rambo = evaluator.get_momenta(process)
 
-    #MLOptions = {'ImprovePS':True,'ForceMP':True}
+#    MLOptions = {'ImprovePS':True,'ForceMP':True}
 
-    #brsvalue = evaluator.evaluate_matrix_element(matrix_element, p=p, gauge_check = True,
-    #                                             output='jamp',MLOptions=MLOptions)
+#    brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
+#                                  output='jamp',MLOptions=MLOptions, options=options)
+
     brsvalue = evaluator.evaluate_matrix_element(matrix_element, gauge_check = True,
                                                  output='jamp', options=options)
 

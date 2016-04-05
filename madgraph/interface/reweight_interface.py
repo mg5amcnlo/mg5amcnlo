@@ -95,14 +95,11 @@ class ReweightInterface(extended_cmd.Cmd):
         self.seed = None
         self.output_type = "default"
         self.helicity_reweighting = True
-        self.rwgt_mode = None # can be LO or NLO, None is default 
+        self.rwgt_mode = '' # can be LO, NLO, NLO_tree, '' is default 
         self.has_nlo = False
         self.rwgt_dir = None
         self.exitted = False # Flag to know if do_quit was already called.
         
-        if 'lhapdf' in self.mother.options and not mother.options['lhapdf']:
-            logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
-            self.rwgt_mode = 'LO'
         if event_path:
             logger.info("Extracting the banner ...")
             self.do_import(event_path, allow_madspin=allow_madspin)
@@ -187,7 +184,13 @@ class ReweightInterface(extended_cmd.Cmd):
                 if self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
                     self.rwgt_mode = 'LO'
-                
+            
+            if 'lhapdf' in self.mother.options and not self.mother.options['lhapdf']:
+                logger.warning('NLO accurate reweighting requires lhapdf to be installed. Pass in approximate LO mode.')
+                self.rwgt_mode = 'LO'
+        else:
+            self.rwgt_mode = 'LO'
+
         if not process:
             msg = 'Invalid proc_card information in the file (no generate line):\n %s' % self.banner['mg5proccard']
             raise Exception, msg

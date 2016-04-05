@@ -30,9 +30,9 @@ c*************************************************************************
 c	Parameters for helicity sums in matrixN.f
 c*************************************************************************
       REAL*8 LIMHEL
-      PARAMETER(LIMHEL=1e-6)
+      PARAMETER(LIMHEL=1e-8)
       INTEGER MAXTRIES
-      PARAMETER(MAXTRIES=10)
+      PARAMETER(MAXTRIES=25)
 C     To pass the helicity configuration chosen by the DiscreteSampler to 
 C     matrix<i>.f
       double precision hel_jacobian

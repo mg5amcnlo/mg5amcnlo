@@ -25,11 +25,11 @@ endif
 
 
 ifeq ($(origin CXXFLAGS),undefined)
-CXXFLAGS= -O -stdlib=libc++ $(MACFLAG)
+CXXFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)
 endif
 
 ifeq ($(origin CFLAGS),undefined)
-CFLAGS= -O -stdlib=libc++ $(MACFLAG)
+CFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)
 endif
 
 # Increase the number of allowed charcters in a Fortran line

@@ -8,8 +8,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u d~ > w+ g WEIGHTED=3 [ all = QCD ]
-C     Process: c s~ > w+ g WEIGHTED=3 [ all = QCD ]
+C     Process: u d~ > w+ g WEIGHTED<=3 [ all = QCD ]
+C     Process: c s~ > w+ g WEIGHTED<=3 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -22,6 +22,8 @@ C
 C     ARGUMENTS 
 C     
       REAL*8 P(0:3,NEXTERNAL),ANS
+      DOUBLE PRECISION       WGT_ME_BORN,WGT_ME_REAL
+      COMMON /C_WGT_ME_TREE/ WGT_ME_BORN,WGT_ME_REAL
 C     
 C     LOCAL VARIABLES 
 C     
@@ -98,6 +100,7 @@ C         add to the sum of helicities
         ENDIF
       ENDDO
       ANS=ANS/DBLE(IDEN)
+      WGT_ME_REAL=ANS
       END
 
 
@@ -110,8 +113,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ g WEIGHTED=3 [ all = QCD ]
-C     Process: c s~ > w+ g WEIGHTED=3 [ all = QCD ]
+C     Process: u d~ > w+ g WEIGHTED<=3 [ all = QCD ]
+C     Process: c s~ > w+ g WEIGHTED<=3 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     

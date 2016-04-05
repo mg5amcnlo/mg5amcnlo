@@ -415,6 +415,14 @@ class TestEditCardCmd(unittest.TestCase):
         self.assertEqual(run['ptj'], 100)
         self.cmd.do_set('run_card ptj default')        
         self.assertEqual(run['ptj'], ptj)
+        
+        run.list_parameter.add('ptj')
+        self.cmd.do_set('ptj 100, 300')
+        self.assertEqual(run['ptj'], [100, 300])
+        self.cmd.do_set('ptj 100  200.1')
+        self.assertEqual(run['ptj'], [100, 200.1])
+        self.cmd.do_set('ptj 100  200.1, 3e3')
+        self.assertEqual(run['ptj'], [100, 200.1, 3000])
 
     def test_modif_ML_card(self):
 

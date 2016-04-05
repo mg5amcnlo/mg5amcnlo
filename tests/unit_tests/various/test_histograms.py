@@ -44,25 +44,25 @@ class TestHistograms(unittest.TestCase):
         my_hist = histo_list[0]+2.0
         my_hist = my_hist-2.0
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
 
         # "Testing 'Hist1 - Hist2 + Hist2 == Hist1'"
         my_hist = histo_list[0]+histo_list[1]
         my_hist = my_hist-histo_list[1]
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
         
         #"Testing 'Hist1 * 2.0 / 2.0 == Hist1'"
         my_hist = histo_list[0]*2.0
         my_hist = my_hist/2.0
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
 
         #"Testing 'Hist1 * Hist2 / Hist2 == Hist1'"
         my_hist = histo_list[0]*histo_list[1]
         my_hist = my_hist/histo_list[1]
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
     
     def test_output_reload(self):
         """ Outputs existing HwU histograms in the gnuplot format and makes sure
@@ -98,5 +98,20 @@ class IOTest_Histogram(IOTests.IOTestManager):
         """ target: HistoOut.HwU
             target: HistoOut.gnuplot
         """
-        histo_list = histograms.HwUList(_HwU_source)
-        histo_list.output(pjoin(self.IOpath,'HistoOut'), format = 'gnuplot')
+        import sys
+        # run in an external version of python due to potential segfault
+        line='''if 1:
+          import os,sys;
+          sys.path=%s;
+          _file_path = '%s';
+          _HwU_source = os.path.join(_file_path,os.pardir,'input_files','MADatNLO.HwU')
+          pjoin = os.path.join
+
+          import madgraph.various.histograms as histograms;
+          histo_list = histograms.HwUList(_HwU_source);
+          histo_list.output(pjoin('%s','HistoOut'), format = 'gnuplot');
+        ''' % (sys.path, _file_path, self.IOpath)
+
+        import os
+        os.system('echo "%s" | python' % line) 
+

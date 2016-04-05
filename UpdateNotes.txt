@@ -24,7 +24,11 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Update the TopEffTh model
         MZ: Fix problem with slurm cluster
         OM: Improve scan functionalities
+	RF: For NLO processes allow for multiple PDF and scales reweighting, directy by inputting lists
+	    in the run_card.dat.
         PT: New way of handling Pythia8 decays
+	RF: Fixed a bug that resulted in wrong event weights for NLO processes when requiring
+            a very small number of events (introduced in 2.3.3)
         OM: Allow to keep the reweight information in the final lhe file for future computation 
         MZ: updated FJcore to version 3.1.3 (was 3.0.5)
 

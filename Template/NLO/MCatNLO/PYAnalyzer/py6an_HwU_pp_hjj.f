@@ -52,11 +52,7 @@ c
       common /to_veto_hist/vetomin,vetomax,nbinveto
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      integer maxRWGT
-      parameter (maxRWGT=100)
-      double precision wgtxsecRWGT(maxRWGT)
-      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
-      character*15 weights_info(max_weight)
+      character*50 weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
 c
 c Initialize histograms

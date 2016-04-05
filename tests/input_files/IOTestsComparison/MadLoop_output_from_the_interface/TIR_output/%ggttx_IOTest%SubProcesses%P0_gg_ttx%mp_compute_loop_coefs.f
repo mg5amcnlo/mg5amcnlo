@@ -36,6 +36,8 @@ C
       PARAMETER (ZERO=0E0_16)
       COMPLEX*32 IMAG1
       PARAMETER (IMAG1=(0E0_16,1E0_16))
+      COMPLEX*32 DP_IMAG1
+      PARAMETER (DP_IMAG1=(0D0,1D0))
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
       PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
@@ -53,6 +55,10 @@ C
       LOGICAL COMPUTE_INTEGRAND_IN_QP
       INTEGER I,J,K,H,HEL_MULT,ITEMP
       REAL*16 TEMP2
+      REAL*8 DP_TEMP2
+      COMPLEX*32 CTEMP
+      COMPLEX*16 DP_CTEMP
+
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       REAL*16 MP_P(0:3,NEXTERNAL)
       REAL*8 P(0:3,NEXTERNAL)
@@ -61,6 +67,7 @@ C
       REAL*16 ANS(3,0:NSQUAREDSO)
       COMPLEX*32 COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 CFTOT
+      COMPLEX*16 DP_CFTOT
 C     
 C     FUNCTIONS
 C     
@@ -284,23 +291,49 @@ C            containers (but only those needed)
  3000     CONTINUE
           MP_UVCT_REQ_SO_DONE=.TRUE.
 
-          DO I=1,NCTAMPS
+          IF (COMPUTE_INTEGRAND_IN_QP) THEN
+
             DO J=1,NBORNAMPS
-              CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16)
-     $         ,0.0E0_16,KIND=16)
-              IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
-              ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AMP(
-     $I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
-              IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
-                DO K=1,3
-                  TEMP2 = HEL_MULT*2.0E0_16*REAL(CFTOT*AMPL(K,I)
-     $             *CONJG(AMP(J)),KIND=16)
-                  ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
-                  ANS(K,0)=ANS(K,0)+TEMP2
-                ENDDO
-              ENDIF
+              CTEMP = HEL_MULT*2.0E0_16*CONJG(AMP(J))
+              DO I=1,NCTAMPS
+                CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16)
+     $           ,0.0E0_16,KIND=16)
+                IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
+                ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AM
+     $P(I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
+                IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+                  DO K=1,3
+                    TEMP2 = REAL(CFTOT*AMPL(K,I)*CTEMP,KIND=16)
+                    ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
+                    ANS(K,0)=ANS(K,0)+TEMP2
+                  ENDDO
+                ENDIF
+              ENDDO
             ENDDO
-          ENDDO
+
+          ELSE
+
+            DO J=1,NBORNAMPS
+              DP_CTEMP = HEL_MULT*2.0D0*DCONJG(DP_AMP(J))
+              DO I=1,NCTAMPS
+                DP_CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=8)
+     $           ,0.0D0,KIND=8)
+                IF(CF_D(I,J).LT.0) DP_CFTOT=DP_CFTOT*DP_IMAG1
+                ITEMP = ML5_0_ML5SQSOINDEX(ML5_0_ML5SOINDEX_FOR_LOOP_AM
+     $P(I),ML5_0_ML5SOINDEX_FOR_BORN_AMP(J))
+                IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+                  DO K=1,3
+                    DP_TEMP2 = REAL(DP_CFTOT*DP_AMPL(K,I)*DP_CTEMP
+     $               ,KIND=8)
+                    ANSDP(K,ITEMP)=ANSDP(K,ITEMP)+DP_TEMP2
+                    ANSDP(K,0)=ANSDP(K,0)+DP_TEMP2
+                  ENDDO
+                ENDIF
+              ENDDO
+            ENDDO
+
+          ENDIF
+
 
           IF (COMPUTE_INTEGRAND_IN_QP) THEN
 
@@ -345,11 +378,17 @@ C          WF matters.
         ENDIF
       ENDDO
 
-      DO I=1,3
-        DO J=0,NSQUAREDSO
-          ANSDP(I,J)=REAL(ANS(I,J),KIND=8)
+
+C     If we were not computing the integrand in QP, then we were
+C      already updating ANSDP all along, so that fetching it here from
+C      the QP ANS(:,:) should not be done.
+      IF (COMPUTE_INTEGRAND_IN_QP) THEN
+        DO I=1,3
+          DO J=0,NSQUAREDSO
+            ANSDP(I,J)=REAL(ANS(I,J),KIND=8)
+          ENDDO
         ENDDO
-      ENDDO
+      ENDIF
 
 C     Grouping of loop diagrams now done directly when creating the
 C      LOOPCOEFS.

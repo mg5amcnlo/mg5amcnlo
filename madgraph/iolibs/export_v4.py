@@ -1704,23 +1704,9 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         The version is also checked, in order to set some extra flags
         if the compiler is clang (on MACOS)"""
        
-        p = misc.Popen([compiler, '--version'], stdout=subprocess.PIPE, 
-                    stderr=subprocess.PIPE)
-        output, error = p.communicate()
-        is_clang = 'LLVM' in output
-        is_lc = False
-        if is_clang:
-            import platform
-            v, _,_ = platform.mac_ver()
-            if not v:
-                is_lc = True
-            else:
-                v = float(v.rsplit('.')[1])
-                if v >= 9:
-                    is_lc = True
-                else:
-                    is_lc = False
-        
+        is_clang = misc.detect_if_cpp_compiler_is_clang(compiler)
+        is_lc    = misc.detect_cpp_std_lib_dependence(compiler) == '-lc++'
+
         # list of the variable to set in the make_opts file
         for_update= {'DEFAULT_CPP_COMPILER':compiler,
                      'MACFLAG':'-mmacosx-version-min=10.7' if is_clang and is_lc else '',
@@ -6301,7 +6287,7 @@ This installation can take some time but only needs to be performed once.""",'$M
 In the future, if you want to reactivate Ninja, you can do so by re-attempting
 its online installation with the command 'install ninja' or install it on your
 own and set the path to its library in the MG5aMC option 'ninja'.""")
-                    cmd.exec_cmd('set ninja None')
+                    cmd.exec_cmd("set ninja ''")
                     cmd.exec_cmd('save options')  
 
 

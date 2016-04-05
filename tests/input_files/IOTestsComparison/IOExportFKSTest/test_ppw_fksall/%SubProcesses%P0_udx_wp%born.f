@@ -8,8 +8,8 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: u d~ > w+ WEIGHTED=2 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED=2 [ all = QCD ]
+C     Process: u d~ > w+ WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ WEIGHTED<=2 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -73,6 +73,8 @@ C
       COMMON/CCALCULATEDBORN/CALCULATEDBORN
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      DOUBLE PRECISION       WGT_ME_BORN,WGT_ME_REAL
+      COMMON /C_WGT_ME_TREE/ WGT_ME_BORN,WGT_ME_REAL
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -94,8 +96,8 @@ C     ----------
       ENDDO
       IF (CALCULATEDBORN) THEN
         DO J=1,NEXTERNAL-1
-          IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
-     $     ,J)) THEN
+          IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3,J))
+     $      THEN
             CALCULATEDBORN=.FALSE.
             WRITE (*,*) 'momenta not the same in Born'
             STOP
@@ -118,16 +120,17 @@ C     ----------
       HEL_FAC=1D0
       DO IHEL=1,NCOMB
         IF (NHEL(GLU_IJ,IHEL).EQ.NHEL(GLU_IJ,1)) THEN
-          IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL+SKIP(NFKSPRO
-     $     CESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT. 2) ) THEN
+          IF ((GOODHEL(IHEL,NFKSPROCESS) .OR. GOODHEL(IHEL
+     $     +SKIP(NFKSPROCESS),NFKSPROCESS) .OR. NTRY(NFKSPROCESS) .LT.
+     $      2) ) THEN
             ANS(1)=ANS(1)+BORN(P1,NHEL(1,IHEL),IHEL,BORNTILDE,BORNS)
             ANS(2)=ANS(2)+BORNTILDE
-            IF ( BORNS(1).NE.0D0 .AND. .NOT. GOODHEL(IHEL,NFKSPROCESS
-     $       ) ) THEN
+            IF ( BORNS(1).NE.0D0 .AND. .NOT. GOODHEL(IHEL,NFKSPROCESS)
+     $        ) THEN
               GOODHEL(IHEL,NFKSPROCESS)=.TRUE.
             ENDIF
-            IF ( BORNS(2).NE.0D0 .AND. .NOT. GOODHEL(IHEL+SKIP(NFKSPROC
-     $       ESS),NFKSPROCESS) ) THEN
+            IF ( BORNS(2).NE.0D0 .AND. .NOT. GOODHEL(IHEL
+     $       +SKIP(NFKSPROCESS),NFKSPROCESS) ) THEN
               GOODHEL(IHEL+SKIP(NFKSPROCESS),NFKSPROCESS)=.TRUE.
             ENDIF
           ENDIF
@@ -135,6 +138,7 @@ C     ----------
       ENDDO
       ANS(1)=ANS(1)/DBLE(IDEN)
       ANS(2)=ANS(2)/DBLE(IDEN)
+      WGT_ME_BORN=DBLE(ANS(1))
       CALCULATEDBORN=.TRUE.
       END
 
@@ -147,8 +151,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: u d~ > w+ WEIGHTED=2 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED=2 [ all = QCD ]
+C     Process: u d~ > w+ WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ WEIGHTED<=2 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -180,8 +184,8 @@ C
       PARAMETER (NMO=NEXTERNAL-1)
       DATA IC /NMO*1/
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
-      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(8,NWAVEFUNCS)
-     $ , JAMPH(2, NCOLOR)
+      COMPLEX*16 ZTEMP, AMP(NGRAPHS), JAMP(NCOLOR), W(8,NWAVEFUNCS),
+     $  JAMPH(2, NCOLOR)
 C     
 C     GLOBAL VARIABLES
 C     
