@@ -1,15 +1,18 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
-2.4.0 (XX/XX/XX)
+2.4.0.beta (06/04/16)
         OM: Allowing the proper NLO reweighting for NLO sample
+	RF: For NLO processes allow for multiple PDF and scales reweighting, directy by inputting lists
+	    in the run_card.dat.
+        VH: Interfaced MadLoop to Samurai and Ninja (the latter is now the default)
+        HS: Turn IREGI to off by default
         MZ: new NLO generation mode. It is more efficient from the memory and CPU point of 
             view, in particular for high-multiplicity processes. 
             Many thanks to Josh Bendavid for his fundamental contribution for this.
             The mode can be enabled with
             > set low_mem_multicore_nlo_generation True
             before generating the process.
-        VH: Interfaced MadLoop to Samurai and Ninja (the latter is now the default)
         OM: Adding the possibility to use new syntax for tree-level processes:
             QED==2 and QCD>2: The first allows to select exactly a power of the coupling (at amplitude level
             While the second ask for a minimum value.   
@@ -24,8 +27,6 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Update the TopEffTh model
         MZ: Fix problem with slurm cluster
         OM: Improve scan functionalities
-	RF: For NLO processes allow for multiple PDF and scales reweighting, directy by inputting lists
-	    in the run_card.dat.
         PT: New way of handling Pythia8 decays
 	RF: Fixed a bug that resulted in wrong event weights for NLO processes when requiring
             a very small number of events (introduced in 2.3.3)

@@ -14,6 +14,10 @@ C     and external lines W(0:6,NEXTERNAL)
 C     
 C     Process: u u~ > d d~ QED<=2 [ QCD QED ] QED^2>2 QCD^2>0
 C     
+C     Modules
+C     
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+C     
       IMPLICIT NONE
 C     
 C     USER CUSTOMIZABLE OPTIONS
@@ -58,8 +62,6 @@ C
       PARAMETER (NEXTERNAL=4)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=18,NLOOPWAVEFUNCS=1188)
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       INTEGER    NCOMB
       PARAMETER (NCOMB=16)
       REAL*8     ZERO
@@ -543,7 +545,7 @@ C         We write a dummy filter for structural reasons here
 C       SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
 C       IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
         DO I=0,3
-          PL(I,0)=(0.0D0,0.0D0)
+          PL(I,0)=DCMPLX(0.0D0,0.0D0)
         ENDDO
         DO I=1,MAXLWFSIZE
           DO J=0,LOOPMAXCOEFS-1

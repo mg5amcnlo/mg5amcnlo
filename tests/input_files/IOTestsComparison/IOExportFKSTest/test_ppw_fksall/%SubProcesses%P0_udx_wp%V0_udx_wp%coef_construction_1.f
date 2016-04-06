@@ -1,5 +1,9 @@
       SUBROUTINE COEF_CONSTRUCTION_1(P,NHEL,H,IC)
 C     
+C     Modules
+C     
+      USE POLYNOMIAL_CONSTANTS
+C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -16,8 +20,6 @@ C
       PARAMETER (NLOOPAMPS=2)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=3,NLOOPWAVEFUNCS=3)
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       REAL*16     MP__ZERO

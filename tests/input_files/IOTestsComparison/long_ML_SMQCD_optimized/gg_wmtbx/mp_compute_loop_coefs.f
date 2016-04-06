@@ -10,6 +10,10 @@ C     and external lines W(0:6,NEXTERNAL)
 C     
 C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
 C     
+C     Modules
+C     
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -28,8 +32,6 @@ C
       PARAMETER (NEXTERNAL=5)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=28,NLOOPWAVEFUNCS=267)
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       INTEGER    NCOMB
       PARAMETER (NCOMB=48)
       REAL*16    ZERO
@@ -180,8 +182,12 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
       ENDDO
 
       DO I=0,3
-        PL(I,0)=(ZERO,ZERO)
+        PL(I,0)=CMPLX(ZERO,ZERO,KIND=16)
+        IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+          DP_PL(I,0)=DCMPLX(0.0D0,0.0D0)
+        ENDIF
       ENDDO
+
       DO I=1,MAXLWFSIZE
         DO J=0,LOOPMAXCOEFS-1
           DO K=1,MAXLWFSIZE
