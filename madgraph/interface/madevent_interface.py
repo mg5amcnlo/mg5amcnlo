@@ -2552,7 +2552,7 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|3|6|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','2|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                     not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
@@ -2560,7 +2560,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','6|1|2|3', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|1|2', ifnotdefault=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop

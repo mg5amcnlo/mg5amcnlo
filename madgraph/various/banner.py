@@ -2190,7 +2190,7 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "6|1|3|2")
+        self.add_param("MLReductionLib", "6|1|2")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)
