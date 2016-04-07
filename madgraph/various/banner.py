@@ -1544,7 +1544,11 @@ class RunCard(ConfigFile):
     
     def get_pdf_id(self, pdf):
         if pdf == "lhapdf":
-            return self["lhaid"]
+            lhaid = self["lhaid"]
+            if isinstance(lhaid, list):
+                return lhaid[0]
+            else:
+                return lhaid
         else: 
             return {'none': 0, 'mrs02nl':20250, 'mrs02nn':20270, 'cteq4_m': 19150,
                     'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
