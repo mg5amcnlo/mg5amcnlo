@@ -535,6 +535,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             del opts['force_run']
 
         cmd.Cmd.__init__(self, *args, **opts)
+        misc.sprint(me_dir)
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
             me_dir = root_path
@@ -1249,7 +1250,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         stdout = devnull
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
-                    mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout)
+                    mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=self.me_dir)
                 mycluster.wait(self.me_dir,update_status)
                 devnull.close()
                 

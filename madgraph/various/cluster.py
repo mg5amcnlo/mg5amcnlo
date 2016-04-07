@@ -673,7 +673,6 @@ class MultiCore(Cluster):
         
         tag = (prog, tuple(argument), cwd, nb_submit)
         if isinstance(prog, str):
-            
     
             opt = {'cwd': cwd, 
                    'stdout':stdout,

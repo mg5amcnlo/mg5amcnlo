@@ -1132,6 +1132,47 @@ class Event(list):
             text = self.tag[start+8:stop]
             self.nloweight = NLO_PARTIALWEIGHT(text, self)
         
+    def parse_lo_weight(self):
+        """ """
+        if hasattr(self, 'loweight'):
+            return self.loweight
+        
+        start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
+        
+        if start != -1 != stop :
+            text = self.tag[start+8:stop]
+#<rscale>  3 0.29765919e+03</rscale>
+#<asrwt>0</asrwt>
+#<pdfrwt beam="1">  1       21 0.15134321e+00 0.29765919e+03</pdfrwt>
+#<pdfrwt beam="2">  1       21 0.38683649e-01 0.29765919e+03</pdfrwt>
+#<totfact> 0.17315115e+03</totfact>
+            self.loweight={}
+            for line in text.split('\n'):
+                line = line.replace('<', ' <').replace("'",'"')
+                if 'rscale' in line:
+                    _, nqcd, scale, _ = line.split()
+                    self.loweight['n_qcd'] = int(nqcd)
+                    self.loweight['ren_scale'] = float(scale)
+                elif '<pdfrwt beam="1"' in line:
+                    args = line.split()
+                    self.loweight['n_pdfrw1'] = int(args[2])
+                    npdf = self.loweight['n_pdfrw1']
+                    self.loweight['pdf_pdg_code1'] = [int(i) for i in args[3:3+npdf]]
+                    self.loweight['pdf_x1'] = [float(i) for i in args[3+npdf:3+2*npdf]]
+                    self.loweight['pdf_q1'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
+                elif '<pdfrwt beam="2"' in line:
+                    args = line.split()
+                    self.loweight['n_pdfrw2'] = int(args[2])
+                    npdf = self.loweight['n_pdfrw2']
+                    self.loweight['pdf_pdg_code2'] = [int(i) for i in args[3:3+npdf]]
+                    self.loweight['pdf_x2'] = [float(i) for i in args[3+npdf:3+2*npdf]]
+                    self.loweight['pdf_q2'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
+                elif 'totfact' in line:
+                    args = line.split() 
+                    self.loweight['tot_fact'] = float(args[1])
+        else:
+            return None
+        return self.loweight
             
     def parse_matching_scale(self):
         """Parse the line containing the starting scale for the shower"""
@@ -1695,7 +1736,8 @@ class Event(list):
         for particle in self:
             if particle.status != 1:
                 continue 
-            scale += particle.mass**2 + particle.momentum.pt**2
+            p = FourMomentum(particle)
+            scale += math.sqrt(p.mass_sqr + p.pt**2)
     
         return prefactor * scale
     

@@ -1564,3 +1564,71 @@ try:
 except:
     def apple_notify(subtitle, info_text, userInfo={}):
         return
+
+
+python_lhapdf=None
+def import_python_lhapdf(lhapdfconfig):
+    """load the python module of lhapdf return None if it can not be loaded"""
+
+    #save the result to have it faster and avoid the segfault at the second try if lhapdf is not compatible
+    global python_lhapdf
+    if python_lhapdf:
+        if python_lhapdf == -1:
+            return None
+        else:
+            return python_lhapdf
+        
+    use_lhapdf=False
+    try:
+        lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
+                                           stdout=subprocess.PIPE).stdout.read().strip()
+    except:
+        use_lhapdf=False
+    else:
+        try:
+            candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
+                            if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
+        except OSError:
+            candidates=[]
+        for candidate in candidates:
+            if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                    break
+                except ImportError:
+                    sys.path.pop(0)
+                    continue
+    if not use_lhapdf:
+        try:
+            candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
+                            if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
+        except OSError:
+            candidates=[]
+        for candidate in candidates:
+            if os.path.isfile(os.path.join(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                    break
+                except ImportError:
+                    sys.path.pop(0)
+                    continue
+        if not use_lhapdf:
+            try:
+                import lhapdf
+                use_lhapdf=True
+            except ImportError:
+                print 'fail'
+                logger.warning("Failed to access python version of LHAPDF: "\
+                                   "If the python interface to LHAPDF is available on your system, try "\
+                                   "adding its location to the PYTHONPATH environment variable and the"\
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
+        
+    if use_lhapdf:
+        python_lhapdf = lhapdf
+    else:
+        python_lhapdf = None
+    return python_lhapdf
