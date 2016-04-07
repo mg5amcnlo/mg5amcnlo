@@ -2097,18 +2097,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         
         # Start from the routine in the template
         replace_dict = copy.copy(matrix_element.rep_dict)
-        
-        # Write the definition of the coef_to_rank_map
-        coef_to_rank_map_definition = []
-        for rank in range(replace_dict['maxrank']+1):
-            start = q_polynomial.get_number_of_coefs_for_rank(rank-1)
-            end   = q_polynomial.get_number_of_coefs_for_rank(rank)-1
-            coef_to_rank_map_definition.append(
-'DATA (COEFTORANK_MAP(I),I=%(start)d,%(end)d)/%(n_entries)d*%(rank)d/'%
-{'start': start,'end': end,'n_entries': end-start+1,'rank': rank})
-        replace_dict['coef_to_rank_map_definition']=\
-                                          '\n'.join(coef_to_rank_map_definition)
-        
+                
         dp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
         mp_routine = open(os.path.join(self.template_dir,'polynomial.inc')).read()
         # The double precision version of the basic polynomial routines, such as
@@ -2133,11 +2122,19 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         # Initialize the polynomial routine writer
         poly_writer=q_polynomial.FortranPolynomialRoutines(
-                                         matrix_element.get_max_loop_rank(),
-                                         sub_prefix=replace_dict['proc_prefix'])
+            matrix_element.get_max_loop_rank(),
+            updater_max_rank = matrix_element.get_max_loop_vertex_rank(), 
+            sub_prefix=replace_dict['proc_prefix'],
+            proc_prefix=replace_dict['proc_prefix'],
+            mp_prefix='')
+        # Write the polynomial constant module common to all
+        writer.writelines(poly_writer.write_polynomial_constant_module()+'\n')
+
         mp_poly_writer=q_polynomial.FortranPolynomialRoutines(
-                    matrix_element.get_max_loop_rank(),coef_format='complex*32',
-                                   sub_prefix='MP_'+replace_dict['proc_prefix'])
+            matrix_element.get_max_loop_rank(),
+            updater_max_rank = matrix_element.get_max_loop_vertex_rank(),        
+            coef_format='complex*32', sub_prefix='MP_'+replace_dict['proc_prefix'],
+            proc_prefix=replace_dict['proc_prefix'], mp_prefix='MP_')
         # The eval subroutine
         subroutines.append(poly_writer.write_polynomial_evaluator())
         subroutines.append(mp_poly_writer.write_polynomial_evaluator())
@@ -2147,12 +2144,40 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         # The merging one for creating the loop coefficients
         subroutines.append(poly_writer.write_wl_merger())
         subroutines.append(mp_poly_writer.write_wl_merger())
-        # Now the udpate subroutines
         for wl_update in matrix_element.get_used_wl_updates():
-            subroutines.append(poly_writer.write_wl_updater(\
+            # We pick here the most appropriate way of computing the 
+            # tensor product depending on the rank of the two tensors.
+            # The various choices below come out from a careful comparison of
+            # the different methods using the valgrind profiler
+            if wl_update[0]==wl_update[1]==1 or wl_update[0]==0 or wl_update[1]==0:
+                # If any of the rank is 0, or if they are both equal to 1, 
+                # then we are better off using the full expanded polynomial, 
+                # and let the compiler optimize it.
+                subroutines.append(poly_writer.write_expanded_wl_updater(\
                                                      wl_update[0],wl_update[1]))
-            subroutines.append(mp_poly_writer.write_wl_updater(\
+                subroutines.append(mp_poly_writer.write_expanded_wl_updater(\
                                                      wl_update[0],wl_update[1]))
+            elif wl_update[0] >= wl_update[1]:
+                # If the loop polynomial is larger then we will filter and loop
+                # over the vertex coefficients first. The smallest product for
+                # which the routines below could be used is then 
+                # loop_rank_2 x vertex_rank_1
+                subroutines.append(poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=True))
+                subroutines.append(mp_poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=True))
+            else:
+                # This happens only when the rank of the updater (vertex coef)
+                # is larger than the one of the loop coef and none of them is
+                # zero. This never happens in renormalizable theories but it
+                # can happen in the HEFT ones or other effective ones. In this
+                # case the typicaly use of this routine if for the product
+                # loop_rank_1 x vertex_rank_2
+                subroutines.append(poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=False))
+                subroutines.append(mp_poly_writer.write_compact_wl_updater(\
+                  wl_update[0],wl_update[1],loop_over_vertex_coefs_first=False))            
+                
         writer.writelines('\n\n'.join(subroutines),
                                        context=self.get_context(matrix_element))
 

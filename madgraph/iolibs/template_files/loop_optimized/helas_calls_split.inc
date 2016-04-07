@@ -1,5 +1,9 @@
       SUBROUTINE %(proc_prefix)s%(bunch_name)s_%(bunch_number)d(P,NHEL,H,IC)
-C  
+C
+C Modules
+C
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+C 
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -18,8 +22,6 @@ C
 	  PARAMETER (NLOOPAMPS=%(nloopamps)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
       %(real_dp_format)s     ZERO
       PARAMETER (ZERO=0D0)
 	  %(real_mp_format)s     MP__ZERO

@@ -177,6 +177,7 @@ class FortranWriter(FileWriter):
                      '^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
                      '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
+                     '^module': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}
     single_indents = {'^else\s*$':-2,
                       '^else\s*if.+then\s*$':-2}

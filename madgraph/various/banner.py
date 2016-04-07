@@ -1544,7 +1544,11 @@ class RunCard(ConfigFile):
     
     def get_pdf_id(self, pdf):
         if pdf == "lhapdf":
-            return self["lhaid"]
+            lhaid = self["lhaid"]
+            if isinstance(lhaid, list):
+                return lhaid[0]
+            else:
+                return lhaid
         else: 
             return {'none': 0, 'mrs02nl':20250, 'mrs02nn':20270, 'cteq4_m': 19150,
                     'cteq4_l':19170, 'cteq4_d':19160, 'cteq5_m':19050, 
@@ -2190,7 +2194,7 @@ class MadLoopParam(ConfigFile):
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "6|1|3|2")
+        self.add_param("MLReductionLib", "6|1|2")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)

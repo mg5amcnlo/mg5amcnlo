@@ -1,5 +1,9 @@
       SUBROUTINE ML5_0_LOOP_CT_CALLS_1(P,NHEL,H,IC)
 C     
+C     Modules
+C     
+      USE ML5_0_POLYNOMIAL_CONSTANTS
+C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -16,8 +20,6 @@ C
       PARAMETER (NLOOPAMPS=129)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10,NLOOPWAVEFUNCS=93)
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       REAL*16     MP__ZERO

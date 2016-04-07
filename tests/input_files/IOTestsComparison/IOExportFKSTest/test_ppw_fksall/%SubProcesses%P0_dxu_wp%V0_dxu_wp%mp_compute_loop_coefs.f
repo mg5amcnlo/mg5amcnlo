@@ -11,6 +11,10 @@ C
 C     Process: d~ u > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
 C     Process: s~ c > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
 C     
+C     Modules
+C     
+      USE POLYNOMIAL_CONSTANTS
+C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -29,8 +33,6 @@ C
       PARAMETER (NEXTERNAL=3)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=3,NLOOPWAVEFUNCS=3)
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       INTEGER    NCOMB
       PARAMETER (NCOMB=12)
       REAL*16    ZERO
@@ -181,8 +183,12 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
       ENDDO
 
       DO I=0,3
-        PL(I,0)=(ZERO,ZERO)
+        PL(I,0)=CMPLX(ZERO,ZERO,KIND=16)
+        IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+          DP_PL(I,0)=DCMPLX(0.0D0,0.0D0)
+        ENDIF
       ENDDO
+
       DO I=1,MAXLWFSIZE
         DO J=0,LOOPMAXCOEFS-1
           DO K=1,MAXLWFSIZE

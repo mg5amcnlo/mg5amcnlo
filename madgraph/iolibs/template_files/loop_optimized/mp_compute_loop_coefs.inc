@@ -8,6 +8,10 @@ c and external lines W(0:6,NEXTERNAL)
 C 
 %(process_lines)s
 C  
+C Modules
+C
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -28,8 +32,6 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
 	  %(real_mp_format)s    ZERO
@@ -214,8 +216,12 @@ DO I=1,NEXTERNAL
 ENDDO
 
 DO I=0,3
-  PL(I,0)=(ZERO,ZERO)
+  PL(I,0)=CMPLX(ZERO,ZERO,KIND=16)
+  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+    DP_PL(I,0)=DCMPLX(0.0d0,0.0d0)
+  ENDIF
 ENDDO
+
 ## if(AmplitudeReduction){
 IF (.NOT.SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
 ## }

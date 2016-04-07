@@ -5488,7 +5488,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'lhapdf5':['arXiv:0605240'],
                           'hepmc':['CPC 134 (2001) 41-46'],
                           'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
-                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:XXXX.YYYYY'],
+                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
                           'oneloop':['arXiv:1007.4716']}
 
         if args[0] in advertisements:
@@ -6318,9 +6318,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if key in self.options_madgraph:
                         self.history.append('set %s %s' % (key, self.options[key]))
         
-        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
-        if warnings:
-            logger.warning(warnings)
+#        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+#        if warnings:
+#            logger.warning(warnings)
 
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
