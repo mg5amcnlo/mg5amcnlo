@@ -466,9 +466,9 @@ class EventFile(object):
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000, "maxevent":float("inf")}
+        opt= {"print_step": 5000, "maxevent":float("inf"),'no_output':False}
         opt.update(opts)
-        
+        start = time.time()
         nb_fct = len(fcts)
         out = []
         for i in range(nb_fct):
@@ -477,13 +477,15 @@ class EventFile(object):
         nb_event = 0
         for event in self:
             nb_event += 1
-            if opt["print_step"] and nb_event % opt["print_step"] == 0:
+            if opt["print_step"] and (nb_event % opt["print_step"]) == 0:
                 if hasattr(self,"len"):
-                    logger.info("currently at %s/%s event" % (nb_event, self.len))
+                    print("currently at %s/%s event [%is]" % (nb_event, self.len, time.time()-start))
                 else:
-                    logger.info("currently at %s event" % nb_event)
+                    print("currently at %s event [%is]" % (nb_event, time.time()-start))
             for i in range(nb_fct):
-                out[i].append(fcts[i](event))
+                value = fcts[i](event)
+                if not opts['no_output']:
+                    out[i].append(value)
             if nb_event > opt['maxevent']:
                 break
         if nb_fct == 1:
@@ -491,6 +493,62 @@ class EventFile(object):
         else:
             return out
 
+    
+    def update_HwU(self, hwu, fct, name='lhe', keep_wgt=False, maxevents=1e99):
+        """take a HwU and add this event file for the function fct"""
+                
+        if not isinstance(hwu, list):
+            hwu = [hwu]
+
+        class HwUUpdater(object):
+            
+            def __init__(self, fct, keep_wgt):
+                
+                self.fct = fct
+                self.first = True
+                self.keep_wgt = keep_wgt
+                
+            def add(self, event):
+
+                value = self.fct(event)
+                # initialise the curve for the first call
+                if self.first:
+                    for h in hwu:
+                        # register the variables
+                        if isinstance(value, dict):
+                            h.add_line(value.keys())
+                        else:
+                        
+                            h.add_line(name)
+                            if self.keep_wgt is True:
+                                event.parse_reweight()
+                                h.add_line(['%s_%s' % (name, key)
+                                                    for key in event.reweight_data])
+                            elif self.keep_wgt:
+                                h.add_line(self.keep_wgt.values())                            
+                    self.first = False
+                # Fill the histograms
+                for h in hwu:
+                    if isinstance(value, tuple):
+                        h.addEvent(value[0], value[1])
+                    else:
+                        h.addEvent(value,{name:event.wgt})
+                        if self.keep_wgt:
+                            event.parse_reweight()
+                            if self.keep_wgt is True:
+                                data = dict(('%s_%s' % (name, key),event.reweight_data[key])
+                                                    for key in event.reweight_data)
+                                h.addEvent(value, data)
+                            else:
+                                data = dict(( value,event.reweight_data[key])
+                                                    for key,value in self.keep_wgt.items())
+                                h.addEvent(value, data)
+                                
+                                      
+        
+        self.apply_fct_on_event(HwUUpdater(fct,keep_wgt).add, no_output=True,maxevent=maxevents)
+        return hwu
+    
     
     def create_syscalc_data(self, out_path, pythia_input=None):
         """take the lhe file and add the matchscale from the pythia_input file"""
@@ -586,7 +644,7 @@ class MultiEventFile(EventFile):
         self.scales = []
         if start_list:
             for p in start_list:
-                self.add(p)
+                self.add(p,None,None,None)
         self._configure = False
         
     def add(self, path, cross, error, across):
@@ -936,7 +994,7 @@ class Event(list):
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
             pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
-            data = pattern.findall(self.tag)
+            data = pattern.findall(self.tag[start:stop])
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
@@ -1502,8 +1560,9 @@ class Event(list):
         scale = 0 
         for particle in self:
             if particle.status != 1:
-                continue 
-            scale += particle.mass**2 + particle.momentum.pt**2
+                continue
+            p=FourMomentum(particle)
+            scale += math.sqrt(p.mass_sqr + p.pt**2)
     
         return prefactor * scale
     
@@ -1593,6 +1652,7 @@ class FourMomentum(object):
         """return the mass"""    
         return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
 
+    @property
     def mass_sqr(self):
         """return the mass square"""    
         return self.E**2 - self.px**2 - self.py**2 - self.pz**2
