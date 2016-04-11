@@ -45,6 +45,9 @@ parser.add_option("","--web", action="store_true", default=False, dest='web', \
                  help='force to be in secure mode')
 parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
                  help='force to launch debug mode')
+parser.add_option("-m", "--mode", dest="plugin",
+                  help="Define some additional command provide by a PLUGIN")
+                               
 (options, args) = parser.parse_args()
 if len(args) == 0:
     args = ''
@@ -119,6 +122,22 @@ except:
     pass
 import madgraph.interface.master_interface as interface
 
+if options.plugin:
+    if not os.path.exists(os.path.join(root_path, 'PLUGIN', options.plugin)):
+        print "ERROR: %s is not present in the PLUGIN directory. Please install it first"
+    __import__('PLUGIN.%s' % options.plugin)
+    plugin = sys.modules['PLUGIN.%s' % options.plugin]
+    if not plugin.new_interface:
+        logging.warning("Plugin: %s do not define dedicated interface and should be used without the --mode options" % options.plugin)
+        sys.exit()
+    cmd_line = plugin.new_interface(mgme_dir = options.mgme_dir)
+elif options.web:
+    cmd_line = interface.MasterCmdWeb()
+else: 
+    cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
+
+
+
 # Call the cmd interface main loop
 try:
     if options.file or args:
@@ -128,14 +147,12 @@ try:
         else:
             input_file = os.path.realpath(options.file)
         if options.web:
-            cmd_line = interface.MasterCmdWeb()
             cmd_line.debug_output = os.path.join(os.path.dirname(input_file),'generation.log')
             cmd_line.use_rawinput = False
             cmd_line.haspiping = False
             cmd_line.run_cmd('import ' + input_file)
             cmd_line.run_cmd('quit')
         else:
-            cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
             cmd_line.use_rawinput = False
             cmd_line.haspiping = False
             cmd_line.run_cmd('import ' + input_file)
@@ -147,10 +164,8 @@ try:
                 os.environ['MADGRAPH_DATA'] = root_path
                 os.environ['MADGRAPH_BASE'] = os.path.join(root_path,'input')
                 os.environ['REMOTE_USER'] = 'webmode'
-            cmd_line = interface.MasterCmdWeb()
             cmd_line.cmdloop()
         else:
-            cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
             cmd_line.cmdloop()
 except KeyboardInterrupt:
     print 'writting history and quit on KeyboardInterrupt' 
