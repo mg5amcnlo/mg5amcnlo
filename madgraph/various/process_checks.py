@@ -613,7 +613,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 self.mg_root, export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
-            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+            FortranExporter.generate_subprocess_directory(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                     for c in l]))
@@ -1156,7 +1156,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             FortranExporter = exporter_class(self.mg_root, export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
-            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+            FortranExporter.generate_subprocess_directory(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                 for c in l]))
@@ -4277,11 +4277,11 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
                 # and the cmd._curr_fortran_model which what we specified, so 
                 # we must make sure to restore them after it finishes
                 orig_model = options['cmd']._curr_model
-                orig_fortran_model = options['cmd']._curr_fortran_model
+                orig_helas_model = options['cmd']._curr_helas_model
                 options['cmd'].do_compute_widths(command, evaluator.full_model)
                 # Restore the models
                 options['cmd']._curr_model = orig_model
-                options['cmd']._curr_fortran_model = orig_fortran_model
+                options['cmd']._curr_helas_model = orig_helas_model
                 # Restore the width of the model passed in argument since
                 # MadWidth will automatically update the width
                 evaluator.full_model.set_parameters_and_couplings(

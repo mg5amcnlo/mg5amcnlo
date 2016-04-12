@@ -292,11 +292,11 @@ class IOExportPythia8Test(IOTests.IOTestManager, test_file_writers.CheckFileCrea
 
         self.mycppwriter = helas_call_writer.CPPUFOHelasCallWriter(self.mymodel)
     
-        self.pythia8_exporter = export_cpp.ProcessExporterPythia8(\
+        self.pythia8_exporter = export_cpp.OneProcessExporterPythia8(\
             self.mymatrixelement, self.mycppwriter,
             process_string = "q q~ > q q~")
         
-        self.cpp_exporter = export_cpp.ProcessExporterCPP(\
+        self.cpp_exporter = export_cpp.OneProcessExporterCPP(\
             self.mymatrixelement, self.mycppwriter,
             process_string = "q q~ > q q~")
 
@@ -728,7 +728,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 }  // end namespace Pythia8
 """ % misc.get_pkg_info()
 
-        exporter = export_cpp.ProcessExporterPythia8(self.mymatrixelement,
+        exporter = export_cpp.OneProcessExporterPythia8(self.mymatrixelement,
         self.mycppwriter, process_string = "q q~ > q q~")
 
         exporter.write_process_cc_file(\
@@ -758,7 +758,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 
         mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
-        exporter = export_cpp.ProcessExporterPythia8(\
+        exporter = export_cpp.OneProcessExporterPythia8(\
             mymatrixelement, self.mycppwriter,
             process_string = "q q > six")
 
@@ -1281,7 +1281,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
         subprocess_group = subproc_groups[0]
         matrix_elements = subprocess_group.get('matrix_elements')
 
-        exporter = export_cpp.ProcessExporterPythia8(matrix_elements,
+        exporter = export_cpp.OneProcessExporterPythia8(matrix_elements,
                                                  self.mycppwriter)
 
         # Test .h file output
@@ -1320,7 +1320,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
         matrix_element.get('matrix_elements')[0].set('has_mirror_process',
                                                      True)
 
-        exporter = export_cpp.ProcessExporterCPP(matrix_element,
+        exporter = export_cpp.OneProcessExporterCPP(matrix_element,
                                                  self.mycppwriter)
 
         exporter.write_process_cc_file(\
@@ -2174,9 +2174,9 @@ class IOExportMatchBox(unittest.TestCase,
 
         mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
-        exporter = export_cpp.ProcessExporterMatchbox( mymatrixelement, self.mycppwriter, process_string="q q > six")
+        exporter = export_cpp.OneProcessExporterMatchbox( mymatrixelement, self.mycppwriter, process_string="q q > six")
         
-        self.assertRaises(export_cpp.ProcessExporterCPP.ProcessExporterCPPError,
+        self.assertRaises(export_cpp.OneProcessExporterCPP.ProcessExporterCPPError,
                           exporter.write_process_cc_file,
                           writers.CPPWriter(self.give_pos('test.cc')))
 
@@ -2204,7 +2204,7 @@ class IOExportMatchBox(unittest.TestCase,
         matrix_element.get('matrix_elements')[0].set('has_mirror_process',
                                                      True)
 
-        exporter = export_cpp.ProcessExporterMatchbox(matrix_element,
+        exporter = export_cpp.OneProcessExporterMatchbox(matrix_element,
                                                  self.mycppwriter)
 
         exporter.write_process_cc_file(\

@@ -79,6 +79,7 @@ class ProcessExporterFortran(object):
                         'export_format':'madevent', 'mp': False,
                         'v5_model': True
                         }
+    grouped_mode = False
 
     def __init__(self, mgme_dir = "", dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
@@ -103,11 +104,11 @@ class ProcessExporterFortran(object):
         calls = 0
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
             for (group_number, me_group) in enumerate(matrix_elements):
-                calls = calls + self.generate_subprocess_directory_v4(\
+                calls = calls + self.generate_subprocess_directory(\
                                           me_group, fortran_model, group_number)
         else:
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
-                calls = calls + self.generate_subprocess_directory_v4(\
+                calls = calls + self.generate_subprocess_directory(\
                                                    me, fortran_model, me_number)    
                         
         return calls    
@@ -458,9 +459,9 @@ class ProcessExporterFortran(object):
     #  
 
     #===========================================================================
-    # generate_subprocess_directory_v4
+    # generate_subprocess_directory
     #===========================================================================
-    def generate_subprocess_directory_v4(self, matrix_element,
+    def generate_subprocess_directory(self, matrix_element,
                                          fortran_model,
                                          me_number):
         """Routine to generate a subprocess directory (for inheritance)"""
@@ -1875,10 +1876,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         self.set_compiler(compiler)
 
     #===========================================================================
-    # generate_subprocess_directory_v4
+    # generate_subprocess_directory
     #===========================================================================
-    def generate_subprocess_directory_v4(self, matrix_element,
-                                         fortran_model):
+    def generate_subprocess_directory(self, matrix_element,
+                                         fortran_model, number):
         """Generate the Pxxxxx directory for a subprocess in MG4 standalone,
         including the necessary matrix.f and nexternal.inc files"""
 
@@ -2398,7 +2399,7 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                 files.cp(model.restrict_card, out_path)
 
     #===========================================================================
-    # generate_subprocess_directory_v4 
+    # generate_subprocess_directory 
     #===========================================================================        
     def copy_python_file(self):
         """copy the python file require for the Template"""
@@ -2607,15 +2608,15 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         self.make_model_symbolic_link()
 
     #===========================================================================
-    # generate_subprocess_directory_v4
+    # generate_subprocess_directory
     #===========================================================================
-    def generate_subprocess_directory_v4(self, matrix_element,
+    def generate_subprocess_directory(self, matrix_element,
                                          fortran_model,number):
         """Generate the Pxxxxx directory for a subprocess in MG4 MadWeight format,
         including the necessary matrix.f and nexternal.inc files"""
 
         cwd = os.getcwd()
-
+        misc.sprint(type(matrix_element))
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = os.path.join(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
@@ -3114,7 +3115,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
 
     #===========================================================================
-    # generate_subprocess_directory_v4 
+    # generate_subprocess_directory 
     #===========================================================================        
     def copy_python_file(self):
         """copy the python file require for the Template"""
@@ -3223,9 +3224,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
 
     #===========================================================================
-    # generate_subprocess_directory_v4 
+    # generate_subprocess_directory 
     #===========================================================================
-    def generate_subprocess_directory_v4(self, matrix_element,
+    def generate_subprocess_directory(self, matrix_element,
                                          fortran_model,
                                          me_number):
         """Generate the Pxxxxx directory for a subprocess in MG4 madevent,
@@ -4456,11 +4457,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     MadEvent subprocess group format."""
 
     matrix_file = "matrix_madevent_group_v4.inc"
-
+    grouped_mode = False
     #===========================================================================
-    # generate_subprocess_directory_v4
+    # generate_subprocess_directory
     #===========================================================================
-    def generate_subprocess_directory_v4(self, subproc_group,
+    def generate_subprocess_directory(self, subproc_group,
                                          fortran_model,
                                          group_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
@@ -6313,6 +6314,7 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
       'cluster_local_path': cmd.options['cluster_local_path']
       }
 
+
     if output_type.startswith('madloop'):        
         import madgraph.loop.loop_exporters as loop_exporters
         if os.path.isdir(os.path.join(cmd._mgme_dir, 'Template/loop_material')):
@@ -6350,6 +6352,7 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
             amcatnlo_options['export_format']='FKS5_optimized'
         return ExporterClass(cmd._mgme_dir, cmd._export_dir, amcatnlo_options)
 
+
     # Then the default tree-level output
     elif output_type=='default':
         assert group_subprocesses in [True, False]
@@ -6366,7 +6369,9 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
         format = cmd._export_format #shortcut
 
         if format in ['standalone_msP', 'standalone_msF', 'standalone_rw']:
-            opt['sa_symmetry'] = True        
+            opt['sa_symmetry'] = True      
+        elif format == 'plugin':
+            opt['sa_symmetry'] = cmd._export_plugin['sa_symmetry']
     
         loop_induced_opt = dict(opt)
         loop_induced_opt.update(MadLoop_SA_options)
@@ -6409,6 +6414,8 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
                                                                             opt)
         elif cmd._export_format in ['madweight']:
             return ProcessExporterFortranMW(cmd._mgme_dir, cmd._export_dir, opt)
+        elif format == 'plugin':
+            return cmd._export_plugin['exporter_class'](cmd._mgme_dir, cmd._export_dir, opt)
         else:
             raise Exception, 'Wrong export_v4 format'
     else:
@@ -6425,11 +6432,11 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
     MadEvent subprocess group format."""
 
     matrix_file = "matrix_madweight_group_v4.inc"
-
+    grouped_mode = True
     #===========================================================================
-    # generate_subprocess_directory_v4
+    # generate_subprocess_directory
     #===========================================================================
-    def generate_subprocess_directory_v4(self, subproc_group,
+    def generate_subprocess_directory(self, subproc_group,
                                          fortran_model,
                                          group_number):
         """Generate the Pn directory for a subprocess group in MadEvent,

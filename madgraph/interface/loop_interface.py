@@ -490,6 +490,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
     def ML5export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
+        if not self._curr_helas_model:
+            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before exporting"""
 
@@ -535,8 +537,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if self._export_format in self.supported_ML_format:
             for me in matrix_elements:
                 calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
-                            me, self._curr_fortran_model)
+                        self._curr_exporter.generate_subprocess_directory(\
+                            me, self._curr_helas_model)
             # If all ME's do not share the same maximum loop vertex rank and the
             # same loop maximum wavefunction size, we need to set the maximum
             # in coef_specs.inc of the HELAS Source. The SubProcesses/P* directory
@@ -561,7 +563,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     logger.info("Creating new file %s" % filename)
                 calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
-                    me, self._curr_fortran_model)
+                    me, self._curr_helas_model)
                 
         cpu_time2 = time.time() - cpu_time1
 

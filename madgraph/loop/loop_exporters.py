@@ -671,13 +671,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 'MadEventOutput': MadEventOutput}
 
     #===========================================================================
-    # generate_subprocess_directory_v4
+    # generate_subprocess_directory
     #===========================================================================
     def generate_loop_subprocess(self, matrix_element, fortran_model,
                           group_number = None, proc_id = None, config_map=None):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
         including the necessary loop_matrix.f, born_matrix.f and include files.
-        Notice that this is too different from generate_subprocess_directory_v4
+        Notice that this is too different from generate_subprocess_directory
         so that there is no point reusing this mother function.
         The 'group_number' and 'proc_id' options are only used for the LoopInduced
         MadEvent output and only to specify the ME_identifier and the P* 
@@ -1010,7 +1010,7 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         writer.writelines(proc_include)
                                 
-    def generate_subprocess_directory_v4(self, matrix_element, fortran_model):
+    def generate_subprocess_directory(self, matrix_element, fortran_model):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
         
@@ -2939,7 +2939,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         # care of MadLoop virtuals initialization
         LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
         
-    def generate_subprocess_directory_v4(self, subproc_group,
+    def generate_subprocess_directory(self, subproc_group,
                                                     fortran_model,group_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
@@ -2955,7 +2955,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
           config_map = subproc_group.get('diagram_maps')[ime])
         
         # Then generate the MadEvent files
-        export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4(
+        export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory(
                                  self, subproc_group,fortran_model,group_number)
         
         return calls
@@ -3103,7 +3103,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         # care of MadLoop virtuals initialization
         LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
 
-    def generate_subprocess_directory_v4(self, matrix_element, fortran_model, me_number):
+    def generate_subprocess_directory(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
@@ -3114,7 +3114,7 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         
         
         # First generate the MadEvent files
-        calls += export_v4.ProcessExporterFortranME.generate_subprocess_directory_v4(
+        calls += export_v4.ProcessExporterFortranME.generate_subprocess_directory(
                                  self, matrix_element, fortran_model, me_number)
         return calls
 

@@ -1457,6 +1457,22 @@ This will take effect only in a NEW terminal
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
+        elif args:
+            # check for PLUGIN format
+            for plug in os.listdir(pjoin(MG5DIR, 'PLUGIN')):
+                if os.path.exists(pjoin(MG5DIR, 'PLUGIN', plug, '__init__.py')):
+                    __import__('PLUGIN.%s' % plug)
+                    plugin = sys.modules['PLUGIN.%s' % plug]                
+                    if hasattr(plugin, 'new_output'):
+                        if args[0] in plugin.new_output:
+                            self._export_format = 'plugin'
+                            self._export_plugin = plugin.new_output[args[0]]
+                            logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
+                            args.pop(0)
+                            break
+            else:
+                misc.sprint("Keep default")
+                self._export_format = default
         else:
             self._export_format = default
 
@@ -2720,8 +2736,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
-    _curr_fortran_model = None
-    _curr_cpp_model = None
+    _curr_helas_model = None
     _curr_exporter = None
     _done_export = False
     _curr_decaymodel = None
@@ -4875,9 +4890,6 @@ This implies that with decay chains:
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
-                self._curr_fortran_model = \
-                      helas_call_writers.FortranHelasCallWriter(\
-                                                               self._curr_model)
             else:
                 # avoid loading the qcd/qed model twice
                 if (args[1].startswith('loop_qcd_qed_sm') or\
@@ -4931,13 +4943,6 @@ This implies that with decay chains:
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
                         return
-                
-                self._curr_fortran_model = \
-                      helas_call_writers.FortranUFOHelasCallWriter(\
-                                                               self._curr_model)
-                self._curr_cpp_model = \
-                      helas_call_writers.CPPUFOHelasCallWriter(\
-                                                               self._curr_model)
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -5048,10 +5053,6 @@ This implies that with decay chains:
         """ import the UFO model """
 
         self._curr_model = import_ufo.import_model(model_name)
-        self._curr_fortran_model = \
-                helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
-        self._curr_cpp_model = \
-                helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
 
     def process_model(self):
         """Set variables _particle_names and _couplings for tab
@@ -6458,15 +6459,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self._curr_model.get('parameters'):
                 # This is a UFO model
                 self._model_v4_path = None
-                self._curr_fortran_model = \
-                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
             else:
                 # This is a v4 model
                 self._model_v4_path = import_v4.find_model_path(\
                     self._curr_model.get('name').replace("_v4", ""),
                     self._mgme_dir)
-                self._curr_fortran_model = \
-                  helas_call_writers.FortranHelasCallWriter(self._curr_model)
 
             # Do post-processing of model
             self.process_model()
@@ -6492,14 +6489,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         self._model_v4_path = import_v4.find_model_path(\
                                    model.get('name').replace("_v4", ""),
                                    self._mgme_dir)
-                        self._curr_fortran_model = \
-                                helas_call_writers.FortranHelasCallWriter(\
-                                                              model)
                     else:
                         self._model_v4_path = None
-                        self._curr_fortran_model = \
-                                helas_call_writers.FortranUFOHelasCallWriter(\
-                                                              model)
                     # If not exceptions from previous steps, set
                     # _curr_amps and _curr_model
                     self._curr_amps = amps
@@ -6776,8 +6767,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self._curr_fortran_model = None
-            self._curr_cpp_model = None
+            self._curr_helas_model = None
             self._curr_exporter = None
             self._done_export = False
             import_ufo._import_once = []
@@ -7039,6 +7029,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
         config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
+        if self._export_format == 'plugin':
+            config['plugin'] = self._export_plugin
+            
         options = config[self._export_format]
         # check
         if os.path.realpath(self._export_dir) == os.getcwd():
@@ -7071,7 +7064,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # set to 'Auto' and propagate this choice down the line:
         if self.options['group_subprocesses'] in [True, False]:
             group_processes = self.options['group_subprocesses']
-        elif self.options['group_subprocesses'] == 'Auto':
+        elif self.options['group_subprocesses'] == 'Auto' and self._export_format != 'plugin':
             # By default we set it to True
             group_processes = True
             # But we turn if off for decay processes which
@@ -7097,6 +7090,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 ||   -> add process <proc_def>
 """)
                     group_processes = False
+        elif self.options['group_subprocesses'] == 'Auto' and self._export_format == 'plugin':
+            group_processes = options['group_subprocesses']
 
         #Exporter + Template
         if options['exporter'] == 'v4':
@@ -7104,8 +7099,12 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                              group_subprocesses=group_processes)
             if options['output'] == 'Template':
                 self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
-        if  options['exporter'] == 'cpp' and options['output'] == 'Template':
-            export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
+        
+        if options['exporter'] == 'cpp':
+            self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes)
+             
+            if options['output'] == 'Template':
+                self._curr_exporter.setup_cpp_standalone_dir(self._curr_model)
 
         if options['output'] == 'dir' and not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
@@ -7137,6 +7136,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
     def export(self, nojpeg = False, main_file_name = "", group_processes=True, 
                                                                        args=[]):
         """Export a generated amplitude to file."""
+
+        # Define the helas call  writer
+        if self._export_format in ['pythia8', 'matchbox_cpp', 'standalone_cpp'] or\
+            (self._export_format == 'plugin' and self._export_plugin['exporter'] == 'cpp'):
+            self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+        else:
+            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
         if version:
@@ -7178,9 +7184,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     matrix_elements_opts = {'optimized_output':
                                        self.options['loop_optimized_output']}
                     if non_dc_amps:
+
+                        criteria = self._export_format
+                        if criteria == 'plugin':
+                            criteria = self._export_plugin['group_mode']
                         subproc_groups.extend(\
                           group_subprocs.SubProcessGroup.group_amplitudes(\
-                          non_dc_amps, self._export_format, 
+                          non_dc_amps,criteria , 
                                      matrix_elements_opts=matrix_elements_opts))
 
                     if dc_amps:
@@ -7245,7 +7255,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                    'standalone_msP', 'standalone_msF', 'standalone_rw',
                                    'matchbox_cpp', 'madweight', 'matchbox']:
             path = pjoin(path, 'SubProcesses')
-
+        elif self._export_format == 'plugin':
+            if self._export_plugin['output'] == 'Template':
+                path = pjoin(path, 'SubProcesses')
+            
+            
         cpu_time1 = time.time()
 
         # First treat madevent and pythia8 exports, where we need to
@@ -7254,7 +7268,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # MadEvent
         if self._export_format == 'madevent':
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
-                                                 self._curr_fortran_model)
+                                                         self._curr_helas_model)
             
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
@@ -7270,21 +7284,21 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     pass
 
         # Pythia 8
-        if self._export_format == 'pythia8':
+        elif self._export_format == 'pythia8':
             # Output the process files
             process_names = []
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
                 for (group_number, me_group) in enumerate(self._curr_matrix_elements):
-                    exporter = export_cpp.generate_process_files_pythia8(\
-                            me_group.get('matrix_elements'), self._curr_cpp_model,
+                    exporter = self._curr_exporter.generate_process_directory(\
+                            me_group.get('matrix_elements'), self._curr_helas_model,
                             process_string = me_group.get('name'),
-                            process_number = group_number, path = path,
+                            process_number = group_number,
                             version = version)
                     process_names.append(exporter.process_name)
             else:
-                exporter = export_cpp.generate_process_files_pythia8(\
-                            self._curr_matrix_elements, self._curr_cpp_model,
-                            process_string = self._generate_info, path = path)
+                exporter =  self._curr_exporter.generate_process_directory(\
+                            self._curr_matrix_elements, self._curr_helas_model,
+                            process_string = self._generate_info, version = version)
                 process_names.append(exporter.process_file_name)
 
             # Output the model parameter and ALOHA files
@@ -7293,44 +7307,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
             # Generate the main program file
             filename, make_filename = \
-                      export_cpp.generate_example_file_pythia8(path,
+                      self._curr_exporter.generate_example_file_pythia8(path,
                                                                model_path,
                                                                process_names,
                                                                exporter,
                                                                main_file_name)
-
-        # Pick out the matrix elements in a list
+                      
+                      
         matrix_elements = self._curr_matrix_elements.get_matrix_elements()
-
-        # Fortran MadGraph MadWeight
-        if self._export_format == 'madweight':
-                        
-            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
-                #remove the merging between electron and muon
-                self._curr_matrix_elements = self._curr_matrix_elements.split_lepton_grouping() 
-                
-                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
-                    calls = calls + \
-                         self._curr_exporter.generate_subprocess_directory_v4(\
-                                me_group, self._curr_fortran_model,
-                                group_number)
-            else:
-                for me_number, me in \
-                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
-                    calls = calls + \
-                            self._curr_exporter.generate_subprocess_directory_v4(\
-                                me, self._curr_fortran_model, me_number)
-
-        # Fortran MadGraph5_aMC@NLO Standalone
-        if self._export_format in ['standalone', 'standalone_msP', 
-                                   'standalone_msF', 'standalone_rw', 'matchbox']:
-            for me in matrix_elements[:]:
-                new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
-                            me, self._curr_fortran_model)
-                if not new_calls:
-                    matrix_elements.remove(me)
-                calls = calls + new_calls
-
         # Just the matrix.f files
         if self._export_format == 'matrix':
             for me in matrix_elements:
@@ -7342,15 +7326,32 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     logger.info("Creating new file %s" % filename)
                 calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
-                    me, self._curr_fortran_model)
+                    me, self._curr_helas_model)
+        elif self._export_format in ['madevent', 'pythia8']:
+            pass
+        # grouping mode
+        elif isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList) and\
+            self._curr_exporter.grouped_mode:
+            if self._export_format == 'madweight' or\
+               (self._export_format == 'plugin'  and self._export_plugin['group_mode'] == 'madweight'):
+                self._curr_matrix_elements = self._curr_matrix_elements.split_lepton_grouping()
+                matrix_elements = self._curr_matrix_elements.get_matrix_elements()
 
-        # C++ standalone
-        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
-            for me in matrix_elements:
-                export_cpp.generate_subprocess_directory_standalone_cpp(\
-                              me, self._curr_cpp_model,
-                              path = path,
-                              format=self._export_format)
+            for me_number, me in enumerate(self._curr_matrix_elements):
+                calls = calls + \
+                    self._curr_exporter.generate_subprocess_directory(\
+                        me, self._curr_helas_model, me_number)               
+        
+        # ungroup mode
+        else:
+            for nb,me in enumerate(matrix_elements[:]):
+                new_calls = self._curr_exporter.generate_subprocess_directory(\
+                            me, self._curr_helas_model, nb)
+                if  isinstance(new_calls, int):
+                    if new_calls ==0:
+                        matrix_elements.remove(me)
+                    else:
+                        calls = calls + new_calls
 
         cpu_time2 = time.time() - cpu_time1
 
@@ -7379,6 +7380,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
+        matrix_elements = self._curr_matrix_elements.get_matrix_elements()
         self._curr_amps = diagram_generation.AmplitudeList(\
                [me.get('base_amplitude') for me in \
                 matrix_elements])
@@ -7556,8 +7558,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 model = import_ufo.import_model(modelname, decay=True)
         else:
             self._curr_model = model
-            self._curr_fortran_model = \
-                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         if not isinstance(model, model_reader.ModelReader):
             model = model_reader.ModelReader(model)
 
