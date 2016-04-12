@@ -3428,6 +3428,26 @@ Please install this tool with the following MG5_aMC command:
         'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
 
         ########################################################################
+        
+        # ----------------------------------------------------------------------
+        # --- Olivier you can remove the couple lines between these dashes -----
+        # ----------------------------------------------------------------------
+        # To make sure the lha convention match Pythia8 expectation, we force
+        # it to be 4. This means that we rescan completely the event file and
+        # make sure the weights *average* to the cross-section.
+        evt_file = pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz")
+        strat_m4_evt_file = pjoin(self.me_dir,"Events", 
+                          self.run_name,"unweighted_events_lha_strat_m4.lhe.gz")
+        PY8_Card.subruns[0].systemSet('Beams:LHEF', strat_m4_evt_file)
+        logger.debug("Forcing lhe output to follow lha strategy '-4'...")
+        # Reuse the output with strat -4 if already existing.
+        if os.path.exists(strat_m4_evt_file):
+            lhe_parser.EventFile(strat_m4_evt_file).enforce_lha_strategy(
+                                               strat_m4_evt_file,-4,force=False)
+        else:
+            lhe_parser.EventFile(evt_file).enforce_lha_strategy(
+                                                strat_m4_evt_file,-4,force=True)            
+        # ----------------------------------------------------------------------
 
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)
@@ -3476,18 +3496,11 @@ Please install this tool with the following MG5_aMC command:
 ################################################################################
 #### Uncomment the lines below so as *not* to output an hepMC file #############
 ################################################################################
-        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
-                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
-        open(HepMC_event_output,'w').write('DUMMY')
+#        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
+#                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
+#        open(HepMC_event_output,'w').write('DUMMY')
 ################################################################################
         wrapper.write(exe_cmd)
-
-        # To make sure the lha convention match Pythia8 expectation, we force
-        # it to be 4. This means that we rescan completely the event file and
-        # make sure the weights *average* to the cross-section.
-        logger.debug("Forcing lhe output to follow lha strategy '-4'...")
-        evt_file = pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz")
-        lhe_parser.EventFile(evt_file).enforce_lha_strategy(evt_file,-4,force=True)
         
         wrapper.close()
         # Set it as executable
