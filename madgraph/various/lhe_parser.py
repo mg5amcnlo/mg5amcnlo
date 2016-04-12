@@ -269,9 +269,68 @@ class EventFile(object):
         self.seek(0)
         return all_wgt, cross, nb_event
             
+    def enforce_lha_strategy(self, outputpath, lha_strategy, force=False):
+        """ Modifies the lhe file to conform to the chosen input lha strategy."""
+        
+        banner = self.get_banner()
+        
+        if not force:
+            if banner.get_lha_strategy()==lha_strategy:
+                # Required strategy already being used. Do nothing.
+                return
+        
+        if lha_strategy not in [3,-3,-4,4]:
+            raise Exception, "Error in lhe_parser, function 'lha_strategy' "+\
+                   "cannot take argument %d but only [3,-3,-4,4]."%lha_strategy
     
-    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, event_target=0, 
-                 log_level=logging.INFO):
+        self.seek(0)
+        nb_event           = 0
+        first_wgt          = None
+        xsec_from_all_wgts = 0.0
+        for event in self:
+            nb_event += 1
+            wgt      = event.wgt
+            xsec_from_all_wgts += event.wgt  
+            if not first_wgt:
+                first_wgt = event.wgt
+            if event.wgt< 0.0 and lha_strategy>0:
+                raise Exception, 'Negative weights can only be supported by'+\
+                                 ' negative lha strategies, not %d'%lha_strategy
+            if event.wgt!=first_wgt and abs(lha_strategy)==3:
+                raise Exception, 'Cannot use lha_strategy +/-3 since event file'+\
+                      ' is not completely unweighted. Please unweight it first.'            
+        
+        # Now determine the proper normalization:
+        if abs(lha_strategy)==3:
+            norm = None
+        elif abs(lha_strategy)==4:
+            norm = nb_event * ( banner.get_cross() / xsec_from_all_wgts)
+
+        self.seek(0)
+        with misc.TMP_directory() as tmp_dir:
+            tmp_path = pjoin(tmp_dir,os.path.basename(outputpath))
+            outfile = EventFile(tmp_path, "w")
+            banner.set_lha_strategy(lha_strategy)
+            banner.write(outfile, close_tag=False)
+            for event in self:
+                # First take care of rescaling the central weight
+                orignal_ctrl_wgt = event.wgt
+                if norm is None:
+                    event.wgt = 1.0
+                else:
+                    event.wgt = norm*orignal_ctrl_wgt   
+                # And now apply the same rescaling to all reweighting information              
+                original_wgts = dict(event.parse_reweight())
+                for wgt_id, value in original_wgts.items():
+                    event.reweight_data[wgt_id] = value * (event.wgt / orignal_ctrl_wgt)
+                    
+                outfile.write(str(event))
+            outfile.write("</LesHouchesEvents>\n")
+            outfile.close()
+            shutil.move(tmp_path, outputpath)
+    
+    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
+                 event_target=0, log_level=logging.INFO):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 

@@ -15,6 +15,9 @@ Main:numberOfEvents      = -1
 ! If equal to -1.0, MadGraph5_aMC@NLO will set it automatically based 
 ! on the parameter 'xqcut' of the run_card.dat 
 JetMatching:qCut         = -1.0
+! Use default kt-MLM to match parton level jets to those produced by the
+! shower. But the other Shower-kt scheme is available too with this option.
+JetMatching:doShowerKt   = off
 ! A value of -1 means that it is automatically guessed by MadGraph.
 ! It is however always safer to explicitly set it.
 JetMatching:nJetMax      = -1

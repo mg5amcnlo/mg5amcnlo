@@ -1254,7 +1254,8 @@ class PY8Card(ConfigFile):
         # for MLM merging
         # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
         self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
-        # -1 means that it is automatically set. 
+        self.add_param("JetMatching:doShowerKt",False,always_write_to_card=False)
+        # -1 means that it is automatically set.
         self.add_param("JetMatching:nJetMax", -1, always_write_to_card=False) 
         # for CKKWL merging
         self.add_param("Merging:TMS", -1.0, always_write_to_card=False)
@@ -1286,7 +1287,8 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
         self.add_param("SysCalc:qCutList", 'auto', hidden=True, always_write_to_card=False)
-        self.add_param("SysCalc:qCutMin",-1.0,hidden=True, always_write_to_card=False)
+        self.add_param("SysCalc:qWeed",-1.0,hidden=True, always_write_to_card=False,
+          comment='Value of the merging scale below which one does not even write the HepMC event.')
         self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
           comment='Do veto externally (e.g. in SysCalc).')
         self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
@@ -1295,7 +1297,6 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False) 
         self.add_param("JetMatching:etaJetMax", 10.0, hidden=True, always_write_to_card=False)
         self.add_param("JetMatching:nQmatch",4,hidden=True, always_write_to_card=False)
-        self.add_param("JetMatching:doShowerKt",False,hidden=True, always_write_to_card=False)
         # for CKKWL merging (common with UMEPS, UNLOPS)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
         self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
@@ -1436,7 +1437,7 @@ class PY8Card(ConfigFile):
             if str(value) in ['1','T','.true.','True','on']:
                 return 'on'
             else:
-                return 'false'
+                return 'off'
         elif formatv == 'int':
             try:
                 return str(int(value))

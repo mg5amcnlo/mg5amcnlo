@@ -3297,9 +3297,9 @@ Please install this tool with the following MG5_aMC command:
     '1.5*xqcut, with xqcut your run_card parameter (=%f).\n'%self.run_card['xqcut']+
     'It would be better/safer to use a larger qCut or a smaller xqcut.')
                
-            # Automatically set qCutMin to xqcut if not defined by the user.
-#            if PY8_Card['SysCalc:qCutMin']==-1.0:
-#                PY8_Card.MadGraphSet('JetMatching:qCutMin',self.run_card['xqcut'])
+            # Automatically set qWeed to xqcut if not defined by the user.
+            if PY8_Card['SysCalc:qWeed']==-1.0:
+                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
 
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:
@@ -3330,8 +3330,6 @@ Please install this tool with the following MG5_aMC command:
             if self.run_card['use_syst']:
                 PY8_Card.MadGraphSet('JetMatching:doVeto',False)
 
-#           MUST PROPERLY SET THIS, showerkt is NOT an argument of the current LO run_card!            
-#            PY8_Card.MadGraphSet('JetMatching:doShowerKt',self.run_card['showerkt'])          
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
             # Use the parameter maxjetflavor for JetMatching:nQmatch which specifies
@@ -3350,20 +3348,40 @@ Please install this tool with the following MG5_aMC command:
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
         # We use the positivity of 'ktdurham' cut as a CKKWl marker.
         elif run_type=='CKKW':
+            CKKW_cut = None
             # Specific CKKW settings
+            if self.run_card['ptlund']<=0.0 and self.run_card['ktdurham']>0.0:
+                PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
+                PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
+                                                    self.run_card['dparameter'])
+                CKKW_cut = 'ktdurham'
+            elif self.run_card['ptlund']>0.0 and self.run_card['ktdurham']<=0.0:
+                PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
+                CKKW_cut = 'ptlund'                
+            else:
+                raise InvalidCmd("*Either* the 'ptlund' or 'ktdurham' cut in "+\
+                  " the run_card must be turned on to activate CKKW(L) merging"+
+                  " with Pythia8, but *both* cuts cannot be turned on at the same time."+
+                  "\n ptlund=%f, ktdurham=%f."%(self.run_card['ptlund'],self.run_card['ktdurham']))
+
+            
+            # Automatically set qWeed to the CKKWL cut if not defined by the user.
+            if PY8_Card['SysCalc:qWeed']==-1.0:
+                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card[CKKW_cut])
+            
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['Merging:TMS']==-1.0:
-                if self.run_card['ktdurham']>0.0:
-                    PY8_Card.MadGraphSet('Merging:TMS',self.run_card['ktdurham'])
+                if self.run_card[CKKW_cut]>0.0:
+                    PY8_Card.MadGraphSet('Merging:TMS',self.run_card[CKKW_cut])
                 else:
                     raise self.InvalidCmd('When running CKKWl merging, the user'+\
-                      " select a 'ktdurham' cut larger than 0.0 in the run_card.")
-            if PY8_Card['Merging:TMS']<self.run_card['ktdurham']:
+                 " select a '%s' cut larger than 0.0 in the run_card."%CKKW_cut)
+            if PY8_Card['Merging:TMS']<self.run_card[CKKW_cut]:
                 logger.error(
     'The CKKWl merging scale you chose (%f) is less than'%PY8_Card['Merging:TMS']+
-    'the ktdurham cut specified in the run_card parameter (=%f).\n'%self.run_card['ktdurham']+
-    'It is incorrect to use a smaller CKKWl scale than the generation-level ktdurham cut!')
+    'the %s cut specified in the run_card parameter (=%f).\n'%(CKKW_cut,self.run_card[CKKW_cut])+
+    'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
     
             if PY8_Card['Merging:Process']=='<set_by_user>':
                 raise self.InvalidCmd('When running CKKWl merging, the user must'+
@@ -3392,7 +3410,7 @@ Please install this tool with the following MG5_aMC command:
                         PY8_Card.MadGraphSet('SysCalc:tmsList',\
                      ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
                        for factor in [0.5,0.75,1.5,2.0] if 
-                   factor*PY8_Card["Merging:TMS"] >= self.run_card['ktdurham']))
+                   factor*PY8_Card["Merging:TMS"] >= self.run_card[CKKW_cut]))
                     else:
                         PY8_Card.MadGraphSet('SysCalc:tmsList',
                               ','.join(self.run_card['sys_matchscale'].split()))
@@ -3401,25 +3419,14 @@ Please install this tool with the following MG5_aMC command:
                 if re.match('^\s*$',scale): continue
                 if 'auto' in scale.lower(): break
                 sc = float(scale.strip())
-                if sc<self.run_card['ktdurham']:
+                if sc<self.run_card[CKKW_cut]:
                     logger.error(
         'One of the CKKWl merging scale you chose (%f) in the variation list'%sc+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
-        "'sys_matchscale' in the run_card) is less than %f, "%self.run_card['ktdurham']+
-        'the ktdurham cut specified in the run_card parameter.\n'+
-        'It is incorrect to use a smaller CKKWl scale than the generation-level ktdurham cut!')
+        "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
+        'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
+        'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
 
-            if self.run_card['ptlund']<=0.0 and self.run_card['ktdurham']>0.0:
-                PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
-                PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
-                                                         self.run_card['dparameter'])
-            elif self.run_card['ptlund']>0.0 and self.run_card['ktdurham']<=0.0:
-                PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
-            else:
-                raise InvalidCmd("*Either* the 'ptlund' or 'ktdurham' cut in "+\
-                  " the run_card must be turned on to activate CKKW(L) merging"+
-                  " with Pythia8, but *both* cuts cannot be turned on at the same time."+
-                  "\n ptlund=%f, ktdurham=%f."%(self.run_card['ptlund'],self.run_card['ktdurham']))
         ########################################################################
 
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
@@ -3469,12 +3476,18 @@ Please install this tool with the following MG5_aMC command:
 ################################################################################
 #### Uncomment the lines below so as *not* to output an hepMC file #############
 ################################################################################
-#        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
-#                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
-#        open(HepMC_event_output,'w').write('DUMMY')
+        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
+                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
+        open(HepMC_event_output,'w').write('DUMMY')
 ################################################################################
         wrapper.write(exe_cmd)
 
+        # To make sure the lha convention match Pythia8 expectation, we force
+        # it to be 4. This means that we rescan completely the event file and
+        # make sure the weights *average* to the cross-section.
+        logger.debug("Forcing lhe output to follow lha strategy '-4'...")
+        evt_file = pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz")
+        lhe_parser.EventFile(evt_file).enforce_lha_strategy(evt_file,-4,force=True)
         
         wrapper.close()
         # Set it as executable
