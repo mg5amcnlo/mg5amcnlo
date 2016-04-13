@@ -3277,9 +3277,10 @@ Please install this tool with the following MG5_aMC command:
         merged_run_types = ['MLM','CKKW']
         if int(self.run_card['ickkw'])==1:
             run_type = 'MLM'
-        elif int(self.run_card['ickkw'])==2 or self.run_card['ktdurham']>0.0:
+        elif int(self.run_card['ickkw'])==2 or \
+                   self.run_card['ktdurham']>0.0 or self.run_card['ptlund']>0.0:
             run_type = 'CKKW'
-        
+
         PY8_Card.subruns[0].systemSet('Beams:LHEF',
           pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz"))
         # We specify by hand all necessary parameters, so that there is no
@@ -3553,6 +3554,11 @@ Please install this tool with the following MG5_aMC command:
                     sigma_m = float(info.group('xsec')) *1e9
                     Nacc = int(info.group('generated'))
                     Ntry = int(info.group('tried'))
+                    if Nacc==0:
+                        raise self.InvalidCmd, 'Pythia8 shower failed since it'+\
+                         ' did not accept any event from the MG5aMC event file.'+\
+                         'You can find more information in this log file:\n%s'%pythia_log
+
                 except ValueError:
                     # xsec is not float - this should not happen
                     self.results.add_detail('cross_pythia', 0)
@@ -4101,14 +4107,15 @@ Please install this tool with the following MG5_aMC command:
                       stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
             self.to_store.remove('pythia')
 
-        if 'pythia8' in self.to_store:
-            self.update_status('Storing Pythia8 files of previous run', level='pythia', error=True)
-            
+        if 'pythia8' in self.to_store:            
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
-            misc.gzip(pjoin(p, n ,'%s_pythia8_events.hepmc'%t), 
-                      stdout=pjoin(p, n,'%s_pythia8_events.hepmc' % t))
+            file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
+            if os.path.isfile(file_path):
+                self.update_status('Storing Pythia8 files of previous run', 
+                                                     level='pythia', error=True)
+                misc.gzip(file_path,stdout=file_path)
             self.to_store.remove('pythia8')            
             
         self.update_status('Done', level='pythia',makehtml=False,error=True)
