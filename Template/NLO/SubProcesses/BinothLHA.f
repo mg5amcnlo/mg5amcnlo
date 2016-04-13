@@ -58,6 +58,7 @@ c general MadFKS parameters
       integer nbad, nbadmax
       double precision target,ran2,accum
       external ran2
+      double precision hel_fact
       double precision wgt_hel(max_bhel)
       common/c_born_hel/wgt_hel
       integer nsqso, MLResArrayDim
@@ -91,6 +92,7 @@ c statistics for MadLoop
       common /to_polecheck/force_polecheck, polecheck_passed
       integer ret_code_common
       common /to_ret_code/ret_code_common
+      double precision born_hel_from_virt
 c masses
       include 'pmass.inc'
       data nbad / 0 /
@@ -105,6 +107,7 @@ c Ellis-Sexton scale)
       virt_wgt= 0d0
       single  = 0d0
       double  = 0d0
+      born_hel_from_virt = 0d0
 C     reset the amp_split array
       do i = 1, amp_split_size
         amp_split(i) = 0d0
@@ -198,8 +201,6 @@ C          different coupling combinations
          elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
-            write(*,*) 'MC over HEL not yet available for FKSEW'
-            stop
             call sborn_hel(p,born_wgt_recomp_direct)
             born_wgt_recomputed=0d0
             do ihel=1,hel(0)
@@ -218,12 +219,29 @@ c virtual as flat as possible
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
      $           ,tolerance,accuracies,ret_code)
-            virt_wgt = virt_wgt + virt_wgts_hel(1,0)*dble(goodhel(ihel))
-     $           /volh/4d0/symfactvirt
-            single   = single   + virt_wgts_hel(2,0)*dble(goodhel(ihel))
-     $           /volh/4d0/symfactvirt
-            double   = double   + virt_wgts_hel(3,0)*dble(goodhel(ihel))
-     $           /volh/4d0/symfactvirt
+            hel_fact = dble(goodhel(ihel))/volh/4d0/symfactvirt
+            do i = 1, nsqso
+              if (keep_order(i)) then
+                born_hel_from_virt= born_hel_from_virt + virt_wgts_hel(0,i)
+                virt_wgt= virt_wgt + virt_wgts_hel(1,i) * hel_fact
+                single  = single + virt_wgts_hel(2,i) * hel_fact
+                double  = double + virt_wgts_hel(3,i) * hel_fact
+C         keep track of the separate pieces correspoinding to
+C          different coupling combinations
+                do j = 1, nsplitorders
+                 amp_orders(j) = getordpowfromindex_ML5(j, i)
+                enddo
+                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts_hel(1,i) * hel_fact
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts_hel(2,i) * hel_fact
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts_hel(3,i) * hel_fact
+                prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
+              endif
+            enddo
+
+            if (abs((wgt_hel(hel(ihel))-born_hel_from_virt/4d0)/wgt_hel(hel(ihel))).gt.1e-5) then
+                write(*,*) 'ERROR HEL', wgt_hel(hel(ihel)),born_hel_from_virt/4d0,wgt_hel(hel(ihel))/(born_hel_from_virt/4d0)
+                stop
+            endif
 c Average over initial state helicities (and take the symfactvirt factor into
 c account)
             if (nincoming.ne.2) then
