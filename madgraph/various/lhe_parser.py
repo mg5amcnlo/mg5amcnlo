@@ -269,7 +269,7 @@ class EventFile(object):
                 # drop the lowest weight
                 nb_keep = max(20, int(nb_event*trunc_error*15))
                 all_wgt = all_wgt[-nb_keep:]
-        
+
         #final selection of the interesting weight to keep
         all_wgt.sort()
         # drop the lowest weight
@@ -307,7 +307,7 @@ class EventFile(object):
             written_weight = lambda x: math.copysign(self.written_weight,float(x))
         else: 
             written_weight = lambda x: x
-            
+                    
         all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
 
         # function that need to be define on the flight
@@ -381,7 +381,7 @@ class EventFile(object):
                             break   
                         else:
                             break
-                        
+
             #create output file (here since we are sure that we have to rewrite it)
             if outputpath:
                 outfile = EventFile(outputpath, "w")
@@ -401,7 +401,6 @@ class EventFile(object):
                 elif wgt > 0:
                     nb_keep += 1
                     event.wgt = written_weight(max(wgt, max_wgt))
-                    
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt 
                     if event_target ==0 or nb_keep <= event_target:
@@ -410,7 +409,7 @@ class EventFile(object):
 
                 elif wgt < 0:
                     nb_keep += 1
-                    event.wgt = -1 * max(abs(wgt), max_wgt)
+                    event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt
                     if outputpath and (event_target ==0 or nb_keep <= event_target):
@@ -838,11 +837,12 @@ class MultiEventFile(EventFile):
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
         
+
         if 'event_target' in opts and opts['event_target']:
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt
-          
+
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
            
