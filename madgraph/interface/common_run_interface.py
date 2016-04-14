@@ -17,6 +17,7 @@
 """
 from __future__ import division
 
+import ast
 import atexit
 import cmath
 import cmd
@@ -296,7 +297,7 @@ class CheckValidForCmd(object):
                 # should be a particles
                 output['particles'].add(particles_name[arg])
             elif arg.isdigit() and int(arg) in particles_name.values():
-                output['particles'].add(eval(arg))
+                output['particles'].add(ast.literal_eval(arg))
             elif arg == 'all':
                 output['particles'] = set(['all'])
             else:
@@ -1878,7 +1879,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.options[args[0]] = (int(first), int(second))
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
-                self.options[args[0]] = eval(args[1])
+                self.options[args[0]] = ast.literal_eval(args[1])
             elif args[0].endswith('path'):
                 if os.path.exists(args[1]):
                     self.options[args[0]] = args[1]
@@ -2183,11 +2184,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pass
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
-                    self.options[key] =eval(self.options[key])
+                    self.options[key] =ast.literal_eval(self.options[key])
             elif key == "notification_center":
                 if self.options[key] in ['False', 'True']:
-                    self.allow_notification_center =eval(self.options[key])
-                    self.options[key] =eval(self.options[key])
+                    self.allow_notification_center =ast.literal_eval(self.options[key])
+                    self.options[key] =ast.literal_eval(self.options[key])
             elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
                               'complex_mass_scheme', 'gauge', 'group_subprocesses']:
                 # Default: try to set parameter
@@ -2848,7 +2849,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     print "File to define the various model parameter"
                     logger.info("List of the Block defined:",'$MG:color:BLUE')
                     print "\t".join(self.param_card.keys())
-                else:
+                elif hasattr(self, args[0]):
                     logger.info("%s information: " % args[0], '$MG:color:BLUE')
                     print(eval('self.%s' % args[0]).__doc__)
                     logger.info("List of parameter associated", '$MG:color:BLUE')
@@ -3320,10 +3321,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:
-                    try:
-                        val = eval(args[start+1])
-                    except NameError:
-                        val = args[start+1]
+                    val = args[start+1]
                 self.setR(args[start], val)
             self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
                                 pjoin(self.me_dir,'Cards','run_card_default.dat'))

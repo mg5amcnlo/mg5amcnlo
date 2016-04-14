@@ -63,6 +63,8 @@
   %(time_of_flight)s = time_of_flight ! threshold below which info is not written (-1 means not written)
   %(lhe_version)s = lhe_version       ! Change the way clustering information pass to shower.        
   %(clusinfo)s = clusinfo         ! include clustering tag in output
+  %(event_norm)s =  event_norm       ! average/sum. Normalization of the weight in the LHEF
+
 #*********************************************************************
 # Matching parameter (MLM only)
 #*********************************************************************

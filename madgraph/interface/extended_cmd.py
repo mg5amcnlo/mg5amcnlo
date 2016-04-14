@@ -718,6 +718,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
+        elif hasattr(question_instance, 'case') and not question_instance.case:
+            for entry in question_instance.allow_arg:
+                if line.lower() == entry.lower():
+                    return entry
         # No valid answer provides
         if self.haspiping:
             self.store_line(line)
@@ -1448,6 +1452,12 @@ class SmartQuestion(BasicCmd):
         self.history_header = ''
         self.default_value = str(default)
         self.mother_interface = mother_interface
+        if 'case' in opt:
+            self.case = opt['case']
+            del opt['case']
+        else:
+            self.case = True
+
         cmd.Cmd.__init__(self, *arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
@@ -1575,7 +1585,7 @@ class SmartQuestion(BasicCmd):
 
 
     def postcmd(self, stop, line):
-        
+
         try:    
             if self.value in self.allow_arg:
                 return True
@@ -1588,6 +1598,14 @@ class SmartQuestion(BasicCmd):
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
+            elif not self.case:
+                for ans in self.allow_arg:
+                    if ans.lower() == self.value.lower():
+                        self.value = ans
+                        return True
+                        break
+                else:
+                    raise Exception
             else: 
                 raise Exception
         except Exception,error:

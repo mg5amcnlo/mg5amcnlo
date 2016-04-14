@@ -548,9 +548,8 @@ class ReweightInterface(extended_cmd.Cmd):
                         output.write(str(event))
                 
         # check normalisation of the events:
-        if 'event_norm' in self.run_card:
-            if self.run_card['event_norm'] == 'average':
-                cross /= event_nb+1
+        if self.run_card['event_norm'] == 'average':
+            cross /= event_nb+1
 
                 
         running_time = misc.format_timer(time.time()-start)

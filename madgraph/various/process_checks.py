@@ -1067,7 +1067,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         MLcard = bannermod.MadLoopParam(MLCardPath)
         for key,value in params.items():
-            MLcard.set(key, value, ifnotdefault=False)
+            MLcard.set(key, value, changeifuserset=False)
         MLcard.write(MLCardPath, commentdefault=True)
 
     def skip_loop_evaluation_setup(self, dir_name, skip=True):

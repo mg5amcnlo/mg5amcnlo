@@ -268,75 +268,16 @@ class EventFile(object):
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
-            
-    def enforce_lha_strategy(self, outputpath, lha_strategy, force=False):
-        """ Modifies the lhe file to conform to the chosen input lha strategy."""
-        
-        banner = self.get_banner()
-        
-        if not force:
-            if banner.get_lha_strategy()==lha_strategy:
-                # Required strategy already being used. Do nothing.
-                return
-        
-        if lha_strategy not in [3,-3,-4,4]:
-            raise Exception, "Error in lhe_parser, function 'lha_strategy' "+\
-                   "cannot take argument %d but only [3,-3,-4,4]."%lha_strategy
-    
-        self.seek(0)
-        nb_event           = 0
-        first_wgt          = None
-        xsec_from_all_wgts = 0.0
-        for event in self:
-            nb_event += 1
-            wgt      = event.wgt
-            xsec_from_all_wgts += event.wgt  
-            if not first_wgt:
-                first_wgt = event.wgt
-            if event.wgt< 0.0 and lha_strategy>0:
-                raise Exception, 'Negative weights can only be supported by'+\
-                                 ' negative lha strategies, not %d'%lha_strategy
-            if event.wgt!=first_wgt and abs(lha_strategy)==3:
-                raise Exception, 'Cannot use lha_strategy +/-3 since event file'+\
-                      ' is not completely unweighted. Please unweight it first.'            
-        
-        # Now determine the proper normalization:
-        if abs(lha_strategy)==3:
-            norm = None
-        elif abs(lha_strategy)==4:
-            norm = nb_event * ( banner.get_cross() / xsec_from_all_wgts)
-
-        self.seek(0)
-        with misc.TMP_directory() as tmp_dir:
-            tmp_path = pjoin(tmp_dir,os.path.basename(outputpath))
-            outfile = EventFile(tmp_path, "w")
-            banner.set_lha_strategy(lha_strategy)
-            banner.write(outfile, close_tag=False)
-            for event in self:
-                # First take care of rescaling the central weight
-                orignal_ctrl_wgt = event.wgt
-                if norm is None:
-                    event.wgt = 1.0
-                else:
-                    event.wgt = norm*orignal_ctrl_wgt   
-                # And now apply the same rescaling to all reweighting information              
-                original_wgts = dict(event.parse_reweight())
-                for wgt_id, value in original_wgts.items():
-                    event.reweight_data[wgt_id] = value * (event.wgt / orignal_ctrl_wgt)
-                    
-                outfile.write(str(event))
-            outfile.write("</LesHouchesEvents>\n")
-            outfile.close()
-            shutil.move(tmp_path, outputpath)
-    
+                
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
-                 event_target=0, log_level=logging.INFO):
+                 event_target=0, log_level=logging.INFO, normalization='average'):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
         trunc_error allow for dynamical partial unweighting
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
+        'strategy' defines the normalisation mode: 4 -> average. 3-> sum
         """
         if not get_wgt:
             def weight(event):
@@ -351,7 +292,6 @@ class EventFile(object):
         else:
             unwgt_name = get_wgt.func_name
 
-        
         # check which weight to write
         if hasattr(self, "written_weight"):
             written_weight = lambda x: math.copysign(self.written_weight,float(x))
@@ -395,18 +335,21 @@ class EventFile(object):
                 banner = self.get_banner()
                 # 1. modify the cross-section
                 banner.modify_init_cross(cross)
-                strategy = banner.get_lha_strategy()
-                # 2. modify the lha strategy
-                if strategy >0:  
-                    banner.set_lha_strategy(4)
-                else:
-                    banner.set_lha_strategy(-4)
                 # 3. add information about change in weight
                 banner["unweight"] = "unweighted by %s" % unwgt_name
             else:
                 banner = self.banner
-
-        
+            # modify the lha strategy
+            curr_strategy = banner.get_lha_strategy()
+            if normalization in ['unit', 'sum']:
+                strategy = 3
+            else:
+                strategy = 4
+            if curr_strategy >0: 
+                banner.set_lha_strategy(abs(strategy))
+            else:
+                banner.set_lha_strategy(-1*abs(strategy))
+                
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
         nb_keep = 0
@@ -504,7 +447,7 @@ class EventFile(object):
           nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
         #correct the weight in the file if not the correct number of event
-        if nb_keep != event_target and hasattr(self, "written_weight"):
+        if nb_keep != event_target and hasattr(self, "written_weight") and strategy !=4:
             written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
             startfile = EventFile(outputpath)
             tmpname = pjoin(os.path.dirname(outputpath), "wgtcorrected_"+ os.path.basename(outputpath))
@@ -752,7 +695,7 @@ class MultiEventFile(EventFile):
             raise Exception
     
 
-    def define_init_banner(self, wgt):
+    def define_init_banner(self, wgt, lha_strategy):
         """define the part of the init_banner"""
         
         if not self.banner:
@@ -797,11 +740,11 @@ class MultiEventFile(EventFile):
                     "wgt": wgt}
             init_information["cross_info"].append( cross_info % conv)
         init_information["cross_info"] = '\n'.join(init_information["cross_info"])
-            
+        init_information['lha_stra'] = -1 * abs(lha_strategy)
         
         
         template_init =\
-        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i -3 %(nprup)i
+        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i %(lha_stra)i %(nprup)i
 %(cross_info)s
 %(generator_info)s
 """
@@ -908,11 +851,21 @@ class MultiEventFile(EventFile):
         #define the weighting such that we have built-in the scaling
         
         if 'event_target' in opts and opts['event_target']:
-            misc.sprint(opts['event_target'])
-            new_wgt = sum(self.across)/opts['event_target']
-            self.define_init_banner(new_wgt)
+            if 'normalization' in opts:
+                if opts['normalization'] == 'sum':
+                    new_wgt = sum(self.across)/opts['event_target']
+                    strategy = 3
+                elif opts['normalization'] == 'average':
+                    strategy = 4
+                    new_wgt = sum(self.across)                    
+                elif opts['normalization'] == 'unit':
+                    strategy =3
+                    new_wgt = 1.
+            else:
+                strategy = 4
+                new_wgt = sum(self.across)
+            self.define_init_banner(new_wgt, strategy)
             self.written_weight = new_wgt
-          
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
            

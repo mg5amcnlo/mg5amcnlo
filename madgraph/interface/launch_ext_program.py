@@ -175,7 +175,7 @@ class MadLoopLauncher(ExtLauncher):
                                os.path.join(self.card_dir, 'MadLoopParams.dat'))   
                 # Unless user asked for it, don't doublecheck the helicity filter.
                 MadLoopparam.set('DoubleCheckHelicityFilter', False, 
-                                                             ifnotdefault=False)
+                                                             changeifuserset=False)
                 MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
                                            'SubProcesses', 'MadLoopParams.dat'))
 

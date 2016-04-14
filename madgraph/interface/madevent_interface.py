@@ -2575,7 +2575,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                 logger.info(
 """You chose to have MadLoop writing out filters. 
 Beware that this can be dangerous for local multicore runs.""")
-            self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
+            self.MadLoopparam.set('WriteOutFilters',False, changeifuserset=False)
             
             # The conservative settings below for 'CTModeInit' and 'ZeroThres'
             # help adress issues for processes like g g > h z, and g g > h g
@@ -2587,27 +2587,27 @@ Beware that this can be dangerous for local multicore runs.""")
             # initialization points only*. This avoids numerical accuracy issues
             # when setting up the helicity filters and does not significantly
             # slow down the run.
-#            self.MadLoopparam.set('CTModeInit',4, ifnotdefault=False)
+#            self.MadLoopparam.set('CTModeInit',4, changeifuserset=False)
             # Consequently, we can allow for a finer threshold for vanishing
             # helicity configuration
-#            self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
+#            self.MadLoopparam.set('ZeroThres',1.0e-11, changeifuserset=False)
 
 #           It is a bit superficial to use the level 2 which tries to numerically
 #           map matching helicities (because of CP symmetry typically) together.
 #           It is useless in the context of MC over helicities and it can 
 #           potentially make the helicity double checking fail.
-            self.MadLoopparam.set('HelicityFilterLevel',1, ifnotdefault=False)
+            self.MadLoopparam.set('HelicityFilterLevel',1, changeifuserset=False)
 
 #           To be on the safe side however, we ask for 4 consecutive matching
 #           helicity filters.
-            self.MadLoopparam.set('CheckCycle',4, ifnotdefault=False)
+            self.MadLoopparam.set('CheckCycle',4, changeifuserset=False)
             
             # For now it is tricky to have eahc channel performing the helicity
             # double check. What we will end up doing is probably some kind
             # of new initialization round at the beginning of each launch
             # command, to reset the filters.    
             self.MadLoopparam.set('DoubleCheckHelicityFilter',False,
-                                                             ifnotdefault=False)
+                                                             changeifuserset=False)
           
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
             # processes, so that we place OPP last.
@@ -2622,14 +2622,14 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|3|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','2|3|1', changeifuserset=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                     not self.MadLoopparam.get('MLReductionLib').startswith('1'):
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','1|2|3|4', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','1|2|3|4', changeifuserset=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
@@ -2647,17 +2647,17 @@ Beware that this can be dangerous for local multicore runs.""")
     zero by MadLoop. You can avoid this by changing the parameter 'FORCE_ML_HELICITY_SUM' int he matrix<i>.f
     files to be .TRUE. so that the sum over helicity configurations is performed within MadLoop (in which case
     the helicity of final state particles cannot be speicfied in the LHE file.""")
-                self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
-                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)
+                self.MadLoopparam.set('NRotations_DP',0,changeifuserset=False)
+                self.MadLoopparam.set('NRotations_QP',0,changeifuserset=False)
             else:
                 # When MC-ing over helicities, the manual TIR cache clearing is
                 # not necessary, so that one can use the lorentz check
                 # Using NRotations_DP=1 slows down the code by close to 100%
                 # but it is typicaly safer.
-                # self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+                # self.MadLoopparam.set('NRotations_DP',0,changeifuserset=False)
                 # Revert to the above to be slightly less robust but twice faster.
-                self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
-                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)                
+                self.MadLoopparam.set('NRotations_DP',1,changeifuserset=False)
+                self.MadLoopparam.set('NRotations_QP',0,changeifuserset=False)                
             
             # Finally, the stability tests are slightly less reliable for process
             # with less or equal than 4 final state particles because the 
@@ -2673,9 +2673,9 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to increase the default value of the MadLoop parameter 'MLStabThres' above 1.0e-7.
     Stability tests can be less reliable on the limited kinematic of processes with less or equal
     than four external legs, so this is not recommended (especially not for g g > z z).""")
-                self.MadLoopparam.set('MLStabThres',1.0e-7,ifnotdefault=False)
+                self.MadLoopparam.set('MLStabThres',1.0e-7,changeifuserset=False)
             else:
-                self.MadLoopparam.set('MLStabThres',1.0e-4,ifnotdefault=False)            
+                self.MadLoopparam.set('MLStabThres',1.0e-4,changeifuserset=False)            
 
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
@@ -2960,7 +2960,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Combining Events', level='parton')
 
         
-        if not hasattr(self, "refine_mode") or self.refine_mode == "old":
+        if self.run_card['gridpack']: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
@@ -3018,7 +3018,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                     out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
                     
-        elif self.refine_mode == "new":
+        else:
             # Define The Banner
             tag = self.run_card['run_tag']
             # Update the banner with the pythia card
@@ -3049,9 +3049,11 @@ Beware that this can be dangerous for local multicore runs.""")
                                  )
                     
             get_wgt = lambda event: event.wgt
+            
+            
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
-                              log_level=logging.DEBUG)
+                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'])
             
             self.results.add_detail('nb_event', nb_event)
         
@@ -3235,6 +3237,11 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
+
+        if self.run_card['event_norm'] not in ['unit','average']:
+            logger.critical("Pythia8 do not support normalisation to the sum.\n"+\
+                             "     The normalisation of the hpmc output file will be wrong.\n"+\
+                             "     Please use 'event_norm = average' in the run_card to avoid this problem.")
 
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
@@ -3428,27 +3435,6 @@ Please install this tool with the following MG5_aMC command:
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
         'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
 
-        ########################################################################
-        
-        # ----------------------------------------------------------------------
-        # --- Olivier you can remove the couple lines between these dashes -----
-        # ----------------------------------------------------------------------
-        # To make sure the lha convention match Pythia8 expectation, we force
-        # it to be 4. This means that we rescan completely the event file and
-        # make sure the weights *average* to the cross-section.
-        evt_file = pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz")
-        strat_m4_evt_file = pjoin(self.me_dir,"Events", 
-                          self.run_name,"unweighted_events_lha_strat_m4.lhe.gz")
-        PY8_Card.subruns[0].systemSet('Beams:LHEF', strat_m4_evt_file)
-        logger.debug("Forcing lhe output to follow lha strategy '-4'...")
-        # Reuse the output with strat -4 if already existing.
-        if os.path.exists(strat_m4_evt_file):
-            lhe_parser.EventFile(strat_m4_evt_file).enforce_lha_strategy(
-                                               strat_m4_evt_file,-4,force=False)
-        else:
-            lhe_parser.EventFile(evt_file).enforce_lha_strategy(
-                                                strat_m4_evt_file,-4,force=True)            
-        # ----------------------------------------------------------------------
 
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)
@@ -4038,7 +4024,7 @@ Please install this tool with the following MG5_aMC command:
         if self.ninitial == 1:
             logger.error('SysCalc can\'t be run for decay processes')
             return
-        
+    
         logger.info('Calculating systematics for run %s' % self.run_name)
         
         self.ask_edit_cards(['run_card'], args)
@@ -4694,6 +4680,10 @@ Please install this tool with the following MG5_aMC command:
         if self.run_card['use_syst'] not in self.true:
             return
         
+        if self.run_card['event_norm'] != 'sum':
+            logger.critical('SysCalc works only when event_norm is on \'sum\'. Bypass SysCalc')
+            return
+        
         logger.info('running syscalc on mode %s' % mode)        
         scdir = self.options['syscalc_path']
         tag = self.run_card['run_tag']  
@@ -4887,7 +4877,7 @@ Please install this tool with the following MG5_aMC command:
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
                     question += '  Type \'help\' for the list of all valid option\n' 
                     question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
-                    answer = self.ask(question, '0', options)
+                    answer = self.ask(question, '0', options, case=False)
                 if (answer.isdigit() and answer != '0') or answer in ['shower', 'detector']:
                     if answer.isdigit():
                         key = switch_order[int(answer) - 1]

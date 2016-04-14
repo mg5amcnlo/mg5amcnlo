@@ -4,6 +4,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         VH+OM: Adding an official interface to PY8 for the parton-shower
         VH: extend install command to install: lhapdf/pythia8
         VH+SP: extend support for CKKWL
+	OM: Adding the run_card options "event_norm" for the LO run_card (same meaning as NLO one)
         OM: Adding the possiblity of having detailled help at the time of the edition of the cards.
             help mass / help mt / help nevents provided some information on the parameters.
 

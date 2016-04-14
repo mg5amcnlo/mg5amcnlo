@@ -1089,15 +1089,15 @@ class ConfigFile(dict):
         return dict.__getitem__(self, name.lower())
 
     
-    def set(self, name, value, ifnotdefault=True, user=False):
+    def set(self, name, value, changeifuserset=True, user=False):
         """convenient way to change attribute.
-        ifnotdefault=False means that the value is NOT change is the value is not on default.
+        changeifuserset=False means that the value is NOT change is the value is not on default.
         user=True, means that the value will be marked as modified by the user 
         (potentially preventing future change to the value) 
         """
 
-        # ifnotdefault=False -> we need to check if the user force a value.
-        if not ifnotdefault:
+        # changeifuserset=False -> we need to check if the user force a value.
+        if not changeifuserset:
             if name.lower() in self.user_set:
                 #value modified by the user -> do nothing
                 return
@@ -1844,12 +1844,14 @@ class RunCard(ConfigFile):
         self.legacy_parameter = {}
         #a list with all the cuts variable
         self.cuts_parameter = []
+        # parameter added where legacy requires an older value.
+        self.system_default = {}
         
         
         super(RunCard, self).__init__(*args, **opts)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
-                  hidden=False, legacy=False, cut=False):
+                  hidden=False, legacy=False, cut=False, sys_default=None):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
         fortran_name defines what is the associate name in the f77 code
@@ -1857,6 +1859,7 @@ class RunCard(ConfigFile):
         hidden defines if the parameter is expected to be define by the user.
         legacy:Parameter which is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
+        sys_default: default used if the parameter is not in the card
         """
 
         super(RunCard, self).add_param(name, value)
@@ -1873,6 +1876,8 @@ class RunCard(ConfigFile):
                 self.not_in_include.append(name)
         if cut:
             self.cuts_parameter.append(name)
+        if sys_default is not None:
+            self.system_default[name] = sys_default
 
 
 
@@ -2026,6 +2031,13 @@ class RunCard(ConfigFile):
                 return "'%s'" % value
         
 
+    def check_validity(self):
+        """check that parameter missing in the card are set to the expected value"""
+
+        for name, value in self.system_default.items():
+                self.set(name, value, changeifuserset=False)
+
+
     def write_include_file(self, output_file):
         """ """
         
@@ -2150,6 +2162,7 @@ class RunCardLO(RunCard):
         self.add_param("asrwgtflavor", 5)
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
+        self.add_param("event_norm", "average", include=False, sys_default='sum')
         #cut
         self.add_param("auto_ptj_mjj", True)
         self.add_param("bwcutoff", 15.0)
@@ -2293,6 +2306,9 @@ class RunCardLO(RunCard):
         
     def check_validity(self):
         """ """
+        
+        super(RunCardLO, self).check_validity()
+        
         #Make sure that nhel is only either 0 (i.e. no MC over hel) or
         #1 (MC over hel with importance sampling). In particular, it can
         #no longer be > 1.
@@ -2553,6 +2569,8 @@ class RunCardNLO(RunCard):
     
     def check_validity(self):
         """check the validity of the various input"""
+        
+        super(RunCardLO, self).check_validity()
         
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 
