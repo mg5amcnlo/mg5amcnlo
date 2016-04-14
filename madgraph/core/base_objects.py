@@ -938,6 +938,26 @@ class Interaction(PhysicsObject):
 
         return mystr
 
+    def canonical_repr(self):
+        """ Returns a string representation that allows to order CT vertices in 
+        a diagram so that identical HelasMatrix element (i.e. typically different
+        flavors with identical masses and couplings) can be matched even though
+        the order of the couplings specified in the UFO is different. """
+
+        return '%s|%s'%(self['type'],
+           '&'.join( sorted('%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],v)
+                                          for k,v in self['couplings'].items() ) ) )
+
+    def get_canonical_couplings_keys_order(self):
+        """ Returns a list of the keys to the 'couplings' dictionary, canonically 
+        ordered so so that identical HelasMatrix element (i.e. typically different
+        flavors with identical masses and couplings) can be matched even though
+        the order of the couplings specified in the UFO is different. """
+
+        return sorted(self['couplings'].keys(), key=lambda k:
+        '%s_%s_%s'%(self['color'][k[0]],self['lorentz'][k[1]],self['couplings'][k]))
+
+
 #===============================================================================
 # InteractionList
 #===============================================================================

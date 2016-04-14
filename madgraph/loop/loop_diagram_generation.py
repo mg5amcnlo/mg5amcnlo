@@ -1450,6 +1450,14 @@ class LoopAmplitude(diagram_generation.Amplitude):
                             CT_added[trackingKeyLoopPart].append(CTID)
                         except KeyError:
                             CT_added[trackingKeyLoopPart] = [CTID, ]
+            # Now make sure that the CT vertices added are cannonically ordered
+            # (using coupling names and color and lorenz strings)
+            # This plays a role when doing comparisons for potential merging of 
+            # identical processes (i.e. Identical HelasMatrixElement where only 
+            # massless flavors differ).
+            diag['CT_vertices'].sort(key=lambda ct: 
+              self['process']['model'].get_interaction(ct.get('id')).canonical_repr())
+            
 
     def create_diagram(self, vertexlist):
         """ Return a LoopDiagram created."""

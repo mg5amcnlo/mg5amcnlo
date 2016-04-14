@@ -23,6 +23,7 @@ import madgraph.interface.amcatnlo_interface as amcatnlocmd
 import os
 import madgraph.fks.fks_helas_objects as fks_helas
 import copy
+import madgraph.iolibs.save_load_object as save_load_object
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -1034,6 +1035,28 @@ class TestAMCatNLOEW(unittest.TestCase):
         # this is to avoid effects on other tests
         self.interface.do_import('model sm')
 
+    def test_combine_equal_processes_pp_hpwmbbx_virt(self):
+        """Makes sure the uux and ccx channel of the process can be merged."""
+
+        if os.path.isfile(pjoin(root_path,'input_files','uux_hpwmbbx.pkl')) and\
+           os.path.isfile(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl')):
+            uux_me = save_load_object.load_from_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'))
+            ccx_me = save_load_object.load_from_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'))            
+        else:
+            self.interface.do_set('complex_mass_scheme True')
+            self.interface.do_import('model 2HDMCMStIIymbMSbar')
+            print "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."
+            self.interface.do_generate('u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            uux_proc = copy.copy(self.interface._fks_multi_proc)
+            uux_me = fks_helas.FKSHelasMultiProcess(uux_proc)['matrix_elements'][0]
+            print "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."            
+            self.interface.do_generate('c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            ccx_proc = copy.copy(self.interface._fks_multi_proc)
+            ccx_me = fks_helas.FKSHelasMultiProcess(ccx_proc)['matrix_elements'][0]            
+            save_load_object.save_to_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'),uux_me)
+            save_load_object.save_to_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'),ccx_me)
+      
+        self.assertEqual(uux_me,ccx_me)
 
     def test_combine_equal_processes_dy_qed_virt(self):
         """check that two processes with the same matrix-elements are equal

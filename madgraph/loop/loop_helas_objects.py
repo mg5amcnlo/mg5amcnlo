@@ -738,13 +738,37 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
 
     # Comparison between different amplitudes, to allow check for
     # identical processes. Note that we are then not interested in
-    # interaction id, but in all other properties.
-    
+    # interaction id, but in all other properties. 
     def __eq__(self, other):
-        """Comparison between different loop matrix elements. It works exactly as for
-           the HelasMatrixElement for now."""
+        """Comparison between different loop matrix elements, to allow check for
+        identical processes.
+        """
 
-        return super(LoopHelasMatrixElement,self).__eq__(other)
+        if not isinstance(other, LoopHelasMatrixElement):
+            return False
+
+        # If no processes, this is an empty matrix element
+        if not self['processes'] and not other['processes']:
+            return True
+
+        # Otherwise if any of the two has not process, then they cannot be equal
+        if not self['processes'] or not self['processes']:
+            return False
+
+        # Check general properties of this loop_helas matrix element
+        if self['has_mirror_process'] != other['has_mirror_process'] or \
+           self['processes'][0]['id'] != other['processes'][0]['id'] or \
+           self['identical_particle_factor'] != \
+                                            other['identical_particle_factor']:
+            return False
+
+        # Finally check the diagrams
+        if self['diagrams'] != other['diagrams']:
+            return False
+
+        return True
+
+        # return super(LoopHelasMatrixElement,self).__eq__(other)
 
     def __ne__(self, other):
         """Overloading the nonequality operator, to make comparison easy"""
@@ -1577,12 +1601,11 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                 (motherslist, colorlists), wfNumber = getloopmothers(\
                                 helas_objects.HelasWavefunctionList(), structIDs, \
                                 [], diagram_wavefunctions, wfNumber)
-                          
                 for mothers, structcolorlist in zip(motherslist, colorlists):
                     for ct_vertex in ct_vertices:
                         # Now generate HelasAmplitudes from this ct_vertex.
                         inter = model.get_interaction(ct_vertex.get('id'))
-                        keys = sorted(inter.get('couplings').keys())
+                        keys = inter.get_canonical_couplings_keys_order()
                         pdg_codes = [p.get_pdg_code() for p in \
                                      inter.get('particles')]
                         mothers.sort_by_pdg_codes(pdg_codes, 0)[0]
