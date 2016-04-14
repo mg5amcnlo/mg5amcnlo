@@ -2470,7 +2470,7 @@ class RunCardLO(RunCard):
             if matching:
                 self['ickkw'] = 1
                 self['xqcut'] = 30
-                self['use_syst'] = False 
+                #self['use_syst'] = False 
                 self['drjj'] = 0
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"

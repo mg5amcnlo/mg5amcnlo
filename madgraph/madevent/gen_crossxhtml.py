@@ -890,6 +890,10 @@ class OneTagResults(dict):
                             (exists(pjoin(path,"%s_pythia8_events.hepmc.gz" % tag)) or
                              exists(pjoin(path,"%s_pythia8_events.hepmc" % tag))):
                 self.pythia8.append('hepmc')
+                
+            if 'merged_xsec' not in self.pythia8 and \
+                           exists(pjoin(path,"%s_merged_xsecs.txt" % tag)):  
+                self.pythia8.append('merged_xsec')
             
             #if 'rwt' not in self.pythia8 and \
             #                (exists(pjoin(path,"%s_syscalc.dat.gz" % tag)) or
@@ -1053,8 +1057,9 @@ class OneTagResults(dict):
                 link = './Events/%(run_name)s/%(tag)s_pythia8_events.hepmc'
                 level = 'pythia8'
                 name = 'HEPMC'                                 
-                out += self.special_link(link, level, name)  
-                out += """ <a href="./Events/%(run_name)s/%(tag)s_merged_xsecs.txt">merged xsection</a> """
+                out += self.special_link(link, level, name)
+                if 'merged_xsec' in self.pythia8:  
+                    out += """ <a href="./Events/%(run_name)s/%(tag)s_merged_xsecs.txt">merged xsection</a> """
             #if 'plot' in self.pythia8:
             #    out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             if 'djr_plot' in self.pythia8:
