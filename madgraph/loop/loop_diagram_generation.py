@@ -1079,15 +1079,41 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Make sure to start with an empty l-cut particle list.
         self.lcutpartemployed=[]
 
-        for order in self['process']['perturbation_couplings']:
+        # It is important to try and obtain an ordering of the loop diagrams
+        # as canonical as possible so that loop ME for identical processes that
+        # differ only by the external massless flavors can be identified and
+        # merged together. We therefore choose to always start with QCD and QED
+        # perturbation if specified and then follow alphabetical order.
+        pert_orders = \
+          (['QCD'] if 'QCD' in self['process']['perturbation_couplings'] else [])+\
+          (['QED'] if 'QED' in self['process']['perturbation_couplings'] else [])+\
+          sorted(order for order in self['process']['perturbation_couplings'] if 
+                                                       order not in ['QCD','QED'])
+
+        for order in pert_orders:
             ldg_debug_info("Perturbation coupling generated now ",order)
             lcutPart=[particle for particle in \
                 self['process']['model']['particles'] if \
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-#            lcutPart = [lp for lp in lcutPart if abs(lp.get('pdg_code'))==6]
-#            misc.sprint("lcutPart=",[part.get('name') for part in lcutPart])
+            # Again, in an effort to canonically order loop diagrams generated, we
+            # choose here to always start with whole integer spin particles and then
+            # half-integer ones and in each of these subset, put first self-antiparticles.
+            # The remaining degeneracy is fixed by ordering by PDGs.
+            whole_spin_no_anti = filter(lambda p: 
+                             p.get('spin')%2==1 and p.get('self_antipart'), lcutPart) 
+            whole_spin_has_anti = filter(lambda p: 
+                         p.get('spin')%2==1 and not p.get('self_antipart'), lcutPart)
+            half_spin_no_anti = filter(lambda p: 
+                             p.get('spin')%2==0 and p.get('self_antipart'), lcutPart) 
+            half_spin_has_anti = filter(lambda p: 
+                         p.get('spin')%2==0 and not p.get('self_antipart'), lcutPart)
+            for l in [whole_spin_no_anti,whole_spin_has_anti,half_spin_no_anti,half_spin_has_anti]:
+                l.sort(key=lambda p: p.get('pdg_code'))
+            lcutPart = whole_spin_no_anti + whole_spin_has_anti + \
+                       half_spin_no_anti + half_spin_has_anti
+#            misc.sprint(order+" lcutPart=",[part.get('name') for part in lcutPart]) 
             for part in lcutPart:
                 if part.get_pdg_code() not in self.lcutpartemployed:
                     # First create the two L-cut particles to add to the process.
