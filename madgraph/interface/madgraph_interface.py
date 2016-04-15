@@ -5933,15 +5933,15 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             #        files.cp(old,new)
 
             # check that all files in bin directory are executable
-            for path in glob.glob(pjoin(MG5DIR, 'bin','*')):
+            for path in misc.glob('*', pjoin(MG5DIR, 'bin')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','*')):
+            for path in misc.glob(pjoin('*','bin','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','internal','*')):
+            for path in misc.glob(pjoin('*','bin','internal','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*', '*.py')):
+            for path in misc.glob(pjoin('*','*', '*.py'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*','*.sh')):
+            for path in misc.glob(pjoin('*','*','*.sh'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
 
             #add empty files/directory

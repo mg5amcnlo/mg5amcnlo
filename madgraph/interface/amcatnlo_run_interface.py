@@ -508,8 +508,8 @@ class CheckValidForCmd(object):
         lock = None              
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'pgs')
-            filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.hep.gz'))
+            filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events', self.run_name)) 
+
             if not filenames:
                 raise self.InvalidCmd('No events file corresponding to %s run with tag %s. '% (self.run_name, prev_tag))
             else:
@@ -565,8 +565,9 @@ class CheckValidForCmd(object):
                               
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'delphes')
-            filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.hep.gz'))
+            filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events')) 
+            
+            
             if not filenames:
                 raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
                     % (self.run_name, prev_tag, 
@@ -656,7 +657,7 @@ class CheckValidForCmd(object):
         else:
             name = args[0]
             type = 'run'
-            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            banners = misc.glob('*_banner.txt', pjoin(self.me_dir,'Events', args[0]))
             if not banners:
                 raise self.InvalidCmd('No banner associates to this name.')    
             elif len(banners) == 1:
@@ -784,7 +785,7 @@ class CompleteForCmd(CheckValidForCmd):
         
         if len(args) > 1:
             # only options are possible
-            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = misc.glob('%s_*_banner.txt' % args[1],pjoin(self.me_dir, 'Events' , args[1]))
             tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
 
             if args[-1] != '--tag=':
@@ -803,7 +804,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             possibilites['Path from ./'] = comp
 
-        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list = misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events')) 
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
@@ -850,7 +851,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx])
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','events.lhe.gz'))
+            data = misc.glob(pjoin('*','events.lhe.gz', pjoin(self.me_dir, 'Events')))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -863,7 +864,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','events.lhe*'))
+            data = misc.glob(pjoin('*','events.lhe*', pjoin(self.me_dir, 'Events')))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -877,7 +878,8 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx], error=False) 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*', 'events_*.hep.gz'))
+            data = misc.glob(pjoin('*', 'events_*.hep.gz'),
+                             pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -1021,11 +1023,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 os.remove(pjoin(self.me_dir, 'Events', 'plots.top'))
                 
         if any([arg in ['all','shower'] for arg in args]):
-            filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                        'events_*.lhe.gz'))
+            filenames = misc.glob('events_*.lhe.gz', pjoin(self.me_dir, 'Events', self.run_name))
             if len(filenames) != 1:
-                filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.hep.gz'))
+                filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events', self.run_name)) 
                 if len(filenames) != 1:
                     logger.info('No shower level file found for run %s' % \
                                 self.run_name)
@@ -2027,8 +2027,9 @@ RESTART = %(mint_mode)s
         # if no appl_start_grid argument given, guess it from the time stamps 
         # of the starting grid files
         if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
-            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*',
-                                            'aMCfast_obs_0_starting_grid.root'))
+            gfiles = misc.glob(pjoin('*', 'aMCfast_obs_0_starting_grid.root'),
+                               pjoin(self.me_dir,'Events')) 
+            
             time_stamps={}
             for root_file in gfiles:
                 time_stamps[root_file]=os.path.getmtime(root_file)
@@ -2104,7 +2105,7 @@ RESTART = %(mint_mode)s
     def finalise_run_FO(self,folder_name,jobs):
         """Combine the plots and put the res*.txt files in the Events/run.../ folder."""
         # Copy the res_*.txt files to the Events/run* folder
-        res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res_*.txt'))
+        res_files = misc.glob('res_*.txt', pjoin(self.me_dir, 'SubProcesses'))
         for res_file in res_files:
             files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
         # Collect the plots and put them in the Events/run* folder
@@ -2287,18 +2288,18 @@ RESTART = %(mint_mode)s
         # Make sure it never stops a run
         # Gather some basic statistics for the run and extracted from the log files.
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
-            log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','G*','log_MINT*.txt'))
+            log_GV_files =  misc.glob(pjoin('P*','G*','log_MINT*.txt'), 
+                                      pjoin(self.me_dir, 'SubProcesses'))
             all_log_files = log_GV_files
         elif mode == 'NLO':
-            log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','all_G*','log_MINT*.txt'))
+            log_GV_files = misc.glob(pjoin('P*','all_G*','log_MINT*.txt'), 
+                                      pjoin(self.me_dir, 'SubProcesses')) 
             all_log_files = log_GV_files
 
         elif mode == 'LO':
             log_GV_files = ''
-            all_log_files = glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','born_G*','log_MINT*.txt'))
+            all_log_files = misc.glob(pjoin('P*','born_G*','log_MINT*.txt'), 
+                                      pjoin(self.me_dir, 'SubProcesses')) 
         else:
             raise aMCatNLOError, 'Running mode %s not supported.'%mode
 
@@ -2795,7 +2796,7 @@ RESTART = %(mint_mode)s
         misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
-            res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res*.txt'))
+            res_files = misc.glob('res*.txt', pjoin(self.me_dir, 'SubProcesses'))
             for res_file in res_files:
                 files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
 
@@ -2954,8 +2955,7 @@ RESTART = %(mint_mode)s
 
         #look for the event files (don't resplit if one asks for the 
         # same number of event files as in the previous run)
-        event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.lhe'))
+        event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name))
         if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
             logger.info('Cleaning old files and splitting the event file...')
             #clean the old files
@@ -2968,8 +2968,7 @@ RESTART = %(mint_mode)s
                                 cwd=pjoin(self.me_dir, 'Events', self.run_name))
                 p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
                 logger.info('Splitting done.')
-            event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.lhe'))
+            event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name)) 
 
         event_files.sort()
 
@@ -3088,7 +3087,7 @@ RESTART = %(mint_mode)s
             elif out_id=='HWU':
                 ext='HwU'
             topfiles = []
-            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'histfile*.tar'))]
+            top_tars = [tarfile.TarFile(f) for f in misc.glob('histfile*.tar', rundir)]
             for top_tar in top_tars:
                 topfiles.extend(top_tar.getnames())
 

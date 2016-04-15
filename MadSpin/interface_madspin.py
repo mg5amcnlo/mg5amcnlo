@@ -662,7 +662,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             #seed is specified need to use that one:
             open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.seed)
             #remove all ranmar_state
-            for name in glob.glob(pjoin(self.options['ms_dir'], '*', 'SubProcesses','*','ranmar_state.dat')):
+            for name in misc.glob(pjoin('*', 'SubProcesses','*','ranmar_state.dat'), 
+                                                        self.options['ms_dir']):
                 os.remove(name)    
         
         generate_all.ending_run()
@@ -786,7 +787,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 os.mkdir(self.path_me) 
         else:
             # cleaning
-            for name in glob.glob(pjoin(self.path_me, "decay_*_*")):
+            for name in misc.glob("decay_*_*", self.path_me):
                 shutil.rmtree(name)
 
         self.events_file.close()

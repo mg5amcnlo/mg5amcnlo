@@ -918,8 +918,7 @@ class gen_ximprove_v4(gen_ximprove):
 
     def reset_multijob(self):
 
-        for path in glob.glob(pjoin(self.me_dir, 'SubProcesses', '*', 
-                                                           '*','multijob.dat')):
+        for path in misc.glob(pjoin('*', '*','multijob.dat'), pjoin(self.me_dir, 'SubProcesses')):
             open(path,'w').write('0\n')
             
     def write_multijob(self, Channel, nb_split):

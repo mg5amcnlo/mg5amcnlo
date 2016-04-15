@@ -140,6 +140,12 @@ def parse_info_str(fsock):
     return info_dict
 
 
+def glob(name, path=''):
+    """call to glob.glob with automatic security on path"""
+    import glob as glob_module
+    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    return glob_module.glob(pjoin(path, name))
+
 #===============================================================================
 # mute_logger (designed to be a decorator)
 #===============================================================================

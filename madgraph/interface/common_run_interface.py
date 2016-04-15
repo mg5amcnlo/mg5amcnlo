@@ -2062,12 +2062,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = self.split_arg(line[0:begidx], error=False) 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'),
+                             pjoin(self.me_dir, 'Events')) 
+
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             return tmp1        
         else:
-            data = glob.glob(pjoin(self.me_dir, 'Events', args[0], '*_pythia_events.hep.gz'))
+            data = misc.glob('*_pythia_events.hep.gz', pjoin(self.me_dir, 'Events', args[0]))
             data = [os.path.basename(p).rsplit('_',1)[0] for p in data]
             data += ["--mode=a", "--mode=w", "--path=", "--format=short"]
             tmp1 =  self.list_completion(text, data)
@@ -2114,7 +2116,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         if len(args) == 1 and os.path.sep not in text:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','*events.lhe*'))
+            data = misc.glob(pjoin('*','*events.lhe*'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             return  self.list_completion(text, data, line)
         else:
@@ -2127,7 +2129,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = self.split_arg(line[0:begidx], error=False)
 
         #return valid run_name
-        data = glob.glob(pjoin(self.me_dir, 'Events', '*','*events.lhe*'))
+        data = misc.glob(pjoin('*','*events.lhe*'), pjoin(self.me_dir, 'Events'))
         data = [n.rsplit('/',2)[1] for n in data]
         if not '-f' in args:
             data.append('-f')
