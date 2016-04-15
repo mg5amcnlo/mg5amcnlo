@@ -4682,7 +4682,7 @@ Please install this tool with the following MG5_aMC command:
         
         if self.run_card['event_norm'] != 'sum':
             logger.critical('SysCalc works only when event_norm is on \'sum\'. Bypass SysCalc')
-            return
+            
         
         logger.info('running syscalc on mode %s' % mode)        
         scdir = self.options['syscalc_path']
