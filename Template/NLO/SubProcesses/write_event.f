@@ -157,7 +157,7 @@ c get info on beam and PDFs
       XERRUP(1)=uncer
       XMAXUP(1)=absint/ievents
       LPRUP(1)=66
-      if (event_norm(1:5).eq.'unity') then
+      if (event_norm(1:5).eq.'unity'.or.event_norm(1:3).eq.'sum') then
          IDWTUP=-3
       else
          IDWTUP=-4
