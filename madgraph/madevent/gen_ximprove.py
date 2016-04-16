@@ -130,10 +130,10 @@ class gensym(object):
             logger.info('    %s ' % subdir)
             
             # clean previous run
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+            for match in misc.glob('*ajob*', Pdir):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(match)
-            for match in glob.glob(pjoin(Pdir, 'G*')):
+            for match in misc.glob('G*', Pdir):
                 if os.path.exists(pjoin(match,'results.dat')):
                     os.remove(pjoin(match, 'results.dat')) 
                 if os.path.exists(pjoin(match, 'ftn25')):

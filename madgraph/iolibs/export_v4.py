@@ -177,7 +177,7 @@ class ProcessExporterFortran(object):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/LO'), 
                                self.dir_path)
-#            for name in glob.glob(pjoin(self.mgme_dir, 'Template/LO/*')):
+#            for name in misc.glob('Template/LO/*', self.mgme_dir):
 #                name = os.path.basename(name)
 #                filname = pjoin(self.mgme_dir, 'Template','LO',name)
 #                if os.path.isfile(filename):
