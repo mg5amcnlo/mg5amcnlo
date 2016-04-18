@@ -909,7 +909,7 @@ class OneTagResults(dict):
                 self.pythia8.append('log') 
                 
             if 'djr_plot' not  in self.pythia8 and \
-                          exists(pjoin(html_path,'%s_djr_plots'%tag,'index.html')):
+                          exists(pjoin(html_path,'%s_PY8_plots'%tag,'index.html')):
                 self.pythia8.append('djr_plot') 
 
         if level in ['pgs', 'all']:
@@ -1063,10 +1063,7 @@ class OneTagResults(dict):
             #if 'plot' in self.pythia8:
             #    out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             if 'djr_plot' in self.pythia8:
-                out += ' <a href="./HTML/%(run_name)s/%(tag)s_djr_plots/index.html">DJR(plot)</a>'
-
-                
-                      
+                out += ' <a href="./HTML/%(run_name)s/%(tag)s_PY8_plots/index.html">Matching plots</a>'                      
                 
             return out % self
 

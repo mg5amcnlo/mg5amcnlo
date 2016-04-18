@@ -3288,8 +3288,19 @@ Please install this tool with the following MG5_aMC command:
                    self.run_card['ktdurham']>0.0 or self.run_card['ptlund']>0.0:
             run_type = 'CKKW'
 
-        PY8_Card.subruns[0].systemSet('Beams:LHEF',
-          pjoin(self.me_dir,"Events", self.run_name,"unweighted_events.lhe.gz"))
+        PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
+
+        HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
+                                                  '%s_pythia8_events.hepmc'%tag)
+        if PY8_Card['HEPMCoutput:file']=='_MG5aMC_auto_set_':
+            PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag)
+        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null']:
+            open(HepMC_event_output,'w').write('HepMC output of Pythia8 disabled!')
+            HepMC_event_output = None
+        else:
+            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
+                                                   PY8_Card['HEPMCoutput:file'])
+        
         # We specify by hand all necessary parameters, so that there is no
         # need to read parameters from the Banner.
         PY8_Card.MadGraphSet('JetMatching:setMad',False)
@@ -3400,6 +3411,7 @@ Please install this tool with the following MG5_aMC command:
             # PY8 should not implement the CKKW veto since the driver should do it.
             if self.run_card['use_syst']:
                 PY8_Card.MadGraphSet('Merging:applyVeto',False)
+                PY8_Card.MadGraphSet('Merging:includeWeightInXsection',False)
             # Use the parameter maxjetflavor for Merging:nQuarksMerge which specifies
             # up to which parton must be matched.
             PY8_Card.MadGraphSet('Merging:nQuarksMerge',self.run_card['maxjetflavor'])
@@ -3454,12 +3466,10 @@ Please install this tool with the following MG5_aMC command:
             
         open(pythia_cmd_card,'w').write("""!
 ! It is possible to run this card manually with:
-!    %s %s my_hepmc_output_events.hepmc
+!    %s %s
 !
 """%(preamble+pythia_main,os.path.basename(pythia_cmd_card))+cmd_card.getvalue())
         
-        HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
-                                                  '%s_pythia8_events.hepmc'%tag)
         # launch pythia8
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.log' % tag)
@@ -3479,14 +3489,9 @@ Please install this tool with the following MG5_aMC command:
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
                 
         exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
-                     [preamble+pythia_main,pythia_cmd_card,HepMC_event_output]))
-################################################################################
-#### Uncomment the lines below so as *not* to output an hepMC file #############
-################################################################################
-#        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
-#                            [preamble+pythia_main,pythia_cmd_card,os.devnull]))
-#        open(HepMC_event_output,'w').write('DUMMY')
-################################################################################
+                     [preamble+pythia_main,
+                      os.path.basename(pythia_cmd_card)]))
+
         wrapper.write(exe_cmd)
         
         wrapper.close()
@@ -3497,18 +3502,27 @@ Please install this tool with the following MG5_aMC command:
         logger.info('Follow Pythia8 shower by running the '+
             'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
 
-        self.cluster.launch_and_wait(wrapper_path, 
+        ret_code = self.cluster.launch_and_wait(wrapper_path, 
                         argument= [],
                         stdout= pythia_log,
                         stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events',self.run_name))
         
-        # Properly rename the djr output if present.
+        if ret_code != 0:
+            raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
+                ' code %d.\n'%ret_code+\
+                'You can find more information in this log file:\n%s'%pythia_log
+        
+        # Properly rename the djr and pts output if present.
         djr_output = pjoin(self.me_dir,'Events', self.run_name, 'djrs.dat')
         if os.path.isfile(djr_output):
             shutil.move(djr_output, pjoin(self.me_dir,'Events',
                                             self.run_name, '%s_djrs.dat' % tag))
-
+        pt_output = pjoin(self.me_dir,'Events', self.run_name, 'pts.dat')
+        if os.path.isfile(pt_output):
+            shutil.move(pt_output, pjoin(self.me_dir,'Events',
+                                            self.run_name, '%s_pts.dat' % tag))
+            
         if not os.path.isfile(pythia_log) or \
              'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[-20]):
             logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
@@ -4681,7 +4695,9 @@ Please install this tool with the following MG5_aMC command:
             return
         
         if self.run_card['event_norm'] != 'sum':
-            logger.critical('SysCalc works only when event_norm is on \'sum\'. Bypass SysCalc')
+            logger.critical('SysCalc works only when event_norm is on \'sum\'.')
+            logger.critical('MG5aMC will still run it, but beware that the xsecs'+\
+                        ' in SysCalc log files will be incorrectly normalized.')            
             
         
         logger.info('running syscalc on mode %s' % mode)        

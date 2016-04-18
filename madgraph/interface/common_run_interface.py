@@ -374,7 +374,6 @@ class CheckValidForCmd(object):
         
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'delphes')
-            misc.sprint(prev_tag)
             if os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):            
                 filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
             elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)):
@@ -1047,6 +1046,99 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
     ############################################################################
+    @misc.mute_logger(names=['madgraph.various.histograms',
+                                          'internal.histograms'],levels=[20,20])
+    def generate_Pythia8_HwU_plots(self, plot_root_path,
+                                   merging_scale_name, observable_name, 
+                                   data_path):
+        """Generated the HwU plots from Pythia8 driver output for a specific
+        observable."""
+        
+        # Make sure that the file is present
+        if not os.path.isfile(data_path):
+            return False
+
+        # Load the HwU file.
+        histos = histograms.HwUList(data_path, consider_reweights='ALL',run_id=0)
+        if len(histos)==0:
+            return False
+
+        # Now also plot the max vs min merging scale
+        merging_scales_available = [label[1] for label in \
+                  histos[0].bins.weight_labels if 
+                  histograms.HwU.get_HwU_wgt_label_type(label)=='merging_scale']
+        if len(merging_scales_available)>=2:
+            min_merging_scale = min(merging_scales_available)
+            max_merging_scale = max(merging_scales_available)
+        else:
+            min_merging_scale = None
+            max_merging_scale = None
+
+        # jet_samples_to_keep = None means that all jet_samples are kept
+        histo_output_options = {
+          'format':'gnuplot', 
+          'uncertainties':['scale','pdf','statistical',
+                           'merging_scale','alpsfact'], 
+          'ratio_correlations':True,
+          'arg_string':'Automatic plotting from MG5aMC', 
+          'jet_samples_to_keep':None,
+          'use_band':['merging_scale','alpsfact'],
+          'auto_open':False
+        }
+        # alpsfact variation only applies to MLM
+        if not (int(self.run_card['ickkw'])==1):
+            histo_output_options['uncertainties'].pop(
+                histo_output_options['uncertainties'].index('alpsfact'))
+            histo_output_options['use_band'].pop(
+                     histo_output_options['use_band'].index('alpsfact'))
+
+        histos.output(pjoin(plot_root_path,
+            'central_%s_%s_plots'%(merging_scale_name,observable_name)),
+            **histo_output_options)
+        
+        for scale in merging_scales_available:
+            that_scale_histos = histograms.HwUList(
+                               data_path,  run_id=0, merging_scale=scale)
+            that_scale_histos.output(pjoin(plot_root_path,
+                '%s_%.3g_%s_plots'%(merging_scale_name,scale,observable_name)),
+                **histo_output_options)
+
+        # If several merging scales were specified, then it is interesting
+        # to compare the summed jet samples for the maximum and minimum
+        # merging scale available.
+        if not min_merging_scale is None:
+            min_scale_histos = histograms.HwUList(data_path, 
+                               consider_reweights=[], run_id=0, 
+                                        merging_scale=min_merging_scale)
+            max_scale_histos = histograms.HwUList(data_path, 
+                               consider_reweights=[], run_id=0, 
+                                        merging_scale=max_merging_scale)
+
+            # Give the histos types so that the plot labels look good
+            for histo in min_scale_histos:
+                if histo.type is None:
+                    histo.type = '%s=%.4g'%(merging_scale_name, min_merging_scale)
+                else:
+                    histo.type += '|%s=%.4g'%(merging_scale_name, min_merging_scale)
+            for histo in max_scale_histos:
+                if histo.type is None:
+                    histo.type = '%s=%.4g'%(merging_scale_name, max_merging_scale)
+                else:
+                    histo.type += '|%s=%.4g'%(merging_scale_name, max_merging_scale)
+            
+            # Now plot and compare against oneanother the shape for the the two scales
+            histograms.HwUList(min_scale_histos+max_scale_histos).output(
+                pjoin(plot_root_path,'min_max_%s_%s_comparison'
+                                         %(merging_scale_name,observable_name)),
+                format='gnuplot', 
+                uncertainties=[], 
+                ratio_correlations=True,
+                arg_string='Automatic plotting from MG5aMC', 
+                jet_samples_to_keep=[],
+                use_band=[],
+                auto_open=False)
+        return True
+    
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot"""
 
@@ -1062,7 +1154,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 return False
         else:
             PY8_plots_root_path = pjoin(self.me_dir,'HTML',
-                                               self.run_name,'%s_djr_plots'%tag)
+                                               self.run_name,'%s_PY8_plots'%tag)
             
         if 'ickkw' in self.run_card:
             if int(self.run_card['ickkw']) and mode == 'Pythia':
@@ -1097,99 +1189,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if not os.path.isdir(PY8_plots_root_path):
                     os.makedirs(PY8_plots_root_path)
 
-                djr_path = pjoin(self.me_dir,'Events',
-                                             self.run_name, '%s_djrs.dat' % tag)
-
                 merging_scale_name = 'qCut' if int(self.run_card['ickkw'])==1 \
                                                                       else 'TMS'
 
-                # Make sure that the file is present
-                if not os.path.isfile(djr_path):
-                    return False
-
-                # Load the HwU file.
-                # If they are NaN's around for the reweighting weights, then
-                # setting consider_reweights to False will disregard them.
-                # run_id = None means that the first run is considered
-                histos = histograms.HwUList(djr_path, consider_reweights='ALL',
-                                                                       run_id=0)
-                
-                if len(histos)==0:
-                    return False
-
-                # Now also plot the max vs min merging scale
-                merging_scales_available = [label[1] for label in \
-                          histos[0].bins.weight_labels if 
-                  histograms.HwU.get_HwU_wgt_label_type(label)=='merging_scale']
-                if len(merging_scales_available)>=2:
-                    min_merging_scale = min(merging_scales_available)
-                    max_merging_scale = max(merging_scales_available)
-                else:
-                    min_merging_scale = None
-                    max_merging_scale = None
-
-                histo_output_options = {
-                  'format':'gnuplot', 
-                  'uncertainties':['scale','pdf','statistical',
-                                   'merging_scale','alpsfact'], 
-                  'ratio_correlations':True,
-                  'arg_string':'Automatic plotting from MG5aMC', 
-                  'jet_samples_to_keep':None,
-                  'use_band':['merging_scale','alpsfact'],
-                  'auto_open':False
-                }
-                # alpsfact variation only applies to MLM
-                if not (int(self.run_card['ickkw'])==1):
-                    histo_output_options['uncertainties'].pop(
-                        histo_output_options['uncertainties'].index('alpsfact'))
-                    histo_output_options['use_band'].pop(
-                             histo_output_options['use_band'].index('alpsfact'))
-
-                # jet_samples_to_keep = None means that all jet_samples are kept
-                histos.output(pjoin(PY8_plots_root_path,
-                              'central_%s_djr_plots'%merging_scale_name),
-                              **histo_output_options)
-                
-                for scale in merging_scales_available:
-                    that_scale_histos = histograms.HwUList(
-                                       djr_path,  run_id=0, merging_scale=scale)
-                    that_scale_histos.output(pjoin(PY8_plots_root_path,
-                                '%s_%.3g_djr_plots'%(merging_scale_name,scale)),
-                                **histo_output_options)
-
-                # If several merging scales were specified, then it is interesting
-                # to compare the summed jet samples for the maximum and minimum
-                # merging scale available.
-                if not min_merging_scale is None:
-                    min_scale_histos = histograms.HwUList(djr_path, 
-                                       consider_reweights=[], run_id=0, 
-                                                merging_scale=min_merging_scale)
-                    max_scale_histos = histograms.HwUList(djr_path, 
-                                       consider_reweights=[], run_id=0, 
-                                                merging_scale=max_merging_scale)
-    
-                    # Give the histos types so that the plot labels look good
-                    for histo in min_scale_histos:
-                        if histo.type is None:
-                            histo.type = '%s=%.4g'%(merging_scale_name, min_merging_scale)
-                        else:
-                            histo.type += '|%s=%.4g'%(merging_scale_name, min_merging_scale)
-                    for histo in max_scale_histos:
-                        if histo.type is None:
-                            histo.type = '%s=%.4g'%(merging_scale_name, max_merging_scale)
-                        else:
-                            histo.type += '|%s=%.4g'%(merging_scale_name, max_merging_scale)
-                    
-                    # Now plot and compare against oneanother the shape for the the two scales
-                    histograms.HwUList(min_scale_histos+max_scale_histos).output(
-                        pjoin(PY8_plots_root_path,'min_max_%s_comparison'%merging_scale_name),
-                        format='gnuplot', 
-                        uncertainties=[], 
-                        ratio_correlations=True,
-                        arg_string='Automatic plotting from MG5aMC', 
-                        jet_samples_to_keep=[],
-                        use_band=[],
-                        auto_open=False)
+                djr_path = pjoin(self.me_dir,'Events',
+                                             self.run_name, '%s_djrs.dat' % tag)
+                pt_path = pjoin(self.me_dir,'Events',
+                                             self.run_name, '%s_pts.dat' % tag)
+                for observable_name, data_path in [('djr',djr_path),
+                                                   ('pt',pt_path)]:
+                    if not self.generate_Pythia8_HwU_plots(
+                                    PY8_plots_root_path, merging_scale_name,
+                                                     observable_name,data_path):
+                        return False
 
         if mode == 'Pythia8':
             plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
@@ -1216,16 +1228,43 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 html+= '<link rel=stylesheet href="../../mgstyle.css" type="text/css">\n</head>\n<body>\n'
                 html += "<h2> Plot for Pythia8 </h2>\n"
                 html += '<a href=../../../crossx.html>return to summary</a><br>'
-                html += "<table>\n<tr><td> <b>Type of plot</b> </td> <td><b> PDF</b> </td> <td><b> input file</b> </td> </tr>\n"
-                for one_plot in plot_files:
+                html += "<table>\n<tr> <td> <b>Obs.</b> </td> <td> <b>Type of plot</b> </td> <td><b> PDF</b> </td> <td><b> input file</b> </td> </tr>\n"
+                def sorted_plots(elem):
+                    name = os.path.basename(elem[1])
+                    if 'central' in name:
+                        return -100
+                    if 'min_max' in name:
+                        return -10
+                    merging_re = re.match(r'^.*_(\d+)_.*$',name)
+                    if not merging_re is None:
+                        return int(merging_re.group(1))
+                    else:
+                        return 1e10
+                djr_plot_files = sorted(
+                            (('DJR',p) for p in plot_files if '_djr_' in p),
+                            key = sorted_plots)
+                pt_plot_files = sorted(
+                            (('Pt',p) for p in plot_files if '_pt_' in p),
+                            key = sorted_plots)
+                last_obs = None            
+                for obs, one_plot in djr_plot_files+pt_plot_files:
+                    if obs!=last_obs:
+                        # Add a line between observables
+                        html += "<tr><td></td></tr>"
+                        last_obs = obs
                     name = os.path.basename(one_plot).replace('.pdf','')
-                    short_name = name.replace('_plots','')
-                    if 'min_max_qCut_comparison' in short_name:
-                        short_name = "Plot to determine the correct value of the merging scale"
-                    html += "<tr><td>%(sn)s</td><td> <a href=./%(n)s.pdf>PDF</a> </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> </td></tr>\n" %\
-                            {'sn': short_name, 'n': name}
+                    short_name = name
+                    for dummy in ['_plots','_djr','_pt']:
+                        short_name = short_name.replace(dummy,'')
+                    short_name = short_name.replace('_',' ')                        
+                    if 'min max' in short_name:
+                        short_name = "%s comparison with min/max merging scale"%obs
+                    if 'central' in short_name:
+                        short_name = "Merging uncertainty band around central scale"
+                    html += "<tr><td>%(obs)s</td><td>%(sn)s</td><td> <a href=./%(n)s.pdf>PDF</a> </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> </td></tr>\n" %\
+                                        {'obs':obs, 'sn': short_name, 'n': name}
                 html += '</table>\n'
-                html += '<a href=../../../bin/internal/plot_djrs.py> Example of code to plot DJR with matplotlib </a><br><br>'
+                html += '<a href=../../../bin/internal/plot_djrs.py> Example of code to plot the above with matplotlib </a><br><br>'
                 html+='</body>\n</html>'
                 ff=open(pjoin(PY8_plots_root_path, 'index.html'),'w')
                 ff.write(html)

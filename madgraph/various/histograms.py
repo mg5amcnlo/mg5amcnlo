@@ -1984,7 +1984,8 @@ class HwUList(histograms_PhysicsObjectList):
                 if histogram.getAttribute("weight")!='all':
                     continue
                 new_histo = HwU()
-                hist_name = str(histogram.getAttribute('name'))
+                hist_name = '%s %s'%(str(histogram.getAttribute('name')),
+                                            str(histogram.getAttribute('unit')))
                 # prepend the jet multiplicity to the histogram name
                 new_histo.process_histogram_name('%s |JETSAMPLE@%d'%(hist_name,multiplicity))
                 # We do not want to include auxiliary diagrams which would be

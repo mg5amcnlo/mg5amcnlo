@@ -1274,6 +1274,9 @@ class PY8Card(ConfigFile):
         self.add_param("Check:epTolErr", 1e-2,
             hidden=True,
             comment='Be more forgiving with momentum mismatches.')
+        self.add_param("HEPMCoutput:file", '_MG5aMC_auto_set_',
+            hidden=True,
+            comment='HepMC output file name or *relative* path.')
 
         # Hidden parameters written out only if user_set or system_set
         # ============================================================
@@ -1283,6 +1286,11 @@ class PY8Card(ConfigFile):
             comment='Reminder: Parameter below is shower tune dependent.')
         self.add_param("TimeShower:alphaSvalue", 0.118, hidden=True, always_write_to_card=False,
             comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("hadronlevel:all", True, hidden=True, always_write_to_card=False,
+            comment='This allows to turn on/off hadronization alltogether.')
+        self.add_param("partonlevel:mpi", True, hidden=True, always_write_to_card=False,
+            comment='This allows to turn on/off MPI alltogether.')
+        
         # for MLM merging
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
@@ -1305,6 +1313,8 @@ class PY8Card(ConfigFile):
                         comment='Set factorisation scales of the 2->2 process.')
         self.add_param("Merging:applyVeto", False, hidden=True, always_write_to_card=False,
           comment='Do veto externally (e.g. in SysCalc).')
+        self.add_param("Merging:includeWeightInXsection", True, hidden=True, always_write_to_card=False,
+          comment='If turned off, then the option belows forces PY8 to keep the original weight.')                       
         self.add_param("Merging:muRen", 91.188, hidden=True, always_write_to_card=False,
                       comment='Set renormalization scales of the 2->2 process.')
         self.add_param("Merging:muFacInME", 91.188, hidden=True, always_write_to_card=False,
