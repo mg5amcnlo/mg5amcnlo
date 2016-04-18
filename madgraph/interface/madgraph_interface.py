@@ -5206,16 +5206,10 @@ This implies that with decay chains:
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
 ############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
-
-        for i, opt in enumerate(additional_options):
-            if opt.startswith('--mg5amc_py8_interface_tarball'):
-                additional_options[i]='--mg5amc_py8_interface_tarball=%s'%\
-                   pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
-                                                'MG5aMC_PY8_interface.tar.gz')
 
         # Potential change in naming convention
         name_map = {}
@@ -5249,9 +5243,9 @@ This implies that with decay chains:
                                '--with_pythia8=%s'%self.options['pythia8_path'])
 
 ##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
-            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
-                   pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
-                                                'MG5aMC_PY8_interface.tar.gz'))
+#            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
+#                   pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
+#                                                'MG5aMC_PY8_interface.tar.gz'))
 ################################################################################
 
         # Special rules for certain tools  
