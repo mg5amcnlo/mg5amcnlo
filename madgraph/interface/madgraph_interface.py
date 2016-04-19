@@ -2629,8 +2629,13 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, self._install_opts)
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
-        elif len(args)>1 and args[1] in self._advanced_install_opts:
-            return self.list_completion(text, ['--keep_source',''])
+        elif len(args)==2 and args[1] in self._advanced_install_opts:           
+            options = ['--keep_source']
+            if args[1]=='pythia8':
+                options.append('--pythia8_tarball=')
+            elif args[1]=='mg5amc_py8_interface':
+                options.append('--mg5amc_py8_interface_tarball=')                                
+            return self.list_completion(text, options)
         else:
             return self.list_completion(text, [])
 
@@ -5174,7 +5179,6 @@ This implies that with decay chains:
         """ Uses the HEPToolsInstaller.py script maintened online to install
         HEP tools with more complicated dependences.
         Additional options will be added to the list when calling HEPInstaller"""
-
         # Always refresh the installer if already present
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
             if HepToolsInstaller_web_address is None:
@@ -5297,8 +5301,6 @@ This implies that with decay chains:
             elif lhapdf_version==6:
                 lhapdf_option.append('--with_lhapdf5=OFF')
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
-            # Make sure each otion in additional_options appears only once
-            additional_options = list(set(additional_options))
              # And that the option '--force' is placed last.
             additional_options = [opt for opt in additional_options if opt!='--force']+\
                         (['--force'] if '--force' in additional_options else [])
@@ -5308,8 +5310,6 @@ This implies that with decay chains:
                         + lhapdf_option + compiler_options + additional_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
-            # Make sure each otion in additional_options appears only once
-            additional_options = list(set(additional_options))
              # And that the option '--force' is placed last.
             additional_options = [opt for opt in additional_options if opt!='--force']+\
                         (['--force'] if '--force' in additional_options else [])
