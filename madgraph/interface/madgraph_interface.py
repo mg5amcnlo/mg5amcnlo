@@ -146,6 +146,33 @@ class CmdExtended(cmd.Cmd):
     # Define the Error Class # Define how error are handle
     InvalidCmd = madgraph.InvalidCmd
     ConfigurationError = MadGraph5Error
+    
+    intro_banner = "************************************************************\n" + \
+        "*                                                          *\n" + \
+        "*                     W E L C O M E to                     *\n" + \
+        "*              M A D G R A P H 5 _ a M C @ N L O           *\n" + \
+        "*                                                          *\n" + \
+        "*                                                          *\n" + \
+        "*                 *                       *                *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                     * * * * 5 * * * *                    *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                 *                       *                *\n" + \
+        "*                                                          *\n" + \
+        "%s" + \
+        "*                                                          *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
+        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*                            and                           *\n" + \
+        "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
+        "*                                                          *\n" + \
+        "*               Type 'help' for in-line help.              *\n" + \
+        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
+        "*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *\n" + \
+        "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
+        "*                                                          *\n" + \
+        "************************************************************"
+    
 
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
@@ -187,32 +214,7 @@ class CmdExtended(cmd.Cmd):
             
 
 
-        logger.info(\
-        "************************************************************\n" + \
-        "*                                                          *\n" + \
-        "*                     W E L C O M E to                     *\n" + \
-        "*              M A D G R A P H 5 _ a M C @ N L O           *\n" + \
-        "*                                                          *\n" + \
-        "*                                                          *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                     * * * * 5 * * * *                    *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                                                          *\n" + \
-        info_line + \
-        "*                                                          *\n" + \
-        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        "*                            and                           *\n" + \
-        "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
-        "*                                                          *\n" + \
-        "*               Type 'help' for in-line help.              *\n" + \
-        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
-        "*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *\n" + \
-        "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
-        "*                                                          *\n" + \
-        "************************************************************")
+        logger.info(self.intro_banner % info_line)
 
         cmd.Cmd.__init__(self, *arg, **opt)
 
@@ -5500,7 +5502,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
             logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
             logger.info("------------------------------------------------------", '$MG:color:GREEN')
-
 
         # Load file with path of the different program:
         import urllib
