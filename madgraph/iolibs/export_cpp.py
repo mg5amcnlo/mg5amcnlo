@@ -208,6 +208,7 @@ class OneProcessExporterCPP(object):
 
         
         return replace_dict
+    
     #===========================================================================
     # write_process_h_file
     #===========================================================================
@@ -818,8 +819,9 @@ class OneProcessExporterCPP(object):
             res_list.append(res)
 
         return "\n".join(res_list)
+    
 
-
+    
 
 class OneProcessExporterMatchbox(OneProcessExporterCPP):
     """Class to take care of exporting a set of matrix elements to
@@ -1607,6 +1609,16 @@ class ProcessExporterCPP(object):
                                     {'model': self.get_model_name(model.get('name'))}
             open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
+
+    def convert_model(self, model, wanted_lorentz = [],
+                         wanted_couplings = []):
+        # create the model parameter files
+        model_builder = UFOModelConverterCPP(model,
+                                         os.path.join(self.dir_path, 'src'),
+                                         wanted_lorentz,
+                                         wanted_couplings)
+        model_builder.write_files()
+
     #===============================================================================
     # generate_subprocess_directory
     #===============================================================================
@@ -1642,6 +1654,10 @@ class ProcessExporterCPP(object):
         name = name.replace('-', '_')
         name = name.replace('+', '_plus_')
         return name
+    
+    def finalize(self, *args, **opts):
+        """ """
+        pass
 
 class ProcessExporterMatchbox(ProcessExporterCPP):
     oneprocessclass = OneProcessExporterMatchbox
@@ -1776,7 +1792,10 @@ class ProcessExporterPythia8(ProcessExporterCPP):
                        os.path.split(make_filename)[0]))
         return main_file, make_filename
 
-
+    def convert_model(self,*args,**opts):
+        pass
+    def finalize(self, *args, **opts):
+        pass
   
 #===============================================================================
 # Global helper methods
@@ -1837,21 +1856,6 @@ def coeff(ff_number, frac, is_imaginary, Nc_power, Nc_value=3):
         res_str = res_str + '*std::complex<double>(0,1)'
 
     return res_str + '*'
-
-#===============================================================================
-# Routines to export/output UFO models in C++ format
-#===============================================================================
-
-def convert_model_to_cpp(model, output_dir, wanted_lorentz = [],
-                         wanted_couplings = []):
-    """Create a full valid Pythia 8 model from an MG5 model (coming from UFO)"""
-
-    # create the model parameter files
-    model_builder = UFOModelConverterCPP(model,
-                                         os.path.join(output_dir, 'src'),
-                                         wanted_lorentz,
-                                         wanted_couplings)
-    model_builder.write_files()
 
 #===============================================================================
 # UFOModelConverterCPP

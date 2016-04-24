@@ -606,21 +606,21 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 del self.previous_lorentz
                 del self.previous_couplings
             
-            self._curr_exporter.convert_model_to_mg4(self._curr_model,
+            self._curr_exporter.convert_model(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
-            
-        compiler = {'fortran': self.options['fortran_compiler'],
-                    'f2py': self.options['f2py_compiler'],
-                    'cpp': self.options['cpp_compiler']}
         
         if self._export_format in self.supported_ML_format:
-            self._curr_exporter.finalize_v4_directory( \
+            flags = []
+            if nojpeg:
+                flags.append('nojpeg')
+            if online:
+                flags.append('online')
+            self._curr_exporter.finalize( \
                                            self._curr_matrix_elements,
                                            self.history,
-                                           not nojpeg,
-                                           online,
-                                           compiler)
+                                           self.options,
+                                           flags)
 
         if self._export_format in self.supported_ML_format:
             logger.info('Output to directory ' + self._export_dir + ' done.')

@@ -2537,7 +2537,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Initiation
         if 'pwd' in opt:
             self.me_dir = opt['pwd']
-            del opt['pwd']        
+            del opt['pwd'] 
+        if 'mother_interface' in opt:
+            self.mother_interface = opt['mother_interface']  
+            del opt['mother_interface']     
         if not hasattr(self, 'me_dir') or not self.me_dir:
             self.me_dir = self.mother_interface.me_dir
         
@@ -2545,9 +2548,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['param'] = pjoin(self.me_dir,'Cards','param_card.dat')
         self.paths['param_default'] = pjoin(self.me_dir,'Cards','param_card_default.dat')
         self.paths['run'] = pjoin(self.me_dir,'Cards','run_card.dat')
-        self.paths['run'] = pjoin(self.me_dir,'Cards','run_card_default.dat')
+        self.paths['run_default'] = pjoin(self.me_dir,'Cards','run_card_default.dat')
         self.paths['transfer'] =pjoin(self.me_dir,'Cards','transfer_card.dat')
         self.paths['MadWeight'] =pjoin(self.me_dir,'Cards','MadWeight_card.dat')
+        self.paths['MadWeight_default'] =pjoin(self.me_dir,'Cards','MadWeight_card_default.dat')
         self.paths['ML'] =pjoin(self.me_dir,'Cards','MadLoopParams.dat')
         self.paths['shower'] = pjoin(self.me_dir,'Cards','shower_card.dat')
         self.paths['shower_default'] = pjoin(self.me_dir,'Cards','shower_card_default.dat')
@@ -2558,17 +2562,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
-        
 
-        self.load_default()
+        self.load_default()        
         self.define_paths(**opt)
-        
-
 
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
-
-
-
 
 
         try:
@@ -3017,7 +3015,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning(text)
 
             if args[start+1] == 'default':
-                default = banner_mod.RunCard(self.paths['run'])
+                default = banner_mod.RunCard(self.paths['run_default'])
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]])
                 else:

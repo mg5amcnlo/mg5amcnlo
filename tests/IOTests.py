@@ -158,7 +158,7 @@ class IOTest(object):
         self.exporter.generate_loop_subprocess(hel_amp, self.helasModel)
         wanted_lorentz = hel_amp.get_used_lorentz()
         wanted_couplings = list(set(sum(hel_amp.get_used_couplings(),[])))
-        self.exporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+        self.exporter.convert_model(model,wanted_lorentz,wanted_couplings)
             
         proc_name='P'+hel_amp.get('processes')[0].shell_string()
         return pjoin(self.outputPath,'SubProcesses',proc_name)

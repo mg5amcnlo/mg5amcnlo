@@ -440,6 +440,15 @@ class ParamCard(dict):
                                        (blockname, lhacode , new_value, value)
         return diff 
 
+    
+    def get_value(self, blockname, lhecode):
+        try:
+            return self[blockname].get(lhecode).value
+        except KeyError:
+            if blockname == 'width':
+                blockname = 'decay'
+                return self.get_value(blockname, lhecode)
+            raise
 
     def write_inc_file(self, outpath, identpath, default, need_mp=False):
         """ write a fortran file which hardcode the param value"""

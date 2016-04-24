@@ -287,14 +287,11 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
-                              online = False, compiler=default_compiler):
-        """Function to finalize v4 directory, for inheritance.
-        """
+    def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[]):
+        """Function to finalize v4 directory, for inheritance.""" 
         
-        self.create_run_card(matrix_elements, history)
-        
-        pass
+        self.create_run_card(matrix_elements, history)         
+
 
     #===========================================================================
     # Create the proc_characteristic file passing information to the run_interface
@@ -744,7 +741,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
     # Routines to output UFO models in MG4 format
     #===========================================================================
 
-    def convert_model_to_mg4(self, model, wanted_lorentz = [],
+    def convert_model(self, model, wanted_lorentz = [],
                              wanted_couplings = []):
         """ Create a full valid MG4 model from a MG5 model (coming from UFO)"""
 
@@ -1842,9 +1839,21 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler=default_compiler):
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+        
+        if 'nojpeg' in flaglist:
+            makejpg = False
+        else:
+            makejpg = True
+        if 'online' in flaglist:
+            online = True
+        else:
+            online = False
+            
+        compiler =  {'fortran': mg5options['fortran_compiler'],
+                     'cpp': mg5options['cpp_compiler'],
+                     'f2py': mg5options['f2py_compiler']}
 
         self.compiler_choice(compiler)
         self.make()
@@ -1854,8 +1863,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             output_file = pjoin(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
         
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
-                                             history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize(self, matrix_elements, 
+                                             history, mg5options, flaglist)
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
 
@@ -2372,12 +2381,12 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
         
     #===========================================================================
-    # convert_model_to_mg4
+    # convert_model
     #===========================================================================    
-    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+    def convert_model(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
          
-        super(ProcessExporterFortranMW,self).convert_model_to_mg4(model, 
+        super(ProcessExporterFortranMW,self).convert_model(model, 
                                                wanted_lorentz, wanted_couplings)
          
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
@@ -2522,9 +2531,23 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     #===========================================================================
     # Create proc_card_mg5.dat for MadWeight directory
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler=default_compiler):
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+
+        if 'nojpeg' in flaglist:
+            makejpg = False
+        else:
+            makejpg = True
+        if 'online' in flaglist:
+            online = True
+        else:
+            online = False
+            
+        compiler =  {'fortran': mg5options['fortran_compiler'],
+                     'cpp': mg5options['cpp_compiler'],
+                     'f2py': mg5options['f2py_compiler']}
+
+
 
         #proc_charac
         self.create_proc_charac()
@@ -2546,8 +2569,10 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
 
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements,
-                                             history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize(self, matrix_elements,
+                                             history, mg5options, flaglist)
+                                             
+            
 
 
     #===========================================================================
@@ -3165,10 +3190,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                  self.dir_path+'/bin/internal/FO_analyse_card.py') 
  
  
-    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+    def convert_model(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
          
-        super(ProcessExporterFortranME,self).convert_model_to_mg4(model, 
+        super(ProcessExporterFortranME,self).convert_model(model, 
                                                wanted_lorentz, wanted_couplings)
          
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
@@ -3433,10 +3458,23 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         for file in linkfiles:
             ln('../' + file , cwd=Ppath)    
 
-    def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler=default_compiler):
+
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
+        
+        if 'nojpeg' in flaglist:
+            makejpg = False
+        else:
+            makejpg = True
+        if 'online' in flaglist:
+            online = True
+        else:
+            online = False
+            
+        compiler =  {'fortran': mg5options['fortran_compiler'],
+                     'cpp': mg5options['cpp_compiler'],
+                     'f2py': mg5options['f2py_compiler']}
 
         # indicate that the output type is not grouped
         if  not isinstance(self, ProcessExporterFortranMEGroup):
@@ -3521,8 +3559,8 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         self.create_proc_charac(matrix_elements, history)
 
         # create the run_card
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
-                                             history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize(self, matrix_elements, history, mg5options, flaglist)
+
 
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
@@ -4963,12 +5001,9 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
 
 
 
-    def finalize_v4_directory(self,*args, **opts):
+    def finalize(self,*args, **opts):
 
-
-        
-        super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args,
-                                                                         **opts)
+        super(ProcessExporterFortranMEGroup, self).finalize(*args, **opts)
         #ensure that the grouping information is on the correct value
         self.proc_characteristic['grouped_matrix'] = True        
 

@@ -280,10 +280,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             cp(pjoin(_file_path,cp_file),
                 pjoin(self.dir_path,'bin','internal',os.path.basename(cp_file)))
 
-    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+    def convert_model(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
 
-        super(ProcessExporterFortranFKS,self).convert_model_to_mg4(model, 
+        super(ProcessExporterFortranFKS,self).convert_model(model, 
                                                wanted_lorentz, wanted_couplings)
         
         IGNORE_PATTERNS = ('*.pyc','*.dat','*.py~')
@@ -700,12 +700,39 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
 
 
-    def finalize_fks_directory(self, matrix_elements, history, makejpg = False,
-            online = False, 
-            compiler_dict={'fortran': 'gfortran', 'cpp': 'g++'}, 
-            output_dependencies = 'external', MG5DIR = None):
+
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Finalize FKS directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
+
+        devnull = os.open(os.devnull, os.O_RDWR)
+        try:
+            res = misc.call([self.options['lhapdf'], '--version'], \
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except Exception:
+            res = 1
+        if res != 0:
+            logger.info('The value for lhapdf in the current configuration does not ' + \
+                        'correspond to a valid executable.\nPlease set it correctly either in ' + \
+                        'input/mg5_configuration or with "set lhapdf /path/to/lhapdf-config" ' + \
+                        'and regenrate the process. \nTo avoid regeneration, edit the ' + \
+                        ('%s/Cards/amcatnlo_configuration.txt file.\n' % self.dir_path ) + \
+                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
+        
+        compiler_dict = {'fortran':  mg5options['fortran_compiler'],
+                             'cpp':  mg5options['cpp_compiler'],
+                             'f2py':  mg5options['f2py_compiler']}
+        
+        if 'nojpeg' in flaglist:
+            makejpg = False
+        else:
+            makejpg = True
+        if 'online' in flaglist:
+            online = True
+        else:
+            online = False
+        output_dependencies = mg5options['output_dependencies']
+        
         
         self.proc_characteristic['grouped_matrix'] = False
         self.create_proc_charac()

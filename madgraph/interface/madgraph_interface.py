@@ -1473,7 +1473,6 @@ This will take effect only in a NEW terminal
                             args.pop(0)
                             break
             else:
-                misc.sprint("Keep default")
                 self._export_format = default
         else:
             self._export_format = default
@@ -7142,6 +7141,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if self._export_format in ['pythia8', 'matchbox_cpp', 'standalone_cpp'] or\
             (self._export_format == 'plugin' and self._export_plugin['exporter'] == 'cpp'):
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+        elif self._model_v4_path:
+            self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
             self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
@@ -7394,79 +7395,53 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                              'cpp': self.options['cpp_compiler'],
                              'f2py': self.options['f2py_compiler']}
 
-        
-        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
-                                   'standalone_msF', 'standalone_rw', 'NLO', 'madweight',
-                                   'matchbox']:
-
-            # For v4 models, copy the model/HELAS information.
-            if self._model_v4_path:
-                logger.info('Copy %s model files to directory %s' % \
+        # Handling of the model.
+        if self._model_v4_path:
+            logger.info('Copy %s model files to directory %s' % \
                             (os.path.basename(self._model_v4_path), self._export_dir))
-                self._curr_exporter.export_model_files(self._model_v4_path)
-                self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))
-            else:
-                logger.info('Export UFO model to MG4 format')
-                # wanted_lorentz are the lorentz structures which are
-                # actually used in the wavefunctions and amplitudes in
-                # these processes
-                wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
-                wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-                # For a unique output of multiple type of exporter need to store this
-                # information.             
-                if hasattr(self, 'previous_lorentz'):
-                    wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
-                    wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
-                    del self.previous_lorentz
-                    del self.previous_couplings
-                if 'store_model' in flaglist:
-                    self.previous_lorentz = wanted_lorentz
-                    self.previous_couplings = wanted_couplings
-                else:
-                    self._curr_exporter.convert_model_to_mg4(self._curr_model,
-                                               wanted_lorentz,
-                                               wanted_couplings)
-        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
-            logger.info('Export UFO model to C++ format')
+            self._curr_exporter.export_model_files(self._model_v4_path)
+            self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))        
+        else:
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-            export_cpp.convert_model_to_cpp(self._curr_model,
-                                            pjoin(self._export_dir),
-                                            wanted_lorentz,
-                                            wanted_couplings)
+            # For a unique output of multiple type of exporter need to store this
+            # information.             
+            if hasattr(self, 'previous_lorentz'):
+                wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
+                wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                del self.previous_lorentz
+                del self.previous_couplings        
+            if 'store_model' in flaglist:
+                self.previous_lorentz = wanted_lorentz
+                self.previous_couplings = wanted_couplings
+            else:
+                self._curr_exporter.convert_model(self._curr_model, 
+                                               wanted_lorentz,
+                                               wanted_couplings)
+        
+        # move the old options to the flaglist system.
+        if nojpeg:
+            flaglist.append('nojpeg')
+        if online:
+            flaglist.append('online')
+            
+        # Dedicated finalize function.
+        self._curr_exporter.finalize(self._curr_matrix_elements,
+                                    self.history,
+                                    self.options,
+                                    flaglist)
+
+        
+        if self._export_format in ['standalone_cpp', 'matchbox_cpp'] or \
+           (self._export_format == 'plugin' and self._export_plugin['exporter'] == 'cpp'):
+            logger.info('Export UFO model to C++ format')
             export_cpp.make_model_cpp(self._export_dir)
 
-
         elif self._export_format in ['NLO']:
-            ## write fj_lhapdf_opts file
-            devnull = os.open(os.devnull, os.O_RDWR)
-            try:
-                res = misc.call([self.options['lhapdf'], '--version'], \
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            except Exception:
-                res = 1
-            if res != 0:
-                logger.info('The value for lhapdf in the current configuration does not ' + \
-                        'correspond to a valid executable.\nPlease set it correctly either in ' + \
-                        'input/mg5_configuration or with "set lhapdf /path/to/lhapdf-config" ' + \
-                        'and regenrate the process. \nTo avoid regeneration, edit the ' + \
-                        ('%s/Cards/amcatnlo_configuration.txt file.\n' % self._export_dir ) + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
-
-
-
-            self._curr_exporter.finalize_fks_directory( \
-                                           self._curr_matrix_elements,
-                                           self.history,
-                                           not nojpeg,
-                                           online,
-                                           compiler_dict,
-                                           output_dependencies = self.options['output_dependencies'],
-                                           MG5DIR = MG5DIR)
-            
+            ## write fj_lhapdf_opts file            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
@@ -7483,16 +7458,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False,
                          to_keep={'mg5_path':MG5DIR})
-
-        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 'standalone_msF',
-                                   'standalone_rw', 'madweight', 'matchbox']:
-
-            self._curr_exporter.finalize_v4_directory( \
-                                           self._curr_matrix_elements,
-                                           self.history,
-                                           not nojpeg,
-                                           online,
-                                           compiler_dict)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')

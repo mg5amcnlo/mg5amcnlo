@@ -328,13 +328,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         else:
             return file
         
-    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+    def convert_model(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
         """ Caches the aloha model created here when writing out the aloha 
         fortran subroutine.
         """
         self.get_aloha_model(model)
-        super(LoopProcessExporterFortranSA, self).convert_model_to_mg4(model,
+        super(LoopProcessExporterFortranSA, self).convert_model(model,
            wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
 
     def get_ME_identifier(self, matrix_element, 
@@ -2772,8 +2772,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
-                              online = False, compiler='g77'):
+    def finalize(self, *args, **opts):
         """Function to finalize v4 directory, for inheritance.
         """
         
@@ -2924,7 +2923,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         # Then the MadLoop-standalone related one
         LoopInducedExporterME.copy_v4template(self, *args, **opts)
 
-    def finalize_v4_directory(self, *args, **opts):
+    def finalize(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically what finalize_v4_directory must be used, so that the
@@ -2932,12 +2931,11 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
 
         self.proc_characteristic['loop_induced'] = True
         
-        export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
-                                                              self,*args,**opts)
+        export_v4.ProcessExporterFortranMEGroup.finalize(self,*args,**opts)
         
-        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # And the finilize from LoopInducedExporterME which essentially takes
         # care of MadLoop virtuals initialization
-        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
+        LoopInducedExporterME.finalize(self,*args,**opts)
         
     def generate_subprocess_directory(self, subproc_group,
                                                     fortran_model,group_number):
@@ -3089,19 +3087,18 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         # Then the MadLoop-standalone related one
         LoopInducedExporterME.copy_v4template(self, *args, **opts)
 
-    def finalize_v4_directory(self, *args, **opts):
+    def finalize(self, *args, **opts):
         """Pick the right mother functions
         """
         
         self.proc_characteristic['loop_induced'] = True
-        # Call specifically what finalize_v4_directory must be used, so that the
+        # Call specifically what finalize must be used, so that the
         # MRO doesn't interfere.
-        export_v4.ProcessExporterFortranME.finalize_v4_directory(
-                                                              self,*args,**opts)
+        export_v4.ProcessExporterFortranME.finalize(self, *args, **opts)
 
         # And the finilize_v4 from LoopInducedExporterME which essentially takes
         # care of MadLoop virtuals initialization
-        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
+        LoopInducedExporterME.finalize(self, *args, **opts)
 
     def generate_subprocess_directory(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
