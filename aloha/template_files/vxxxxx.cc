@@ -7,14 +7,14 @@ void vxxxxx(double p[4],double vmass,int nhel,int nsv, complex<double> vc[6]){
   int nsvahl;
   sqh = sqrt(0.5);
   hel = double(nhel);
-  nsvahl = nsv*abs(hel);
+  nsvahl = nsv*std::abs(hel);
   pt2 = (p[1]*p[1])+(p[2]*p[2]);
   pp = min(p[0],sqrt(pt2+(p[3]*p[3])));
   pt =min(pp,sqrt(pt2));
   vc[0] = complex<double>(p[0]*nsv,p[3]*nsv);
   vc[1] = complex<double>(p[1]*nsv,p[2]*nsv);
   if (vmass != 0.0){
-    hel0 = 1.0-abs(hel);
+    hel0 = 1.0-std::abs(hel);
     if( pp == 0.0 ){ 
       vc[2] = complex<double>(0.0,0.0);
       vc[3] = complex<double>(-hel*sqh,0.0);

@@ -12,7 +12,7 @@ void ixxxxx(double p[4],double fmass,int nhel, int nsf, complex<double> fi[6]){
   if (fmass != 0.0) { 
     pp = min(p[0],sqrt(p[1]*p[1]+p[2]*p[2]+p[3]*p[3]));
     if (pp == 0.0){ 
-      sqm[0] = sqrt(abs(fmass)); 
+      sqm[0] = sqrt(std::abs(fmass)); 
       sqm[1] = Sgn(sqm[0],fmass);
       ip = (1+nh)/2;
       im = (1-nh)/2;

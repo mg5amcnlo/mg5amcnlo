@@ -1322,7 +1322,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conj(dcmplx(%s))',
                    '/' : '{0}/%s'.format(one),
-                   'abs': 'abs(%s)'
+                   'abs': 'std::abs(%s)'
                    }
             
         if fct in self.fct_format:

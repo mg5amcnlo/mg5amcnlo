@@ -81,7 +81,7 @@ void txxxxx(double p[4], double tmass, int nhel, int nst, complex<double> tc[18]
 	}
 	
 	// construct eps0
-	if( fabs(nhel) <= 1 )
+	if( std::labs(nhel) <= 1 )
 	{
 		if( pp == 0 )
 		{
