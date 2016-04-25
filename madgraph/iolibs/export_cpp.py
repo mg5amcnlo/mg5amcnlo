@@ -2287,8 +2287,8 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
     namespace = 'Pythia8'
     
     # Dictionaries for expression of MG5 SM parameters into Pythia 8
-    slha_to_expr = {('SMINPUTS', (1,)): '1./csm->alphaEM(pow(pd->m0(23),2))',
-                    ('SMINPUTS', (2,)): 'M_PI*csm->alphaEM(pow(pd->m0(23),2))*pow(pd->m0(23),2)/(sqrt(2.)*pow(pd->m0(24),2)*(pow(pd->m0(23),2)-pow(pd->m0(24),2)))',
+    slha_to_expr = {('SMINPUTS', (1,)): '1./csm->alphaEM(((pd->m0(23))*(pd->m0(23))))',
+                    ('SMINPUTS', (2,)): 'M_PI*csm->alphaEM(((pd->m0(23))*(pd->m0(23))))*((pd->m0(23))*(pd->m0(23)))/(sqrt(2.)*((pd->m0(24))*(pd->m0(24)))*(((pd->m0(23))*(pd->m0(23)))-((pd->m0(24))*(pd->m0(24)))))',
                     ('SMINPUTS', (3,)): 'alpS',
                     ('CKMBLOCK', (1,)): 'csm->VCKMgen(1,2)',
                     }
