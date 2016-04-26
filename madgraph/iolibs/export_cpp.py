@@ -65,6 +65,8 @@ class OneProcessExporterCPP(object):
     # Static variables (for inheritance)
     process_dir = '.'
     include_dir = '.'
+    template_path = os.path.join(_file_path, 'iolibs', 'template_files')
+    __template_path = os.path.join(_file_path, 'iolibs', 'template_files') 
     process_template_h = 'cpp_process_h.inc'
     process_template_cc = 'cpp_process_cc.inc'
     process_class_template = 'cpp_process_class.inc'
@@ -178,8 +180,32 @@ class OneProcessExporterCPP(object):
             self.amplitudes = helas_objects.HelasMatrixElement({\
                 'diagrams': helas_objects.HelasDiagramList([diagram])})
 
-    # Methods for generation of process files for C++
+    #===============================================================================
+    # Global helper methods
+    #===============================================================================
+    @classmethod
+    def read_template_file(cls, filename, classpath=False):
+        """Open a template file and return the contents."""
+         
+        if isinstance(filename, tuple):
+            file_path = filename[0]
+            filename = filename[1]
+        elif isinstance(filename, str):
+            if classpath:
+                file_path = cls.__template_path
+            else:
+                file_path = cls.template_path
+        else:
+            raise MadGraph5Error('Argument should be string or tuple.')
+        
+        return open(os.path.join(file_path, filename)).read()
+        
+        
+                  
 
+
+
+    # Methods for generation of process files for C++
     def generate_process_files(self):
         """Generate the .h and .cc files needed for C++, for the
         processes described by multi_matrix_element"""
@@ -236,7 +262,7 @@ class OneProcessExporterCPP(object):
         process_class_definitions = self.get_process_class_definitions()
         replace_dict['process_class_definitions'] = process_class_definitions
 
-        file = read_template_file(self.process_template_h) % replace_dict
+        file = self.read_template_file(self.process_template_h) % replace_dict
 
         # Write the file
         writer.writelines(file)
@@ -271,7 +297,7 @@ class OneProcessExporterCPP(object):
         replace_dict['process_function_definitions'] = \
                                                    process_function_definitions
 
-        file = read_template_file(self.process_template_cc) % replace_dict
+        file = self.read_template_file(self.process_template_cc) % replace_dict
 
         # Write the file
         writer.writelines(file)
@@ -347,7 +373,7 @@ class OneProcessExporterCPP(object):
                                       for me in self.matrix_elements])
 
 
-        file = read_template_file(self.process_class_template) % replace_dict
+        file = self.read_template_file(self.process_class_template) % replace_dict
 
         return file
 
@@ -384,7 +410,7 @@ class OneProcessExporterCPP(object):
                                   self.get_all_sigmaKin_lines(color_amplitudes,
                                                               'CPPProcess')
 
-        file = read_template_file(self.process_definition_template) %\
+        file = self.read_template_file(self.process_definition_template) %\
                replace_dict
 
         return file
@@ -477,7 +503,7 @@ class OneProcessExporterCPP(object):
         replace_dict['amplitude_calls'] = "\n".join(\
             self.helas_call_writer.get_amplitude_calls(amplitudes))
 
-        file = read_template_file(self.process_wavefunction_template) % \
+        file = self.read_template_file(self.process_wavefunction_template) % \
                 replace_dict
 
         return file
@@ -543,7 +569,7 @@ class OneProcessExporterCPP(object):
 
 
             file = \
-                 read_template_file(\
+                 self.read_template_file(\
                             self.process_sigmaKin_function_template) %\
                             replace_dict
 
@@ -606,7 +632,7 @@ class OneProcessExporterCPP(object):
         replace_dict['den_factor'] = matrix_element.get_denominator_factor()
 
         file = \
-         read_template_file('cpp_process_sigmaKin_subproc_function.inc') %\
+         self.read_template_file('cpp_process_sigmaKin_subproc_function.inc') %\
          replace_dict
 
         return file
@@ -659,7 +685,7 @@ class OneProcessExporterCPP(object):
         #specific exporter hack
         replace_dict =  self.get_class_specific_definition_matrix(replace_dict, matrix_element)
         
-        file = read_template_file(self.single_process_template) % \
+        file = self.read_template_file(self.single_process_template) % \
                 replace_dict
 
         return file
@@ -821,8 +847,6 @@ class OneProcessExporterCPP(object):
         return "\n".join(res_list)
     
 
-    
-
 class OneProcessExporterMatchbox(OneProcessExporterCPP):
     """Class to take care of exporting a set of matrix elements to
     Matchbox format."""
@@ -936,6 +960,8 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
     process_definition_template = 'pythia8_process_function_definitions.inc'
     process_wavefunction_template = 'pythia8_process_wavefunctions.inc'
     process_sigmaKin_function_template = 'pythia8_process_sigmaKin_function.inc'
+    template_path = os.path.join(_file_path, 'iolibs', 'template_files', 'pythia8')     
+
 
     def __init__(self, *args, **opts):
         """Set process class name"""
@@ -1040,7 +1066,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                                       for me in self.matrix_elements])
 
 
-        file = read_template_file('pythia8_process_class.inc') % replace_dict
+        file = self.read_template_file('pythia8_process_class.inc') % replace_dict
 
         return file
 
@@ -1080,7 +1106,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                                   self.get_all_sigmaKin_lines(color_amplitudes,
                                                               self.process_name)
 
-        file = read_template_file('pythia8_process_function_definitions.inc') %\
+        file = self.read_template_file('pythia8_process_function_definitions.inc') %\
                replace_dict
 
         return file
@@ -1132,6 +1158,19 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
 
         return 
 
+    #===============================================================================
+    # Global helper methods
+    #===============================================================================
+    @classmethod
+    def read_template_file(cls, filename):
+        """Open a template file and return the contents."""
+             
+        try:
+            return super(OneProcessExporterPythia8, cls).read_template_file(filename)     
+        except:
+            return super(OneProcessExporterPythia8, cls).read_template_file(filename, classpath=True)
+
+        
     def get_id_masses(self, process):
         """Return the lines which define the ids for the final state particles,
         for the Pythia phase space"""
@@ -1600,12 +1639,12 @@ class ProcessExporterCPP(object):
                     cp(f, key)
 
             # Copy src Makefile
-            makefile = read_template_file('Makefile_sa_cpp_src') % \
+            makefile = self.read_template_file('Makefile_sa_cpp_src') % \
                            {'model': self.get_model_name(model.get('name'))}
             open(os.path.join('src', 'Makefile'), 'w').write(makefile)
 
             # Copy SubProcesses Makefile
-            makefile = read_template_file('Makefile_sa_cpp_sp') % \
+            makefile = self.read_template_file('Makefile_sa_cpp_sp') % \
                                     {'model': self.get_model_name(model.get('name'))}
             open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
@@ -1618,7 +1657,13 @@ class ProcessExporterCPP(object):
                                          wanted_lorentz,
                                          wanted_couplings)
         model_builder.write_files()
-
+        
+    @classmethod
+    def read_template_file(cls, *args, **opts):
+        """Open a template file and return the contents."""
+         
+        return cls.oneprocessclass.read_template_file(*args, **opts) 
+        
     #===============================================================================
     # generate_subprocess_directory
     #===============================================================================
@@ -1746,7 +1791,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
             replace_dict['include_prefix'] = ''
         
         
-        file = read_template_file(template_path) % \
+        file = ProcessExporterPythia8.read_template_file(template_path) % \
                replace_dict
     
         if not main_file_name:
@@ -1778,7 +1823,7 @@ class ProcessExporterPythia8(ProcessExporterCPP):
         replace_dict['include_dir'] = exporter.include_dir
     
         # Create the makefile
-        file = read_template_file(makefile_path) % replace_dict
+        file = ProcessExporterPythia8.read_template_file(makefile_path) % replace_dict
     
         make_filename = os.path.join(filepath, 'Makefile_%s_%s' % \
                                 (exporter.model_name, main_file_name))
@@ -1797,20 +1842,6 @@ class ProcessExporterPythia8(ProcessExporterCPP):
     def finalize(self, *args, **opts):
         pass
   
-#===============================================================================
-# Global helper methods
-#===============================================================================
-def read_template_file(filename):
-    """Open a template file and return the contents."""
-    try:
-        return open(os.path.join(_file_path, \
-                             'iolibs', 'template_files', 'pythia8',
-                             filename)).read()
-    except:
-        return open(os.path.join(_file_path, \
-                             'iolibs', 'template_files',
-                             filename)).read()        
-
 def get_mg5_info_lines():
     """Return info lines for MG5, suitable to place at beginning of
     Fortran files"""
@@ -2088,9 +2119,9 @@ class UFOModelConverterCPP(object):
             replace_dict['include_prefix'] = ''
 
 
-        file_h = read_template_file(self.param_template_h) % \
+        file_h = self.read_template_file(self.param_template_h) % \
                  replace_dict
-        file_cc = read_template_file(self.param_template_cc) % \
+        file_cc = self.read_template_file(self.param_template_cc) % \
                   replace_dict
         
         return file_h, file_cc
@@ -2199,8 +2230,8 @@ class UFOModelConverterCPP(object):
         replace_dict['function_declarations'] = '\n'.join(template_h_files)
         replace_dict['function_definitions'] = '\n'.join(template_cc_files)
 
-        file_h = read_template_file(self.aloha_template_h) % replace_dict
-        file_cc = read_template_file(self.aloha_template_cc) % replace_dict
+        file_h = self.read_template_file(self.aloha_template_h) % replace_dict
+        file_cc = self.read_template_file(self.aloha_template_cc) % replace_dict
 
         # Write the files
         writers.CPPWriter(model_h_file).writelines(file_h)
@@ -2264,9 +2295,14 @@ class UFOModelConverterCPP(object):
 
         return line
 
-
-    
-
+    #===============================================================================
+    # Global helper methods
+    #===============================================================================
+    @classmethod
+    def read_template_file(cls, filename, classpath=False):
+        """Open a template file and return the contents."""
+         
+        return OneProcessExporterCPP.read_template_file(filename, classpath)
 
 
 #===============================================================================
@@ -2290,6 +2326,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
     # Template files to use
     param_template_h = 'pythia8_model_parameters_h.inc'
     param_template_cc = 'pythia8_model_parameters_cc.inc'
+    template_paths = os.path.join(_file_path, 'iolibs', 'template_files', 'pythia8')     
 
     def prepare_parameters(self):
         """Extract the model parameters from Pythia 8, and store them in
@@ -2407,7 +2444,7 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
             path = 'pythia8.2_makefile.inc'
         else:
             path = 'pythia8_makefile.inc'
-        makefile = read_template_file(path) % replace_dict
+        makefile = self.read_template_file(path) % replace_dict
 
         # Write the files
         open(makefilename, 'w').write(makefile)
@@ -2428,6 +2465,15 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
         logger.info("Created %s in directory %s" \
                     % (os.path.split(paramcardname)[-1],
                        os.path.split(paramcardname)[0]))
+        
+    #===============================================================================
+    # Global helper methods
+    #===============================================================================
+    @classmethod
+    def read_template_file(cls, *args, **opts):
+        """Open a template file and return the contents."""
+         
+        return OneProcessExporterPythia8.read_template_file(*args, **opts)
 
 def ExportCPPFactory(cmd, group_subprocesses=False):
     """ Determine which Export class is required. cmd is the command 
