@@ -1015,6 +1015,7 @@ class HwU(Histogram):
                 self.title = tag.strip()
             else:
                 stag = tag.split('@')
+                if len(stag)==1 and stag[0].startswith('#'): continue
                 if len(stag)!=2:
                     raise MadGraph5Error, 'Specifier in title must have the'+\
             " syntax @<attribute_name>:<attribute_value>, not '%s'."%tag.strip()
