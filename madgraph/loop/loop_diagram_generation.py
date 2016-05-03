@@ -1090,80 +1090,92 @@ class LoopAmplitude(diagram_generation.Amplitude):
           sorted(order for order in self['process']['perturbation_couplings'] if 
                                                        order not in ['QCD','QED'])
 
+        whole_spin_no_anti = []
+        whole_spin_has_anti = []
+        half_spin_no_anti = []
+        half_spin_has_anti = []
         for order in pert_orders:
-            ldg_debug_info("Perturbation coupling generated now ",order)
             lcutPart=[particle for particle in \
                 self['process']['model']['particles'] if \
                 (particle.is_perturbating(order, self['process']['model']) and \
                 particle.get_pdg_code() not in \
                                         self['process']['forbidden_particles'])]
-            # Again, in an effort to canonically order loop diagrams generated, we
-            # choose here to always start with whole integer spin particles and then
-            # half-integer ones and in each of these subset, put first self-antiparticles.
-            # The remaining degeneracy is fixed by ordering by PDGs.
-            whole_spin_no_anti = filter(lambda p: 
-                             p.get('spin')%2==1 and p.get('self_antipart'), lcutPart) 
-            whole_spin_has_anti = filter(lambda p: 
-                         p.get('spin')%2==1 and not p.get('self_antipart'), lcutPart)
-            half_spin_no_anti = filter(lambda p: 
-                             p.get('spin')%2==0 and p.get('self_antipart'), lcutPart) 
-            half_spin_has_anti = filter(lambda p: 
-                         p.get('spin')%2==0 and not p.get('self_antipart'), lcutPart)
-            for l in [whole_spin_no_anti,whole_spin_has_anti,half_spin_no_anti,half_spin_has_anti]:
-                l.sort(key=lambda p: p.get('pdg_code'))
-            lcutPart = whole_spin_no_anti + whole_spin_has_anti + \
-                       half_spin_no_anti + half_spin_has_anti
-#            misc.sprint(order+" lcutPart=",[part.get('name') for part in lcutPart]) 
-            for part in lcutPart:
-                if part.get_pdg_code() not in self.lcutpartemployed:
-                    # First create the two L-cut particles to add to the process.
-                    # Remember that in the model only the particles should be
-                    # tagged as contributing to the a perturbation. Never the 
-                    # anti-particle. We chose here a specific orientation for 
-                    # the loop momentum flow, say going IN lcutone and OUT 
-                    # lcuttwo. We also define here the 'positive' loop fermion
-                    # flow by always setting lcutone to be a particle and 
-                    # lcuttwo the corresponding anti-particle.
-                    ldg_debug_info("Generating loop diagram with L-cut type",\
-                                                                part.get_name())
-                    lcutone=base_objects.Leg({'id': part.get_pdg_code(),
-                                              'state': True,
-                                              'loop_line': True})
-                    lcuttwo=base_objects.Leg({'id': part.get_anti_pdg_code(),
-                                              'state': True,
-                                              'loop_line': True})
-                    self['process'].get('legs').extend([lcutone,lcuttwo])
-                    # WARNING, it is important for the tagging to notice here 
-                    # that lcuttwo is the last leg in the process list of legs 
-                    # and will therefore carry the highest 'number' attribute as
-                    # required to insure that it will never be 'propagated' to
-                    # any output leg.
-                                    
-                    # We generate the diagrams now
-                    loopsuccessful, lcutdiaglist = \
-                              super(LoopAmplitude, self).generate_diagrams(True)
+            whole_spin_no_anti += filter(lambda p: 
+                      p.get('spin')%2==1 and p.get('self_antipart') 
+                                      and p not in whole_spin_no_anti, lcutPart) 
+            whole_spin_has_anti += filter(lambda p: 
+                      p.get('spin')%2==1 and not p.get('self_antipart')
+                                     and p not in whole_spin_has_anti, lcutPart)
+            half_spin_no_anti += filter(lambda p: 
+                      p.get('spin')%2==0 and p.get('self_antipart')
+                                       and p not in half_spin_no_anti, lcutPart) 
+            half_spin_has_anti += filter(lambda p: 
+                      p.get('spin')%2==0 and not p.get('self_antipart')
+                                      and p not in half_spin_has_anti, lcutPart)
 
-                    # Now get rid of all the previously defined l-cut particles.
-                    leg_to_remove=[leg for leg in self['process']['legs'] \
-                                            if leg['loop_line']]
-                    for leg in leg_to_remove:
-                        self['process']['legs'].remove(leg)
+        # In an effort to canonically order loop diagrams generated, we
+        # choose here to always start with whole integer spin particles and then
+        # half-integer ones and in each of these subset, put first self-antiparticles.
+        # The remaining degeneracy is fixed by ordering by PDGs.
+        for l in [whole_spin_no_anti,whole_spin_has_anti,
+                  half_spin_no_anti,half_spin_has_anti]:
+             l.sort(key=lambda p: p.get('pdg_code'))
 
-                    # The correct L-cut type is specified
-                    for diag in lcutdiaglist:
-                        diag.set('type',part.get_pdg_code())
-                    self['loop_diagrams']+=lcutdiaglist
+        # Finally add them together to the list of l-cut particles to be processed.
+        lcutPart = whole_spin_no_anti + whole_spin_has_anti + \
+                   half_spin_no_anti  + half_spin_has_anti
+                   
+#       misc.sprint(" lcutPart=",[part.get('name') for part in lcutPart]) 
+        for part in lcutPart:
+            if part.get_pdg_code() not in self.lcutpartemployed:
+                # First create the two L-cut particles to add to the process.
+                # Remember that in the model only the particles should be
+                # tagged as contributing to the a perturbation. Never the 
+                # anti-particle. We chose here a specific orientation for 
+                # the loop momentum flow, say going IN lcutone and OUT 
+                # lcuttwo. We also define here the 'positive' loop fermion
+                # flow by always setting lcutone to be a particle and 
+                # lcuttwo the corresponding anti-particle.
+                ldg_debug_info("Generating loop diagram with L-cut type",\
+                                                            part.get_name())
+                lcutone=base_objects.Leg({'id': part.get_pdg_code(),
+                                          'state': True,
+                                          'loop_line': True})
+                lcuttwo=base_objects.Leg({'id': part.get_anti_pdg_code(),
+                                          'state': True,
+                                          'loop_line': True})
+                self['process'].get('legs').extend([lcutone,lcuttwo])
+                # WARNING, it is important for the tagging to notice here 
+                # that lcuttwo is the last leg in the process list of legs 
+                # and will therefore carry the highest 'number' attribute as
+                # required to insure that it will never be 'propagated' to
+                # any output leg.
+                                
+                # We generate the diagrams now
+                loopsuccessful, lcutdiaglist = \
+                          super(LoopAmplitude, self).generate_diagrams(True)
 
-                    # Update the list of already employed L-cut particles such 
-                    # that we never use them again in loop particles
-                    self.lcutpartemployed.append(part.get_pdg_code())
-                    self.lcutpartemployed.append(part.get_anti_pdg_code())
+                # Now get rid of all the previously defined l-cut particles.
+                leg_to_remove=[leg for leg in self['process']['legs'] \
+                                        if leg['loop_line']]
+                for leg in leg_to_remove:
+                    self['process']['legs'].remove(leg)
 
-                    ldg_debug_info("#Diags generated w/ this L-cut particle",\
-                                                              len(lcutdiaglist))
-                    # Accordingly update the totloopsuccessful tag
-                    if loopsuccessful:
-                        totloopsuccessful=True
+                # The correct L-cut type is specified
+                for diag in lcutdiaglist:
+                    diag.set('type',part.get_pdg_code())
+                self['loop_diagrams']+=lcutdiaglist
+
+                # Update the list of already employed L-cut particles such 
+                # that we never use them again in loop particles
+                self.lcutpartemployed.append(part.get_pdg_code())
+                self.lcutpartemployed.append(part.get_anti_pdg_code())
+
+                ldg_debug_info("#Diags generated w/ this L-cut particle",\
+                                                          len(lcutdiaglist))
+                # Accordingly update the totloopsuccessful tag
+                if loopsuccessful:
+                    totloopsuccessful=True
 
         # Reset the l-cut particle list
         self.lcutpartemployed=[]
