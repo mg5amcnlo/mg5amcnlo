@@ -2269,19 +2269,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         pdfsetname=set()
         for lhaid in lhaid_list:
-            try:
-                if lhaid in self.lhapdf_pdfsets:
-                    pdfsetname.add(self.lhapdf_pdfsets[lhaid]['filename'])
-                else:
-                    raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
-            except KeyError:
-                if self.lhapdf_version.startswith('5'):
-                    raise MadGraph5Error(\
-                        ('invalid lhaid set in th run_card: %d .\nPlease note that some sets' % lhaid) + \
-                         '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
-                else:
-                    logger.debug('%d not found in pdfsets.index' % lhaid)
-
+            if isinstance(lhaid, (int,float)):
+                try:
+                    if lhaid in self.lhapdf_pdfsets:
+                        pdfsetname.add(self.lhapdf_pdfsets[lhaid]['filename'])
+                    else:
+                        raise MadGraph5Error('lhaid %s not valid input number for the current lhapdf' % lhaid )
+                except KeyError:
+                    if self.lhapdf_version.startswith('5'):
+                        raise MadGraph5Error(\
+                            ('invalid lhaid set in th run_card: %d .\nPlease note that some sets' % lhaid) + \
+                             '(eg MSTW 90%CL error sets) \nare not available in aMC@NLO + LHAPDF 5.x.x')
+                    else:
+                        logger.debug('%d not found in pdfsets.index' % lhaid)
+            else:
+                pdfsetname.add(lhaid)
 
         # check if the file exists, otherwise install it:
         # also check that the PDFsets dir exists, otherwise create it.
