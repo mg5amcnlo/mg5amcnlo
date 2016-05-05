@@ -7334,9 +7334,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # grouping mode
         elif isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList) and\
             self._curr_exporter.grouped_mode:
-            if self._export_format == 'madweight' or\
-               (self._export_format == 'plugin'  and self._export_plugin['group_mode'] == 'madweight'):
-                self._curr_matrix_elements = self._curr_matrix_elements.split_lepton_grouping()
+            misc.sprint(isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList), type(self._curr_matrix_elements))        
+            modify, self._curr_matrix_elements = self._curr_exporter.modify_grouping(self._curr_matrix_elements)
+            if modify:
                 matrix_elements = self._curr_matrix_elements.get_matrix_elements()
 
             for me_number, me in enumerate(self._curr_matrix_elements):
@@ -7347,6 +7347,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # ungroup mode
         else:
             for nb,me in enumerate(matrix_elements[:]):
+                misc.sprint(type(self._curr_exporter), nb)
                 new_calls = self._curr_exporter.generate_subprocess_directory(\
                             me, self._curr_helas_model, nb)
                 if  isinstance(new_calls, int):
@@ -7438,7 +7439,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if self._export_format in ['standalone_cpp', 'matchbox_cpp'] or \
            (self._export_format == 'plugin' and self._export_plugin['exporter'] == 'cpp'):
             logger.info('Export UFO model to C++ format')
-            export_cpp.make_model_cpp(self._export_dir)
+            self._curr_exporter.compile_model()
 
         elif self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file            

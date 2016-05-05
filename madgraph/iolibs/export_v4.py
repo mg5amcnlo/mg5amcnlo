@@ -799,6 +799,18 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         # Re-establish original aloha mode
         aloha.mp_precision=old_aloha_mp
     
+
+    #===========================================================================
+    # Helper functions
+    #===========================================================================
+    def modify_grouping(self, matrix_element):
+        """allow to modify the grouping (if grouping is in place)
+            return two value:
+            - True/False if the matrix_element was modified
+            - the new(or old) matrix element"""
+        misc.sprint("DO not modify grouping") 
+        return False, matrix_element
+        
     #===========================================================================
     # Helper functions
     #===========================================================================
@@ -5254,8 +5266,9 @@ class UFO_model_to_mg4(object):
         elif self.opt['export_format'] in ['madloop','madloop_optimized', 'madloop_matchbox']:
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read_mp.f'
-        elif self.opt['export_format'].startswith('standalone') or self.opt['export_format'] in ['madweight']\
-                            or self.opt['export_format'].startswith('matchbox'):
+        elif self.opt['export_format'].startswith('standalone') \
+            or self.opt['export_format'] in ['madweight', 'plugin']\
+            or self.opt['export_format'].startswith('matchbox'):
             load_card = 'call LHA_loadcard(param_name,npara,param,value)'
             lha_read_filename='lha_read.f'
         else:
@@ -5280,7 +5293,8 @@ class UFO_model_to_mg4(object):
                 text = text.replace('madevent','aMCatNLO')
                 open(path, 'w').writelines(text)
         elif self.opt['export_format'] in ['standalone', 'standalone_msP','standalone_msF',
-                                  'madloop','madloop_optimized', 'standalone_rw', 'madweight','matchbox','madloop_matchbox']:
+                                  'madloop','madloop_optimized', 'standalone_rw', 
+                                  'madweight','matchbox','madloop_matchbox', 'plugin']:
             cp( MG5DIR + '/models/template_files/fortran/makefile_standalone', 
                 self.dir_path + '/makefile')
         #elif self.opt['export_format'] in []:
@@ -6619,6 +6633,18 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
             tot_calls = 0
         return tot_calls
 
+
+    #===========================================================================
+    # Helper functions
+    #===========================================================================
+    def modify_grouping(self, matrix_element):
+        """allow to modify the grouping (if grouping is in place)
+            return two value:
+            - True/False if the matrix_element was modified
+            - the new(or old) matrix element"""
+            
+        return True, matrix_element.split_lepton_grouping()
+    
     #===========================================================================
     # write_super_auto_dsig_file
     #===========================================================================

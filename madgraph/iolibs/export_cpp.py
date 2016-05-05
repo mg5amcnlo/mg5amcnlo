@@ -1648,6 +1648,18 @@ class ProcessExporterCPP(object):
                                     {'model': self.get_model_name(model.get('name'))}
             open(os.path.join('SubProcesses', 'Makefile'), 'w').write(makefile)
 
+    #===========================================================================
+    # Helper functions
+    #===========================================================================
+    def modify_grouping(self, matrix_element):
+        """allow to modify the grouping (if grouping is in place)
+            return two value:
+            - True/False if the matrix_element was modified
+            - the new(or old) matrix element"""
+            
+        return False, matrix_element
+
+
 
     def convert_model(self, model, wanted_lorentz = [],
                          wanted_couplings = []):
@@ -1657,7 +1669,10 @@ class ProcessExporterCPP(object):
                                          wanted_lorentz,
                                          wanted_couplings)
         model_builder.write_files()
-        
+    
+    def compile_model(self):
+        make_model_cpp(self.dir_path)
+    
     @classmethod
     def read_template_file(cls, *args, **opts):
         """Open a template file and return the contents."""
