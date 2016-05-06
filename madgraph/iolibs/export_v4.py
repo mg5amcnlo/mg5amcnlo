@@ -6474,7 +6474,7 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
         if format in ['standalone_msP', 'standalone_msF', 'standalone_rw']:
             opt['sa_symmetry'] = True      
         elif format == 'plugin':
-            opt['sa_symmetry'] = cmd._export_plugin['sa_symmetry']
+            opt['sa_symmetry'] = cmd._export_plugin.sa_symmetry
     
         loop_induced_opt = dict(opt)
         loop_induced_opt.update(MadLoop_SA_options)
