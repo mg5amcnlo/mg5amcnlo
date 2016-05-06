@@ -40,55 +40,6 @@ _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
                                 'input_files')
 
-#===============================================================================
-# IOExportFKSTest
-#===============================================================================
-class IOExportFKSTest(IOTests.IOTestManager):
-    """Test class for the export fks module"""
-
-    def generate(self, process, model, multiparticles=[]):
-        """Create a process"""
-
-        def run_cmd(cmd):
-            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
-                               precmd=True, postcmd=True)
-
-        interface = MGCmd.MasterCmd()
-        
-        run_cmd('import model %s' % model)
-        for multi in multiparticles:
-            run_cmd('define %s' % multi)
-        if isinstance(process, str):
-            run_cmd('generate %s' % process)
-        else:
-            for p in process:
-                run_cmd('add process %s' % p)
-
-        files.rm(self.IOpath)
-        run_cmd('output %s -f' % self.IOpath)
-
-
-    @IOTests.createIOTest()
-    def testIO_test_pptt_fksreal(self):
-        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > t t~ [real=QCD]'], 'sm')
-
-    @IOTests.createIOTest()
-    def testIO_test_ppw_fksall(self):
-        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > w+ [QCD]'], 'sm')
-
-    @IOTests.createIOTest()
-    def testIO_test_tdecay_fksreal(self):
-        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['t > j j b [real=QCD]'], 'sm')
-
-    @IOTests.createIOTest()
-    def testIO_test_pptt_fks_loonly(self):
-        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
-        self.generate(['p p > t t~ [LOonly=QCD]'], 'sm')
-
-
 class TestFKSOutput(unittest.TestCase):
     """ this class is to test that the new and old nlo generation give
     identical results
