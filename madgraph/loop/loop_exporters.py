@@ -92,7 +92,7 @@ class LoopExporterFortran(object):
                         'golem' : 'generic_function_1p.mod',
                         'samurai':'msamurai.mod'}
 
-    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+    def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
@@ -108,7 +108,7 @@ class LoopExporterFortran(object):
         self.dependencies = self.opt['output_dependencies']
         self.compute_color_flows = self.opt['compute_color_flows']
 
-        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
+        super(LoopExporterFortran,self).__init__(dir_path, self.opt)        
 
 
     def link_CutTools(self, targetPath):
@@ -217,16 +217,16 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                left_frame_char = '{',right_frame_char = '}',
                print_frame=True, side_margin = 7, up_margin = 1)
 
-    def copy_v4template(self, modelname = ''):
+    def copy_template(self, model):
         """Additional actions needed to setup the Template.
         """
-        super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
+        super(LoopProcessExporterFortranSA, self).copy_template(model)
 
         self.loop_additional_template_setup()
     
     def loop_additional_template_setup(self, copy_Source_makefile = True):
         """ Perform additional actions specific for this class when setting
-        up the template with the copy_v4template function."""
+        up the template with the copy_template function."""
 
         # We must change some files to their version for NLO computations
         cpfiles= ["Cards/MadLoopParams.dat",
@@ -1574,13 +1574,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # using a standalone verison independent of gosam_contrib
     all_tir=['pjfry','iregi','ninja','golem','samurai']
     
-    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+    def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
         information on where to find all the loop-related source files, 
         like CutTools and TIR"""
 
-        super(LoopProcessOptimizedExporterFortranSA,self).__init__(mgme_dir, 
-                                                                   dir_path, opt)
+        super(LoopProcessOptimizedExporterFortranSA,self).__init__(dir_path, opt)
 
         # TIR available ones
         self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True,
@@ -1597,12 +1596,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             else:
                 setattr(self,tir_dir,'')
 
-    def copy_v4template(self, modelname = ''):
+    def copy_template(self, model):
         """Additional actions needed to setup the Template. 
         """
         
-        super(LoopProcessOptimizedExporterFortranSA, self).copy_v4template(
-                                                                      modelname)
+        super(LoopProcessOptimizedExporterFortranSA, self).copy_template(model)
         
         self.loop_optimized_additional_template_setup()
 
@@ -1630,7 +1628,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
     def loop_optimized_additional_template_setup(self):
         """ Perform additional actions specific for this class when setting
-        up the template with the copy_v4template function."""
+        up the template with the copy_template function."""
         
         # We must link the TIR to the Library folder of the active Template
         link_tir_libs=[]
@@ -2757,7 +2755,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         
         ln(pjoin('../MadLoop5_resources') , cwd=Ppath)
 
-    def copy_v4template(self, *args, **opts):
+    def copy_template(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically the necessary building functions for the mixed
@@ -2911,17 +2909,17 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         export_v4.ProcessExporterFortranMEGroup.write_source_makefile(self,
                                                                   *args, **opts)
 
-    def copy_v4template(self, *args, **opts):
+    def copy_template(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically the necessary building functions for the mixed
         # template setup for both MadEvent and MadLoop standalone
         
         # Start witht the MadEvent one
-        export_v4.ProcessExporterFortranMEGroup.copy_v4template(self,*args,**opts)
+        export_v4.ProcessExporterFortranMEGroup.copy_template(self,*args,**opts)
 
         # Then the MadLoop-standalone related one
-        LoopInducedExporterME.copy_v4template(self, *args, **opts)
+        LoopInducedExporterME.copy_template(self, *args, **opts)
 
     def finalize(self, *args, **opts):
         """Pick the right mother functions
@@ -3075,17 +3073,17 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         super(export_v4.ProcessExporterFortranME,self).\
                                             write_source_makefile(*args, **opts)
 
-    def copy_v4template(self, *args, **opts):
+    def copy_template(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically the necessary building functions for the mixed
         # template setup for both MadEvent and MadLoop standalone
         
         # Start witht the MadEvent one
-        export_v4.ProcessExporterFortranME.copy_v4template(self,*args,**opts)
+        export_v4.ProcessExporterFortranME.copy_template(self,*args,**opts)
 
         # Then the MadLoop-standalone related one
-        LoopInducedExporterME.copy_v4template(self, *args, **opts)
+        LoopInducedExporterME.copy_template(self, *args, **opts)
 
     def finalize(self, *args, **opts):
         """Pick the right mother functions

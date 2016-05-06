@@ -7030,9 +7030,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
         if self._export_format == 'plugin':
-            config['plugin'] = self._export_plugin
+            options = {'check': self._export_plugin.check, 'exporter':self._export_plugin.exporter, 'output':self._export_plugin.output}
+        else:
+            options = config[self._export_format]
             
-        options = config[self._export_format]
         # check
         if os.path.realpath(self._export_dir) == os.getcwd():
             if len(args) == 0:
@@ -7064,7 +7065,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # set to 'Auto' and propagate this choice down the line:
         if self.options['group_subprocesses'] in [True, False]:
             group_processes = self.options['group_subprocesses']
-        elif self.options['group_subprocesses'] == 'Auto' and self._export_format != 'plugin':
+        elif self.options['group_subprocesses'] == 'Auto':
             # By default we set it to True
             group_processes = True
             # But we turn if off for decay processes which
@@ -7090,23 +7091,17 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 ||   -> add process <proc_def>
 """)
                     group_processes = False
-        elif self.options['group_subprocesses'] == 'Auto' and self._export_format == 'plugin':
-            group_processes = options['group_subprocesses']
 
         #Exporter + Template
         if options['exporter'] == 'v4':
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                                              group_subprocesses=group_processes)
-            if options['output'] == 'Template':
-                self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
-        
-        if options['exporter'] == 'cpp':
+        elif options['exporter'] == 'cpp':
             self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes)
-             
-            if options['output'] == 'Template':
-                self._curr_exporter.setup_cpp_standalone_dir(self._curr_model)
-
-        if options['output'] == 'dir' and not os.path.isdir(self._export_dir):
+            
+        if options['output'] == 'Template':
+            self._curr_exporter.copy_template(self._curr_model)
+        elif options['output'] == 'dir' and not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         # Reset _done_export, since we have new directory
@@ -7138,12 +7133,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """Export a generated amplitude to file."""
 
         # Define the helas call  writer
-        if self._export_format in ['pythia8', 'matchbox_cpp', 'standalone_cpp'] or\
-            (self._export_format == 'plugin' and self._export_plugin['exporter'] == 'cpp'):
+        if self._curr_exporter.exporter == 'cpp':       
             self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
         elif self._model_v4_path:
+            assert self._curr_exporter.exporter == 'v4'
             self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
         else:
+            assert self._curr_exporter.exporter == 'v4'
             self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
@@ -7186,10 +7182,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     matrix_elements_opts = {'optimized_output':
                                        self.options['loop_optimized_output']}
                     if non_dc_amps:
-
-                        criteria = self._export_format
-                        if criteria == 'plugin':
-                            criteria = self._export_plugin['group_mode']
+                        criteria = self._curr_exporter.grouped_mode
                         subproc_groups.extend(\
                           group_subprocs.SubProcessGroup.group_amplitudes(\
                           non_dc_amps,criteria , 
@@ -7253,14 +7246,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone',
-                                   'standalone_msP', 'standalone_msF', 'standalone_rw',
-                                   'matchbox_cpp', 'madweight', 'matchbox']:
-            path = pjoin(path, 'SubProcesses')
-        elif self._export_format == 'plugin':
-            if self._export_plugin['output'] == 'Template':
-                path = pjoin(path, 'SubProcesses')
-            
             
         cpu_time1 = time.time()
 
@@ -7269,6 +7254,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # MadEvent
         if self._export_format == 'madevent':
+            path = pjoin(path, 'SubProcesses')
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
                                                          self._curr_helas_model)
             
@@ -7435,13 +7421,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                     self.options,
                                     flaglist)
 
-        
-        if self._export_format in ['standalone_cpp', 'matchbox_cpp'] or \
-           (self._export_format == 'plugin' and self._export_plugin['exporter'] == 'cpp'):
-            logger.info('Export UFO model to C++ format')
-            self._curr_exporter.compile_model()
-
-        elif self._export_format in ['NLO']:
+        if self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')

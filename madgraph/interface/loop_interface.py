@@ -460,11 +460,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                      noclean, output_type=output_type, group_subprocesses=False)
 
         if self._export_format in ['standalone', 'matchbox']:
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+            self._curr_exporter.copy_template(self._curr_model)
 
         if self._export_format == "standalone_rw":
             self._export_format = "standalone"
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+            self._curr_exporter.copy_template(self._curr_model)
             self._export_format = "standalone_rw"
 
         # Reset _done_export, since we have new directory

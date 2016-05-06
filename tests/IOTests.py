@@ -154,7 +154,7 @@ class IOTest(object):
         hel_amp=loop_helas_objects.LoopHelasMatrixElement(\
                                         myloopamp,optimized_output=isOptimized)
 
-        self.exporter.copy_v4template(model.get('name'))
+        self.exporter.copy_template(model)
         self.exporter.generate_loop_subprocess(hel_amp, self.helasModel)
         wanted_lorentz = hel_amp.get_used_lorentz()
         wanted_couplings = list(set(sum(hel_amp.get_used_couplings(),[])))

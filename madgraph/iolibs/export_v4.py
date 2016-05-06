@@ -68,10 +68,64 @@ default_compiler= {'fortran': 'gfortran',
                        'f2py': 'f2py',
                        'cpp':'g++'}
 
+
+class VirtualExporter(object):
+    
+    #exporter variable who modified the way madgraph interacts with this class
+    
+    grouped_mode = 'madevent'  
+    # This variable changes the type of object called within 'generate_subprocess_directory'
+    #functions. 
+    # False to avoid grouping (only identical matrix element are merged)
+    # 'madevent' group the massless quark and massless lepton
+    # 'madweight' group the gluon with the massless quark
+    sa_symmetry = False
+    # If no grouped_mode=False, uu~ and u~u will be called independently. 
+    #Putting sa_symmetry generates only one of the two matrix-element.
+    check = True
+    # Ask madgraph to check if the directory already exists and propose to the user to 
+    #remove it first if this is the case
+    output = 'Template'
+    # [Template, None, dir]
+    #    - Template, madgraph will call copy_template
+    #    - dir, madgraph will just create an empty directory for initialisation
+    #    - None, madgraph do nothing for initialisation
+    exporter = 'v4'
+    # language of the output 'v4' for Fortran output
+    #                        'cpp' for C++ output 
+    
+    
+    def __init__(self, dir_path = "", opt=None):
+        return
+
+    def copy_template(self, model):
+        return
+
+    def generate_subprocess_directory(self, subproc_group, helicity_model, me=None):
+    #    generate_subprocess_directory(self, matrix_element, helicity_model, me_number) [for ungrouped]
+        return 0 # return an integer stating the number of call to helicity routine
+    
+    def convert_model(self, model, wanted_lorentz=[], wanted_coupling=[]):
+        return
+    
+    def finalize(self,matrix_element, cmdhistory, MG5options, outputflag):
+        return
+    
+    def modify_grouping(self, matrix_element):
+        return False, matrix_element
+           
+    def export_model_files(self, model_v4_path):
+        raise Exception, "V4 model not supported by this type of exporter. Please use UFO model"
+        return
+    
+    def export_helas(self, HELAS_PATH):
+        raise Exception, "V4 model not supported by this type of exporter. Please use UFO model"
+        return
+
 #===============================================================================
 # ProcessExporterFortran
 #===============================================================================
-class ProcessExporterFortran(object):
+class ProcessExporterFortran(VirtualExporter):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
@@ -81,9 +135,9 @@ class ProcessExporterFortran(object):
                         }
     grouped_mode = False
 
-    def __init__(self, mgme_dir = "", dir_path = "", opt=None):
+    def __init__(self,  dir_path = "", opt=None):
         """Initiate the ProcessExporterFortran with directory information"""
-        self.mgme_dir = mgme_dir
+        self.mgme_dir = MG5DIR
         self.dir_path = dir_path
         self.model = None
 
@@ -147,7 +201,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # copy the Template in a new directory.
     #===========================================================================
-    def copy_v4template(self, modelname):
+    def copy_template(self, model):
         """create the directory run_name as a copy of the MadEvent
         Template, and clean the directory
         """
@@ -1758,7 +1812,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             self.format = 'standalone'
         ProcessExporterFortran.__init__(self, *args, **opts)
 
-    def copy_v4template(self, modelname):
+    def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
 
@@ -2352,11 +2406,11 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
 
     matrix_file="matrix_standalone_v4.inc"
 
-    def copy_v4template(self, modelname):
+    def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
 
-        super(ProcessExporterFortranMW, self).copy_v4template(modelname)        
+        super(ProcessExporterFortranMW, self).copy_template(model)        
 
         # Add the MW specific file
         shutil.copytree(pjoin(MG5DIR,'Template','MadWeight'),
@@ -3126,18 +3180,18 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
     matrix_file = "matrix_madevent_v4.inc"
 
-    def copy_v4template(self, modelname):
+    def copy_template(self, model):
         """Additional actions needed for setup of Template
         """
 
-        super(ProcessExporterFortranME, self).copy_v4template(modelname)
+        super(ProcessExporterFortranME, self).copy_template(model)
         
         # File created from Template (Different in some child class)
         filename = pjoin(self.dir_path,'Source','run_config.inc')
         self.write_run_config_file(writers.FortranWriter(filename))
         
         # The next file are model dependant (due to SLAH convention)
-        self.model_name = modelname
+        self.model_name = model.get('name')
         # Add the symmetry.f 
         filename = pjoin(self.dir_path,'SubProcesses','symmetry.f')
         self.write_symmetry(writers.FortranWriter(filename))
@@ -4507,7 +4561,7 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     MadEvent subprocess group format."""
 
     matrix_file = "matrix_madevent_group_v4.inc"
-    grouped_mode = False
+    grouped_mode = 'madevent'
     #===========================================================================
     # generate_subprocess_directory
     #===========================================================================
@@ -6379,7 +6433,7 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
                     MadLoop_SA_options['export_format'] = 'madloop_matchbox'
                 else:
                     raise Exception, "output_type not recognize %s" % output_type
-            return ExporterClass(cmd._mgme_dir, cmd._export_dir, MadLoop_SA_options)
+            return ExporterClass(cmd._export_dir, MadLoop_SA_options)
         else:
             raise MadGraph5Error('MG5_aMC cannot find the \'loop_material\' directory'+\
                                  ' in %s'%str(cmd._mgme_dir))
@@ -6399,7 +6453,7 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
             logger.info("Writing out the aMC@NLO code, using optimized Loops")
             ExporterClass = export_fks.ProcessOptimizedExporterFortranFKS
             amcatnlo_options['export_format']='FKS5_optimized'
-        return ExporterClass(cmd._mgme_dir, cmd._export_dir, amcatnlo_options)
+        return ExporterClass(cmd._export_dir, amcatnlo_options)
 
 
     # Then the default tree-level output
@@ -6434,37 +6488,33 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
                 loop_induced_opt[key] = opt[key]
     
         if format == 'matrix' or format.startswith('standalone'):
-            return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt,
-                                            format=format)
+            return ProcessExporterFortranSA(cmd._export_dir, opt, format=format)
         
         elif format in ['madevent'] and group_subprocesses:
             if isinstance(cmd._curr_amps[0], 
                                          loop_diagram_generation.LoopAmplitude):
                 import madgraph.loop.loop_exporters as loop_exporters
-                return  loop_exporters.LoopInducedExporterMEGroup(cmd._mgme_dir, 
+                return  loop_exporters.LoopInducedExporterMEGroup( 
                                                cmd._export_dir,loop_induced_opt)
             else:
-                return  ProcessExporterFortranMEGroup(cmd._mgme_dir, 
-                                                            cmd._export_dir,opt)                
+                return  ProcessExporterFortranMEGroup(cmd._export_dir,opt)                
         elif format in ['madevent']:
             if isinstance(cmd._curr_amps[0], 
                                          loop_diagram_generation.LoopAmplitude):
                 import madgraph.loop.loop_exporters as loop_exporters
-                return  loop_exporters.LoopInducedExporterMENoGroup(cmd._mgme_dir, 
+                return  loop_exporters.LoopInducedExporterMENoGroup( 
                                                cmd._export_dir,loop_induced_opt)
             else:
-                return  ProcessExporterFortranME(cmd._mgme_dir, 
-                                                            cmd._export_dir,opt)
+                return  ProcessExporterFortranME(cmd._export_dir,opt)
         elif format in ['matchbox']:
-            return ProcessExporterFortranMatchBox(cmd._mgme_dir, cmd._export_dir,opt)
+            return ProcessExporterFortranMatchBox(cmd._export_dir,opt)
         elif cmd._export_format in ['madweight'] and group_subprocesses:
 
-            return ProcessExporterFortranMWGroup(cmd._mgme_dir, cmd._export_dir,
-                                                                            opt)
+            return ProcessExporterFortranMWGroup(cmd._export_dir, opt)
         elif cmd._export_format in ['madweight']:
-            return ProcessExporterFortranMW(cmd._mgme_dir, cmd._export_dir, opt)
+            return ProcessExporterFortranMW(cmd._export_dir, opt)
         elif format == 'plugin':
-            return cmd._export_plugin['exporter_class'](cmd._mgme_dir, cmd._export_dir, opt)
+            return cmd._export_plugin(cmd._export_dir, opt)
         else:
             raise Exception, 'Wrong export_v4 format'
     else:
@@ -6481,7 +6531,7 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
     MadEvent subprocess group format."""
 
     matrix_file = "matrix_madweight_group_v4.inc"
-    grouped_mode = True
+    grouped_mode = 'madweight'
     #===========================================================================
     # generate_subprocess_directory
     #===========================================================================

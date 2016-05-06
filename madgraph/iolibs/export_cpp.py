@@ -39,6 +39,7 @@ import madgraph.various.banner as banner_mod
 from madgraph import MadGraph5Error, InvalidCmd, MG5DIR
 from madgraph.iolibs.files import cp, ln, mv
 
+from madgraph.iolibs.export_v4 import VirtualExporter
 import madgraph.various.misc as misc
 
 import aloha.create_aloha as create_aloha
@@ -1574,15 +1575,17 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
 #===============================================================================
 # ProcessExporterCPP
 #===============================================================================
-class ProcessExporterCPP(object):
+class ProcessExporterCPP(VirtualExporter):
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
+
+    grouped_mode = False
+    exporter = 'cpp'
 
     default_opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent', 'mp': False,
                         'v5_model': True
                         }
-    grouped_mode = False
     
     oneprocessclass = OneProcessExporterCPP
     s= _file_path + 'iolibs/template_files/'
@@ -1607,7 +1610,7 @@ class ProcessExporterCPP(object):
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()    
 
-    def setup_cpp_standalone_dir(self, model):
+    def copy_template(self, model):
         """Prepare export_dir as standalone_cpp directory, including:
         src (for RAMBO, model and ALOHA files + makefile)
         lib (with compiled libraries from src)
@@ -1717,6 +1720,7 @@ class ProcessExporterCPP(object):
     
     def finalize(self, *args, **opts):
         """ """
+        self.compile_model()
         pass
 
 class ProcessExporterMatchbox(ProcessExporterCPP):
@@ -2505,7 +2509,7 @@ def ExportCPPFactory(cmd, group_subprocesses=False):
     elif cformat == 'matchbox_cpp':
         return  ProcessExporterMatchbox(cmd._export_dir, opt)
     elif cformat == 'plugin':
-        return cmd._export_plugin['exporter_class'](cmd._export_dir, opt)
+        return cmd._export_plugin(cmd._export_dir, opt)
     
 
 
