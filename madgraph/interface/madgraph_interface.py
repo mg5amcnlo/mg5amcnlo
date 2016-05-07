@@ -2663,7 +2663,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5',
-                              'hepmc','mg5amc_py8_interface']
+                              'hepmc','mg5amc_py8_interface','MadAnalysis5']
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
@@ -2693,6 +2693,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
+                       'madanalysis5_path':'./HEPTools/madanalysis5',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
@@ -5210,9 +5211,9 @@ This implies that with decay chains:
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
 ############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
 
         # Potential change in naming convention
@@ -5252,7 +5253,17 @@ This implies that with decay chains:
 #                                                'MG5aMC_PY8_interface.tar.gz'))
 ################################################################################
 
-        # Special rules for certain tools  
+        # Special rules for certain tools
+        if tool=='madanalysis5':
+            additional_options.append('--mg5_path=%s'%MG5DIR)
+            fastjet_config  = misc.which(self.options['fastjet'])
+            if fastjet_config:
+                additional_options.append('--with_fastjet=%s'%fastjet_config)
+            if self.options['delphes_path'] and \
+                                    os.path.isdir(self.options['delphes_path']):
+                additional_options.append('--with_delphes3=%s'%\
+                                                   self.options['delphes_path'])
+
         if tool=='pythia8':
             # All what's below is to handle the lhapdf dependency of Pythia8
             lhapdf_config  = misc.which(self.options['lhapdf'])
@@ -5351,7 +5362,9 @@ This implies that with decay chains:
             self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf5','bin',
                                                                 'lhapdf-config')
             self.exec_cmd('save options')            
-
+        elif tool == 'madanalysis5':
+            self.options['madanalysis5_path'] = pjoin(MG5DIR,'HEPTools','madanalysis5')
+            self.exec_cmd('save options')
         elif tool == 'mg5amc_py8_interface':
             # At this stage, pythia is guaranteed to be installed, s
             if self.options['pythia8_path'] in ['',None,'None']:
@@ -5439,7 +5452,8 @@ This implies that with decay chains:
                           'lhapdf6':'[arXiv:1412.7420]',
                           'lhapdf5':'[arXiv:0605240]',
                           'hepmc':'[CPC 134 (2001) 41-46]',
-                          'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]'}
+                          'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]',
+                          'MadAnalysis5':'[arXiv:1206.1599]'}
 
         if args[0] in advertisements:
             logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
@@ -5461,7 +5475,7 @@ This implies that with decay chains:
             r = [r, (1-r)]
 ################################################################################
 #           Force her to choose one particular server
-#            r = [0]
+            r = [1]
 ################################################################################
             for index in r:
                 cluster_path = data_path[index]
@@ -5483,6 +5497,20 @@ This implies that with decay chains:
 #            path['XXX'] = 'YYY'
 ################################################################################
 
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
+
+        try:
+            name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
+                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
+                'SysCalc':'SysCalc', 'Golem95': 'golem95',
+                'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5'
+                }
+            name = name[args[0]]
+        except KeyError:
+            name = args[0]
+
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
@@ -5491,27 +5519,13 @@ This implies that with decay chains:
             additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
                                                    path['MG5aMC_PY8_interface'])
             additional_options.extend(install_options['options_for_HEPToolsInstaller'])
-            return self.advanced_install(args[0], path['HEPToolsInstaller'],
+            return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = additional_options)
 
         if args[0] == 'PJFry' and not os.path.exists(
                                  pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
             logger.info("Installing PJFRY's dependence QCDLoop...")
             self.do_install('QCDLoop', paths=path)
-
-        if args[0] == 'Delphes':
-            args[0] = 'Delphes3'
-        
-        try:
-            name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
-                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
-                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
-                'SysCalc':'SysCalc', 'Golem95': 'golem95',
-                'PJFry':'PJFry','QCDLoop':'QCDLoop',
-                }
-            name = name[args[0]]
-        except:
-            pass
 
         #check outdated install
         if args[0] in ['Delphes2', 'pythia-pgs']:
@@ -6155,7 +6169,7 @@ This implies that with decay chains:
         # try absolute and relative path
         for key in self.options:
             if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path',
-                       'mg5amc_py8_interface_path']:
+                       'mg5amc_py8_interface_path','madanalysis5_path']:
                 if self.options[key] in ['None', None]:
                     self.options[key] = None
                     continue
@@ -6172,8 +6186,14 @@ This implies that with decay chains:
                         self.options['pythia8_path'] = None
                     else:
                         continue
+                #this is for madanalysis5
+                if key == 'madanalysis5_path' and not os.path.isfile(pjoin(MG5DIR, path, 'version.txt')):
+                    if not os.path.isfile(pjoin(path, 'version.txt')):
+                        self.options['madanalysis5_path'] = None
+                    else:
+                        continue
                 #this is for hw++
-                elif key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                if key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                     if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                         self.options['hwpp_path'] = None
                     else:
