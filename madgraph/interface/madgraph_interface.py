@@ -5259,10 +5259,10 @@ This implies that with decay chains:
             fastjet_config  = misc.which(self.options['fastjet'])
             if fastjet_config:
                 additional_options.append('--with_fastjet=%s'%fastjet_config)
-            if self.options['delphes_path'] and \
-                                    os.path.isdir(self.options['delphes_path']):
+            if self.options['delphes_path'] and os.path.isdir(
+                  os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
                 additional_options.append('--with_delphes3=%s'%\
-                                                   self.options['delphes_path'])
+                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path'])))
 
         if tool=='pythia8':
             # All what's below is to handle the lhapdf dependency of Pythia8
