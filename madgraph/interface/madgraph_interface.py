@@ -2749,6 +2749,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
+    _curr_proc_defs = base_objects.ProcessDefinitionList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_fortran_model = None
     _curr_cpp_model = None
@@ -2818,6 +2819,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
+        self._proc_defs = base_objects.ProcessDefinitionList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
         self._v4_export_formats = ['madevent', 'standalone','standalone_msP','standalone_msF',
@@ -2921,6 +2923,8 @@ This implies that with decay chains:
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial():
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+            
+            self._curr_proc_defs.append(myprocdef)
             
             # Negative coupling order contraints can be given on at most one
             # coupling order (and either in squared orders or orders, not both)
@@ -4152,6 +4156,8 @@ This implies that with decay chains:
         aloha_lib.KERNEL.clean()
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
+        # Reset Process definition
+        self._proc_defs = base_objects.ProcessDefinitionList()
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._generate_info = line
@@ -4867,6 +4873,8 @@ This implies that with decay chains:
             self._model_v4_path = None
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
+            # Reset proc defs
+            self._proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             # Import model
             if args[0].endswith('_v4'):
@@ -4943,6 +4951,8 @@ This implies that with decay chains:
             self.process_model()
             # Reset amplitudes and matrix elements and global checks
             self._curr_amps = diagram_generation.AmplitudeList()
+            # Reset proc defs
+            self._proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             process_checks.store_aloha = []
 
@@ -6415,7 +6425,7 @@ This implies that with decay chains:
                 raise self.RWError('Could not load model from file %s' \
                                       % args[1])
         elif args[0] == 'processes':
-            amps = save_load_object.load_from_file(args[1])
+            amps,proc_defs = save_load_object.load_from_file(args[1])
             if isinstance(amps, diagram_generation.AmplitudeList):
                 cpu_time2 = time.time()
                 logger.info("Loaded processes from file in %0.3f s" % \
@@ -6439,6 +6449,7 @@ This implies that with decay chains:
                     # _curr_amps and _curr_model
                     self._curr_amps = amps
                     self._curr_model = model
+                    self._proc_defs = proc_defs
                     logger.info("Model set from process.")
                     # Do post-processing of model
                     self.process_model()
@@ -6548,7 +6559,7 @@ This implies that with decay chains:
                 raise self.InvalidCmd('No model to save!')
         elif args[0] == 'processes':
             if self._curr_amps:
-                if save_load_object.save_to_file(args[1], self._curr_amps):
+                if save_load_object.save_to_file(args[1], (self._curr_amps,self._proc_defs) ):
                     logger.info('Saved processes to file %s' % args[1])
             else:
                 raise self.InvalidCmd('No processes to save!')
@@ -6629,6 +6640,7 @@ This implies that with decay chains:
                                                     str(self.options[args[0]]))
                 logger.info('Note that you need to regenerate all processes')
             self._curr_amps = diagram_generation.AmplitudeList()
+            self._proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
         elif args[0] == "stdout_level":
@@ -6710,6 +6722,7 @@ This implies that with decay chains:
             model_name = self._curr_model.get('modelpath+restriction')
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
+            self._proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self._curr_fortran_model = None
             self._curr_cpp_model = None
@@ -6837,6 +6850,7 @@ This implies that with decay chains:
             # Reset the amplitudes, MatrixElements and exporter as they might
             # depend on this option
             self._curr_amps = diagram_generation.AmplitudeList()
+            self._proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self._curr_exporter = None
             self.options[args[0]] = args[1]
@@ -7413,7 +7427,8 @@ This implies that with decay chains:
                                            self.history,
                                            not nojpeg,
                                            online,
-                                           compiler_dict)
+                                           compiler_dict,
+                                           proc_defs = self._curr_proc_defs)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -7777,6 +7792,7 @@ This implies that with decay chains:
 
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
+        self._proc_defs = base_objects.ProcessDefinitionList()
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         # Reset _done_export, since we have new process

@@ -341,7 +341,6 @@ def get_MadAnalysis5_main(mg5_path, ma5_path):
     MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
     
     if MA5path is None or not os.path.isfile(pjoin(MA5path,'version.txt')):
-        print "FU"
         return None
     if MA5path not in sys.path:
         sys.path.insert(0, MA5path)
@@ -353,10 +352,8 @@ def get_MadAnalysis5_main(mg5_path, ma5_path):
     try:
         from madanalysis.core.main import Main
         MA5_main = Main()
-        print MA5_main
         MA5_main.archi_info.ma5dir = MA5path
     except Exception as e:
-        print "HUHU"
         raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%e
         return None
 
