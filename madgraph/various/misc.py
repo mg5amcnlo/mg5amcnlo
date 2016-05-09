@@ -333,6 +333,36 @@ def which_lib(lib):
     return None
 
 #===============================================================================
+# Return a Main instance of MadAnlysis5, provided its path
+#===============================================================================
+def get_MadAnalysis5_main(mg5_path, ma5_path):
+    """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
+    
+    MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
+    
+    if MA5path is None or not os.path.isfile(pjoin(MA5path,'version.txt')):
+        print "FU"
+        return None
+    if MA5path not in sys.path:
+        sys.path.insert(0, MA5path)
+    
+    MA5_services = pjoin(MA5path,'tools','ReportGenerator','Services')
+    if MA5_services not in sys.path:
+        sys.path.insert(0, MA5_services)
+
+    try:
+        from madanalysis.core.main import Main
+        MA5_main = Main()
+        print MA5_main
+        MA5_main.archi_info.ma5dir = MA5path
+    except Exception as e:
+        print "HUHU"
+        raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%e
+        return None
+
+    return MA5_main
+
+#===============================================================================
 # Return Nice display for a random variable
 #===============================================================================
 def nice_representation(var, nb_space=0):

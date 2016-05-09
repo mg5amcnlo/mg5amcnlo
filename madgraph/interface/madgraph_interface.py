@@ -2630,11 +2630,14 @@ class CompleteForCmd(cmd.CompleteCmd):
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
         elif len(args)==2 and args[1] in self._advanced_install_opts:           
-            options = ['--keep_source']
+            options = ['--keep_source','--logging=']
             if args[1]=='pythia8':
                 options.append('--pythia8_tarball=')
             elif args[1]=='mg5amc_py8_interface':
-                options.append('--mg5amc_py8_interface_tarball=')                                
+                options.append('--mg5amc_py8_interface_tarball=') 
+            elif args[1]=='MadAnalysis5':
+                options.append('--no_MA5_further_install')
+                options.append('--madanalysis5_tarball=')     
             return self.list_completion(text, options)
         else:
             return self.list_completion(text, [])
@@ -5363,7 +5366,8 @@ This implies that with decay chains:
                                                                 'lhapdf-config')
             self.exec_cmd('save options')            
         elif tool == 'madanalysis5':
-            self.options['madanalysis5_path'] = pjoin(MG5DIR,'HEPTools','madanalysis5')
+            self.options['madanalysis5_path'] = pjoin(os.curdir,'HEPTools',
+                                                  'madanalysis5','madanalysis5')
             self.exec_cmd('save options')
         elif tool == 'mg5amc_py8_interface':
             # At this stage, pythia is guaranteed to be installed, s

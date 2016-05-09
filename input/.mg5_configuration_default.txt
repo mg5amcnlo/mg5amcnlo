@@ -145,7 +145,7 @@
 
 #! MadAnalysis5 python-based Package [For advanced analysis]
 #!  relative path start from main directory
-# madanalysis5_path = ./HEPTools/madanalysis5
+# madanalysis5_path = ./HEPTools/madanalysis5/madanalysis5
 
 #! ExRootAnalysis Package
 #!  relative path start from main directory

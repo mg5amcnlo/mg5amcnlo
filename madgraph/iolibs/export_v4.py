@@ -222,7 +222,12 @@ class ProcessExporterFortran(object):
             open(pjoin(self.dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                               MG_version['version'])
 
-            
+        # Create the default MadAnalysis5 cards
+        if 'madanalysis5_path' in self.opt and not \
+                                          self.opt['madanalysis5_path'] is None:
+            self.create_default_madanalysis5_cards(
+                    self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'))
+
         # add the makefile in Source directory 
         filename = pjoin(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FileWriter(filename))
@@ -237,8 +242,22 @@ class ProcessExporterFortran(object):
         self.write_pdf_opendata()
         
         
+    #===========================================================================
+    # Call MadAnalysis5 to generate the default cards for this process
+    #=========================================================================== 
+    def create_default_madanalysis5_cards(self, ma5_path, output_dir):
+        """ Call MA5 so that it writes default cards for both parton and
+        post-shower levels, tailored for this particular process."""
         
-            
+        MA5_main = misc.get_MadAnalysis5_main(MG5DIR,ma5_path)
+        
+        open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
+                MA5_main.madgraph.generate_card(matrix_element.get('processes'),
+                                                                 type='parton'))
+        open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
+                MA5_main.madgraph.generate_card(matrix_element.get('processes'),
+                                                                 type='hadron'))
+
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
     #===========================================================================
@@ -6366,6 +6385,10 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
             if key not in loop_induced_opt:
                 loop_induced_opt[key] = opt[key]
     
+        # Madevent output supports MadAnalysis5
+        if format in ['madevent']:
+            opt['madanalysis5'] = cmd.options['madanalysis5_path']
+            
         if format == 'matrix' or format.startswith('standalone'):
             return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt,
                                             format=format)

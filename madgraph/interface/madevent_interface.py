@@ -4781,8 +4781,8 @@ Please install this tool with the following MG5_aMC command:
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0']
-        void = 'NOT INSTALLED'
-        switch_order = ['shower', 'detector', 'madspin', 'reweight']
+        void = 'NOT AVAILABLE'
+        switch_order = ['shower', 'detector', 'madspin', 'reweight', 'madanalysis5']
         
         switch = dict((k, void) for k in switch_order)
 
@@ -4790,6 +4790,7 @@ Please install this tool with the following MG5_aMC command:
                        'detector': 'Choose the detector simulation program:',
                        'madspin': 'Decay particles with the MadSpin module:',
                        'reweight':'Add weights to the events based on changing model parameters:',
+                       'madanalysis5':'Run MadAnalysis5 on the events generated:'
                        }
 
         force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
@@ -4825,7 +4826,29 @@ Please install this tool with the following MG5_aMC command:
                 switch['shower'] = 'PYTHIA8'
             elif switch['shower'] == void:
                 switch['shower'] = 'OFF'            
+        
+        # MadAnalysis5 options
+        if self.options['madanalysis5_path']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')):
+                valid_options['madanalysis5'].append('PARTON')           
+            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
+                valid_options['madanalysis5'].append('HADRON')
+            if 'HADRON' in valid_options['madanalysis5'] and 'PARTON' in valid_options['madanalysis5']:
+                valid_options['madanalysis5'].append('PARTON+HADRON')
+            if len(valid_options['madanalysis5'])>1:                
+                available_mode.append('5')
             
+            parton_card_present = os.path.exits(pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat'))
+            hadron_card_present = os.path.exits(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat'))
+            if parton_card_present and not hadron_card_present:
+                switch['madanalysis5'] = 'PARTON'                
+            elif hadron_card_present and not parton_card_present:
+                switch['madanalysis5'] = 'HADRON'
+            elif hadron_card_present and parton_card_present:
+                switch['madanalysis5'] = 'PARTON+HADRON'
+            elif switch['madanalysis5'] == void:
+                switch['madanalysis5'] = 'OFF'
+
         # Need to allow Delphes only if a shower exists                
         if self.options['delphes_path']:
             if valid_options['shower'] != ['OFF']:
@@ -4959,7 +4982,8 @@ Please install this tool with the following MG5_aMC command:
                                     switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
+                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 
+                                'delphes','madanalysis5']:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
@@ -4980,6 +5004,9 @@ Please install this tool with the following MG5_aMC command:
                     elif answer == 'madspin':
                         switch_assign('madspin', 'ON')
                         switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF')
+                    elif answer == 'madanalysis5':
+                        switch_assign('madanalysis5', valid_options['madanalysis5'][-1])
                         switch_assign('detector', 'OFF')
                     elif answer == 'reweight':
                         switch_assign('reweight', 'ON')
@@ -5011,6 +5038,11 @@ Please install this tool with the following MG5_aMC command:
             cards.append('madspin_card.dat')
         if switch['reweight'] == 'ON':
             cards.append('reweight_card.dat')
+        if switch['madanalysis5'] in ['PARTON','PARTON+HADRON']:
+            cards.append('madanalysis5_parton_card.dat')
+        if switch['madanalysis5'] in ['HADRON','PARTON+HADRON']:
+            cards.append('madanalysis5_hadron_card.dat')
+
         self.keep_cards(cards)
         
         if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
