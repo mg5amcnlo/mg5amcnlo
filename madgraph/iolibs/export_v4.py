@@ -239,7 +239,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Call MadAnalysis5 to generate the default cards for this process
     #=========================================================================== 
-    def create_default_madanalysis5_cards(self, matrix_elements,
+    def create_default_madanalysis5_cards(self, processes_information,
                                                            ma5_path, output_dir):
         """ Call MA5 so that it writes default cards for both parton and
         post-shower levels, tailored for this particular process."""
@@ -247,10 +247,10 @@ class ProcessExporterFortran(object):
         MA5_main = misc.get_MadAnalysis5_main(MG5DIR,ma5_path)
         
         open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
-                MA5_main.madgraph.generate_card(matrix_elements.get('processes'),
+                MA5_main.madgraph.generate_card(processes_information,
                                                                  type='parton'))
         open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
-                MA5_main.madgraph.generate_card(matrix_elements.get('processes'),
+                MA5_main.madgraph.generate_card(processes_information,
                                                                  type='hadron'))
 
     #===========================================================================
@@ -308,8 +308,6 @@ class ProcessExporterFortran(object):
             self.create_default_madanalysis5_cards(
                 [[amp.get('process') for amp in proc.get('amplitudes')] for proc in all_proc],
                 self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'))
-        
-        
         pass
 
     #===========================================================================
