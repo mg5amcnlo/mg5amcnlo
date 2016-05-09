@@ -4781,7 +4781,7 @@ Please install this tool with the following MG5_aMC command:
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0']
-        void = 'NOT AVAILABLE'
+        void = 'NOT INSTALLED'
         switch_order = ['shower', 'detector', 'madspin', 'reweight', 'madanalysis5']
         
         switch = dict((k, void) for k in switch_order)
@@ -4837,9 +4837,13 @@ Please install this tool with the following MG5_aMC command:
                 valid_options['madanalysis5'].append('PARTON+HADRON')
             if len(valid_options['madanalysis5'])>1:                
                 available_mode.append('5')
-            
-            parton_card_present = os.path.exits(pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat'))
-            hadron_card_present = os.path.exits(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat'))
+            else:
+                switch['madanalysis5'] = 'Not available yet for this output/process'
+
+            parton_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
+                                                'madanalysis5_parton_card.dat'))
+            hadron_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
+                                                'madanalysis5_hadron_card.dat'))
             if parton_card_present and not hadron_card_present:
                 switch['madanalysis5'] = 'PARTON'                
             elif hadron_card_present and not parton_card_present:
