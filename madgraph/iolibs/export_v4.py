@@ -239,7 +239,7 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Call MadAnalysis5 to generate the default cards for this process
     #=========================================================================== 
-    def create_default_madanalysis5_cards(self, processes_information,
+    def create_default_madanalysis5_cards(self, proc_defs, processes,
                                                            ma5_path, output_dir):
         """ Call MA5 so that it writes default cards for both parton and
         post-shower levels, tailored for this particular process."""
@@ -247,12 +247,14 @@ class ProcessExporterFortran(object):
         MA5_main = misc.get_MadAnalysis5_main(MG5DIR,ma5_path)
         
         open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
-                MA5_main.madgraph.generate_card(processes_information,'parton'))
+                MA5_main.madgraph.generate_card(proc_defs, processes,'parton'))
         open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
-                MA5_main.madgraph.generate_card(processes_information,'hadron'))
+                MA5_main.madgraph.generate_card(proc_defs, processes,'hadron'))
 
         open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
-""" 
+"""import events.lhe.gz
+plot Pt[j]
+submit
 """)
         open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
 """ DUMMY FOR NOW """)
@@ -304,7 +306,7 @@ class ProcessExporterFortran(object):
                      online = False, compiler=default_compiler, proc_defs=None):
         """Function to finalize v4 directory, for inheritance.
         """
-        
+
         self.create_run_card(all_proc, history)
         # Create the default MadAnalysis5 cards
         if 'madanalysis5_path' in self.opt and not \
@@ -317,7 +319,7 @@ class ProcessExporterFortran(object):
                 processes = [me.get('processes') 
                                  for me in all_proc['matrix_elements']]
             self.create_default_madanalysis5_cards(
-                (proc_defs,processes),
+                proc_defs, processes,
                 self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'))
 
     #===========================================================================

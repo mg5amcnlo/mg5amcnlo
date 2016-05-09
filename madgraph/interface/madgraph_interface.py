@@ -2923,7 +2923,7 @@ This implies that with decay chains:
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial():
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
-            
+
             self._curr_proc_defs.append(myprocdef)
             
             # Negative coupling order contraints can be given on at most one
