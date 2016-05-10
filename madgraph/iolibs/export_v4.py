@@ -105,7 +105,7 @@ class VirtualExporter(object):
     #    generate_subprocess_directory(self, matrix_element, helicity_model, me_number) [for ungrouped]
         return 0 # return an integer stating the number of call to helicity routine
     
-    def convert_model(self, model, wanted_lorentz=[], wanted_coupling=[]):
+    def convert_model(self, model, wanted_lorentz=[], wanted_couplings=[]):
         return
     
     def finalize(self,matrix_element, cmdhistory, MG5options, outputflag):

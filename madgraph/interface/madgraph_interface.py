@@ -7181,17 +7181,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     subproc_groups = group_subprocs.SubProcessGroupList()
                     matrix_elements_opts = {'optimized_output':
                                        self.options['loop_optimized_output']}
+                    
+                    grouping_criteria = self._curr_exporter.grouped_mode
                     if non_dc_amps:
-                        criteria = self._curr_exporter.grouped_mode
                         subproc_groups.extend(\
                           group_subprocs.SubProcessGroup.group_amplitudes(\
-                          non_dc_amps,criteria , 
+                          non_dc_amps,grouping_criteria, 
                                      matrix_elements_opts=matrix_elements_opts))
 
                     if dc_amps:
                         dc_subproc_group = \
                                   group_subprocs.DecayChainSubProcessGroup.\
-                                  group_amplitudes(dc_amps, self._export_format,
+                                  group_amplitudes(dc_amps, grouping_criteria,
                                       matrix_elements_opts=matrix_elements_opts)
                         subproc_groups.extend(dc_subproc_group.\
                                     generate_helas_decay_chain_subproc_groups())

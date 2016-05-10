@@ -1728,7 +1728,7 @@ class ProcessExporterMatchbox(ProcessExporterCPP):
 
 class ProcessExporterPythia8(ProcessExporterCPP):
     oneprocessclass = OneProcessExporterPythia8
-    grouped_mode = True
+    grouped_mode = 'madevent'
      
     #===============================================================================
     # generate_process_files_pythia8
