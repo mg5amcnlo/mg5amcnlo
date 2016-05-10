@@ -80,9 +80,12 @@ class BasicCmd(cmd.Cmd):
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
 
-    def deal_multiple_categories(self, dico, forceCategory=False):
+    def deal_multiple_categories(self, dico, formatting=True, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
         specific readline parser"""
+
+        if not formatting:
+            return dico
 
         if 'libedit' in readline.__doc__:
             # No parser in this case, just send all the valid options
@@ -1680,7 +1683,7 @@ class OneLinePathCompletion(SmartQuestion):
     
     completion_prefix=''
 
-    def completenames(self, text, line, begidx, endidx):
+    def completenames(self, text, line, begidx, endidx, formatting=True):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
@@ -1694,7 +1697,7 @@ class OneLinePathCompletion(SmartQuestion):
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
             out[' Recognized command'] = BasicCmd.completenames(self, text)
             
-            return self.deal_multiple_categories(out)
+            return self.deal_multiple_categories(out, formatting)
         except Exception, error:
             print error
             

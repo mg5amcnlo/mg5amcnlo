@@ -263,7 +263,7 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             return self.list_completion(text, content)
 
 
-    def complete_launch(self, text, line, begidx, endidx):
+    def complete_launch(self, text, line, begidx, endidx, formatting=True):
         """ complete the launch command"""
         args = self.split_arg(line[0:begidx])
 
@@ -301,7 +301,7 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             out['Options'] = self.list_completion(text, opt, line)
         
 
-        return self.deal_multiple_categories(out)
+        return self.deal_multiple_categories(out, formatting)
 
 class HelpFKS(mg_interface.HelpToCmd):
 

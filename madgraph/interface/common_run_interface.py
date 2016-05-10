@@ -2136,7 +2136,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
 
-    def complete_compute_widths(self, text, line, begidx, endidx):
+    def complete_compute_widths(self, text, line, begidx, endidx, formatting=True):
         "Complete the compute_widths command"
 
         args = self.split_arg(line[0:begidx])
@@ -2156,7 +2156,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             ['--path=', '--output=', '--min_br=0.\$', '--nlo',
                              '--precision_channel=0.\$', '--body_decay='])            
         
-        return self.deal_multiple_categories(completion)
+        return self.deal_multiple_categories(completion, formatting)
         
 
     def update_make_opts(self):
@@ -2684,7 +2684,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
 
 
-    def complete_set(self, text, line, begidx, endidx):
+    def complete_set(self, text, line, begidx, endidx, formatting=True):
         """ Complete the set command"""
 
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -2862,7 +2862,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
 
-        return self.deal_multiple_categories(possibilities)
+        return self.deal_multiple_categories(possibilities, formatting)
 
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
@@ -3472,7 +3472,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         print '   If you specify some names after the command (i.e. asperge m1 m2) then ASperGe will only'
         print '   diagonalize the associate mass matrices (here m1 and m2).'
 
-    def complete_asperge(self, text, line, begidx, endidx):
+    def complete_asperge(self, text, line, begidx, endidx, formatting=True):
         signal.alarm(0) # avoid timer if any
 
         blockname = self.pname2block.keys()
@@ -3483,7 +3483,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         output = {'Mixing matrices': self.list_completion(text, valid, line),
                   'Other potential valid input': self.list_completion(text, potential, line)}
 
-        return self.deal_multiple_categories(output)
+        return self.deal_multiple_categories(output, formatting)
 
 
     def do_asperge(self, line):

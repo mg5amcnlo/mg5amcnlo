@@ -1863,7 +1863,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         return self.list_completion(text, possibilities)
 
     def model_completion(self, text, process, line, categories = True, \
-                                                      allowed_loop_mode = None):
+                                                      allowed_loop_mode = None,
+                                                      formatting=True):
         """ complete the line with model information. If categories is True,
         it will use completion with categories. If allowed_loop_mode is
         specified, it will only complete with these loop modes."""
@@ -1940,9 +1941,9 @@ class CompleteForCmd(cmd.CompleteCmd):
             if len(possibilities.keys())==1:
                 return self.list_completion(text, possibilities.values()[0])
             else:
-                return self.deal_multiple_categories(possibilities)
+                return self.deal_multiple_categories(possibilities, formatting)
 
-    def complete_generate(self, text, line, begidx, endidx):
+    def complete_generate(self, text, line, begidx, endidx, formatting=True):
         "Complete the generate command"
 
         # Return list of particle names and multiparticle names, as well as
@@ -1950,25 +1951,25 @@ class CompleteForCmd(cmd.CompleteCmd):
         args = self.split_arg(line[0:begidx])
 
         valid_sqso_operators=['==','<=','>']
+
         if any(line.endswith('^2 %s '%op) for op in valid_sqso_operators):
             return
         if args[-1].endswith('^2'):
             return self.list_completion(text,valid_sqso_operators)
         match_op = [o for o in valid_sqso_operators if o.startswith(args[-1])]            
-        if args[-2].endswith('^2') and len(match_op)>0:
+        if len(args)>2 and args[-2].endswith('^2') and len(match_op)>0:
             if args[-1] in valid_sqso_operators:
                 return self.list_completion(text,' ')
             if len(match_op)==1:
                 return self.list_completion(text,[match_op[0][len(args[-1]):]])
             else:
                 return self.list_completion(text,match_op)
-
         if len(args) > 2 and args[-1] == '@' or ( args[-1].endswith('=') and \
                             (not '[' in line or ('[' in line and ']' in line))):
             return
 
         try:
-            return self.model_completion(text, ' '.join(args[1:]),line)
+            return self.model_completion(text, ' '.join(args[1:]),line, formatting)
         except Exception as error:
             print error
 
@@ -1980,7 +1981,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         #                            self._multiparticles.keys() + couplings)
 
 
-    def complete_compute_widths(self, text, line, begidx, endidx):
+    def complete_compute_widths(self, text, line, begidx, endidx,formatting=True):
         "Complete the compute_widths command"
 
         args = self.split_arg(line[0:begidx])
@@ -2001,11 +2002,11 @@ class CompleteForCmd(cmd.CompleteCmd):
                              '--precision_channel=0.\$', '--body_decay=', '--nlo'])
             completion['particles'] = self.model_completion(text, '', line)
 
-        return self.deal_multiple_categories(completion)
+        return self.deal_multiple_categories(completion,formatting)
 
     complete_decay_diagram = complete_compute_widths
 
-    def complete_add(self, text, line, begidx, endidx):
+    def complete_add(self, text, line, begidx, endidx, formatting):
         "Complete the add command"
 
         args = self.split_arg(line[0:begidx])
@@ -2021,7 +2022,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion_categories = self.complete_import(text, line, begidx, endidx, 
                                                          allow_restrict=False, treat_completion=False)
             completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate'])
-            return self.deal_multiple_categories(completion_categories) 
+            return self.deal_multiple_categories(completion_categories, formatting) 
             
     def complete_customize_model(self, text, line, begidx, endidx):
         "Complete the customize_model command"
@@ -2033,7 +2034,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, ['--save='])
 
 
-    def complete_check(self, text, line, begidx, endidx):
+    def complete_check(self, text, line, begidx, endidx, formatting=True):
         "Complete the check command"
 
         out = {}
@@ -2067,7 +2068,7 @@ class CompleteForCmd(cmd.CompleteCmd):
           {'Process completion': self.model_completion(text, ' '.join(args[2:]),
           line, categories = False, allowed_loop_mode=['virt']),
           'Param_card.dat path completion:':self.path_completion(text),
-          'options': self.list_completion(text,options)})
+          'options': self.list_completion(text,options)}, formatting)
 
         #Special rules for check cms completion
         if cms_check_mode:
@@ -2099,7 +2100,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         return self.deal_multiple_categories(
           {"Examples of completion for option '%s'"%args[-1].split('=')[0]:
 #                    ['%d: %s'%(i+1,ex) for i, ex in enumerate(example)]},
-                    ['%s'%ex for i, ex in enumerate(example)]},
+                    ['%s'%ex for i, ex in enumerate(example)]},formatting,
                                                              forceCategory=True)
                 if args[-1]=='--recompute_width=':
                     return self.list_completion(text,
@@ -2118,17 +2119,20 @@ class CompleteForCmd(cmd.CompleteCmd):
                         line, categories = False, allowed_loop_mode=['virt']),
                    'Param_card.dat path completion:': self.path_completion(text),
                'reanalyze result on disk / save output:':self.list_completion(
-                                                  text,['-reuse','--analyze='])})
+                                                  text,['-reuse','--analyze='])},
+                                                     formatting)
             elif not any(arg.startswith('--') for arg in args):
                 if '>' in args:
                     return self.deal_multiple_categories({'Process completion': 
                         self.model_completion(text, ' '.join(args[2:]),
                         line, categories = False, allowed_loop_mode=['virt']),
-                        'options': self.list_completion(text,options)})
+                        'options': self.list_completion(text,options)},
+                                                         formatting)
                 else:
                     return self.deal_multiple_categories({'Process completion': 
                         self.model_completion(text, ' '.join(args[2:]),
-                        line, categories = False, allowed_loop_mode=['virt'])})
+                        line, categories = False, allowed_loop_mode=['virt'])},
+                                                         formatting)
             else:
                 return self.list_completion(text,options)
             
@@ -2191,7 +2195,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                                 'non_propagating', '--']
             return self.list_completion(text, opt)
 
-    def complete_launch(self, text, line, begidx, endidx):
+    def complete_launch(self, text, line, begidx, endidx,formatting=True):
         """ complete the launch command"""
         args = self.split_arg(line[0:begidx])
 
@@ -2225,7 +2229,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             out['Options'] = self.list_completion(text, opt, line)
 
 
-        return self.deal_multiple_categories(out)
+        return self.deal_multiple_categories(out,formatting)
 
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
@@ -2347,7 +2351,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             content += possible_options_full
             return self.list_completion(text, content)
 
-    def aloha_complete_output(self, text, line, begidx, endidx):
+    def aloha_complete_output(self, text, line, begidx, endidx,formatting=True):
         "Complete the output aloha command"
         args = self.split_arg(line[0:begidx])
         completion_categories = {}
@@ -2386,7 +2390,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion_categories['Wavefunctions routines'] = self.list_completion(text, wf_opt)
             completion_categories['conjugate_routines'] = self.list_completion(text, opt_conjg)
 
-        return self.deal_multiple_categories(completion_categories)
+        return self.deal_multiple_categories(completion_categories,formatting)
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
@@ -2440,7 +2444,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         only_dirs = True)
         
     def complete_import(self, text, line, begidx, endidx, allow_restrict=True,
-                        treat_completion=True):
+                        formatting=True):
         "Complete the import command"
 
         args=self.split_arg(line[0:begidx])
@@ -2573,11 +2577,9 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
-        if treat_completion:
-            return self.deal_multiple_categories(completion_categories) 
-        else:
-            #this means this function is called as a subgroup of another completion
-            return completion_categories
+
+        return self.deal_multiple_categories(completion_categories,formatting) 
+
 
 
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
