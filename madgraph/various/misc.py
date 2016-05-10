@@ -335,7 +335,8 @@ def which_lib(lib):
 #===============================================================================
 # Return a Main instance of MadAnlysis5, provided its path
 #===============================================================================
-def get_MadAnalysis5_main(mg5_path, ma5_path):
+def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
+                                                                forced = False):
     """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
     
     MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
@@ -345,19 +346,31 @@ def get_MadAnalysis5_main(mg5_path, ma5_path):
     if MA5path not in sys.path:
         sys.path.insert(0, MA5path)
     
+###########
     MA5_services = pjoin(MA5path,'tools','ReportGenerator','Services')
     if MA5_services not in sys.path:
         sys.path.insert(0, MA5_services)
+###########
 
     try:
         from madanalysis.core.main import Main
-        MA5_main = Main()
+        from madanalysis.interpreter.interpreter import Interpreter
+        # Prevent MA5 to ask questions
+        Main.forced = forced
+        # Make sure MA5 loggers are listened to.
+        ma_logger  = logging.getLogger('madanalysis')
+        handler    = logging.StreamHandler(logstream)
+        if not logstream is None:
+            ma_logger.addHandler(handler)
+        ma_logger.setLevel(logging.INFO)
+        MA5_main   = Main()
         MA5_main.archi_info.ma5dir = MA5path
+        MA5_interpreter = Interpreter(MA5_main)
     except Exception as e:
         raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%e
         return None
 
-    return MA5_main
+    return MA5_interpreter
 
 #===============================================================================
 # Return Nice display for a random variable

@@ -760,10 +760,12 @@ class OneTagResults(dict):
         self.reweight = [] 
         self.pythia = []
         self.pythia8 = []
+        self.madanalysis5 = []
         self.pgs = []
         self.delphes = []
         self.shower = []
-        self.level_modes = ['parton', 'pythia', 'pythia8','pgs', 'delphes','reweight','shower']
+        self.level_modes = ['parton', 'pythia', 'pythia8',
+                            'pgs', 'delphes','reweight','shower','madanalysis5']
         # data 
         self.status = ''
 
@@ -844,7 +846,6 @@ class OneTagResults(dict):
                     else:
                         self.shower.append('%s' % kind)
 
-                
         if level in ['pythia', 'all']:
             
             if 'plot' not in self.pythia and \

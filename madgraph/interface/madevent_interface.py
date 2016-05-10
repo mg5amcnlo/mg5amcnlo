@@ -1000,13 +1000,121 @@ class CheckValidForCmd(object):
             misc.gunzip(input_file, keep=True, stdout=output_file)
         
         args.append(mode)
+
+    def check_madanalysis5(self, args):
+        """Check the argument for the madanalysis5 command
+        syntax: madanalysis5 [NAME]
+        """
+        
+        # By default we attempt to run MA5 on parton level output and various
+        # hadronic level outpout that could be found.
+        MA5_options={'parton':True,
+                     'hadron':['PY8','*.hepmc','*.stdhep','*.lhco'],
+                     'tag':None,
+                     'run_name':None}
+     
+        # If not pythia-pgs path
+        if not self.options['madanalysis5_path']:
+            logger.info('Now trying to read the configuration file again'+
+                                                   ' to find MadAnalysis5 path')
+            self.set_configuration()
+            
+        if not self.options['madanalysis5_path'] or not \
+            os.path.exists(pjoin(self.options['madanalysis5_path'],'version.txt')):
+            error_msg = 'No valid MadAnalysis5 path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            error_msg += 'Finally, it can be installed automatically using the'
+            error_msg += ' install command.\n'
+            raise self.InvalidCmd(error_msg)
+
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+            MA5_options['tag']=tag
+            
+
+        if len(args) == 0 and not self.run_name:
+            if self.results.lastrun:
+                MA5_options['run_name']=self.results.lastrun
+            else:
+                raise self.InvalidCmd('No run name currently define. '+
+                                                 'Please add this information.')             
+        
+        if len(args) >= 1:
+            if args[0] != self.run_name and\
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 
+                                                  'unweighted_events.lhe.gz')):
+                raise self.InvalidCmd('No events file in the %s run.'%args[0])
+            MA5_options['run_name']=self.results.lastrun
+            self.set_run_name(args[0], tag, 'madanalysis5')
+        else:
+            if tag:
+                self.run_card['run_tag'] = args[0]
+                MA5_options['run_tag']=args[0]
+            self.set_run_name(self.run_name, tag, 'madanalysis5')  
+        
+        if '--no_parton' in args or not os.path.isfile(pjoin(self.me_dir,
+                               'Cards','madanalysis5_parton_card_default.dat')):
+            MA5_options['parton'] = False
+        else:
+            input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
+            MA5_options['parton'] = '%s.gz'%input_file
+            if not os.path.exists('%s.gz'%input_file):
+                if os.path.exists(input_file):
+                    misc.gzip(input_file, keep=True, stdout=output_file)
+                else:
+                    logger.warning("LHE event file not found in \n%s\ns"%input_file+
+                                       "Parton level MA5 analysis is disabled.")
+                    MA5_options['parton'] = False
+    
+        if '--no_hadron' in args or not os.path.isfile(pjoin(self.me_dir,
+                               'Cards','madanalysis5_hadron_card_default.dat')):
+            MA5_options['hadron'] = []
+        else:
+            hadron_tag       = [t for t in args if t.startswith('--hadron=')]
+            if hadron_tag and hadron_tag[0][9:]:
+                MA5_options['hadron'] = hadron_tag[0][9:].split(',')
+            
+        # Make sure the corresponding input files are present and unfold potential
+        # wildcard while making their path absolute as well.
+        hadron_input_files = []
+        for htag in hadron_tag:
+            # Special tag for MA5 runs when using piping (as with PY8 for instance)
+            if htag in ['PY8']:
+                if not self.options['pythia8_path']:
+                    if any(t for t in tags if t.startswith('--hadron=')):
+                        logger.warning("Pythia8 must be installed for MadAnalysis5"+\
+                          " to be piped to its output, with the command --hadron=PY8")
+                else:
+                    hadron_input_files.append(htag)
+                
+            input_files = glob.glob(pjoin(self.me_dir,'Events',self.run_name,htag))
+            priority_files = [os.path.basename(f).startswith('events') for f in input_files]
+            if priority_files:
+                hadron_input_files.append(priority_files[0])
+                continue
+            if input_files:
+                hadron_input_files.append(input_files[0])
+                continue
+        
+        MA5_options['hadron'] = hadron_input_files
+        
+        # Now check that there is at least one input to run
+        if not MA5_options['parton'] and MA5_options['hadron']==[]:
+            raise self.InvalidCmd('No input files specified or availabled for'+
+            ' this MadAnalysis5 run. Please double-check the options of this'+
+            ' MA5 command and what output files are currently in the chosen'+
+            'run directory.')      
+
+        return MA5_options
     
     def check_pythia8(self, args):
         """Check the argument for pythia command
         syntax: pythia8 [NAME] 
         Note that other option are already removed at this point
-        """
-        
+        """        
         mode = None
         laststep = [arg for arg in args if arg.startswith('--laststep=')]
         if laststep and len(laststep)==1:
@@ -1060,9 +1168,10 @@ class CheckValidForCmd(object):
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         #output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
         if not os.path.exists('%s.gz'%input_file):
-            if not os.path.exists(input_file):
+            if os.path.exists(input_file):
                 misc.gzip(input_file, keep=True, stdout=output_file)
-            raise self.InvalidCmd('No event file corresponding to %s run. '
+            else:
+                raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)
         
         args.append(mode)
@@ -2074,6 +2183,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             if self.run_card['time_of_flight']>=0:
                 self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
             
+            self.exec_cmd('madanalysis5 --no_default', postcmd=False, printcmd=False)
             self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)            
             
             # shower launches pgs/delphes if needed    
@@ -3208,6 +3318,78 @@ Beware that this can be dangerous for local multicore runs.""")
         for shower in chosen_showers:
             self.exec_cmd('%s %s'%(shower,' '.join(args)), 
                                                   postcmd=False, printcmd=False)
+
+    def do_madanalysis5(self, line):
+        """launch MadAnalysis5 at the parton level or at the hadron level with
+        whatever .stdhep, .hepmc or .lhco found in the Run directory."""
+        # Check argument's validity
+        args = self.split_arg(line)
+        
+        if '--no_default' in args:
+            no_default = True
+            args.remove('--no_default')
+        else:
+            no_default = False
+        
+        if not self.options['madanalysis5_path'] or \
+            all(not os.path.exists(pjoin(self.me_dir, 'Cards',card)) for card in
+               ['madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat']):
+            return
+
+        if not self.run_name:
+            MA5_opts = self.check_madanalysis5(args)
+            self.configure_directory(html_opening =False)
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory(html_opening =False)
+            MA5_opts = self.check_madanalysis5(args)
+
+        if no_default:
+            if not os.path.exists(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_parton_card.dat')):
+                MA5_opts['parton'] = []
+            if not os.path.exists(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_hadron_card.dat')):
+                MA5_opts['hadron'] = []
+            if not os.path.exists(pjoin(self.me_dir, 'Cards',
+                           'pythia8_card.dat')) and 'PY8' in MA5_opts['hadron']:
+                MA5_opts.remove('PY8')
+
+        if MA5_opts['parton']:
+            misc.sprint(":D:D NOW RUNNING MA5 at parton lvl on '%s'."%MA5_opts['parton'])
+            # Obtain a main running loop 
+            MA5_interpreter = misc.get_MadAnalysis5_interpreter(self.options['mg5_path'], 
+            self.options['madanalysis5_path'], logstream=None, forced=True)
+################################################################################
+# THIS SHOULD BE FIXED EVENTUALLY AND THESE SETTINGS ARE TEMPORARY
+################################################################################
+            # Temporary need to force zlib
+            MA5_interpreter.main.archi_info.has_zlib = True
+            MA5_interpreter.main.archi_info.root_bin_path = '/Users/valentin/Documents/HEP_softs/root/root_installation_5_34_08_bis/bin/'
+            _environ = dict(os.environ)
+            os.environ['MA5_BASE']=os.path.normpath(pjoin(self.options['mg5_path'],self.options['madanalysis5_path']))
+            misc.sprint(os.environ['MA5_BASE'])
+            from madanalysis.core.main import Main
+            Main.forced = True
+################################################################################
+            MA5_commands  = ['import %s'%pjoin(self.me_dir,'PROC_sm_30','bin','internal','ufomodel')]
+            MA5_commands  = ['import %s'%MA5_opts['parton']]
+            MA5_commands += open(pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat'),'r').readlines()
+            MA5_commands.append('submit %s'%pjoin(self.me_dir,'MA5_ANALYSIS'))
+            misc.sprint('Now launching MA5 with commands:\n','\n'.join(MA5_commands))
+            MA5_interpreter.load(MA5_commands)
+################################################################################
+# THIS SHOULD BE FIXED EVENTUALLY AND THESE SETTINGS ARE TEMPORARY
+################################################################################            
+            os.environ.clear()
+            os.environ.update(_environ)
+################################################################################
+            
+            misc.sprint('Finished')
+            stop
+
+        if MA5_opts['hadron']:
+            misc.sprint(":D:D NOW RUNNING MA5 at hadron lvl on\n%s"%('\n'.join(MA5_opts['hadron'])))
 
     def do_pythia8(self, line):
         """launch pythia8"""
@@ -4459,7 +4641,7 @@ Please install this tool with the following MG5_aMC command:
             # tag/run to working wel.
             if level == 'parton':
                 return
-            elif level in ['pythia','pythia8']:
+            elif level in ['pythia','pythia8','madanalysis5']:
                 return self.results[self.run_name][0]['tag']
             else:
                 for i in range(-1,-len(self.results[self.run_name])-1,-1):
@@ -4469,14 +4651,13 @@ Please install this tool with the following MG5_aMC command:
     
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
-                       'pythia': ['pythia','pgs','delphes'],
-                       'pgs': ['pgs'],
-                       'delphes':['delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5'],
+                       'pythia': ['pythia','pgs','delphes','madanalysis5'],
+                       'pgs': ['pgs','madanalysis5'],
+                       'delphes':['delphes','madanalysis5'],
+                       'madanalysis5':[],
                        'plot':[],
-                       'syscalc':[]}
-        
-        
+                       'syscalc':['madanalysis5']}
 
         if name == self.run_name:        
             if reload_card:
@@ -4781,7 +4962,7 @@ Please install this tool with the following MG5_aMC command:
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0']
-        void = 'NOT INSTALLED'
+        void = 'Not installed'
         switch_order = ['shower', 'detector', 'madspin', 'reweight', 'madanalysis5']
         
         switch = dict((k, void) for k in switch_order)
@@ -4906,16 +5087,32 @@ Please install this tool with the following MG5_aMC command:
         options += ['parton'] + sorted(list(set(available_mode)))    
         #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
+        
+        def color(switch_value):
+            green = '\x1b[32m%s\x1b[0m' 
+            bold = '\x1b[33m%s\x1b[0m'
+            red   = '\x1b[31m%s\x1b[0m'
+            if switch_value in ['OFF',void,'Requires a shower',
+                    'Not available (requires NumPy)',
+                    'Not available yet for this output/process']:
+                return red%switch_value
+            elif switch_value in ['ON','PARTON','HADRON','PARTON+HADRON',
+                                  'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
+                                  'DELPHES-CMS','DELPHES']:
+                return green%switch_value
+            else:
+                return bold%switch_value                
+
         if mode or not self.force:
             answer = ''
             while answer not in ['0', 'done', 'auto']:
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " %i %-61s %10s=%s\n"
+                    switch_format = " %i %-61s %12s = %s\n"
                     question = "The following switches determine which programs are run:\n"
                     for id, key in enumerate(switch_order):
-                        question += switch_format % (id+1, description[key], key, switch[key])
+                        question += switch_format % (id+1, description[key], key, color(switch[key]))
                     question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
                     question += '  Type \'help\' for the list of all valid option\n' 

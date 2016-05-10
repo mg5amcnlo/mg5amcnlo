@@ -2111,7 +2111,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
                       'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
-                      'reweight_card.dat','pythia8_card.dat']
+                      'reweight_card.dat','pythia8_card.dat',
+                      'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',]
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
