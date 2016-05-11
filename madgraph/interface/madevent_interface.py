@@ -1048,12 +1048,14 @@ class CheckValidForCmd(object):
                                                   'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file in the %s run.'%args[0])
             MA5_options['run_name']=self.results.lastrun
-            self.set_run_name(args[0], tag, 'madanalysis5')
+            self.set_run_name(args[0], tag, 'madanalysis5_parton')
+            self.set_run_name(args[0], tag, 'madanalysis5_hadron')            
         else:
             if tag:
                 self.run_card['run_tag'] = args[0]
                 MA5_options['run_tag']=args[0]
-            self.set_run_name(self.run_name, tag, 'madanalysis5')  
+            self.set_run_name(self.run_name, tag, 'madanalysis5_parton')  
+            self.set_run_name(self.run_name, tag, 'madanalysis5_hadron')  
         
         if '--no_parton' in args or not os.path.isfile(pjoin(self.me_dir,
                                'Cards','madanalysis5_parton_card_default.dat')):
@@ -3381,22 +3383,35 @@ Beware that this can be dangerous for local multicore runs.""")
 
         if MA5_opts['parton']:
             misc.sprint(":D:D NOW RUNNING MA5 at parton lvl on '%s'."%MA5_opts['parton'])
-            # Obtain a main running loop 
-            MA5_interpreter = misc.get_MadAnalysis5_interpreter(self.options['mg5_path'], 
-            self.options['madanalysis5_path'], logstream=sys.stdout,
-                                             loglevel=logger.level, forced=True)
+            # Obtain a main running loop
+            MA5_interpreter = misc.get_MadAnalysis5_interpreter(
+                    self.options['mg5_path'], 
+                    self.options['madanalysis5_path'],
+                    logstream=sys.stdout,
+                    loglevel=self.options['stdout_level'],
+                    forced=True)
             MA5_commands  = ['import %s'%pjoin(self.me_dir,'PROC_sm_30','bin','internal','ufomodel')]
             MA5_commands  = ['import %s'%MA5_opts['parton']]
             MA5_commands += open(pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat'),'r').readlines()
-            MA5_commands.append('submit %s'%pjoin(self.me_dir,'MA5_ANALYSIS'))
+            MA5_commands.append('submit %s'%pjoin(self.me_dir,'MA5_PARTON_ANALYSIS'))
             misc.sprint('Now launching MA5 with commands:\n','\n'.join(MA5_commands))
             MA5_interpreter.load(MA5_commands)
+            
+            if not os.path.isdir(pjoin('MA5_PARTON_ANALYSIS','PDF','main.pdf')):
+                raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
+                    "an output for the parton analysis in\n   %s"%pjoin(self.me_dir,'MA5_PARTON_ANALYSIS')
+            
+            # Move the MA5 results in the corresponding PROC<xxx>/HTML/run_<xx> folder
+            # TODOTODO
+
             misc.sprint('Finished')
+            
+            self.update_status('finish', level='madanalysis5_parton', makehtml=False)
             
         if MA5_opts['hadron']:
             misc.sprint(":D:D NOW RUNNING MA5 at hadron lvl on\n%s"%('\n'.join(MA5_opts['hadron'])))
 
-        self.update_status('finish', level='madanalysis5', makehtml=False)
+            self.update_status('finish', level='madanalysis5_hadron', makehtml=False)
 
     def do_pythia8(self, line):
         """launch pythia8"""
@@ -4648,7 +4663,7 @@ Please install this tool with the following MG5_aMC command:
             # tag/run to working wel.
             if level == 'parton':
                 return
-            elif level in ['pythia','pythia8','madanalysis5']:
+            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron']:
                 return self.results[self.run_name][0]['tag']
             else:
                 for i in range(-1,-len(self.results[self.run_name])-1,-1):
@@ -4658,13 +4673,14 @@ Please install this tool with the following MG5_aMC command:
     
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5'],
-                       'pythia': ['pythia','pgs','delphes','madanalysis5'],
-                       'pgs': ['pgs','madanalysis5'],
-                       'delphes':['delphes','madanalysis5'],
-                       'madanalysis5':[],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_parton','madanalysis5_hadron'],
+                       'pythia': ['pythia','pgs','delphes','madanalysis5_parton','madanalysis5_hadron'],
+                       'pgs': ['pgs','madanalysis5_parton','madanalysis5_hadron'],
+                       'delphes':['delphes','madanalysis5_parton','madanalysis5_hadron'],
+                       'madanalysis5_parton':[],
+                       'madanalysis5_hadron':[],
                        'plot':[],
-                       'syscalc':['madanalysis5']}
+                       'syscalc':['madanalysis5_parton','madanalysis5_hadron']}
 
         if name == self.run_name:        
             if reload_card:

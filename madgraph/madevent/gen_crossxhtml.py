@@ -760,12 +760,14 @@ class OneTagResults(dict):
         self.reweight = [] 
         self.pythia = []
         self.pythia8 = []
-        self.madanalysis5 = []
+        self.madanalysis5_parton = []
+        self.madanalysis5_hadron = []
         self.pgs = []
         self.delphes = []
         self.shower = []
         self.level_modes = ['parton', 'pythia', 'pythia8',
-                            'pgs', 'delphes','reweight','shower','madanalysis5']
+                            'pgs', 'delphes','reweight','shower',
+                            'madanalysis5_parton','madanalysis5_hadron']
         # data 
         self.status = ''
 
@@ -951,6 +953,16 @@ class OneTagResults(dict):
                           exists(pjoin(path,"%s_delphes.log" % tag)):
                 self.delphes.append('log') 
     
+        if level in ['madanlysis5_parton','all']:
+            if 'plot' not in self.madanalysis5_parton and \
+                                        exists(pjoin(html_path,'miaou_parton')):
+                self.madanalysis5_parton.append('miaou_parton')
+
+        if level in ['madanlysis5_hadron','all']:
+            if 'plot' not in self.madanalysis5_hadron and \
+                                        exists(pjoin(html_path,'miaou_hadron')):
+                self.madanalysis5_hadron.append('miaou_hadron')
+    
     def special_link(self, link, level, name):
         
         id = '%s_%s_%s_%s' % (self['run_name'],self['tag'], level, name)
@@ -1096,6 +1108,11 @@ class OneTagResults(dict):
                 out += """ <a href="./HTML/%(run_name)s/plots_delphes_%(tag)s.html">plots</a>"""            
             return out % self
 
+        if level == 'madanalysis5_parton':
+            out += """ <a href="<not_set_yet>">DUMMYMA5</a> """
+        if level == 'madanalysis5_hadron':
+            out += """ <a href="<not_set_yet>">DUMMYMA5</a> """
+
         if level == 'shower':
         # this is to add the link to the results after shower for amcatnlo
             for kind in ['hep', 'hepmc', 'top', 'HwU', 'pdf', 'ps']:
@@ -1118,7 +1135,9 @@ class OneTagResults(dict):
     def get_nb_line(self):
         
         nb_line = 0
-        for i in [self.parton, self.reweight, self.pythia, self.pythia8, self.pgs, self.delphes, self.shower]:
+        for i in [self.parton, self.reweight, self.pythia, self.pythia8, self.pgs, 
+                  self.delphes, self.shower, self.madanalysis5_parton,
+                  self.madanalysis5_hadron]:
             if len(i):
                 nb_line += 1
         return max([nb_line,1])
@@ -1157,6 +1176,12 @@ class OneTagResults(dict):
         </tr>"""        
 
         sub_part_template_shower = """
+        <td> %(type)s %(run_mode)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""
+        
+        sub_part_template_madanalysis5 = """
         <td> %(type)s %(run_mode)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
@@ -1259,6 +1284,18 @@ class OneTagResults(dict):
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error_pythia']
 
+            elif ttype in ['madanalysis5_parton']:
+                template = sub_part_template_madanalysis5
+                # Nothing else needs to be done for now, since only type and
+                # run_mode must be defined in local_dict and this has already
+                # been done.
+
+            elif ttype in ['madanalysis5_hadron']:
+                template = sub_part_template_madanalysis5
+                # Nothing else needs to be done for now, since only type and
+                # run_mode must be defined in local_dict and this has already
+                # been done.
+
             elif ttype == 'shower':
                 template = sub_part_template_shower
                 if self.parton:           
@@ -1357,6 +1394,15 @@ class OneTagResults(dict):
                     else:
                         local_dico['action'] = self.command_suggestion_html('remove %s  pythia --tag=%s'\
                                                                             % (self['run_name'], self['tag']))
+            elif ttype in ['madanalysis5_parton']:
+                # For now, nothing special needs to be done since we don't
+                # support actions for madanalysis5.
+                local_dico['action'] = ''
+            elif ttype in ['madanalysis5_hadron']:
+                # For now, nothing special needs to be done since we don't
+                # support actions for madanalysis5.
+                local_dico['action'] = ''
+                
             else:
                 if runresults.web:
                     local_dico['action'] = """
