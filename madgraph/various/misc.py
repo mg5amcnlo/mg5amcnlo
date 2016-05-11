@@ -354,23 +354,9 @@ def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
     try:
 
         from madanalysis.misc.get_interpreter import GetInterpreter
-        myinterp = GetInterpreter(MA5path,LoggerLevel=logging.INFO,LoggerStream=sys.stdout).Interpreter()
+        MA5_interpreter = GetInterpreter(MA5path,LoggerLevel=logging.INFO,LoggerStream=sys.stdout).Interpreter()
 #        myinterp = GetInterpreter(MA5path,LoggerLevel=logging.INFO,LoggerStream=open(os.devnull,'w')).Interpreter()
 
-
-        from madanalysis.core.main import Main
-        from madanalysis.interpreter.interpreter import Interpreter
-        # Prevent MA5 to ask questions
-        Main.forced = forced
-        # Make sure MA5 loggers are listened to.
-        ma_logger  = logging.getLogger('madanalysis')
-        handler    = logging.StreamHandler(logstream)
-        if not logstream is None:
-            ma_logger.addHandler(handler)
-        ma_logger.setLevel(logging.INFO)
-        MA5_main   = Main()
-        MA5_main.archi_info.ma5dir = MA5path
-        MA5_interpreter = Interpreter(MA5_main)
     except Exception as e:
         raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%str(e)
         return None
