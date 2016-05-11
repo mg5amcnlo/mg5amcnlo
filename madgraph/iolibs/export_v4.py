@@ -244,7 +244,8 @@ class ProcessExporterFortran(object):
         """ Call MA5 so that it writes default cards for both parton and
         post-shower levels, tailored for this particular process."""
         
-        MA5_interpreter = misc.get_MadAnalysis5_interpreter(MG5DIR,ma5_path)
+        MA5_interpreter = misc.get_MadAnalysis5_interpreter(MG5DIR,ma5_path,
+                                                                     loglevel=0)
         MA5_main = MA5_interpreter.main
 
         open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(

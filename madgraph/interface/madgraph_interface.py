@@ -6201,8 +6201,8 @@ This implies that with decay chains:
                     else:
                         continue
                 #this is for madanalysis5
-                if key == 'madanalysis5_path' and not os.path.isfile(pjoin(MG5DIR, path, 'version.txt')):
-                    if not os.path.isfile(pjoin(path, 'version.txt')):
+                if key == 'madanalysis5_path' and not os.path.isfile(pjoin(MG5DIR, path,'bin','ma5')):
+                    if not os.path.isfile(pjoin(path,'bin','ma5')):
                         self.options['madanalysis5_path'] = None
                     else:
                         continue

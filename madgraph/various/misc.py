@@ -336,27 +336,19 @@ def which_lib(lib):
 # Return a Main instance of MadAnlysis5, provided its path
 #===============================================================================
 def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
-                                                                forced = False):
+                                        loglevel = logging.INFO, forced = True):
     """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
     
     MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
     
-    if MA5path is None or not os.path.isfile(pjoin(MA5path,'version.txt')):
+    if MA5path is None or not os.path.isfile(pjoin(MA5path,'bin','ma5')):
         return None
     if MA5path not in sys.path:
-        sys.path.insert(0, MA5path)
-    
-###########
-    MA5_services = pjoin(MA5path,'tools','ReportGenerator','Services')
-    if MA5_services not in sys.path:
-        sys.path.insert(0, MA5_services)
-###########
+        sys.path.insert(0, MA5path) 
     try:
-
         from madanalysis.misc.get_interpreter import GetInterpreter
-        MA5_interpreter = GetInterpreter(MA5path,LoggerLevel=logging.INFO,LoggerStream=sys.stdout).Interpreter()
-#        myinterp = GetInterpreter(MA5path,LoggerLevel=logging.INFO,LoggerStream=open(os.devnull,'w')).Interpreter()
-
+        MA5_interpreter = GetInterpreter(MA5path, LoggerLevel=loglevel,
+                             LoggerStream=logstream,forced=forced).Interpreter()
     except Exception as e:
         raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%str(e)
         return None

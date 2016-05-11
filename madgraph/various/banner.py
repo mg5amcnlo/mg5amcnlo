@@ -908,8 +908,6 @@ class ConfigFile(dict):
         self.lower_to_case = {}
         self.default_setup()
 
-        
-        
         # if input is define read that input
         if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput)
@@ -1223,7 +1221,7 @@ class GridpackCard(ConfigFile):
         fsock = open(output_file,'w')
         fsock.write(text)
         fsock.close()
-
+        
 class PY8Card(ConfigFile):
     """ Implements the Pythia8 card."""
 

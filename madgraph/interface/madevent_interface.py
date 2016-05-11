@@ -1020,7 +1020,7 @@ class CheckValidForCmd(object):
             self.set_configuration()
             
         if not self.options['madanalysis5_path'] or not \
-            os.path.exists(pjoin(self.options['madanalysis5_path'],'version.txt')):
+            os.path.exists(pjoin(self.options['madanalysis5_path'],'bin','ma5')):
             error_msg = 'No valid MadAnalysis5 path set.\n'
             error_msg += 'Please use the set command to define the path and retry.\n'
             error_msg += 'You can also define it in the configuration file.\n'
@@ -1086,7 +1086,7 @@ class CheckValidForCmd(object):
                 if not self.options['pythia8_path']:
                     if any(t for t in tags if t.startswith('--hadron=')):
                         logger.warning("Pythia8 must be installed for MadAnalysis5"+\
-                          " to be piped to its output, with the command --hadron=PY8")
+                          " to be piped to its output with the command --hadron=PY8")
                 else:
                     hadron_input_files.append(htag)
                 
@@ -1685,7 +1685,7 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_pythia8(self,text, line, begidx, endidx):
         "Complete the pythia8 command"
         args = self.split_arg(line[0:begidx], error=False)
-
+        print 'haha'
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
@@ -1700,6 +1700,30 @@ class CompleteForCmd(CheckValidForCmd):
         elif line[-1] != '=':
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--no_default','--tag='], line)
+
+    def complete_madanalysis5(self,text, line, begidx, endidx):
+        "Complete the madanalysis5 command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            #return valid run_name
+            data = []
+            for name in ['unweighted_events.lhe','*.hepmc','*.stdhep','*.lhco']:
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, self._run_options + ['-f',
+                '--no_hadron','--no_parton','--hadron=','--no_default', '--tag='], line)
+                return tmp1 + tmp2
+        elif line[-1] != '=':
+            return self.list_completion(text, self._run_options + ['-f', 
+                '--no_hadron','--no_parton','--hadron=','--no_default','--tag='], line)
+        elif line[-1].endswith('--hadron='):
+            return self.list_completion(text, self._run_options + 
+                        ['PY8','*.lhe','*.hepmc','*.lhco','*.stdhep'], line)
     
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"     
@@ -3368,7 +3392,6 @@ Beware that this can be dangerous for local multicore runs.""")
             MA5_interpreter.main.archi_info.root_bin_path = '/Users/valentin/Documents/HEP_softs/root/root_installation_5_34_08_bis/bin/'
             _environ = dict(os.environ)
             os.environ['MA5_BASE']=os.path.normpath(pjoin(self.options['mg5_path'],self.options['madanalysis5_path']))
-            misc.sprint(os.environ['MA5_BASE'])
             from madanalysis.core.main import Main
             Main.forced = True
 ################################################################################
@@ -3386,10 +3409,11 @@ Beware that this can be dangerous for local multicore runs.""")
 ################################################################################
             
             misc.sprint('Finished')
-            stop
-
+            
         if MA5_opts['hadron']:
             misc.sprint(":D:D NOW RUNNING MA5 at hadron lvl on\n%s"%('\n'.join(MA5_opts['hadron'])))
+
+        self.update_status('finish', level='madanalysis5', makehtml=False)
 
     def do_pythia8(self, line):
         """launch pythia8"""
@@ -3675,8 +3699,8 @@ Please install this tool with the following MG5_aMC command:
                       os.path.basename(pythia_cmd_card)]))
 
         wrapper.write(exe_cmd)
-        
         wrapper.close()
+
         # Set it as executable
         st = os.stat(wrapper_path)
         os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
