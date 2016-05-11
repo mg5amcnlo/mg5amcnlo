@@ -351,8 +351,13 @@ def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
     if MA5_services not in sys.path:
         sys.path.insert(0, MA5_services)
 ###########
-
     try:
+
+        from madanalysis.misc.get_interpreter import GetInterpreter
+        myinterp = GetInterpreter(MA5path,LoggerLevel=logging.INFO,LoggerStream=sys.stdout).Interpreter()
+#        myinterp = GetInterpreter(MA5path,LoggerLevel=logging.INFO,LoggerStream=open(os.devnull,'w')).Interpreter()
+
+
         from madanalysis.core.main import Main
         from madanalysis.interpreter.interpreter import Interpreter
         # Prevent MA5 to ask questions
@@ -367,7 +372,7 @@ def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
         MA5_main.archi_info.ma5dir = MA5path
         MA5_interpreter = Interpreter(MA5_main)
     except Exception as e:
-        raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%e
+        raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%str(e)
         return None
 
     return MA5_interpreter
