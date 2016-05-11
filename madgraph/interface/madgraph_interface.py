@@ -2683,7 +2683,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'fastjet':'fastjet-config',
                        'pjfry':'auto',
                        'golem':'auto',
-                       'samurai':'auto',
+                       'samurai':None,
                        'ninja':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
