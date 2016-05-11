@@ -3383,31 +3383,14 @@ Beware that this can be dangerous for local multicore runs.""")
             misc.sprint(":D:D NOW RUNNING MA5 at parton lvl on '%s'."%MA5_opts['parton'])
             # Obtain a main running loop 
             MA5_interpreter = misc.get_MadAnalysis5_interpreter(self.options['mg5_path'], 
-            self.options['madanalysis5_path'], logstream=None, forced=True)
-################################################################################
-# THIS SHOULD BE FIXED EVENTUALLY AND THESE SETTINGS ARE TEMPORARY
-################################################################################
-            # Temporary need to force zlib
-            MA5_interpreter.main.archi_info.has_zlib = True
-            MA5_interpreter.main.archi_info.root_bin_path = '/Users/valentin/Documents/HEP_softs/root/root_installation_5_34_08_bis/bin/'
-            _environ = dict(os.environ)
-            os.environ['MA5_BASE']=os.path.normpath(pjoin(self.options['mg5_path'],self.options['madanalysis5_path']))
-            from madanalysis.core.main import Main
-            Main.forced = True
-################################################################################
+            self.options['madanalysis5_path'], logstream=sys.stdout,
+                                             loglevel=logger.level, forced=True)
             MA5_commands  = ['import %s'%pjoin(self.me_dir,'PROC_sm_30','bin','internal','ufomodel')]
             MA5_commands  = ['import %s'%MA5_opts['parton']]
             MA5_commands += open(pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat'),'r').readlines()
             MA5_commands.append('submit %s'%pjoin(self.me_dir,'MA5_ANALYSIS'))
             misc.sprint('Now launching MA5 with commands:\n','\n'.join(MA5_commands))
             MA5_interpreter.load(MA5_commands)
-################################################################################
-# THIS SHOULD BE FIXED EVENTUALLY AND THESE SETTINGS ARE TEMPORARY
-################################################################################            
-            os.environ.clear()
-            os.environ.update(_environ)
-################################################################################
-            
             misc.sprint('Finished')
             
         if MA5_opts['hadron']:
