@@ -245,7 +245,7 @@ class ProcessExporterFortran(object):
         post-shower levels, tailored for this particular process."""
         
         MA5_interpreter = misc.get_MadAnalysis5_interpreter(MG5DIR,ma5_path,
-                                                                     loglevel=0)
+                                                                   loglevel=100)
         MA5_main = MA5_interpreter.main
 
         open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
