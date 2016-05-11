@@ -200,7 +200,7 @@ class TestCmdShell1(unittest.TestCase):
                     'max_npoint_for_channel': 0,
                     'low_mem_multicore_nlo_generation': False,
                     'ninja': './HEPTools/lib',
-                    'samurai': 'auto',
+                    'samurai': None,
                     }
 
         self.assertEqual(config, expected)
