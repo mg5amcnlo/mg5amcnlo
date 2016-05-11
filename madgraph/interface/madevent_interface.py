@@ -3397,9 +3397,10 @@ Beware that this can be dangerous for local multicore runs.""")
             misc.sprint('Now launching MA5 with commands:\n','\n'.join(MA5_commands))
             MA5_interpreter.load(MA5_commands)
             
-            if not os.path.isdir(pjoin('MA5_PARTON_ANALYSIS','PDF','main.pdf')):
+            if not os.path.isdir(pjoin(self.me_dir,'MA5_PARTON_ANALYSIS','PDF','main.pdf')):
                 raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
-                    "an output for the parton analysis in\n   %s"%pjoin(self.me_dir,'MA5_PARTON_ANALYSIS')
+                    "an output for the parton analysis in\n   %s"%\
+                       pjoin(self.me_dir,'MA5_PARTON_ANALYSIS','PDF','main.pdf')
             
             # Move the MA5 results in the corresponding PROC<xxx>/HTML/run_<xx> folder
             # TODOTODO

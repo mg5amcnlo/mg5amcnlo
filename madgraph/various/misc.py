@@ -346,7 +346,7 @@ def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
     if MA5path not in sys.path:
         sys.path.insert(0, MA5path) 
     try:
-        from madanalysis.misc.ma5_interpreter import MA5Interpreter
+        from madanalysis.interpreter.ma5_interpreter import MA5Interpreter
         MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
                              LoggerStream=logstream,forced=forced)
     except Exception as e:
