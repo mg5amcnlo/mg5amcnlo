@@ -2247,10 +2247,7 @@ class MadLoopParam(ConfigFile):
                 template = pjoin(MG5DIR, 'Template', 'loop_material', 'StandAlone', 
                                                    'Cards', 'MadLoopParams.dat')
             else:
-                template = pjoin(MEDIR, 'SubProcesses', 'MadLoop5_resources',
-                                                           'MadLoopParams.dat' )
-                if not os.path.exists(template):
-                    template = pjoin(MEDIR, 'Cards', 'MadLoopParams.dat')
+                template = pjoin(MEDIR, 'Cards', 'MadLoopParams_default.dat')
         fsock = open(template, 'r')
         template = fsock.readlines()
         fsock.close()
