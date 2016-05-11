@@ -6861,6 +6861,7 @@ c i_fks and j_fks of the same type? -> subtract 1 to avoid double counting
      $        fac_j_FKS(nFKSprocess)=fac_j_FKS(nFKSprocess)-1
 
 c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
+C MZ the test may be removed sooner or later
          if (j_fks.gt.nincoming) then
             if ( i_fks_pdg.eq.j_fks_pdg .and. i_fks_pdg.ne.21) then
                write (*,*) 'ERROR, if PDG type of i_fks and j_fks '//
@@ -6877,10 +6878,21 @@ c THESE TESTS WORK ONLY FOR FINAL STATE SINGULARITIES
      &                 particle_type(j_fks),pdg_type(i_fks),pdg_type(j_fks)
                   stop
                endif
+            elseif(particle_type(i_fks).eq.1.and.abs(particle_charge(i_fks)).gt.0d0) then
+               if ( particle_charge(i_fks).ne.-particle_charge(j_fks) .or.
+     &              pdg_type(i_fks).ne.-pdg_type(j_fks)) then
+                  write (*,*) 'ERROR, i_fks is a charged color singlet,'//
+     &                 ' j_fks must be its anti-particle,'//
+     &                 ' or an initial state gluon.',
+     &                 i_fks,j_fks,particle_charge(i_fks),
+     &                 particle_charge(j_fks),pdg_type(i_fks),pdg_type(j_fks)
+                  stop
+               endif
             elseif(abs(i_fks_pdg).ne.21.and.i_fks_pdg.ne.22) then ! if not already above, it MUST be a gluon or photon
                write (*,*) 'ERROR, i_fks is not a g/gamma and falls not'//
      $              ' in other categories',i_fks,j_fks,i_fks_pdg
      $              ,j_fks_pdg
+               stop
             endif
          endif
 

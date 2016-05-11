@@ -23,6 +23,7 @@ import madgraph.interface.amcatnlo_interface as amcatnlocmd
 import os
 import madgraph.fks.fks_helas_objects as fks_helas
 import copy
+import madgraph.iolibs.save_load_object as save_load_object
 
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
@@ -993,6 +994,24 @@ class TestAMCatNLOEW(unittest.TestCase):
         for real in fksme1.real_processes:
             self.assertEqual(len(real.matrix_element['processes']), 2)
 
+    def load_fksME(self, save_name, model_name, process_def, force=False):
+        """tries to recover the fksME from a pickle file, otherwise regenerate it."""
+
+        if not force and os.path.isfile(pjoin(root_path,'input_files',save_name)):
+            return save_load_object.load_from_file(pjoin(root_path,'input_files',save_name))
+        else:
+            self.interface.do_import('model %s'%model_name)
+            print "Regenerating %s ..."%process_def
+            self.interface.do_generate(process_def)
+            proc = copy.copy(self.interface._fks_multi_proc)
+            me = fks_helas.FKSHelasMultiProcess(proc)['matrix_elements'][0]
+            save_load_object.save_to_file(pjoin(root_path,'input_files',save_name),me)
+            return me
+
+    def notest_special_dijet_equal_process_qcd_qed_virt_test(self):
+        fksme1 = self.load_fksME('aa_emep_dijet.pkl','loop_qcd_qed_sm-no_widths','a a > e- e+ QED=2 QCD=2 [QCD QED]')
+        fksme2 = self.load_fksME('aa_mummup_dijet.pkl','loop_qcd_qed_sm-no_widths','a a > mu- mu+ QED=2 QCD=2 [QCD QED]')
+        self.assertEqual(fksme1,fksme2)
 
     def test_combine_equal_processes_dijet_qcd_qed_virt(self):
         """check that two processes with the same matrix-elements are equal
@@ -1020,6 +1039,10 @@ class TestAMCatNLOEW(unittest.TestCase):
         fksme3 = fks_helas.FKSHelasMultiProcess(fksproc3)['matrix_elements'][0]
         fksme4 = fks_helas.FKSHelasMultiProcess(fksproc4)['matrix_elements'][0]
 
+##        fksme1 = self.load_fksME('uux_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','u u~ > g g QED=0 QCD=2 [QCD QED]')
+##        fksme2 = self.load_fksME('ccx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','c c~ > g g QED=0 QCD=2 [QCD QED]')
+##        fksme3 = self.load_fksME('ddx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','d d~ > g g QED=0 QCD=2 [QCD QED]')
+##        fksme4 = self.load_fksME('bbx_gg_dijet.pkl','loop_qcd_qed_sm-no_widths','b b~ > g g QED=0 QCD=2 [QCD QED]')
         # check that the u and d initiated are not equal
         self.assertNotEqual(fksme2,fksme3)
 
@@ -1034,6 +1057,38 @@ class TestAMCatNLOEW(unittest.TestCase):
         # this is to avoid effects on other tests
         self.interface.do_import('model sm')
 
+    def notest_combine_equal_processes_pp_hpwmbbx_virt(self):
+        """Makes sure the uux and ccx channel of the process can be merged."""
+
+        if os.path.isfile(pjoin(root_path,'input_files','uux_hpwmbbx.pkl')) and\
+           os.path.isfile(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl')) and\
+           os.path.isfile(pjoin(root_path,'input_files','ddx_hpwmbbx.pkl')):
+            uux_me = save_load_object.load_from_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'))
+            ccx_me = save_load_object.load_from_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'))
+            ddx_me = save_load_object.load_from_file(pjoin(root_path,'input_files','ddx_hpwmbbx.pkl'))            
+        else:
+            self.interface.do_set('complex_mass_scheme True')
+            self.interface.do_import('model 2HDMCMStIIymbMSbar')
+            print "Regenerating u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."
+            self.interface.do_generate('u u~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            uux_proc = copy.copy(self.interface._fks_multi_proc)
+            uux_me = fks_helas.FKSHelasMultiProcess(uux_proc)['matrix_elements'][0]
+            save_load_object.save_to_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'),uux_me)            
+            print "Regenerating c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."            
+            self.interface.do_generate('c c~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            ccx_proc = copy.copy(self.interface._fks_multi_proc)
+            ccx_me = fks_helas.FKSHelasMultiProcess(ccx_proc)['matrix_elements'][0]
+            save_load_object.save_to_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'),ccx_me)
+            uux_me = save_load_object.load_from_file(pjoin(root_path,'input_files','uux_hpwmbbx.pkl'))
+            ccx_me = save_load_object.load_from_file(pjoin(root_path,'input_files','ccx_hpwmbbx.pkl'))
+            print "Regenerating d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD] ..."             
+            self.interface.do_generate('d d~ > h+ w- b b~ / h1 h2 h3 QED=2 YB=1 YT=1 QCD=2 [QCD]')
+            ddx_proc = copy.copy(self.interface._fks_multi_proc)
+            ddx_me = fks_helas.FKSHelasMultiProcess(ddx_proc)['matrix_elements'][0]
+            save_load_object.save_to_file(pjoin(root_path,'input_files','ddx_hpwmbbx.pkl'),ddx_me)  
+
+        self.assertEqual(uux_me,ccx_me)
+        self.assertEqual(uux_me,ddx_me)
 
     def test_combine_equal_processes_dy_qed_virt(self):
         """check that two processes with the same matrix-elements are equal
