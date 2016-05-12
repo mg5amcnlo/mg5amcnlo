@@ -145,6 +145,15 @@ c helicity stuff
       integer fks_conf_number,fks_loop_min,fks_loop_max,fks_loop
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+
+C split orders stuff
+      include 'orders.inc'
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
+      integer iamp
+      integer orders(nsplitorders)
+      double precision fxl_split(amp_split_size)
+      double precision limit_split(15,amp_split_size), wlimit_split(15,amp_split_size)
       
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
@@ -254,7 +263,7 @@ c
          write (*,*) 'with PDGs:       i=',PDG_type(i_fks),'  j='
      $        ,PDG_type(j_fks)
 c
-      ndim = 22
+      ndim = 55
       ncall = 10000
       itmax = 10
       ninvar = 35
@@ -295,8 +304,8 @@ c x_to_f_arg subroutine
 
       do iconfig=bs_min,bs_max       ! Born configurations
 
-      call setcuts
-      call setfksfactor(iconfig)
+      !call setcuts
+      !call setfksfactor(iconfig,.true.)
       call set_mc_matrices
 
       wgt=1d0
@@ -339,9 +348,17 @@ c x_to_f_arg subroutine
       softtest=.true.
       colltest=.false.
       nerr=0
-      imax=10
+      imax=14
       do j=1,nsofttests
          call get_helicity(i_fks,j_fks)
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = 0d0
+           do i = 1,imax
+             limit_split(i,iamp) = 0d0
+             wlimit_split(i,iamp) = 0d0
+           enddo
+         enddo
+
          if(nsofttests.le.10)then
            write (*,*) ' '
            write (*,*) ' '
@@ -379,8 +396,16 @@ c Initialise shower_S_scale to a large value, not to get spurious dead zones
 
          if(ilim.eq.0)then
            call xmcsubt_wrap(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl)
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split_mc(iamp)*jac_cnt(0)
+           enddo
          else
            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl) 
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split(iamp)*jac_cnt(0)
+           enddo
          endif
          fxl=fxl*jac_cnt(0)
 
@@ -395,6 +420,11 @@ c because otherwise fresh random will be used...
          call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
          limit(1)=fx*wgt
          wlimit(1)=wgt
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+           limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+           wlimit_split(1,iamp) = wgt
+         enddo
 
          do k=1,nexternal
             do l=0,3
@@ -416,6 +446,11 @@ c because otherwise fresh random will be used...
             call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             limit(i)=fx*wgt
             wlimit(i)=wgt
+            ! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+              limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+              wlimit_split(i,iamp) = wgt
+            enddo
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
@@ -431,6 +466,25 @@ c because otherwise fresh random will be used...
            do i=1,imax
               call xprintout(6,limit(i),fxl)
            enddo
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               write(*,*) '   Split-order', iamp
+               call amp_split_pos_to_orders(iamp,orders)
+               do i = 1, nsplitorders
+                  write(*,*) '      ',ordernames(i), ':', orders(i)
+               enddo
+               do i=1,imax
+                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+               enddo
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               write(*,*) 'RETURN CODE', iret
+             endif
+           enddo
+           
 c
            write(80,*)'  '
            write(80,*)'****************************'
@@ -450,6 +504,16 @@ c
            call checkres(limit,fxl,wlimit,jac_cnt(0),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
            nerr=nerr+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               nerr=nerr+iret
+             endif
+           enddo
         endif
 
       enddo
@@ -486,9 +550,16 @@ c in genps_fks_test.f
       rotategranny=.false.
 
       nerr=0
-      imax=10
+      imax=14
       do j=1,ncolltests
          call get_helicity(i_fks,j_fks)
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = 0d0
+           do i = 1,imax
+             limit_split(i,iamp) = 0d0
+             wlimit_split(i,iamp) = 0d0
+           enddo
+         enddo
 
          if(ncolltests.le.10)then
             write (*,*) ' '
@@ -516,14 +587,28 @@ c in genps_fks_test.f
          call set_cms_stuff(1)
          if(ilim.eq.0)then
            call xmcsubt_wrap(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl)
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split_mc(iamp)*jac_cnt(1)
+           enddo
          else
            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl) 
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split(iamp)*jac_cnt(1)
+           enddo
          endif
          fxl=fxl*jac_cnt(1)
+
          call set_cms_stuff(-100)
          call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
          limit(1)=fx*wgt
          wlimit(1)=wgt
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+              limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+              wlimit_split(1,iamp) = wgt
+         enddo
 
          do k=1,nexternal
             do l=0,3
@@ -545,6 +630,11 @@ c in genps_fks_test.f
             call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             limit(i)=fx*wgt
             wlimit(i)=wgt
+            ! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+              limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+              wlimit_split(i,iamp) = wgt
+            enddo
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
@@ -559,6 +649,24 @@ c in genps_fks_test.f
             do i=1,imax
                call xprintout(6,limit(i),fxl)
             enddo
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               write(*,*) '   Split-order', iamp
+               call amp_split_pos_to_orders(iamp,orders)
+               do i = 1, nsplitorders
+                  write(*,*) '      ',ordernames(i), ':', orders(i)
+               enddo
+               do i=1,imax
+                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+               enddo
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               write(*,*) 'RETURN CODE', iret
+             endif
+           enddo
 c
             write(80,*)'  '
             write(80,*)'****************************'
@@ -578,6 +686,16 @@ c
             call checkres(limit,fxl,wlimit,jac_cnt(1),xp,lxp,
      &                    iflag,imax,j,nexternal,i_fks,j_fks,iret)
             nerr=nerr+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               nerr=nerr+iret
+             endif
+           enddo
          endif
       enddo
       if(ncolltests.gt.10)then

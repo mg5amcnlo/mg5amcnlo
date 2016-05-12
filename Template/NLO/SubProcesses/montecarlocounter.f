@@ -269,13 +269,28 @@ c
       integer nofpartners
       logical lzone(nexternal),flagmc
 
+      ! amp split stuff
+      include 'orders.inc'
+      integer iamp
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
+      double precision amp_split_gfunc(amp_split_size)
+      common /to_amp_split_gfunc/amp_split_gfunc
+
+
 c True MC subtraction term
+      ! this fills the amp_split_mc
+      ! no need to set them to zero before the call, they are
+      ! reset inside xmcsubt
       call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      #                   xmc,nofpartners,lzone,flagmc,z,xmcxsec)
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
-
+      
       wgt=xmc+xrealme
+      do iamp=1, amp_split_size
+        amp_split_mc(iamp) = amp_split_mc(iamp) + amp_split_gfunc(iamp)
+      enddo
 
       return
       end
@@ -318,22 +333,49 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
       double precision pmass(nexternal)
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
+
+      ! amp split stuff
+      include 'orders.inc'
+      integer iamp
+      double precision amp_split_gfunc(amp_split_size)
+      common /to_amp_split_gfunc/amp_split_gfunc
+      double precision amp_split_s(amp_split_size), 
+     $                 amp_split_c(amp_split_size), 
+     $                 amp_split_sc(amp_split_size)
+
       include "pmass.inc"
 c
+      wgt=0d0
+      do iamp=1, amp_split_size
+        amp_split_gfunc(iamp) = 0d0
+      enddo
+      ! this contribution is needed only for i_fks being a gluon/photon
+      ! (soft limit)
       if (is_aorg(i_fks))then
 c i_fks is gluon/photon
          call set_cms_stuff(izero)
          call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts)
+         do iamp=1, amp_split_size
+           amp_split_s(iamp) = amp_split(iamp)
+         enddo
          call set_cms_stuff(ione)
          call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc)
+         do iamp=1, amp_split_size
+           amp_split_c(iamp) = amp_split(iamp)
+         enddo
          call set_cms_stuff(itwo)
          call sreal(p1_cnt(0,1,2),zero,one,wgtsc)
+         do iamp=1, amp_split_size
+           amp_split_sc(iamp) = amp_split(iamp)
+         enddo
          wgt=wgts+(1-gfactcl)*(wgtc-wgtsc)
          wgt=wgt*(1-gfactsf)
-      elseif (abs(i_type).eq.3.or.ch_i.ne.0d0)then
-c i_fks is (anti-)quark/lepton
-         wgt=0d0
-      else
+         do iamp = 1, amp_split_size
+           amp_split_gfunc(iamp) = amp_split_s(iamp)+(1-gfactcl)*(amp_split_c(iamp)-amp_split_sc(iamp))
+           amp_split_gfunc(iamp) = amp_split_gfunc(iamp)*(1-gfactsf)
+         enddo
+      elseif (abs(i_type).ne.3.and.ch_i.eq.0d0)then
+         ! we should never get here
          write(*,*) 'FATAL ERROR #1 in xmcsubtME',i_type,i_fks
          stop
       endif
@@ -513,8 +555,8 @@ c Initialise
       knbar    = veckbarn_ev
       kn0      = xp0jfks
       nofpartners = ipartners(0)
-      tiny = 1d-4
-      if (softtest.or.colltest)tiny = 1d-6
+      tiny = 1d-6
+      if (softtest.or.colltest)tiny = 1d-12
 c Logical variables to control the IR limits:
 c one can remove any reference to xi_i_fks
       limit = 1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny
@@ -1067,7 +1109,7 @@ c the same method
       integer i
 
       double precision vtiny,pi(0:3),pj(0:3),cphi_mother,sphi_mother
-      parameter (vtiny=1d-8)
+      parameter (vtiny=1d-12)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
