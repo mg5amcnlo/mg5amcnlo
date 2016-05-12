@@ -42,7 +42,7 @@ _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 def define_model():
     global _model
     
-    if hasattr(test_drawing,'_model'):
+    if test_drawing._model:
         _model = test_drawing._model
     else:
         test_drawing.define_model()
@@ -150,7 +150,7 @@ class TestDrawingS_EPS(unittest.TestCase):
         plot = draw_eps.EpsDiagramDrawer(diagram, \
                                         '__testdiag__.eps', model=_model, \
                                          amplitude='')
-        
+
         plot.convert_diagram()
         plot.initialize()
         

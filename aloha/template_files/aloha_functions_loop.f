@@ -1205,10 +1205,10 @@ c      ft(5,1) = dcmplx(p(0),p(3))*nst
 c      ft(6,1) = dcmplx(p(1),p(2))*nst
 
 c     Convention for loop computations
-      ft(5,1) = cmplx(p(0),0.0e0_16)*nst
-      ft(6,1) = cmplx(p(1),0.0e0_16)*nst
-      ft(7,1) = cmplx(p(2),0.0e0_16)*nst
-      ft(8,1) = cmplx(p(3),0.0e0_16)*nst
+      ft(5,1) = cmplx(p(0),0.0e0_16,KIND=16)*nst
+      ft(6,1) = cmplx(p(1),0.0e0_16,KIND=16)*nst
+      ft(7,1) = cmplx(p(2),0.0e0_16,KIND=16)*nst
+      ft(8,1) = cmplx(p(3),0.0e0_16,KIND=16)*nst
 
       if ( nhel.ge.0 ) then
 c construct eps+

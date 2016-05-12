@@ -281,8 +281,8 @@ C     JAMPs contributing to orders QCD=2
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
-            RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N)) 
-     $       + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+            RES(MG5_1_SQSOINDEX(M,N)) = RES(MG5_1_SQSOINDEX(M,N)) +
+     $        ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
           ENDDO
         ENDDO
       ENDDO
@@ -539,8 +539,8 @@ C     This functions plays the role of the interference matrix. It can
 C      be hardcoded or 
 C     made more elegant using hashtables if its execution speed ever
 C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
+C     factor. From two split order indices, it return the
+C      corresponding index in the squared 
 C     order canonical ordering.
 C     
 C     CONSTANTS
@@ -568,7 +568,7 @@ C     BEGIN CODE
 C     
       DO I=1,NSO
         SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
+     $NDEXB,I)
       ENDDO
       MG5_1_SQSOINDEX=MG5_1_SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -662,8 +662,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function MG5_1_GET_SQUARED_ORDERS_F'
-     $ //'OR_SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function MG5_1_GET_SQUARED_ORDERS_FO'
+     $ //'R_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -702,15 +702,15 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function MG5_1_GET_ORDERS_FOR_AMPSO'
-     $ //'INDEX'
+      WRITE(*,*) 'ERROR:: Stopping function MG5_1_GET_ORDERS_FOR_AMPSOI'
+     $ //'NDEX'
       WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
       STOP
 
       END SUBROUTINE
 
-C     This function is not directly useful, but included for completene
-C     ss
+C     This function is not directly useful, but included for
+C      completeness
       INTEGER FUNCTION MG5_1_SOINDEX_FOR_AMPORDERS(ORDERS)
 C     
 C     This functions returns the integer index identifying the
@@ -745,8 +745,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function MG5_1_SOINDEX_FOR_AMPORDER'
-     $ //'S'
+      WRITE(*,*) 'ERROR:: Stopping function MG5_1_SOINDEX_FOR_AMPORDERS'
+     $ //''
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 

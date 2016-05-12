@@ -25,6 +25,7 @@ c
       include 'run.inc'
       include 'alfas.inc'
       include 'MODEL/coupl.inc'
+      include '../SubProcesses/reweight0.inc'
 
       double precision D
       common/to_dj/D
@@ -80,6 +81,26 @@ c----------
 c MZ add the possibility to have shower_MC input lowercase
       call to_upper(shower_MC)
 C
+
+c Determine if there is a need to do scale and/or PDF reweighting
+      do_rwgt_scale=.false.
+      do i=1,dyn_scale(0)
+         if (lscalevar(i) .or. dyn_scale(0).gt.1) then
+            do_rwgt_scale=.true.
+            exit
+         endif
+      enddo
+      do_rwgt_pdf=.false.
+      do i=1,lhaPDFid(0)
+         if (lpdfvar(i) .or. lhaPDFid(0).gt.1) then
+            do_rwgt_pdf=.true.
+            exit
+         endif
+      enddo
+
+c Default scale and PDF choice used for the actual run
+      dynamical_scale_choice=dyn_scale(1)
+      lhaid=lhaPDFid(1)
 
 c merging cuts
       xqcut=0d0
@@ -179,6 +200,14 @@ C       Fill common block for Les Houches init info
       enddo
       call get_pdfup(pdlabel,pdfgup,pdfsup,lhaid)
 
+      if (lpdfvar(1) .and. (lpp(1).ne.0.or.lpp(2).ne.0) ) then
+c fill the nmemPDF(i) array with the number of PDF error set. This we
+c get from LHAPDF.
+         call numberPDFm(1,nmemPDF(1))
+      else
+         nmemPDF(1)=0
+      endif
+
       return
  99   write(*,*) 'error in reading'
       return
@@ -232,7 +261,7 @@ C-------------------------------------------------
      $   10042,
      $   246800,
      $   247000,
-     $   244600/
+     $   244800/
 
 
       if(pdfin.eq."lhapdf") then

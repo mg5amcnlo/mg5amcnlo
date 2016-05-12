@@ -194,7 +194,7 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-
+        
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -217,8 +217,11 @@ class BasicCmd(cmd.Cmd):
                 else:
                     try:
                         compfunc = getattr(self, 'complete_' + cmd)
-                    except AttributeError:
+                    except AttributeError, error:
+                        misc.sprint(error)
                         compfunc = self.completedefault
+                    except Exception, error:
+                        misc.sprint(error)
             else:
                 compfunc = self.completenames
                 
@@ -273,6 +276,9 @@ class BasicCmd(cmd.Cmd):
                 tmp += data
                 tmp = os.path.expanduser(os.path.expandvars(tmp))
                 out.append(tmp)
+                # Reinitialize tmp in case there is another differen argument
+                # containing escape characters
+                tmp = ''
             else:
                 out.append(data)
         return out
@@ -497,8 +503,58 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                               # answer which are not required.
         if not hasattr(self, 'helporder'):
             self.helporder = ['Documented commands']
-        
+
+    def preloop(self):
+        """Hook method executed once when the cmdloop() method is called."""
+        if self.completekey:
+            try:
+                import readline
+                self.old_completer = readline.get_completer()
+                readline.set_completer(self.complete)
+                readline.parse_and_bind(self.completekey+": complete")
+            except ImportError:
+                pass
+        if readline and not 'libedit' in readline.__doc__:
+            readline.set_completion_display_matches_hook(self.print_suggestions)
+
     
+    def cmdloop(self, intro=None):
+        
+        self.preloop()
+        if intro is not None:
+            self.intro = intro
+        if self.intro:
+            print self.intro
+        stop = None
+        while not stop:
+            if self.cmdqueue:
+                line = self.cmdqueue[0]
+                del self.cmdqueue[0]
+            else:
+                if self.use_rawinput:
+                    try:
+                        line = raw_input(self.prompt)
+                    except EOFError:
+                        line = 'EOF'
+                else:
+                    sys.stdout.write(self.prompt)
+                    sys.stdout.flush()
+                    line = sys.stdin.readline()
+                    if not len(line):
+                        line = 'EOF'
+                    else:
+                        line = line[:-1] # chop \n
+            try:
+                line = self.precmd(line)
+                stop = self.onecmd(line)
+            except BaseException, error:
+                self.error_handling(error, line)
+                if isinstance(error, KeyboardInterrupt):
+                    stop = True
+            finally:
+                stop = self.postcmd(stop, line)
+        self.postloop()
+            
     def no_notification(self):
         """avoid to have html opening / notification"""
         self.allow_notification_center = False
@@ -517,16 +573,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         if not line:
             return line
-        line = line.lstrip()
 
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
             self.save_line = ''
-        
+            
+        line = line.lstrip()        
         # Check if the line is complete
         if line.endswith('\\'):
-            self.save_line = line[:-1]
+            self.save_line = line[:-1] 
             return '' # do nothing   
                 
         # Remove comment
@@ -540,7 +596,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not (subline.startswith("history") or subline.startswith('help') \
                         or subline.startswith('#*')): 
                     self.history.append(subline)           
-                stop = self.onecmd(subline)
+                stop = self.onecmd_orig(subline)
                 stop = self.postcmd(stop, subline)
             return ''
             
@@ -591,7 +647,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
             timeout = True, fct_timeout=None, ask_class=None, alias={},
-            first_cmd=None, **opt):
+            first_cmd=None, text_format='4', **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -606,11 +662,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 timeout = self.options['timeout']
             except Exception:
                 pass
-                    
+
         # add choice info to the question
         if choices + path_msg:
             question += ' ['
-            question += "\033[%dm%s\033[0m, " % (4, default)    
+            question += "\033[%sm%s\033[0m, " % (text_format, default)    
             for data in choices[:9] + path_msg:
                 if default == data:
                     continue
@@ -621,7 +677,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 question += '... , ' 
             question = question[:-2]+']'
         else:
-            question += "[\033[%dm%s\033[0m] " % (4, default)    
+            question += "[\033[%sm%s\033[0m] " % (text_format, default)    
         if ask_class:
             obj = ask_class  
         elif path_msg:
@@ -636,8 +692,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                    mother_interface=self, **opt)
         
         if first_cmd:
-            question_instance.onecmd(first_cmd)
-        
+            if isinstance(first_cmd, str):
+                question_instance.onecmd(first_cmd)
+            else:
+                for line in first_cmd:
+                    question_instance.onecmd(line)
         if not self.haspiping:
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
@@ -651,13 +710,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 answer = alias[answer]
             if ask_class:
                 answer = question_instance.default(answer)
+            if hasattr(question_instance, 'check_answer_consistency'):
+                question_instance.check_answer_consistency()
             return answer
         
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
-
         
         try:
             if value in alias:
@@ -709,8 +768,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.warning('The answer to the previous question is not set in your input file')
-                logger.warning('Use %s value' % default)
+                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
+                logger.info('Use %s value' % default, '$MG:color:BLACK')
                 return str(default)
         
         line = line.replace('\n','').strip()
@@ -732,6 +791,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
+        elif any(line.lower()==opt.lower() for opt in options): 
+            possibility = [opt for opt in options if line.lower()==opt.lower()]
+            if len (possibility)==1:
+                return possibility[0]
+            
         # No valid answer provides
         if self.haspiping:
             self.store_line(line)
@@ -880,6 +944,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """
         if '~/' in line and os.environ.has_key('HOME'):
             line = line.replace('~/', '%s/' % os.environ['HOME'])
+        if '#' in line:
+            line = line.split('#')[0]
+             
         line = os.path.expandvars(line)
         cmd, arg, line = self.parseline(line)
         if not line:
@@ -896,16 +963,15 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 return self.default(line)
             return func(arg, **opt)
 
-
-    def onecmd(self, line, **opt):
-        """catch all error and stop properly command accordingly"""
+    def error_handling(self, error, line):
         
         me_dir = ''
         if hasattr(self, 'me_dir'):
             me_dir = os.path.basename(me_dir) + ' '
         
+        
         try:
-            return self.onecmd_orig(line, **opt)
+            raise 
         except self.InvalidCmd as error:            
             if __debug__:
                 self.nice_error_handling(error, line)
@@ -933,6 +999,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if __debug__:
                 self.nice_config_error(error, line)
             logger.error(self.keyboard_stop_msg)
+        
+
+
+    def onecmd(self, line, **opt):
+        """catch all error and stop properly command accordingly"""
+           
+        try:
+            return self.onecmd_orig(line, **opt)
+        except BaseException, error: 
+            self.error_handling(error, line)
+            
     
     def stop_on_keyboard_stop(self):
         """action to perform to close nicely on a keyboard interupt"""

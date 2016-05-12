@@ -51,7 +51,8 @@ C ARGUMENTS
 C
       INTEGER NLOOPLINE, RANK
       %(real_dp_format)s PL(0:3,NLOOPLINE)
-      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1), ABSPCT(0:3)
+      %(real_dp_format)s REF_P
       REAL(ki) PGOLEM(NLOOPLINE,0:3)
       %(mass_dp_format)s M2L(NLOOPLINE)
       COMPLEX(ki) M2LGOLEM(NLOOPLINE)
@@ -102,15 +103,14 @@ C
 	  common/%(proc_prefix)sLOOP/ID,R
 ## }
 
-      LOGICAL CTINIT, TIRINIT, GOLEMINIT
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT
+      LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
+      include 'loop_max_coefs.inc'
 
 ## if(not AmplitudeReduction){	  
       %(complex_dp_format)s LOOPCOEFS(0:LOOPMAXCOEFS-1,NSQUAREDSO,NLOOPGROUPS)
@@ -122,7 +122,13 @@ C ----------
 C BEGIN CODE
 C ----------
 
-C INITIALIZE CUTTOOLS IF NEEDED
+C The CT initialization is also performed here if not done already because it calls MPINIT of OneLOop which is necessary on some system
+      IF (CTINIT) THEN
+	    CTINIT=.FALSE.
+		CALL %(proc_prefix)sINITCT()
+      ENDIF
+
+C INITIALIZE GOLEM IF NEEDED
       IF (GOLEMINIT) THEN
 	    GOLEMINIT=.FALSE.
 	    CALL %(proc_prefix)sINITGOLEM()
@@ -145,6 +151,7 @@ C  CONVERT THE MASSES TO BE COMPLEX
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
+        ABSPCT(I) = 0.D0
         do J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         enddo
@@ -152,19 +159,24 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         enddo
       enddo
-      if (checkPConservation) then
-        if (PCT(0,0).gt.1.d-6) then
+      ref_p = max(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+       do I=0,3
+           ABSPCT(I) = MAX(ref_p*1e-6, ABSPCT(I))
+       enddo
+      if (checkPConservation.and.ref_p.gt.1d-8) then
+        if ((PCT(0,0)/ABSPCT(0)).gt.1.d-6) then
           write(*,*) 'energy is not conserved ',PCT(0,0)
           stop 'energy is not conserved'
-        elseif (PCT(1,0).gt.1.d-6) then
+        elseif ((PCT(1,0)/ABSPCT(1)).gt.1.d-6) then
          write(*,*) 'px is not conserved ',PCT(1,0)
          stop 'px is not conserved'
-        elseif (PCT(2,0).gt.1.d-6) then
+        elseif ((PCT(2,0)/ABSPCT(2)).gt.1.d-6) then
          write(*,*) 'py is not conserved ',PCT(2,0)
          stop 'py is not conserved'
-        elseif (PCT(3,0).gt.1.d-6) then
+        elseif ((PCT(3,0)/ABSPCT(3)).gt.1.d-6) then
          write(*,*) 'pz is not conserved ',PCT(3,0)
          stop 'pz is not conserved'
         endif
@@ -455,54 +467,21 @@ C
      INTEGER NLOOPLINE
      REAL(KI) PGOLEM(NLOOPLINE,0:3)
      COMPLEX(KI) M2L(NLOOPLINE)
-
-C    
-C    GLOBAL VARIABLES
-C
-     include 'MadLoopParams.inc'
-     INTEGER CTMODE
-     %(real_dp_format)s LSCALE
-     COMMON/%(proc_prefix)sCT/LSCALE,CTMODE
-     %(real_dp_format)s REF_NORMALIZATION
 C
 C    LOCAL VARIABLES
 C
-     INTEGER I,J,K
-     COMPLEX(KI) DIFFSQ
-C     ----------
-C     BEGIN CODE
-C     ----------
+     INTEGER I,J
+     %(complex_dp_format)s S_MAT_FROM_MG(NLOOPLINE,NLOOPLINE)
+C    ----------
+C    BEGIN CODE
+C    ----------
 
-     do i=1,NLOOPLINE
-       do j=1,NLOOPLINE
-          if(i.eq.j)then
-	    s_mat(i,j)=-(M2L(i)+M2L(j))
-	  else
-	    DIFFSQ = (CMPLX(PGOLEM(i,0),0.0_KI,kind=KI)-CMPLX(PGOLEM(j,0),0.0_KI,KIND=KI))**2
-	    do k=1,3
-	      DIFFSQ = DIFFSQ-(CMPLX(PGOLEM(i,k),0.0_KI,KIND=KI)-CMPLX(PGOLEM(j,k),0.0_KI,KIND=KI))**2
-	    enddo
-	    s_mat(i,j)=DIFFSQ-M2L(i)-M2L(j)
-	    IF(M2L(i).NE.0.0D0)THEN
-	      IF(ABS((DIFFSQ-M2L(i))/M2L(i)).LT.OSThres)THEN
-	         s_mat(i,j)=-M2L(j)
- 	      ENDIF
-	    ENDIF
-	    IF(M2L(j).NE.0.0D0)THEN
-	      IF(ABS((DIFFSQ-M2L(j))/M2L(j)).LT.OSThres)THEN
-	         s_mat(i,j)=-M2L(i)
-	      ENDIF
-            ENDIF
-C           Chose what seems the most appropriate way to compare
-C           massless onshellness. (here we pick the energy component)
-            REF_NORMALIZATION=(PGOLEM(i,0)+PGOLEM(j,0))**2
-	    IF(REF_NORMALIZATION.NE.0.0D0)THEN
-               IF(ABS(DIFFSQ/REF_NORMALIZATION).LT.OSThres)THEN
-	          s_mat(i,j)=-(M2L(i)+M2L(j))
-	       ENDIF
-            ENDIF
-         ENDIF
-        ENDDO
+   	   CALL %(proc_prefix)sBUILD_KINEMATIC_MATRIX(NLOOPLINE,PGOLEM,M2L,S_MAT_FROM_MG) 
+
+       do i=1,NLOOPLINE
+         do j=1,NLOOPLINE
+	       s_mat(i,j)=S_MAT_FROM_MG(i,j)
+         ENDDO
        ENDDO
        
       END

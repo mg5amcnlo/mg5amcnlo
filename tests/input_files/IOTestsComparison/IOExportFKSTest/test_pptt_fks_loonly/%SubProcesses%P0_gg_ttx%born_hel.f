@@ -8,7 +8,7 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P1(0:3,NEXTERNAL-1)
 C     
-C     Process: g g > t t~ WEIGHTED=2 [ LOonly = QCD ]
+C     Process: g g > t t~ WEIGHTED<=2 [ LOonly = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -53,16 +53,16 @@ C     ----------
       IDEN=IDEN_VALUES(NFKSPROCESS)
       IF (CALCULATEDBORN) THEN
         DO J=1,NEXTERNAL-1
-          IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
-     $     ,J)) THEN
+          IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3,J))
+     $      THEN
             CALCULATEDBORN=.FALSE.
             WRITE (*,*) 'momenta not the same in Born_hel'
             STOP
           ENDIF
         ENDDO
       ELSE
-        WRITE(*,*) 'Error in born_hel: should be called only wit'
-     $   //'h calculatedborn = true'
+        WRITE(*,*) 'Error in born_hel: should be called only with'
+     $   //' calculatedborn = true'
         STOP
       ENDIF
       ANS = 0D0
@@ -84,7 +84,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: g g > t t~ WEIGHTED=2 [ LOonly = QCD ]
+C     Process: g g > t t~ WEIGHTED<=2 [ LOonly = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -131,8 +131,8 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       IF (.NOT. CALCULATEDBORN) THEN
-        WRITE(*,*) 'Error in born_hel.f: this should be called onl'
-     $   //'y with calculatedborn = true'
+        WRITE(*,*) 'Error in born_hel.f: this should be called only'
+     $   //' with calculatedborn = true'
         STOP
       ELSEIF (CALCULATEDBORN) THEN
         DO I=1,NGRAPHS

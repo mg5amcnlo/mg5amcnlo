@@ -42,7 +42,10 @@ c
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      integer maxRWGT
+      parameter (maxRWGT=100)
+      double precision wgtxsecRWGT(maxRWGT)
+      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
       character*15 weights_info(max_weight)
       common/cwgtsinfo/weights_info
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -96,7 +99,10 @@ C----------------------------------------------------------------------
       data tot/0.5d0/
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      integer maxRWGT
+      parameter (maxRWGT=100)
+      double precision wgtxsecRWGT(maxRWGT)
+      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
       double precision ww(max_weight),www(max_weight)
       common/cww/ww
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

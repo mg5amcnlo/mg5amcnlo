@@ -14,8 +14,3 @@ c The central set idpdf(0) presently coincides with the default set used
 c in the computation, but this condition may be relaxed
       integer idpdf(0:maxPDFs)
       common/cNLOrwgt3/idpdf
-
-c Total number of PDFs used in the computation (ilastPDF-ifirstPDF+2),
-c including the central one
-      integer numPDFs
-      common/cNLOrwgt4/numPDFs

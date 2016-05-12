@@ -431,8 +431,8 @@ c PDG codes of particles
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
       logical passcuts_user
       external passcuts_user
       call cpu_time(tBefore)
@@ -871,9 +871,9 @@ c-----
       integer maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
+     &     icolup(2,nexternal,maxflow),niprocs
 c      include 'leshouche.inc'
-      common /c_leshouche_inc/idup,mothup,icolup
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
       integer IDUP_tmp(nexternal),i
 c
       do i=1,nexternal

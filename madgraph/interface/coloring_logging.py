@@ -1,4 +1,7 @@
 import logging
+# method to add color to a logging.info add a second argument:
+# '$MG:color:BLACK'
+
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
 

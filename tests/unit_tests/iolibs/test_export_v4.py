@@ -2006,9 +2006,9 @@ C     Number of configs
             LO_text = open(pjoin(MG5DIR, 'Template','LO','Source','make_opts')).read()
             self.assertTrue('F2PY=f2py' in LO_text)
             self.assertTrue('FC=gfortran' in LO_text)
-            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
-            self.assertTrue('F2PY=f2py' in NLO_text)
-            self.assertTrue('FC=gfortran' in NLO_text)            
+#            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
+#            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in NLO_text)
+#            self.assertTrue('FC=gfortran' in NLO_text)            
             
             
             
@@ -9791,8 +9791,8 @@ C
       P1(1) = -DBLE(F1(2))
       P1(2) = -DIMAG(F1(2))
       P1(3) = -DIMAG(F1(1))
-      DENOM = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 
-     $ -CI* W1))"""
+      DENOM = COUP/(P1(0)**2-P1(1)**2-P1(2)**2-P1(3)**2 - M1 * (M1 -CI
+     $ * W1))"""
 
         abstract_M = create_aloha.AbstractRoutineBuilder(FFV1).compute_routine(1)
         abstract_M.add_symmetry(2)

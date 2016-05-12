@@ -117,11 +117,11 @@ class CmdExtended(common_run.CommonRunCmd):
     }
     
     debug_output = 'ME5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
 
     keyboard_stop_msg = """stopping all operation
@@ -870,10 +870,11 @@ class CheckValidForCmd(object):
         elif not args[0].isdigit():
             self.help_multi_run()
             raise self.InvalidCmd("The first argument of multi_run should be a integer.")
+        #pass nb run to an integer
         nb_run = args.pop(0)
-        self.check_survey(args, cmd='multi_run')
         args.insert(0, int(nb_run))
-        
+         
+
         return run
 
     def check_refine(self, args):
@@ -938,7 +939,7 @@ class CheckValidForCmd(object):
     
     def check_pythia(self, args):
         """Check the argument for pythia command
-        syntax: pythia [NAME] 
+        syntax is  "pythia [NAME]" 
         Note that other option are already remove at this point
         """
         
@@ -1122,9 +1123,9 @@ class CheckValidForCmd(object):
                                   'systematics information needed for syscalc.')
         
     
-    def check_pgs(self, arg):
+    def check_pgs(self, arg, no_default=False):
         """Check the argument for pythia command
-        syntax: pgs [NAME] 
+        syntax is  "pgs [NAME]" 
         Note that other option are already remove at this point
         """
         
@@ -1157,7 +1158,8 @@ class CheckValidForCmd(object):
         
         if not len(arg) and \
            not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.help_pgs()
+            if not no_default:
+                self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
         
@@ -1181,7 +1183,7 @@ class CheckValidForCmd(object):
 
     def check_delphes(self, arg):
         """Check the argument for pythia command
-        syntax: delphes [NAME] 
+        syntax is "delphes [NAME]" 
         Note that other option are already remove at this point
         """
         
@@ -1238,7 +1240,7 @@ class CheckValidForCmd(object):
 
     def check_display(self, args):
         """check the validity of line
-        syntax: display XXXXX
+        syntax is "display XXXXX"
         """
             
         if len(args) < 1 or args[0] not in self._display_opts:
@@ -1655,24 +1657,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
 
-        
-        # load the current status of the directory
-        if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
-            try:
-                self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
-            except Exception:
-                #the pickle fail -> need to recreate the library
-                model = self.find_model_name()
-                process = self.process # define in find_model_name
-                self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
-                self.results.resetall(self.me_dir)
-            else:                                
-                self.results.resetall(self.me_dir)
-        else:
-            model = self.find_model_name()
-            process = self.process # define in find_model_name
-            self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
-            self.results.resetall(self.me_dir)
+        self.load_results_db()        
         self.results.def_web_mode(self.web)
         
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
@@ -2036,7 +2021,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     orig_name = self.run_name
                     for card in param_card_iterator:
                         card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                        self.exec_cmd("generate_events -f ",precmd=True, postcmd=True,errorhandling=False)
+                        next_name = param_card_iterator.get_next_name(self.run_name)
+                        self.exec_cmd("generate_events -f %s" % next_name,
+                                      precmd=True, postcmd=True,errorhandling=False)
                         param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
                     param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                     name = misc.get_scan_name(orig_name, self.run_name)
@@ -2344,8 +2331,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if nb_run == 1:
             logger.warn("'multi_run 1' command is not optimal. Think of using generate_events instead")
         self.ask_run_configuration(mode)
-        main_name = self.run_name
 
+        self.check_survey(args, cmd='multi_run')
+        main_name = self.run_name
         # check if the param_card requires a scan over parameter.
         path=pjoin(self.me_dir, 'Cards', 'param_card.dat')
         self.check_param_card(path, run=False)
@@ -2558,19 +2546,21 @@ Beware that this can be dangerous for local multicore runs.""")
                 run_card = self.run_card
             if run_card['nhel'] == 0:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
-                            self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    (self.MadLoopparam.get('MLReductionLib').startswith('1') or
+                     self.MadLoopparam.get('MLReductionLib').startswith('6')):
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|3|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','2|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
-                    not self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
+                         self.MadLoopparam.get('MLReductionLib').startswith('6')):
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','1|2|3|4', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|1|2', ifnotdefault=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
@@ -2996,6 +2986,7 @@ Beware that this can be dangerous for local multicore runs.""")
             
             self.results.add_detail('nb_event', nb_event)
         
+        self.to_store.append('event')
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
@@ -3178,6 +3169,13 @@ Beware that this can be dangerous for local multicore runs.""")
             pass        
         
         ## LAUNCHING PYTHIA
+        # check that LHAPATH is define.
+        if not re.search(r'^\s*LHAPATH=%s/PDFsets'  % pythia_src,
+                          open(pjoin(self.me_dir,'Cards','pythia_card.dat')).read(), 
+                          re.M):
+            f = open(pjoin(self.me_dir,'Cards','pythia_card.dat'),'a')
+            f.write('\n     LHAPATH=%s/PDFsets' % pythia_src)
+            f.close()
         tag = self.run_tag
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
         self.cluster.launch_and_wait('../bin/internal/run_pythia', 
@@ -3263,16 +3261,17 @@ Beware that this can be dangerous for local multicore runs.""")
             except SysCalcError, error:
                 logger.error(str(error))
             else:
-                # Store syst.dat
-                misc.gzip(pjoin(self.me_dir,'Events', 'syst.dat'),
-                          stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
-                         
-                # Store syscalc.dat
-                if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
-                    filename = pjoin(self.me_dir, 'Events' ,self.run_name,
-                                              '%s_syscalc.dat' % self.run_tag)
-                    misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
-                              stdout = "%s.gz" % filename)
+                if os.path.exists(pjoin(self.me_dir,'Events', 'syst.dat')):
+                    # Store syst.dat
+                    misc.gzip(pjoin(self.me_dir,'Events', 'syst.dat'),
+                              stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
+                             
+                    # Store syscalc.dat
+                    if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
+                        filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                                  '%s_syscalc.dat' % self.run_tag)
+                        misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
+                                  stdout = "%s.gz" % filename)
 
         # Plot for pythia
         self.create_plot('Pythia')
@@ -3525,8 +3524,18 @@ Beware that this can be dangerous for local multicore runs.""")
         logger.info('Calculating systematics for run %s' % self.run_name)
         
         self.ask_edit_cards(['run_card'], args)
-        self.run_card = banner_mod.RunCard(pjoin(self.medir, 'Cards', 'run_card.dat'))
-                
+        self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+        
+        # Check that all pdfset are correctly installed
+        lhaid = [self.run_card.get_lhapdf_id()]
+        sys_pdf = self.run_card['sys_pdf'].split('&&')
+        lhaid += [l.split()[0] for l in sys_pdf]
+        pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        # Copy all the relevant PDF sets
+        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+        
+        
+            
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
@@ -3577,8 +3586,12 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('storring files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
-            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
+            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
+               os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe')):
+                logger.info("gzipping output file: unweighted_events.lhe")
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
+            if os.path.exists(pjoin(self.me_dir,'Events','reweight.lhe')):
+                os.remove(pjoin(self.me_dir,'Events', 'reweight.lhe'))
         
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
@@ -3620,8 +3633,9 @@ Beware that this can be dangerous for local multicore runs.""")
 
 
         elif mode in [1,2]:
+            exename = os.path.basename(exe)
             # For condor cluster, create the input/output files
-            if 'ajob' in exe: 
+            if 'ajob' in exename: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
@@ -3665,7 +3679,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
-            elif 'survey' in exe:
+            elif 'survey' in exename:
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
@@ -3717,7 +3731,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,
                              required_output=required_output, **opt)
-            elif "refine_splitted.sh" in exe:
+            elif "refine_splitted.sh" in exename:
                 input_files = ['madevent','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
@@ -3745,7 +3759,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 
             
             else:
-                self.cluster.submit(exe, stdout=stdout, cwd=cwd, **opt)
+                self.cluster.submit(exe, argument=argument, stdout=stdout, cwd=cwd, **opt)
             
 
     ############################################################################
@@ -3807,6 +3821,9 @@ Beware that this can be dangerous for local multicore runs.""")
 
         # Basic check
         assert os.path.exists(pjoin(self.me_dir,'SubProcesses'))
+
+        # environmental variables to be included in make_opts
+        self.make_opts_var = {}
         
         #see when the last file was modified
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
@@ -3838,15 +3855,13 @@ Beware that this can be dangerous for local multicore runs.""")
         # lhapdf
         misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
         
-        # set environment variable for lhapdf.
+        # set  lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
-            os.environ['lhapdf'] = 'True'
+            self.make_opts_var['lhapdf'] = 'True'
             self.link_lhapdf(pjoin(self.me_dir,'lib'))
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
-        elif 'lhapdf' in os.environ.keys():
-            del os.environ['lhapdf']
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
             
@@ -3869,6 +3884,9 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_CKKW_matching()
+
+        # add the make_opts_var to make_opts
+        self.update_make_opts()
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
@@ -4087,7 +4105,7 @@ Beware that this can be dangerous for local multicore runs.""")
         return CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
-    def treat_ckkw_matching(self):
+    def treat_CKKW_matching(self):
         """check for ckkw"""
         
         lpp1 = self.run_card['lpp1']
@@ -4227,10 +4245,11 @@ Beware that this can be dangerous for local multicore runs.""")
         except OSError, error:
             logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
         else:
-            if mode == 'parton' and os.path.exists(output):
-                files.mv(output, event_path)
-            else:
+            if not os.path.exists(output):
                 logger.warning('SysCalc Failed. Please read the associate log to see the reason. Did you install the associate PDF set?')
+            elif mode == 'parton':
+                files.mv(output, event_path)
+                
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         
@@ -4866,7 +4885,7 @@ class MadLoopInitializer(object):
                 my_req_files.remove('LoopFilter.dat')
             except ValueError:
                 pass
-        
+
         if MLCard['HelicityFilterLevel']==0:
             try:
                 my_req_files.remove('HelFilter.dat')
@@ -5077,4 +5096,112 @@ class MadLoopInitializer(object):
         logger.info('MadLoop initialization finished.')        
 
 AskforEditCard = common_run.AskforEditCard
+
+
+if '__main__' == __name__:
+    # Launch the interface without any check if one code is already running.
+    # This can ONLY run a single command !!
+    import sys
+    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
+               'Please upgrate your version of python.')
+
+    import os
+    import optparse
+    # Get the directory of the script real path (bin)                                                                                                                                                           
+    # and add it to the current PYTHONPATH                                                                                                                                                                      
+    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    sys.path.insert(0, root_path)
+
+    class MyOptParser(optparse.OptionParser):    
+        class InvalidOption(Exception): pass
+        def error(self, msg=''):
+            raise MyOptParser.InvalidOption(msg)
+    # Write out nice usage message if called with -h or --help                                                                                                                                                  
+    usage = "usage: %prog [options] [FILE] "
+    parser = MyOptParser(usage=usage)
+    parser.add_option("-l", "--logging", default='INFO',
+                      help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+    parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                     help='force toce to be in secure mode')
+    parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                     help='force to launch debug mode')
+    parser_error = ''
+    done = False
+    
+    for i in range(len(sys.argv)-1):
+        try:
+            (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
+            done = True
+        except MyOptParser.InvalidOption, error:
+            pass
+        else:
+            args += sys.argv[len(sys.argv)-i:]
+    if not done:
+        # raise correct error:                                                                                                                                                                                  
+        try:
+            (options, args) = parser.parse_args()
+        except MyOptParser.InvalidOption, error:
+            print error
+            sys.exit(2)
+
+    if len(args) == 0:
+        args = ''
+
+    import subprocess
+    import logging
+    import logging.config
+    # Set logging level according to the logging level given by options                                                                                                                                         
+    #logging.basicConfig(level=vars(logging)[options.logging])                                                                                                                                                  
+    import internal.coloring_logging
+    try:
+        if __debug__ and options.logging == 'INFO':
+            options.logging = 'DEBUG'
+        if options.logging.isdigit():
+            level = int(options.logging)
+        else:
+            level = eval('logging.' + options.logging)
+        print os.path.join(root_path, 'internal', 'me5_logging.conf')
+        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        logging.root.setLevel(level)
+        logging.getLogger('madgraph').setLevel(level)
+    except:
+        raise
+        pass
+
+    # Call the cmd interface main loop                                                                                                                                                                          
+    try:
+        if args:
+            # a single command is provided
+            if '--web' in args:
+                i = args.index('--web') 
+                args.pop(i)                                                                                                                                                                     
+                cmd_line = MadEventCmd(force_run=True)
+            else:
+                cmd_line = MadEventCmdShell(force_run=True)
+            if not hasattr(cmd_line, 'do_%s' % args[0]):
+                if parser_error:
+                    print parser_error
+                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                else:
+                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+            else:
+                cmd_line.use_rawinput = False
+                cmd_line.run_cmd(' '.join(args))
+                cmd_line.run_cmd('quit')
+
+    except KeyboardInterrupt:
+        print 'quit on KeyboardInterrupt'
+        pass
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+
 

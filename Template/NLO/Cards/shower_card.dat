@@ -12,10 +12,8 @@
 #   mind the format:   variable    = value     # comment               *
 #***********************************************************************
 #
-#****************
-# Shower settings
-#****************
-#
+#***********************************************************************
+# Shower settings                                                      *
 #***********************************************************************
 # Number of events, jobs, errors, and random seeds                     *
 #***********************************************************************
@@ -62,40 +60,57 @@ Qcut       = -1.0     # Merging scale
 njmax      = 0        # Maximal multiplicity in the merging
 #***********************************************************************
 # Decay channels                                                       *
-# Write down the decay channels for the resonances, to be performed by *
-# the shower.                                                          *
-# The syntax (for a two-body decay) is                                 *
+#***********************************************************************
+# Syntax for HERWIG6                                                   *
 # DM_I = M > D1 D2 @ BR @ ME                                           *
-# where I < 100, M is the decaying resonance, D1, D2 are the decay     *
-# products (up to D5 if such a decay is supported by the shower), BR   *
-# is the branching ratio (only used by the HERWIG6 shower, ignored     *
-# otherwise) and ME is the type of matrix element to be used in the    *
-# decay (only used by HERWIG6, ignored otherwise).                     *
-# BR's are correctly understood by HERWIG6 only if they add up to 1    *
-# and only if no more than three modes are required for a given        *
-# resonance.                                                           *
-# ME corresponds to the third entry of subroutine HWMODK, see the      *
-# relevant manual.                                                     *
+# corresponding to call to HWMODK(M,BR,ME,D1,D2)                       *
+# I < 100, M is the decaying resonance, D1, D2, ... are the decay      *
+# products (up to five), BR is the branching ratio and ME is the type  *
+# of matrix element to be used in the decay.                           *
+# BR's are correctly understood only if they add up to 1, and only if  *
+# no more than three modes are required for a given resonance.         *
+# WARNING: the order of decay products in > 2-body decays IS RELEVANT. *
 #                                                                      *
-# WARNING: in HERWIG6, the order of decay products in > 2-body decays  *
-# IS RELEVANT.                                                         *
-# WARNING: in PYTHIA6, turning hadronisation off disables top decays   *
-# WARNING: in PYTHIA6 and PYTHIA8, 1 -> n decays (with n > 2) are      *
-# handled through a sequence of 1 -> 2 decays.                         *
+# Syntax for PYTHIA6                                                   *
+# DM_I = M > D1 D2 @ BR @ ME                                           *
+# WARNING: turning hadronisation off disables top decays               *
+# WARNING: 1 -> n decays (with n > 2) are handled through a sequence   *
+# of 1 -> 2 decays.                                                    *
+# WARNING: entries BR and ME are ignored                               *
 #                                                                      *
-# Examples of syntax:                                                  *
-# Z -> e+ e- or mu+ mu- with BR = 0.5 each                             *
+# Syntax for HERWIG++                                                  *
+# DM_I = M > D1 D2 @ BR @ ME                                           *
+# WARNING: entries BR and ME are ignored                               *
+#                                                                      *
+# Syntax for PYTHIA8                                                   *
+# DM_I = M:onIfAny = D1 D2                                             *
+# or similar, according to the offical PYTHIA8 decay syntax, see       *
+# the online PYTHIA8 manual                                            *
+# WARNING: 1 -> n decays (with n > 2) are handled through a sequence   *
+# of 1 -> 2 decays.                                                    *
+#                                                                      *
+# Examples                                                             *
+# Z -> e+ e- or mu+ mu- with BR = 0.5 each, HERWIG6                    *
 # DM_1 = 23 > -11 11 @ 0.5d0 @ 100
 # DM_2 = 23 > -13 13 @ 0.5d0 @ 100
-# H -> tau+ tau- with BR = 1                                           *
+# H -> ta+ ta- with BR = 1, HERWIG6 or HERWIG++                        *
 # DM_3 = 25 > -15 15 @ 1.0d0 @ 0
-# t -> nu_e e+ b with BR = 1 (HERWIG)                                  *
+# t -> ve e+ b with BR = 1, HERWIG6 or HERWIG++                        *
 # DM_4 = 6 > 12 -11 5 @ 1d0 @ 100
-# t -> nu_e e+ b with BR = 1 (PYTHIA)                                  *
+# t -> ve e+ b with BR = 1, PYTHIA6                                    *
 # DM_5 = 6 > 24 5 @ 1d0 @ 100
 # DM_6 = 24 > 12 -11 @ 1d0 @ 100
+# W+ -> ve e+, W- -> vm~ mu-, PYTHIA8                                  *
+# DM_1 = 24:onMode = off
+# DM_2 = 24:onPosIfAny = 11 12
+# DM_3 = 24:onNegIfAny = 13 14
+# W+ -> ve e+, W- -> ve~ e- and vm~ mu-, PYTHIA8                       *
+# DM_1 = 24:onMode = off
+# DM_2 = 24:onIfAny = 11 12
+# DM_3 = 24:onNegIfAny = 13 14
 #***********************************************************************
-# Extra Libraries/analyses                                             *
+# Extra libraries/analyses                                             *
+#***********************************************************************
 # The following lines need to be changed if the user does not want to  *
 # create a StdHEP/HepMC file, but to directly run an own analysis (to  *
 # be placed in HWAnalyzer or analogous MCatNLO subfolders).            *

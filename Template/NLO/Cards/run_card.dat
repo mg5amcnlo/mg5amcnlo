@@ -10,6 +10,9 @@
 #   Lines starting with a hash (#) are info or comments                *
 #                                                                      *
 #   mind the format:   value    = variable     ! comment               *
+#                                                                      *
+#   Some of the values of variables can be list. These can either be   *
+#   comma or space separated.                                          *
 #***********************************************************************
 #
 #*******************                                                 
@@ -58,8 +61,10 @@
 #***********************************************************************
 # PDF choice: this automatically fixes also alpha_s(MZ) and its evol.  *
 #***********************************************************************
- %(pdlabel)s   = pdlabel   ! PDF set
- %(lhaid)s    = lhaid     ! if pdlabel=lhapdf, this is the lhapdf number
+ %(pdlabel)s = pdlabel ! PDF set
+ %(lhaid)s  = lhaid   ! If pdlabel=lhapdf, this is the lhapdf number. Only 
+              ! numbers for central PDF sets are allowed. Can be a list; 
+              ! PDF sets beyond the first are included via reweighting.
 #***********************************************************************
 # Include the NLO Monte Carlo subtr. terms for the following parton    *
 # shower (HERWIG6 | HERWIGPP | PYTHIA6Q | PYTHIA6PT | PYTHIA8)         *
@@ -71,37 +76,36 @@
 #***********************************************************************
 # Renormalization and factorization scales                             *
 # (Default functional form for the non-fixed scales is the sum of      *
-# the transverse masses of all final state particles and partons. This *
-# can be changed in SubProcesses/set_scales.f)                         *
+# the transverse masses divided by two of all final state particles    * 
+# and partons. This can be changed in SubProcesses/set_scales.f or via *
+# dynamical_scale_choice option)                                       *
 #***********************************************************************
- %(fixed_ren_scale)s        = fixed_ren_scale  ! if .true. use fixed ren scale
- %(fixed_fac_scale)s        = fixed_fac_scale  ! if .true. use fixed fac scale
+ %(fixed_ren_scale)s    = fixed_ren_scale  ! if .true. use fixed ren scale
+ %(fixed_fac_scale)s    = fixed_fac_scale  ! if .true. use fixed fac scale
  %(mur_ref_fixed)s   = muR_ref_fixed    ! fixed ren reference scale 
- %(muf1_ref_fixed)s   = muF1_ref_fixed   ! fixed fact reference scale for pdf1
- %(muf2_ref_fixed)s   = muF2_ref_fixed   ! fixed fact reference scale for pdf2
- %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one of the preselected dynamical choices
-#***********************************************************************
-# Renormalization and factorization scales (advanced and NLO options)  *
-#***********************************************************************
- %(fixed_qes_scale)s = fixed_QES_scale  ! if .true. use fixed Ellis-Sexton scale
- %(qes_ref_fixed)s = QES_ref_fixed    ! fixed Ellis-Sexton reference scale
- %(mur_over_ref)s  = muR_over_ref     ! ratio of current muR over reference muR
- %(muf1_over_ref)s = muF1_over_ref    ! ratio of current muF1 over reference muF1
- %(muf2_over_ref)s = muF2_over_ref    ! ratio of current muF2 over reference muF2
- %(qes_over_ref)s  = QES_over_ref     ! ratio of current QES over reference QES
+ %(muf_ref_fixed)s   = muF_ref_fixed    ! fixed fact reference scale
+ %(dynamical_scale_choice)s = dynamical_scale_choice ! Choose one (or more) of the predefined
+           ! dynamical choices. Can be a list; scale choices beyond the
+           ! first are included via reweighting
+ %(mur_over_ref)s  = muR_over_ref  ! ratio of current muR over reference muR
+ %(muf_over_ref)s  = muF_over_ref  ! ratio of current muF over reference muF
 #*********************************************************************** 
-# Reweight flags to get scale dependence and PDF uncertainty           *
-# For scale dependence: factor rw_scale_up/down around central scale   *
-# For PDF uncertainty: use LHAPDF with supported set                   *
+# Reweight variables for scale dependence and PDF uncertainty          *
 #***********************************************************************
- %(reweight_scale)s   = reweight_scale   ! reweight to get scale dependence
- %(rw_rscale_down)s   = rw_Rscale_down   ! lower bound for ren scale variations
- %(rw_rscale_up)s     = rw_Rscale_up     ! upper bound for ren scale variations
- %(rw_fscale_down)s     = rw_Fscale_down   ! lower bound for fact scale variations
- %(rw_fscale_up)s     = rw_Fscale_up     ! upper bound for fact scale variations
- %(reweight_pdf)s  = reweight_PDF     ! reweight to get PDF uncertainty
- %(pdf_set_min)s   = PDF_set_min      ! First of the error PDF sets 
- %(pdf_set_max)s   = PDF_set_max      ! Last of the error PDF sets
+ %(rw_rscale)s = rw_rscale ! muR factors to be included by reweighting
+ %(rw_fscale)s = rw_fscale ! muF factors to be included by reweighting
+ %(reweight_scale)s = reweight_scale ! Reweight to get scale variation using the 
+            ! rw_rscale and rw_fscale factors. Should be a list of 
+            ! booleans of equal length to dynamical_scale_choice to
+            ! specify for which choice to include scale dependence.
+ %(reweight_pdf)s = reweight_PDF  ! Reweight to get PDF uncertainty. Should be a
+            ! list booleans of equal length to lhaid to specify for
+            !  which PDF set to include the uncertainties.
+#***********************************************************************
+# Store reweight information in the LHE file for off-line model-       *
+# parameter reweighting at NLO+PS accuracy                             *
+#***********************************************************************
+ %(store_rwgt_info)s = store_rwgt_info ! Store info for reweighting in LHE file
 #***********************************************************************
 # ickkw parameter:                                                     *
 #   0: No merging                                                      *
@@ -116,47 +120,43 @@
 #***********************************************************************
 #
 #***********************************************************************
-# BW cutoff (M+/-bwcutoff*Gamma)                                       *
+# BW cutoff (M+/-bwcutoff*Gamma). Determines which resonances are      *
+# written in the LHE event file                                        *
 #***********************************************************************
  %(bwcutoff)s  = bwcutoff
 #***********************************************************************
-# Cuts on the jets                                                     *
-# Jet clustering is performed by FastJet.
-# When matching to a parton shower, these generation cuts should be    *
-# considerably softer than the analysis cuts.                          *
-# (more specific cuts can be specified in SubProcesses/cuts.f)         *
+# Cuts on the jets. Jet clustering is performed by FastJet.            *
+#  - When matching to a parton shower, these generation cuts should be *
+#    considerably softer than the analysis cuts.                       *
+#  - More specific cuts can be specified in SubProcesses/cuts.f        *
 #***********************************************************************
- %(jetalgo)s  = jetalgo   ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
- %(jetradius)s  = jetradius ! The radius parameter for the jet algorithm
+  %(jetalgo)s  = jetalgo   ! FastJet jet algorithm (1=kT, 0=C/A, -1=anti-kT)
+  %(jetradius)s  = jetradius ! The radius parameter for the jet algorithm
  %(ptj)s  = ptj       ! Min jet transverse momentum
  %(etaj)s  = etaj      ! Max jet abs(pseudo-rap) (a value .lt.0 means no cut)
 #***********************************************************************
 # Cuts on the charged leptons (e+, e-, mu+, mu-, tau+ and tau-)        *
-# (more specific gen cuts can be specified in SubProcesses/cuts.f)     *
+# More specific cuts can be specified in SubProcesses/cuts.f           *
 #***********************************************************************
   %(ptl)s  = ptl     ! Min lepton transverse momentum
-  %(etal)s  = etal    ! Max lepton abs(pseudo-rap) (a value .lt.0 means no cut)
+ %(etal)s  = etal    ! Max lepton abs(pseudo-rap) (a value .lt.0 means no cut)
   %(drll)s  = drll    ! Min distance between opposite sign lepton pairs
   %(drll_sf)s  = drll_sf ! Min distance between opp. sign same-flavor lepton pairs
   %(mll)s  = mll     ! Min inv. mass of all opposite sign lepton pairs
-  %(mll_sf)s  = mll_sf  ! Min inv. mass of all opp. sign same-flavor lepton pairs
+ %(mll_sf)s  = mll_sf  ! Min inv. mass of all opp. sign same-flavor lepton pairs
 #***********************************************************************
-# Photon-isolation cuts, according to hep-ph/9801442                   *
-# When ptgmin=0, all the other parameters are ignored                  *
+# Photon-isolation cuts, according to hep-ph/9801442. When ptgmin=0,   *
+# all the other parameters are ignored.                                *
+# More specific cuts can be specified in SubProcesses/cuts.f           *
 #***********************************************************************
-  %(ptgmin)s  = ptgmin    ! Min photon transverse momentum
-  %(etagamma)s  = etagamma  ! Max photon abs(pseudo-rap)
+ %(ptgmin)s  = ptgmin    ! Min photon transverse momentum
+ %(etagamma)s  = etagamma  ! Max photon abs(pseudo-rap)
   %(r0gamma)s  = R0gamma   ! Radius of isolation code
   %(xn)s  = xn        ! n parameter of eq.(3.4) in hep-ph/9801442
   %(epsgamma)s  = epsgamma  ! epsilon_gamma parameter of eq.(3.4) in hep-ph/9801442
-  %(isoem)s  = isoEM  ! isolate photons from EM energy (photons and leptons)
-#***********************************************************************
-# Maximal PDG code for quark to be considered a jet when applying cuts.*
-# At least all massless quarks of the model should be included here.   *
-#***********************************************************************
- %(maxjetflavor)s = maxjetflavor
+ %(isoem)s  = isoEM  ! isolate photons from EM energy (photons and leptons)
 #***********************************************************************
 # For aMCfast+APPLGRID use in PDF fitting (http://amcfast.hepforge.org)*
 #***********************************************************************
- %(iappl)s = iappl   ! aMCfast switch (0=OFF, 1=prepare APPLgrids, 2=fill grids)
+ %(iappl)s = iappl ! aMCfast switch (0=OFF, 1=prepare grids, 2=fill grids)
 #***********************************************************************

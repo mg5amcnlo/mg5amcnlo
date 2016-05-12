@@ -106,8 +106,7 @@ class AbstractRoutine(object):
             assert isinstance(self.expr, aloha_lib.SplitCoefficient)
             rank= 1
             for coeff in self.expr:
-                if max(sum(coeff), rank):
-                    rank = sum(coeff)
+                rank = max(sum(coeff), rank)
             return rank -1 # due to the coefficient associate to the wavefunctions
         else:
             raise ALOHAERROR, '%s is not a valid information that can be computed' % info
@@ -253,7 +252,7 @@ in presence of majorana particle/flow violation"""
             expr = self.lorentz_expr
         
         if need_P_sign:
-            expr = re.sub(r'\b(P|PSlash)\(', r'-\1\(', expr)
+            expr = re.sub(r'\b(P|PSlash)\(', r'-\1(', expr)
         
         calc = aloha_parsers.ALOHAExpressionParser()
         lorentz_expr = calc.parse(expr)
@@ -471,7 +470,7 @@ in presence of majorana particle/flow violation"""
         numerator = self.mod_propagator_expression(tag, numerator)
         if denominator:
             denominator = self.mod_propagator_expression(tag, denominator)      
-                
+        
         numerator = self.parse_expression(numerator, needPflipping)
         if denominator:
             self.denominator = self.parse_expression(denominator, needPflipping)

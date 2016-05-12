@@ -26,6 +26,7 @@ import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
@@ -538,24 +539,16 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                             me, self._curr_fortran_model)
             # If all ME's do not share the same maximum loop vertex rank and the
             # same loop maximum wavefunction size, we need to set the maximum
-            # in coef_specs.inc of the HELAS Source and warn the user that this
-            # might be a problem
+            # in coef_specs.inc of the HELAS Source. The SubProcesses/P* directory
+            # all link this file, so it should be properly propagated
             if self.options['loop_optimized_output'] and len(matrix_elements)>1:
                 max_lwfspins = [m.get_max_loop_particle_spin() for m in \
                                                                 matrix_elements]
-                try:
-                    max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
+                max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
                                                                 matrix_elements]
-                except MadGraph5Error:
-                    pass
-                else:
-                    if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
-                        self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
+                if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
+                    self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
                                                        max(max_loop_vert_ranks))
-                        logger.warning('ML5 has just output processes which do not'+\
-                      ' share the same maximum loop wavefunction size or the '+\
-                      ' same maximum loop vertex rank. This is potentially '+\
-                      ' dangerous. Please prefer to output them separately.')
 
         # Just the matrix.f files
         if self._export_format == 'matrix':
@@ -616,7 +609,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                                            wanted_couplings)
             
         compiler = {'fortran': self.options['fortran_compiler'],
-                    'f2py': self.options['f2py_compiler']}
+                    'f2py': self.options['f2py_compiler'],
+                    'cpp': self.options['cpp_compiler']}
         
         if self._export_format in self.supported_ML_format:
             self._curr_exporter.finalize_v4_directory( \
@@ -707,7 +701,17 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         else:
             self.validate_model()
 
-        if args[0] == 'process':            
+        loop_filter=None
+        if args[0] == 'process':
+
+            # Extract potential loop_filter          
+            for arg in args:
+                if arg.startswith('--loop_filter='):
+                    loop_filter = arg[14:]
+                if not isinstance(self, extended_cmd.CmdShell):
+                    raise InvalidCmd, "loop_filter is not allowed in web mode"
+            args = [a for a in args if not a.startswith('--loop_filter=')]
+
             # Rejoin line
             line = ' '.join(args[1:])
             
@@ -717,10 +721,25 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 
             # Reset Helas matrix elements
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-
-            # Extract process from process definition
-
+            
+        # Extract process from process definition
         myprocdef = self.extract_process(line)
+        # hack for multiprocess:
+        if myprocdef.has_multiparticle_label():
+            # split it in a loop
+            succes, failed = 0, 0
+            for base_proc in myprocdef:
+                try:
+                    self.exec_cmd("add process %s" % base_proc.nice_string(prefix=False, print_weighted=True))
+                    succes += 1
+                except Exception:
+                    failed +=1
+            logger.info("%s/%s processes succeeded" % (succes, failed+succes))
+            if succes == 0:
+                raise
+            else:
+                return
+             
              
         # If it is a process for MadLoop standalone, make sure it has a 
         # unique ID. It is important for building a BLHA library which
@@ -739,9 +758,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             multiprocessclass=loop_diagram_generation.LoopMultiProcess
         else:
             multiprocessclass=diagram_generation.MultiProcess
-        
+
         myproc = multiprocessclass(myprocdef, collect_mirror_procs = False,
-                                            ignore_six_quark_processes = False)
+                                            ignore_six_quark_processes = False,
+                                            loop_filter = loop_filter)
         
         for amp in myproc.get('amplitudes'):
             if amp not in self._curr_amps:

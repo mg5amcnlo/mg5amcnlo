@@ -217,6 +217,15 @@ def ln(file_pos, starting_dir='.', name='', log=True, cwd=None, abspath=False):
             logger.warning('Could not link %s at position: %s' % (file_pos, \
                                                 os.path.realpath(starting_dir)))
 
-
+def copytree(src, dst):
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+    for item in os.listdir(src):
+        s = os.path.join(src, item)
+        d = os.path.join(dst, item)
+        if os.path.isdir(s):
+            copytree(s, d, symlinks, ignore)
+        else:
+            shutil.copy2(s, d)
 
      
