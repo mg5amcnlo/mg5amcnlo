@@ -51,6 +51,9 @@ C
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
       INTEGER NGOOD(2), IGOOD(NCOMB,2)
       INTEGER JHEL(2), J, JJ
+      INTEGER THIS_NTRY(2)
+      SAVE THIS_NTRY
+      DATA THIS_NTRY /0,0/
 C     This is just to temporarily store the reference grid for
 C      helicity of the DiscreteSampler so as to obtain its number of
 C      entries with ref_helicity_grid%%n_tot_entries
@@ -108,6 +111,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       NTRY(IMIRROR)=NTRY(IMIRROR)+1
+      THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1
       DO I=1,NEXTERNAL
         JC(I) = +1
       ENDDO
@@ -133,7 +137,7 @@ C     ----------
      $('Helicity').EQ.0).OR.(HEL_PICKED.EQ.-1)) THEN
         DO I=1,NCOMB
           IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.OR.(ISU
-     $M_HEL.NE.0)) THEN
+     $M_HEL.NE.0).OR.THIS_NTRY(IMIRROR).LE.2) THEN
             T=MATRIX1(P ,NHEL(1,I),JC(1))
             DO JJ=1,NINCOMING
               IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
@@ -170,7 +174,7 @@ C     ----------
           ENDIF
         ELSE
           JHEL(IMIRROR) = 1
-          IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+          IF(NTRY(IMIRROR).LE.MAXTRIES.OR.THIS_NTRY(IMIRROR).LE.2)THEN
             DO I=1,NCOMB
               IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS
      $         *LIMHEL/NCOMB)) THEN
@@ -178,7 +182,7 @@ C     ----------
                 NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                 IGOOD(NGOOD(IMIRROR),IMIRROR) = I
                 PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in'
-     $           //' event ',NTRY(IMIRROR)
+     $           //' event ',NTRY(IMIRROR), 'local:',THIS_NTRY(IMIRROR)
               ENDIF
             ENDDO
           ENDIF
