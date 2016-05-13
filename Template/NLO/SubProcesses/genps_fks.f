@@ -103,8 +103,8 @@ c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      integer ndim
+      common/tosigint/ndim
       double precision qmass_common(-nexternal:0),qwidth_common(
      &     -nexternal:0)
       common /c_qmass_qwidth/qmass_common,qwidth_common
@@ -160,8 +160,8 @@ c arguments for the generate_momenta_conf subroutine from common blocks
       double precision p(0:3,nexternal)
       integer itree(2,-max_branch:-1),iconf
       common /to_itree/itree,iconf
-      integer ndim,ipole
-      common/tosigint/ndim,ipole
+      integer ndim
+      common/tosigint/ndim
       double precision qmass_common(-nexternal:0),qwidth_common(
      &     -nexternal:0)
       common /c_qmass_qwidth/qmass_common,qwidth_common
