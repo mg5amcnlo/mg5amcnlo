@@ -16,6 +16,7 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 import contextlib
+import itertools
 import logging
 import os
 import re
@@ -1544,7 +1545,7 @@ class ProcessTimer:
 #    except psutil.error.NoSuchProcess:
 #      pass
 
-
+## Define apple_notify (in a way which is system independent
 try:
     import Foundation
     import objc
@@ -1564,3 +1565,64 @@ try:
 except:
     def apple_notify(subtitle, info_text, userInfo={}):
         return
+## End apple notify
+
+
+def get_older_version(v1, v2):
+    """ return v2  if v1>v2
+        return v1 if v1<v2
+        return v1 if v1=v2 
+        return v1 if v2 is not in 1.2.3.4.5 format
+        return v2 if v1 is not in 1.2.3.4.5 format
+    """
+    from itertools import izip_longest
+    for a1, a2 in izip_longest(v1, v2, fillvalue=0):
+        try:
+            a1= int(a1)
+        except:
+            return v2
+        try:
+            a2= int(a2)
+        except:
+            return v1        
+        if a1 > a2:
+            return v2
+        elif a1 < a2:
+            return v1
+    return v1
+    
+
+plugin_support = {}
+def is_plugin_supported(obj):
+    global plugin_support
+    
+    name = obj.__name__
+    if name in plugin_support:
+        return plugin_support[name]
+    
+    # get MG5 version
+    if '__mg5amcnlo__' in plugin_support:
+        mg5_ver = plugin_support['__mg5amcnlo__']
+    else:
+        info = get_pkg_info()
+        mg5_ver = info['version'].split('.')
+    
+    min_ver = obj.minimal_mg5amcnlo_version
+    max_ver = obj.maximal_mg5amcnlo_version
+    val_ver = obj.latest_validated_version
+    if get_older_version(min_ver, mg5_ver) == min_ver and \
+       get_older_version(mg5_ver, max_ver) == mg5_ver:
+        plugin_support[name] = True
+        if get_older_version(mg5_ver, val_ver) == val_ver:
+            logger.warning("""Plugin %s has marked as NOT being validated with this version. 
+This plugin has been validated for the last time with version: %s""",
+                                        name, '.'.join(str(i) for i in val_ver))
+    else:
+        logger.warning("Plugin %s is not supported by this version." % name)
+        plugin_support[name] = False
+    return plugin_support[name]
+    
+    
+    
+    
+

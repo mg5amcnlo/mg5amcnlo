@@ -1685,9 +1685,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if self.cluster_mode == 1:
             opt = self.options
             cluster_name = opt['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](**opt)
-
-
+            if cluster_name in cluster.from_name:
+                self.cluster = cluster.from_name[cluster_name](**opt)
+            else:
+                # Check if a plugin define this type of cluster
+                # check for PLUGIN format
+                for plug in os.listdir(pjoin(MG5DIR, 'PLUGIN')):
+                    if os.path.exists(pjoin(MG5DIR, 'PLUGIN', plug, '__init__.py')):
+                        __import__('PLUGIN.%s' % plug)
+                        plugin = sys.modules['PLUGIN.%s' % plug]  
+                        if not hasattr(plugin, 'new_cluster'):
+                            continue
+                        if not misc.is_plugin_supported(plugin):
+                            continue              
+                        if cluster_name in plugin.new_cluster:
+                            logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
+                            self.cluster = plugin.new_cluster[cluster_name](**opt)
+                            break
+                else:
+                    raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
+                
+                
     def check_param_card(self, path, run=True):
         """
         1) Check that no scan parameter are present

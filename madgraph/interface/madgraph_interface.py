@@ -1466,6 +1466,8 @@ This will take effect only in a NEW terminal
                     __import__('PLUGIN.%s' % plug)
                     plugin = sys.modules['PLUGIN.%s' % plug]                
                     if hasattr(plugin, 'new_output'):
+                        if not misc.is_plugin_supported(plugin):
+                            continue
                         if args[0] in plugin.new_output:
                             self._export_format = 'plugin'
                             self._export_plugin = plugin.new_output[args[0]]
@@ -7100,7 +7102,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                              group_subprocesses=group_processes)
         elif options['exporter'] == 'cpp':
             self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes)
-            
+        
+        self._curr_exporter.pass_information_from_cmd(self)
+        
         if options['output'] == 'Template':
             self._curr_exporter.copy_template(self._curr_model)
         elif options['output'] == 'dir' and not os.path.isdir(self._export_dir):

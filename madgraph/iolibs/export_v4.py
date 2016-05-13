@@ -111,6 +111,12 @@ class VirtualExporter(object):
     def finalize(self,matrix_element, cmdhistory, MG5options, outputflag):
         return
     
+    def pass_information_from_cmd(self, cmd):
+        """pass information from the command interface to the exporter.
+           Please do not modify any object of the interface from the exporter.
+        """
+        return
+    
     def modify_grouping(self, matrix_element):
         return False, matrix_element
            

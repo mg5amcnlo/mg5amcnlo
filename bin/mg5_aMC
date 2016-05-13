@@ -130,13 +130,14 @@ if options.plugin:
     if not plugin.new_interface:
         logging.warning("Plugin: %s do not define dedicated interface and should be used without the --mode options" % options.plugin)
         sys.exit()
+    import madgraph.various.misc as misc
+    if not misc.is_plugin_supported(plugin):
+        sys.exit()
     cmd_line = plugin.new_interface(mgme_dir = options.mgme_dir)
 elif options.web:
     cmd_line = interface.MasterCmdWeb()
 else: 
     cmd_line = interface.MasterCmd(mgme_dir = options.mgme_dir)
-
-
 
 # Call the cmd interface main loop
 try:

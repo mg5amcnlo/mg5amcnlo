@@ -221,8 +221,10 @@ class ModelReader(loop_base_objects.LoopModel):
             
     def get_width(self, pdg_code):
         """easy way to have access to a width value"""
-        return self.get('parameter_dict')[self.get_particle(pdg_code).get('width')].real
-
+        if isinstance(pdg_code, (int,str)):
+            return self.get('parameter_dict')[self.get_particle(pdg_code).get('width')].real
+        else:
+            return self.get('parameter_dict')[pdg_code.get('mass')].real
     
     
 class Alphas_Runner(object):
