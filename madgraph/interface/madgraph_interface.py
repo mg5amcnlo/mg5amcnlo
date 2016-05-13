@@ -6651,6 +6651,7 @@ This implies that with decay chains:
             logging.root.setLevel(level)
             logging.getLogger('madgraph').setLevel(level)
             logging.getLogger('madevent').setLevel(level)
+            self.options[args[0]] = level
             if log:
                 logger.info('set output information to level: %s' % level)
         elif args[0].lower() == "ewscheme":

@@ -244,6 +244,7 @@ class ProcessExporterFortran(object):
         """ Call MA5 so that it writes default cards for both parton and
         post-shower levels, tailored for this particular process."""
         
+        logger.info('Generating MadAnalysis5 default cards tailored to this process')
         MA5_interpreter = misc.get_MadAnalysis5_interpreter(MG5DIR,ma5_path,
                                                                    loglevel=100)
         MA5_main = MA5_interpreter.main
@@ -252,11 +253,6 @@ class ProcessExporterFortran(object):
                 MA5_main.madgraph.generate_card(history, proc_defs, processes,'parton'))
         open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
                 MA5_main.madgraph.generate_card(history, proc_defs, processes,'hadron'))
-
-#        open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
-#"""plot PT(e+)"""%{'out_dir':pjoin(output_dir,os.pardir)})
-        open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
-""" DUMMY FOR NOW """)
 
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)

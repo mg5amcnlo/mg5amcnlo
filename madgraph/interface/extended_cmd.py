@@ -76,9 +76,16 @@ def debug(debug_only=True):
 class BasicCmd(cmd.Cmd):
     """Simple extension for the readline"""
 
-    def preloop(self):
+    def set_readline_completion_display_matches_hook(self):
+        """ This has been refactorized here so that it can be called when another
+        program called by MG5 (such as MadAnalysis5) changes this attribute of readline"""
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
+        else:
+            readline.set_completion_display_matches_hook()
+
+    def preloop(self):
+        self.set_readline_completion_display_matches_hook()
 
     def deal_multiple_categories(self, dico, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
@@ -220,7 +227,7 @@ class BasicCmd(cmd.Cmd):
                         compfunc = self.completedefault
             else:
                 compfunc = self.completenames
-                
+
             # correct wrong splittion with '\ '
             if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
                 Ntext = line.split(os.path.sep)[-1]
@@ -228,6 +235,7 @@ class BasicCmd(cmd.Cmd):
                 to_rm = len(self.completion_prefix) - 1
                 Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
                 data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
+                misc.sprint(data)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
             # correct wrong splitting with '-'/"="

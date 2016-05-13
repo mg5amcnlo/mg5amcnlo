@@ -335,8 +335,8 @@ def which_lib(lib):
 #===============================================================================
 # Return a Main instance of MadAnlysis5, provided its path
 #===============================================================================
-def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
-                                        loglevel = logging.INFO, forced = True):
+def get_MadAnalysis5_interpreter(mg5_path, ma5_path, mg5_interface=None, 
+                logstream = sys.stdout, loglevel = logging.INFO, forced = True):
     """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
     
     MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
@@ -346,10 +346,22 @@ def get_MadAnalysis5_interpreter(mg5_path, ma5_path, logstream = sys.stdout,
     if MA5path not in sys.path:
         sys.path.insert(0, MA5path) 
     try:
+        # We must backup the readline module attributes because they get modified
+        # when MA5 imports root and that supersedes MG5 autocompletion
+        import readline
+        old_completer = readline.get_completer()
+        old_delims    = readline.get_completer_delims()
         from madanalysis.interpreter.ma5_interpreter import MA5Interpreter
         MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
                              LoggerStream=logstream,forced=forced)
-    except Exception as e:
+        # Now restore the readline MG5 state
+        readline.set_completer(old_completer)
+        readline.set_completer_delims(old_delims)
+        # Also restore the completion_display_matches_hook if an mg5 interface
+        # is specified as it could also have been potentially modified
+        if not mg5_interface is None:
+            mg5_interface.set_readline_completion_display_matches_hook()
+    except KeyError as e:
         raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%str(e)
         return None
 

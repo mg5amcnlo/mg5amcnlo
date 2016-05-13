@@ -551,18 +551,23 @@ class RunResults(list):
     
     def get_html(self, output_path, **opt):
         """WRITE HTML OUTPUT"""
+
         try:
             self.web = opt['web']
             self.info['web'] = self.web
         except Exception:
             self.web = False
 
-        # check if more than one parton output
-        parton = [r for r in self if r.parton]
+        # check if more than one parton output except for tags corresponding
+        # to different MA5 parton-level runs.
+        parton = [r for r in self if (r.parton and 'lhe' in r.parton)]
         # clean wrong previous run link
         if len(parton)>1:
             for p in parton[:-1]:
-                p.parton = []
+                # Do not remove the MA5 parton level results.
+                for res in p.parton:
+                    if not res.startswith('ma5'):
+                        p.parton.remove(res)
 
         dico = self.info
         dico['run_span'] = sum([tag.get_nb_line() for tag in self], 1) -1
@@ -760,14 +765,17 @@ class OneTagResults(dict):
         self.reweight = [] 
         self.pythia = []
         self.pythia8 = []
-        self.madanalysis5_parton = []
         self.madanalysis5_hadron = []
+        # This is just a container that contain 'done' when the parton level MA5
+        # analysis is done, so that set_run_name knows when to update the tag
+        self.madanalysis5_parton = []        
         self.pgs = []
         self.delphes = []
         self.shower = []
+        
         self.level_modes = ['parton', 'pythia', 'pythia8',
                             'pgs', 'delphes','reweight','shower',
-                            'madanalysis5_parton','madanalysis5_hadron']
+                            'madanalysis5_hadron','madanalysis5_parton']
         # data 
         self.status = ''
 
@@ -796,7 +804,9 @@ class OneTagResults(dict):
             if 'plot' not in self.reweight and \
                          exists(pjoin(html_path,"plots_%s.html" % tag)):
                 self.reweight.append('plot')
-        
+
+        # We also trigger parton for madanalysis5_parton because its results
+        # must be added to self.parton
         if level in ['parton','all'] and 'parton' not in nolevel:
             
             if 'lhe' not in self.parton and \
@@ -826,6 +836,26 @@ class OneTagResults(dict):
                 if glob.glob(pjoin(path,"*.%s" % kind)):
                     if self['run_mode'] in ['LO', 'NLO']:
                         self.parton.append('%s' % kind)
+
+        if level in ['madanalysis5_parton','all'] and 'madanalysis5_parton' not in nolevel:
+
+            if 'ma5_plot' not in self.parton and \
+                    exists(pjoin(path,"%s_MA5_parton_analysis.pdf"%self['tag'])):
+                self.parton.append('ma5_plot')                
+
+            if 'ma5_html' not in self.parton and \
+                    exists(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS'%self['tag'],
+                                 'HTML','index.html')):
+                self.parton.append('ma5_html')                
+            
+            if 'ma5_card' not in self.parton and \
+                    exists(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS'%self['tag'],
+                                                                'history.ma5')):
+                self.parton.append('ma5_card')
+
+            if 'done' not in self.madanalysis5_parton and \
+              any(res in self.parton for res in ['ma5_plot','ma5_html','ma5_card']):
+                self.madanalysis5_parton.append('done')
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
@@ -952,16 +982,9 @@ class OneTagResults(dict):
             if 'log' not in self.delphes and \
                           exists(pjoin(path,"%s_delphes.log" % tag)):
                 self.delphes.append('log') 
-    
-        if level in ['madanlysis5_parton','all']:
-            if 'plot' not in self.madanalysis5_parton and \
-                                        exists(pjoin(html_path,'miaou_parton')):
-                self.madanalysis5_parton.append('miaou_parton')
 
         if level in ['madanlysis5_hadron','all']:
-            if 'plot' not in self.madanalysis5_hadron and \
-                                        exists(pjoin(html_path,'miaou_hadron')):
-                self.madanalysis5_hadron.append('miaou_hadron')
+            pass
     
     def special_link(self, link, level, name):
         
@@ -1008,6 +1031,18 @@ class OneTagResults(dict):
                     for f in \
                         glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)):
                         out += " <a href=\"%s\">%s</a> " % (f, '%s' % kind.upper())
+            
+            # The link below is commented because it might a bit too heavy visually
+            # in the list of links of the webpage                       
+#            if 'ma5_plot' in self.parton:
+#                out += ' <a href="./Events/%(run_name)s/%(tag)s_MA5_parton_analysis.pdf">MA5_plots</a>'
+
+            if 'ma5_html' in self.parton:
+                out += ' <a href="./HTML/%(run_name)s/%(tag)s_MA5_PARTON_ANALYSIS/HTML/index.html">MA5_report</a>'
+
+            if 'ma5_card' in self.parton:
+                out += ' <a href="./HTML/%(run_name)s/%(tag)s_MA5_PARTON_ANALYSIS/history.ma5">MA5_card</a>'
+                        
             if 'HwU' in self.parton:
             # fixed order plots
                 for f in \
@@ -1108,8 +1143,6 @@ class OneTagResults(dict):
                 out += """ <a href="./HTML/%(run_name)s/plots_delphes_%(tag)s.html">plots</a>"""            
             return out % self
 
-        if level == 'madanalysis5_parton':
-            out += """ <a href="<not_set_yet>">DUMMYMA5</a> """
         if level == 'madanalysis5_hadron':
             out += """ <a href="<not_set_yet>">DUMMYMA5</a> """
 
@@ -1136,8 +1169,7 @@ class OneTagResults(dict):
         
         nb_line = 0
         for i in [self.parton, self.reweight, self.pythia, self.pythia8, self.pgs, 
-                  self.delphes, self.shower, self.madanalysis5_parton,
-                  self.madanalysis5_hadron]:
+                  self.delphes, self.shower, self.madanalysis5_hadron]:
             if len(i):
                 nb_line += 1
         return max([nb_line,1])
@@ -1181,12 +1213,6 @@ class OneTagResults(dict):
         <td> %(action)s</td>
         </tr>"""
         
-        sub_part_template_madanalysis5 = """
-        <td> %(type)s %(run_mode)s </td>
-        <td> %(links)s</td>
-        <td> %(action)s</td>
-        </tr>"""
-        
         # Compute the HTMl output for subpart
         nb_line = self.get_nb_line()
         # Check that cross/nb_event/error are define
@@ -1224,7 +1250,13 @@ class OneTagResults(dict):
             if not data:
                 continue
             
+            if ttype == 'madanalysis5_parton':
+                # The 'done' store in madanalysis5_parton is just a placeholder
+                # it doesn't have a corresponding line
+                continue
+            
             local_dico = {'type': ttype, 'run': self['run_name'], 'syst': ''}
+            
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
             else:
@@ -1258,7 +1290,10 @@ class OneTagResults(dict):
                         local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_Pythia_syscalc.log">systematics</a>' \
                                              % {'run_name':self['run_name'], 'tag': self['tag']}
                 else:
-                    local_dico['type'] += ' %s' % self['run_mode']
+                    if 'lhe' not in self.parton and self.madanalysis5_parton:
+                        local_dico['type'] += ' MA5'
+                    else:
+                        local_dico['type'] += ' %s' % self['run_mode']
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
@@ -1284,14 +1319,9 @@ class OneTagResults(dict):
                 local_dico['cross'] = self['cross_pythia']
                 local_dico['err'] = self['error_pythia']
 
-            elif ttype in ['madanalysis5_parton']:
-                template = sub_part_template_madanalysis5
-                # Nothing else needs to be done for now, since only type and
-                # run_mode must be defined in local_dict and this has already
-                # been done.
-
             elif ttype in ['madanalysis5_hadron']:
-                template = sub_part_template_madanalysis5
+                # We can use the same template as pgs here
+                template = sub_part_template_pgs
                 # Nothing else needs to be done for now, since only type and
                 # run_mode must be defined in local_dict and this has already
                 # been done.
@@ -1394,10 +1424,6 @@ class OneTagResults(dict):
                     else:
                         local_dico['action'] = self.command_suggestion_html('remove %s  pythia --tag=%s'\
                                                                             % (self['run_name'], self['tag']))
-            elif ttype in ['madanalysis5_parton']:
-                # For now, nothing special needs to be done since we don't
-                # support actions for madanalysis5.
-                local_dico['action'] = ''
             elif ttype in ['madanalysis5_hadron']:
                 # For now, nothing special needs to be done since we don't
                 # support actions for madanalysis5.
