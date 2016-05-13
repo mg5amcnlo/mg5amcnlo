@@ -14,7 +14,7 @@ reset
 
 set lmargin 10
 set rmargin 0
-set terminal postscript portrait enhanced color "Helvetica" 9 
+set terminal postscript portrait enhanced mono dashed lw 1.0 "Helvetica" 9 
 # The pdf terminal offers transparency support, but you will have to adapt things a bit
 #set terminal pdf enhanced font "Helvetica 12" lw 1.0 dashed size 29.7cm, 21cm
 set key font ",9"
@@ -26,57 +26,56 @@ set output "HistoOut.ps"
 # color-blind individuals with either protanopia or deuteranopia. Bang
 # Wong [2011] Nature Methods 8, 441.
 
-set style line  1 lt 1 lc rgb "#009e73" lw 1.3
-set style line 11 lt 2 lc rgb "#009e73" lw 1.3 dt (6,3)
-set style line 21 lt 4 lc rgb "#009e73" lw 1.3 dt (3,2)
-set style line 31 lt 6 lc rgb "#009e73" lw 1.3 dt (2,1)
-set style line 41 lt 8 lc rgb "#009e73" lw 1.3 dt (4,3)
+set style line  1 lt 1 lc rgb "#009e73" lw 2.5
+set style line 11 lt 2 lc rgb "#009e73" lw 2.5
+set style line 21 lt 4 lc rgb "#009e73" lw 2.5
+set style line 31 lt 6 lc rgb "#009e73" lw 2.5
+set style line 41 lt 8 lc rgb "#009e73" lw 2.5
 
-set style line  2 lt 1 lc rgb "#0072b2" lw 1.3
-set style line 12 lt 2 lc rgb "#0072b2" lw 1.3 dt (6,3)
-set style line 22 lt 4 lc rgb "#0072b2" lw 1.3 dt (3,2)
-set style line 32 lt 6 lc rgb "#0072b2" lw 1.3 dt (2,1)
-set style line 42 lt 8 lc rgb "#0072b2" lw 1.3 dt (4,3)
+set style line  2 lt 1 lc rgb "#0072b2" lw 2.5
+set style line 12 lt 2 lc rgb "#0072b2" lw 2.5
+set style line 22 lt 4 lc rgb "#0072b2" lw 2.5
+set style line 32 lt 6 lc rgb "#0072b2" lw 2.5
+set style line 42 lt 8 lc rgb "#0072b2" lw 2.5
+
+set style line  3 lt 1 lc rgb "#d55e00" lw 2.5
+set style line 13 lt 2 lc rgb "#d55e00" lw 2.5
+set style line 23 lt 4 lc rgb "#d55e00" lw 2.5
+set style line 33 lt 6 lc rgb "#d55e00" lw 2.5
+set style line 43 lt 8 lc rgb "#d55e00" lw 2.5
+
+set style line  4 lt 1 lc rgb "#f0e442" lw 2.5
+set style line 14 lt 2 lc rgb "#f0e442" lw 2.5
+set style line 24 lt 4 lc rgb "#f0e442" lw 2.5
+set style line 34 lt 6 lc rgb "#f0e442" lw 2.5
+set style line 44 lt 8 lc rgb "#f0e442" lw 2.5
+
+set style line  5 lt 1 lc rgb "#56b4e9" lw 2.5
+set style line 15 lt 2 lc rgb "#56b4e9" lw 2.5
+set style line 25 lt 4 lc rgb "#56b4e9" lw 2.5
+set style line 35 lt 6 lc rgb "#56b4e9" lw 2.5
+set style line 45 lt 8 lc rgb "#56b4e9" lw 2.5
+
+set style line  6 lt 1 lc rgb "#cc79a7" lw 2.5
+set style line 16 lt 2 lc rgb "#cc79a7" lw 2.5
+set style line 26 lt 4 lc rgb "#cc79a7" lw 2.5
+set style line 36 lt 6 lc rgb "#cc79a7" lw 2.5
+set style line 46 lt 8 lc rgb "#cc79a7" lw 2.5
+
+set style line  7 lt 1 lc rgb "#e69f00" lw 2.5
+set style line 17 lt 2 lc rgb "#e69f00" lw 2.5
+set style line 27 lt 4 lc rgb "#e69f00" lw 2.5
+set style line 37 lt 6 lc rgb "#e69f00" lw 2.5
+set style line 47 lt 8 lc rgb "#e69f00" lw 2.5
+
+set style line  8 lt 1 lc rgb "black" lw 2.5
+set style line 18 lt 2 lc rgb "black" lw 2.5
+set style line 28 lt 4 lc rgb "black" lw 2.5
+set style line 38 lt 6 lc rgb "black" lw 2.5
+set style line 48 lt 7 lc rgb "black" lw 2.5
 
 
-set style line  3 lt 1 lc rgb "#d55e00" lw 1.3
-set style line 13 lt 2 lc rgb "#d55e00" lw 1.3 dt (6,3)
-set style line 23 lt 4 lc rgb "#d55e00" lw 1.3 dt (3,2)
-set style line 33 lt 6 lc rgb "#d55e00" lw 1.3 dt (2,1)
-set style line 43 lt 8 lc rgb "#d55e00" lw 1.3 dt (4,3)
-
-set style line  4 lt 1 lc rgb "#f0e442" lw 1.3
-set style line 14 lt 2 lc rgb "#f0e442" lw 1.3 dt (6,3)
-set style line 24 lt 4 lc rgb "#f0e442" lw 1.3 dt (3,2)
-set style line 34 lt 6 lc rgb "#f0e442" lw 1.3 dt (2,1)
-set style line 44 lt 8 lc rgb "#f0e442" lw 1.3 dt (4,3)
-
-set style line  5 lt 1 lc rgb "#56b4e9" lw 1.3
-set style line 15 lt 2 lc rgb "#56b4e9" lw 1.3 dt (6,3)
-set style line 25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (3,2)
-set style line 35 lt 6 lc rgb "#56b4e9" lw 1.3 dt (2,1)
-set style line 45 lt 8 lc rgb "#56b4e9" lw 1.3 dt (4,3)
-
-set style line  6 lt 1 lc rgb "#cc79a7" lw 1.3
-set style line 16 lt 2 lc rgb "#cc79a7" lw 1.3 dt (6,3)
-set style line 26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (3,2)
-set style line 36 lt 6 lc rgb "#cc79a7" lw 1.3 dt (2,1)
-set style line 46 lt 8 lc rgb "#cc79a7" lw 1.3 dt (4,3)
-
-set style line  7 lt 1 lc rgb "#e69f00" lw 1.3
-set style line 17 lt 2 lc rgb "#e69f00" lw 1.3 dt (6,3)
-set style line 27 lt 4 lc rgb "#e69f00" lw 1.3 dt (3,2)
-set style line 37 lt 6 lc rgb "#e69f00" lw 1.3 dt (2,1)
-set style line 47 lt 8 lc rgb "#e69f00" lw 1.3 dt (4,3)
-
-set style line  8 lt 1 lc rgb "black" lw 1.3
-set style line 18 lt 2 lc rgb "black" lw 1.3 dt (6,3)
-set style line 28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
-set style line 38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
-set style line 48 lt 8 lc rgb "black" lw 1.3 dt (4,3)
-
-
-set style line 999 lt 1 lc rgb "gray" lw 1.3
+set style line 999 lt 1 lc rgb "gray" lw 2.5
 
 safe(x,y,a) = (y == 0.0 ? a : x/y)
 

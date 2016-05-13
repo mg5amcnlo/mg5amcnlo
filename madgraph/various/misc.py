@@ -59,6 +59,7 @@ def mg5amc_py8_interface_consistency_warning(options):
     """ Check the consistency of the mg5amc_py8_interface installed with
     the current MG5 and Pythia8 versions. """
 
+    return None
     # All this is only relevant is Pythia8 is interfaced to MG5
     if not options['pythia8_path']:
         return None

@@ -3,8 +3,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.4.1 (xx/xx/xx)
         OM: Fix a bug in fix target experiment with PDF on the particle at rest.
             The cross-section was correct but the z-boost was not performed correctly.
- 
-2.4.0.beta (06/04/16)
+
+2.4.0 (12/06/16)
         OM: Allowing the proper NLO reweighting for NLO sample
 	RF: For NLO processes allow for multiple PDF and scales reweighting, directy by inputting lists
 	    in the run_card.dat.

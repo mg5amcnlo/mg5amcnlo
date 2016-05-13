@@ -178,7 +178,7 @@
 #! if auto: try to find it automatically on the system (default)
 #! if '' or None: disabling samurai
 #! if samurai=/PATH/TO/samurai/lib: use that specific installation path for samurai
-# samurai = auto
+# samurai = None
 
 #! Set the samurai directory containing ninja's library
 #! if auto: try to find it automatically on the system (default)

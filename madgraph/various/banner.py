@@ -1735,7 +1735,7 @@ class RunCardLO(RunCard):
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
         self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "30 50", include=False)
-        self.add_param("sys_pdf", "Ct10nlo.LHgrid", include=False)
+        self.add_param("sys_pdf", "NNPDF23_lo_as_0130_qed", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
         
         #parameter not in the run_card by default
@@ -2247,10 +2247,7 @@ class MadLoopParam(ConfigFile):
                 template = pjoin(MG5DIR, 'Template', 'loop_material', 'StandAlone', 
                                                    'Cards', 'MadLoopParams.dat')
             else:
-                template = pjoin(MEDIR, 'SubProcesses', 'MadLoop5_resources',
-                                                           'MadLoopParams.dat' )
-                if not os.path.exists(template):
-                    template = pjoin(MEDIR, 'Cards', 'MadLoopParams.dat')
+                template = pjoin(MEDIR, 'Cards', 'MadLoopParams_default.dat')
         fsock = open(template, 'r')
         template = fsock.readlines()
         fsock.close()
