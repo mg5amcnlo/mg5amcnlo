@@ -53,6 +53,7 @@ c
       double complex wgt1(2)
       double precision p1(0:3,99),xx(maxinvar)
       integer ninvar, ndim, iconfig, minconfig, maxconfig
+      common/tosigint/ndim
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer ic(nexternal,maxswitch), jc(12),nswitch
       double precision saveamp(maxamps)
@@ -205,7 +206,7 @@ c
      $        ,PDG_type(j_fks)
 
 c
-      ndim = 22
+      ndim = 55
       ncall = 10000
       itmax = 10
       ninvar = 35

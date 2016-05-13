@@ -47,6 +47,7 @@ c
       double precision p1_cnt_save(0:3,nexternal,-2:2),p_born_save(0:3
      &     ,nexternal-1),p_ev_red1(0:3,nexternal-1)
       integer ninvar, ndim, iconfig, minconfig, maxconfig
+      common/tosigint/ndim
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer icb(nexternal-1,maxswitch),jc(12),nswitch
       double precision saveamp(maxamps)
