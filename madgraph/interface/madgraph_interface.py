@@ -1153,13 +1153,15 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                
-                if not self._done_export[1].startswith(mode):
-                    print mode, self._done_export[1]
+                if (self._done_export[1] == 'plugin' and mode not in self._export_formats):
+                    args.append(mode)
+                    args.append(self._done_export[0])
+                elif self._done_export[1].startswith(mode):
+                    args.append(self._done_export[1])
+                    args.append(self._done_export[0])
+                else:
                     raise self.InvalidCmd, \
                           '%s not valid directory for launch' % self._done_export[0]
-                args.append(self._done_export[1])
-                args.append(self._done_export[0])
                 return
             else:
                 logger.warning('output command missing, run it automatically (with default argument)')

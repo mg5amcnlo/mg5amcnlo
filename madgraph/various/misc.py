@@ -1606,19 +1606,24 @@ def is_plugin_supported(obj):
     else:
         info = get_pkg_info()
         mg5_ver = info['version'].split('.')
+    try:
+        min_ver = obj.minimal_mg5amcnlo_version
+        max_ver = obj.maximal_mg5amcnlo_version
+        val_ver = obj.latest_validated_version
+    except:
+        logger.error("Plugin %s misses some required info to be valid. It is therefore discarded" % name)
+        plugin_support[name] = False
+        return
     
-    min_ver = obj.minimal_mg5amcnlo_version
-    max_ver = obj.maximal_mg5amcnlo_version
-    val_ver = obj.latest_validated_version
     if get_older_version(min_ver, mg5_ver) == min_ver and \
        get_older_version(mg5_ver, max_ver) == mg5_ver:
         plugin_support[name] = True
         if get_older_version(mg5_ver, val_ver) == val_ver:
             logger.warning("""Plugin %s has marked as NOT being validated with this version. 
-This plugin has been validated for the last time with version: %s""",
+It has been validated for the last time with version: %s""",
                                         name, '.'.join(str(i) for i in val_ver))
     else:
-        logger.warning("Plugin %s is not supported by this version." % name)
+        logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
         plugin_support[name] = False
     return plugin_support[name]
     

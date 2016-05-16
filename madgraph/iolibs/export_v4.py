@@ -811,6 +811,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
 
         # create the MODEL
         write_dir=pjoin(self.dir_path, 'Source', 'MODEL')
+        misc.sprint(write_dir, os.path.exists(write_dir))
         model_builder = UFO_model_to_mg4(model, write_dir, self.opt + self.proc_characteristic)
         model_builder.build(wanted_couplings)
 
@@ -5107,11 +5108,11 @@ class UFO_model_to_mg4(object):
         self.model = model
         self.model_name = model['name']
         self.dir_path = output_path
-        if opt:
-            self.opt = opt
-        else:
-            self.opt = {'complex_mass': False, 'export_format': 'madevent', 'mp':True,
+        
+        self.opt = {'complex_mass': False, 'export_format': 'madevent', 'mp':True,
                         'loop_induced': False}
+        if opt:
+            self.opt.update(opt)
             
         self.coups_dep = []    # (name, expression, type)
         self.coups_indep = []  # (name, expression, type)
