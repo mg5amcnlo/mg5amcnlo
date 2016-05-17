@@ -58,13 +58,16 @@ class Banner(dict):
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
                      'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
-                     'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
+                     'mgdelphescard', 'mgdelphestrigger','mgshowercard',
+                     'ma5card_parton','ma5card_hadron','run_settings']
 
     capitalized_items = {
             'mgversion': 'MGVersion',
             'mg5proccard': 'MG5ProcCard',
             'mgproccard': 'MGProcCard',
             'mgruncard': 'MGRunCard',
+            'ma5card_parton' : 'MA5Card_parton',
+            'ma5card_hadron' : 'MA5Card_hadron',            
             'mggenerationinfo': 'MGGenerationInfo',
             'mgpythiacard': 'MGPythiaCard',
             'mgpgscard': 'MGPGSCard',
@@ -116,6 +119,8 @@ class Banner(dict):
       'madspin':'madspin_card.dat',
       'mgshowercard':'shower_card.dat',
       'pythia8':'pythia8_card.dat',
+      'ma5card_parton':'madanalysis5_parton_card.dat',
+      'ma5card_hadron':'madanalysis5_hadron_card.dat',      
       'run_settings':''
       }
     
@@ -439,6 +444,10 @@ class Banner(dict):
                 tag = 'foanalyse'
             elif 'reweight_card' in card_name:
                 tag='reweight_card'
+            elif 'madanalysis5_parton_card' in card_name:
+                tag='MA5Card_parton'
+            elif 'madanalysis5_hadron_card' in card_name:
+                tag='MA5Card_hadron'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -1263,6 +1272,10 @@ class PY8Card(ConfigFile):
         # for both merging, chose whether to also consider different merging
         # scale values for the extra weights related to scale and PDF variations.
         self.add_param("SysCalc:fullCutVariation", False)
+        # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
+        # to indicate that he wants to pipe the output. Or \dev\null to turn the
+        # output off.
+        self.add_param("HEPMCoutput:file", 'auto')
 
         # Hidden parameters always written out
         # ====================================
@@ -1272,9 +1285,6 @@ class PY8Card(ConfigFile):
         self.add_param("Check:epTolErr", 1e-2,
             hidden=True,
             comment='Be more forgiving with momentum mismatches.')
-        self.add_param("HEPMCoutput:file", '_MG5aMC_auto_set_',
-            hidden=True,
-            comment='HepMC output file name or *relative* path.')
 
         # Hidden parameters written out only if user_set or system_set
         # ============================================================
@@ -2511,12 +2521,12 @@ class MadAnalysis5Card(dict):
     def default_setup(self):
         """define the default value""" 
         self['mode']      = 'parton'
-        self['inputs']     = ['*.lhe']
+        self['inputs']    = ['*.lhe']
         # The default for a hadron type of card is
-        # 'PY8','*.hepmc', '*.stdhep', '*.lhco'
+        # '*.hepmc', '*.stdhep', '*.lhco'
         # These two dictionaries are formated as follows:
         #     {'analysis/recasting name':['analysis/recasting lines here>']}
-        self['analyses']  = {}
+        self['analyses'] = {}
         # Specify in which order the analysis/recasting were specified
         self['order'] = []
 
@@ -2560,7 +2570,7 @@ class MadAnalysis5Card(dict):
 
         self['mode'] = mode
         if self['mode']=='hadron':
-            self['inputs']  = ['PY8','*.hepmc', '*.stdhep', '*.lhco']
+            self['inputs']  = ['*.hepmc', '*.stdhep', '*.lhco']
         else:
             self['inputs']  = ['*.lhe']
 

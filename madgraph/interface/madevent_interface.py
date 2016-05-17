@@ -1093,15 +1093,13 @@ class CheckValidForCmd(object):
             # Make sure the corresponding input files are present and unfold
             # potential wildcard while making their path absolute as well.
             MA5_options['inputs'] = []
+            special_source_tags = []
             for htag in hadron_inputs:
                 # Special tag for MA5 runs when using piping (as with PY8 for instance)
-                if htag in ['PY8']:
-                    if not self.options['pythia8_path']:
-                        if any(t for t in tags if t.startswith('--input=')):
-                            logger.warning("Pythia8 must be installed for MadAnalysis5"+\
-                          " to be piped to its output with the command --input=PY8")
-                        continue
+                if htag in special_source_tags:
+                    # Special check/actions
                     MA5_options['inputs'].append(htag)
+                    continue
                 
                 # Now select one source per tag, giving priority to unzipped 
                 # files with 'events' in their name (case-insensitive).
@@ -1734,7 +1732,7 @@ class CompleteForCmd(CheckValidForCmd):
                 '--no_hadron','--no_parton','--hadron=','--no_default','--tag='], line)
         elif line[-1].endswith('--hadron='):
             return self.list_completion(text, self._run_options + 
-                        ['PY8','*.lhe','*.hepmc','*.lhco','*.stdhep'], line)
+                        ['*.lhe','*.hepmc','*.lhco','*.stdhep'], line)
     
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"     
@@ -3458,6 +3456,13 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('finish', level='madanalysis5_%s'%mode,
                                                                  makehtml=False)
  
+        #Update the banner
+        self.banner.add(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_%s_card.dat'%mode))
+        banner_path = pjoin(self.me_dir,'Events', self.run_name,
+                               '%s_%s_banner.txt'%(self.run_name, self.run_tag))
+        self.banner.write(banner_path)
+ 
         if not no_default:
             logger.info('Find more information about this run on the HTML local page')
             logger.info('   %s'%pjoin(self.me_dir,'index.html'))
@@ -3543,17 +3548,45 @@ Please install this tool with the following MG5_aMC command:
 
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
 
-        HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
+        HepMC_event_output = None
+        if PY8_Card['HEPMCoutput:file']=='auto':
+            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
-        if PY8_Card['HEPMCoutput:file']=='_MG5aMC_auto_set_':
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag)
+        elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
+            fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
+            fifo_path  = None
+            if len(fifo_specs)<=1:
+                fifo_path = pjoin(self.me_dir,'Events', self.run_name,'PY8_hepmc.fifo')
+                if os.path.exists(fifo_path):
+                    os.remove(fifo_path)
+                misc.mkfifo(fifo_path)
+                # Use defaultSet not to overwrite the current userSet status
+                PY8_Card.defaultSet('HEPMCoutput:file','PY8_hepmc.fifo')
+            else:
+                fifo_path = fifo_specs[1]
+                if os.path.exists(fifo_path):
+                    if stat.S_ISFIFO(os.stat(fifo_path).st_mode):
+                        logger.warning('PY8 will be reusing already existing '+
+                                         'custom fifo file at:\n  %s'%fifo_path)
+                    else:
+                        raise InvalidCmd(
+"""The fifo path speficied for the PY8 parameter 'HEPMCoutput:file':
+   %s
+already exists and is not a fifo file."""%fifo_path)
+                else:
+                    misc.mkfifo(fifo_path)
+                # Use defaultSet not to overwrite the current userSet status
+                PY8_Card.defaultSet('HEPMCoutput:file',fifo_path)
+            HepMC_event_output=fifo_path    
         elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null']:
-            open(HepMC_event_output,'w').write('HepMC output of Pythia8 disabled!')
+            logger.warning('User disabled the HepMC output of Pythia8.')
             HepMC_event_output = None
         else:
+            # Normalize the relative path if given as relative by the user.
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                    PY8_Card['HEPMCoutput:file'])
-        
+
         # We specify by hand all necessary parameters, so that there is no
         # need to read parameters from the Banner.
         PY8_Card.MadGraphSet('JetMatching:setMad',False)
@@ -3752,19 +3785,36 @@ Please install this tool with the following MG5_aMC command:
         st = os.stat(wrapper_path)
         os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
 
-        logger.info('Follow Pythia8 shower by running the '+
-            'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
+        # If the target HEPMC output file is a fifo, don't hang MG5_aMC and let
+        # it proceed.
+        is_HepMC_output_fifo = stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode)        
+        if is_HepMC_output_fifo:
+            logger.info(
+"""Pythia8 is set to output HEPMC events to to a fifo file.
+You can follow PY8 run with the following command (in a separate terminal):
+    tail -f %s"""%pythia_log)
+            py8_log = open(pythia_log,'w')
+            py8_bkgrd_proc = misc.Popen([wrapper_path],
+                    stdout=py8_log,stderr=py8_log,
+                                  cwd=pjoin(self.me_dir,'Events',self.run_name))
+            # Now directly return to madevent interactive interface if we are piping PY8
+            if not no_default:
+                logger.info('You can now run a tool that reads the following fifo file:'+\
+                '\n   %s\nwhere PY8 outputs HEPMC events (e.g. MadAnalysis5).'
+                                          %HepMC_event_output,'$MG:color:GREEN')
+            return
+        else:
+            logger.info('Follow Pythia8 shower by running the '+
+                'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
+    
+            ret_code = self.cluster.launch_and_wait(wrapper_path, 
+                    argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
+                                  cwd=pjoin(self.me_dir,'Events',self.run_name))
+            if ret_code != 0:
+                raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
+                    ' code %d.\n'%ret_code+\
+                    'You can find more information in this log file:\n%s'%pythia_log
 
-        ret_code = self.cluster.launch_and_wait(wrapper_path, 
-                        argument= [],
-                        stdout= pythia_log,
-                        stderr=subprocess.STDOUT,
-                        cwd=pjoin(self.me_dir,'Events',self.run_name))
-        
-        if ret_code != 0:
-            raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
-                ' code %d.\n'%ret_code+\
-                'You can find more information in this log file:\n%s'%pythia_log
         
         # Properly rename the djr and pts output if present.
         djr_output = pjoin(self.me_dir,'Events', self.run_name, 'djrs.dat')
@@ -3889,7 +3939,6 @@ Please install this tool with the following MG5_aMC command:
             xsecs_file.close()
             
         #Update the banner
-        # self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
         # We add directly the pythia command card because it has the full 
         # information
         self.banner.add(pythia_cmd_card)
@@ -4724,6 +4773,7 @@ Please install this tool with the following MG5_aMC command:
         # when are we force to change the tag new_run:previous run requiring changes
         upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
                        'pythia': ['pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],

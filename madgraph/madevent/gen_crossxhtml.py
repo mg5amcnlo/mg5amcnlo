@@ -1039,9 +1039,10 @@ class OneTagResults(dict):
 
             if 'ma5_html' in self.parton:
                 out += ' <a href="./HTML/%(run_name)s/%(tag)s_MA5_PARTON_ANALYSIS/HTML/index.html">MA5_report</a>'
-
-            if 'ma5_card' in self.parton:
-                out += ' <a href="./HTML/%(run_name)s/%(tag)s_MA5_PARTON_ANALYSIS/history.ma5">MA5_card</a>'
+            
+            # This card is available in the banner and in the MA5 pdf report, so no need to add it
+#            if 'ma5_card' in self.parton:
+#                out += ' <a href="./HTML/%(run_name)s/%(tag)s_MA5_PARTON_ANALYSIS/history.ma5">MA5_card</a>'
                         
             if 'HwU' in self.parton:
             # fixed order plots

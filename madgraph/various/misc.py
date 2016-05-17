@@ -846,6 +846,17 @@ def tail(f, n, offset=None):
         avg_line_length *= 1.3
         avg_line_length = int(avg_line_length)
 
+def mkfifo(fifo_path):
+    """ makes a piping fifo (First-in First-out) file and nicely intercepts 
+    error in case the file format of the target drive doesn't suppor tit."""
+
+    try:
+        os.mkfifo(fifo_path)
+    except:
+        raise OSError('MadGraph5_aMCatNLO could not create a fifo file at:\n'+
+          '   %s\n'%fifo_path+'Make sure that this file does not exist already'+
+          ' and that the file format of the target drive supports fifo file (i.e not NFS).')
+
 ################################################################################
 # LAST LINE FUNCTION
 ################################################################################
@@ -853,7 +864,7 @@ def get_last_line(fsock):
     """return the last line of a file"""
     
     return tail(fsock, 1)[0]
-    
+
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()
 This actually just reads blocks (4096 bytes by default) of data from the end of
