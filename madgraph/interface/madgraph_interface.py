@@ -7342,7 +7342,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # ungroup mode
         else:
             for nb,me in enumerate(matrix_elements[:]):
-                misc.sprint(type(self._curr_exporter), nb)
                 new_calls = self._curr_exporter.generate_subprocess_directory(\
                             me, self._curr_helas_model, nb)
                 if  isinstance(new_calls, int):

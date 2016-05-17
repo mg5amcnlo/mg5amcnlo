@@ -2556,7 +2556,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'pwd' in opt:
             self.me_dir = opt['pwd']
             del opt['pwd'] 
-        if 'mother_interface' in opt:
+        elif 'mother_interface' in opt:
             self.mother_interface = opt['mother_interface']  
             del opt['mother_interface']     
         if not hasattr(self, 'me_dir') or not self.me_dir:
@@ -3383,6 +3383,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         line = line.strip()
         args = line.split()
+        misc.sprint(line, args)
         if line == '' and self.default_value is not None:
             self.value = self.default_value
         # check if input is a file
@@ -3649,9 +3650,12 @@ class EditParamCard(AskforEditCard):
         if os.path.isfile(card[0]):
             self.param_card = check_param_card.ParamCard(card[0])
             self.paths['param'] = card[0]
-            self.paths['param_default'] = card[0]
+            if os.path.isfile(card[0].replace('.dat', '_default.dat')):
+                self.paths['param_default'] = card[0].replace('.dat', '_default.dat')
+            else:
+                self.paths['param_default'] = card[0]
         else:
-            raise Exception
+            raise Exception, 'path %s do not exists' % card[0]
         
         self.pname2block, self.restricted_value = self.param_card.analyze_param_card()
         self.cards=['param']

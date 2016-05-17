@@ -15,7 +15,6 @@
 """  A file containing different extension of the cmd basic python library"""
 
 
-import cmd
 import logging
 import os
 import pydoc
@@ -68,12 +67,372 @@ def debug(debug_only=True):
                 return
         return deco_f
     return deco_debug
-            
+
+import string
+
+# The following is copy from the standard cmd routine but pass in new class type
+__all__ = ["Cmd"]
+PROMPT = '(Cmd) '
+IDENTCHARS = string.ascii_letters + string.digits + '_'            
+class OriginalCmd(object):
+    """A simple framework for writing line-oriented command interpreters.
+
+    These are often useful for test harnesses, administrative tools, and
+    prototypes that will later be wrapped in a more sophisticated interface.
+
+    A Cmd instance or subclass instance is a line-oriented interpreter
+    framework.  There is no good reason to instantiate Cmd itself; rather,
+    it's useful as a superclass of an interpreter class you define yourself
+    in order to inherit Cmd's methods and encapsulate action methods.
+
+    """
+    prompt = PROMPT
+    identchars = IDENTCHARS
+    ruler = '='
+    lastcmd = ''
+    intro = None
+    doc_leader = ""
+    doc_header = "Documented commands (type help <topic>):"
+    misc_header = "Miscellaneous help topics:"
+    undoc_header = "Undocumented commands:"
+    nohelp = "*** No help on %s"
+    use_rawinput = 1
+
+    def __init__(self, completekey='tab', stdin=None, stdout=None):
+        """Instantiate a line-oriented interpreter framework.
+
+        The optional argument 'completekey' is the readline name of a
+        completion key; it defaults to the Tab key. If completekey is
+        not None and the readline module is available, command completion
+        is done automatically. The optional arguments stdin and stdout
+        specify alternate input and output file objects; if not specified,
+        sys.stdin and sys.stdout are used.
+
+        """
+        import sys
+        if stdin is not None:
+            self.stdin = stdin
+        else:
+            self.stdin = sys.stdin
+        if stdout is not None:
+            self.stdout = stdout
+        else:
+            self.stdout = sys.stdout
+        self.cmdqueue = []
+        self.completekey = completekey
+
+    def cmdloop(self, intro=None):
+        """Repeatedly issue a prompt, accept input, parse an initial prefix
+        off the received input, and dispatch to action methods, passing them
+        the remainder of the line as argument.
+
+        """
+
+        self.preloop()
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                self.old_completer = readline.get_completer()
+                readline.set_completer(self.complete)
+                readline.parse_and_bind(self.completekey+": complete")
+            except ImportError:
+                pass
+        try:
+            if intro is not None:
+                self.intro = intro
+            if self.intro:
+                self.stdout.write(str(self.intro)+"\n")
+            stop = None
+            while not stop:
+                if self.cmdqueue:
+                    line = self.cmdqueue.pop(0)
+                else:
+                    if self.use_rawinput:
+                        try:
+                            line = raw_input(self.prompt)
+                        except EOFError:
+                            line = 'EOF'
+                    else:
+                        self.stdout.write(self.prompt)
+                        self.stdout.flush()
+                        line = self.stdin.readline()
+                        if not len(line):
+                            line = 'EOF'
+                        else:
+                            line = line.rstrip('\r\n')
+                line = self.precmd(line)
+                stop = self.onecmd(line)
+                stop = self.postcmd(stop, line)
+            self.postloop()
+        finally:
+            if self.use_rawinput and self.completekey:
+                try:
+                    import readline
+                    readline.set_completer(self.old_completer)
+                except ImportError:
+                    pass
+
+
+    def precmd(self, line):
+        """Hook method executed just before the command line is
+        interpreted, but after the input prompt is generated and issued.
+
+        """
+        return line
+
+    def postcmd(self, stop, line):
+        """Hook method executed just after a command dispatch is finished."""
+        return stop
+
+    def preloop(self):
+        """Hook method executed once when the cmdloop() method is called."""
+        pass
+
+    def postloop(self):
+        """Hook method executed once when the cmdloop() method is about to
+        return.
+
+        """
+        pass
+
+    def parseline(self, line):
+        """Parse the line into a command name and a string containing
+        the arguments.  Returns a tuple containing (command, args, line).
+        'command' and 'args' may be None if the line couldn't be parsed.
+        """
+        line = line.strip()
+        if not line:
+            return None, None, line
+        elif line[0] == '?':
+            line = 'help ' + line[1:]
+        elif line[0] == '!':
+            if hasattr(self, 'do_shell'):
+                line = 'shell ' + line[1:]
+            else:
+                return None, None, line
+        i, n = 0, len(line)
+        while i < n and line[i] in self.identchars: i = i+1
+        cmd, arg = line[:i], line[i:].strip()
+        return cmd, arg, line
+
+    def onecmd(self, line):
+        """Interpret the argument as though it had been typed in response
+        to the prompt.
+
+        This may be overridden, but should not normally need to be;
+        see the precmd() and postcmd() methods for useful execution hooks.
+        The return value is a flag indicating whether interpretation of
+        commands by the interpreter should stop.
+
+        """
+        cmd, arg, line = self.parseline(line)
+        if not line:
+            return self.emptyline()
+        if cmd is None:
+            return self.default(line)
+        self.lastcmd = line
+        if cmd == '':
+            return self.default(line)
+        else:
+            try:
+                func = getattr(self, 'do_' + cmd)
+            except AttributeError:
+                return self.default(line)
+            return func(arg)
+
+    def emptyline(self):
+        """Called when an empty line is entered in response to the prompt.
+
+        If this method is not overridden, it repeats the last nonempty
+        command entered.
+
+        """
+        if self.lastcmd:
+            return self.onecmd(self.lastcmd)
+
+    def default(self, line):
+        """Called on an input line when the command prefix is not recognized.
+
+        If this method is not overridden, it prints an error message and
+        returns.
+
+        """
+        self.stdout.write('*** Unknown syntax: %s\n'%line)
+
+    def completedefault(self, *ignored):
+        """Method called to complete an input line when no command-specific
+        complete_*() method is available.
+
+        By default, it returns an empty list.
+
+        """
+        return []
+
+    def completenames(self, text, *ignored):
+        dotext = 'do_'+text
+        return [a[3:] for a in self.get_names() if a.startswith(dotext)]
+
+    def complete(self, text, state):
+        """Return the next possible completion for 'text'.
+
+        If a command has not been entered, then complete against command list.
+        Otherwise try to call complete_<command> to get list of completions.
+        """
+        if state == 0:
+            import readline
+            origline = readline.get_line_buffer()
+            line = origline.lstrip()
+            stripped = len(origline) - len(line)
+            begidx = readline.get_begidx() - stripped
+            endidx = readline.get_endidx() - stripped
+            if begidx>0:
+                cmd, args, foo = self.parseline(line)
+                if cmd == '':
+                    compfunc = self.completedefault
+                else:
+                    try:
+                        compfunc = getattr(self, 'complete_' + cmd)
+                    except AttributeError:
+                        compfunc = self.completedefault
+            else:
+                compfunc = self.completenames
+            self.completion_matches = compfunc(text, line, begidx, endidx)
+        try:
+            return self.completion_matches[state]
+        except IndexError:
+            return None
+
+    def get_names(self):
+        # Inheritance says we have to look in class and
+        # base classes; order is not important.
+        names = []
+        classes = [self.__class__]
+        while classes:
+            aclass = classes.pop(0)
+            if aclass.__bases__:
+                classes = classes + list(aclass.__bases__)
+            names = names + dir(aclass)
+        return names
+
+    def complete_help(self, *args):
+        return self.completenames(*args)
+
+    def do_help(self, arg):
+        if arg:
+            # XXX check arg syntax
+            try:
+                func = getattr(self, 'help_' + arg)
+            except AttributeError:
+                try:
+                    doc=getattr(self, 'do_' + arg).__doc__
+                    if doc:
+                        self.stdout.write("%s\n"%str(doc))
+                        return
+                except AttributeError:
+                    pass
+                self.stdout.write("%s\n"%str(self.nohelp % (arg,)))
+                return
+            func()
+        else:
+            names = self.get_names()
+            cmds_doc = []
+            cmds_undoc = []
+            help = {}
+            for name in names:
+                if name[:5] == 'help_':
+                    help[name[5:]]=1
+            names.sort()
+            # There can be duplicates if routines overridden
+            prevname = ''
+            for name in names:
+                if name[:3] == 'do_':
+                    if name == prevname:
+                        continue
+                    prevname = name
+                    cmd=name[3:]
+                    if cmd in help:
+                        cmds_doc.append(cmd)
+                        del help[cmd]
+                    elif getattr(self, name).__doc__:
+                        cmds_doc.append(cmd)
+                    else:
+                        cmds_undoc.append(cmd)
+            self.stdout.write("%s\n"%str(self.doc_leader))
+            self.print_topics(self.doc_header,   cmds_doc,   15,80)
+            self.print_topics(self.misc_header,  help.keys(),15,80)
+            self.print_topics(self.undoc_header, cmds_undoc, 15,80)
+
+    def print_topics(self, header, cmds, cmdlen, maxcol):
+        if cmds:
+            self.stdout.write("%s\n"%str(header))
+            if self.ruler:
+                self.stdout.write("%s\n"%str(self.ruler * len(header)))
+            self.columnize(cmds, maxcol-1)
+            self.stdout.write("\n")
+
+    def columnize(self, list, displaywidth=80):
+        """Display a list of strings as a compact set of columns.
+
+        Each column is only as wide as necessary.
+        Columns are separated by two spaces (one was not legible enough).
+        """
+        if not list:
+            self.stdout.write("<empty>\n")
+            return
+        nonstrings = [i for i in range(len(list))
+                        if not isinstance(list[i], str)]
+        if nonstrings:
+            raise TypeError, ("list[i] not a string for i in %s" %
+                              ", ".join(map(str, nonstrings)))
+        size = len(list)
+        if size == 1:
+            self.stdout.write('%s\n'%str(list[0]))
+            return
+        # Try every row count from 1 upwards
+        for nrows in range(1, len(list)):
+            ncols = (size+nrows-1) // nrows
+            colwidths = []
+            totwidth = -2
+            for col in range(ncols):
+                colwidth = 0
+                for row in range(nrows):
+                    i = row + nrows*col
+                    if i >= size:
+                        break
+                    x = list[i]
+                    colwidth = max(colwidth, len(x))
+                colwidths.append(colwidth)
+                totwidth += colwidth + 2
+                if totwidth > displaywidth:
+                    break
+            if totwidth <= displaywidth:
+                break
+        else:
+            nrows = len(list)
+            ncols = 1
+            colwidths = [0]
+        for row in range(nrows):
+            texts = []
+            for col in range(ncols):
+                i = row + nrows*col
+                if i >= size:
+                    x = ""
+                else:
+                    x = list[i]
+                texts.append(x)
+            while texts and not texts[-1]:
+                del texts[-1]
+            for col in range(len(texts)):
+                texts[col] = texts[col].ljust(colwidths[col])
+            self.stdout.write("%s\n"%str("  ".join(texts)))    
+    
+    
+
 
 #===============================================================================
 # CmdExtended
 #===============================================================================
-class BasicCmd(cmd.Cmd):
+class BasicCmd(OriginalCmd):
     """Simple extension for the readline"""
 
     def preloop(self):
@@ -496,7 +855,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.log = True
         self.history = []
         self.save_line = '' # for line splitting
-        cmd.Cmd.__init__(self, *arg, **opt)
+        super(Cmd, self).__init__(*arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
         self.child = None # sub CMD interface call from this one
         self.mother = None #This CMD interface was called from another one
@@ -842,7 +1201,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
+            super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
            logger.error(error)
 
@@ -915,7 +1274,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text = 'Error detected in sub-command %s\n' % self.history[-1]
         error_text += 'write debug file %s \n' % self.debug_output
         self.log = False
-        cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+        super(Cmd,self).onecmd('history %s' % self.debug_output)
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         error_text += self.config_debug % {'debug' :self.debug_output}
@@ -1259,7 +1618,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 
         # if they are an argument use the default help
         if line:
-            return cmd.Cmd.do_help(self, line)
+            return super(Cmd, self).do_help(line)
         
         
         names = self.get_names()
@@ -1542,7 +1901,7 @@ class SmartQuestion(BasicCmd):
         self.history_header = ''
         self.default_value = str(default)
         self.mother_interface = mother_interface
-        cmd.Cmd.__init__(self, *arg, **opt)
+        super(SmartQuestion, self).__init__(*arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
         
@@ -1666,7 +2025,7 @@ class SmartQuestion(BasicCmd):
                 return True
                 
     def cmdloop(self, intro=None):
-        cmd.Cmd.cmdloop(self, intro)
+        super(SmartQuestion,self).cmdloop(intro)
         return self.value
     
 # a function helper
