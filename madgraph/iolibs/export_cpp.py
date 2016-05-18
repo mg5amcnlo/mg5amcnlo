@@ -242,7 +242,7 @@ class OneProcessExporterCPP(object):
     def write_process_h_file(self, writer):
         """Write the class definition (.h) file for the process"""
         
-        if not isinstance(writer, writers.CPPWriter):
+        if writer and not isinstance(writer, writers.CPPWriter):
             raise writers.CPPWriter.CPPWriterError(\
                 "writer not CPPWriter")
 
@@ -263,11 +263,12 @@ class OneProcessExporterCPP(object):
         process_class_definitions = self.get_process_class_definitions()
         replace_dict['process_class_definitions'] = process_class_definitions
 
-        file = self.read_template_file(self.process_template_h) % replace_dict
-
-        # Write the file
-        writer.writelines(file)
-
+        if writer:
+            file = self.read_template_file(self.process_template_h) % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
     #===========================================================================
     # write_process_cc_file
     #===========================================================================
@@ -275,8 +276,9 @@ class OneProcessExporterCPP(object):
         """Write the class member definition (.cc) file for the process
         described by matrix_element"""
 
-        if not isinstance(writer, writers.CPPWriter):
-            raise writers.CPPWriter.CPPWriterError(\
+        if writer:
+            if not isinstance(writer, writers.CPPWriter):
+                raise writers.CPPWriter.CPPWriterError(\
                 "writer not CPPWriter")
 
         replace_dict = self.get_default_converter()
@@ -298,15 +300,17 @@ class OneProcessExporterCPP(object):
         replace_dict['process_function_definitions'] = \
                                                    process_function_definitions
 
-        file = self.read_template_file(self.process_template_cc) % replace_dict
-
-        # Write the file
-        writer.writelines(file)
-
+        if writer:
+            file = self.read_template_file(self.process_template_cc) % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
+        
     #===========================================================================
     # Process export helper functions
     #===========================================================================
-    def get_process_class_definitions(self):
+    def get_process_class_definitions(self, write=True):
         """The complete class definition for the process"""
 
         replace_dict = {}
@@ -373,11 +377,12 @@ class OneProcessExporterCPP(object):
                                       replace("0_", "") \
                                       for me in self.matrix_elements])
 
-
-        file = self.read_template_file(self.process_class_template) % replace_dict
-
-        return file
-
+        if write:
+            file = self.read_template_file(self.process_class_template) % replace_dict
+            return file
+        else:
+            return replace_dict
+        
     def get_process_function_definitions(self):
         """The complete Pythia 8 class definition for the process"""
 
@@ -485,7 +490,7 @@ class OneProcessExporterCPP(object):
         return ret_lines
         
 
-    def get_calculate_wavefunctions(self, wavefunctions, amplitudes):
+    def get_calculate_wavefunctions(self, wavefunctions, amplitudes, write=True):
         """Return the lines for optimized calculation of the
         wavefunctions for all subprocesses"""
 
@@ -504,13 +509,15 @@ class OneProcessExporterCPP(object):
         replace_dict['amplitude_calls'] = "\n".join(\
             self.helas_call_writer.get_amplitude_calls(amplitudes))
 
-        file = self.read_template_file(self.process_wavefunction_template) % \
+        if write:
+            file = self.read_template_file(self.process_wavefunction_template) % \
                 replace_dict
-
-        return file
+            return file
+        else:
+            return replace_dict
        
 
-    def get_sigmaKin_lines(self, color_amplitudes):
+    def get_sigmaKin_lines(self, color_amplitudes, write=True):
         """Get sigmaKin_lines for function definition for Pythia 8 .cc file"""
 
         
@@ -568,22 +575,27 @@ class OneProcessExporterCPP(object):
                     
             replace_dict['get_mirror_matrix_lines'] = mirror_matrix_lines
 
-
-            file = \
+            if write:
+                file = \
                  self.read_template_file(\
                             self.process_sigmaKin_function_template) %\
                             replace_dict
-
-            return file
-
+                return file
+            else:
+                return replace_dict
         else:
             ret_lines = "// Call the individual sigmaKin for each process\n"
-            return ret_lines + \
+            ret_lines = ret_lines + \
                    "\n".join(["sigmaKin_%s();" % \
                               me.get('processes')[0].shell_string().\
                               replace("0_", "") for \
                               me in self.matrix_elements])
-
+            if write:
+                return ret_lines 
+            else:
+                replace_dict['get_mirror_matrix_lines'] = ret_lines
+                return replace_dict
+                
     def get_all_sigmaKin_lines(self, color_amplitudes, class_name):
         """Get sigmaKin_process for all subprocesses for Pythia 8 .cc file"""
 
@@ -606,7 +618,7 @@ class OneProcessExporterCPP(object):
         return "\n".join(ret_lines)
 
 
-    def get_sigmaKin_single_process(self, i, matrix_element):
+    def get_sigmaKin_single_process(self, i, matrix_element, write=True):
         """Write sigmaKin for each process"""
 
         # Write sigmaKin for the process
@@ -632,14 +644,16 @@ class OneProcessExporterCPP(object):
         # Extract denominator
         replace_dict['den_factor'] = matrix_element.get_denominator_factor()
 
-        file = \
-         self.read_template_file('cpp_process_sigmaKin_subproc_function.inc') %\
-         replace_dict
-
-        return file
-
+        if write:
+            file = \
+            self.read_template_file('cpp_process_sigmaKin_subproc_function.inc') %\
+            replace_dict
+            return file
+        else:
+            return replace_dict
+        
     def get_matrix_single_process(self, i, matrix_element, color_amplitudes,
-                                  class_name):
+                                  class_name, write=True):
         """Write matrix() for each process"""
 
         # Write matrix() for the process
@@ -686,11 +700,13 @@ class OneProcessExporterCPP(object):
         #specific exporter hack
         replace_dict =  self.get_class_specific_definition_matrix(replace_dict, matrix_element)
         
-        file = self.read_template_file(self.single_process_template) % \
+        if write:
+            file = self.read_template_file(self.single_process_template) % \
                 replace_dict
-
-        return file
-
+            return file
+        else:
+            return replace_dict
+        
     def get_class_specific_definition_matrix(self, converter, matrix_element):
         """place to add some specific hack to a given exporter.
         Please always use Super in that case"""
@@ -1002,7 +1018,7 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
     #===========================================================================
     # Process export helper functions
     #===========================================================================
-    def get_process_class_definitions(self):
+    def get_process_class_definitions(self, write=True):
         """The complete Pythia 8 class definition for the process"""
 
         replace_dict = self.get_default_converter()
@@ -1066,12 +1082,13 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
                                       replace("0_", "") \
                                       for me in self.matrix_elements])
 
+        if write:
+            file = self.read_template_file('pythia8_process_class.inc') % replace_dict
+            return file
+        else:
+            return replace_dict
 
-        file = self.read_template_file('pythia8_process_class.inc') % replace_dict
-
-        return file
-
-    def get_process_function_definitions(self):
+    def get_process_function_definitions(self, write=True):
         """The complete Pythia 8 class definition for the process"""
 
 
@@ -1106,11 +1123,12 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         replace_dict['all_sigmaKin'] = \
                                   self.get_all_sigmaKin_lines(color_amplitudes,
                                                               self.process_name)
-
-        file = self.read_template_file('pythia8_process_function_definitions.inc') %\
+        if write:
+            file = self.read_template_file('pythia8_process_function_definitions.inc') %\
                replace_dict
-
-        return file
+            return file
+        else:
+            return replace_dict
 
     def get_process_influx(self):
         """Return process file name for the process in matrix_element"""
