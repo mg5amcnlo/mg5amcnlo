@@ -963,7 +963,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_shower(argss, options)
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('onlyshower', options)
-        self.run_mcatnlo(evt_file)
+        self.run_mcatnlo(evt_file, options)
 
         self.update_status('', level='all', update_results=True)
 
@@ -1217,7 +1217,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
-            self.run_mcatnlo(evt_file)
+            self.run_mcatnlo(evt_file, options)
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
@@ -2775,7 +2775,7 @@ RESTART = %(mint_mode)s
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
-                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
@@ -2806,7 +2806,7 @@ RESTART = %(mint_mode)s
         return evt_file[:-3]
 
 
-    def run_mcatnlo(self, evt_file):
+    def run_mcatnlo(self, evt_file, options):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
         logger.info('Preparing MCatNLO run')
@@ -2961,7 +2961,7 @@ RESTART = %(mint_mode)s
             #clean the old files
             files.rm([f for f in event_files if 'events.lhe' not in f])
             if self.shower_card['nsplit_jobs'] > 1:
-                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'))
+                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'), nocompile=options['nocompile'])
                 p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
                                 stdin=subprocess.PIPE,
                                 stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
