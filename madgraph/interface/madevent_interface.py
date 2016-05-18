@@ -3443,7 +3443,7 @@ Beware that this can be dangerous for local multicore runs.""")
         # Copy the PDF report in the Events/run directory.
         PDF_in_run_path = pjoin(self.me_dir,'Events',self.run_name,
                                    '%s_MA5_%s_analysis.pdf'%(self.run_tag,mode))
-        shutil.move(pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper(),
+        shutil.copy(pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper(),
                                              'PDF','main.pdf'), PDF_in_run_path)
         logger.info('MadAnalysis5 successfully completed the analysis. '+
                                                  'Its PDF report is placed in:')

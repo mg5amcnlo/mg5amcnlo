@@ -2517,16 +2517,20 @@ class InvalidMadAnalysis5Card(InvalidCmd):
 class MadAnalysis5Card(dict):
     """ A class to store a MadAnalysis5 card. Very basic since it is basically
     free format."""
+    
+    _MG5aMC_escape_tag = '@MG5aMC'
 
     def default_setup(self):
         """define the default value""" 
         self['mode']      = 'parton'
-        self['inputs']    = ['*.lhe']
+        self['inputs']    = []
         # The default for a hadron type of card is
-        # '*.hepmc', '*.stdhep', '*.lhco'
+        #   '*.hepmc', '*.stdhep', '*.lhco'
         # These two dictionaries are formated as follows:
         #     {'analysis/recasting name':['analysis/recasting lines here>']}
-        self['analyses'] = {}
+        self['analyses']       = {}
+        self['recasting']      = []
+        self['reconstruction'] = {}
         # Specify in which order the analysis/recasting were specified
         self['order'] = []
 
@@ -2552,74 +2556,122 @@ class MadAnalysis5Card(dict):
     def read(self, input, mode=None):
         """ Read an MA5 card"""
         
+        if mode not in [None,'parton','hadron']:
+            raise MadGraph5Error('A MadAnalysis5Card can be read onlin the modes'+
+                                                         "'parton' or 'hadron'")
+        card_mode = mode
+        
         if isinstance(input, (file, StringIO.StringIO)):
             input_stream = input
         elif isinstance(input, str):
             if not os.path.isfile(input):
                 raise InvalidMadAnalysis5Card("Cannot read the MadAnalysis5 card."+\
                                                     "File '%s' not found."%input)
-            if mode==None and 'hadron' in input:
-                mode = 'hadron'
+            if mode is None and 'hadron' in input:
+                card_mode = 'hadron'
             input_stream = open(input,'r')
         else:
             raise MadGraph5Error('Incorrect input for the read function of'+\
               ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(input)))
 
-        if mode==None:
-            mode = 'parton'
-
-        self['mode'] = mode
-        if self['mode']=='hadron':
-            self['inputs']  = ['*.hepmc', '*.stdhep', '*.lhco']
-        else:
-            self['inputs']  = ['*.lhe']
-
-        self['analyses']  = {}
-        self['recasting'] = {}        
+        # Reinstate default values
+        self.__init__()
         current_name = 'default'
         current_type = 'analyses'
         for line in input_stream:
-            if line.startswith('#MG5aMC#'):
-                option,value = line[:8].split('=')
-                option.strip()
-                value.strip()
+            if line.endswith('\n'):
+                line = line[:-1]
+            if line.startswith(self._MG5aMC_escape_tag):
+                try:
+                    option,value = line[len(self._MG5aMC_escape_tag):].split('=')
+                    value = value.strip()
+                except ValueError:
+                    option = line[len(self._MG5aMC_escape_tag):]
+                option = option.strip()
                 if option=='inputs':
                     self['inputs'] = [v.strip() for v in value.split(',')]
                 elif option=='analysis_name':
                     current_type = 'analyses'
                     current_name = value
-                elif option=='recasting_name':
-                    current_type = 'recasting'
+                    if current_name in self[current_type]:
+                        raise InvalidMadAnalysis5Card(
+               "Analysis '%s' already defined in MadAnalysis5 card"%current_name)
+                    else:
+                        self[current_type][current_name] = []
+                elif option=='reconstruction_name':
+                    current_type = 'reconstruction'
                     current_name = value
-            if current_name not in self[current_type]:
-                self[current_type][current_name] = []
-                self['order'].append((current_type,current_name))
-            if line.endswith('\n'):
-                line = line[:-1]
-            self[current_type][current_name].append(line)
+                    if current_name in self[current_type]:
+                        raise InvalidMadAnalysis5Card(
+               "Reconstruction '%s' already defined in MadAnalysis5 hadron card"%current_name)
+                    else:
+                        self[current_type][current_name] = []
+                elif option=='recasting':
+                    current_type = 'recasting'
+                    current_name = None
+                    if len(self['recasting'])>0:
+                        raise InvalidMadAnalysis5Card(
+               "Only one recasting can be defined in MadAnalysis5 hadron card")
+                else:
+                    raise InvalidMadAnalysis5Card(
+               "Unreckognized MG5aMC instruction in MadAnalysis5 card: '%s'"%option)
+                
+                if option in ['analysis_name','reconstruction_name','recasting']:
+                    self['order'].append((current_type,current_name))
+                continue
+
+            if current_type in ['recasting']:
+                self[current_type].append(line)
+            else:
+                # Special case for default since its definition in the card is
+                # not mandatory
+                if current_name == 'default' and current_type == 'analyses' and\
+                                              'default' not in self['analyses']:
+                        self['analyses']['default'] = []
+                        self['order'].append(('analyses','default'))
+                self[current_type][current_name].append(line)
+
+        if 'reconstruction' in self['analyses'] or len(self['recasting'])>0:
+            if mode=='parton':
+                raise InvalidMadAnalysis5Card(
+      "A parton MadAnalysis5 card cannot specify a recombination or recasting.")
+            card_mode = 'hadron'
+        elif mode is None:
+            card_mode = 'parton'
+
+        self['mode'] = card_mode
+        if self['inputs'] == []:
+            if self['mode']=='hadron':
+                self['inputs']  = ['*.hepmc', '*.stdhep', '*.lhco']
+            else:
+                self['inputs']  = ['*.lhe']
             
         return
     
     def write(self, output):
         """ Write an MA5 card."""
 
-        if isinstance(output, file, StringIO.StringIO):
-            output_stream = file
+        if isinstance(output, (file, StringIO.StringIO)):
+            output_stream = output
         elif isinstance(output, str):
-            output_stream = open(file,'w')
+            output_stream = open(output,'w')
         else:
             raise MadGraph5Error('Incorrect input for the write function of'+\
               ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(output)))
         
-        output_lines = ['#MG5aMC# inputs = %s'%(','.join(self['inputs']))]
+        output_lines = ['%s inputs = %s'%(self._MG5aMC_escape_tag,','.join(self['inputs']))]
 
-        for analysis_type, name in self['order']:
-            if analysis_type!='analyses' or name!='default':
-                if analysis_type=='analyses':
-                    output_lines.append('#MG5aMC# analysis_name = %s'%name)
-                elif analysis_type=='recasting':
-                    output_lines.append('#MG5aMC# recasting_name = %s'%name)                    
-            output_lines.extend(self[analysis_type][name])
+        for definition_type, name in self['order']:
+            if definition_type=='analyses':
+                output_lines.append('%s analysis_name = %s'%(self._MG5aMC_escape_tag,name))
+            elif definition_type=='reconstruction':
+                output_lines.append('%s reconstruction_name = %s'%(self._MG5aMC_escape_tag,name))
+            elif definition_type=='recasting':
+                output_lines.append('%s recasting'%(self._MG5aMC_escape_tag))
+            if definition_type in ['recasting']:
+                output_lines.extend(self[definition_type])
+            else:
+                output_lines.extend(self[definition_type][name])                
         
         output_stream.write('\n'.join(output_lines))
         
@@ -2635,13 +2687,17 @@ class MadAnalysis5Card(dict):
             cmds.append('import %s'%UFO_model_path)
             
         cmds.append('import %s'%input)
-        for i, (analysis_type, name) in enumerate(self['order']):
-            # Recasting not supported yet
-            if analysis_type == 'recasting':
+        for i, (definition_type, name) in enumerate(self['order']):
+            # Reconstruction not supported yet
+            if definition_type == 'reconstruction':
                 continue
-            cmds.extend(self[analysis_type][name])
-            # multianalysis not supported yet:
-            break
+            # Recasting not supported yet
+            if definition_type == 'recasting':
+                continue
+            else:
+                cmds.extend(self[definition_type][name])
+                # multianalysis not supported yet:
+                break
         
         # And now add the submit line
         if submit_folder is None:

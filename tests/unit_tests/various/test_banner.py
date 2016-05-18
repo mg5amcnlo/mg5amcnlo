@@ -132,6 +132,55 @@ class TestConfigFileCase(unittest.TestCase):
 #        """actually tested in sum_object"""
 
 
+class TestMadAnalysis5Card(unittest.TestCase):
+    """ A class to test the MadAnalysis5 card IO functionality """
+
+    def setUp(self):
+        pass
+    
+    def test_MadAnalysis5Card(self):
+        """ Basic check that the read-in write-out of MadAnalysis5 works as
+        expected."""
+        
+        MG5aMCtag = bannermod.MadAnalysis5Card._MG5aMC_escape_tag
+        
+        input = StringIO.StringIO(
+"""%(MG5aMCtag)s inputs = *.hepmc *.stdhep
+First command of a default analysis
+#Second command of a default analysis
+etc...
+%(MG5aMCtag)s analysis_name = MyNewAnalysis
+First command of a new analysis
+#Second command of a new analysis
+etc...
+%(MG5aMCtag)s reconstruction_name = recoA
+First command of a recoA
+Second command of a recoA
+etc...
+%(MG5aMCtag)s recasting
+First command of recasting
+#Second command of recasting
+etc...
+%(MG5aMCtag)s analysis_name = YetANewAnalysis
+First command of yet a new analysis
+Second command of yet a new analysis
+etc...
+%(MG5aMCtag)s reconstruction_name = recoB
+First command of a recoB
+Second command of a recoB
+etc..."""%{'MG5aMCtag':MG5aMCtag})
+        
+        myMA5Card = bannermod.MadAnalysis5Card(input)
+        input.seek(0)
+        output = StringIO.StringIO()
+        myMA5Card.write(output)
+        output.seek(0)
+        self.assertEqual(myMA5Card,bannermod.MadAnalysis5Card(output))
+        output.seek(0)
+        output_target = input.getvalue().split('\n')
+        output_target.insert(1,'@MG5aMC analysis_name = default')
+        self.assertEqual(output.getvalue(),'\n'.join(output_target))
+        
 class TestPythia8Card(unittest.TestCase):
     """ A class to test the Pythia8 card IO functionality """
    
