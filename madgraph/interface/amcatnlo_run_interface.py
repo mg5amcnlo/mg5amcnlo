@@ -1919,10 +1919,12 @@ RESTART = %(mint_mode)s
         scale_pdf_info=[]
         if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
            len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
-            data_files=[]
+            evt_files=[]
+            evt_wghts=[]
             for job in jobs:
-                data_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
-            scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
+                evt_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
+                evt_wghts.append(job['wgt_frac'])
+            scale_pdf_info = self.pdf_scale_from_reweighting(evt_files,evt_wghts)
         return scale_pdf_info
 
 
@@ -3569,6 +3571,7 @@ RESTART = %(mint_mode)s
         # loop over lines (all but the last one whith is empty) and check that the
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
+        evt_wghts = [float(line.split()[3]) for line in lines[:-1] if line.split()[1] != '0']
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'
@@ -3597,9 +3600,9 @@ RESTART = %(mint_mode)s
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
 
-        return self.pdf_scale_from_reweighting(evt_files)
+        return self.pdf_scale_from_reweighting(evt_files,evt_wghts)
 
-    def pdf_scale_from_reweighting(self, evt_files):
+    def pdf_scale_from_reweighting(self, evt_files,evt_wghts):
         """This function takes the files with the scale and pdf values
         written by the reweight_xsec_events.f code
         (P*/G*/pdf_scale_dependence.dat) and computes the overall
@@ -3608,16 +3611,17 @@ RESTART = %(mint_mode)s
         and returns it in percents.  The expected format of the file
         is: n_scales xsec_scale_central xsec_scale1 ...  n_pdf
         xsec_pdf0 xsec_pdf1 ...."""
+
         scales=[]
         pdfs=[]
-        for evt_file in evt_files:
+        for i,evt_file in enumerate(evt_files):
             path, evt=os.path.split(evt_file)
             with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
                 data_line=f.readline()
                 if "scale variations:" in data_line:
                     for i,scale in enumerate(self.run_card['dynamical_scale_choice']):
                         data_line = f.readline().split()
-                        scales_this = [float(val) for val in f.readline().replace("D", "E").split()]
+                        scales_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
                             scales[i] = [a + b for a, b in zip(scales[i], scales_this)]
                         except IndexError:
@@ -3626,7 +3630,7 @@ RESTART = %(mint_mode)s
                 if "pdf variations:" in data_line:
                     for i,pdf in enumerate(self.run_card['lhaid']):
                         data_line = f.readline().split()
-                        pdfs_this = [float(val) for val in f.readline().replace("D", "E").split()]
+                        pdfs_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
                             pdfs[i] = [a + b for a, b in zip(pdfs[i], pdfs_this)]
                         except IndexError:
