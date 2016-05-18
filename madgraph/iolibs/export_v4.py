@@ -334,16 +334,22 @@ class ProcessExporterFortran(VirtualExporter):
         process_str = ' '.join(new_process_content)
 
         #format the SubProcess
-        process_text += process_template.substitute({'process': process_str, \
-                                                            'coupling': coupling})
-
-        text = proc_card_template.substitute({'process': process_text,
+        replace_dict = {'process': process_str,
+                        'coupling': coupling}
+        process_text += process_template.substitute(replace_dict)
+        
+        replace_dict = {'process': process_text,
                                             'model': modelname,
-                                            'multiparticle':''})
-        ff = open(file_pos, 'w')
-        ff.write(text)
-        ff.close()
-
+                                            'multiparticle':''}
+        text = proc_card_template.substitute(replace_dict)
+        
+        if file_pos:
+            ff = open(file_pos, 'w')
+            ff.write(text)
+            ff.close()
+        else:
+            return replace_dict
+        
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
@@ -576,9 +582,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
           parameter (nincoming_prod=%(ninitial)d)""" % replace_dict
 
         # Write the file
-        writer.writelines(file)
-
-        return True
+        if writer:
+            writer.writelines(file)
+            return True
+        else:
+            return replace_dict
 
     #===========================================================================
     # write_helamp_madspin
@@ -597,9 +605,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
           common /to_helamp/helamp """ % replace_dict
 
         # Write the file
-        writer.writelines(file)
+        if writer:
+            writer.writelines(file)
+            return True
+        else:
+            return replace_dict
 
-        return True
 
 
     #===========================================================================
@@ -620,10 +631,11 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
           parameter (nincoming=%(ninitial)d)""" % replace_dict
 
         # Write the file
-        writer.writelines(file)
-
-        return True
-
+        if writer:
+            writer.writelines(file)
+            return True
+        else:
+            return replace_dict
     #===========================================================================
     # write_pmass_file
     #===========================================================================
@@ -745,56 +757,6 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         writer.writelines(file)
 
         return True
-
-    #===========================================================================
-    # write_props_file
-    #===========================================================================
-    def write_props_file(self, writer, matrix_element, s_and_t_channels):
-        """Write the props.inc file for MadEvent. Needs input from
-        write_configs_file."""
-
-        lines = []
-
-        particle_dict = matrix_element.get('processes')[0].get('model').\
-                        get('particle_dict')
-
-        for iconf, configs in enumerate(s_and_t_channels):
-            for vertex in configs[0] + configs[1][:-1]:
-                leg = vertex.get('legs')[-1]
-                if leg.get('id') not in particle_dict:
-                    # Fake propagator used in multiparticle vertices
-                    mass = 'zero'
-                    width = 'zero'
-                    pow_part = 0
-                else:
-                    particle = particle_dict[leg.get('id')]
-                    # Get mass
-                    if particle.get('mass').lower() == 'zero':
-                        mass = particle.get('mass')
-                    else:
-                        mass = "abs(%s)" % particle.get('mass')
-                    # Get width
-                    if particle.get('width').lower() == 'zero':
-                        width = particle.get('width')
-                    else:
-                        width = "abs(%s)" % particle.get('width')
-
-                    pow_part = 1 + int(particle.is_boson())
-
-                lines.append("prmass(%d,%d)  = %s" % \
-                             (leg.get('number'), iconf + 1, mass))
-                lines.append("prwidth(%d,%d) = %s" % \
-                             (leg.get('number'), iconf + 1, width))
-                lines.append("pow(%d,%d) = %d" % \
-                             (leg.get('number'), iconf + 1, pow_part))
-
-        # Write the file
-        writer.writelines(lines)
-
-        return True
-
-
-
 
 
     #===========================================================================
@@ -2110,16 +2072,19 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if not matrix_element.get('processes') or \
                not matrix_element.get('diagrams'):
             return 0
-
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
+        
+        if writer:
+            if not isinstance(writer, writers.FortranWriter):
+                raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter but %s" % type(writer))
+            # Set lowercase/uppercase Fortran code
+            writers.FortranWriter.downcase = False
+
             
         if not self.opt.has_key('sa_symmetry'):
             self.opt['sa_symmetry']=False
 
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
+
 
         # The proc_id is for MadEvent grouping which is never used in SA.
         replace_dict = {'global_variable':'', 'amp2_lines':'',
@@ -2248,7 +2213,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
 
-        if write:
+        if write and writer:
             path = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
             content = open(path).read()
             content = content % replace_dict
@@ -2282,13 +2247,16 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                     "write(*,*) '%d) Matrix element for (%s) = ',MATELEMS(%d)"\
                                                  %(i+1,' '.join(sq_orders),i+1))
         printout_sq_orders='\n'.join(printout_sq_orders)
-        writer.writelines(check_sa_content%{\
-                                    'printout_sqorders':printout_sq_orders, 
-                                    'nSplitOrders':len(squared_orders),
-                                    'nexternal':nexternal,
-                                    'nincoming':nincoming,
-                                    'proc_prefix':proc_prefix})
-
+        replace_dict = {'printout_sqorders':printout_sq_orders, 
+                        'nSplitOrders':len(squared_orders),
+                        'nexternal':nexternal,
+                        'nincoming':nincoming,
+                        'proc_prefix':proc_prefix}
+        
+        if writer:
+            writer.writelines(check_sa_content % replace_dict)
+        else:
+            return replace_dict
 
 class ProcessExporterFortranMatchBox(ProcessExporterFortranSA):
     """class to take care of exporting a set of matrix element for the Matchbox
@@ -2826,12 +2794,13 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                not matrix_element.get('diagrams'):
             return 0
 
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
+        if writer:
+            if not isinstance(writer, writers.FortranWriter):
+                raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
 
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
+            # Set lowercase/uppercase Fortran code
+            writers.FortranWriter.downcase = False
 
         replace_dict = {}
 
@@ -2889,16 +2858,16 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        file = open(os.path.join(_file_path, \
+        if writer:
+            file = open(os.path.join(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
-        file = file % replace_dict
-
-
-        # Write the file
-        writer.writelines(file)
-
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)),ncolor
-
+            file = file % replace_dict
+            # Write the file
+            writer.writelines(file)
+            return len(filter(lambda call: call.find('#') != 0, helas_calls)),ncolor
+        else:
+            replace_dict['return_value'] = (len(filter(lambda call: call.find('#') != 0, helas_calls)),ncolor)
+            
     #===========================================================================
     # write_source_makefile
     #===========================================================================
@@ -2994,15 +2963,15 @@ c     channel position
             replace_dict['passcuts_end'] = "ENDIF"
             replace_dict['define_subdiag_lines'] = "" 
 
-        file = open(os.path.join(_file_path, \
+        if writer:
+            file = open(os.path.join(_file_path, \
                           'iolibs/template_files/auto_dsig_mw.inc')).read()
         
-        file = file % replace_dict
-
-
-        # Write the file
-        writer.writelines(file)
-
+            file = file % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
     #===========================================================================
     # write_configs_file
     #===========================================================================
@@ -3664,13 +3633,12 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                not matrix_element.get('diagrams'):
             return 0
 
-        if not isinstance(writer, writers.FortranWriter):
-            raise writers.FortranWriter.FortranWriterError(\
+        if writer: 
+            if not isinstance(writer, writers.FortranWriter):
+                raise writers.FortranWriter.FortranWriterError(\
                 "writer not FortranWriter")
-
-        
-        # Set lowercase/uppercase Fortran code
-        writers.FortranWriter.downcase = False
+            # Set lowercase/uppercase Fortran code
+            writers.FortranWriter.downcase = False
 
         # The proc prefix is not used for MadEvent output so it can safely be set
         # to an empty string.
@@ -3793,20 +3761,22 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-        file = open(pjoin(_file_path, \
+
+        if writer:
+            file = open(pjoin(_file_path, \
                           'iolibs/template_files/%s' % self.matrix_file)).read()
-        
-        file = file % replace_dict
-        
-        # Add the split orders helper functions.
-        file = file + '\n' + open(pjoin(_file_path, \
-             'iolibs/template_files/split_orders_helping_functions.inc'))\
+            file = file % replace_dict
+            # Add the split orders helper functions.
+            file = file + '\n' + open(pjoin(_file_path, \
+                  'iolibs/template_files/split_orders_helping_functions.inc'))\
                                                             .read()%replace_dict
-        # Write the file
-        writer.writelines(file)
-
-        return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
-
+            # Write the file
+            writer.writelines(file)
+            return len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor
+        else:
+            replace_dict['return_value'] = (len(filter(lambda call: call.find('#') != 0, helas_calls)), ncolor)
+            return replace_dict
+        
     #===========================================================================
     # write_auto_dsig_file
     #===========================================================================
@@ -3880,15 +3850,17 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         else:
             replace_dict['read_write_good_hel'] = ""
         
+        context = {'read_write_good_hel':True}
         
-
-        file = open(pjoin(_file_path, \
+        if writer:
+            file = open(pjoin(_file_path, \
                           'iolibs/template_files/auto_dsig_v4.inc')).read()
-        file = file % replace_dict
+            file = file % replace_dict
 
-        # Write the file
-        writer.writelines(file, context={'read_write_good_hel':True})
-
+            # Write the file
+            writer.writelines(file, context=context)
+        else:
+            return replace_dict, context
     #===========================================================================
     # write_coloramps_file
     #===========================================================================
@@ -4109,10 +4081,13 @@ c           This is dummy particle used in multiparticle vertices
             job_per_chan = 1
         else: 
            job_per_chan = 5
-        text = open(path).read() % {'chanperjob': job_per_chan} 
-        writer.write(text)
-        return True
-
+        
+        if writer:
+            text = open(path).read() % {'chanperjob': job_per_chan} 
+            writer.write(text)
+            return True
+        else:
+            return {'chanperjob': job_per_chan} 
 
     #===========================================================================
     # write_configs_file_from_diagrams
@@ -4314,11 +4289,12 @@ c           This is dummy particle used in multiparticle vertices
         else:
             replace_dict['secondparam']=''            
 
-        text = open(path).read() % replace_dict
-
-        writer.write(text)
-        
-        return True
+        if writer:
+            text = open(path).read() % replace_dict
+            writer.write(text)
+            return True
+        else:
+            return replace_dict
 
     #===========================================================================
     # write_addmothers
@@ -4368,16 +4344,19 @@ c           This is dummy particle used in multiparticle vertices
             card = 'Source/MODEL/MG5_param.dat'
         else:
             card = 'param_card.dat' 
-        text = open(path).read() 
         
         if v5:
-            text = text % {'param_card_name':card, 'setparasecondarg':''} 
+            replace_dict = {'param_card_name':card, 'setparasecondarg':''}      
         else:
-            text = text % {'param_card_name':card, 'setparasecondarg':',.true.'} 
-        writer.write(text)
+            replace_dict= {'param_card_name':card, 'setparasecondarg':',.true.'} 
         
-        return True
-
+        if writer:
+            text = open(path).read() 
+            text = text % replace_dict
+            writer.write(text)
+            return True
+        else:
+            return replace_dict
 
 
 
@@ -4841,13 +4820,16 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
         ncomb=matrix_elements[0].get_helicity_combinations()
         replace_dict['read_write_good_hel'] = self.read_write_good_hel(ncomb)
         
-        file = open(pjoin(_file_path, \
+        if writer:
+            file = open(pjoin(_file_path, \
                        'iolibs/template_files/super_auto_dsig_group_v4.inc')).read()
-        file = file % replace_dict
+            file = file % replace_dict
 
-        # Write the file
-        writer.writelines(file)
-
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
+        
     #===========================================================================
     # write_mirrorprocs
     #===========================================================================
@@ -6742,13 +6724,15 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
                  "proc": matrix_elements[iproc].get('processes')[0].base_string()})
         replace_dict['call_dsig_proc_lines'] = "\n".join(call_dsig_proc_lines)
 
-        file = open(os.path.join(_file_path, \
+        if writer:
+            file = open(os.path.join(_file_path, \
                        'iolibs/template_files/super_auto_dsig_mw_group_v4.inc')).read()
-        file = file % replace_dict
-
-        # Write the file
-        writer.writelines(file)
-
+            file = file % replace_dict
+            # Write the file
+            writer.writelines(file)
+        else:
+            return replace_dict
+        
     #===========================================================================
     # write_mirrorprocs
     #===========================================================================

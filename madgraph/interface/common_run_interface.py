@@ -3636,7 +3636,7 @@ You can also copy/paste, your event file here.''')
             except:
                 import internal.madweight.Cards as mwcards
             self.mw_card = mwcards.Card(path)
- 
+        return path
 
 class EditParamCard(AskforEditCard):
     """a dedicated module for the param"""
