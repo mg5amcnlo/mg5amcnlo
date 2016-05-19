@@ -1378,17 +1378,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         pass # dummy function
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True, 
-                                     precmd=False, postcmd=True, **opt):
+                                     precmd=False, postcmd=True,
+                                     child=True, **opt):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
+
         if printcmd and not line.startswith('#'):
             logger.info(line)
-        if self.child:
+        if self.child and child:
             current_interface = self.child
         else:
             current_interface = self
-        
         if precmd:
             line = current_interface.precmd(line)
         if errorhandling:
@@ -1421,11 +1422,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if self.history and self.history[-1] == line:        
             self.history.pop()
-        
-
-
-
-     
+             
     # Write the list of command line use in this session
     def do_history(self, line):
         """write in a file the suite of command that was used"""
@@ -1964,6 +1961,8 @@ class SmartQuestion(BasicCmd):
                 return func(arg, **opt)        
         except Exception as error:
             logger.warning(error)  
+            if __debug__:
+                raise
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')

@@ -782,21 +782,42 @@ class ParamCardIterator(ParamCard):
     
     def store_entry(self, run_name, cross):
         """store the value of the cross-section"""
-        self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross':cross})
+        if isinstance(cross, dict):
+            info = dict(cross)
+            info.update({'bench' : self.itertag, 'run_name': run_name})
+            self.cross.append(info)
+        else:
+            self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
         
 
-    def write_summary(self, path):
+    def write_summary(self, path, order=None):
         """ """
         
-        ff = open(path, 'w')
-        ff.write("#%-19s %-20s %-20s\n" % ('run_name',' '.join(self.param_order), 'cross(pb)'))
+        ff = open(path, 'w')        
+        if order:
+            keys = order
+        else:
+            keys = self.cross[0].keys()
+            keys.remove('bench')
+            keys.remove('run_name')
+            keys.sort()
+
+        formatting = "#%s%s%s\n" %('%-19s ', '%-20s '* len(self.param_order),
+                                             '%-20s '* len(keys))
+        # header
+        ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
+        formatting = "%s%s%s\n" %('%-20s ', '%-20s '* len(self.param_order),
+                                             '%-20s '* len(keys))
         for info in self.cross:
-            bench = [str(p) for p in info['bench']]
-            cross = info['cross']
             name = info['run_name']
-            ff.write("%-20s %-20s %-20s \n" % (name,' '.join(bench) ,cross))
-            #ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
-    
+            bench = info['bench']
+            data = []
+            for k in keys:
+                data.append(info[k])
+                
+            ff.write(formatting % tuple([name] + bench + data))
+                
+            
     def get_next_name(self, run_name):
         """returns a smart name for the next run"""
     
