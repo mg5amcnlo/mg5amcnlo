@@ -1409,7 +1409,9 @@ class RunCard(ConfigFile):
 
         if name.lower() not in self.user_set:
             if log_level is None:
-                if name.lower() in self.hidden_param:
+                if name.lower() in self.system_only:
+                    log_level = 5
+                elif name.lower() in self.hidden_param:
                     log_level = 10
                 else:
                     log_level = 20
