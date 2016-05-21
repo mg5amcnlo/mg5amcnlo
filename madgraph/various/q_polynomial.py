@@ -362,6 +362,20 @@ C        ARGUMENTS
         
         return '\n'.join(lines)
     
+    def get_COLLIER_mapping(self):
+        """ Returns a list of tuples of the form:
+          [ (COLLIER_ind0, COLLIER_ind1, COLLIER_ind2, COLLIER_ind3), ]
+          where the position in the list is the coef_ID in MadLoop ordering.
+        """        
+        res = []
+        for coef_pos in range(0,get_number_of_coefs_for_rank(self.pq.rank)):
+            indices_list = self.pq.get_coef_at_position(coef_pos)
+            res.append((indices_list.count(0),
+                        indices_list.count(1),
+                        indices_list.count(2),
+                        indices_list.count(3)))
+        return res
+    
     def write_golem95_mapping(self):
         """ Returns a fortran subroutine which fills in the array of tensorial
         coefficients following golem95 standards using MadLoop coefficients."""

@@ -186,6 +186,13 @@
 #! if ninja=/PATH/TO/ninja/lib: use that specific installation path for ninja 
 # ninja = ./HEPTools/lib
 
+#! Set the COLLIER directory containing COLLIER's library
+#! if auto: try to find it automatically on the system (default)
+#! if '' or None: disabling COLLIER 
+#! if ninja=/PATH/TO/ninja/lib: use that specific installation path for COLLIER
+# Note that it is necessary that you have generated a static library for COLLIER
+# collier = auto 
+
 #! Set how MadLoop dependencies (such as CutTools) should be handled
 #!  > external : ML5 places a link to the MG5_aMC-wide libraries
 #!  > internal : ML5 copies all dependencies in the output so that it is independent

@@ -613,7 +613,8 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                 self.mg_root, export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
-            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel, 1)
+            FortranExporter.write_global_specs(matrix_element)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                     for c in l]))
@@ -1155,7 +1156,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             FortranExporter = exporter_class(self.mg_root, export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_v4template(modelname=model.get('name'))
-            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel)
+            FortranExporter.generate_subprocess_directory_v4(matrix_element, FortranModel, 1)
+            FortranExporter.write_global_specs(matrix_element)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                 for c in l]))
@@ -1470,8 +1472,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             tools=list(set(tools)) # remove the duplication ones
             
         # not self-contained tir libraries
-        tool_var={'pjfry':2,'golem':4,'samurai':5,'ninja':6}
-        for tool in ['pjfry','golem','samurai','ninja']:
+        tool_var={'pjfry':2,'golem':4,'samurai':5,'ninja':6,'collier':7}
+        for tool in ['pjfry','golem','samurai','ninja','collier']:
             tool_dir='%s_dir'%tool
             if not tool_dir in self.tir_dir:
                 continue
@@ -1494,7 +1496,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                                                 temp_dir_prefix+"_%s"%proc_name)
         
         tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95',5:'Samurai',
-                    6:'Ninja'}
+                    6:'Ninja',7:'Collier'}
         return_dict={}
         return_dict['Stability']={}
         infos_save={'Process_output': None,
@@ -2186,6 +2188,8 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                 MLoptions["MLReductionLib"].extend([5])
             if "ninja_dir" in tir:
                 MLoptions["MLReductionLib"].extend([6])
+            if "collier_dir" in tir:
+                MLoptions["MLReductionLib"].extend([7])
 
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 
@@ -2678,7 +2682,8 @@ The loop direction test power P is computed as follow:
         # Use nicer name for the XML tag in the log file
         xml_toolname = {'GOLEM95':'GOLEM','IREGI':'IREGI',
                         'CUTTOOLS':'CUTTOOLS','PJFRY++':'PJFRY',
-                        'NINJA':'NINJA','SAMURAI':'SAMURAI'}[toolname.upper()]
+                        'NINJA':'NINJA','SAMURAI':'SAMURAI',
+                        'COLLIER':'COLLIER'}[toolname.upper()]
         if len(UPS)>0:
             res_str_i = "\nDetails of the %d/%d UPS encountered by %s\n"\
                                                         %(len(UPS),nPS,toolname)

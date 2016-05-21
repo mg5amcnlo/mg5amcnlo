@@ -2630,7 +2630,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
                                                                       'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
-    _advanced_install_opts = ['ninja']
+    _advanced_install_opts = ['ninja','collier']
     
     # The options below are commented for now but already available
 #    _advanced_install_opts += ['pythia8','zlib','boost','lhapdf6','lhapdf5','hepmc','mg5amc_py8_interface','oneloop']
@@ -2685,6 +2685,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
+                       'collier':'auto',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
@@ -3890,6 +3891,14 @@ This implies that with decay chains:
                 if 5 in MLoptions["MLReductionLib"]:
                     logger_check.warning('Samurai not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(5)
+        
+        if 'collier' in self.options and isinstance(self.options['collier'],str):
+            TIR_dir['collier_dir']=self.options['collier']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 7 in MLoptions["MLReductionLib"]:
+                    logger_check.warning('Collier not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(7)
         
         if 'ninja' in self.options and isinstance(self.options['ninja'],str):
             TIR_dir['ninja_dir']=self.options['ninja']
@@ -5234,9 +5243,9 @@ This implies that with decay chains:
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
 ############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
             
         # Potential change in naming convention
@@ -5390,7 +5399,9 @@ This implies that with decay chains:
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
             self.exec_cmd('save options')      
-
+        elif tool == 'collier':
+            self.options['collier'] = pjoin(os.curdir,'HEPTools','lib')
+            self.exec_cmd('save options')
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
                                               MG5DIR,'HEPTools','ninja','lib')):
@@ -5489,6 +5500,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'hepmc':['CPC 134 (2001) 41-46'],
                           'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
                           'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
+                          'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716']}
 
         if args[0] in advertisements:
@@ -6259,7 +6271,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     else:
                         continue
 
-            elif key in ['pjfry','golem','samurai']:
+            elif key in ['pjfry','golem','samurai','collier']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -6270,7 +6282,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     else:
                         # Try to look for it locally
                         local_install = {'pjfry':'PJFRY', 'golem':'golem95',
-                                         'samurai':'samurai'}
+                                         'samurai':'samurai',
+                                         'collier':'HEPTools'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
@@ -6852,8 +6865,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ['pjfry','golem','samurai','ninja'] and \
-                           not (args[0]=='ninja' and args[1]=='./HEPTools/lib'):
+        elif args[0] in ['pjfry','golem','samurai','ninja','collier'] and \
+             not (args[0] in ['ninja','collier'] and args[1]=='./HEPTools/lib'):
             if args[1] in ['None',"''",'""']:
                 self.options[args[0]] = None
             else:
@@ -7255,6 +7268,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if self._export_format == 'madevent':
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
                                                  self._curr_fortran_model)
+            self._curr_exporter.write_global_specs(
+                               self._curr_matrix_elements.get_matrix_elements())
             
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \

@@ -102,9 +102,11 @@ class ProcessExporterFortran(object):
         
         calls = 0
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            unique_id=1
             for (group_number, me_group) in enumerate(matrix_elements):
                 calls = calls + self.generate_subprocess_directory_v4(\
-                                          me_group, fortran_model, group_number)
+                    me_group, fortran_model, group_number, unique_id=unique_id)
+                unique_id += len(me_group.get('matrix_elements'))
         else:
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory_v4(\
@@ -112,7 +114,16 @@ class ProcessExporterFortran(object):
                         
         return calls    
         
-
+    #===========================================================================
+    #  Generate an include file with global quantities about all ME's output.
+    #===========================================================================
+    def write_global_specs(self, matrix_elements):
+        """ Writes the file global_specs.inc which contains general information
+        about *all* the ME's output in this directory."""
+        
+        # Do nothing here, but daughter classes such as LoopOptimizedExporterFortran
+        # overwrites this.
+        pass
 
     #===========================================================================
     #  create the run_card 
@@ -4462,10 +4473,12 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     #===========================================================================
     def generate_subprocess_directory_v4(self, subproc_group,
                                          fortran_model,
-                                         group_number):
+                                         group_number,
+                                         unique_id=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
-        other helper files"""
+        other helper files. Unique_id is dummy here, but not in 
+        LoopInducedExporterMEGroup, so it must be kept."""
 
         assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
                                       "subproc_group object not SubProcessGroup"
@@ -6304,6 +6317,7 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
       'golem_dir':cmd.options['golem'],
       'samurai_dir':cmd.options['samurai'],
       'ninja_dir':cmd.options['ninja'],
+      'collier_dir':cmd.options['collier'],
       'fortran_compiler':cmd.options['fortran_compiler'],
       'f2py_compiler':cmd.options['f2py_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],
@@ -6431,10 +6445,12 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
     #===========================================================================
     def generate_subprocess_directory_v4(self, subproc_group,
                                          fortran_model,
-                                         group_number):
+                                         group_number,
+                                         unique_id=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
-        other helper files"""
+        other helper files. Unique_id is dummy here, but not in 
+        LoopInducedExporterMEGroup, so it must be kept."""
 
         if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
             raise base_objects.PhysicsObject.PhysicsObjectError,\

@@ -7,17 +7,22 @@
 !
 	  integer CTModeInit,CTModeRun,CheckCycle,MaxAttempts,
      &CTLoopLibrary,NRotations_DP,NRotations_QP,ImprovePSPoint,
-     &MLReductionLib(7),IREGIMODE,HelicityFilterLevel
+     &MLReductionLib(8),IREGIMODE,HelicityFilterLevel,COLLIERMode,
+     &COLLIERGlobalCache
 
-      real*8 MLStabThres,CTStabThres,ZeroThres,OSThres
+      real*8 MLStabThres,CTStabThres,ZeroThres,OSThres,COLLIERRequiredAccuracy
 
-      logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter
+      logical UseLoopFilter,LoopInitStartOver,DoubleCheckHelicityFilter,
+     &COLLIERComputeIRpoles,COLLIERComputeUVpoles,COLLIERCanOutput
 	  logical HelInitStartOver,IREGIRECY,WriteOutFilters
       logical UseQPIntegrandForNinja, UseQPIntegrandForCutTools
 
       common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
+     &COLLIERMode,COLLIERGlobalCache,
      &ImprovePSPoint,CheckCycle, MaxAttempts,UseLoopFilter,MLStabThres,
+     &COLLIERRequiredAccuracy,
      &CTStabThres,CTLoopLibrary,LoopInitStartOver,
+     &COLLIERComputeIRpoles,COLLIERComputeUVpoles,COLLIERCanOutput,
      &DoubleCheckHelicityFilter,ZeroThres,OSThres,HelInitStartOver,
      &MLReductionLib,IREGIMODE,HelicityFilterLevel,IREGIRECY,
      &WriteOutFilters,UseQPIntegrandForNinja,UseQPIntegrandForCutTools

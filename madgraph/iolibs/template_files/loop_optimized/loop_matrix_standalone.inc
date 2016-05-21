@@ -97,9 +97,9 @@ C     These are constants related to the split orders
 	  INTEGER NSQUAREDSOP1
 	  PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
-C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai and Ninja
+C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai, Ninja and COLLIER
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=6)
+      PARAMETER (NLOOPLIB=7)
 C     Only CutTools or possibly Ninja (if installed with qp support) provide QP
       INTEGER QP_NLOOPLIB
 ## if(ninja_supports_quad_prec) {
@@ -235,6 +235,7 @@ C
 C GLOBAL VARIABLES
 C 
       include 'process_info.inc'
+      include 'unique_id.inc'
       include 'coupl.inc'
 	  include 'mp_coupl.inc'
 	  include 'MadLoopParams.inc'
@@ -267,20 +268,20 @@ C
 	  DATA MP_DONE/.FALSE./
 	  common/%(proc_prefix)sMP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE AVAILABLE OR NOT
-      LOGICAL LOOPLIBS_AVAILABLE(6)
+      LOGICAL LOOPLIBS_AVAILABLE(NLOOPLIB)
       DATA LOOPLIBS_AVAILABLE/%(data_looplibs_av)s/
 	  common/%(proc_prefix)sLOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS AVAILABLE OR NOT IN THE LOOPLIBS
-      LOGICAL LOOPLIBS_DIRECTEST(6)
-	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      LOGICAL LOOPLIBS_DIRECTEST(NLOOPLIB)
+	  DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
 C     Specifying for which reduction tool quadruple precision is available.
 C     The index 0 is dummy and simply means that the corresponding loop_library is not available
 C     in which case neither is its quadruple precision version.
-      LOGICAL LOOPLIBS_QPAVAILABLE(0:6)
+      LOGICAL LOOPLIBS_QPAVAILABLE(0:7)
 ## if(ninja_supports_quad_prec) {
-	  DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TRUE./
+	  DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.TRUE.,.FALSE./
 ## } else {
-	  DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
+	  DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
 ## }
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT USED ANYWHERE ELSE
@@ -329,7 +330,7 @@ C     loop split orders contributions have been reached already and the rest can
 	  DATA CT_REQ_SO_DONE/.FALSE./
 	  DATA MP_CT_REQ_SO_DONE/.FALSE./	  
 	  DATA LOOP_REQ_SO_DONE/.FALSE./
-	  DATA MP_LOOP_REQ_SO_DONE/.FALSE./	  
+	  DATA MP_LOOP_REQ_SO_DONE/.FALSE./
 	  DATA CTCALL_REQ_SO_DONE/.FALSE./
 	  DATA FILTER_SO/.FALSE./
 	  common/%(proc_prefix)sSO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
@@ -345,11 +346,10 @@ C     This can be accessed with the SET_FORBID_HEL_DOUBLECHECK subroutine of Mad
 	  integer I_LIB
 	  DATA I_LIB/1/
 	  common/%(proc_prefix)sI_LIB/I_LIB
-C UTIL NOW, ONLY CUTTOOLS PROVIDE QP
-       	  LOGICAL QP_TOOLS_AVAILABLE
-       	  DATA QP_TOOLS_AVAILABLE/.FALSE./
-       	  INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
-       	  common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
+      LOGICAL QP_TOOLS_AVAILABLE
+      DATA QP_TOOLS_AVAILABLE/.FALSE./
+      INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
+      common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
 
 ## if(not LoopInduced) {
 	  %(complex_dp_format)s AMP(NBORNAMPS)
@@ -420,7 +420,7 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
 	  DATA MP_DONE_ONCE/.FALSE./
 	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
-	  character(512) MLPath
+                                               	  character(512) MLPath
       common/MLPATH/MLPath
 
 C     This variable controls the general initialization which is *common* between all MadLoop SubProcesses.
@@ -440,6 +440,7 @@ C     For example, the reading of the filters must be done independently by each
       LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
 	  data FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION/.FALSE.,.FALSE./      
 	  COMMON/%(proc_prefix)sFPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -800,6 +801,11 @@ C Make sure we start with empty caches
 IF (AUTOMATIC_CACHE_CLEARING) THEN
   CALL %(proc_prefix)sCLEAR_CACHES()
 ENDIF
+
+## if(collier_available){
+C Now make sure to turn on the global COLLIER cache if applicable
+CALL %(proc_prefix)sSET_COLLIER_GLOBAL_CACHE(.TRUE.)
+## }
 
 IF (ImprovePSPoint.ge.0) THEN
 C Make the input PS more precise (exact onshell and energy-momentum conservation)
@@ -1812,13 +1818,26 @@ C Make sure that we finish by emptying caches
 IF (AUTOMATIC_CACHE_CLEARING) THEN
   CALL %(proc_prefix)sCLEAR_CACHES()
 ENDIF
+
+## if(collier_available){
+C Now make sure to turn off the global COLLIER cache if applicable
+CALL %(proc_prefix)sSET_COLLIER_GLOBAL_CACHE(.FALSE.)
+## }
+
       END
 
       SUBROUTINE %(proc_prefix)sCLEAR_CACHES()
-C Clears all the caches used at some point in MadLoop
+C
+C     This routine can be called directly from the user if
+C     AUTOMATIC_CACHE_CLEARING is set to False. It must then be called after
+C     ech event
+C
         CALL %(proc_prefix)sCLEAR_TIR_CACHE()
 ## if(ninja_available){
         call ninja_clear_integral_cache()
+## }
+## if(collier_available){
+        call %(proc_prefix)sCLEAR_COLLIER_CACHE()
 ## }
       END
 

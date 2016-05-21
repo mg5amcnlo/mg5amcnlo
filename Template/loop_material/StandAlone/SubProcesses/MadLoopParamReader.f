@@ -33,6 +33,12 @@
                stop 'CTModeRun must be >= -1 and <=6.'
              endif 
 
+           else if (buff .eq. '#COLLIERGlobalCache') then
+             read(666,*,end=999) COLLIERGlobalCache
+             if (COLLIERGlobalCache .lt. -1) then
+               stop 'COLLIERGlobalCache must be >= -1'
+             endif
+
            else if (buff .eq. '#NRotations_DP') then
              read(666,*,end=999) NRotations_DP
              if (NRotations_DP .lt. 0 .or.
@@ -52,7 +58,14 @@
              if (MLStabThres.lt.0.0d0) then
                  stop 'MLStabThres must be >= 0'
              endif
-          
+
+           else if (buff .eq. '#COLLIERRequiredAccuracy') then
+             read(666,*,end=999) COLLIERRequiredAccuracy
+             if (COLLIERRequiredAccuracy.le.0.0d0.and.
+     &           COLLIERRequiredAccuracy.ne.-1.0d0) then
+                 stop 'COLLIERRequiredAccuracy must be > 0 or = -1.0'
+             endif
+
            else if (buff .eq. '#CTLoopLibrary') then
              read(666,*,end=999) CTLoopLibrary
              if (CTLoopLibrary.lt.2 .or.
@@ -89,6 +102,15 @@
              if (MaxAttempts.lt.1) then
                  stop 'MaxAttempts must be >= 1'
              endif
+
+          else if (buff .eq. '#COLLIERComputeUVpoles') then
+             read(666,*,end=999) COLLIERComputeUVpoles
+
+          else if (buff .eq. '#COLLIERComputeIRpoles') then
+             read(666,*,end=999) COLLIERComputeIRpoles
+
+          else if (buff .eq. '#COLLIERCanOutput') then
+             read(666,*,end=999) COLLIERCanOutput
 
           else if (buff .eq. '#UseLoopFilter') then
              read(666,*,end=999) UseLoopFilter
@@ -127,7 +149,7 @@
 
           else if (buff .eq. '#MLReductionLib') then
              read(666,*,end=999) MLReductionLib_str
-             MLReductionLib(1:6)=0
+             MLReductionLib(1:7)=0
              MLReductionLib_str_save=MLReductionLib_str
              j=0
              DO
@@ -149,6 +171,8 @@
                    MLRed=5
                 ELSEIF(MLReductionLib_char.EQ.'6 ')THEN
                    MLRed=6
+                ELSEIF(MLReductionLib_char.EQ.'7 ')THEN
+                   MLRed=7
                 ELSE
                    PRINT *, 'MLReductionLib is wrong: '//
      $                  TRIM(MLReductionLib_str_save)
@@ -171,6 +195,12 @@
                    MLReductionLib_str=MLReductionLib_str(i+1:)
                 ENDIF
              ENDDO
+          else if (buff .eq. '#COLLIERMode') then
+             read(666,*,end=999) COLLIERMode
+             if (COLLIERMode .lt. 1 .or.
+     &            COLLIERMode .gt.3) then
+                stop 'COLLIERMode must be >=1 and <=3.'
+             endif
           else if (buff .eq. '#IREGIRECY') then
              read(666,*,end=999) IREGIRECY
           else if (buff .eq. '#IREGIMODE') then
@@ -218,6 +248,15 @@ C     a non existing or malformed parameter file
      & '==============================================================='
       write(*,*) ' > MLReductionLib            = '
      $     //TRIM(MLReductionLib_str_save)
+
+
+      write(*,*) ' > COLLIERMode               = ',COLLIERMode
+      write(*,*) ' > COLLIERComputeUVpoles     = ',COLLIERComputeUVpoles
+      write(*,*) ' > COLLIERComputeIRpoles     = ',COLLIERComputeIRpoles
+      write(*,*) ' > COLLIERRequiredAccuracy   = ',
+     $COLLIERRequiredAccuracy
+      write(*,*) ' > COLLIERCanOutput          = ',COLLIERCanOutput
+      write(*,*) ' > COLLIERGlobalCache        = ',COLLIERGlobalCache
       write(*,*) ' > IREGIMODE                 = ',IREGIMODE
       write(*,*) ' > IREGIRECY                 = ',IREGIRECY
       write(*,*) ' > CTModeRun                 = ',CTModeRun
@@ -259,9 +298,15 @@ C     a non existing or malformed parameter file
       include "MadLoopParams.inc"
 
       MLReductionLib(1)=6
-      MLReductionLib(2:6)=0
+      MLReductionLib(2:7)=0
       IREGIMODE=2
       IREGIRECY=.TRUE.
+      COLLIERComputeIRpoles = .TRUE.
+      COLLIERComputeUVpoles = .TRUE.
+      COLLIERCanOutput = .FALSE.
+      COLLIERGlobalCache = -1
+      COLLIERMode=1
+      COLLIERRequiredAccuracy=-1.0d0
       CTModeInit=0
       CTModeRun=-1
       NRotations_DP=1

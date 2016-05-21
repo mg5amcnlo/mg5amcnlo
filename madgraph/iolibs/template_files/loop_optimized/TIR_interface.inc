@@ -43,8 +43,8 @@ C LOCAL VARIABLES
 C
 	  INTEGER I, J, K
 	  INTEGER NLOOPCOEFS
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT,COLLIERINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
 
 c This variable will be used to detect changes in the TIR library used so as to force the reset of the TIR filter.
 	  INTEGER LAST_LIB_USED
@@ -72,9 +72,13 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
-C     The variables below are just for monitoring purposes. 
+## if(not AmplitudeReduction) {
       INTEGER ID,SQSOINDEX,R
-      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+	  common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+## }else{
+      INTEGER ID,R
+	  common/%(proc_prefix)sLOOP/ID,R
+## }
 
 c The argument ILIB is the TIR library to be used for that specific library.
       INTEGER LIBINDEX
@@ -178,9 +182,9 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       enddo
 
       do I=0,3
-      	 do J=1,(NLOOPLINE-1)
-	    PDEN(I,J)=PCT(I,J)
-	 enddo
+        do J=1,(NLOOPLINE-1)
+	      PDEN(I,J)=PCT(I,J)
+	    enddo
       enddo
 C NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       NLOOPCOEFS=0
@@ -218,6 +222,14 @@ C     CONVERT TO MADLOOP CONVENTION
       CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)  
 ## } else {
       WRITE(*,*) 'ERROR:: IREGI is not interfaced.'
+      STOP
+## }
+      CASE(7)
+C     COLLIER
+## if(collier_available){
+      CALL %(proc_prefix)sCOLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS)
+## } else {
+      WRITE(*,*) 'ERROR:: COLLIER is not interfaced.'
       STOP
 ## }
       END SELECT
@@ -262,6 +274,8 @@ C     IF(MLReductionLib(I_LIB).EQ.2) THEN
 C       WRITE(*,*) 'PJFry: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ELSEIF(MLReductionLib(I_LIB).EQ.3) THEN
 C       WRITE(*,*) 'Iregi: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ELSEIF(MLReductionLib(I_LIB).EQ.7) THEN
+C       WRITE(*,*) 'COLLIER: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ENDIF
       END
 
@@ -385,8 +399,8 @@ C
 C GLOBAL VARIABLES 
 C
 	  include 'MadLoopParams.inc'
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT,COLLIERINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
 	  
 C ----------
 C BEGIN CODE
@@ -428,7 +442,7 @@ C
 C CONSTANTS
 C
             INTEGER NLOOPLIB
-			PARAMETER (NLOOPLIB=4)
+			PARAMETER (NLOOPLIB=7)
 			INTEGER QP_NLOOPLIB
 ## if(ninja_supports_quad_prec) {
       		PARAMETER (QP_NLOOPLIB=2)
@@ -479,8 +493,8 @@ C  QP EVALUATION, ONLY CUTTOOLS
 		      ENDIF
 		   ENDDO
 		   IF(J_LIB.EQ.0)THEN
-                      SELECT_LIBINDEX=SELECT_LIBINDEX+1		
-                      IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLReductionLib(SELECT_LIBINDEX).EQ.0)SELECT_LIBINDEX=1
+              SELECT_LIBINDEX=SELECT_LIBINDEX+1		
+              IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLReductionLib(SELECT_LIBINDEX).EQ.0)SELECT_LIBINDEX=1
 		   ENDIF
 		ENDDO
 		I=J_LIB

@@ -4,8 +4,8 @@
 
 !     
 #MLReductionLib
-!6|1|2
-! Default :: 6|1|2
+!7|6|1|2
+! Default :: 7|6|1|2
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
 !     2 | PJFry++
@@ -13,6 +13,7 @@
 !     4 | Golem95
 !     5 | Samurai
 !     6 | Ninja
+!     7 | COLLIER
 !     One can use the combinations to reduce integral,e.g.
 !     1|2|3 means first use CutTools, if it is not stable, use PJFry++, 
 !     if it is still unstable, use IREGI. If it failed, use QP of CutTools.
@@ -31,6 +32,7 @@
 !.FALSE.
 ! Default :: .FALSE.
 !
+
 !     =================================================================================
 !     The parameters below set the parameters for IREGI
 !     =================================================================================
@@ -38,9 +40,9 @@
 #IREGIMODE
 !2
 ! Default :: 2
-!     IMODE=0, IBP reduction
-!     IMODE=1, PaVe reduction
-!     IMODE=2, PaVe reduction with stablility improved by IBP reduction
+!     IREGIMODE=0, IBP reduction
+!     IREGIMODE=1, PaVe reduction
+!     IREGIMODE=2, PaVe reduction with stablility improved by IBP reduction
 
 #IREGIRECY
 !.TRUE.
@@ -223,6 +225,49 @@
 !     This decides wether consecutive consistency for the helicity filtering setup is also 
 !     required. Better to set it to false as it can cause problems for unstable processes.
 #HelInitStartOver
+!.FALSE.
+! Default :: .FALSE.
+
+!     =================================================================================
+!     The parameters below set the main parameters for COLLIER
+!     To edit more specific technical COLLIER parameters, modify directly the content
+!     of the subroutine 'INITCOLLIER' in the file 'MadLoopCommons.f'
+!     =================================================================================
+
+!     Choose which branch(es) of COLLIER have to be used
+#COLLIERMode
+!1
+! Default :: 1
+!     COLLIERMode=1 : COLI branch 
+!     COLLIERMode=2 : DD branch
+!     COLLIERMode=3 : Both DD and COLI branch compared
+
+!     Decide if COLLIER must be computed multiple times to evaluate the UV pole residues
+#COLLIERComputeUVpoles
+!.TRUE.
+! Default :: .TRUE.
+
+!     Decide if COLLIER must be computed multiple times to evaluate the IR pole residues
+#COLLIERComputeIRpoles
+!.TRUE.
+! Default :: .TRUE.
+
+!     Decide if COLLIER must be computed multiple times to evaluate the IR pole residues
+#COLLIERRequiredAccuracy
+!-1.0d0
+! Default :: -1.0d0
+!     A value of -1.0d0 means that it will be automatically set from MLStabThres.
+
+!     Set up to which N-loop to use the COLLIER global caching system.
+#COLLIERGlobalCache
+!-1
+! Default :: -1
+!     -1 : Enable the global cache for all loops 
+!      0 : Disable the global cache alltogether
+!      N : Enable the global cache but only for up to N-loops
+
+!     Decide if COLLIER can output its information in a log directory.
+#COLLIERCanOutput
 !.FALSE.
 ! Default :: .FALSE.
 
