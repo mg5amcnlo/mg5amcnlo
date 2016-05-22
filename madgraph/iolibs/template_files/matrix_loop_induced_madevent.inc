@@ -126,8 +126,8 @@ C  Notice that when forcing helicity sum directly in MadLoop then one doesn't ha
 	IF(.NOT.INIT_MADLOOP) THEN
 	  INIT_MADLOOP = .TRUE.
 C We don't use the poles, so let's not compute them with COLLIER
-      CALL COLLIERComputeIRpoles(.False.)
-      CALL COLLIERComputeUVpoles(.False.)
+      CALL %(ml_prefix)sCOLLIER_COMPUTE_UV_POLES(.False.)
+      CALL %(ml_prefix)sCOLLIER_COMPUTE_IR_POLES(.False.)
 C Unless this is the first iteration, make sure to never double check the helicity filter again
       IF (read_grid_file) THEN
         CALL SET_FORBID_HEL_DOUBLECHECK(.True.)

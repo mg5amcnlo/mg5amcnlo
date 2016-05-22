@@ -1536,14 +1536,6 @@ end
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
-        # We also need to write the overall maximum quantities for this group
-        # of processes in 'global_specs.inc'. In aMCatNLO, there is always
-        # only one process, so this is trivial
-        self.write_global_specs(matrix_element)
-        open('unique_id.inc','w').write(
-"""      integer UNIQUE_ID
-      parameter(UNIQUE_ID=1)""")
-
         calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         # The born matrix element, if needed
         filename = 'born_matrix.f'
@@ -1582,12 +1574,19 @@ end
             matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
+        # We also need to write the overall maximum quantities for this group
+        # of processes in 'global_specs.inc'. In aMCatNLO, there is always
+        # only one process, so this is trivial
+        self.write_global_specs(matrix_element)
+        open('unique_id.inc','w').write(
+"""      integer UNIQUE_ID
+      parameter(UNIQUE_ID=1)""")
+
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
                      'MadLoopCommons.f','MadLoopParams.inc','global_specs.inc']
 
         # We should move to MadLoop5_resources directory from the SubProcesses
-
         ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
                                               pjoin('..','MadLoop5_resources'))
 
@@ -3243,14 +3242,7 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
-        
-        # We also need to write the overall maximum quantities for this group
-        # of processes in 'global_specs.inc'. In aMCatNLO, there is always
-        # only one process, so this is trivial
-        self.write_global_specs(matrix_element)
-        open('unique_id.inc','w').write(
-"""      integer UNIQUE_ID
-      parameter(UNIQUE_ID=1)""")
+
         calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         
         # We need a link to coefs.inc from DHELAS
@@ -3300,9 +3292,17 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                                           print_weighted=False))
         plot.draw()
 
+        # We also need to write the overall maximum quantities for this group
+        # of processes in 'global_specs.inc'. In aMCatNLO, there is always
+        # only one process, so this is trivial
+        self.write_global_specs(matrix_element)
+        open('unique_id.inc','w').write(
+"""      integer UNIQUE_ID
+      parameter(UNIQUE_ID=1)""")
+
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc','MadLoopCommons.f']
+                     'MadLoopParams.inc','MadLoopCommons.f','global_specs.inc']
 
         for file in linkfiles:
             ln('../../%s' % file)

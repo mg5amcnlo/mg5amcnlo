@@ -85,8 +85,8 @@ c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
          CALL FORCE_STABILITY_CHECK(.TRUE.)
-         CALL COLLIERComputeIRpoles(.FALSE.)
-         CALL COLLIERComputeUVpoles(.FALSE.)
+         CALL COLLIER_COMPUTE_UV_POLES(.FALSE.)
+         CALL COLLIER_COMPUTE_IR_POLES(.FALSE.)
          firsttime_run = .false.
       endif
       if (firsttime) then
