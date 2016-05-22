@@ -243,11 +243,13 @@
 !     COLLIERMode=3 : Both DD and COLI branch compared
 
 !     Decide if COLLIER must be computed multiple times to evaluate the UV pole residues
+!     (Withing a Monte-Carlo performed in MG5aMC, this is automatically disabled internally)
 #COLLIERComputeUVpoles
 !.TRUE.
 ! Default :: .TRUE.
 
 !     Decide if COLLIER must be computed multiple times to evaluate the IR pole residues
+!     (Withing a Monte-Carlo performed in MG5aMC, this is automatically disabled internally)
 #COLLIERComputeIRpoles
 !.TRUE.
 ! Default :: .TRUE.
@@ -265,6 +267,14 @@
 !     -1 : Enable the global cache for all loops 
 !      0 : Disable the global cache alltogether
 !      N : Enable the global cache but only for up to N-loops
+
+!     Use the global cache when evaluating the poles as well (more memory consuming)
+!     During a Monte-Carlo it is typically not useful anyway, because the pole  
+!     computation is automatically disabled for COLLIER, irrespectively of the value
+!     of the parameters COLLIERCompute<UV/IR>poles specified above.
+#COLLIERUseCacheForPoles
+!.FALSE.
+! Default :: .FALSE.
 
 !     Decide if COLLIER can output its information in a log directory.
 #COLLIERCanOutput

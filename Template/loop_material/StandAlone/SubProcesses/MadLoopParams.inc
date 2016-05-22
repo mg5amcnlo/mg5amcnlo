@@ -16,6 +16,7 @@
      &COLLIERComputeIRpoles,COLLIERComputeUVpoles,COLLIERCanOutput
 	  logical HelInitStartOver,IREGIRECY,WriteOutFilters
       logical UseQPIntegrandForNinja, UseQPIntegrandForCutTools
+	  logical COLLIERUseCacheForPoles
 
       common /MADLOOP/CTModeInit,CTModeRun,NRotations_DP,NRotations_QP,
      &COLLIERMode,COLLIERGlobalCache,
@@ -23,6 +24,7 @@
      &COLLIERRequiredAccuracy,
      &CTStabThres,CTLoopLibrary,LoopInitStartOver,
      &COLLIERComputeIRpoles,COLLIERComputeUVpoles,COLLIERCanOutput,
+     &COLLIERUseCacheForPoles,
      &DoubleCheckHelicityFilter,ZeroThres,OSThres,HelInitStartOver,
      &MLReductionLib,IREGIMODE,HelicityFilterLevel,IREGIRECY,
      &WriteOutFilters,UseQPIntegrandForNinja,UseQPIntegrandForCutTools

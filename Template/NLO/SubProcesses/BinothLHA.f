@@ -85,6 +85,8 @@ c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
          CALL FORCE_STABILITY_CHECK(.TRUE.)
+         CALL COLLIERComputeIRpoles(.FALSE.)
+         CALL COLLIERComputeUVpoles(.FALSE.)
          firsttime_run = .false.
       endif
       if (firsttime) then
@@ -102,6 +104,7 @@ c splips unnoticed.
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
+
             call sloopmatrix_thres(p,virt_wgts,tolerance,accuracies
      $           ,ret_code)
             prec_found = accuracies(0)            
@@ -164,7 +167,7 @@ c for all phase-space points when not doing MC over helicities. Skip
 c MadLoop initialization PS points.
       cpol=.false.
       if ((firsttime .or. mc_hel.eq.0) .and. mod(ret_code,100)/10.ne.3
-     $     .and. mod(ret_code,100)/10.ne.4) then 
+     $     .and. mod(ret_code,100)/10.ne.4.and.mod(ret_code,10).ne.7) then
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
          avgPoleRes(1)=(single+madfks_single)/2.0d0
          avgPoleRes(2)=(double+madfks_double)/2.0d0

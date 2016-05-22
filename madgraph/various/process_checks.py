@@ -2174,6 +2174,12 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
         MLoptions = {}
     else:
         MLoptions = MLOptions
+        # Make sure that the poles computation is disabled for COLLIER
+        if 'COLLIERComputeUVpoles' not in MLoptions:
+            MLoptions['COLLIERComputeUVpoles']=False
+        if 'COLLIERComputeIRpoles' not in MLoptions:
+            MLoptions['COLLIERComputeIRpoles']=False
+        
         if "MLReductionLib" not in MLOptions:
             MLoptions["MLReductionLib"] = []
             if cuttools:
@@ -2227,6 +2233,15 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
         MLoptions = {}
     else:
         MLoptions = MLOptions
+        # Make sure that the poles computation is disabled for COLLIER
+        if 'COLLIERComputeUVpoles' not in MLoptions:
+            MLoptions['COLLIERComputeUVpoles']=False
+        if 'COLLIERComputeIRpoles' not in MLoptions:
+            MLoptions['COLLIERComputeIRpoles']=False
+        # And the COLLIER global cache is active, if not specified
+        if 'COLLIERGlobalCache' not in MLoptions:
+            MLoptions['COLLIERGlobalCache']=-1
+            
     timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
                                      keep_folder = keep_folder, options=options,
                                      MLOptions = MLoptions)

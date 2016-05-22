@@ -423,6 +423,13 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
                                                	  character(512) MLPath
       common/MLPATH/MLPath
 
+C     This is just so that if the user disabled the computation of poles by COLLIER
+C     using the MadLoop subroutine, we don't overwrite his choice when reading the parameters
+      LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPUTATION_CHOICE
+	  DATA  FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION/.FALSE.,.FALSE./
+	  COMMON/%(proc_prefix)sCOLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_CHOICE
+
 C     This variable controls the general initialization which is *common* between all MadLoop SubProcesses.
 C     For example setting the MadLoopPath or reading the ML runtime parameters.
 	  LOGICAL ML_INIT
@@ -452,6 +459,12 @@ IF(ML_INIT) THEN
   CALL setMadLoopPath(TMP)
   CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
   CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
+  IF (FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION) THEN
+    COLLIERComputeUVpoles = COLLIER_UV_POLE_COMPUTATION_CHOICE
+  ENDIF
+  IF (FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION) THEN
+    COLLIERComputeIRpoles = COLLIER_IR_POLE_COMPUTATION_CHOICE
+  ENDIF
   IF (FORBID_HEL_DOUBLECHECK) THEN
     DoubleCheckHelicityFilter = .False. 
   ENDIF 
@@ -2344,6 +2357,46 @@ C
 C --=========================================--
 C   Definition of additional access routines
 C --=========================================--
+
+	  SUBROUTINE %(proc_prefix)sCOLLIER_COMPUTE_UV_POLES(ONOFF)
+C
+C This function can be called by the MadLoop user so as to chose to have COLLIER
+C compute the UV pole or not (it costs more time).
+C
+      LOGICAL ONOFF
+
+	  include 'MadLoopParams.inc'
+
+      LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPUTATION_CHOICE
+	  COMMON/%(proc_prefix)sCOLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_CHOICE
+
+	  COLLIERComputeUVpoles                        = ONOFF
+C     This is just so that if we read the param again, we don't overwrite the choice made here
+	  FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION = .TRUE.
+      COLLIER_UV_POLE_COMPUTATION_CHOICE           = ONOFF
+
+	  END SUBROUTINE
+
+	  SUBROUTINE %(proc_prefix)sCOLLIER_COMPUTE_IR_POLES(ONOFF)
+C
+C This function can be called by the MadLoop user so as to chose to have COLLIER
+C compute the IR pole or not (it costs more time).
+C
+      LOGICAL ONOFF
+
+	  include 'MadLoopParams.inc'
+
+      LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPUTATION_CHOICE
+	  COMMON/%(proc_prefix)sCOLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_CHOICE
+
+	  COLLIERComputeIRpoles         = ONOFF
+C     This is just so that if we read the param again, we don't overwrite the choice made here
+	  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION = .TRUE.
+      COLLIER_IR_POLE_COMPUTATION_CHOICE           = ONOFF
+
+	  END SUBROUTINE
 
 	  SUBROUTINE %(proc_prefix)sFORCE_STABILITY_CHECK(ONOFF)
 C

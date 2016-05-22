@@ -37,6 +37,8 @@ C
 C LOCAL VARIABLES 
 C
 	  INTEGER N, I, J, K, L
+	  INTEGER C0,C1,C2,C3
+	  INTEGER N_CACHES
 	  INTEGER CURR_RANK, SGN
 	  INTEGER CURR_INDEX
 	  INTEGER CURR_MAXCOEF
@@ -97,7 +99,7 @@ C
 	  %(real_dp_format)s TIR_COEFS_ERROR(0:MAXRANK,NLOOPGROUPS)
 	  common/%(proc_prefix)sCOLLIER_TIR_COEFS/TIR_COEFS_DIRECT_MODE,TIR_COEFS_ERROR,LOOP_ID_DONE
 
-      INTEGER COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE, NCOLLIERCALLS
+      INTEGER COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE(4), NCOLLIERCALLS(4)
       LOGICAL MUST_INIT_EVENT
 	  COMMON/%(proc_prefix)sCOLLIER_CACHE_STATUS/COLLIER_CACHE_ACTIVE,NCALLS_IN_CACHE, NCOLLIERCALLS,MUST_INIT_EVENT
 
@@ -107,6 +109,12 @@ C
 C ----------
 C BEGIN CODE
 C ----------
+
+	  IF (COLLIERUseCacheForPoles) THEN
+	    N_CACHES = 4
+	  ELSE
+	    N_CACHES =1
+	  ENDIF
 
 C     Initialize COLLIER if needed 
       IF (COLLIERINIT) THEN
@@ -120,30 +128,49 @@ C     Initialize the event if it is the first time collier is called on this PS 
         IF (COLLIERGlobalCache.eq.0) THEN
 	      CALL InitEvent_cll()
 	    ELSE
-C         Record how many events where put in the cache. On the first PS point.
-		  IF (NCALLS_IN_CACHE.eq.-1.AND.NCOLLIERCALLS.gt.0) THEN
-		    NCALLS_IN_CACHE = NCOLLIERCALLS
-		  ENDIF
-C         Now apply a safety check that our last event had as many calls as the cache is setup for.
-          IF (NCALLS_IN_CACHE.ne.-1.and.NCOLLIERCALLS.ne.NCALLS_IN_CACHE) then
-		    WRITE(*,*) 'WARNING: A consistency check in MadLoop failed and, for safety, forced MadLoop to reinitialize the global cache of COLLIER. Report this to MadLoop authors.'
-            IF (COLLIERGLOBALCACHE.EQ.-1) THEN
-              CALL INITCACHESYSTEM_CLL(NPROCS,MAXNEXTERNAL)
-            ELSE
-		      CALL INITCACHESYSTEM_CLL(NPROCS,COLLIERGLOBALCACHE)
-            ENDIF
-C           Make sure all caches are switched off at first.
-            call SwitchOffCacheSystem_cll()
-C           Reset the cache design property
-		    NCALLS_IN_CACHE = -1
-		    IF (COLLIER_CACHE_ACTIVE.eq.1) THEN
-		      CALL SwitchOnCache_cll(unique_id)
+		  DO I=1,N_CACHES
+C           Record how many events where put in the cache. On the first PS point.
+		    IF (NCALLS_IN_CACHE(I).eq.-1.AND.NCOLLIERCALLS(I).gt.0) THEN
+		      NCALLS_IN_CACHE(I) = NCOLLIERCALLS(I)
 		    ENDIF
+	      ENDDO
+		  DO I=1,N_CACHES		  
+C           Now apply a safety check that our last event had as many calls as the cache is setup for.
+            IF (NCALLS_IN_CACHE(I).ne.-1.and.NCOLLIERCALLS(I).ne.NCALLS_IN_CACHE(I)) then
+		      WRITE(*,*) 'WARNING: A consistency check in MadLoop failed and, for safety, forced MadLoop to reinitialize the global cache of COLLIER. Report this to MadLoop authors. The problematic cache was number ',I
+              IF (COLLIERGLOBALCACHE.EQ.-1) THEN
+                CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,MAXNEXTERNAL)
+              ELSE
+		        CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,COLLIERGLOBALCACHE)
+              ENDIF
+C             Make sure all caches are switched off at first.
+              call SwitchOffCacheSystem_cll()
+C             Reset the cache design property
+		      NCALLS_IN_CACHE(:) = -1
+			  NCOLLIERCALLS(:)   = 0
+		      IF (COLLIER_CACHE_ACTIVE.eq.1) THEN			  
+		        CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+1)
+			  ENDIF
+C             No need to check the other caches since we already had to reset here.
+			  EXIT
+		    ENDIF
+		  ENDDO
+	      CALL InitEvent_cll((UNIQUE_ID-1)*N_CACHES+1)
+		  NCOLLIERCALLS(1) = 0		  
+		  IF(COLLIERComputeUVpoles.and.COLLIERUseCacheForPoles) THEN
+	        CALL InitEvent_cll((UNIQUE_ID-1)*N_CACHES+2)
+			NCOLLIERCALLS(2) = 0
 		  ENDIF
-	      CALL InitEvent_cll(UNIQUE_ID)
+		  IF(COLLIERComputeIRpoles.and.COLLIERUseCacheForPoles) THEN
+	        CALL InitEvent_cll((UNIQUE_ID-1)*N_CACHES+3)
+			NCOLLIERCALLS(3) = 0
+	        CALL InitEvent_cll((UNIQUE_ID-1)*N_CACHES+4)
+			NCOLLIERCALLS(4) = 0
+		  ENDIF
         ENDIF
-		NCOLLIERCALLS = 0
 	  ENDIF
+
+C     Now really start the reduction with COLLIER
 
 C     Number of coefficients for the current rank
       CURR_MAXCOEF = 0
@@ -151,6 +178,8 @@ C     Number of coefficients for the current rank
         CURR_MAXCOEF=CURR_MAXCOEF+(3+I)*(2+I)*(1+I)/6
       ENDDO
 
+C     Use MADLOOP internal cache dedicated to COLLIER that emulates the CTMODE 2
+C     by using coefficients shifted by COLLIER internal error estimate.
       IF (CTMODE.EQ.1) THEN
 	    IF (LOOP_ID_DONE(ID)) THEN
 		  DO I=0,CURR_MAXCOEF-1
@@ -247,20 +276,105 @@ C         For the massless onshell-case, we base the threshold only on the energ
         CALL TNten_cll(TNten, TNtenuv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr)
 	  ENDIF
 	  IF (COLLIER_CACHE_ACTIVE.eq.1) THEN
-	    NCOLLIERCALLS = NCOLLIERCALLS+1
+	    NCOLLIERCALLS(1) = NCOLLIERCALLS(1)+1
+	  ENDIF
+
+C     Now compute the UV poles if asked for
+      IF (COLLIERComputeUVpoles) THEN
+	    IF(COLLIER_CACHE_ACTIVE.eq.1) THEN
+		  CALL SwitchOffCache_cll((unique_id-1)*N_CACHES+1)
+		  IF(COLLIERUseCacheForPoles) THEN
+		    CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+2)
+		  ENDIF
+        ENDIF
+        CALL SetDeltaIR_cll(0.0d0,(PI**2)/6.0d0)
+        CALL SetDeltaUV_cll(1.0d0)
+        CALL SetMuIR2_cll(mu_r**2)      
+        CALL SetMuUV2_cll(mu_r**2)
+	    IF (NLOOPLINE.ne.1) THEN
+          CALL TNten_cll(TNten_UV, TNtenuv_UV, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_UV)
+        ELSE
+          CALL TNten_cll(TNten_UV, TNtenuv_UV, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_UV)
+	    ENDIF
+	    IF (COLLIER_CACHE_ACTIVE.eq.1) THEN
+	      NCOLLIERCALLS(2) = NCOLLIERCALLS(2)+1
+	    ENDIF
+	    IF(COLLIER_CACHE_ACTIVE.eq.1) THEN
+		  IF(COLLIERUseCacheForPoles) THEN
+		    CALL SwitchOffCache_cll((unique_id-1)*N_CACHES+2)
+		  ENDIF
+		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+1)
+        ENDIF
+	  ENDIF
+
+C     Now compute the IR poles if asked for
+      IF (COLLIERComputeIRpoles) THEN
+	    IF(COLLIER_CACHE_ACTIVE.eq.1) THEN
+		  CALL SwitchOffCache_cll((unique_id-1)*N_CACHES+1)
+		  IF(COLLIERUseCacheForPoles) THEN
+		    CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+3)
+		  ENDIF
+        ENDIF
+        CALL SetDeltaIR_cll(1.0d0,(PI**2)/6.0d0)
+        CALL SetDeltaUV_cll(0.0d0)
+        CALL SetMuIR2_cll(mu_r**2)      
+        CALL SetMuUV2_cll(mu_r**2)
+	    IF (NLOOPLINE.ne.1) THEN
+          CALL TNten_cll(TNten_IR1, TNtenuv_IR1, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR1)
+        ELSE
+          CALL TNten_cll(TNten_IR1, TNtenuv_IR1, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR1)
+	    ENDIF
+	    IF (COLLIER_CACHE_ACTIVE.eq.1) THEN
+	      NCOLLIERCALLS(3) = NCOLLIERCALLS(3)+1
+	    ENDIF
+        IF(COLLIER_CACHE_ACTIVE.eq.1.AND.COLLIERUseCacheForPoles) THEN
+		  CALL SwitchOffCache_cll((unique_id-1)*N_CACHES+3)
+		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+4)			
+        ENDIF
+        CALL SetDeltaIR_cll(0.0d0,1.0d0+(PI**2)/6.0d0)
+        CALL SetDeltaUV_cll(0.0d0)
+        CALL SetMuIR2_cll(mu_r**2)      
+        CALL SetMuUV2_cll(mu_r**2)
+	    IF (NLOOPLINE.ne.1) THEN
+          CALL TNten_cll(TNten_IR2, TNtenuv_IR2, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR2)
+        ELSE
+          CALL TNten_cll(TNten_IR2, TNtenuv_IR2, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR2)
+	    ENDIF
+	    IF (COLLIER_CACHE_ACTIVE.eq.1) THEN
+	      NCOLLIERCALLS(4) = NCOLLIERCALLS(4)+1
+	    ENDIF
+	    IF(COLLIER_CACHE_ACTIVE.eq.1) THEN
+		  IF(COLLIERUseCacheForPoles) THEN
+		    CALL SwitchOffCache_cll((unique_id-1)*N_CACHES+4)
+		  ENDIF
+		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+1)		  
+        ENDIF
 	  ENDIF
 
 	  DO I=0,(CURR_MAXCOEF-1)
-	    CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
+	    C0 = COEFMAP_ZERO(I)
+		C1 = COEFMAP_ONE(I)
+		C2 = COEFMAP_TWO(I)
+		C3 = COEFMAP_THREE(I)
+	    CURR_RANK = C0+C1+C2+C3
 C       Because we must set q -> -q, we apply a minus sign to coefs of odd rank
 	    IF (MOD(CURR_RANK,2).eq.1) THEN
 		  SGN = -1
 		ELSE
 		  SGN = 1
 		ENDIF
-		TIRCOEFS(I,1) = SGN*TNten(COEFMAP_ZERO(I),COEFMAP_ONE(I),COEFMAP_TWO(I),COEFMAP_THREE(I))
-		TIRCOEFS(I,2) = DCMPLX(0.0d0,0.0d0)
-		TIRCOEFS(I,3) = DCMPLX(0.0d0,0.0d0)
+		TIRCOEFS(I,1) = SGN*TNten(C0,C1,C2,C3)
+        IF (COLLIERComputeUVpoles) THEN
+		  TIRCOEFS(I,2) = SGN*( TNten_UV(C0,C1,C2,C3)-TNten(C0,C1,C2,C3) )
+		ELSE
+		  TIRCOEFS(I,2) = DCMPLX(0.0d0,0.0d0)
+		ENDIF
+        IF (COLLIERComputeIRpoles) THEN
+		  TIRCOEFS(I,2) = TIRCOEFS(I,2) + SGN*( TNten_IR1(C0,C1,C2,C3)-TNten(C0,C1,C2,C3) )
+		  TIRCOEFS(I,3) = SGN*( TNten_IR2(C0,C1,C2,C3)-TNten(C0,C1,C2,C3) )
+		ELSE
+		  TIRCOEFS(I,3) = DCMPLX(0.0d0,0.0d0)		
+		ENDIF
       ENDDO
 
 c     Finish by caching the coefficients and error just computed
@@ -304,7 +418,7 @@ c     Finish by caching the coefficients and error just computed
 	    %(complex_dp_format)s TIR_COEFS_ERROR(0:MAXRANK,NLOOPGROUPS)
 	    common/%(proc_prefix)sCOLLIER_TIR_COEFS/TIR_COEFS_DIRECT_MODE,TIR_COEFS_ERROR,LOOP_ID_DONE
 
-        INTEGER COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE, NCOLLIERCALLS
+        INTEGER COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE(4), NCOLLIERCALLS(4)
         LOGICAL MUST_INIT_EVENT
 	    COMMON/%(proc_prefix)sCOLLIER_CACHE_STATUS/COLLIER_CACHE_ACTIVE,NCALLS_IN_CACHE, NCOLLIERCALLS,MUST_INIT_EVENT
 
@@ -346,6 +460,7 @@ C
 C       LOCAL VARIABLES
 C
         LOGICAL NEED_REINITIALIZATION
+		INTEGER N_CACHES
 C		
 C       GLOBAL VARIABLES
 C
@@ -354,18 +469,19 @@ C       This common blocks saves the relevant ML parameters when activating the
 C       global cache of COLLIER so that we know when we must reinitialize it.
 C       COLLIER_CACHE_ACTIVE is set to -1 when it has never been turned on yet and
 C       to 1 for 'Active' and 0 for 'Inactive'.
-C       The integer NCALLS_IN_CACHE saves how many calls the cache is setup for.
+C       The integer NCALLS_IN_CACHE saves how many calls the cache is setup for, for each of the up to four caches.
 C       When it is the first PS points, it is set to -1.
-        INTEGER COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE, NCOLLIERCALLS
-	    DATA COLLIER_CACHE_ACTIVE,NCALLS_IN_CACHE, NCOLLIERCALLS/-1,-1, 0/		
+        INTEGER COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE(4), NCOLLIERCALLS(4)
+	    DATA COLLIER_CACHE_ACTIVE/-1/
+		DATA NCALLS_IN_CACHE/-1,-1,-1,-1/
+		DATA NCOLLIERCALLS/0,0,0,0/
 C       This is a flag to tell the COLLIER subroutine that it must init the event when called.
 		LOGICAL MUST_INIT_EVENT
 		DATA MUST_INIT_EVENT/.TRUE./
 		COMMON/%(proc_prefix)sCOLLIER_CACHE_STATUS/COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE, NCOLLIERCALLS,MUST_INIT_EVENT
 
 		INTEGER USERHEL_BU, SQSO_TARGET_BU, COLLIERMode_BU
-        LOGICAL COMPUTE_UVPOLES_BU,COMPUTE_IRPOLES_BU
-        COMMON/%(proc_prefix)sCOLLIER_CACHE_RELEVANT_PARAMS/USERHEL_BU,SQSO_TARGET_BU,COLLIERMode_BU,COMPUTE_UVPOLES_BU,COMPUTE_IRPOLES_BU
+        COMMON/%(proc_prefix)sCOLLIER_CACHE_RELEVANT_PARAMS/USERHEL_BU,SQSO_TARGET_BU,COLLIERMode_BU
 
 C       The common blocks below are to retrieve the necessary information about
 C       MadLoop running mode and store it in the sCOLLIER_CACHE_RELEVANT_PARAMS common block.
@@ -391,43 +507,47 @@ C
 C       BEGIN CODE
 C
 
+		IF (COLLIERUseCacheForPoles) THEN
+		  N_CACHES = 4
+		ELSE
+		  N_CACHES =1
+		ENDIF
+
 C       Do nothing if COLLIER still has to be initialized or if global caches are disabled
         IF(COLLIERINIT.OR.COLLIERGlobalCache.eq.0) THEN
 		  RETURN
 		ENDIF
 
+C       Never activate anything in the checkphase
+        IF (ONOFF.AND.CHECKPHASE) THEN
+		  RETURN
+		ENDIF
+
 C       Handle the request of turning off the caching
 		IF (.NOT.ONOFF) THEN
-C         If we were asked to turn the cache off but it was already so, then do nothing
 		  IF (COLLIER_CACHE_ACTIVE.eq.1) THEN
-		    CALL SwitchOffCache_cll(unique_id)
+		    CALL SwitchOffCache_cll((unique_id-1)*4+1)
 		    COLLIER_CACHE_ACTIVE = 0
 		  ENDIF
+C         If we were asked to turn the cache off but it was already so, then do nothing		  
 		  RETURN
 		ENDIF
 
 C       Handle the request of turning on the caching
 
 C       If asked to activate it but already active, then do nothing
-		IF (COLLIER_CACHE_ACTIVE.eq.1) THEN
+		IF (ONOFF.AND.COLLIER_CACHE_ACTIVE.eq.1) THEN
 		  RETURN
         ENDIF
 
 C       We are now in the position where we are asked to activate the global cache but it was *not* already active.
-
-C       Never do so if still in the checkphase
-        IF (CHECKPHASE) THEN
-		  RETURN
-		ENDIF
 
 C       If we activate it for the first time, make sure to store the value of the relevant parameters, activate and return.
         IF (COLLIER_CACHE_ACTIVE.eq.-1) THEN
 		  USERHEL_BU         = USERHEL 
 		  SQSO_TARGET_BU     = SQSO_TARGET
 		  COLLIERMode_BU     = COLLIERMode
-		  COMPUTE_UVPOLES_BU = COLLIERComputeUVpoles
-		  COMPUTE_IRPOLES_BU = COLLIERComputeIRpoles
-		  CALL SwitchOnCache_cll(unique_id)
+		  CALL SwitchOnCache_cll((unique_id-1)*4+1)
 		  COLLIER_CACHE_ACTIVE = 1
 		  RETURN
 		ENDIF
@@ -458,12 +578,6 @@ C       except if the LoopFilter is ON which really shouldn't be the case anymor
         IF (SQSO_TARGET.NE.SQSO_TARGET_BU) THEN
 		  NEED_REINITIALIZATION = .TRUE.		
 		ENDIF
-        IF (COLLIERComputeUVpoles.NEQV.COMPUTE_UVPOLES_BU) THEN
-		  NEED_REINITIALIZATION = .TRUE.		
-		ENDIF
-        IF (COLLIERComputeIRpoles.NEQV.COMPUTE_IRPOLES_BU) THEN
-		  NEED_REINITIALIZATION = .TRUE.		
-		ENDIF
 
 		IF(NEED_REINITIALIZATION) THEN
 C         Log the event because if it happens a lot of time and floods the screen, the user must see it
@@ -472,21 +586,19 @@ C         and either change its usage of MadLoop or turnoff COLLIER cache
 		  USERHEL_BU         = USERHEL 
 		  SQSO_TARGET_BU     = SQSO_TARGET
 		  COLLIERMode_BU     = COLLIERMode
-		  COMPUTE_UVPOLES_BU = COLLIERComputeUVpoles
-		  COMPUTE_IRPOLES_BU = COLLIERComputeIRpoles
           IF (COLLIERGLOBALCACHE.EQ.-1) THEN
-            CALL INITCACHESYSTEM_CLL(NPROCS,MAXNEXTERNAL)
+            CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,MAXNEXTERNAL)
           ELSE
-		    CALL INITCACHESYSTEM_CLL(NPROCS,COLLIERGLOBALCACHE)
+		    CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,COLLIERGLOBALCACHE)
           ENDIF
-		  NCOLLIERCALLS   = 0
-		  NCALLS_IN_CACHE = -1 
+		  NCOLLIERCALLS(:)   = 0
+		  NCALLS_IN_CACHE(:) = -1 
 C         Make sure all caches are switched off at first.
           call SwitchOffCacheSystem_cll()
 		ENDIF
 
 C       Now we can finally activate the cache
-		CALL SwitchOnCache_cll(unique_id)
+		CALL SwitchOnCache_cll((unique_id-1)*4+1)
 		COLLIER_CACHE_ACTIVE = 1
 
 	  END

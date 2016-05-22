@@ -109,6 +109,9 @@
           else if (buff .eq. '#COLLIERComputeIRpoles') then
              read(666,*,end=999) COLLIERComputeIRpoles
 
+          else if (buff .eq. '#COLLIERUseCacheForPoles') then
+             read(666,*,end=999) COLLIERUseCacheForPoles
+
           else if (buff .eq. '#COLLIERCanOutput') then
              read(666,*,end=999) COLLIERCanOutput
 
@@ -251,12 +254,14 @@ C     a non existing or malformed parameter file
 
 
       write(*,*) ' > COLLIERMode               = ',COLLIERMode
-      write(*,*) ' > COLLIERComputeUVpoles     = ',COLLIERComputeUVpoles
-      write(*,*) ' > COLLIERComputeIRpoles     = ',COLLIERComputeIRpoles
       write(*,*) ' > COLLIERRequiredAccuracy   = ',
      $COLLIERRequiredAccuracy
       write(*,*) ' > COLLIERCanOutput          = ',COLLIERCanOutput
+      write(*,*) ' > COLLIERComputeUVpoles     = ',COLLIERComputeUVpoles
+      write(*,*) ' > COLLIERComputeIRpoles     = ',COLLIERComputeIRpoles
       write(*,*) ' > COLLIERGlobalCache        = ',COLLIERGlobalCache
+      write(*,*) ' > COLLIERUseCacheForPoles   = ',
+     &COLLIERUseCacheForPoles
       write(*,*) ' > IREGIMODE                 = ',IREGIMODE
       write(*,*) ' > IREGIRECY                 = ',IREGIRECY
       write(*,*) ' > CTModeRun                 = ',CTModeRun
@@ -303,6 +308,7 @@ C     a non existing or malformed parameter file
       IREGIRECY=.TRUE.
       COLLIERComputeIRpoles = .TRUE.
       COLLIERComputeUVpoles = .TRUE.
+      COLLIERUseCacheForPoles = .FALSE.
       COLLIERCanOutput = .FALSE.
       COLLIERGlobalCache = -1
       COLLIERMode=1

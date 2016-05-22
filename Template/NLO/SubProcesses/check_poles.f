@@ -116,6 +116,8 @@ c ie. which is a Born+g real-emission process
 c Make sure that stability checks are always used by MadLoop, even for
 c initialization
       CALL FORCE_STABILITY_CHECK(.TRUE.)
+      CALL COLLIERComputeIRpoles(.TRUE.)
+      CALL COLLIERComputeUVpoles(.TRUE.)
 
 200   continue
           calculatedborn = .false.

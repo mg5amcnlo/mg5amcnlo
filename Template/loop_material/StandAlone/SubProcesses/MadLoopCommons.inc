@@ -53,7 +53,8 @@ C     Force COLLIER to completely reset from scratch
       parameter (noreset=.FALSE.)
 C
 C LOCAL VARIABLES 
-C     
+C    
+      INTEGER N_CACHES
 C  
 C GLOBAL VARIABLES 
 C
@@ -85,11 +86,17 @@ C     Set COLLIER mode
       CALL SetMode_cll(COLLIERMode)
 
 C     Set the global cache strategy
-C     For now we support only the single cache mode
+C     If we use the caches for the poles as well, then it is a total of
+C     4 caches per process.
+      IF (COLLIERUseCacheForPoles) THEN
+	    N_CACHES =4*NPROCS
+	  ELSE
+	    N_CACHES =NPROCS
+	  ENDIF
       IF (COLLIERGlobalCache.eq.-1) THEN
-	    CALL InitCacheSystem_cll(NPROCS,MAXNEXTERNAL)
+	    CALL InitCacheSystem_cll(N_CACHES,MAXNEXTERNAL)
 	  ELSEIF(COLLIERGlobalCache.gt.0) THEN
-	    CALL InitCacheSystem_cll(NPROCS,COLLIERGlobalCache)
+	    CALL InitCacheSystem_cll(N_CACHES,COLLIERGlobalCache)
 	  ENDIF
 
 C     Make sure to start by first switching off all cache
