@@ -4125,6 +4125,7 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
             if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
+            self.make_opts_var['lhapdf'] = ""
 
         # read the run_card to find if applgrid is used or not
         if self.run_card['iappl'] != 0:
@@ -4157,6 +4158,8 @@ RESTART = %(mint_mode)s
                     line=appllibs
                 text_out.append(line)
             open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
+        else:
+            self.make_opts_var['applgrid'] = ""
 
         if 'fastjet' in self.options.keys() and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
