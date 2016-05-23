@@ -786,7 +786,6 @@ class OneTagResults(dict):
     
     def update_status(self, level='all', nolevel=[]):
         """update the status of the current run """
-
         exists = os.path.exists
         run = self['run_name']
         tag =self['tag']
@@ -840,22 +839,38 @@ class OneTagResults(dict):
         if level in ['madanalysis5_parton','all'] and 'madanalysis5_parton' not in nolevel:
 
             if 'ma5_plot' not in self.parton and \
-                    exists(pjoin(path,"%s_MA5_parton_analysis.pdf"%self['tag'])):
+               glob.glob(pjoin(path,"%s_MA5_parton_analysis_*.pdf"%self['tag'])):
                 self.parton.append('ma5_plot')                
 
             if 'ma5_html' not in self.parton and \
-                    exists(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS'%self['tag'],
+               glob.glob(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS_*'%self['tag'],
                                  'HTML','index.html')):
                 self.parton.append('ma5_html')                
             
             if 'ma5_card' not in self.parton and \
-                    exists(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS'%self['tag'],
+                glob.glob(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS_*'%self['tag'],
                                                                 'history.ma5')):
                 self.parton.append('ma5_card')
 
             if 'done' not in self.madanalysis5_parton and \
               any(res in self.parton for res in ['ma5_plot','ma5_html','ma5_card']):
                 self.madanalysis5_parton.append('done')
+
+        if level in ['madanalysis5_hadron','all'] and 'madanalysis5_hadron' not in nolevel:
+
+            if 'ma5_plot' not in self.madanalysis5_hadron and \
+              glob.glob(pjoin(path,"%s_MA5_hadron_analysis_*.pdf"%self['tag'])):
+                self.madanalysis5_hadron.append('ma5_plot')                
+
+            if 'ma5_html' not in self.madanalysis5_hadron and \
+               glob.glob(pjoin(html_path,'%s_MA5_HADRON_ANALYSIS_*'%self['tag'],
+                                 'HTML','index.html')):
+                self.madanalysis5_hadron.append('ma5_html')                
+            
+            if 'ma5_card' not in self.madanalysis5_hadron and \
+               glob.glob(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS_*'%self['tag'],
+                                                                'history.ma5')):
+                self.madanalysis5_hadron.append('ma5_card')
 
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
@@ -1032,17 +1047,12 @@ class OneTagResults(dict):
                         glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)):
                         out += " <a href=\"%s\">%s</a> " % (f, '%s' % kind.upper())
             
-            # The link below is commented because it might a bit too heavy visually
-            # in the list of links of the webpage                       
-#            if 'ma5_plot' in self.parton:
-#                out += ' <a href="./Events/%(run_name)s/%(tag)s_MA5_parton_analysis.pdf">MA5_plots</a>'
-
             if 'ma5_html' in self.parton:
-                out += ' <a href="./HTML/%(run_name)s/%(tag)s_MA5_PARTON_ANALYSIS/HTML/index.html">MA5_report</a>'
-            
-            # This card is available in the banner and in the MA5 pdf report, so no need to add it
-#            if 'ma5_card' in self.parton:
-#                out += ' <a href="./HTML/%(run_name)s/%(tag)s_MA5_PARTON_ANALYSIS/history.ma5">MA5_card</a>'
+                for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
+                                       '%s_MA5_PARTON_ANALYSIS_*'%self['tag'])):
+                    target    = pjoin(os.curdir,os.path.relpath(result,self.me_dir),'HTML','index.html')
+                    link_name = os.path.basename(result).split('PARTON_ANALYSIS')[-1]
+                    out += """ <a href="%s">MA5_report%s</a> """%(target, link_name)
                         
             if 'HwU' in self.parton:
             # fixed order plots
@@ -1145,7 +1155,13 @@ class OneTagResults(dict):
             return out % self
 
         if level == 'madanalysis5_hadron':
-            out += """ <a href="<not_set_yet>">DUMMYMA5</a> """
+            if 'ma5_html' in self.madanalysis5_hadron:
+                for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
+                                       '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
+                    target    = pjoin(os.curdir,os.path.relpath(result,self.me_dir),'HTML','index.html')
+                    link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]
+                    out += """ <a href="%s">%s</a> """%(target, link_name.strip('_'))
+            return out % self
 
         if level == 'shower':
         # this is to add the link to the results after shower for amcatnlo
@@ -1247,7 +1263,7 @@ class OneTagResults(dict):
         first = None
         subresults_html = ''
         for ttype in self.level_modes:
-            data = getattr(self, ttype)
+            data = getattr(self, ttype)            
             if not data:
                 continue
             
@@ -1257,7 +1273,7 @@ class OneTagResults(dict):
                 continue
             
             local_dico = {'type': ttype, 'run': self['run_name'], 'syst': ''}
-            
+
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
             else:
@@ -1293,8 +1309,11 @@ class OneTagResults(dict):
                 else:
                     if 'lhe' not in self.parton and self.madanalysis5_parton:
                         local_dico['type'] += ' MA5'
+                    elif ttype=='madanalysis5_hadron' and self.madanalysis5_hadron:
+                        local_dico['type'] = 'hadron MA5'
                     else:
                         local_dico['type'] += ' %s' % self['run_mode']
+
                     local_dico['cross_span'] = nb_line
                     local_dico['cross'] = self['cross']
                     local_dico['err'] = self['error']
@@ -1323,6 +1342,7 @@ class OneTagResults(dict):
             elif ttype in ['madanalysis5_hadron']:
                 # We can use the same template as pgs here
                 template = sub_part_template_pgs
+                local_dico['type'] = 'hadron MA5'
                 # Nothing else needs to be done for now, since only type and
                 # run_mode must be defined in local_dict and this has already
                 # been done.
@@ -1444,10 +1464,9 @@ class OneTagResults(dict):
                 else:
                     local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
                                                               (self['run_name'], ttype, self['tag']))
-
+            
             # create the text
             subresults_html += template % local_dico
-            
             
         if subresults_html == '':
             if runresults.web:

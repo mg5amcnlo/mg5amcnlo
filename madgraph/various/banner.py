@@ -2519,6 +2519,8 @@ class MadAnalysis5Card(dict):
     free format."""
     
     _MG5aMC_escape_tag = '@MG5aMC'
+    _empty_analysis    = {'commands':[],
+                          'reconstructions':[]}
 
     def default_setup(self):
         """define the default value""" 
@@ -2527,7 +2529,12 @@ class MadAnalysis5Card(dict):
         # The default for a hadron type of card is
         #   '*.hepmc', '*.stdhep', '*.lhco'
         # These two dictionaries are formated as follows:
-        #     {'analysis/recasting name':['analysis/recasting lines here>']}
+        #     {'analysis_name':
+        #          {'reconstructions' : ['associated_reconstructions_name']}
+        #          {'commands':['analysis command lines here']}    }
+        # with values being of the form of the _empty_analysis attribute
+        # of this class and some other property could be added to this dictionary
+        # in the future.
         self['analyses']       = {}
         self['recasting']      = []
         self['reconstruction'] = {}
@@ -2557,7 +2564,7 @@ class MadAnalysis5Card(dict):
         """ Read an MA5 card"""
         
         if mode not in [None,'parton','hadron']:
-            raise MadGraph5Error('A MadAnalysis5Card can be read onlin the modes'+
+            raise MadGraph5Error('A MadAnalysis5Card can be read online the modes'+
                                                          "'parton' or 'hadron'")
         card_mode = mode
         
@@ -2579,6 +2586,9 @@ class MadAnalysis5Card(dict):
         current_name = 'default'
         current_type = 'analyses'
         for line in input_stream:
+            # Skip comments for now
+            if line.startswith('#'):
+                continue
             if line.endswith('\n'):
                 line = line[:-1]
             if line.startswith(self._MG5aMC_escape_tag):
@@ -2597,7 +2607,21 @@ class MadAnalysis5Card(dict):
                         raise InvalidMadAnalysis5Card(
                "Analysis '%s' already defined in MadAnalysis5 card"%current_name)
                     else:
-                        self[current_type][current_name] = []
+                        self[current_type][current_name] = self._empty_analysis
+                elif option=='set_reconstructions':
+                    try:
+                        reconstructions = eval(value)
+                        if not isinstance(reconstructions, list):
+                            raise
+                    except:
+                        raise InvalidMadAnalysis5Card("List of reconstructions"+\
+                         " '%s' could not be parsed in MadAnalysis5 card."%value)
+                    if current_type!='analyses' and current_name not in self[current_type]:
+                        raise InvalidMadAnalysis5Card("A list of reconstructions"+\
+                                   "can only be defined in the context of an "+\
+                                             "analysis in a MadAnalysis5 card.")
+                    self[current_type][current_name]['reconstructions']=reconstructions
+                    continue
                 elif option=='reconstruction_name':
                     current_type = 'reconstruction'
                     current_name = value
@@ -2620,16 +2644,19 @@ class MadAnalysis5Card(dict):
                     self['order'].append((current_type,current_name))
                 continue
 
+            # Add the default analysis if needed since the user does not need
+            # to specify it.
+            if current_name == 'default' and current_type == 'analyses' and\
+                                          'default' not in self['analyses']:
+                    self['analyses']['default'] = self._empty_analysis
+                    self['order'].append(('analyses','default'))
+
             if current_type in ['recasting']:
                 self[current_type].append(line)
-            else:
-                # Special case for default since its definition in the card is
-                # not mandatory
-                if current_name == 'default' and current_type == 'analyses' and\
-                                              'default' not in self['analyses']:
-                        self['analyses']['default'] = []
-                        self['order'].append(('analyses','default'))
+            elif current_type in ['reconstruction']:
                 self[current_type][current_name].append(line)
+            elif current_type in ['analyses']:
+                self[current_type][current_name]['commands'].append(line)
 
         if 'reconstruction' in self['analyses'] or len(self['recasting'])>0:
             if mode=='parton':
@@ -2645,7 +2672,19 @@ class MadAnalysis5Card(dict):
                 self['inputs']  = ['*.hepmc', '*.stdhep', '*.lhco']
             else:
                 self['inputs']  = ['*.lhe']
-            
+        
+        # Make sure at least one reconstruction is specified for each hadron
+        # level analysis and that it exists.
+        if self['mode']=='hadron':
+            for analysis_name, analysis in self['analyses'].items():
+                if len(analysis['reconstructions'])==0:
+                    raise InvalidMadAnalysis5Card('Hadron-level analysis '+\
+                      "'%s' is not specified any reconstruction(s)."%analysis_name)
+                if any(reco not in self['reconstruction'] for reco in \
+                                                   analysis['reconstructions']):
+                    raise InvalidMadAnalysis5Card('A reconstructions specified in'+\
+                                 " analysis '%s' is not defined."%analysis_name)
+
         return
     
     def write(self, output):
@@ -2664,50 +2703,73 @@ class MadAnalysis5Card(dict):
         for definition_type, name in self['order']:
             if definition_type=='analyses':
                 output_lines.append('%s analysis_name = %s'%(self._MG5aMC_escape_tag,name))
+                output_lines.append('%s set_reconstructions = %s'%(self._MG5aMC_escape_tag,
+                                str(self['analyses'][name]['reconstructions'])))                
             elif definition_type=='reconstruction':
                 output_lines.append('%s reconstruction_name = %s'%(self._MG5aMC_escape_tag,name))
             elif definition_type=='recasting':
                 output_lines.append('%s recasting'%(self._MG5aMC_escape_tag))
             if definition_type in ['recasting']:
                 output_lines.extend(self[definition_type])
-            else:
-                output_lines.extend(self[definition_type][name])                
+            elif definition_type in ['reconstruction']:
+                output_lines.extend(self[definition_type][name])
+            elif definition_type in ['analyses']:
+                output_lines.extend(self[definition_type][name]['commands'])                
         
         output_stream.write('\n'.join(output_lines))
         
         return
     
-    def get_MA5_cmds(self, input, UFO_model_path=None, submit_folder=None):
-        # For now we only support parton level analysis, so we keep it simple.
-        # But of course the final version will be more advanced.
-        cmds = []
+    def get_MA5_cmds(self, inputs_arg, UFO_model_path=None, submit_folder=None):
+        """ Returns a list of tuples ('AnalysisTag',['commands']) specifying 
+        the commands of the MadAnalysis runs required from this card. 
+        At parton-level, the number of such commands is the number of analysis 
+        asked for. In the future, the idea is that the entire card can be
+        processed in one go from MA5 directly."""
         
+        if isinstance(inputs_arg, list):
+            inputs = inputs_arg
+        elif isinstance(inputs_arg, str):
+            inputs = [inputs_arg]
+        else:
+            raise MadGraph5Error("The function 'get_MA5_cmds' can only take "+\
+                            " a string or a list for the argument 'inputs_arg'")
+        
+        cmds_list = []
+        
+        UFO_load = []
         # first import the UFO if provided
         if UFO_model_path:
-            cmds.append('import %s'%UFO_model_path)
+            UFO_load.append('import %s'%UFO_model_path)
+        
+        # Then the event file(s) input(s)
+        inputs_load = []
+        for input in inputs:
+            inputs_load.append('import %s'%input)
             
-        cmds.append('import %s'%input)
+        submit_command = 'submit %s'%submit_folder+'_%s'
+            
         for i, (definition_type, name) in enumerate(self['order']):
-            # Reconstruction not supported yet
-            if definition_type == 'reconstruction':
-                continue
-            # Recasting not supported yet
-            if definition_type == 'recasting':
-                continue
-            else:
-                cmds.extend(self[definition_type][name])
-                # multianalysis not supported yet:
-                break
-        
-        # And now add the submit line
-        if submit_folder is None:
-            cmds.append('submit')
-        else:
-            cmds.append('submit %s'%submit_folder)
-        
-        return cmds
             
+            if definition_type == 'recasting':
+                cmds_list.append( ('Recasting',
+                  sum([UFO_load,inputs_load,
+                       self['recasting'],
+                       [submit_command%'Recasting']],[])) )
+            
+            elif definition_type == 'analyses':
+                if self['mode']=='parton':
+                    recos = [('',[]),]
+                elif self['mode']=='hadron':
+                    recos = [('_%s'%reco,self['reconstruction'][reco]) 
+                          for reco in self['analyses'][name]['reconstructions']]
+                for reco_name, reco in recos:
+                    cmds_list.append( (name+reco_name,
+                      sum([reco,UFO_load,inputs_load,
+                           self['analyses'][name]['commands'],
+                           [submit_command%(name+reco_name)]   ],[]) ) )
         
+        return cmds_list
 
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""

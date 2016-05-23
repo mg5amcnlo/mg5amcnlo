@@ -1006,12 +1006,30 @@ class CheckValidForCmd(object):
         syntax: madanalysis5_parton [NAME]
         """
         
-        MA5_options = {}
+        MA5_options = {'MA5_stdout_lvl':'default'}
         
+        stdout_level_tags = [a for a in args if a.startswith('--MA5_stdout_lvl=')]
+        for slt in stdout_level_tags:
+            lvl = slt.split('=')[1].strip()
+            try:
+                # It is likely an int
+                MA5_options['MA5_stdout_lvl']=int(lvl)
+            except ValueError:
+                try:
+                    # Maybe the user used something like 'logging.INFO'
+                    MA5_options['MA5_stdout_lvl']=eval(lvl)
+                except:
+                    try:
+                        MA5_options['MA5_stdout_lvl']=eval('logging.%s'%lvl)
+                    except:
+                        raise InvalidCmd("MA5 output level specification"+\
+                                                 " '%s' is incorrect."%str(lvl))
+            args.remove(slt)
+
         if mode=='parton':
             # We will attempt to run MA5 on the parton level output
             # found in the last run if not specified.
-            MA5_options['input'] = '*.lhe'
+            MA5_options['inputs'] = '*.lhe'
         elif mode=='hadron':
             # We will run MA5 on all sources of post-partonic output we
             # can find if not specified. PY8 is a keyword indicating shower
@@ -1072,7 +1090,7 @@ class CheckValidForCmd(object):
                   ' available when running partonic MadAnalysis5 analysis. The'+
                       ' .lhe output of the selected run is used automatically.')
             input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
-            MA5_options['input'] = '%s.gz'%input_file
+            MA5_options['inputs'] = '%s.gz'%input_file
             if not os.path.exists('%s.gz'%input_file):
                 if os.path.exists(input_file):
                     misc.gzip(input_file, keep=True, stdout=output_file)
@@ -1086,10 +1104,10 @@ class CheckValidForCmd(object):
                 hadron_inputs = hadron_tag[0][9:].split(',')
             
             # If not set above, then we must read it from the card
-            if MA5_options['inputs'] == 'fromCard':
+            elif MA5_options['inputs'] == ['fromCard']:
                 hadron_inputs = banner_mod.MadAnalysis5Card(pjoin(self.me_dir,
-                              'Cards','madanalysis5_hadron_card.dat'))['inputs']
-            
+                'Cards','madanalysis5_hadron_card.dat'),mode='hadron')['inputs']
+
             # Make sure the corresponding input files are present and unfold
             # potential wildcard while making their path absolute as well.
             MA5_options['inputs'] = []
@@ -1104,7 +1122,7 @@ class CheckValidForCmd(object):
                 # Now select one source per tag, giving priority to unzipped 
                 # files with 'events' in their name (case-insensitive).
                 file_candidates = glob.glob(pjoin(self.me_dir,'Events',self.run_name,htag))+\
-                                glob.glob(pjoin(self.me_dir,'Events',self.run_name,'%.gz'%htag))
+                            glob.glob(pjoin(self.me_dir,'Events',self.run_name,'%s.gz'%htag))
                 priority_files = [f for f in file_candidates if 'EVENTS' in os.path.basename(f).upper()]
                 if priority_files:
                     MA5_options['inputs'].append(priority_files[0])
@@ -3386,7 +3404,7 @@ Beware that this can be dangerous for local multicore runs.""")
         else:
             # Called issued by the user itself and only MA5 will be run.
             # we must therefore ask wheter the user wants to edit the card
-            self.ask_madanalysis5_run_configuration(mode=mode)        
+            self.ask_madanalysis5_run_configuration(runtype=mode)        
         
         if not self.options['madanalysis5_path'] or \
             all(not os.path.exists(pjoin(self.me_dir, 'Cards',card)) for card in
@@ -3405,53 +3423,78 @@ Beware that this can be dangerous for local multicore runs.""")
             self.configure_directory(html_opening =False)
             MA5_opts = self.check_madanalysis5(args, mode=mode)
 
-        logger.info('Now running MadAnalysis5...')
-        # Obtain a main MA5 interpreter
-        MA5_interpreter = misc.get_MadAnalysis5_interpreter(
-                self.options['mg5_path'], 
-                self.options['madanalysis5_path'],
-                logstream=sys.stdout,
-                loglevel=self.options['stdout_level'],
-                forced=True)
+        MA5_card = banner_mod.MadAnalysis5Card(pjoin(self.me_dir, 'Cards',
+                                    'madanalysis5_%s_card.dat'%mode), mode=mode)
+        
+        MA5_cmds_list = MA5_card.get_MA5_cmds(MA5_opts['inputs'],
+                UFO_model_path=pjoin(self.me_dir,'bin','internal','ufomodel'),
+                submit_folder=pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper()))
 
-        if mode=='parton':
-            MA5_card = banner_mod.MadAnalysis5Card(pjoin(self.me_dir, 'Cards',
-                                 'madanalysis5_parton_card.dat'), mode='parton')
-            MA5_interpreter.load(MA5_card.get_MA5_cmds(MA5_opts['input'],
-                 UFO_model_path=pjoin(self.me_dir,'bin','internal','ufomodel'),
-                 submit_folder=pjoin(self.me_dir,'MA5_PARTON_ANALYSIS')))
+#       Here's how to print the MA5 commands generated by MG5aMC
+#        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+#            misc.sprint('Commands for MA5 runtag %s:'%MA5_runtag)
+#            misc.sprint('\n'.join(MA5_cmds))
 
-            # Set the number of events and cross-section to the last one 
-            # obtained. Ideally we should take it from MA5.
-            new_details={}
-            for detail in ['nb_event','cross','error']:
-                new_details[detail] = \
-                          self.results[self.run_name].get_current_info()[detail]
-            for detail in new_details:
-                self.results.add_detail(detail,new_details[detail])
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+        logger.info('Now starting MadAnalysis5 [arXiv:1206.1599]','$MG:color:GREEN')
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+                    
+        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+            # Obtain a main MA5 interpreter
+            # Ideally we would like to do it all with a single interpreter
+            # but we'd need a way to reset it for this.
+            if MA5_opts['MA5_stdout_lvl']=='default':
+                MA5_lvl = self.options['stdout_level']
+            else:
+                MA5_lvl = MA5_opts['MA5_stdout_lvl']
+            MA5_interpreter = misc.get_MadAnalysis5_interpreter(
+                    self.options['mg5_path'], 
+                    self.options['madanalysis5_path'],
+                    logstream=sys.stdout,
+                    loglevel=MA5_lvl,
+                    forced=True)
+        
+            if mode=='hadron':
+                MA5_interpreter.init_reco()
+            
+            if MA5_runtag!='default':
+                logger.info("MadAnalysis5 running the '%s' analysis..."%MA5_runtag)
+            MA5_interpreter.load(MA5_cmds)
 
-        if mode=='hadron':
-            logger.critical("NOT IMPLEMENTED YET. Intended to run MA5 hadron-level on"+
-                                      " on\n%s"%('\n'.join(MA5_opts['inputs'])))
+            if not os.path.isfile(pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')):
+                raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
+                    "an output for the parton analysis '%s' in\n   %s"%\
+                       (MA5_runtag,pjoin(self.me_dir,
+                            'MA5_%s_ANALYSIS_%s'%(mode.upper(),MA5_runtag),
+                                                              'PDF','main.pdf'))
 
-        if not os.path.isfile(pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper(),
-                                                             'PDF','main.pdf')):
-            raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
-                "an output for the parton analysis in\n   %s"%\
-                   pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper(),'PDF','main.pdf')
-
-        # Copy the PDF report in the Events/run directory.
-        PDF_in_run_path = pjoin(self.me_dir,'Events',self.run_name,
-                                   '%s_MA5_%s_analysis.pdf'%(self.run_tag,mode))
-        shutil.copy(pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper(),
+            # Copy the PDF report in the Events/run directory.
+            PDF_in_run_path = pjoin(self.me_dir,'Events',self.run_name,
+                     '%s_MA5_%s_analysis_%s.pdf'%(self.run_tag,mode,MA5_runtag))
+            shutil.copy(pjoin(self.me_dir,
+                   'MA5_%s_ANALYSIS_%s'%(mode.upper(),MA5_runtag),
                                              'PDF','main.pdf'), PDF_in_run_path)
-        logger.info('MadAnalysis5 successfully completed the analysis. '+
-                                                 'Its PDF report is placed in:')
-        logger.info('   %s'%PDF_in_run_path)       
-        # Copy the entire analysis in the HTML directory
-        shutil.move(pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper()), 
-                            pjoin(self.me_dir,'HTML',self.run_name,
-                              '%s_MA5_%s_ANALYSIS'%(self.run_tag,mode.upper())))
+            if MA5_runtag!='default':
+                logger.info("MadAnalysis5 successfully completed the analysis "+
+                                 "'%s'. Its PDF report is placed in:"%MA5_runtag)
+            else:
+                logger.info("MadAnalysis5 successfully completed the analysis."+
+                                                " Its PDF report is placed in:")
+            logger.info('   %s'%PDF_in_run_path)
+            # Copy the entire analysis in the HTML directory
+            shutil.move(pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+              %(mode.upper(),MA5_runtag)), pjoin(self.me_dir,'HTML',self.run_name,
+                '%s_MA5_%s_ANALYSIS_%s'%(self.run_tag,mode.upper(),MA5_runtag)))
+
+        # Set the number of events and cross-section to the last one 
+        # (maybe do something smarter later)
+        new_details={}
+        for detail in ['nb_event','cross','error']:
+            new_details[detail] = \
+                      self.results[self.run_name].get_current_info()[detail]
+        for detail in new_details:
+            self.results.add_detail(detail,new_details[detail])
 
         self.update_status('finish', level='madanalysis5_%s'%mode,
                                                                  makehtml=False)
@@ -3787,7 +3830,8 @@ already exists and is not a fifo file."""%fifo_path)
 
         # If the target HEPMC output file is a fifo, don't hang MG5_aMC and let
         # it proceed.
-        is_HepMC_output_fifo = stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode)        
+        is_HepMC_output_fifo = os.path.exists(HepMC_event_output) and \
+                              stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode)        
         if is_HepMC_output_fifo:
             logger.info(
 """Pythia8 is set to output HEPMC events to to a fifo file.
@@ -4755,13 +4799,13 @@ You can follow PY8 run with the following command (in a separate terminal):
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
                      allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
-    
+
         def get_last_tag(self, level):
             # Return the tag of the previous run having the required data for this
             # tag/run to working wel.
             if level == 'parton':
                 return
-            elif level in ['pythia','pythia8','madanalysis5_parton']:
+            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron']:
                 return self.results[self.run_name][0]['tag']
             else:
                 for i in range(-1,-len(self.results[self.run_name])-1,-1):
@@ -4776,7 +4820,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                        'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
-                       'madanalysis5_hadron':['madanalysis5_hadron'],
+                       'madanalysis5_hadron':['madanalysis5_hadron','madanalysis5_parton'],
                        'madanalysis5_parton':['madanalysis5_parton'],
                        'plot':[],
                        'syscalc':[]}
@@ -4851,12 +4895,6 @@ You can follow PY8 run with the following command (in a separate terminal):
 
         return get_last_tag(self, level)
             
-            
-        
-        
-        
-        
-        
 
     ############################################################################
     def find_model_name(self):
