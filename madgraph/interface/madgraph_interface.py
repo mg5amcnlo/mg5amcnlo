@@ -7626,6 +7626,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     elif value < 0:
                         raise Exception, 'Partial width for %s > %s negative: %s' % \
                                        (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+                    elif value < 0.1 and particle['color'] !=1:
+                        logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
+                                   % (particle.get('name'), value, decay_to))
+                        value = 0
+                                     
                     decay_info[particle.get('pdg_code')].append([decay_to, value])
                     total += value
             else:
@@ -7647,8 +7652,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         if self._curr_amps:
             logger.info('Pass to numerical integration for computing the widths:')
-        else:
+        else:            
             logger.info('No need for N body-decay (N>2). Results are in %s' % opts['output'])
+            
+            
+            
             return
 
         # Do the MadEvent integration!!
