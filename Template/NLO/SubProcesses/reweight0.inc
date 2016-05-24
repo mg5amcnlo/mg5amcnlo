@@ -69,16 +69,28 @@ c
 c Cross sections after variations of scales and PDFs
 c
       integer maxscales,maxPDFs
-      parameter (maxscales=3)
+      parameter (maxscales=9)
       parameter (maxPDFs=200)
 
+c New format to allow for multiple PDF sets and scales (both functional form
+c and normal)
+      integer    maxPDFsets,   maxdynscales
+      parameter (maxPDFsets=10,maxdynscales=10)
+      integer lhaPDFid(0:maxPDFsets),nmemPDF(maxPDFsets)
+     $     ,dyn_scale(0:maxdynscales)
+      logical lscalevar(maxdynscales),lpdfvar(maxPDFsets)
+      character*100 LHAPDFsetname(maxPDFsets)
+      double precision scalevarR(0:maxscales),scalevarF(0:maxscales)
+      common/new_format_scale_pdf/LHAPDFsetname,scalevarR,scalevarF
+     $     ,lhaPDFid,nmemPDF,dyn_scale,lscalevar,lpdfvar
+
 c Number of scale factors (for each scale) and PDF error pairs
-      integer numscales,numPDFpairs
-      common/cwgxsec1/numscales,numPDFpairs
+      integer numscales,numPDFpairs,numPDFs
+      common/cwgxsec1/numscales,numPDFpairs,numPDFs
 
 c Cross sections at different scales and PDFs
-      double precision wgtxsecmu(maxscales,maxscales),
-     #                 wgtxsecPDF(0:maxPDFs)
+      double precision wgtxsecmu(maxscales,maxscales,maxdynscales),
+     #                 wgtxsecPDF(0:maxPDFs,maxPDFsets)
       common/cwgxsec2/wgtxsecmu,wgtxsecPDF
 
 c Cross sections at different scales and PDFs, for NLO computations
@@ -113,16 +125,12 @@ c cpower: power of muR-dependent factor in the born
       double precision wgtcpower
       common/cwgtcpower/wgtcpower
 
-c input of cpower (checked against calculated value)
-      double precision cpowerinput
-      parameter (cpowerinput=0.d0)
-
       integer cpower_pos
-      parameter (cpower_pos=0)
+      parameter (cpower_pos=3)
 
 c switch for running muR-dependent factor runfac=1(running)/0(fixed)
       integer runfac
-      parameter (runfac=0)
+      parameter (runfac=1)
 c WARNING: If you set runfac=1 to include a muR-dependent factor
 c          make sure you modified the function rwgt_muR_dep_fac in
 c	   reweight_xsec.f and compute_cpower in fks_singular.f
@@ -138,7 +146,7 @@ c muR-dependent factor,
 c e.g. for masses:      ren_group_coeff = gamma0 = 3/2*C_F,
 c i.e. also for Yukawa: ren_group_coeff = gamma0
       double precision ren_group_coeff_in
-      parameter (ren_group_coeff_in=0d0)
+      parameter (ren_group_coeff_in=2d0)
 
 c NLO+NNLL jet veto stuff
       double precision veto_multiplier,H1_factor_virt,
@@ -151,3 +159,8 @@ c NLO+NNLL jet veto stuff
       character*1024 n_ctr_str(max_n_ctr)
       double precision momenta_str(0:3,maxparticles,max_n_ctr)
       common /c_rwgt_lines/n_ctr_str,momenta_str,n_ctr_found,n_mom_conf
+
+      integer max_weight_shower
+      parameter (max_weight_shower=1024)
+      
+      

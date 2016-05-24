@@ -113,6 +113,57 @@ class TestConfigFileCase(unittest.TestCase):
         self.assertTrue(dict.__contains__(config3, 'UPPER'))
         self.assertTrue(config3.__contains__('UPPER'))
           
+    def test_handling_list_of_values(self):
+        """check that the read/write of a list of value works"""
+        
+        # add a parameter which can be a list
+        self.config.add_param("list", [1])
+        self.assertEqual(self.config['list'], [1])
+        # try to write info in it via the string
+        self.config['list'] = "1,2, 3, 4 , 5"
+
+        self.assertEqual(self.config['list'],[1,2,3,4,5])
+        self.config['list'] = [1.0,2,3+0j]
+        self.assertEqual(self.config['list'],[1,2,3])
+
+
+        
+        # check that it fail for invalid input:
+        self.assertRaises(Exception, self.config.__setitem__, 'list', [1,'a'])
+        self.assertRaises(Exception, self.config.add_param, "list2", [1, 2.0])
+        #self.assertRaises(Exception, self.config.add_param, 'list3', ['a'])
+        
+        #check that we can go back to non list format:
+        self.config['list'] = '-2'
+        self.assertEqual(self.config['list'], [-2])
+        
+        #check that space only format works as well
+        self.config['list'] = "1 2 3 4e1"
+        self.assertEqual(self.config['list'],[1,2,3,40])
+        
+        #check that space + command format works as well
+        self.config['list'] = " 1 2, 3, 5d1 "
+        self.assertEqual(self.config['list'],[1,2,3,50])        
+        
+        self.config['list'] = (1,2,3,'4')
+        self.assertEqual(self.config['list'],[1,2,3,4]) 
+        self.config['list'] = set((1,'2',3,'4'))
+        self.assertEqual(set(self.config['list']),set([1,2,3,4])) 
+        
+        self.assertRaises(Exception, self.config.__setitem__, 'list', {1:2,3:4})
+        
+
+        # add a parameter which can be a list of string
+        self.config.add_param("list_s", ['1'])
+        self.assertEqual(self.config['list_s'], ['1'])
+        self.config['list_s'] = " 1 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],['1','2','3', '5d1'])
+        self.config['list_s'] = " 1\ 2, 3, 5d1 "
+        self.assertEqual(self.config['list_s'],['1\ 2','3', '5d1']) 
+        # Fail to have the correct behavior for that one. Should be ok in general       
+        #self.config['list_s'] = " 1\\ 2, 3, 5d1 "        
+        #self.assertEqual(self.config['list_s'],['1\\', '2','3', '5d1'])
+
         
     def test_for_loop(self):
         """ check correct handling of case"""
@@ -169,7 +220,8 @@ class TestRunCard(unittest.TestCase):
         self.assertTrue(hasattr(run_card2, 'not_in_include')) 
         self.assertTrue(hasattr(run_card2, 'fortran_name'))
         self.assertFalse(hasattr(run_card2, 'default'))
-        self.assertTrue(hasattr(run_card2, 'cuts_parameter'))         
+        self.assertTrue(hasattr(run_card2, 'cuts_parameter'))   
+              
   
     def test_default(self):
       
@@ -189,7 +241,9 @@ class TestRunCard(unittest.TestCase):
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
-            self.assertEqual(run_card[key], run_card2[key])      
+            self.assertEqual(run_card[key], run_card2[key])  
+            
+
 
 MadLoopParam = bannermod.MadLoopParam
 class TESTMadLoopParam(unittest.TestCase):

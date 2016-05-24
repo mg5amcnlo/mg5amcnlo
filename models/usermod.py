@@ -24,6 +24,7 @@ import os
 import re
 import sys
 
+import madgraph.core.base_objects as base_objects
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import models as ufomodels
@@ -41,7 +42,6 @@ class UFOModel(object):
     def __init__(self, modelpath, addon='__1'):
         """load the model from a valid UFO directory (otherwise keep everything
         as empty."""
-        
         self.modelpath = modelpath
         model = ufomodels.load_model(modelpath)
         
@@ -458,7 +458,7 @@ from object_library import all_propagators, Propagator
 
     def add_parameter(self, parameter, identify_pid={}):
         """wrapper to call the correct function"""
-        
+
         if parameter.nature == 'internal':
             self.add_internal_parameter(parameter)
         else:
@@ -471,6 +471,18 @@ from object_library import all_propagators, Propagator
         if identify:
             name = identify
         old_part = next((p for p in self.particles if p.name==name), None)
+        if not old_part:
+            first = True
+            for p in self.particles:
+                if p.name.lower() == name.lower():
+                    if not first:
+                        raise Exception
+                    else:
+                        first =False
+                    old_part = p
+        
+        
+        
         if old_part:
             #Check if the two particles have the same pdgcode
             if old_part.pdg_code == particle.pdg_code:
@@ -481,8 +493,6 @@ from object_library import all_propagators, Propagator
                     raise USRMODERROR, "identify particles should have the same spin"
                 elif particle.color != old_part.color:
                     raise USRMODERROR, "identify particles should have the same color"
-                
-                particle.pdg_code = old_part.pdg_code
                 particle.replace = old_part
                 return self.check_mass_width_of_particle(old_part, particle)
             else:
@@ -493,17 +503,18 @@ from object_library import all_propagators, Propagator
                 return
         elif identify:
             raise USRMODERROR, "Particle %s is not in the model" % identify
-        
+
         pdg = particle.pdg_code
         if pdg in self.particle_dict:
             particle.replace = self.particle_dict[pdg]
             return self.check_mass_width_of_particle(self.particle_dict[pdg], particle)
         else:
+            if hasattr(particle, 'replace'):
+                del particle.replace
             self.particles.append(particle)
         
                 
     def check_mass_width_of_particle(self, p_base, p_plugin):
-              
         # Check the mass
         if p_base.mass.name != p_plugin.mass.name:
             #different name but actually  the same
@@ -692,12 +703,15 @@ from object_library import all_propagators, Propagator
         else:
             self.lorentz.append(lorentz)    
         
-    def add_interaction(self, interaction):
+    def add_interaction(self, interaction , model):
         """Add one interaction to the model. This is UNCONDITIONAL!
         if the same interaction is in the model this means that the interaction
         will appear twice. This is now weaken if both interaction are exactly identical!
         (EXACT same color/lorentz/coupling expression)
         """
+
+        interaction = interaction.__class__(**interaction.__dict__)
+        model.all_vertices.pop(-1)
         
         #0. check name:
         name = interaction.name
@@ -708,7 +722,6 @@ from object_library import all_propagators, Propagator
         #1. check particles translation
         particles = [p.replace if hasattr(p, 'replace') else p for p in interaction.particles]
         interaction.particles = particles
-        
         #2. check the lorentz structure
         lorentz = [l.replace if hasattr(l, 'replace') else l for l in interaction.lorentz]
         interaction.lorentz = lorentz
@@ -809,6 +822,7 @@ from object_library import all_propagators, Propagator
     def add_model(self, model=None, path=None, identify_particles=None):
         """add another model in the current one"""
         
+        
         self.new_external = []
         if path:
             model = ufomodels.load_model(path) 
@@ -839,8 +853,27 @@ from object_library import all_propagators, Propagator
             for new, old in identify_particles.items():
                 new_part = next((p for p in model.all_particles if p.name==new), None)
                 old_part = next((p for p in self.particles if p.name==old), None)
-                identify_pid[new_part.pdg_code] = old_part.pdg_code
-                
+                # secure agqinst lower/upper case problem
+                if not new_part:
+                    first = True
+                    for p in model.all_particles:
+                        if p.name.lower() == new.lower():
+                            if not first:
+                                raise Exception
+                            else:
+                                first =False
+                            new_part = p
+                if not old_part:
+                    first = True
+                    for p in self.particles:
+                        if p.name.lower() == old.lower():
+                            if not first:
+                                raise Exception
+                            else:
+                                first =False
+                            old_part = p
+                # end for the case security
+                identify_pid[new_part.pdg_code] = old_part.pdg_code                
                 if new_part is None:
                     raise USRMODERROR, "particle %s not in added model" % new
                 if old_part is None:
@@ -848,12 +881,11 @@ from object_library import all_propagators, Propagator
                 if new_part.antiname not in identify_particles:
                     new_anti = new_part.antiname
                     old_anti = old_part.antiname
-                    misc.sprint(old, new, new_anti, old_anti, old_part.antiname)
                     if old_anti == old:
                         raise USRMODERROR, "failed identification (one particle is self-conjugate and not the other)"
                     logger.info("adding identification for anti-particle: %s=%s" % (new_anti, old_anti))
                     identify_particles[new_anti] = old_anti
-        
+       
         for parameter in model.all_parameters:
             self.add_parameter(parameter, identify_pid)
         for coupling in model.all_couplings:
@@ -866,7 +898,7 @@ from object_library import all_propagators, Propagator
             else:
                 self.add_particle(particle)
         for vertex in model.all_vertices:
-            self.add_interaction(vertex)
+            self.add_interaction(vertex, model)
         
         self.all_path.append(path)
         

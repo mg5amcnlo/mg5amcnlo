@@ -87,12 +87,12 @@ class CmdExtended(cmd.Cmd):
     }
     
     debug_output = 'MW5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'with MadWeight in the title of the bug report.'
     error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
 
     keyboard_stop_msg = """stopping all operation
@@ -563,7 +563,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             fsock2 = open(out_path,'w')
             fsock.write('<subprocess id=\'%s\'>\n' % MWdir)
             fsock2.write('<subprocess id=\'%s\'>\n' % MWdir)
-            for output in glob.glob(pjoin(input_dir, 'output_*_*.xml')):
+            for output in misc.glob('output_*_*.xml', input_dir):
                 at_least_one = True
                 text = open(output).read()
                 fsock2.write(text)

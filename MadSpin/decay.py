@@ -1749,7 +1749,7 @@ class decay_misc:
 
         return finalfound
    
-         
+        
     def reorder_branch(self,branch):
         """ branch is a string with the definition of a decay chain
                 If branch contains " A > B C , B > ... " 
@@ -1764,26 +1764,37 @@ class decay_misc:
             if list_branch[index]==' ' or list_branch[index]=='': del list_branch[index]
         #print list_branch
         for index, item in enumerate(list_branch):
-            if item =="," and list_branch[index+1]!="(": 
-                if list_branch[index-2]==list_branch[index+1]:
-                    # swap the two particles before the comma:
-                    temp=list_branch[index-2]
-                    list_branch[index-2]=list_branch[index-1]
-                    list_branch[index-1]=temp
-            if item =="," and list_branch[index+1]=="(":
-                if list_branch[index-2]==list_branch[index+2]:
-                    # swap the two particles before the comma:
-                    temp=list_branch[index-2]
-                    list_branch[index-2]=list_branch[index-1]
-                    list_branch[index-1]=temp
 
+            if item[-1] =="," and list_branch[index+1]!="(":
+                # search pos of B and C 
+                counter=1
+                while 1:
+                  if list_branch[index-counter].find("=")<0:
+                     break
+                  counter+=1
+                if list_branch[index-counter-1]==list_branch[index+1]:
+                    # swap the two particles before the comma:
+                    temp=list_branch[index-counter-1]
+                    list_branch[index-counter-1]=list_branch[index-counter]
+                    list_branch[index-counter]=temp
+            if item[-1] =="," and list_branch[index+1]=="(":
+                # search pos of B and C 
+                counter=1
+                while 1:
+                  if list_branch[index-counter].find("=")<0:
+                     break
+                  counter+=1
+                if list_branch[index-counter -1]==list_branch[index+2]:
+                    # swap the two particles before the comma:
+                    temp=list_branch[index-counter-1]
+                    list_branch[index-counter-1]=list_branch[index-counter]
+                    list_branch[index-counter]=temp
 
         new_branch=""
         for item in list_branch:
             new_branch+=item+" "
 
         return new_branch, list_branch[0]
-
 
     def set_light_parton_massless(self,topo):
         """ masses of light partons are set to zero for 
@@ -2405,7 +2416,13 @@ class decay_all_events(object):
                     self.curr_event.particle[part_for_curr_evt]['momentum']=ext_mom[prod2full[part-1]-1]
                     self.curr_event.particle[part_for_curr_evt]['helicity']=helicities[prod2full[part-1]-1]
                     if not use_mc_masses or abs(pid) not in self.MC_masses:
-                        self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
+                        try:
+                            self.curr_event.particle[part_for_curr_evt]['mass']=self.banner.get('param_card','mass', abs(pid)).value
+                        except KeyError:
+                            if self.model.get_particle(abs(pid)).get('mass').lower() == 'zero':
+                                self.curr_event.particle[part_for_curr_evt]['mass'] = 0
+                            else:
+                                raise
                     else:
                         self.curr_event.particle[part_for_curr_evt]['mass']=self.MC_masses[abs(pid)]
 
@@ -2646,6 +2663,8 @@ class decay_all_events(object):
         #for name, definition in self.mscmd.multiparticles:
         if hasattr(self.mscmd, 'multiparticles_ms'):
             for name, pdgs in  self.mscmd.multiparticles_ms.items():
+                if name == 'all':
+                    continue
                 #self.banner.get('proc_card').get('multiparticles'):
                 mgcmd.do_define("%s = %s" % (name, ' '.join(`i` for i in pdgs)))
             
@@ -2666,6 +2685,10 @@ class decay_all_events(object):
                 proc_nb = '@ %i' % proc_nb 
             else:
                 proc_nb = ''
+            
+            if ',' in proc:
+                raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
+                        '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
             
             if '[' not in proc:
                 commandline+="add process %s  --no_warning=duplicate;" % proc
@@ -3213,14 +3236,16 @@ class decay_all_events(object):
                         logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
 
-        if __debug__: 
+#        if __debug__: 
         # check that all decay have a max_weight and fix it if not the case.
-            for prod in self.all_ME.values():
-                for dec in prod['decays']:
-                    if dec['decay_tag']:                                                
-                        assert 'max_weight' in dec and dec['max_weight'] ,\
-                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
-                                                  os.path.basename(prod['path']))
+        for prod in self.all_ME.values():
+            for dec in prod['decays']:
+                if dec['decay_tag'] and not 'max_weight' in dec:
+                    dec['max_weight'] = 0. 
+
+#                        assert 'max_weight' in dec and dec['max_weight'] ,\
+#                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
+#                                                  os.path.basename(prod['path']))
         self.evtfile.seek(0)
         return
 
@@ -3664,6 +3689,45 @@ class decay_all_events(object):
                             d1colup1=maxcol
                             d2colup2=maxcol
                             d2colup1=0
+                        elif colord1==-3 and colord2==-3 and colormother == 3:
+                            maxcol+=2
+                            d1colup1=0
+                            d1colup2=maxcol
+                            d2colup1=0
+                            d2colup2=maxcol-1
+                        elif (colord1==-3 and colord2==3 and colormother == 3) or\
+                             (colord1==-3 and colord2==3 and colormother == -3):
+                            maxcol+=2
+                            d1colup1 = 0
+                            d1colup2 = maxcol
+                            d2colup1 = maxcol-1
+                            d2colup2 = 0
+                        elif (colord1==3 and colord2==-3 and colormother == 3) or\
+                            (colord1==3 and colord2==-3 and colormother == -3):
+                            maxcol+=2
+                            d1colup1=maxcol
+                            d1colup2=0
+                            d2colup1=0
+                            d2colup2=maxcol-1
+                        elif colord1==3 and colord2==3 and colormother == -3:
+                            maxcol+=2
+                            d1colup1=maxcol
+                            d1colup2=0
+                            d2colup1=maxcol-1
+                            d2colup2=0    
+                        elif colord2==8 and colord1==8 and colormother ==8:
+                            maxcol+=1
+                            ran = random.random()
+                            if ran> 0.5:
+                                d1colup2=colup2
+                                d1colup1=maxcol
+                                d2colup2=maxcol
+                                d2colup1=colup1
+                            else:                            
+                                d1colup2=maxcol
+                                d1colup1=colup1
+                                d2colup2=colup2
+                                d2colup1=maxcol                        
                         else:
                             raise Exception, 'color combination not treated by MadSpin (yet). (%s,%s,%s)' \
                                 % (colord1,colord2,colormother)

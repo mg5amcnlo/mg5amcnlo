@@ -132,6 +132,23 @@ C     ----------
       DO I=1,NSQAMPSO
         ANS(I) = 0D0
       ENDDO
+C     When spin-2 particles are involved, the Helicity filtering is
+C      dangerous for the 2->1 topology.
+C     This is because depending on the MC setup the initial PS points
+C      have back-to-back initial states
+C     for which some of the spin-2 helicity configurations are zero.
+C      But they are no longer zero
+C     if the point is boosted on the z-axis. Remember that HELAS
+C      helicity amplitudes are no longer
+C     lorentz invariant with expternal spin-2 particles (only the
+C      helicity sum is).
+C     For this reason, we simply remove the filterin when there is
+C      only three external particles.
+      IF (NEXTERNAL.LE.3) THEN
+        DO IHEL=1,NCOMB
+          GOODHEL(IHEL)=.TRUE.
+        ENDDO
+      ENDIF
       DO IHEL=1,NCOMB
         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN
@@ -233,7 +250,7 @@ C
       REAL*8 DENOM(NCOLOR), CF(NCOLOR,NCOLOR)
       COMPLEX*16 AMP(NGRAPHS)
       COMPLEX*16 JAMP(NCOLOR,NAMPSO)
-      COMPLEX*16 W(18,NWAVEFUNCS)
+      COMPLEX*16 W(20,NWAVEFUNCS)
       COMPLEX*16 DUM0,DUM1
       DATA DUM0, DUM1/(0D0, 0D0), (1D0, 0D0)/
 C     
@@ -281,8 +298,8 @@ C     JAMPs contributing to orders QCD=2
             ZTEMP = ZTEMP + CF(J,I)*JAMP(J,M)
           ENDDO
           DO N = 1, NAMPSO
-            RES(ML5_0_SQSOINDEX(M,N)) = RES(ML5_0_SQSOINDEX(M,N)) 
-     $       + ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
+            RES(ML5_0_SQSOINDEX(M,N)) = RES(ML5_0_SQSOINDEX(M,N)) +
+     $        ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
           ENDDO
         ENDDO
       ENDDO
@@ -341,8 +358,8 @@ C     This functions plays the role of the interference matrix. It can
 C      be hardcoded or 
 C     made more elegant using hashtables if its execution speed ever
 C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
+C     factor. From two split order indices, it return the
+C      corresponding index in the squared 
 C     order canonical ordering.
 C     
 C     CONSTANTS
@@ -370,7 +387,7 @@ C     BEGIN CODE
 C     
       DO I=1,NSO
         SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
+     $NDEXB,I)
       ENDDO
       ML5_0_SQSOINDEX=ML5_0_SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -464,8 +481,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_GET_SQUARED_ORDERS_F'
-     $ //'OR_SOINDEX'
+      WRITE(*,*) 'ERROR:: Stopping function ML5_0_GET_SQUARED_ORDERS_FO'
+     $ //'R_SOINDEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -504,15 +521,15 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_GET_ORDERS_FOR_AMPSO'
-     $ //'INDEX'
+      WRITE(*,*) 'ERROR:: Stopping function ML5_0_GET_ORDERS_FOR_AMPSOI'
+     $ //'NDEX'
       WRITE(*,*) 'Could not find amplitude split orders index ',SOINDEX
       STOP
 
       END SUBROUTINE
 
-C     This function is not directly useful, but included for completene
-C     ss
+C     This function is not directly useful, but included for
+C      completeness
       INTEGER FUNCTION ML5_0_SOINDEX_FOR_AMPORDERS(ORDERS)
 C     
 C     This functions returns the integer index identifying the
@@ -547,8 +564,8 @@ C
  1009   CONTINUE
       ENDDO
 
-      WRITE(*,*) 'ERROR:: Stopping function ML5_0_SOINDEX_FOR_AMPORDER'
-     $ //'S'
+      WRITE(*,*) 'ERROR:: Stopping function ML5_0_SOINDEX_FOR_AMPORDERS'
+     $ //''
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
 

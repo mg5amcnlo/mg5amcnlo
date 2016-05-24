@@ -126,7 +126,7 @@ class MyTextTestRunner(unittest.TextTestRunner):
             self.stream.writeln("Some of the tests Bypassed due to Ctrl-C")
         return result 
 
-    def run_border(self, test):
+    def run_border(self, test, to_check):
         "Run the given test case or test suite."
         MyTextTestRunner.stream = self.stream
         result = self._makeResult()
@@ -149,7 +149,17 @@ class MyTextTestRunner(unittest.TextTestRunner):
                 if failed: self.stream.write(", ")
                 self.stream.write("errors=%d" % errored)
             self.stream.writeln(")")
-            sys.exit(0)
+            print to_check
+            to_check= to_check.rsplit('.',1)[1]
+            print to_check
+            if result.failures:
+                print 'fail', to_check,[str(R[0]) for R in result.failures]
+            if result.errors:
+                print 'errors',to_check,[str(R[0]) for R in result.errors]
+
+            if any(to_check in str(R[0]) for R in result.failures) or\
+               any(to_check in str(R[0]) for R in result.errors):
+                sys.exit(0)
         #else:
         #    self.stream.writeln("OK")
         #if self.bypassed:
@@ -214,7 +224,6 @@ def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit
     print "to_crash"
     to_crash = TestFinder(package=package, expression=to_crash, re_opt=re_opt)
     to_crash.collect_dir(package, checking=True)
-    print dir(to_crash)
 
     for test_fct in all_test:
         testsuite = unittest.TestSuite()
@@ -228,7 +237,7 @@ def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit
         testsuite.addTest(data)
         # Running it
         print "run it for %s" % test_fct
-        output =  MyTextTestRunner(verbosity=verbosity).run_border(testsuite)
+        output =  MyTextTestRunner(verbosity=verbosity).run_border(testsuite, to_crash[0])
     
     return output
     #import tests

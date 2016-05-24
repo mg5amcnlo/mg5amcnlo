@@ -415,6 +415,8 @@ c timing statistics
       common /to_abrv/ abrv
       integer iappl
       common /for_applgrid/ iappl
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       if (ifl.ne.0) then
          write (*,*) 'ERROR ifl not equal to zero in sigint',ifl
          stop 1
@@ -432,6 +434,8 @@ c timing statistics
          born_wgt_mint(iamp)=0d0
       enddo
       virtual_over_born=0d0
+      wgt_me_born=0d0
+      wgt_me_real=0d0
       if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
@@ -478,6 +482,8 @@ c The n+1-body contributions (including counter terms)
          ! MZ this is a temporary fix for processes without
          ! soft singularities associated to the initial state
          ! DO NOT extend this fix to event generation
+         wgt_me_born=0d0
+         wgt_me_real=0d0
          jac=MC_int_wgt
          call update_fks_dir(iFKS,iconfig)
          call generate_momenta(ndim,iconfig,jac,x,p)

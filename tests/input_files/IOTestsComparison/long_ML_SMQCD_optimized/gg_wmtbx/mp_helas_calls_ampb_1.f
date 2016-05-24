@@ -1,5 +1,6 @@
       SUBROUTINE ML5_0_MP_HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
 C     
+      USE ML5_0_POLYNOMIAL_CONSTANTS
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -17,10 +18,6 @@ C
       PARAMETER (NLOOPAMPS=396)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=28,NLOOPWAVEFUNCS=267)
-      INTEGER MAXLWFSIZE
-      PARAMETER (MAXLWFSIZE=4)
-      INTEGER LOOPMAXCOEFS, VERTEXMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=70, VERTEXMAXCOEFS=5)
       REAL*16     ZERO
       PARAMETER (ZERO=0.0E0_16)
       COMPLEX*32     IZERO
@@ -55,16 +52,16 @@ C
      $ ,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE
      $ ,CTCALL_REQ_SO_DONE,FILTER_SO
       COMMON/ML5_0_SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE
-     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_S
-     $ O_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE
+     $ ,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
       COMPLEX*32 AMP(NBORNAMPS)
       COMMON/ML5_0_MP_AMPS/AMP
       COMPLEX*32 W(20,NWAVEFUNCS)
       COMMON/ML5_0_MP_W/W
 
-      COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEF
-     $ UNCS)
+      COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE
+     $ ,0:NLOOPWAVEFUNCS)
       COMPLEX*32 PL(0:3,0:NLOOPWAVEFUNCS)
       COMMON/ML5_0_MP_WL/WL,PL
 
@@ -152,13 +149,13 @@ C     Counter-term amplitude(s) for loop diagram number 12
       CALL MP_VVV1_0(W(1,1),W(1,2),W(1,14),R2_3GQ,AMPL(1,34))
       CALL MP_FFV1_2(W(1,5),W(1,6),GC_5,MDL_MB,ZERO,W(1,15))
 C     Counter-term amplitude(s) for loop diagram number 15
-      CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,15),W(1,7),R2_QQQ,R2_QQB,AMPL(1
-     $ ,35))
+      CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,15),W(1,7),R2_QQQ,R2_QQB,AMPL(1,35)
+     $ )
       CALL MP_R2_QQ_2_0(W(1,15),W(1,7),UV_BMASS,AMPL(1,36))
       CALL MP_R2_QQ_2_0(W(1,15),W(1,7),UV_BMASS_1EPS,AMPL(2,37))
 C     Counter-term amplitude(s) for loop diagram number 16
-      CALL MP_R2_GG_1_R2_GG_3_0(W(1,6),W(1,13),R2_GGQ,R2_GGB,AMPL(1
-     $ ,38))
+      CALL MP_R2_GG_1_R2_GG_3_0(W(1,6),W(1,13),R2_GGQ,R2_GGB,AMPL(1,38)
+     $ )
 C     Counter-term amplitude(s) for loop diagram number 17
       CALL MP_FFV1_0(W(1,5),W(1,7),W(1,6),UV_GQQQ_1EPS,AMPL(2,39))
       CALL MP_FFV1_0(W(1,5),W(1,7),W(1,6),UV_GQQQ_1EPS,AMPL(2,40))
@@ -171,8 +168,8 @@ C     Counter-term amplitude(s) for loop diagram number 17
       CALL MP_FFV1_0(W(1,5),W(1,7),W(1,6),UV_GQQG_1EPS,AMPL(2,47))
       CALL MP_FFV1_0(W(1,5),W(1,7),W(1,6),R2_GQQ,AMPL(1,48))
 C     Counter-term amplitude(s) for loop diagram number 19
-      CALL MP_R2_GG_1_R2_GG_3_0(W(1,6),W(1,14),R2_GGQ,R2_GGB,AMPL(1
-     $ ,49))
+      CALL MP_R2_GG_1_R2_GG_3_0(W(1,6),W(1,14),R2_GGQ,R2_GGB,AMPL(1,49)
+     $ )
 C     Counter-term amplitude(s) for loop diagram number 20
       CALL MP_FFV2_0(W(1,15),W(1,4),W(1,3),R2_SXCW,AMPL(1,50))
       CALL MP_FFV1_1(W(1,4),W(1,6),GC_5,MDL_MT,MDL_WT,W(1,16))
@@ -221,8 +218,8 @@ C     Counter-term amplitude(s) for loop diagram number 35
       CALL MP_FFV1_0(W(1,11),W(1,7),W(1,2),R2_GQQ,AMPL(1,80))
       CALL MP_FFV1_2(W(1,11),W(1,2),GC_5,MDL_MB,ZERO,W(1,20))
 C     Counter-term amplitude(s) for loop diagram number 37
-      CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,20),W(1,7),R2_QQQ,R2_QQB,AMPL(1
-     $ ,81))
+      CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,20),W(1,7),R2_QQQ,R2_QQB,AMPL(1,81)
+     $ )
       CALL MP_R2_QQ_2_0(W(1,20),W(1,7),UV_BMASS,AMPL(1,82))
       CALL MP_R2_QQ_2_0(W(1,20),W(1,7),UV_BMASS_1EPS,AMPL(2,83))
       CALL MP_FFV1_1(W(1,7),W(1,2),GC_5,MDL_MB,ZERO,W(1,21))

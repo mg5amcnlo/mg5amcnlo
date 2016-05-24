@@ -1,19 +1,38 @@
-# Environment variables
+STDLIB = -lc++
+STDLIB_FLAG = -stdlib=libc++
+MACFLAG = -mmacosx-version-min=10.7
+DEFAULT_F_COMPILER = gfortran
+DEFAULT_F2PY_COMPILER = f2py
+DEFAULT_CPP_COMPILER = g++
+#end_of_make_opts_variables
 
+# Rest of the makefile
 ifeq ($(origin FFLAGS),undefined)
   #FFLAGS= -O -w
   FFLAGS = -O -fno-automatic
   #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
 
+# REMOVE MACFLAG IF NOT ON MAC 
+UNAME := $(shell uname -s)
+ifneq ($(UNAME), Darwin)
+    MACFLAG=  
+endif
+
+
 ifeq ($(origin CXXFLAGS),undefined)
   #CXXFLAGS= -g 
-  CXXFLAGS = -O 
+  CXXFLAGS = -O $(STDLIB_FLAG) $(MACFLAG)
 endif
 
 ifeq ($(origin CFLAGS),undefined)
   #CFLAGS= -g 
-  CFLAGS = -O 
+  CFLAGS = -O  $(STDLIB_FLAG) $(MACFLAG)
+endif
+
+# REMOVE MACFLAG IF IN F2PY mode
+ifdef f2pymode
+    MACFLAG= 
 endif
 
 # Increase the number of allowed charcters in a Fortran line
@@ -22,18 +41,22 @@ FFLAGS+= -ffixed-line-length-132
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
 #  FC=g77
-  FC=gfortran
+  FC=$(DEFAULT_F_COMPILER)
 endif
 # Set F2PY unless it's defined by an environment variable
 ifeq ($(origin F2PY),undefined)
-  F2PY=f2py
+  F2PY=$(DEFAULT_F2PY_COMPILER)
 endif
 
 # Set CXX unless it's defined by an environment variable
 ifeq ($(origin CXX),default)
-  CXX=g++
+  CXX=$(DEFAULT_CPP_COMPILER)
 endif
 
+UNAME := $(shell uname -s)
+ifeq ($(origin LDFLAGS), undefined)
+     LDFLAGS=$(STDLIB)
+endif
 # Options: dynamic, lhapdf
 
 UNAME := $(shell uname)
@@ -69,7 +92,7 @@ endif
 ifdef lhapdf
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  llhapdf=-lLHAPDF -lstdc++
+  llhapdf+=-lLHAPDF 
   reweight_xsec_events_pdf_dummy=
 else
   alfas_functions=alfas_functions

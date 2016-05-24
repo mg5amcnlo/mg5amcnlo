@@ -40,6 +40,8 @@ C
       double precision tiny
       parameter (tiny = 1d-12)
       double precision max_val
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 
       include 'genps.inc'
       double precision amp2b(maxamps), jamp2b(0:maxamps,0:nampso)
@@ -133,6 +135,8 @@ C   keep track of the separate pieces correspoinding to different coupling combi
 enddo
 C this is to avoid fake non-zero contributions 
 if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
+
+wgt_me_born=ans_summed
 
 C fill the amp2 and jamp2 arrays
 do i = 1, ngraphs

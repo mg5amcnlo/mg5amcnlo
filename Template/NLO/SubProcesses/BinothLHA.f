@@ -4,22 +4,6 @@ c Given the Born momenta, this is the Binoth-Les Houches interface file
 c that calls the OLP and returns the virtual weights. For convenience
 c also the born_wgt is passed to this subroutine.
 c
-C************************************************************************
-c WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
-C************************************************************************
-c The Born in MadFKS -- and therefore also the virtual!-- should have a
-c slightly adapted identical particle symmetry factor. The normal
-c virtual weight as coming from the OLP should be divided by the number
-c of gluons/photons in the corresponding real-emission process (i.e. the number
-c of gluons in the Born plus one). These factors are passed to this
-c subroutine in /numberofparticles/ common block, as "ngluons" and "nphotons". 
-c So, divided virt_wgt by
-C  symfactvirt = dble(max(ngluons,1) * max(nphotons,1))
-c to get the correct virtual to be used in MadFKS. 
-c The born_wgt that is passed to this subroutine has
-c already been divided by this factor.
-C************************************************************************
-c
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
@@ -36,11 +20,6 @@ c general MadFKS parameters
       double precision, allocatable :: virt_wgts_hel(:,:)
       double precision mu,ao2pi,conversion,alpha_S
       save conversion
-      double precision fkssymmetryfactor,fkssymmetryfactorBorn,
-     &     fkssymmetryfactorDeg,symfactvirt
-      integer ngluons,nquarks(-6:6),nphotons
-      common/numberofparticles/fkssymmetryfactor,fkssymmetryfactorBorn,
-     &                    fkssymmetryfactorDeg,ngluons,nquarks,nphotons
       logical firsttime,firsttime_conversion
       data firsttime,firsttime_conversion /.true.,.true./
       logical firsttime_run
@@ -117,8 +96,6 @@ C     reset the amp_split array
         prec_found(i) = 0d0
       enddo
 c This is no longer needed, because now the Born has the correct symmetry factor:
-c      symfactvirt = dble(max(ngluons,1)*max(nphotons,1))
-      symfactvirt = 1d0
       if (firsttime_run) then
 c The helicity double check should have been performed during the
 c pole check, so we skip it here. It also makes sure that there is
@@ -161,17 +138,17 @@ C        look for orders which match the nlo order constraint
          enddo
          do i = 1, nsqso
            if (keep_order(i)) then
-             virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
-             single  = single + virt_wgts(2,i) / symfactvirt
-             double  = double + virt_wgts(3,i) / symfactvirt
+             virt_wgt= virt_wgt + virt_wgts(1,i)
+             single  = single + virt_wgts(2,i)
+             double  = double + virt_wgts(3,i)
 C         keep track of the separate pieces correspoinding to
 C          different coupling combinations
              do j = 1, nsplitorders
               amp_orders(j) = getordpowfromindex_ML5(j, i)
              enddo
-             amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
-             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
-             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
+             amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
+             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i)
+             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i)
              prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
            endif
         enddo
@@ -184,17 +161,17 @@ c once the initial pole check is performed.
      $           ,ret_code)
             do i = 1, nsqso
               if (keep_order(i)) then
-                virt_wgt= virt_wgt + virt_wgts(1,i) / symfactvirt
-                single  = single + virt_wgts(2,i) / symfactvirt
-                double  = double + virt_wgts(3,i) / symfactvirt
+                virt_wgt= virt_wgt + virt_wgts(1,i)
+                single  = single + virt_wgts(2,i)
+                double  = double + virt_wgts(3,i)
 C         keep track of the separate pieces correspoinding to
 C          different coupling combinations
                 do j = 1, nsplitorders
                  amp_orders(j) = getordpowfromindex_ML5(j, i)
                 enddo
-                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i) / symfactvirt
-                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i) / symfactvirt
-                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i) / symfactvirt
+                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i)
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i)
                 prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
               endif
             enddo
@@ -219,7 +196,7 @@ c virtual as flat as possible
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
      $           ,tolerance,accuracies,ret_code)
-            hel_fact = dble(goodhel(ihel))/volh/4d0/symfactvirt
+            hel_fact = dble(goodhel(ihel))/volh/4d0
             do i = 1, nsqso
               if (keep_order(i)) then
                 born_hel_from_virt= born_hel_from_virt + virt_wgts_hel(0,i)
@@ -242,8 +219,7 @@ C          different coupling combinations
                 write(*,*) 'ERROR HEL', wgt_hel(hel(ihel)),born_hel_from_virt/4d0,wgt_hel(hel(ihel))/(born_hel_from_virt/4d0)
                 stop
             endif
-c Average over initial state helicities (and take the symfactvirt factor into
-c account)
+c Average over initial state helicities 
             if (nincoming.ne.2) then
                write (*,*)
      &              'Cannot do MC over helicities for 1->N processes'

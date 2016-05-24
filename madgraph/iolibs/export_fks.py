@@ -55,6 +55,20 @@ pjoin = os.path.join
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_fks')
 
+
+def make_jpeg_async(args):
+    Pdir = args[0]
+    old_pos = args[1]
+    dir_path = args[2]
+  
+    devnull = os.open(os.devnull, os.O_RDWR)
+  
+    os.chdir(Pdir)
+    subprocess.call([os.path.join(old_pos, dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+                    stdout = devnull)
+    os.chdir(os.path.pardir)  
+
+
 #=================================================================================
 # Class for used of the (non-optimized) Loop process
 #=================================================================================
@@ -156,6 +170,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+        
+        shutil.copy(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'),
+                    pjoin(self.dir_path, 'Cards','MadLoopParams_default.dat'))
+
         if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
                 self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.dir_path, 
                                                   'Cards', 'MadLoopParams.dat'))
@@ -294,11 +312,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===========================================================================
     # write_maxparticles_file
     #===========================================================================
-    def write_maxparticles_file(self, writer, matrix_elements):
+    def write_maxparticles_file(self, writer, maxparticles):
         """Write the maxparticles.inc file for MadEvent"""
-
-        maxparticles = max([me.get_nexternal_ninitial()[0] \
-                              for me in matrix_elements['matrix_elements']])
 
         lines = "integer max_particles, max_branch\n"
         lines += "parameter (max_particles=%d) \n" % maxparticles
@@ -313,15 +328,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===========================================================================
     # write_maxconfigs_file
     #===========================================================================
-    def write_maxconfigs_file(self, writer, matrix_elements):
+    def write_maxconfigs_file(self, writer, maxconfigs):
         """Write the maxconfigs.inc file for MadEvent"""
-
-        try:
-            maxconfigs = max([me.get_num_configs() \
-                            for me in matrix_elements['real_matrix_elements']])
-        except ValueError:
-            maxconfigs = max([me.born_me.get_num_configs() \
-                            for me in matrix_elements['matrix_elements']])
 
         lines = "integer lmaxconfigs\n"
         lines += "parameter (lmaxconfigs=%d)" % maxconfigs
@@ -455,7 +463,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # likely also generate it for each subproc.
         if OLP=='NJET':
             filename = 'OLE_order.lh'
-            self.write_lh_order(filename, matrix_element, OLP)
+            self.write_lh_order(filename, [matrix_element.born_matrix_element.get('processes')[0]], OLP)
         
         if matrix_element.virt_matrix_element:
                     calls += self.generate_virt_directory( \
@@ -710,13 +718,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===========================================================================
     #  create the run_card 
     #===========================================================================
-    def create_run_card(self, matrix_elements, history):
+    def create_run_card(self, processes, history):
         """ """
  
         run_card = banner_mod.RunCardNLO()
-        
-        processes = [me.get('processes') 
-                                 for me in matrix_elements['matrix_elements']]
         
         run_card.create_default_for_process(self.proc_characteristic, 
                                             history,
@@ -736,7 +741,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.proc_characteristic['grouped_matrix'] = False
         self.create_proc_charac()
 
-        self.create_run_card(matrix_elements, history)
+        self.create_run_card(matrix_elements.get_processes(), history)
 #        modelname = self.model.get('name')
 #        if modelname == 'mssm' or modelname.startswith('mssm-'):
 #            param_card = os.path.join(self.dir_path, 'Cards','param_card.dat')
@@ -750,14 +755,15 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         self.write_get_mass_width_file(writers.FortranWriter(filename), makeinc, self.model)
 
 #        # Write maxconfigs.inc based on max of ME's/subprocess groups
+
         filename = os.path.join(self.dir_path,'Source','maxconfigs.inc')
         self.write_maxconfigs_file(writers.FortranWriter(filename),
-                                   matrix_elements)
+                                   matrix_elements.get_max_configs())
         
 #        # Write maxparticles.inc based on max of ME's/subprocess groups
         filename = os.path.join(self.dir_path,'Source','maxparticles.inc')
         self.write_maxparticles_file(writers.FortranWriter(filename),
-                                     matrix_elements)
+                                     matrix_elements.get_max_particles())
 
         # Touch "done" file
         os.system('touch %s/done' % os.path.join(self.dir_path,'SubProcesses'))
@@ -1723,7 +1729,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                             fortran_model)
 
 
-    def generate_virtuals_from_OLP(self,FKSHMultiproc,export_path, OLP):
+
+    def generate_virtuals_from_OLP(self,process_list,export_path, OLP):
         """Generates the library for computing the loop matrix elements
         necessary for this process using the OLP specified."""
         
@@ -1732,7 +1739,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         if not os.path.exists(virtual_path):
             os.makedirs(virtual_path)
         filename = os.path.join(virtual_path,'OLE_order.lh')
-        self.write_lh_order(filename, FKSHMultiproc.get('matrix_elements'),OLP)
+        self.write_lh_order(filename, process_list, OLP)
 
         fail_msg='Generation of the virtuals with %s failed.\n'%OLP+\
             'Please check the virt_generation.log file in %s.'\
@@ -1801,20 +1808,19 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         proc_to_label = self.parse_contract_file(
                                             pjoin(virtual_path,'OLE_order.olc'))
 
-        self.write_BinothLHA_inc(FKSHMultiproc,proc_to_label,\
+        self.write_BinothLHA_inc(process_list,proc_to_label,\
                                               pjoin(export_path,'SubProcesses'))
         
         # Link the contract file to within the SubProcess directory
         ln(pjoin(virtual_path,'OLE_order.olc'),pjoin(export_path,'SubProcesses'))
         
-    def write_BinothLHA_inc(self, FKSHMultiproc, proc_to_label, SubProcPath):
+    def write_BinothLHA_inc(self, processes, proc_to_label, SubProcPath):
         """ Write the file Binoth_proc.inc in each SubProcess directory so as 
         to provide the right process_label to use in the OLP call to get the
         loop matrix element evaluation. The proc_to_label is the dictionary of
         the format of the one returned by the function parse_contract_file."""
         
-        for matrix_element in FKSHMultiproc.get('matrix_elements'):
-            proc = matrix_element.get('processes')[0]
+        for proc in processes:
             name = "P%s"%proc.shell_string()
             proc_pdgs=(tuple([leg.get('id') for leg in proc.get('legs') if \
                                                          not leg.get('state')]),
@@ -1968,6 +1974,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         for file in linkfiles:
             ln('../../../lib/%s' % file)
 
+        linkfiles = ['coef_specs.inc']
+
+        for file in linkfiles:        
+            ln('../../../Source/DHELAS/%s' % file)
+
         # Return to original PWD
         os.chdir(cwd)
 
@@ -1990,26 +2001,19 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     # write_lh_order
     #===============================================================================
     #test written
-    def write_lh_order(self, filename, matrix_elements, OLP='MadLoop'):
+    def write_lh_order(self, filename, process_list, OLP='MadLoop'):
         """Creates the OLE_order.lh file. This function should be edited according
         to the OLP which is used. For now it is generic."""
         
-        if isinstance(matrix_elements,fks_helas_objects.FKSHelasProcess):
-            fksborns=fks_helas_objects.FKSHelasProcessList([matrix_elements])
-        elif isinstance(matrix_elements,fks_helas_objects.FKSHelasProcessList):
-            fksborns= matrix_elements
-        else:
-            raise fks_common.FKSProcessError('Wrong type of argument for '+\
-                                  'matrix_elements in function write_lh_order.')
         
-        if len(fksborns)==0:
+        if len(process_list)==0:
             raise fks_common.FKSProcessError('No matrix elements provided to '+\
                                                  'the function write_lh_order.')
             return
         
         # We assume the orders to be common to all Subprocesses
         
-        orders = fksborns[0].orders 
+        orders = process_list[0].get('orders') 
         if 'QED' in orders.keys() and 'QCD' in orders.keys():
             QED=orders['QED']
             QCD=orders['QCD']
@@ -2021,12 +2025,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             QCD=orders['QCD']
         else:
             QED, QCD = self.get_qed_qcd_orders_from_weighted(\
-                    fksborns[0].get_nexternal_ninitial()[0]-1, # -1 is because the function returns nexternal of the real emission
+                    len(process_list[0].get('legs')),
                     orders['WEIGHTED'])
 
         replace_dict = {}
         replace_dict['mesq'] = 'CHaveraged'
-        replace_dict['corr'] = ' '.join(matrix_elements[0].get('processes')[0].\
+        replace_dict['corr'] = ' '.join(process_list[0].\
                                                   get('perturbation_couplings'))
         replace_dict['irreg'] = 'CDR'
         replace_dict['aspow'] = QCD
@@ -2034,8 +2038,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         replace_dict['modelfile'] = './param_card.dat'
         replace_dict['params'] = 'alpha_s'
         proc_lines=[]
-        for fksborn in fksborns:
-            proc_lines.append(fksborn.get_lh_pdg_string())
+        for proc in process_list:
+            proc_lines.append('%s -> %s' % \
+                    (' '.join(str(l['id']) for l in proc['legs'] if not l['state']),
+                     ' '.join(str(l['id']) for l in proc['legs'] if l['state'])))
         replace_dict['pdgs'] = '\n'.join(proc_lines)
         replace_dict['symfin'] = 'Yes'
         content = \
@@ -3462,32 +3468,30 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         link_tir_libs=[]
         tir_libs=[]
         tir_include=[]
-        # special for PJFry++/Golem95
-        link_pjfry_lib=""
-        pjfry_lib=""
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
             libpath=getattr(self,tir_dir)
-            libname="lib%s.a"%tir
-            tir_name=tir
             libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
-                                              libpath,libname,tir_name=tir_name)
+                                              libpath,"lib%s.a"%tir,tir_name=tir)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir in ['pjfry','golem']:
-                    # Apparently it is necessary to link against the original 
-                    # location of the pjfry/golem library, so it needs a special treatment.
+                if tir in ['pjfry','ninja','golem', 'samurai']:
+                    # We should link dynamically when possible, so we use the original
+                    # location of these libraries.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
-                    if tir=='golem':
+                    # We must add the corresponding includes for golem, samurai
+                    # and ninja
+                    if tir in ['golem','samurai','ninja']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
-                        golem_include = misc.find_includes_path(trg_path,'.mod')
-                        if golem_include is None:
+                        to_include = misc.find_includes_path(trg_path,
+                                                        self.include_names[tir])
+                        if to_include is None:
                             logger.error(
-'Could not find the include directory for golem, looking in %s.\n' % str(trg_path)+
+'Could not find the include directory for %s, looking in %s.\n' % (tir ,str(trg_path))+
 'Generation carries on but you will need to edit the include path by hand in the makefiles.')
-                            golem_include = '<Not_found_define_it_yourself>'
-                        tir_include.append('-I %s'%golem_include)
+                            to_include = '<Not_found_define_it_yourself>'
+                        tir_include.append('-I %s'%to_include)
                 else:
                     link_tir_libs.append('-l%s'%tir)
                     tir_libs.append('$(LIBDIR)lib%s.$(libext)'%tir)
@@ -3528,10 +3532,16 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         cpfiles= ["SubProcesses/MadLoopParamReader.f",
                   "Cards/MadLoopParams.dat",
                   "SubProcesses/MadLoopParams.inc"]
-        
+
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+        
+        shutil.copy(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'),
+                      pjoin(self.dir_path, 'Cards','MadLoopParams_default.dat'))
+
+        
+        
         if os.path.exists(pjoin(self.dir_path, 'Cards', 'MadLoopParams.dat')):          
                 self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.dir_path, 
                                                   'Cards', 'MadLoopParams.dat'))
@@ -3608,6 +3618,10 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
 
         calls=self.write_loop_matrix_element_v4(None,matrix_element,fortran_model)
         
+        # We need a link to coefs.inc from DHELAS
+        ln(pjoin(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc'),
+                                                        abspath=False, cwd=None)
+    
         # The born matrix element, if needed
         filename = 'born_matrix.f'
         calls = self.write_bornmatrix(
@@ -3670,6 +3684,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         for file in linkfiles:
             ln('../../../lib/%s' % file)
 
+        linkfiles = ['coef_specs.inc']
+
+        for file in linkfiles:        
+            ln('../../../Source/DHELAS/%s' % file)
+
         # Return to original PWD
         os.chdir(cwd)
 
@@ -3681,19 +3700,16 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     #===============================================================================
     # write_coef_specs
     #===============================================================================
-    def write_coef_specs_file(self, virt_me_list):
+    def write_coef_specs_file(self, max_loop_vertex_ranks):
         """ writes the coef_specs.inc in the DHELAS folder. Should not be called in the 
         non-optimized mode"""
         filename = os.path.join(self.dir_path, 'Source', 'DHELAS', 'coef_specs.inc')
 
         replace_dict = {}
-        replace_dict['max_lwf_size'] = 4 
-
-        max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for me in virt_me_list]
+        replace_dict['max_lwf_size'] = 4
         replace_dict['vertex_max_coefs'] = max(\
                 [q_polynomial.get_number_of_coefs_for_rank(n) 
                     for n in max_loop_vertex_ranks])
-
         IncWriter=writers.FortranWriter(filename,'w')
         IncWriter.writelines("""INTEGER MAXLWFSIZE
                            PARAMETER (MAXLWFSIZE=%(max_lwf_size)d)

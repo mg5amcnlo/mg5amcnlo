@@ -1,4 +1,4 @@
-################################################################################
+###############################################################################
 #
 # Copyright (c) 2010 The MadGraph5_aMC@NLO Development team and Contributors
 #
@@ -211,7 +211,7 @@ class ParamCardWriter(object):
             info = info[4:]
     
         if param.value.imag != 0:
-            raise ParamCardWriterError, 'All External Parameter should be real'
+            raise ParamCardWriterError, 'All External Parameter should be real (not the case for %s)'%param.name
     
 
         # avoid to keep special value used to avoid restriction
@@ -256,7 +256,7 @@ class ParamCardWriter(object):
             if part["type"] == "ghost":
                 continue
             if self.model['parameter_dict'][param.name].imag:
-                raise ParamCardWriterError, 'All Mass/Width Parameter should be real'
+                raise ParamCardWriterError, 'All Mass/Width Parameter should be real (not the case for %s)'%param.name
             value = complex(self.model['parameter_dict'][param.name]).real
             text += """%s %s %f # %s : %s \n""" %(prefix, part["pdg_code"], 
                         value, part["name"], param.expr.replace('mdl_',''))  

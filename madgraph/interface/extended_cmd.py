@@ -276,6 +276,9 @@ class BasicCmd(cmd.Cmd):
                 tmp += data
                 tmp = os.path.expanduser(os.path.expandvars(tmp))
                 out.append(tmp)
+                # Reinitialize tmp in case there is another differen argument
+                # containing escape characters
+                tmp = ''
             else:
                 out.append(data)
         return out
@@ -570,16 +573,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         if not line:
             return line
-        line = line.lstrip()
 
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
             self.save_line = ''
-        
+            
+        line = line.lstrip()        
         # Check if the line is complete
         if line.endswith('\\'):
-            self.save_line = line[:-1]
+            self.save_line = line[:-1] 
             return '' # do nothing   
                 
         # Remove comment
@@ -644,7 +647,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     #===============================================================================    
     def ask(self, question, default, choices=[], path_msg=None, 
             timeout = True, fct_timeout=None, ask_class=None, alias={},
-            first_cmd=None, **opt):
+            first_cmd=None, text_format='4', **opt):
         """ ask a question with some pre-define possibility
             path info is
         """
@@ -659,11 +662,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 timeout = self.options['timeout']
             except Exception:
                 pass
-                    
+
         # add choice info to the question
         if choices + path_msg:
             question += ' ['
-            question += "\033[%dm%s\033[0m, " % (4, default)    
+            question += "\033[%sm%s\033[0m, " % (text_format, default)    
             for data in choices[:9] + path_msg:
                 if default == data:
                     continue
@@ -674,7 +677,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 question += '... , ' 
             question = question[:-2]+']'
         else:
-            question += "[\033[%dm%s\033[0m] " % (4, default)    
+            question += "[\033[%sm%s\033[0m] " % (text_format, default)    
         if ask_class:
             obj = ask_class  
         elif path_msg:
@@ -689,8 +692,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                    mother_interface=self, **opt)
         
         if first_cmd:
-            question_instance.onecmd(first_cmd)
-        
+            if isinstance(first_cmd, str):
+                question_instance.onecmd(first_cmd)
+            else:
+                for line in first_cmd:
+                    question_instance.onecmd(line)
         if not self.haspiping:
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
@@ -704,13 +710,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 answer = alias[answer]
             if ask_class:
                 answer = question_instance.default(answer)
+            if hasattr(question_instance, 'check_answer_consistency'):
+                question_instance.check_answer_consistency()
             return answer
         
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
-
         
         try:
             if value in alias:
@@ -762,8 +768,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.warning('The answer to the previous question is not set in your input file')
-                logger.warning('Use %s value' % default)
+                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
+                logger.info('Use %s value' % default, '$MG:color:BLACK')
                 return str(default)
         
         line = line.replace('\n','').strip()
@@ -785,6 +791,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
+        elif any(line.lower()==opt.lower() for opt in options): 
+            possibility = [opt for opt in options if line.lower()==opt.lower()]
+            if len (possibility)==1:
+                return possibility[0]
+            
         # No valid answer provides
         if self.haspiping:
             self.store_line(line)
@@ -933,6 +944,9 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         """
         if '~/' in line and os.environ.has_key('HOME'):
             line = line.replace('~/', '%s/' % os.environ['HOME'])
+        if '#' in line:
+            line = line.split('#')[0]
+             
         line = os.path.expandvars(line)
         cmd, arg, line = self.parseline(line)
         if not line:

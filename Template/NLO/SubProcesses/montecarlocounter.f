@@ -1125,6 +1125,8 @@ c the same method
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
@@ -1338,10 +1340,10 @@ c BARRED AMPLITUDES
       do i=1,max_bcol
         do iord=1,nsplitorders
           if (sumborn.ne.0d0) then
-            bornbars(i,iord)=jamp2(i)/sumborn * born(iord)
+            bornbars(i,iord)=jamp2(i)/sumborn * born(iord) *iden_comp
             do iamp=1,amp_split_size
               amp_split_bornbars(iamp,i,iord)=jamp2(i)/sumborn * 
-     &                                      amp_split_born(iamp,iord)
+     &                              amp_split_born(iamp,iord) *iden_comp
             enddo
           elseif (born(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
             bornbars(i,iord)=0d0
@@ -1353,10 +1355,10 @@ c BARRED AMPLITUDES
             stop
           endif
           if (sumborn.ne.0d0) then
-            bornbarstilde(i,iord)=jamp2(i)/sumborn * borntilde(iord)
+            bornbarstilde(i,iord)=jamp2(i)/sumborn * borntilde(iord) *iden_comp
             do iamp=1,amp_split_size
               amp_split_bornbarstilde(iamp,i,iord)=jamp2(i)/sumborn * 
-     &                              amp_split_borntilde(iamp,iord)
+     &                      amp_split_borntilde(iamp,iord) *iden_comp
             enddo
           elseif (borntilde(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
             bornbarstilde(i,iord)=0d0

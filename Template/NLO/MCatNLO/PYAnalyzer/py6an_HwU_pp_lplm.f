@@ -48,11 +48,7 @@ c
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      integer maxRWGT
-      parameter (maxRWGT=100)
-      double precision wgtxsecRWGT(maxRWGT)
-      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
-      character*15 weights_info(max_weight)
+      character*50 weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)
@@ -240,7 +236,7 @@ c
       etalb=getpseudorap(pplb(4),pplb(1),pplb(2),pplb(3))
 c
       ptpair=ptv
-      azi=getdelphi(ppl(1),pplb(1),ppl(2),pplb(2))
+      azi=getdelphi(ppl(1),ppl(2),pplb(1),pplb(2))
       azinorm=(pi-azi)/pi
       xmll=xmv
       detallb=etal-etalb
