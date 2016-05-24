@@ -675,10 +675,6 @@ class TestFKSProcess(unittest.TestCase):
 
         myfks = fks_base.FKSProcess(MG.Process(dict))
         target_real_pdgs = [\
-                [-11,21,2,-2,-11],
-                [11,21,2,-2,11],
-                [-13,21,2,-2,-13],
-                [13,21,2,-2,13],
                 [-1,21,2,-2,-1],
                 [1,21,2,-2,1],
                 [-2,21,2,-2,-2],
@@ -689,55 +685,39 @@ class TestFKSProcess(unittest.TestCase):
                 [22,2,2,2,-2],
                 [22,21,2,-2,22]]
         target_fks_infos = [ \
-                # real config 1: e+ g > u u~ e+
+                # real config 1: d~ g > u u~ d~
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 2: e- g > u u~ e-
+                # real config 2: d g > u u~ d
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 3: mu+ g > u u~ mu+
+                # real config 3: u~ g > u u~ u~
                 [{'i':5, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 4: mu- g > u u~ mu-
-                [{'i':5, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
-                 'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
-                 'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 5: d~ g > u u~ d~
-                [{'i':5, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
-                 'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
-                 'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 6: d g > u u~ d
-                [{'i':5, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
-                 'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
-                 'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 7: u~ g > u u~ u~
-                [{'i':5, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
-                 'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
-                 'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 8: u g > u u u~
+                # real config 4: u g > u u u~
                 [{'i':4, 'j':1, 'ij':1, 'ij_id':22, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QED'], 'extra_cnt_index': -1}],
-                # real config 9: a d~ > u u~ d~
+                # real config 5: a d~ > u u~ d~
                 [{'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QCD'], 'extra_cnt_index': -1}],
-                # real config 10: a d > u u~ d
+                # real config 6: a d > u u~ d
                 [{'i':4, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QCD'], 'extra_cnt_index': -1}],
-                # real config 11: a u~ > u u~ u~
+                # real config 7: a u~ > u u~ u~
                 [{'i':5, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QCD'], 'extra_cnt_index': -1}],
-                # real config 12: a u > u u~ u
+                # real config 8: a u > u u~ u
                 [{'i':4, 'j':2, 'ij':2, 'ij_id':21, 'need_color_links':False,
                  'need_charge_links':False, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QCD'], 'extra_cnt_index': -1}],
-                # real config 13: a g > u u~ a
+                # real config 9: a g > u u~ a
                 [{'i':5, 'j':3, 'ij':3, 'ij_id':2, 'need_color_links':False,
                  'need_charge_links':True, 'underlying_born':[[22,21,2,-2]],
                  'splitting_type':['QED'], 'extra_cnt_index': -1},
@@ -746,33 +726,9 @@ class TestFKSProcess(unittest.TestCase):
                  'splitting_type':['QED'], 'extra_cnt_index': -1}],
                     ]
         misc.sprint('fix rb_links')
-#        target_fks_infos = [ \
-#                # real config 1: e- g > u u~ e-
-#                [{'i':5, 'j':1, 'ij':1, 'ij_id':1, 'need_color_links':False,
-#                    'rb_links': [{'real_conf': 1, 'born_conf': 0}, {'real_conf': 0, 'born_conf': 1}]}],
-#                # real config 2: e+ g > u u~ e+
-#                [{'i':5, 'j':1, 'ij':1, 'ij_id':1, 'need_color_links':False,
-#                    'rb_links': [{'real_conf': 1, 'born_conf': 0}, {'real_conf': 0, 'born_conf': 1}]}],
-#                # real config 3: d g > u u~ d
-#                [{'i':5, 'j':1, 'ij':1, 'ij_id':1, 'need_color_links':False,
-#                    'rb_links': [{'real_conf': 2, 'born_conf': 0}, {'real_conf': 1, 'born_conf': 1}]}],
-#                # real config 4: d~ g > u u~ d~
-#                [{'i':5, 'j':1, 'ij':1, 'ij_id':1, 'need_color_links':False,
-#                    'rb_links': [{'real_conf': 2, 'born_conf': 0}, {'real_conf': 1, 'born_conf': 1}]}],
-#                # real config 5: u g > u u u~
-#                [{'i':4, 'j':1, 'ij':1, 'ij_id':1, 'need_color_links':False,
-#                    'rb_links': [{'real_conf': 5, 'born_conf': 0}, {'real_conf': 4, 'born_conf': 1}]}],
-#                # real config 6: u~ g > u u~ u~
-#                [{'i':5, 'j':1, 'ij':1, 'ij_id':1, 'need_color_links':False,
-#                    'rb_links': [{'real_conf': 5, 'born_conf': 0}, {'real_conf': 4, 'born_conf': 1}]}],
-#                # real config 7: a g > u u~ a
-#                [{'i':5, 'j':3, 'ij':3, 'ij_id':0, 'need_color_links':True,
-#                    'rb_links': [{'real_conf': 5, 'born_conf': 0}, {'real_conf': 3, 'born_conf': 1}]},
-#                 {'i':5, 'j':4, 'ij':4, 'ij_id':0, 'need_color_links':True,
-#                    'rb_links': [{'real_conf': 1, 'born_conf': 0}, {'real_conf': 4, 'born_conf': 1}]}]]
 
         myfks.generate_reals([],[])
-        self.assertEqual(len(myfks.real_amps),13)
+        self.assertEqual(len(myfks.real_amps),9)
         for real, fks_info, pdgs in zip(myfks.real_amps, target_fks_infos, target_real_pdgs):
             self.assertEqual([l['id'] for l in real.process['legs']], pdgs)
             self.assertEqual(real.fks_infos, fks_info)

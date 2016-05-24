@@ -51,16 +51,24 @@ class TestGenerateLoopFKS(unittest.TestCase):
         myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
     
         myproc1 = MG.ProcessDefinition({'legs':myleglist,
-                                           'model':self.mymodel,
-                                           'orders': {'QED': 0},
-                                           'perturbation_couplings':['QCD'],
-                                           'NLO_mode': 'real'})
+                                        'model':self.mymodel,
+                                        'orders':{'QCD':4, 'QED':0},
+                                        'born_orders':{'QCD':2, 'QED':0},
+                                        'squared_orders':{'QCD':6, 'QED':0},
+                                        'split_orders':['QCD', 'QED'],
+                                        'sqorders_types':{'QED':'=', 'QCD':'='},
+                                        'perturbation_couplings':['QCD'],
+                                        'NLO_mode': 'real'})
 
         myproc2 = MG.ProcessDefinition({'legs':myleglist,
-                                           'model':self.mymodel,
-                                           'orders': {'QED': 0},
-                                           'perturbation_couplings':['QCD'],
-                                           'NLO_mode': 'all'})
+                                        'model':self.mymodel,
+                                        'orders':{'QCD':4, 'QED':0},
+                                        'born_orders':{'QCD':2, 'QED':0},
+                                        'squared_orders':{'QCD':6, 'QED':0},
+                                        'split_orders':['QCD', 'QED'],
+                                        'sqorders_types':{'QED':'=', 'QCD':'='},
+                                        'perturbation_couplings':['QCD'],
+                                        'NLO_mode': 'all'})
         
         my_process_definitions1 = MG.ProcessDefinitionList([myproc1])
         my_process_definitions2 = MG.ProcessDefinitionList([myproc2])
@@ -92,10 +100,15 @@ class TestGenerateLoopFKS(unittest.TestCase):
         myleglist.append(MG.MultiLeg({'ids':[-2], 'state':True}))
     
         myproc = MG.ProcessDefinition({'legs':myleglist,
-                                           'model':self.mymodel,
-                                           'orders': {'QED': 0},
-                                           'perturbation_couplings':['QCD'],
-                                           'NLO_mode': 'all'})
+                                       'model':self.mymodel,
+                                       'orders':{'QCD':4, 'QED':0},
+                                       'born_orders':{'QCD':2, 'QED':0},
+                                       'squared_orders':{'QCD':6, 'QED':0},
+                                       'split_orders':['QCD', 'QED'],
+                                       'sqorders_types':{'QED':'=', 'QCD':'='},
+                                       'perturbation_couplings':['QCD'],
+                                       'perturbation_couplings':['QCD'],
+                                       'NLO_mode': 'all'})
         
         my_process_definitions = MG.ProcessDefinitionList([myproc])
         

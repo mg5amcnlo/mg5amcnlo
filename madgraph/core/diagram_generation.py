@@ -792,42 +792,6 @@ class Amplitude(base_objects.PhysicsObject):
         if not returndiag and len(res)>0:
             res = self.apply_squared_order_constraints(res)
 
-        # Filter the diagrams according to the squared coupling order
-        # constraints and possible the negative one. Remember that OrderName=-n
-        # means that the user wants to include everything up to the N^(n+1)LO
-        # contribution in that order and at most one order can be restricted
-        # in this way. We shall do this only if the diagrams are not asked to
-        # be returned, as it is the case for NLO because it this case the
-        # interference are not necessarily among the diagrams generated here only.
-        if not returndiag:   
-            # Start by checking the positive squared order constraints
-            for order, value in process.get('squared_orders').items():
-                if value >= 0:
-                    # First make sure there are some diagrams left
-                    if len(res)==0: break
-                    # Assuming born amplitude squared (see comment above)
-                    min_amp_order=min(diag.get_order(order) for diag in res)
-                    res = base_objects.DiagramList(filter(lambda diag: \
-                                diag.get_order(order)<=value-min_amp_order,res))
-            # Now check any negative order constraint
-            try:
-                neg_order=[elem for elem in process.get('orders').items()+\
-                          process.get('squared_orders').items() if elem[1]<0][0]
-                # Make sure there still are some diagrams
-                if len(res)==0:
-                    raise IndexError
-                min_amp_order=min(diag.get_order(neg_order[0]) for diag in res)
-                # When not including loop corrections, restricting a coupling
-                # order with a negative value at the amplitude level or at the
-                # squared order level does not make a difference.
-                # The expansion is in terms of alpha_x, not g_x, hence the
-                # factor 2.
-                res = base_objects.DiagramList(filter(lambda diag: \
-                                  diag.get_order(neg_order[0])<= min_amp_order+\
-                                                       2*(-neg_order[1]-1),res))           
-            except IndexError:
-                pass
-
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
             for diagram in res:
