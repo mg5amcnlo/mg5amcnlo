@@ -151,20 +151,22 @@ C      gluon in the initial state
         if (amp_split(iamp).eq.0d0) cycle
         call amp_split_pos_to_orders(iamp, orders)
         alphasbpow = orders(qcd_pos)/2
-        ! this contribution will end up with one extra power
-        ! of alpha_s
-        orders(qcd_pos) = orders(qcd_pos) + 2
+        if (niglu.ne.0 .or. alphasbpow.ne.0) then
+          ! this contribution will end up with one extra power
+          ! of alpha_s
+          orders(qcd_pos) = orders(qcd_pos) + 2
 
-        amp_split_6to5f_muf(orders_to_amp_split_pos(orders)) = 
-     &   alphas / 3d0 / pi * TF * dble(niglu) * amp_split(iamp)  
+          amp_split_6to5f_muf(orders_to_amp_split_pos(orders)) = 
+     &     alphas / 3d0 / pi * TF * dble(niglu) * amp_split(iamp)  
 
-        amp_split_6to5f_mur(orders_to_amp_split_pos(orders)) = 
-     &  - alphas / 3d0 / pi * TF * dble(alphasbpow) * amp_split(iamp)  
+          amp_split_6to5f_mur(orders_to_amp_split_pos(orders)) = 
+     &    - alphas / 3d0 / pi * TF * dble(alphasbpow) * amp_split(iamp) 
         
-        amp_split_6to5f(orders_to_amp_split_pos(orders)) = 
-     &  dlog(qes2/mdl_mt**2) * 
-     &   (alphas / 3d0 / pi * TF * dble(niglu)   
-     &  - alphas / 3d0 / pi * TF * dble(alphasbpow)) * amp_split(iamp)  
+          amp_split_6to5f(orders_to_amp_split_pos(orders)) = 
+     &    dlog(qes2/mdl_mt**2) * 
+     &     (alphas / 3d0 / pi * TF * dble(niglu)   
+     &    - alphas / 3d0 / pi * TF * dble(alphasbpow)) * amp_split(iamp)
+        endif
       enddo
 
       return

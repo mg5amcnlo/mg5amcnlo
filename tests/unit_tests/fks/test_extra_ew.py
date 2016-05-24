@@ -1175,7 +1175,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         quarks=[1,2,3,4,5]
         # default should be set to false
         # initial state leptons
-        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QCD]')
+        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QED]')
         fksproc = self.interface._fks_multi_proc['born_processes'][0]
         reals=fksproc.reals
         for real in reals[0]+reals[1]:
@@ -1190,7 +1190,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         # now set it to true
         self.interface.do_set('include_initial_leptons_split True')
         # initial state leptons
-        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QCD]')
+        self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QED]')
         fksproc = self.interface._fks_multi_proc['born_processes'][0]
         reals=fksproc.reals
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[0]]))

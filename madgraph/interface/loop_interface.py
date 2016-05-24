@@ -287,9 +287,9 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if isinstance(coupling_type,str):
             coupling_type = [coupling_type,]
 
-        if coupling_type!= ['QCD'] and loop_type not in ['virtual','noborn']:
-            c = ' '.join(coupling_type)
-            raise self.InvalidCmd, 'MG5aMC can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c)
+##        if coupling_type!= ['QCD'] and loop_type not in ['virtual','noborn']:
+##            c = ' '.join(coupling_type)
+##            raise self.InvalidCmd, 'MG5aMC can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c)
         
 
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
