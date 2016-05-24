@@ -3854,6 +3854,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
+            self.make_opts_var['lhapdf'] = ""
             
         # set random number
         if self.run_card['iseed'] != 0:

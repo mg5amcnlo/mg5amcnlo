@@ -963,7 +963,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_shower(argss, options)
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('onlyshower', options)
-        self.run_mcatnlo(evt_file)
+        self.run_mcatnlo(evt_file, options)
 
         self.update_status('', level='all', update_results=True)
 
@@ -1217,7 +1217,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
-            self.run_mcatnlo(evt_file)
+            self.run_mcatnlo(evt_file, options)
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
@@ -1952,10 +1952,12 @@ RESTART = %(mint_mode)s
         scale_pdf_info=[]
         if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
            len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
-            data_files=[]
+            evt_files=[]
+            evt_wghts=[]
             for job in jobs:
-                data_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
-            scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
+                evt_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
+                evt_wghts.append(job['wgt_frac'])
+            scale_pdf_info = self.pdf_scale_from_reweighting(evt_files,evt_wghts)
         return scale_pdf_info
 
 
@@ -2012,6 +2014,7 @@ RESTART = %(mint_mode)s
         if normalisation:
             command.append("--multiply="+(','.join([str(n) for n in normalisation])))
         command.append("--sum")
+        command.append("--keep_all_weights")
         command.append("--no_open")
 
         p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
@@ -2808,7 +2811,7 @@ RESTART = %(mint_mode)s
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
-                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
@@ -2839,7 +2842,7 @@ RESTART = %(mint_mode)s
         return evt_file[:-3]
 
 
-    def run_mcatnlo(self, evt_file):
+    def run_mcatnlo(self, evt_file, options):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
         logger.info('Preparing MCatNLO run')
@@ -2994,7 +2997,7 @@ RESTART = %(mint_mode)s
             #clean the old files
             files.rm([f for f in event_files if 'events.lhe' not in f])
             if self.shower_card['nsplit_jobs'] > 1:
-                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'))
+                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'), nocompile=options['nocompile'])
                 p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
                                 stdin=subprocess.PIPE,
                                 stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
@@ -3602,6 +3605,7 @@ RESTART = %(mint_mode)s
         # loop over lines (all but the last one whith is empty) and check that the
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
+        evt_wghts = [float(line.split()[3]) for line in lines[:-1] if line.split()[1] != '0']
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'
@@ -3630,9 +3634,9 @@ RESTART = %(mint_mode)s
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
 
-        return self.pdf_scale_from_reweighting(evt_files)
+        return self.pdf_scale_from_reweighting(evt_files,evt_wghts)
 
-    def pdf_scale_from_reweighting(self, evt_files):
+    def pdf_scale_from_reweighting(self, evt_files,evt_wghts):
         """This function takes the files with the scale and pdf values
         written by the reweight_xsec_events.f code
         (P*/G*/pdf_scale_dependence.dat) and computes the overall
@@ -3641,16 +3645,17 @@ RESTART = %(mint_mode)s
         and returns it in percents.  The expected format of the file
         is: n_scales xsec_scale_central xsec_scale1 ...  n_pdf
         xsec_pdf0 xsec_pdf1 ...."""
+
         scales=[]
         pdfs=[]
-        for evt_file in evt_files:
+        for i,evt_file in enumerate(evt_files):
             path, evt=os.path.split(evt_file)
             with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
                 data_line=f.readline()
                 if "scale variations:" in data_line:
                     for i,scale in enumerate(self.run_card['dynamical_scale_choice']):
                         data_line = f.readline().split()
-                        scales_this = [float(val) for val in f.readline().replace("D", "E").split()]
+                        scales_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
                             scales[i] = [a + b for a, b in zip(scales[i], scales_this)]
                         except IndexError:
@@ -3659,7 +3664,7 @@ RESTART = %(mint_mode)s
                 if "pdf variations:" in data_line:
                     for i,pdf in enumerate(self.run_card['lhaid']):
                         data_line = f.readline().split()
-                        pdfs_this = [float(val) for val in f.readline().replace("D", "E").split()]
+                        pdfs_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
                             pdfs[i] = [a + b for a, b in zip(pdfs[i], pdfs_this)]
                         except IndexError:
@@ -4154,6 +4159,7 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
             if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
+            self.make_opts_var['lhapdf'] = ""
 
         # read the run_card to find if applgrid is used or not
         if self.run_card['iappl'] != 0:
@@ -4186,6 +4192,8 @@ RESTART = %(mint_mode)s
                     line=appllibs
                 text_out.append(line)
             open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
+        else:
+            self.make_opts_var['applgrid'] = ""
 
         if 'fastjet' in self.options.keys() and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']

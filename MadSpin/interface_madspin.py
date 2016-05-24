@@ -460,11 +460,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ """
 
         try:
-            self.mg5cmd.do_define(line)
+            self.mg5cmd.exec_cmd('define %s' % line)
         except:
             #cleaning if the error is recover later
             key = line.split()[0]
-            if hasattr(self, 'multiparticles_ms' and key in self.multiparticles_ms):
+            if hasattr(self, 'multiparticles_ms') and key in self.multiparticles_ms:
                 del self.multiparticles_ms[key]
             raise
            
