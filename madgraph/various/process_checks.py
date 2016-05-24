@@ -1495,8 +1495,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         export_dir=pjoin(self.mg_root,("SAVED" if keep_folder else "")+\
                                                 temp_dir_prefix+"_%s"%proc_name)
         
-        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95',5:'Samurai',
-                    6:'Ninja',7:'Collier'}
+        tools_name=bannermod.MadLoopParam._ID_reduction_tool_map
+        
         return_dict={}
         return_dict['Stability']={}
         infos_save={'Process_output': None,
@@ -1519,7 +1519,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # The exceptional PS points are those which stay unstable in quad prec.
             Exceptional_PS_points = []
         
-            MLoptions={}
+            MLoptions=MLOptions
             MLoptions["MLReductionLib"]=tool
             clean = (tool==tools[0]) and not nPoints==0
             if infos_IN==None or (tool_name not in infos_IN):

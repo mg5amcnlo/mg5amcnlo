@@ -480,7 +480,7 @@ C ----------
       LPASS=.TRUE.
 	  IF (CURRENT_COLLIERMODE.NE.1) THEN
 C       The DD branch is used and it has limitations
-        IF((NLOOPLINE.GT.7).OR.(NLOOPLINE.GT.RANK)) then
+        IF((NLOOPLINE.GT.6).OR.(RANK.GT.NLOOPLINE)) then
 	      LPASS=.FALSE.
         endif
       ELSE

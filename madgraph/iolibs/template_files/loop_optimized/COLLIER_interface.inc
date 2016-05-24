@@ -169,6 +169,10 @@ C             No need to check the other caches since we already had to reset he
 			NCOLLIERCALLS(4) = 0
 		  ENDIF
         ENDIF
+        CALL SetDeltaIR_cll(0.0d0,(PI**2)/6.0d0)
+        CALL SetDeltaUV_cll(0.0d0)
+        CALL SetMuIR2_cll(mu_r**2)      
+        CALL SetMuUV2_cll(mu_r**2)
 	  ENDIF
 
 C     Now really start the reduction with COLLIER
@@ -271,10 +275,6 @@ C         For the massless onshell-case, we base the threshold only on the energ
 		ENDDO
       ENDDO
 
-      CALL SetDeltaIR_cll(0.0d0,(PI**2)/6.0d0)
-      CALL SetDeltaUV_cll(0.0d0)
-      CALL SetMuIR2_cll(mu_r**2)      
-      CALL SetMuUV2_cll(mu_r**2)
 	  IF (NLOOPLINE.ne.1) THEN
         CALL TNten_cll(TNten, TNtenuv, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr)
       ELSE
@@ -292,10 +292,7 @@ C     Now compute the UV poles if asked for
 		    CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+2)
 		  ENDIF
         ENDIF
-        CALL SetDeltaIR_cll(0.0d0,(PI**2)/6.0d0)
         CALL SetDeltaUV_cll(1.0d0)
-        CALL SetMuIR2_cll(mu_r**2)      
-        CALL SetMuUV2_cll(mu_r**2)
 	    IF (NLOOPLINE.ne.1) THEN
           CALL TNten_cll(TNten_UV, TNtenuv_UV, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_UV)
         ELSE
@@ -310,6 +307,7 @@ C     Now compute the UV poles if asked for
 		  ENDIF
 		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+1)
         ENDIF
+        CALL SetDeltaUV_cll(0.0d0)
 	  ENDIF
 
 C     Now compute the IR poles if asked for
@@ -321,9 +319,6 @@ C     Now compute the IR poles if asked for
 		  ENDIF
         ENDIF
         CALL SetDeltaIR_cll(1.0d0,(PI**2)/6.0d0)
-        CALL SetDeltaUV_cll(0.0d0)
-        CALL SetMuIR2_cll(mu_r**2)      
-        CALL SetMuUV2_cll(mu_r**2)
 	    IF (NLOOPLINE.ne.1) THEN
           CALL TNten_cll(TNten_IR1, TNtenuv_IR1, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR1)
         ELSE
@@ -337,9 +332,6 @@ C     Now compute the IR poles if asked for
 		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+4)			
         ENDIF
         CALL SetDeltaIR_cll(0.0d0,1.0d0+(PI**2)/6.0d0)
-        CALL SetDeltaUV_cll(0.0d0)
-        CALL SetMuIR2_cll(mu_r**2)      
-        CALL SetMuUV2_cll(mu_r**2)
 	    IF (NLOOPLINE.ne.1) THEN
           CALL TNten_cll(TNten_IR2, TNtenuv_IR2, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR2)
         ELSE
@@ -354,6 +346,7 @@ C     Now compute the IR poles if asked for
 		  ENDIF
 		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+1)		  
         ENDIF
+		CALL SetDeltaIR_cll(0.0d0,(PI**2)/6.0d0)
 	  ENDIF
 
 	  DO I=0,(CURR_MAXCOEF-1)

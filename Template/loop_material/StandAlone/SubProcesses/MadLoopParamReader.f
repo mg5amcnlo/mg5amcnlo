@@ -254,21 +254,6 @@ C     a non existing or malformed parameter file
      & '==============================================================='
       write(*,*) ' > MLReductionLib            = '
      $     //TRIM(MLReductionLib_str_save)
-
-
-      write(*,*) ' > COLLIERMode               = ',COLLIERMode
-      write(*,*) ' > COLLIERRequiredAccuracy   = ',
-     $COLLIERRequiredAccuracy
-      write(*,*) ' > COLLIERCanOutput          = ',COLLIERCanOutput
-      write(*,*) ' > COLLIERComputeUVpoles     = ',COLLIERComputeUVpoles
-      write(*,*) ' > COLLIERComputeIRpoles     = ',COLLIERComputeIRpoles
-      write(*,*) ' > COLLIERGlobalCache        = ',COLLIERGlobalCache
-      write(*,*) ' > COLLIERUseCacheForPoles   = ',
-     &COLLIERUseCacheForPoles
-      write(*,*) ' > COLLIERUseInternalStabilityTest = ',
-     &COLLIERUseInternalStabilityTest
-      write(*,*) ' > IREGIMODE                 = ',IREGIMODE
-      write(*,*) ' > IREGIRECY                 = ',IREGIRECY
       write(*,*) ' > CTModeRun                 = ',CTModeRun
       write(*,*) ' > MLStabThres               = ',MLStabThres
       write(*,*) ' > NRotations_DP             = ',NRotations_DP
@@ -292,6 +277,19 @@ C     a non existing or malformed parameter file
      &UseQPIntegrandForNinja
       write(*,*) ' > UseQPIntegrandForCutTools = ',
      &UseQPIntegrandForCutTools
+      write(*,*) ' > IREGIMODE                 = ',IREGIMODE
+      write(*,*) ' > IREGIRECY                 = ',IREGIRECY
+      write(*,*) ' > COLLIERMode               = ',COLLIERMode
+      write(*,*) ' > COLLIERRequiredAccuracy   = ',
+     $COLLIERRequiredAccuracy
+      write(*,*) ' > COLLIERCanOutput          = ',COLLIERCanOutput
+      write(*,*) ' > COLLIERComputeUVpoles     = ',COLLIERComputeUVpoles
+      write(*,*) ' > COLLIERComputeIRpoles     = ',COLLIERComputeIRpoles
+      write(*,*) ' > COLLIERGlobalCache        = ',COLLIERGlobalCache
+      write(*,*) ' > COLLIERUseCacheForPoles   = ',
+     &COLLIERUseCacheForPoles
+      write(*,*) ' > COLLIERUseInternalStabilityTest = ',
+     &COLLIERUseInternalStabilityTest
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
