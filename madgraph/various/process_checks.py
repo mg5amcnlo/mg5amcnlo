@@ -2891,7 +2891,7 @@ def output_timings(process, timings):
     # Define shortcut
     f = format_output
     loop_optimized_output = timings['loop_optimized_output']
-    reduction_tool        = misc.MadLoopParam._ID_reduction_tool_map[
+    reduction_tool        = bannermod.MadLoopParam._ID_reduction_tool_map[
                                                       timings['reduction_tool']]
     
     res_str = "%s \n"%process.nice_string()
@@ -2918,7 +2918,7 @@ def output_timings(process, timings):
     res_str += "|= Initialization............ %s\n"\
                                             %f(timings['Initialization'],'%.3gs')
 
-    res_srt += "\n= Reduction tool(s)......... %s\n"%reduction_tool
+    res_str += "\n= Reduction tool tested...... %s\n"%reduction_tool
     res_str += "\n= Helicity sum time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_unpolarized_total']*1000.0)
     if loop_optimized_output:
