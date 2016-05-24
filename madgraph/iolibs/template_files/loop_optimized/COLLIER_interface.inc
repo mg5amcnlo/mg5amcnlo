@@ -136,7 +136,8 @@ C           Record how many events where put in the cache. On the first PS point
 	      ENDDO
 		  DO I=1,N_CACHES		  
 C           Now apply a safety check that our last event had as many calls as the cache is setup for.
-            IF (NCALLS_IN_CACHE(I).ne.-1.and.NCOLLIERCALLS(I).ne.NCALLS_IN_CACHE(I)) then
+C           The only case for now when it can be half of the calls when we are doing the true loop-direction test with also the computation of a rotated PS point (which is computed for one mode only).
+            IF (NCALLS_IN_CACHE(I).ne.-1.and..NOT. ( NCOLLIERCALLS(I).eq.NCALLS_IN_CACHE(I).or. ( CTModeRun.eq.-1.and..not.COLLIERUseInternalStabilityTest.and.NRotations_DP.gt.0.and.MOD(NCALLS_IN_CACHE(I),2).eq.0.and.(NCALLS_IN_CACHE(I)/2).eq.NCOLLIERCALLS(I) ) ) ) then
 		      WRITE(*,*) 'WARNING: A consistency check in MadLoop failed and, for safety, forced MadLoop to reinitialize the global cache of COLLIER. Report this to MadLoop authors. The problematic cache was number ',I
               IF (COLLIERGLOBALCACHE.EQ.-1) THEN
                 CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,MAXNEXTERNAL)
@@ -178,31 +179,35 @@ C     Number of coefficients for the current rank
         CURR_MAXCOEF=CURR_MAXCOEF+(3+I)*(2+I)*(1+I)/6
       ENDDO
 
-C     Use MADLOOP internal cache dedicated to COLLIER that emulates the CTMODE 2
-C     by using coefficients shifted by COLLIER internal error estimate.
-      IF (CTMODE.EQ.1) THEN
-	    IF (LOOP_ID_DONE(ID)) THEN
-		  DO I=0,CURR_MAXCOEF-1
-		    DO K=1,3
-			  TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)
-			ENDDO
-	      ENDDO
-		  RETURN
-		ENDIF
-      ELSEIF (CTMODE.EQ.2) THEN
-	    IF (LOOP_ID_DONE(ID)) THEN
-		  DO I=0,CURR_MAXCOEF-1
-		    CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
-		    DO K=1,3
-			  TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)*(1.0d0+TIR_COEFS_ERROR(CURR_RANK,ID))
-			ENDDO
-	      ENDDO
-		  RETURN
-		ENDIF
-	  ELSE
+	  IF (CTMODE.ne.1.and.CTMODE.ne.2) THEN
 	    WRITE(*,*) 'ERROR: COLLIER only support the computational mode CTMODE equal to 1 or 2, not',CTMODE
-		stop 'Incorrect computational mode specified to COLLIER.'
+	    stop 'Incorrect computational mode specified to the COLLIER MG5aMC interface.'
 	  ENDIF
+
+	  IF (COLLIERUseInternalStabilityTest) THEN
+C       Use MADLOOP internal cache dedicated to COLLIER that emulates the CTMODE 2
+C       by using coefficients shifted by COLLIER internal error estimate.
+        IF (CTMODE.EQ.1) THEN
+	      IF (LOOP_ID_DONE(ID)) THEN
+		    DO I=0,CURR_MAXCOEF-1
+		      DO K=1,3
+			    TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)
+			  ENDDO
+	        ENDDO
+		    RETURN
+		  ENDIF
+        ELSEIF (CTMODE.EQ.2) THEN
+	      IF (LOOP_ID_DONE(ID)) THEN
+		    DO I=0,CURR_MAXCOEF-1
+		      CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
+		      DO K=1,3
+			    TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)*(1.0d0+TIR_COEFS_ERROR(CURR_RANK,ID))
+			  ENDDO
+	        ENDDO
+		    RETURN
+		  ENDIF
+	    ENDIF
+      ENDIF
 
 C     Make sure masses are complex 
       do I=1,NLOOPLINE
@@ -377,26 +382,28 @@ C       Because we must set q -> -q, we apply a minus sign to coefs of odd rank
 		ENDIF
       ENDDO
 
-c     Finish by caching the coefficients and error just computed
-	  LOOP_ID_DONE(ID) = .TRUE.
-	  DO J=0,CURR_MAXCOEF-1
-	    DO K=1,3
-	      TIR_COEFS_DIRECT_MODE(J,K,ID) = TIRCOEFS(J,K)
+	  IF (COLLIERUseInternalStabilityTest) THEN
+c       Finish by caching the coefficients and error just computed
+	    LOOP_ID_DONE(ID) = .TRUE.
+	    DO J=0,CURR_MAXCOEF-1
+	      DO K=1,3
+	        TIR_COEFS_DIRECT_MODE(J,K,ID) = TIRCOEFS(J,K)
+	      ENDDO
 	    ENDDO
-	  ENDDO
-	  DO J=0,RANK
-	    TIR_COEFS_ERROR(J,ID)=TNtenerr(J)
-	  ENDDO
+	    DO J=0,RANK
+	      TIR_COEFS_ERROR(J,ID)=TNtenerr(J)
+	    ENDDO
 
-      IF (CTMODE.EQ.2) THEN 
-	    DO I=0,(CURR_MAXCOEF-1)
-	      CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)		
-		  DO J=1,3
-		    TIRCOEFS(I,J) = TIRCOEFS(I,J) * (1.0d0+TNtenerr(CURR_RANK))
-		  ENDDO
-        ENDDO
+        IF (CTMODE.EQ.2) THEN 
+	      DO I=0,(CURR_MAXCOEF-1)
+	        CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)		
+		    DO J=1,3
+		      TIRCOEFS(I,J) = TIRCOEFS(I,J) * (1.0d0+TNtenerr(CURR_RANK))
+		    ENDDO
+          ENDDO
+	    ENDIF
 	  ENDIF
-	  
+
 	  END SUBROUTINE %(proc_prefix)sCOLLIERLOOP 
 
       SUBROUTINE %(proc_prefix)sCLEAR_COLLIER_CACHE()
@@ -480,8 +487,9 @@ C       This is a flag to tell the COLLIER subroutine that it must init the even
 		DATA MUST_INIT_EVENT/.TRUE./
 		COMMON/%(proc_prefix)sCOLLIER_CACHE_STATUS/COLLIER_CACHE_ACTIVE, NCALLS_IN_CACHE, NCOLLIERCALLS,MUST_INIT_EVENT
 
-		INTEGER USERHEL_BU, SQSO_TARGET_BU, COLLIERMode_BU
-        COMMON/%(proc_prefix)sCOLLIER_CACHE_RELEVANT_PARAMS/USERHEL_BU,SQSO_TARGET_BU,COLLIERMode_BU
+		LOGICAL COLLIERUseInternalStabilityTest_BU
+		INTEGER USERHEL_BU, SQSO_TARGET_BU, COLLIERMode_BU,CTModeRun_BU
+        COMMON/%(proc_prefix)sCOLLIER_CACHE_RELEVANT_PARAMS/USERHEL_BU,SQSO_TARGET_BU,COLLIERMode_BU,CTModeRun_BU,COLLIERUseInternalStabilityTest_BU
 
 C       The common blocks below are to retrieve the necessary information about
 C       MadLoop running mode and store it in the sCOLLIER_CACHE_RELEVANT_PARAMS common block.
@@ -547,6 +555,8 @@ C       If we activate it for the first time, make sure to store the value of th
 		  USERHEL_BU         = USERHEL 
 		  SQSO_TARGET_BU     = SQSO_TARGET
 		  COLLIERMode_BU     = COLLIERMode
+		  COLLIERUseInternalStabilityTest_BU = COLLIERUseInternalStabilityTest
+		  CTModeRun_BU       = CTModeRun
 		  CALL SwitchOnCache_cll((unique_id-1)*4+1)
 		  COLLIER_CACHE_ACTIVE = 1
 		  RETURN
@@ -554,7 +564,23 @@ C       If we activate it for the first time, make sure to store the value of th
 
 C       Now perform sanity check before the activation to decide if we need to reinitialize the cache system first.
 		NEED_REINITIALIZATION = .FALSE.
-		
+
+        IF (SQSO_TARGET.NE.SQSO_TARGET_BU) THEN
+		  NEED_REINITIALIZATION = .TRUE.		
+		ENDIF
+
+        IF (COLLIERMode.NE.COLLIERMode_BU) THEN
+		  NEED_REINITIALIZATION = .TRUE.		
+		ENDIF
+
+        IF (COLLIERUseInternalStabilityTest.NEQV.COLLIERUseInternalStabilityTest_BU) THEN
+		  NEED_REINITIALIZATION = .TRUE.		
+		ENDIF
+
+		IF (CTModeRun_BU.ne.CTModeRun.and.(.not.COLLIERUseInternalStabilityTest)) THEN
+		  NEED_REINITIALIZATION = .TRUE.			  
+		ENDIF
+
 ## if(AmplitudeReduction){
 C       When doing amplitude reduction, the parameter USERHEL impacts the number of COLLIER calls/order if
 C       it involves a different number of helicity configurations or always if the Loop filter is on, which
@@ -575,9 +601,6 @@ C       except if the LoopFilter is ON which really shouldn't be the case anymor
 		  NEED_REINITIALIZATION = .TRUE.
 		ENDIF
 ## }
-        IF (SQSO_TARGET.NE.SQSO_TARGET_BU) THEN
-		  NEED_REINITIALIZATION = .TRUE.		
-		ENDIF
 
 		IF(NEED_REINITIALIZATION) THEN
 C         Log the event because if it happens a lot of time and floods the screen, the user must see it
@@ -586,7 +609,9 @@ C         and either change its usage of MadLoop or turnoff COLLIER cache
 		  USERHEL_BU         = USERHEL 
 		  SQSO_TARGET_BU     = SQSO_TARGET
 		  COLLIERMode_BU     = COLLIERMode
-          IF (COLLIERGLOBALCACHE.EQ.-1) THEN
+		  COLLIERUseInternalStabilityTest_BU = COLLIERUseInternalStabilityTest
+		  CTModeRun_BU       = CTModeRun		  
+		  IF (COLLIERGLOBALCACHE.EQ.-1) THEN
             CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,MAXNEXTERNAL)
           ELSE
 		    CALL INITCACHESYSTEM_CLL(N_CACHES*NPROCS,COLLIERGLOBALCACHE)

@@ -2218,10 +2218,11 @@ class MadLoopParam(ConfigFile):
         self.add_param("COLLIERMode", 1)
         self.add_param("COLLIERComputeUVpoles", True)
         self.add_param("COLLIERComputeIRpoles", True)
-        self.add_param("COLLIERRequiredAccuracy", -1.0)
+        self.add_param("COLLIERRequiredAccuracy", 1.0e-8)
         self.add_param("COLLIERCanOutput",False)
         self.add_param("COLLIERGlobalCache",-1)
         self.add_param("COLLIERUseCacheForPoles",False)
+        self.add_param("COLLIERUseInternalStabilityTest",False)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

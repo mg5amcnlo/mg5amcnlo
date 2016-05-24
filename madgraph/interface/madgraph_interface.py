@@ -910,8 +910,10 @@ class CheckValidForCmd(cmd.CheckCmd):
         
         user_options = {'--energy':'1000','--split_orders':'-1',
                    '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
-                   '--helicity':'-1','--seed':'-1','--collier_cache':'-1'}
-        
+                   '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
+                   '--collier_req_acc':'auto',
+                   '--collier_internal_stability_test':'False'}  
+
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
             user_options['--energy']='5000'
@@ -3530,6 +3532,11 @@ This implies that with decay chains:
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
             elif option[0]=='--collier_cache':
                 MLoptions['COLLIERGlobalCache']=int(option[1])
+            elif option[0]=='--collier_req_acc':
+                if option[1]!='auto':
+                    MLoptions['COLLIERRequiredAccuracy']=float(option[1])
+            elif option[0]=='--collier_internal_stability_test':
+                MLoptions['COLLIERUseInternalStabilityTest']=eval(option[1])                
             elif option[0]=='--CTModeRun':
                 try:
                     MLoptions['CTModeRun']=int(option[1])  

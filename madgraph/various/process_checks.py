@@ -2179,7 +2179,13 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
             MLoptions['COLLIERComputeUVpoles']=False
         if 'COLLIERComputeIRpoles' not in MLoptions:
             MLoptions['COLLIERComputeIRpoles']=False
-        
+        # Use high required accuracy in COLLIER's requirement if not specified
+        if 'COLLIERRequiredAccuracy' not in MLoptions:
+            MLoptions['COLLIERRequiredAccuracy']=1e-13
+        # Use loop-direction switching as stability test if not specifed (more reliable)
+        if 'COLLIERUseInternalStabilityTest' not in MLoptions:
+            MLoptions['COLLIERUseInternalStabilityTest']=False           
+
         if "MLReductionLib" not in MLOptions:
             MLoptions["MLReductionLib"] = []
             if cuttools:

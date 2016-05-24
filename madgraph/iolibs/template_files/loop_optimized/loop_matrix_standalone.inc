@@ -1984,6 +1984,13 @@ C
 	  real*8 accuracies(3)
 	  real*8 list(maxstabilitylength)
 
+C
+C GLOBAL VARIABLES
+C
+	  integer I_LIB
+	  common/%(proc_prefix)sI_LIB/I_LIB
+	  include 'MadLoopParams.inc'
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -2030,6 +2037,13 @@ C       The following is used instead
 		if (avg.ne.0.0d0) then
           acc(k)  = acc(k) / ( ABS(AVG) / 3.0d0)
 		endif
+        
+C       When using COLLIER with the internal stability test, the first evaluation is typically more reliable so we do not want to use the average but rather the first evaluation.
+		IF (MLREDUCTIONLIB(I_LIB).eq.7.and.COLLIERUseInternalStabilityTest) THEN
+		  DO I=1,3
+		    estimate(i,k) = fulllist(i,k,1)
+		  ENDDO
+		ENDIF
 
 	  enddo
 

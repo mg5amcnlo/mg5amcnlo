@@ -109,6 +109,9 @@
           else if (buff .eq. '#COLLIERComputeIRpoles') then
              read(666,*,end=999) COLLIERComputeIRpoles
 
+		  else if (buff .eq. '#COLLIERUseInternalStabilityTest') then
+             read(666,*,end=999) COLLIERUseInternalStabilityTest
+
           else if (buff .eq. '#COLLIERUseCacheForPoles') then
              read(666,*,end=999) COLLIERUseCacheForPoles
 
@@ -262,6 +265,8 @@ C     a non existing or malformed parameter file
       write(*,*) ' > COLLIERGlobalCache        = ',COLLIERGlobalCache
       write(*,*) ' > COLLIERUseCacheForPoles   = ',
      &COLLIERUseCacheForPoles
+      write(*,*) ' > COLLIERUseInternalStabilityTest = ',
+     &COLLIERUseInternalStabilityTest
       write(*,*) ' > IREGIMODE                 = ',IREGIMODE
       write(*,*) ' > IREGIRECY                 = ',IREGIRECY
       write(*,*) ' > CTModeRun                 = ',CTModeRun
@@ -312,7 +317,8 @@ C     a non existing or malformed parameter file
       COLLIERCanOutput = .FALSE.
       COLLIERGlobalCache = -1
       COLLIERMode=1
-      COLLIERRequiredAccuracy=-1.0d0
+      COLLIERRequiredAccuracy=1.0d-8
+      COLLIERUseInternalStabilityTest = .FALSE.
       CTModeInit=0
       CTModeRun=-1
       NRotations_DP=1
