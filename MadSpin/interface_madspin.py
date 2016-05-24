@@ -460,7 +460,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ """
 
         try:
-            self.mg5cmd.do_define(line)
+            self.mg5cmd.exec_cmd('define %s' % line)
         except:
             #cleaning if the error is recover later
             key = line.split()[0]
