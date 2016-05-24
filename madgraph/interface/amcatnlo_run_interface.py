@@ -1981,6 +1981,7 @@ RESTART = %(mint_mode)s
         if normalisation:
             command.append("--multiply="+(','.join([str(n) for n in normalisation])))
         command.append("--sum")
+        command.append("--keep_all_weights")
         command.append("--no_open")
 
         p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
