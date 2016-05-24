@@ -2247,6 +2247,10 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
         # And the COLLIER global cache is active, if not specified
         if 'COLLIERGlobalCache' not in MLoptions:
             MLoptions['COLLIERGlobalCache']=-1
+        # And time NINJA by default if not specified:
+        if 'MLReductionLib' not in MLoptions or \
+                                            len(MLoptions['MLReductionLib'])==0:
+            MLoptions['MLReductionLib'] = [6]
             
     timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
                                      keep_folder = keep_folder, options=options,
@@ -2258,6 +2262,7 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
         # Return the merged two dictionaries
         res = dict(timing1.items()+timing2.items())
         res['loop_optimized_output']=myTimer.loop_optimized_output
+        res['reduction_tool'] = MLoptions['MLReductionLib'][0]
         return res
 
 #===============================================================================
@@ -2886,6 +2891,8 @@ def output_timings(process, timings):
     # Define shortcut
     f = format_output
     loop_optimized_output = timings['loop_optimized_output']
+    reduction_tool        = misc.MadLoopParam._ID_reduction_tool_map[
+                                                      timings['reduction_tool']]
     
     res_str = "%s \n"%process.nice_string()
     try:
@@ -2911,6 +2918,7 @@ def output_timings(process, timings):
     res_str += "|= Initialization............ %s\n"\
                                             %f(timings['Initialization'],'%.3gs')
 
+    res_srt += "\n= Reduction tool(s)......... %s\n"%reduction_tool
     res_str += "\n= Helicity sum time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_unpolarized_total']*1000.0)
     if loop_optimized_output:
@@ -2920,7 +2928,7 @@ def output_timings(process, timings):
         total=coef_time+loop_time
         res_str += "|= Coefs. computation time... %.3gms (%d%%)\n"\
                                   %(coef_time,int(round(100.0*coef_time/total)))
-        res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
+        res_str += "|= Loop evaluation time...... %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
     res_str += "\n= One helicity time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_polarized_total']*1000.0)
@@ -2931,7 +2939,7 @@ def output_timings(process, timings):
         total=coef_time+loop_time        
         res_str += "|= Coefs. computation time... %.3gms (%d%%)\n"\
                                   %(coef_time,int(round(100.0*coef_time/total)))
-        res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
+        res_str += "|= Loop evaluation time...... %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
     res_str += "\n= Miscellaneous ========================\n"
     res_str += "|= Number of hel. computed... %s/%s\n"\

@@ -2188,7 +2188,15 @@ class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat
     contains a parser to read it, facilities to write a new file,...
     """
-            
+    
+    _ID_reduction_tool_map = {1:'CutTools',
+                             2:'PJFry++',
+                             3:'IREGI',
+                             4:'Golem95',
+                             5:'Samurai',
+                             6:'Ninja',
+                             7:'COLLIER'}
+    
     def default_setup(self):
         """initialize the directory to the default value"""
         

@@ -1669,12 +1669,15 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
                     if tir in ['ninja','golem', 'samurai','collier']:
                         trgt_path = pjoin(os.path.dirname(libpath),'include')
-                        to_include = misc.find_includes_path(trgt_path,
+                        if os.path.isdir(trgt_path):
+                            to_include = misc.find_includes_path(trgt_path,
                                                         self.include_names[tir])
+                        else:
+                            to_include = None
                         # Special possible location for collier
                         if to_include is None and tir=='collier':
                             to_include = misc.find_includes_path(
-                               pjoin(libpath,'include'),self.include_names[tir])
+                               pjoin(libpath,'modules'),self.include_names[tir])
                         if to_include is None:
                             logger.error(
 'Could not find the include directory for %s, looking in %s.\n' % (tir, str(trgt_path))+
