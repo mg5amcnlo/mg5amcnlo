@@ -1369,6 +1369,7 @@ c Check for NaN's and INF's. Simply skip the contribution
       if (wgt2.ne.wgt2) return
       if (wgt3.ne.wgt3) return
       icontr=icontr+1
+
       if (icontr.gt.max_contr) then
          write (*,*) 'ERROR in add_wgt: too many contributions'
      &        ,max_contr
@@ -4036,7 +4037,7 @@ c q->g/a q splitting
       end
 
 
-      subroutine AP_reduced_SUSY(part1, part2, t, z, ap)
+      subroutine AP_reduced_SUSY(col1,col2,ch1,ch2,t,z,ap)
 c Same as AP_reduced, except for the fact that it only deals with
 c   go -> go g
 c   sq -> sq g
@@ -4044,40 +4045,43 @@ c splittings in SUSY. We assume this function to be called with
 c part2==colour(i_fks)
       implicit none
 
-      integer part1, part2
-      double precision z,ap,t
+      integer col1, col2
+      double precision ch1, ch2
+      double precision z,ap(2),t
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
-      write(*,*) 'FIX AP REDUCED SUSY'
 
-      if (part2.ne.8)then
-         write (*,*) 'Fatal error #0 in AP_reduced_SUSY',part1,part2
+      if (col2.ne.8.and.ch2.ne.0d0)then
+         write (*,*) 'Fatal error #0 in AP_reduced_SUSY',col1,col2,ch1,ch2
          stop
       endif
 
-      if (part1.eq.8)then
+      if (col1.eq.8)then
 c go->gog splitting
-         ap = CA * (1d0+z**2)
+         ap(1) = CA * (1d0+z**2)
+         ap(2) = 0d0
 
-      elseif(abs(part1).eq.3)then
+      elseif(abs(col1).eq.3.or.ch1.ne.0d0)then
 c sq->sqg splitting
-         ap = 2d0 * CF * z
+         ap(1) = 2d0 * CF * z
+         ap(2) = 2d0 * ch1**2 * z
 
       else
-         write (*,*) 'Fatal error in AP_reduced_SUSY',part1,part2
+         write (*,*) 'Fatal error in AP_reduced_SUSY',col1,col2,ch1,ch2
          stop
       endif
 
-      ap = ap*g**2/t
+      ap(1) = ap(1)*g**2/t
+      ap(2) = ap(2)*dble(gal(1))**2/t
 
       return
       end
 
 
-      subroutine AP_reduced_massive(part1, part2, t, z, q2, m2, ap)
+      subroutine AP_reduced_massive(col1,col2,ch1,ch2,t,z,q2,m2,ap)
 c Returns massive Altarelli-Parisi splitting function summed/averaged over helicities
 c times prefactors such that |M_n+1|^2 = ap * |M_n|^2. This means
 c    AP_reduced = (1-z) P_{S(part1,part2)->part1+part2}(z) * gS^2/t
@@ -4087,36 +4091,43 @@ c part1 and part2 can be either gluon (8) or (anti-)quark (+-3). z is the
 c fraction of the energy of part1 and t is the invariant mass of the mother.
       implicit none
 
-      integer part1, part2
-      double precision z,ap,t,q2,m2
+      integer col1, col2
+      double precision ch1, ch2
+      double precision z,ap(2),t,q2,m2
 
       double precision CA,TR,CF
       parameter (CA=3d0,TR=1d0/2d0,CF=4d0/3d0)
 
       include "coupl.inc"
-      write(*,*) 'FIX AP REDUCED MASSIVE'
 
-      if (part1.eq.8 .and. part2.eq.8)then
+      if (col1.eq.8 .and. col2.eq.8)then
 c g->gg splitting
-         ap = 2d0 * CA * ( (1d0-z)**2/z + z + z*(1d0-z)**2 )
+         ap(1) = 2d0 * CA * ( (1d0-z)**2/z + z + z*(1d0-z)**2 )
+         ap(2) = 0d0
 
-      elseif(abs(part1).eq.3 .and. abs(part2).eq.3)then
+      elseif((abs(col1).eq.3 .and. abs(col2).eq.3).or.
+     &       (ch1.ne.0d0 .and. ch2.ne.0d0))then
 c g->qqbar splitting
-         ap = TR * ( z**2 + (1d0-z)**2 )*(1d0-z) + TR * 2d0*m2/(z*q2)
-         
-      elseif(abs(part1).eq.3 .and. part2.eq.8)then
+         ap(1) = TR * ( z**2 + (1d0-z)**2 )*(1d0-z) + TR * 2d0*m2/(z*q2)
+         ap(1) = dble(abs(col1)) * ch1**2 * ( z**2 + (1d0-z)**2 )*(1d0-z) + TR * 2d0*m2/(z*q2)
+      elseif((abs(col1).eq.3 .and. col2.eq.8).or.
+     &      (ch1.ne.0d0.and.ch2.eq.0d0))then
 c q->qg splitting
-         ap = CF * (1d0+z**2) - CF * 2d0*m2/(z*q2)
+         ap(1) = CF * (1d0+z**2) - CF * 2d0*m2/(z*q2)
+         ap(2) = ch1**2 * (1d0+z**2) - ch1**2 * 2d0*m2/(z*q2)
 
-      elseif(part1.eq.8 .and. abs(part2).eq.3)then
+      elseif((col1.eq.8 .and. abs(col2).eq.3).or.
+     &      (ch1.eq.0d0.and.ch2.ne.0d0))then
 c q->gq splitting
-         ap = CF * (1d0+(1d0-z)**2)*(1d0-z)/z - CF * 2d0*m2/(z*q2)
+         ap(1) = CF * (1d0+(1d0-z)**2)*(1d0-z)/z - CF * 2d0*m2/(z*q2)
+         ap(2) = ch2**2 * (1d0+(1d0-z)**2)*(1d0-z)/z - ch2**2 * 2d0*m2/(z*q2)
       else
-         write (*,*) 'Fatal error in AP_reduced',part1,part2
+         write (*,*) 'Fatal error in AP_reduced',col1,col2,ch1,ch2
          stop
       endif
 
-      ap = ap*g**2/t
+      ap(1) = ap(1)*g**2/t
+      ap(2) = ap(2)*dble(gal(1))**2/t
 
       return
       end
