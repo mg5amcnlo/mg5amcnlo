@@ -42,7 +42,6 @@ C
 	  INTEGER CURR_RANK, SGN
 	  INTEGER CURR_INDEX
 	  INTEGER CURR_MAXCOEF
-	  INTEGER N_ROWS, N_ENTRIES
 	  %(real_dp_format)s RBUFF(0:3)
 
       INTEGER COEFMAP_ZERO(0:LOOPMAXCOEFS-1)
@@ -225,33 +224,26 @@ C     Now convert the loop offset momenta to COLLIER conventions
 	    ENDDO
       ENDDO
 
-	  IF (NLOOPLINE.le.2) THEN
-	    N_ROWS = 1
-      ELSE
-	    N_ROWS = NLOOPLINE-2
-	  ENDIF
-C     Compute the kinematic invarients required by COLLIER
 C     This first do loop spans over 'N' in '\foreach_N \foreach_i(k_i+k_{i+1}+..+k_{i+N})^2'
       CURR_INDEX = 0
-      DO N=0,N_ROWS-1
-	    IF (N.eq.0) THEN
-	      IF (NLOOPLINE.LE.2) THEN
-		    N_ENTRIES = NLOOPLINE-1
-		  ELSE
-		    N_ENTRIES = NLOOPLINE
-		  ENDIF
-		ELSE
-		  N_ENTRIES = NLOOPLINE-N-1
+      DO N=0,NLOOPLINE-1
+C       We stop whenever we reached the target number of invariants
+        IF (CURR_INDEX.GE.((NLOOPLINE*(NLOOPLINE-1))/2)) THEN
+		  EXIT
 		ENDIF
 C       This do loop spans over 'i' in the expression above.
-        DO I=1,N_ENTRIES
-C         Now sum the momenta of each term
-          RBUFF(:) = 0.0d0
-          DO J=I,I+N
-            RBUFF(:) = RBUFF(:) + PL(:,J)
-          ENDDO
+        DO I=1,NLOOPLINE
+          IF (CURR_INDEX.GE.((NLOOPLINE*(NLOOPLINE-1))/2)) THEN
+		    EXIT
+		  ENDIF
+
           CURR_INDEX = CURR_INDEX+1
+          RBUFF(:) = 0.0D0
+          DO J=I,I+N
+            RBUFF(:) = RBUFF(:) + PL(:,MOD(J-1,NLOOPLINE)+1)
+          ENDDO
           MomInv(CURR_INDEX) = DCMPLX(RBUFF(0)**2-RBUFF(1)**2-RBUFF(2)**2-RBUFF(3)**2,0.0d0)
+
 C         Now regularize the onshell behavior of the kinematic invarients
 C         All loop masses are tested, but that might be a bit too inclusive.
 	      DO K=1,NLOOPLINE
@@ -272,9 +264,11 @@ C         For the massless onshell-case, we base the threshold only on the energ
               MomInv(CURR_INDEX)=DCMPLX(0.0d0,0.0d0)
             ENDIF
           ENDIF
-		ENDDO
-      ENDDO
 
+		ENDDO
+	  ENDDO
+
+C     We can now call COLLIER
 	  IF (NLOOPLINE.ne.1) THEN
         CALL TNten_cll(TNten, TNtenuv, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr)
       ELSE

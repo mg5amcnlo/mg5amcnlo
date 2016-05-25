@@ -1608,7 +1608,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                             str(datetime.timedelta(seconds=sec_needed)),\
                             datetime.datetime.now().strftime("%d-%m-%Y %H:%M")))
             if logger.getEffectiveLevel()<logging.WARNING and \
-                (sec_needed>5 or (reusing and infos['Initialization'] == None)):
+                              (sec_needed>5 or infos['Initialization'] == None):
                 widgets = ['Stability check:', pbar.Percentage(), ' ', 
                                             pbar.Bar(),' ', pbar.ETA(), ' ']
                 progress_bar = pbar.ProgressBar(widgets=widgets, maxval=nPoints, 
