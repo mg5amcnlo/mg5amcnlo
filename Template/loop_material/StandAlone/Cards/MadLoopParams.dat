@@ -23,14 +23,13 @@
 !     When using quadruple precision with Ninja or CutTools, the reduction will 
 !     always be done in quadruple precision, but the parameters below allow you to
 !     chose if you want to also recompute the *integrand* in quadruple precision.
-!     Doing so is slow and typically does not improve the accuracy for Ninja, so it 
-!     is disabled by default in this case.
+!     Doing so is slow but might improve the accuracy in some situation.
 #UseQPIntegrandForCutTools
 !.TRUE.
 ! Default :: .TRUE.
 #UseQPIntegrandForNinja
-!.FALSE.
-! Default :: .FALSE.
+!.TRUE.
+! Default :: .TRUE.
 !
 
 !     =================================================================================
@@ -86,8 +85,8 @@
 !     Below you can chose if you want to use zero, one or two rotations of the PS point 
 !     in QP.
 #NRotations_DP
-!1
-! Default :: 1
+!0
+! Default :: 0
 #NRotations_QP
 !0
 ! Default :: 0
@@ -258,11 +257,14 @@
 !     Decide whether to use COLLIER's internal stability test or the loop-direction
 !     switch test instead.
 #COLLIERUseInternalStabilityTest
-!.FALSE.
-! Default :: .FALSE.
+!.TRUE.
+! Default :: .TRUE.
 !     COLLIER's internal stability test is at no extra cost but not as reliable
 !     as the loop-direction switch test, which however doubles the reduction time.
 !     This parameter is only relevant when running MadLoop with CTModeRun=-1.
+!     If you find a large number of unstable points with COLLIER for complicated
+!     processes, set this parameter to .FALSE. to make sure the PS points flagged
+!     as unstable with COLLIER really are so.
 
 !     Set up to which N-loop to use the COLLIER global caching system.
 #COLLIERGlobalCache

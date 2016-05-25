@@ -210,7 +210,10 @@ C       by using coefficients shifted by COLLIER internal error estimate.
 		    RETURN
 		  ENDIF
 	    ENDIF
-      ENDIF
+      ELSE
+C       Apply the loop-direction switching here.
+        CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)	  
+	  ENDIF
 
 C     Make sure masses are complex 
       do I=1,NLOOPLINE

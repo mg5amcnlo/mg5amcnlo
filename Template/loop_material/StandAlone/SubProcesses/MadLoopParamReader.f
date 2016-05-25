@@ -316,10 +316,10 @@ C     a non existing or malformed parameter file
       COLLIERGlobalCache = -1
       COLLIERMode=1
       COLLIERRequiredAccuracy=1.0d-8
-      COLLIERUseInternalStabilityTest = .FALSE.
+      COLLIERUseInternalStabilityTest = .TRUE.
       CTModeInit=0
       CTModeRun=-1
-      NRotations_DP=1
+      NRotations_DP=0
       NRotations_QP=0
       MLStabThres=1.0d-3
       CTStabThres=1.0d-2
@@ -336,6 +336,6 @@ C     a non existing or malformed parameter file
       OSThres=1.0d-13
       ImprovePSPoint=2
       UseQPIntegrandForCutTools=.True.
-      UseQPIntegrandForNinja=.False.
+      UseQPIntegrandForNinja=.True.
 
       end

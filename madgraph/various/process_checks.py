@@ -2184,7 +2184,11 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
             MLoptions['COLLIERRequiredAccuracy']=1e-13
         # Use loop-direction switching as stability test if not specifed (more reliable)
         if 'COLLIERUseInternalStabilityTest' not in MLoptions:
-            MLoptions['COLLIERUseInternalStabilityTest']=False           
+            MLoptions['COLLIERUseInternalStabilityTest']=False
+        # Finally we *must* forbid the use of COLLIER global cache here, because it
+        # does not work with the way we call independently CTMODERun 1 and 2
+        # with the StabilityChecker.
+        MLoptions['COLLIERGlobalCache'] = 0
 
         if "MLReductionLib" not in MLOptions:
             MLoptions["MLReductionLib"] = []

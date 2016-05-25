@@ -2205,7 +2205,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)
         self.add_param("MLStabThres", 1e-3)
-        self.add_param("NRotations_DP", 1)
+        self.add_param("NRotations_DP", 0)
         self.add_param("NRotations_QP", 0)
         self.add_param("ImprovePSPoint", 2)
         self.add_param("CTLoopLibrary", 2)
@@ -2221,7 +2221,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("HelicityFilterLevel", 2)
         self.add_param("LoopInitStartOver", False)
         self.add_param("HelInitStartOver", False)
-        self.add_param("UseQPIntegrandForNinja", False)        
+        self.add_param("UseQPIntegrandForNinja", True)        
         self.add_param("UseQPIntegrandForCutTools", True)
         self.add_param("COLLIERMode", 1)
         self.add_param("COLLIERComputeUVpoles", True)
@@ -2230,7 +2230,7 @@ class MadLoopParam(ConfigFile):
         self.add_param("COLLIERCanOutput",False)
         self.add_param("COLLIERGlobalCache",-1)
         self.add_param("COLLIERUseCacheForPoles",False)
-        self.add_param("COLLIERUseInternalStabilityTest",False)
+        self.add_param("COLLIERUseInternalStabilityTest",True)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

@@ -227,7 +227,6 @@ C     CONVERT TO MADLOOP CONVENTION
       CASE(7)
 C     COLLIER
 ## if(collier_available){
-      CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)		
       CALL %(proc_prefix)sCOLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS)
 ## } else {
       WRITE(*,*) 'ERROR:: COLLIER is not interfaced.'
