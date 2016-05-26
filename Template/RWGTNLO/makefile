@@ -10,7 +10,7 @@ RWGT=rwgt.f $(alphas_functions)
 rwgt2py.so: rwgt.f makefile $(LIBS)
 	touch __init__.py	
 	touch ../__init__.py
-	$(F2PY) $(LDFLAGS) $(LINKLIBS) -c  $(RWGT) -m rwgt2py --fcompiler=$(FC)
+	$(F2PY) $(LINKLIBS) $(LDFLAGS) -c  $(RWGT) -m rwgt2py --fcompiler=$(FC)
 
 $(LIBS):
 	cd PDF; make
