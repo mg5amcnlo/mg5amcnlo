@@ -3106,8 +3106,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                     # We must add the corresponding includes for these TIR
                     if tir in ['golem','samurai','ninja','collier']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
-                        if os.path.isdir(trgt_path):
-                            to_include = misc.find_includes_path(trgt_path,
+                        if os.path.isdir(trg_path):
+                            to_include = misc.find_includes_path(trg_path,
                                                         self.include_names[tir])
                         else:
                             to_include = None
