@@ -1318,6 +1318,9 @@ class HwU(Histogram):
             if type=='PDF' and use_lhapdf:
                 lhapdf.setVerbosity(0)
 
+        print 'FORCING use_lhapdf=False'
+        use_lhapdf = False
+
         # Place the new weight label last before the first tuple
         position=[]
         labels=[]
@@ -1398,8 +1401,30 @@ class HwU(Histogram):
                         pdf_stdev = math.sqrt(pdf_stdev)
                         pdf_up   = cntrl_val+pdf_stdev
                         pdf_down = cntrl_val-pdf_stdev
+                    elif wgts[0] in range(244400, 244501) or \
+                         wgts[0] in range(244600, 244701) or \
+                         wgts[0] in range(244800, 244901) or \
+                         wgts[0] in range(245000, 245101) or \
+                         wgts[0] in range(245200, 245301) or \
+                         wgts[0] in range(245400, 245501) or \
+                         wgts[0] in range(245600, 245701) or \
+                         wgts[0] in range(245800, 245901) or \
+                         wgts[0] in range(246000, 246101) or \
+                         wgts[0] in range(246200, 246301) or \
+                         wgts[0] in range(246400, 246501) or \
+                         wgts[0] in range(246600, 246701) or \
+                         wgts[0] in range(246800, 246901) or \
+                         wgts[0] in range(247000, 247101) or \
+                         wgts[0] in range(247200, 247301) or \
+                         wgts[0] in range(247400, 247501): 
+                        # use Gaussian (68%CL) method (NNPDF)
+                        pdf_stdev = 0.0
+                        pdf_diff = sorted([abs(pdf-cntrl_val) for pdf in pdfs[1:]])
+                        pdf_stdev = pdf_diff[67]
+                        pdf_up   = cntrl_val+pdf_stdev
+                        pdf_down = cntrl_val-pdf_stdev
                     else:
-                        # use Gaussian method (NNPDF)
+                        # use Gaussian (one sigma) method (NNPDF)
                         pdf_stdev = 0.0
                         for pdf in pdfs[1:]:
                             pdf_stdev += (pdf - cntrl_val)**2
