@@ -30,7 +30,7 @@ C
             pdf(i)=f(i)/x
          enddo
       elseif(ih .eq. 2) then  !from a proton without breaking
-          pdf(7) = epa_proton(x,xmu*xmu)
+          pdf(7) = epa_proton(x, q * q)
       else
          write (*,*) 'beam type not supported in lhadpf'
          stop 1

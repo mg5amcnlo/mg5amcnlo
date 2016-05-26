@@ -2612,7 +2612,7 @@ class decay_all_events(object):
         return decay_mapping
     
 
-    #@misc.mute_logger()
+    @misc.mute_logger()
     @test_aloha.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
@@ -3148,6 +3148,7 @@ class decay_all_events(object):
             atleastonedecay=False
             for decay in self.all_ME[production_tag]['decays']:
                 tag = decay['decay_tag']
+
                 if decay_mapping and not tag in decay_mapping:
                     continue
                 if not tag:
@@ -3161,10 +3162,11 @@ class decay_all_events(object):
                 else:
                     max_decay[tag] = weight
                     #print weight, max_decay[name]
-                    #raise Exception   
+                    #raise Exception 
+                      
             if not atleastonedecay:
                 # NO decay [one possibility is all decay are identical to their particle]
-                logger.info('No independent decay for one type of final states -> skip those events')
+                logger.info('No independent decay for one type of final states -> skip those events for the maximum weight computation')
                 nb_decay[decaying] = numberev
                 ev += numberev -1
                 continue
