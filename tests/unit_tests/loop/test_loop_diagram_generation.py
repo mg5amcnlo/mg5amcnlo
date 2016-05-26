@@ -27,6 +27,7 @@ root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 sys.path.append(os.path.join(root_path, os.path.pardir, os.path.pardir))
 
 
+import tests.IOTests as IOTests
 import tests.unit_tests as unittest
 
 
@@ -1602,6 +1603,7 @@ class LoopEWDiagramGenerationTest(unittest.TestCase):
 
     myamplitude = diagram_generation.Amplitude()
 
+    @IOTests.set_global(unitary=False)
     def setUp(self):
         """Load different objects for the tests."""
         
