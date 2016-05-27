@@ -2127,8 +2127,10 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
 
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
                             param_card, keep_folder=keep_folder,options=options,
-                            MLOptions = MLoptions)
+                            MLOptions = MLoptions) 
     
+    timing2['reduction_tool'] = MLoptions['MLReductionLib'][0]
+
     if timing2 == None:
         return None, None
 
