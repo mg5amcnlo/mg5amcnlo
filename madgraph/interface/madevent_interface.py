@@ -1728,13 +1728,13 @@ class CompleteForCmd(CheckValidForCmd):
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--no_default','--tag='], line)
 
-    def complete_madanalysis5(self,text, line, begidx, endidx):
+    def complete_madanalysis5_parton(self,text, line, begidx, endidx):
         "Complete the madanalysis5 command"
         args = self.split_arg(line[0:begidx], error=False)
         if len(args) == 1:
             #return valid run_name
             data = []
-            for name in ['unweighted_events.lhe','*.hepmc','*.stdhep','*.lhco']:
+            for name in ['unweighted_events.lhe']:
                 data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
                 data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
             data = [n.rsplit('/',2)[1] for n in data]
@@ -1742,16 +1742,50 @@ class CompleteForCmd(CheckValidForCmd):
             if not self.run_name:
                 return tmp1
             else:
-                tmp2 = self.list_completion(text, self._run_options + ['-f',
-                '--no_hadron','--no_parton','--hadron=','--no_default', '--tag='], line)
+                tmp2 = self.list_completion(text, ['-f',
+                '--MA5_stdout_lvl=','--no_default','--tag='], line)
+                return tmp1 + tmp2            
+        elif '--MA5_stdout_lvl=' in line and not any(arg.startswith(
+                                          '--MA5_stdout_lvl=') for arg in args):
+            return self.list_completion(text, 
+                ['--MA5_stdout_lvl=%s'%opt for opt in 
+                ['logging.INFO','logging.DEBUG','logging.WARNING',
+                                                'logging.CRITICAL','90']], line)
+        else:
+            return self.list_completion(text,  ['-f', 
+                             '--MA5_stdout_lvl=','--no_default','--tag='], line)
+
+    def complete_madanalysis5_hadron(self,text, line, begidx, endidx):
+        "Complete the madanalysis5 command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            #return valid run_name
+            data = []
+            for name in ['*.hepmc','*.stdhep','*.lhco']:
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, ['-f',
+                '--MA5_stdout_lvl=','--hadron=','--no_default', '--tag='], line)
                 return tmp1 + tmp2
-        elif line[-1] != '=':
-            return self.list_completion(text, self._run_options + ['-f', 
-                '--no_hadron','--no_parton','--hadron=','--no_default','--tag='], line)
-        elif line[-1].endswith('--hadron='):
-            return self.list_completion(text, self._run_options + 
-                        ['*.lhe','*.hepmc','*.lhco','*.stdhep'], line)
-    
+            
+        elif '--MA5_stdout_lvl=' in line and not any(arg.startswith(
+                                          '--MA5_stdout_lvl=') for arg in args):
+            return self.list_completion(text, 
+                ['--MA5_stdout_lvl=%s'%opt for opt in 
+                ['logging.INFO','logging.DEBUG','logging.WARNING',
+                                                'logging.CRITICAL','90']], line)
+        elif '--hadron=':
+            return self.list_completion(text, ['--hadron=%s'%opt for opt in
+                         ['*.lhe','*.hepmc','*.lhco','*.stdhep','path']], line)
+        else:
+            return self.list_completion(text, ['-f', 
+                '--MA5_stdout_lvl=','--hadron=','--no_default', '--tag='], line)
+
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"     
         args = self.split_arg(line[0:begidx], error=False)
@@ -3438,24 +3472,28 @@ Beware that this can be dangerous for local multicore runs.""")
         logger.info('-------------------------------------------','$MG:color:GREEN')
         logger.info('Now starting MadAnalysis5 [arXiv:1206.1599]','$MG:color:GREEN')
         logger.info('-------------------------------------------','$MG:color:GREEN')
+
+        # Obtain a main MA5 interpreter
+        # Ideally we would like to do it all with a single interpreter
+        # but we'd need a way to reset it for this.
+        if MA5_opts['MA5_stdout_lvl']=='default':
+            MA5_lvl = self.options['stdout_level']
+        else:
+            MA5_lvl = MA5_opts['MA5_stdout_lvl']
                     
+        MA5_interpreter = misc.get_MadAnalysis5_interpreter(
+                self.options['mg5_path'], 
+                self.options['madanalysis5_path'],
+                logstream=sys.stdout,
+                loglevel=MA5_lvl,
+                forced=True)
+            
         for MA5_runtag, MA5_cmds in MA5_cmds_list:
-            # Obtain a main MA5 interpreter
-            # Ideally we would like to do it all with a single interpreter
-            # but we'd need a way to reset it for this.
-            if MA5_opts['MA5_stdout_lvl']=='default':
-                MA5_lvl = self.options['stdout_level']
-            else:
-                MA5_lvl = MA5_opts['MA5_stdout_lvl']
-            MA5_interpreter = misc.get_MadAnalysis5_interpreter(
-                    self.options['mg5_path'], 
-                    self.options['madanalysis5_path'],
-                    logstream=sys.stdout,
-                    loglevel=MA5_lvl,
-                    forced=True)
-        
+            # Make sure to properly initialize MA5 interpreter
             if mode=='hadron':
                 MA5_interpreter.init_reco()
+            else:
+                MA5_interpreter.init_parton()        
             
             if MA5_runtag!='default':
                 logger.info("MadAnalysis5 running the '%s' analysis..."%MA5_runtag)
