@@ -1005,7 +1005,7 @@ class CheckValidForCmd(object):
         """Check the argument for the madanalysis5 command
         syntax: madanalysis5_parton [NAME]
         """
-        
+
         MA5_options = {'MA5_stdout_lvl':'default'}
         
         stdout_level_tags = [a for a in args if a.startswith('--MA5_stdout_lvl=')]
@@ -1100,8 +1100,8 @@ class CheckValidForCmd(object):
     
         if mode=='hadron':
             hadron_tag = [t for t in args if t.startswith('--input=')]
-            if hadron_tag and hadron_tag[0][9:]:
-                hadron_inputs = hadron_tag[0][9:].split(',')
+            if hadron_tag and hadron_tag[0][8:]:
+                hadron_inputs = hadron_tag[0][8:].split(',')
             
             # If not set above, then we must read it from the card
             elif MA5_options['inputs'] == ['fromCard']:
@@ -1130,13 +1130,6 @@ class CheckValidForCmd(object):
                 if file_candidates:
                     MA5_options['inputs'].append(file_candidates[0])
                     continue
-        
-            # Now check that there is at least one input to run
-            if MA5_options['inputs']==[]:
-                raise self.InvalidCmd('No input files specified or availabled for'+
-            ' this MadAnalysis5 hadron-level run. Please double-check the options of this'+
-            ' MA5 command (or card) and what output file are currently in the chosen'+
-            'run directory.')      
 
         return MA5_options
     
@@ -1761,7 +1754,7 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 1:
             #return valid run_name
             data = []
-            for name in ['*.hepmc','*.stdhep','*.lhco']:
+            for name in banner_mod.MadAnalysis5Card._default_hadron_inputs:
                 data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
                 data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
             data = [n.rsplit('/',2)[1] for n in data]
@@ -1770,7 +1763,7 @@ class CompleteForCmd(CheckValidForCmd):
                 return tmp1
             else:
                 tmp2 = self.list_completion(text, ['-f',
-                '--MA5_stdout_lvl=','--hadron=','--no_default', '--tag='], line)
+                '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
                 return tmp1 + tmp2
             
         elif '--MA5_stdout_lvl=' in line and not any(arg.startswith(
@@ -1779,12 +1772,13 @@ class CompleteForCmd(CheckValidForCmd):
                 ['--MA5_stdout_lvl=%s'%opt for opt in 
                 ['logging.INFO','logging.DEBUG','logging.WARNING',
                                                 'logging.CRITICAL','90']], line)
-        elif '--hadron=':
-            return self.list_completion(text, ['--hadron=%s'%opt for opt in
-                         ['*.lhe','*.hepmc','*.lhco','*.stdhep','path']], line)
+        elif '--input=' in line and not any(arg.startswith(
+                                                  '--input=') for arg in args):
+            return self.list_completion(text, ['--input=%s'%opt for opt in
+         (banner_mod.MadAnalysis5Card._default_hadron_inputs +['path'])], line)
         else:
             return self.list_completion(text, ['-f', 
-                '--MA5_stdout_lvl=','--hadron=','--no_default', '--tag='], line)
+                '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
 
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"     
@@ -3457,6 +3451,18 @@ Beware that this can be dangerous for local multicore runs.""")
             self.configure_directory(html_opening =False)
             MA5_opts = self.check_madanalysis5(args, mode=mode)
 
+        # Now check that there is at least one input to run
+        if MA5_opts['inputs']==[]:
+            if no_default:
+                logger.warning('No hadron level input found to run MadAnalysis5 on.'+
+                                         ' Skipping its hadron-level analysis.')
+                return
+            else:
+                raise self.InvalidCmd('\nNo input files specified or availabled for'+
+        ' this MadAnalysis5 hadron-level run.\nPlease double-check the options of this'+
+        ' MA5 command (or card) and which output files\nare currently in the chosen'+
+        " run directory '%s'."%self.run_name)
+
         MA5_card = banner_mod.MadAnalysis5Card(pjoin(self.me_dir, 'Cards',
                                     'madanalysis5_%s_card.dat'%mode), mode=mode)
         
@@ -3493,7 +3499,9 @@ Beware that this can be dangerous for local multicore runs.""")
             if mode=='hadron':
                 MA5_interpreter.init_reco()
             else:
-                MA5_interpreter.init_parton()        
+                MA5_interpreter.init_parton()
+            # Make sure that the interpreter is still forced (no questions to user)
+            MA5_interpreter.main.forced = True
             
             if MA5_runtag!='default':
                 logger.info("MadAnalysis5 running the '%s' analysis..."%MA5_runtag)
@@ -5174,7 +5182,10 @@ You can follow PY8 run with the following command (in a separate terminal):
 
         force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
                        ('detector', 'PGS'): {'shower':'PYTHIA6'},
-                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
+                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']},
+                       ('madanalysis5','HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
+                       ('madanalysis5','PARTON+HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
+                       ('shower', 'OFF'): {'madanalysis5': ['PARTON','OFF']} }
 
         switch_assign = lambda key, value: switch.__setitem__(key, value if value \
                                          in valid_options[key] else switch[key])

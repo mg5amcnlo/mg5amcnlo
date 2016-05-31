@@ -2521,13 +2521,13 @@ class MadAnalysis5Card(dict):
     _MG5aMC_escape_tag = '@MG5aMC'
     _empty_analysis    = {'commands':[],
                           'reconstructions':[]}
+    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco']
+    _default_parton_inputs = ['*.lhe']
 
     def default_setup(self):
         """define the default value""" 
         self['mode']      = 'parton'
         self['inputs']    = []
-        # The default for a hadron type of card is
-        #   '*.hepmc', '*.stdhep', '*.lhco'
         # These two dictionaries are formated as follows:
         #     {'analysis_name':
         #          {'reconstructions' : ['associated_reconstructions_name']}
@@ -2669,9 +2669,9 @@ class MadAnalysis5Card(dict):
         self['mode'] = card_mode
         if self['inputs'] == []:
             if self['mode']=='hadron':
-                self['inputs']  = ['*.hepmc', '*.stdhep', '*.lhco']
+                self['inputs']  = self._default_hadron_inputs
             else:
-                self['inputs']  = ['*.lhe']
+                self['inputs']  = self._default_parton_inputs
         
         # Make sure at least one reconstruction is specified for each hadron
         # level analysis and that it exists.
