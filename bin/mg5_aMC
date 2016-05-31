@@ -134,6 +134,7 @@ if options.plugin:
     if not misc.is_plugin_supported(plugin):
         sys.exit()
     cmd_line = plugin.new_interface(mgme_dir = options.mgme_dir)
+    cmd_line.plugin=options.plugin
 elif options.web:
     cmd_line = interface.MasterCmdWeb()
 else: 

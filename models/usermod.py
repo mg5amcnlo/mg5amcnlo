@@ -145,7 +145,7 @@ class UFOModel(object):
                         logger.warning("%s will not acting for %s %s" % (p, block, lhaid))
                         param_card[block.lower()].get(lhaid).value = value
                 # all added -> write it
-                param_card.write(pjoin(outputdir, p))
+                param_card.write(pjoin(outputdir, p), precision=7)
 
                         
                     

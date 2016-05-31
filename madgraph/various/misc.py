@@ -1305,6 +1305,9 @@ def sprint(*args, **opt):
         return
     
     import inspect
+    if opt.has_key('cond') and not opt['cond']:
+        return
+    
     if opt.has_key('log'):
         log = opt['log']
     else:
@@ -1317,6 +1320,11 @@ def sprint(*args, **opt):
         #if level == 20:
         #    level = 10 #avoid info level
         #print "use", level
+    if opt.has_key('wait'):
+        wait = bool(opt['wait'])
+    else:
+        wait = False
+        
     lineno  =  inspect.currentframe().f_back.f_lineno
     fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
     filename, lineno = fargs[:2]
@@ -1343,6 +1351,9 @@ def sprint(*args, **opt):
 
     log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
                    ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
+
+    if wait:
+        raw_input('press_enter to continue')
     return 
 
 ################################################################################

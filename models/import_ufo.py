@@ -1765,7 +1765,7 @@ class RestrictModel(model_reader.ModelReader):
         
         # define usefull variable to detect identical input
         block_value_to_var={} #(lhablok, value): list_of_var
-        mult_param = set([])       # key of the previous dict with more than one
+        mult_param = set([])  # key of the previous dict with more than one
                               #parameter.
                               
         #detect identical parameter and remove the duplicate parameter
@@ -1775,9 +1775,9 @@ class RestrictModel(model_reader.ModelReader):
                 continue
             if param.lhablock.lower() == 'decay':
                 continue
-            
             key = (param.lhablock, value)
             mkey =  (param.lhablock, -value)
+
             if key in block_value_to_var:
                 block_value_to_var[key].append((param,1))
                 mult_param.add(key)

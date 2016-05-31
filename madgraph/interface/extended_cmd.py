@@ -1248,7 +1248,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return self.child.nice_user_error(error, line)
         # Make sure that we are at the initial position
         os.chdir(self.__initpos)
-        if line == self.history[-1]:
+        if not self.history or line == self.history[-1]:
             error_text = 'Command \"%s\" interrupted with error:\n' % line
         else:
             error_text = 'Command \"%s\" interrupted in sub-command:\n' %line

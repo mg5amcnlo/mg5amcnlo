@@ -2212,16 +2212,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             else:
                 matrix_template = "matrix_standalone_splitOrders_v4.inc"
 
+        replace_dict['template_file'] = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
+        replace_dict['template_file2'] = pjoin(_file_path, \
+                                   'iolibs/template_files/split_orders_helping_functions.inc')
         if write and writer:
-            path = pjoin(_file_path, 'iolibs', 'template_files', matrix_template)
+            path = replace_dict['template_file']
             content = open(path).read()
             content = content % replace_dict
             # Write the file
             writer.writelines(content)
             # Add the helper functions.
             if len(split_orders)>0:
-                content = '\n' + open(pjoin(_file_path, \
-                                   'iolibs/template_files/split_orders_helping_functions.inc'))\
+                content = '\n' + open(replace_dict['template_file2'])\
                                    .read()%replace_dict
                 writer.writelines(content)
             return len(filter(lambda call: call.find('#') != 0, helas_calls))
@@ -2856,10 +2858,13 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
         # Extract JAMP lines
         jamp_lines = self.get_JAMP_lines(matrix_element)
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
-
+        
+        replace_dict['template_file'] =  os.path.join(_file_path, \
+                          'iolibs/template_files/%s' % self.matrix_file)
+        replace_dict['template_file2'] = ''
+        
         if writer:
-            file = open(os.path.join(_file_path, \
-                          'iolibs/template_files/%s' % self.matrix_file)).read()
+            file = open(replace_dict['template_file']).read()
             file = file % replace_dict
             # Write the file
             writer.writelines(file)
@@ -3760,14 +3765,15 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                         split_orders if len(split_orders)>0 else ['ALL_ORDERS'])
         replace_dict['jamp_lines'] = '\n'.join(jamp_lines)
 
-
+        replace_dict['template_file'] = pjoin(_file_path, \
+                          'iolibs/template_files/%s' % self.matrix_file)
+        replace_dict['template_file2'] = pjoin(_file_path, \
+                          'iolibs/template_files/split_orders_helping_functions.inc')      
         if writer:
-            file = open(pjoin(_file_path, \
-                          'iolibs/template_files/%s' % self.matrix_file)).read()
+            file = open(replace_dict['template_file']).read()
             file = file % replace_dict
             # Add the split orders helper functions.
-            file = file + '\n' + open(pjoin(_file_path, \
-                  'iolibs/template_files/split_orders_helping_functions.inc'))\
+            file = file + '\n' + open(replace_dict['template_file2'])\
                                                             .read()%replace_dict
             # Write the file
             writer.writelines(file)

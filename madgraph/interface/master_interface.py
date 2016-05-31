@@ -80,6 +80,9 @@ class Switcher(object):
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
         
+        if hasattr(self, 'plugin') and self.plugin:
+            return True
+        
         correct = True
         # function which should be self.cmd dependent but which doesn't start
         # by do_xxxx, help_xxx, check_xxxx or complete_xxx 

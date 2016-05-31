@@ -1682,6 +1682,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 sorted_legs = sorted([(l,i+1) for (i,l) in \
                                    enumerate(legs.get_outgoing_id_list(model))])
                 permutation = [l[1] for l in sorted_legs]
+                
                 sorted_legs = array.array('i', [l[0] for l in sorted_legs])
 
                 # Check for six-quark processes

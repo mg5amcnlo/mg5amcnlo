@@ -104,26 +104,26 @@ class Parameter (object):
         self.value = float(data[0]) 
         self.format = 'decay_table'
 
-    def __str__(self):
+    def __str__(self, precision=''):
         """ return a SLAH string """
 
+        
         format = self.format
         if self.format == 'float':
             try:
                 value = float(self.value)
             except:
                 format = 'str'
-        
         self.comment = self.comment.strip()
         if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,basestring):
-                return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+                return 'DECAY %s %{}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
                 return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             elif self.lhablock and self.lhablock.startswith('qnumbers'):
                 return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
-                return '      %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+                return '      %s %.{}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         elif format == 'str':
@@ -180,6 +180,11 @@ class Block(list):
     
     def __eq__(self, other, prec=1e-4):
         """ """
+        
+        if isinstance(other, str) and ' ' not in other:
+            return self.name.lower() == other.lower()
+        
+        
         if len(self) != len(other):
             return False
         
@@ -249,7 +254,7 @@ class Block(list):
         
         return [p.lhacode for p in self]
 
-    def __str__(self):
+    def __str__(self, precision=''):
         """ return a str in the SLAH format """ 
         
         text = """###################################""" + \
@@ -273,7 +278,7 @@ class Block(list):
         else:
             text += 'BLOCK %s Q= %e # %s\n' % (self.name.upper(), self.scale, self.comment)
         
-        text += '\n'.join([str(param) for param in self])
+        text += '\n'.join([param.__str__(precision) for param in self])
         return text + '\n'
 
 
@@ -409,13 +414,13 @@ class ParamCard(dict):
         
         return pname2block, restricted_value
     
-    def write(self, outpath=None):
+    def write(self, outpath=None, precision=''):
         """schedular for writing a card"""
   
         # order the block in a smart way
         blocks = self.order_block()
         text = self.header
-        text += ''.join([str(block) for block in blocks])
+        text += ''.join([block.__str__(precision) for block in blocks])
 
         if not outpath:
             return text
