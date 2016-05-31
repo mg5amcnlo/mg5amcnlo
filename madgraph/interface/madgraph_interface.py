@@ -912,7 +912,8 @@ class CheckValidForCmd(cmd.CheckCmd):
                    '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
                    '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
                    '--collier_req_acc':'auto',
-                   '--collier_internal_stability_test':'False'}  
+                   '--collier_internal_stability_test':'False',
+                   '--collier_mode':'1'}  
 
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -3530,6 +3531,8 @@ This implies that with decay chains:
                                        " must be an integer, not %s."%option[1])
             elif option[0]=='--reduction':
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
+            elif option[0]=='--collier_mode':
+                MLoptions['COLLIERMode']=int(option[1])
             elif option[0]=='--collier_cache':
                 MLoptions['COLLIERGlobalCache']=int(option[1])
             elif option[0]=='--collier_req_acc':

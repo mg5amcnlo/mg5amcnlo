@@ -204,7 +204,7 @@ C       by using coefficients shifted by COLLIER internal error estimate.
 		    DO I=0,CURR_MAXCOEF-1
 		      CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
 		      DO K=1,3
-			    TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)*(1.0d0+TIR_COEFS_ERROR(CURR_RANK,ID))
+			    TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)+TIR_COEFS_ERROR(CURR_RANK,ID)
 			  ENDDO
 	        ENDDO
 		    RETURN
@@ -388,7 +388,7 @@ c       Finish by caching the coefficients and error just computed
 	      DO I=0,(CURR_MAXCOEF-1)
 	        CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)		
 		    DO J=1,3
-		      TIRCOEFS(I,J) = TIRCOEFS(I,J) * (1.0d0+TNtenerr(CURR_RANK))
+		      TIRCOEFS(I,J) = TIRCOEFS(I,J) + TNtenerr(CURR_RANK)
 		    ENDDO
           ENDDO
 	    ENDIF
