@@ -6971,9 +6971,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         force = '-f' in args
         nojpeg = '-nojpeg' in args
         flaglist = []
-        
-
-            
+                    
         if '--postpone_model' in args:
             flaglist.append('store_model')
         

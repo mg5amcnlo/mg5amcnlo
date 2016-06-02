@@ -1010,9 +1010,7 @@ c     Note the following condition is the first line of setclscales
 c      if(xqcut.gt.0d0.or.ickkw.gt.0.or.scale.eq.0.or.q2fact(1).eq.0)then
 c     Do not duplicate it since some variable are set for syscalc in the fct
         if(.not.setclscales(p))then
-         if(debug) write (*,*) ' setclscales -> fails'
-         passcuts=.false.
-         return
+         if(debug) write (*,*) ' setclscales -> fails but no cut!'
        endif
 c      endif
 
