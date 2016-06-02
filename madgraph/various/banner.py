@@ -907,7 +907,7 @@ class ConfigFile(dict):
             dict.__init__(self, finput)
             assert finput.__dict__.keys()
             for key in finput.__dict__:
-                setattr(self, key, copy.copy(getattr(finput, key)) )
+                setattr(self, key, dict(getattr(finput, key)) )
             return
         else:
             dict.__init__(self)
@@ -2519,24 +2519,33 @@ class MadAnalysis5Card(dict):
     free format."""
     
     _MG5aMC_escape_tag = '@MG5aMC'
-    _empty_analysis    = {'commands':[],
-                          'reconstructions':[]}
-    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco']
+    
+    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep']
     _default_parton_inputs = ['*.lhe']
+    
+    @classmethod
+    def empty_analysis(cls):
+        """ A method returning the structure of an empty analysis """
+        return {'commands':[],
+                'reconstructions':[]}
 
     def default_setup(self):
         """define the default value""" 
         self['mode']      = 'parton'
         self['inputs']    = []
+        # None is the default stdout level, it will be set automatically by MG5aMC
+        self['stdout_lvl'] = None
         # These two dictionaries are formated as follows:
         #     {'analysis_name':
         #          {'reconstructions' : ['associated_reconstructions_name']}
         #          {'commands':['analysis command lines here']}    }
-        # with values being of the form of the _empty_analysis attribute
+        # with values being of the form of the empty_analysis() attribute
         # of this class and some other property could be added to this dictionary
         # in the future.
         self['analyses']       = {}
-        self['recasting']      = []
+        # The recasting structure contains on set of commands and one set of 
+        # card lines. 
+        self['recasting']      = {'commands':[],'card':[]}
         self['reconstruction'] = {}
         # Specify in which order the analysis/recasting were specified
         self['order'] = []
@@ -2591,6 +2600,8 @@ class MadAnalysis5Card(dict):
                 continue
             if line.endswith('\n'):
                 line = line[:-1]
+            if line.strip()=='':
+                continue
             if line.startswith(self._MG5aMC_escape_tag):
                 try:
                     option,value = line[len(self._MG5aMC_escape_tag):].split('=')
@@ -2600,6 +2611,18 @@ class MadAnalysis5Card(dict):
                 option = option.strip()
                 if option=='inputs':
                     self['inputs'] = [v.strip() for v in value.split(',')]
+                elif option=='stdout_lvl':
+                    try: # It is likely an int
+                        self['stdout_lvl']=int(value)
+                    except ValueError:
+                        try: # Maybe the user used something like 'logging.INFO'
+                            self['stdout_lvl']=eval(value)
+                        except:
+                            try:
+                               self['stdout_lvl']=eval('logging.%s'%value)
+                            except:
+                                raise InvalidMadAnalysis5Card(
+                 "MA5 output level specification '%s' is incorrect."%str(value))
                 elif option=='analysis_name':
                     current_type = 'analyses'
                     current_name = value
@@ -2607,7 +2630,7 @@ class MadAnalysis5Card(dict):
                         raise InvalidMadAnalysis5Card(
                "Analysis '%s' already defined in MadAnalysis5 card"%current_name)
                     else:
-                        self[current_type][current_name] = self._empty_analysis
+                        self[current_type][current_name] = MadAnalysis5Card.empty_analysis()
                 elif option=='set_reconstructions':
                     try:
                         reconstructions = eval(value)
@@ -2630,17 +2653,21 @@ class MadAnalysis5Card(dict):
                "Reconstruction '%s' already defined in MadAnalysis5 hadron card"%current_name)
                     else:
                         self[current_type][current_name] = []
-                elif option=='recasting':
+                elif option.startswith('recasting'):
                     current_type = 'recasting'
-                    current_name = None
-                    if len(self['recasting'])>0:
+                    try:
+                        current_name = option.split('_')[1]
+                    except:
+                        raise InvalidMadAnalysis5Card('Malformed MA5 recasting option %s.'%option)
+                    if len(self['recasting'][current_name])>0:
                         raise InvalidMadAnalysis5Card(
                "Only one recasting can be defined in MadAnalysis5 hadron card")
                 else:
                     raise InvalidMadAnalysis5Card(
                "Unreckognized MG5aMC instruction in MadAnalysis5 card: '%s'"%option)
                 
-                if option in ['analysis_name','reconstruction_name','recasting']:
+                if option in ['analysis_name','reconstruction_name'] or \
+                                                 option.startswith('recasting'):
                     self['order'].append((current_type,current_name))
                 continue
 
@@ -2648,17 +2675,17 @@ class MadAnalysis5Card(dict):
             # to specify it.
             if current_name == 'default' and current_type == 'analyses' and\
                                           'default' not in self['analyses']:
-                    self['analyses']['default'] = self._empty_analysis
+                    self['analyses']['default'] = MadAnalysis5Card.empty_analysis()
                     self['order'].append(('analyses','default'))
 
             if current_type in ['recasting']:
-                self[current_type].append(line)
+                self[current_type][current_name].append(line)
             elif current_type in ['reconstruction']:
                 self[current_type][current_name].append(line)
             elif current_type in ['analyses']:
                 self[current_type][current_name]['commands'].append(line)
 
-        if 'reconstruction' in self['analyses'] or len(self['recasting'])>0:
+        if 'reconstruction' in self['analyses'] or len(self['recasting']['card'])>0:
             if mode=='parton':
                 raise InvalidMadAnalysis5Card(
       "A parton MadAnalysis5 card cannot specify a recombination or recasting.")
@@ -2684,8 +2711,6 @@ class MadAnalysis5Card(dict):
                                                    analysis['reconstructions']):
                     raise InvalidMadAnalysis5Card('A reconstructions specified in'+\
                                  " analysis '%s' is not defined."%analysis_name)
-
-        return
     
     def write(self, output):
         """ Write an MA5 card."""
@@ -2699,8 +2724,10 @@ class MadAnalysis5Card(dict):
               ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(output)))
         
         output_lines = ['%s inputs = %s'%(self._MG5aMC_escape_tag,','.join(self['inputs']))]
-
+        if not self['stdout_lvl'] is None:
+            output_lines.append('%s stdout_lvl=%s'%(self._MG5aMC_escape_tag,self['stdout_lvl']))
         for definition_type, name in self['order']:
+            
             if definition_type=='analyses':
                 output_lines.append('%s analysis_name = %s'%(self._MG5aMC_escape_tag,name))
                 output_lines.append('%s set_reconstructions = %s'%(self._MG5aMC_escape_tag,
@@ -2708,9 +2735,10 @@ class MadAnalysis5Card(dict):
             elif definition_type=='reconstruction':
                 output_lines.append('%s reconstruction_name = %s'%(self._MG5aMC_escape_tag,name))
             elif definition_type=='recasting':
-                output_lines.append('%s recasting'%(self._MG5aMC_escape_tag))
+                output_lines.append('%s recasting_%s'%(self._MG5aMC_escape_tag,name))
+
             if definition_type in ['recasting']:
-                output_lines.extend(self[definition_type])
+                output_lines.extend(self[definition_type][name])
             elif definition_type in ['reconstruction']:
                 output_lines.extend(self[definition_type][name])
             elif definition_type in ['analyses']:
@@ -2720,7 +2748,8 @@ class MadAnalysis5Card(dict):
         
         return
     
-    def get_MA5_cmds(self, inputs_arg, UFO_model_path=None, submit_folder=None):
+    def get_MA5_cmds(self, inputs_arg, submit_folder, run_dir_path=None, 
+                                               UFO_model_path=None, run_tag=''):
         """ Returns a list of tuples ('AnalysisTag',['commands']) specifying 
         the commands of the MadAnalysis runs required from this card. 
         At parton-level, the number of such commands is the number of analysis 
@@ -2735,6 +2764,13 @@ class MadAnalysis5Card(dict):
             raise MadGraph5Error("The function 'get_MA5_cmds' can only take "+\
                             " a string or a list for the argument 'inputs_arg'")
         
+        if len(inputs)==0:
+            raise MadGraph5Error("The function 'get_MA5_cmds' must have "+\
+                                              " at least one input specified'")
+        
+        if run_dir_path is None:
+            run_dir_path = os.path.dirname(inputs_arg)
+        
         cmds_list = []
         
         UFO_load = []
@@ -2748,27 +2784,57 @@ class MadAnalysis5Card(dict):
             inputs_load.append('import %s'%input)
             
         submit_command = 'submit %s'%submit_folder+'_%s'
-            
-        for i, (definition_type, name) in enumerate(self['order']):
-            
-            if definition_type == 'recasting':
-                cmds_list.append( ('Recasting',
-                  sum([UFO_load,inputs_load,
-                       self['recasting'],
-                       [submit_command%'Recasting']],[])) )
-            
+        
+        # Keep track of the reconstruction outpus in the MA5 workflow
+        # Keys are reconstruction names and values are .lhe.gz reco file paths.
+        reconstruction_outputs = {}
+        # If a recasting card has to be written out, chose here its path
+        recasting_card_path = pjoin(run_dir_path,
+       '_'.join([run_tag,os.path.basename(submit_folder),'recasting_card.dat']))
+        
+
+        for definition_type, name in self['order']:
+            if definition_type == 'reconstruction':
+                reco_outputs = ['%s_%s.lhe.gz'%(os.path.basename(
+                       input).replace('_events','').split('.')[0],name)
+                                                            for input in inputs]
+                analysis_cmds = self['reconstruction'][name]
+                for i_input, (input, reco_output) in enumerate(zip(inputs, reco_outputs)):
+                    analysis_cmds.append('import %s as reco_events'%input)
+                    analysis_cmds.append('set main.outputfile=%s'%reco_output)
+                    analysis_cmds.append(
+                       submit_command%('_reconstruction__%s_%d'%(name,i_input+1)))
+                    analysis_cmds.append('remove reco_events')
+                    
+                reconstruction_outputs[name]= [pjoin(run_dir_path,rec_out) 
+                                                    for rec_out in reco_outputs]
+                cmds_list.append(('__reconstruction__%s'%name,analysis_cmds))
+
             elif definition_type == 'analyses':
                 if self['mode']=='parton':
-                    recos = [('',[]),]
+                    cmds_list.append( (name, UFO_load+inputs_load+
+                      self['analyses'][name]['commands']+[submit_command%name]) )
                 elif self['mode']=='hadron':
-                    recos = [('_%s'%reco,self['reconstruction'][reco]) 
-                          for reco in self['analyses'][name]['reconstructions']]
-                for reco_name, reco in recos:
-                    cmds_list.append( (name+reco_name,
-                      sum([reco,UFO_load,inputs_load,
-                           self['analyses'][name]['commands'],
-                           [submit_command%(name+reco_name)]   ],[]) ) )
-        
+                    for reco in self['analyses'][name]['reconstructions']:                            
+                        analysis_cmds = ['import %s'%rec_out for rec_out in
+                                                   reconstruction_outputs[reco]]
+                        analysis_cmds.extend(self['analyses'][name]['commands'])
+                        analysis_cmds.append(submit_command%('%s_%s'%(name,reco)))
+                        cmds_list.append( ('%s_%s'%(name,reco),analysis_cmds)  )
+
+            elif definition_type == 'recasting':
+                if len(self['recasting']['card'])==0:
+                    continue
+                if name == 'card':
+                    # Create the card here
+                    open(recasting_card_path,'w').write('\n'.join(self['recasting']['card']))
+                if name == 'commands':
+                    recasting_cmds = inputs_load
+                    recasting_cmds.append('set main.recast.card_path=%s'%recasting_card_path)
+                    recasting_cmds.extend(self['recasting']['commands'])
+                    recasting_cmds.append(submit_command%'Recasting')
+                    cmds_list.append( ('Recasting',recasting_cmds))
+
         return cmds_list
 
 class RunCardNLO(RunCard):
