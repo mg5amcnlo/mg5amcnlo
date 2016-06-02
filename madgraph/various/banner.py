@@ -2520,7 +2520,7 @@ class MadAnalysis5Card(dict):
     
     _MG5aMC_escape_tag = '@MG5aMC'
     
-    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep']
+    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco']
     _default_parton_inputs = ['*.lhe']
     
     @classmethod
@@ -2803,12 +2803,12 @@ class MadAnalysis5Card(dict):
                     analysis_cmds.append('import %s as reco_events'%input)
                     analysis_cmds.append('set main.outputfile=%s'%reco_output)
                     analysis_cmds.append(
-                       submit_command%('_reconstruction__%s_%d'%(name,i_input+1)))
+                       submit_command%('reco_%s_%d'%(name,i_input+1)))
                     analysis_cmds.append('remove reco_events')
                     
                 reconstruction_outputs[name]= [pjoin(run_dir_path,rec_out) 
                                                     for rec_out in reco_outputs]
-                cmds_list.append(('__reconstruction__%s'%name,analysis_cmds))
+                cmds_list.append(('_reco_%s'%name,analysis_cmds))
 
             elif definition_type == 'analyses':
                 if self['mode']=='parton':

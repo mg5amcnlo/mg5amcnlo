@@ -3529,9 +3529,9 @@ Beware that this can be dangerous for local multicore runs.""")
                 MA5_interpreter.init_parton()
             
             if MA5_runtag!='default':
-                if MA5_runtag.startswith('__reconstruction__'):
+                if MA5_runtag.startswith('_reco_'):
                     logger.info("MadAnalysis5 now running the reconstruction '%s'..."%
-                                              MA5_runtag[18:],'$MG:color:GREEN')
+                                              MA5_runtag[6:],'$MG:color:GREEN')
                 elif MA5_runtag=='Recasting':
                     logger.info("MadAnalysis5 now running the recasting...",
                                                               '$MG:color:GREEN') 
@@ -3539,7 +3539,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.info("MadAnalysis5 now running the '%s' analysis..."%
                                                    MA5_runtag,'$MG:color:GREEN')                    
             MA5_interpreter.load(MA5_cmds)            
-            if MA5_runtag.startswith('__reconstruction__'):
+            if MA5_runtag.startswith('_reco_'):
                 # When doing a reconstruction we must first copy the event file
                 # created and then directly proceed to the next batch of instructions
                 # There can be several output directory if there were several
@@ -3551,20 +3551,20 @@ Beware that this can be dangerous for local multicore runs.""")
                                                      '_reco_events','*.lhe.gz'))
                     if len(reco_event_file)==0:
                         raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
-                  "reconstructed event file for reconstruction '%s'."%MA5_runtag[18:]
+                  "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
                     reco_event_file = reco_event_file[0]
                     # move the reconstruction output to the HTML directory
                     shutil.move(reco_output,pjoin(self.me_dir,'HTML',
-                   self.run_name,'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i)))
+                   self.run_name,'%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),MA5_runtag,i)))
                     # link the reconstructed event file to the run directory
                     links_created.append(os.path.basename(reco_event_file))
                     files.ln(pjoin(self.me_dir,'HTML',self.run_name,
-                  'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i),
+                  '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),MA5_runtag,i),
                   'Output','_reco_events',links_created[-1]),
                                       pjoin(self.me_dir,'Events',self.run_name))
                     
                 logger.info("MadAnalysis5 successfully completed the reconstruction "+
-                  "'%s'. Links to the reconstructed *.lhe.gz event files are:"%MA5_runtag[18:])
+                  "'%s'. Links to the reconstructed *.lhe.gz event files are:"%MA5_runtag[6:])
                 for link in links_created:
                     logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,link))
                 continue

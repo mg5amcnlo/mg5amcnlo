@@ -1158,6 +1158,10 @@ class OneTagResults(dict):
             if 'ma5_html' in self.madanalysis5_hadron:
                 for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
                                        '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
+                    # Chose here whether to also include the reports of the reconstructions
+                    if os.path.basename(result).startswith('reco_'):
+                        # Change the line below to 'continue' to ignore thess reports
+                        pass
                     target    = pjoin(os.curdir,os.path.relpath(result,self.me_dir),'HTML','index.html')
                     link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]
                     out += """ <a href="%s">%s</a> """%(target, link_name.strip('_'))
