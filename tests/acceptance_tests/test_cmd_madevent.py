@@ -79,6 +79,7 @@ class TestMECmdShell(unittest.TestCase):
         except Exception, error:
             pass
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
         interface.run_cmd('import model %s' % model)
         if isinstance(process, str):
             interface.run_cmd('generate %s' % process)
@@ -121,7 +122,7 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
-        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.cmd_line.no_notification()
         self.cmd_line.options['syscalc_path'] = pjoin(MG5DIR, 'SysCalc')
         
     
@@ -222,6 +223,8 @@ class TestMECmdShell(unittest.TestCase):
         cmd = os.getcwd()
         
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
+
         interface.exec_cmd("import model loop_qcd_qed_sm", errorhandling=False, 
                                                         printcmd=False, 
                                                         precmd=True, postcmd=False)
@@ -297,10 +300,13 @@ class TestMECmdShell(unittest.TestCase):
         
 
         mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
         mg_cmd.exec_cmd('set automatic_html_opening False --no_save')
         mg_cmd.exec_cmd(' generate u u > u u')
         mg_cmd.exec_cmd('output %s/'% self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= self.run_dir)
+        self.cmd_line.no_notification()
+        
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         
         self.do('generate_events -f')
@@ -312,6 +318,7 @@ class TestMECmdShell(unittest.TestCase):
         mg_cmd.exec_cmd('generate u u > u u')
         mg_cmd.exec_cmd('output %s' % self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir= self.run_dir)
+        self.cmd_line.no_notification()
         self.cmd_line.exec_cmd('set automatic_html_opening False')
 
         
@@ -332,10 +339,12 @@ class TestMECmdShell(unittest.TestCase):
         
 
         mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
         mg_cmd.exec_cmd('set automatic_html_opening False --save')
         mg_cmd.exec_cmd(' generate e- p  > e- j')
         mg_cmd.exec_cmd('output %s/'% self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
+        self.cmd_line.no_notification()
         self.cmd_line.exec_cmd('set automatic_html_opening False')
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ep.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir) 
@@ -353,11 +362,12 @@ class TestMECmdShell(unittest.TestCase):
         
 
         mg_cmd = MGCmd.MasterCmd()
+        mg_cmd.no_notification()
         mg_cmd.exec_cmd('set automatic_html_opening False --save')
         mg_cmd.exec_cmd(' generate e+ e-  > e+ e-')
         mg_cmd.exec_cmd('output %s/' % self.run_dir)
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=  self.run_dir)
-        self.cmd_line.exec_cmd('set automatic_html_opening False')
+        self.cmd_line.no_notification()
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_ee.dat'),
                     '%s/Cards/run_card.dat' % self.run_dir)
         
@@ -454,6 +464,7 @@ class TestMEfromfile(unittest.TestCase):
         
         cmd = """import model sm
                  set automatic_html_opening False --no_save
+                 set notification_center False --no_save
                  generate p p > w+ z
                  output %s -f -nojpeg
                  launch -i 
@@ -529,6 +540,7 @@ class TestMEfromfile(unittest.TestCase):
         command = open(pjoin(self.path, 'cmd'), 'w')
         command.write("""import model sm
         set automatic_html_opening False --no_save
+        set notification_center False --no_save
         generate p p > w+ 
         add process p p > w-
         output %(path)s
@@ -681,6 +693,7 @@ class TestMEfromfile(unittest.TestCase):
             pass
         
         cmd = MGCmd.MasterCmd()
+        cmd.no_notification()
         cmd.run_cmd('import model loop_sm')
         self.assertEqual(cmd.cmd.__name__, 'aMCatNLOInterface')
         #cmd.run_cmd('switch MG5')
@@ -712,13 +725,13 @@ class TestMEfromPdirectory(unittest.TestCase):
             pass
         
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):
             interface.onecmd('generate %s' % process)
         else:
             for p in process:
                 interface.onecmd('add process %s' % p)
-        interface.onecmd('set automatic_html_opening False')
         interface.onecmd('output madevent /tmp/MGPROCESS/ -f')
 
     def load_result(self, run_name):
@@ -751,7 +764,10 @@ class TestMEfromPdirectory(unittest.TestCase):
                     '/tmp/MGPROCESS/Cards/run_card.dat')
         os.chdir('/tmp/MGPROCESS/')
         ff = open('cmd.cmd','w')
-        ff.write('set automatic_html_opening False\n')
+        ff.write('set automatic_html_opening False --nosave\n')
+        ff.write('set notification_center False --nosave\n')
+        ff.write('display options\n')
+        ff.write('display variable allow_notification_center\n')
         ff.write('generate_events -f \n') 
         ff.close()
         if logger.getEffectiveLevel() > 20:

@@ -681,7 +681,7 @@ class HwU(Histogram):
     
     
     def __init__(self, file_path=None, weight_header=None,
-                                                      raw_labels=False, **opts):
+                            raw_labels=False, consider_reweights='ALL', **opts):
         """ Read one plot from a file_path or a stream. Notice that this
         constructor only reads one, and the first one, of the plots specified.
         If file_path was a path in argument, it would then close the opened stream.
@@ -711,7 +711,7 @@ class HwU(Histogram):
             weight_header = HwU.parse_weight_header(stream, raw_labels=raw_labels)
 
         if not self.parse_one_histo_from_stream(stream, weight_header,
-                                                           raw_labels=raw_labels):
+                  consider_reweights=consider_reweights, raw_labels=raw_labels):
             # Indicate that the initialization of the histogram was unsuccessful
             # by setting the BinList property to None.
             super(Histogram,self).__setattr__('bins',None)
@@ -719,7 +719,7 @@ class HwU(Histogram):
         # Explicitly close the opened stream for clarity.
         if isinstance(file_path, str):
             stream.close()
-    
+
     def addEvent(self, x_value, weights = 1.0):
         """ Add an event to the current plot. """
         
@@ -752,8 +752,6 @@ class HwU(Histogram):
             for bin in self.bins:
                 bin.wgts[name] = 0
             
-            
-    
     def get_uncertainty_band(self, selector, mode=0):
         """return two list of entry one with the minimum and one with the maximum value.
            selector can be:
@@ -880,7 +878,7 @@ class HwU(Histogram):
             if label_type == 'UNKNOWN_TYPE':
                 others.append(label)
             elif label_type == 'scale':
-                others.append('muR=%4.2f muF=%4.2f'%(label[1],label[2]))
+                others.append('muR=%6.3f muF=%6.3f'%(label[1],label[2]))
             elif label_type == 'scale_adv':
                 others.append('dyn=%i muR=%6.3f muF=%6.3f'%(label[1],label[2],label[3]))
             elif label_type == 'merging_scale':
@@ -1041,6 +1039,7 @@ class HwU(Histogram):
                 self.title = tag.strip()
             else:
                 stag = tag.split('@')
+                if len(stag)==1 and stag[0].startswith('#'): continue
                 if len(stag)!=2:
                     raise MadGraph5Error, 'Specifier in title must have the'+\
             " syntax @<attribute_name>:<attribute_value>, not '%s'."%tag.strip()
@@ -1092,12 +1091,25 @@ class HwU(Histogram):
                 res.append('|TYPE@%s'%self.type)
             return ' '.join(res)
         
-    def parse_one_histo_from_stream(self, stream, weight_header, raw_labels=False):
+    def parse_one_histo_from_stream(self, stream, all_weight_header,
+                                    consider_reweights='ALL', raw_labels=False):
         """ Reads *one* histogram from a stream, with the mandatory specification
         of the ordered list of weight names. Return True or False depending
         on whether the starting definition of a new plot could be found in this
         stream."""
         n_bins = 0
+        
+        if consider_reweights=='ALL' or raw_labels:
+            weight_header = all_weight_header 
+        else:
+            new_weight_header = []
+            # Filter the weights to consider based on the user selection
+            for wgt_label in all_weight_header:
+                if wgt_label in ['central','stat_error','boundary_xmin','boundary_xmax'] or\
+                    HwU.get_HwU_wgt_label_type(wgt_label) in consider_reweights:
+                        new_weight_header.append(wgt_label)
+            weight_header = new_weight_header                   
+        
         # Find the starting point of the stream
         for line in stream:
             start = HwU.histo_start_re.match(line)
@@ -1121,15 +1133,15 @@ class HwU(Histogram):
             boundaries = [0.0,0.0]
             for j, weight in \
                       enumerate(HwU.histo_bin_weight_re.finditer(line_bin)):
-                if j == len(weight_header):
+                if j == len(all_weight_header):
                     raise HwU.ParseError, "There is more bin weights"+\
                               " specified than expected (%i)"%len(weight_header)
-                if weight_header[j] == 'boundary_xmin':
+                if all_weight_header[j] == 'boundary_xmin':
                     boundaries[0] = float(weight.group('weight'))
-                elif weight_header[j] == 'boundary_xmax':
+                elif all_weight_header[j] == 'boundary_xmax':
                     boundaries[1] = float(weight.group('weight'))                            
-                else:
-                    bin_weights[weight_header[j]] = \
+                elif all_weight_header[j] in weight_header:
+                    bin_weights[all_weight_header[j]] = \
                                            float(weight.group('weight'))
 
             # For the HwU format, we know that exactly two 'weights'
@@ -1302,8 +1314,8 @@ class HwU(Histogram):
                     except OSError:
                         candidates=[]
                     for candidate in candidates:
-                        if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
-                            sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
+                        if os.path.isfile(os.path.join(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+                            sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
                             try:
                                 import lhapdf
                                 use_lhapdf=True
@@ -1324,7 +1336,8 @@ class HwU(Histogram):
                                    "but the automatic computation of the uncertainties from "\
                                    "those weights might not be correct. \n "\
                                    "If the python interface to LHAPDF is available on your system, try "\
-                                   "adding its location to the PYTHONPATH environment variable.")
+                                   "adding its location to the PYTHONPATH environment variable and the"\
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
             
             if type=='PDF' and use_lhapdf:
                 lhapdf.setVerbosity(0)
@@ -1619,18 +1632,20 @@ class HwUList(histograms_PhysicsObjectList):
                     consider_reweights=consider_reweights,
                     raw_labels=raw_labels)    
         except XMLParsingError:
-            # Rewing the stream
+            # Rewinding the stream
             stream.seek(0)
             # Attempt to find the weight headers if not specified        
             if not weight_header:
                 weight_header = HwU.parse_weight_header(stream,raw_labels=raw_labels)
         
-            new_histo = HwU(stream, weight_header,raw_labels=raw_labels)
+            new_histo = HwU(stream, weight_header,raw_labels=raw_labels,
+                                          consider_reweights=consider_reweights)
             while not new_histo.bins is None:
                 if accepted_types_order==[] or \
                                          new_histo.type in accepted_types_order:
                     self.append(new_histo)
-                new_histo = HwU(stream, weight_header, raw_labels=raw_labels)
+                new_histo = HwU(stream, weight_header, raw_labels=raw_labels,
+                                          consider_reweights=consider_reweights)
 
             if not run_id is None:
                 logger.info("The run_id '%s' was specified, but "%run_id+
@@ -2230,12 +2245,14 @@ set output "%s.ps"
 # Wong [2011] Nature Methods 8, 441.
 
 set style line  1 lt 1 lc rgb "#009e73" lw 1.3
+set style line 101 lt 1 lc rgb "#009e73" lw 1.3 dt (6,3)
 set style line 11 lt 2 lc rgb "#009e73" lw 1.3 dt (6,3)
 set style line 21 lt 4 lc rgb "#009e73" lw 1.3 dt (3,2)
 set style line 31 lt 6 lc rgb "#009e73" lw 1.3 dt (2,1)
 set style line 41 lt 8 lc rgb "#009e73" lw 1.3 dt (4,3)
 
 set style line  2 lt 1 lc rgb "#0072b2" lw 1.3
+set style line  102 lt 1 lc rgb "#0072b2" lw 1.3 dt (6,3)
 set style line 12 lt 2 lc rgb "#0072b2" lw 1.3 dt (6,3)
 set style line 22 lt 4 lc rgb "#0072b2" lw 1.3 dt (3,2)
 set style line 32 lt 6 lc rgb "#0072b2" lw 1.3 dt (2,1)
@@ -2243,36 +2260,42 @@ set style line 42 lt 8 lc rgb "#0072b2" lw 1.3 dt (4,3)
 
 
 set style line  3 lt 1 lc rgb "#d55e00" lw 1.3
+set style line 103 lt 1 lc rgb "#d55e00" lw 1.3 dt (6,3)
 set style line 13 lt 2 lc rgb "#d55e00" lw 1.3 dt (6,3)
 set style line 23 lt 4 lc rgb "#d55e00" lw 1.3 dt (3,2)
 set style line 33 lt 6 lc rgb "#d55e00" lw 1.3 dt (2,1)
 set style line 43 lt 8 lc rgb "#d55e00" lw 1.3 dt (4,3)
 
 set style line  4 lt 1 lc rgb "#f0e442" lw 1.3
+set style line  104 lt 1 lc rgb "#f0e442" lw 1.3 dt (6,3)
 set style line 14 lt 2 lc rgb "#f0e442" lw 1.3 dt (6,3)
 set style line 24 lt 4 lc rgb "#f0e442" lw 1.3 dt (3,2)
 set style line 34 lt 6 lc rgb "#f0e442" lw 1.3 dt (2,1)
 set style line 44 lt 8 lc rgb "#f0e442" lw 1.3 dt (4,3)
 
 set style line  5 lt 1 lc rgb "#56b4e9" lw 1.3
+set style line  105 lt 1 lc rgb "#56b4e9" lw 1.3 dt (6,3)
 set style line 15 lt 2 lc rgb "#56b4e9" lw 1.3 dt (6,3)
 set style line 25 lt 4 lc rgb "#56b4e9" lw 1.3 dt (3,2)
 set style line 35 lt 6 lc rgb "#56b4e9" lw 1.3 dt (2,1)
 set style line 45 lt 8 lc rgb "#56b4e9" lw 1.3 dt (4,3)
 
 set style line  6 lt 1 lc rgb "#cc79a7" lw 1.3
+set style line  106 lt 1 lc rgb "#cc79a7" lw 1.3 dt (6,3)
 set style line 16 lt 2 lc rgb "#cc79a7" lw 1.3 dt (6,3)
 set style line 26 lt 4 lc rgb "#cc79a7" lw 1.3 dt (3,2)
 set style line 36 lt 6 lc rgb "#cc79a7" lw 1.3 dt (2,1)
 set style line 46 lt 8 lc rgb "#cc79a7" lw 1.3 dt (4,3)
 
 set style line  7 lt 1 lc rgb "#e69f00" lw 1.3
+set style line  107 lt 1 lc rgb "#e69f00" lw 1.3 dt (6,3)
 set style line 17 lt 2 lc rgb "#e69f00" lw 1.3 dt (6,3)
 set style line 27 lt 4 lc rgb "#e69f00" lw 1.3 dt (3,2)
 set style line 37 lt 6 lc rgb "#e69f00" lw 1.3 dt (2,1)
 set style line 47 lt 8 lc rgb "#e69f00" lw 1.3 dt (4,3)
 
 set style line  8 lt 1 lc rgb "black" lw 1.3
+set style line  108 lt 1 lc rgb "black" lw 1.3 dt (6,3)
 set style line 18 lt 2 lc rgb "black" lw 1.3 dt (6,3)
 set style line 28 lt 4 lc rgb "black" lw 1.3 dt (3,2)
 set style line 38 lt 6 lc rgb "black" lw 1.3 dt (2,1)
@@ -2348,6 +2371,42 @@ set key invert
         """ This functions output a single group of histograms with either one
         histograms untyped (i.e. type=None) or two of type 'NLO' and 'LO' 
         respectively."""
+        
+        # This function returns the main central plot line, making sure that
+        # negative distribution are displayed in dashed style
+        def get_main_central_plot_lines(HwU_name, block_position, color_index,
+                                                  title, show_mc_uncertainties):
+            """ Returns two plot lines, one for the negative contributions in
+            dashed and one with the positive ones in solid."""
+            
+            template = "'%(hwu)s' index %(ind)d using (($1+$2)/2):%(data)s%(stat_col)s%(stat_err)s%(ls)s%(title)s"
+            template_no_stat = "'%(hwu)s' index %(ind)d using (($1+$2)/2):%(data)s%(ls)s%(title)s"        
+            rep_dic = {'hwu':HwU_name,
+                       'ind':block_position,
+                       'ls':' ls %d'%color_index,
+                       'title':" title '%s'"%title,
+                       'stat_col': ':4',
+                       'stat_err': ' w yerrorbar',
+                       'data':'3',
+                       'linetype':''}
+
+            # This would be the original output
+            # return [template_no_stat%rep_dic]+\
+            #               ([template%rep_dic] if show_mc_uncertainties else [])
+            
+            # The use of sqrt(-1) is just a trick to prevent the line to display
+            res = []
+            rep_dic['data'] = '($3 < 0 ? sqrt(-1) : $3)'
+            res.append(template_no_stat%rep_dic)
+            rep_dic['title'] = " title ''"
+            if show_mc_uncertainties:
+                res.append(template%rep_dic)                
+            rep_dic['data'] = '($3 >= 0 ? sqrt(-1) : abs($3))'
+            rep_dic['ls']  = ' ls %d'%(100+color_index)            
+            res.append(template_no_stat%rep_dic)
+            if show_mc_uncertainties:
+                res.append(template%rep_dic)
+            return res
         
         # This bool can be modified later to decide whether to use uncertainty
         # bands or not
@@ -2775,13 +2834,16 @@ plot \\"""
                         uncertainty_plot_lines[-1]['alpsfact'] = \
         ["sqrt(-1) ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
 
-            plot_lines.append(
-"'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
-%(HwU_name,block_position+i,color_index, major_title))
-            if 'statistical' in uncertainties:
-                plot_lines.append(
-"'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
-%(HwU_name,block_position+i,color_index))
+#            plot_lines.append(
+# "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
+# %(HwU_name,block_position+i,color_index, major_title))
+#            if 'statistical' in uncertainties:
+#                plot_lines.append(
+# "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
+# %(HwU_name,block_position+i,color_index))
+            plot_lines.extend(
+                get_main_central_plot_lines(HwU_name, block_position+i,
+                      color_index, major_title, 'statistical' in uncertainties))
 
             # Add additional central scale/PDF curves
             if not mu_var_pos is None:
@@ -3328,6 +3390,7 @@ if __name__ == "__main__":
            '--gnuplot' or '' output the histograms read to gnuplot
            '--HwU'           to output the histograms read to the raw HwU source.
            '--types=<type1>,<type2>,...' to keep only the type<i> when importing histograms.
+           '--titles=<title1>,<title2>,...' to keep only the titles which have any of 'title<i>' in them (not necessarily equal to them)
            '--n_ratios=<integer>' Specifies how many curves must be considerd for the ratios.
            '--no_open'       Turn off the automatic processing of the gnuplot output.
            '--show_full'     to show the complete output of what was read.
@@ -3370,7 +3433,7 @@ if __name__ == "__main__":
                       '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', 
                       '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
                       '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
-                      '--variations','--band','--central_only', '--lhapdf-config']
+                      '--variations','--band','--central_only', '--lhapdf-config','--titles']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact']
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
@@ -3403,6 +3466,12 @@ if __name__ == "__main__":
         if arg.startswith('--types='):
             accepted_types = [(type if type!='None' else None) for type in \
                                                              arg[8:].split(',')]
+
+    accepted_titles = []
+    for arg in sys.argv[1:]:
+        if arg.startswith('--titles='):
+            accepted_titles = [(type if type!='None' else None) for type in \
+                                                             arg[9:].split(',')]
 
     assigned_types = []
     for arg in sys.argv[1:]:
@@ -3457,7 +3526,7 @@ if __name__ == "__main__":
         ratio_correlations = False
     
     for arg in sys.argv:
-        if arg.startswith('--no_'):
+        if arg.startswith('--no_') and not arg.startswith('--no_open'):
             uncertainties.remove(variation_type_map[arg[5:]])
         if arg.startswith('--only_'):
             uncertainties= [variation_type_map[arg[7:]]]
@@ -3506,6 +3575,10 @@ if __name__ == "__main__":
                 sys.exit(1)
         new_histo_list = HwUList(filename, accepted_types_order=accepted_types,
                           consider_reweights=consider_reweights, **file_options)
+        # We filter now the diagrams whose title doesn't match the constraints
+        if len(accepted_titles)>0:
+            new_histo_list = HwUList(histo for histo in new_histo_list if
+                                 any(t in histo.title for t in accepted_titles))
         for histo in new_histo_list:
             if no_suffix or n_files==1:
                 continue
@@ -3562,7 +3635,7 @@ if __name__ == "__main__":
             arg_string=arg_string, 
             jet_samples_to_keep=jet_samples_to_keep,
             use_band=use_band,
-            auto_open=True,
+            auto_open=auto_open,
             lhapdfconfig=lhapdfconfig)
         # Tell the user that everything went for the best
         log("%d histograms have been output in " % len(histo_list)+\
@@ -3590,3 +3663,49 @@ if __name__ == "__main__":
             log(histo.nice_string(short=(not '--show_full' in sys.argv)))
     log("=======")
 
+######## Routine from https://gist.github.com/thriveth/8352565 
+######## To fill for histograms data in matplotlib
+def fill_between_steps(x, y1, y2=0, h_align='right', ax=None, **kwargs):
+    ''' Fills a hole in matplotlib: fill_between for step plots.
+    Parameters :
+    ------------
+    x : array-like
+        Array/vector of index values. These are assumed to be equally-spaced.
+        If not, the result will probably look weird...
+    y1 : array-like
+        Array/vector of values to be filled under.
+    y2 : array-Like
+        Array/vector or bottom values for filled area. Default is 0.
+    **kwargs will be passed to the matplotlib fill_between() function.
+    '''
+    # If no Axes opject given, grab the current one:
+    if ax is None:
+        ax = plt.gca()
+
+
+    # First, duplicate the x values
+    #duplicate the info # xx = numpy.repeat(2)[1:] 
+    xx= []; [(xx.append(d),xx.append(d)) for d in x]; xx = xx[1:]
+    # Now: the average x binwidth
+    xstep = x[1] -x[0]
+    # Now: add one step at end of row.
+    xx.append(xx[-1] + xstep)
+
+    # Make it possible to change step alignment.
+    if h_align == 'mid':
+        xx = [X-xstep/2. for X in xx]
+    elif h_align == 'right':
+        xx = [X-xstep for X in xx]
+
+    # Also, duplicate each y coordinate in both arrays
+    yy1 = []; [(yy1.append(d),yy1.append(d)) for d in y1]
+    if isinstance(y1, list):
+        yy2 = []; [(yy2.append(d),yy2.append(d)) for d in y2]
+    else:
+        yy2=y2
+
+    # now to the plotting part:
+    ax.fill_between(xx, yy1, y2=yy2, **kwargs)
+
+    return ax
+######## end routine from https://gist.github.com/thriveth/835256

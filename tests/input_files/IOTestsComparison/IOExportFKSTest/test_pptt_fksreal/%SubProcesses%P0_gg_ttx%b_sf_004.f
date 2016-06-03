@@ -8,7 +8,7 @@ C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     AND HELICITIES
 C     FOR THE POINT IN PHASE SPACE P(0:3,NEXTERNAL-1)
 C     
-C     Process: g g > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: g g > t t~ WEIGHTED<=2 [ real = QCD ]
 C     spectators: 2 3 
 
 C     
@@ -51,17 +51,17 @@ C     ----------
       IDEN=IDEN_VALUES(NFKSPROCESS)
       IF (CALCULATEDBORN) THEN
         DO J=1,NEXTERNAL-1
-          IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3
-     $     ,J)) THEN
+          IF (SAVEMOM(J,1).NE.P1(0,J) .OR. SAVEMOM(J,2).NE.P1(3,J))
+     $      THEN
             CALCULATEDBORN=.FALSE.
-            WRITE(*,*) 'Error in sb_sf: momenta not the same in th'
-     $       //'e born'
+            WRITE(*,*) 'Error in sb_sf: momenta not the same in the'
+     $       //' born'
             STOP
           ENDIF
         ENDDO
       ELSE
-        WRITE(*,*) 'Error in sb_sf: color_linked borns should b'
-     $   //'e called only with calculatedborn = true'
+        WRITE(*,*) 'Error in sb_sf: color_linked borns should be'
+     $   //' called only with calculatedborn = true'
         STOP
       ENDIF
       ANS = 0D0
@@ -82,7 +82,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS AMPLITUDE SQUARED SUMMED/AVG OVER COLORS
 C     FOR THE POINT WITH EXTERNAL LINES W(0:6,NEXTERNAL-1)
 
-C     Process: g g > t t~ WEIGHTED=2 [ real = QCD ]
+C     Process: g g > t t~ WEIGHTED<=2 [ real = QCD ]
 C     spectators: 2 3 
 
 C     
@@ -129,8 +129,8 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       IF (.NOT. CALCULATEDBORN) THEN
-        WRITE(*,*) 'Error in b_sf: color_linked borns should be calle'
-     $   //'d only with calculatedborn = true'
+        WRITE(*,*) 'Error in b_sf: color_linked borns should be called'
+     $   //' only with calculatedborn = true'
         STOP
       ELSEIF (CALCULATEDBORN) THEN
         DO I=1,NGRAPHS

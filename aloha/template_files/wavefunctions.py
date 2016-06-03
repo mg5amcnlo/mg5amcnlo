@@ -207,11 +207,19 @@ def vxxxxx(p,vmass,nhel,nsv):
 
 def sign(x,y):
     """Fortran's sign transfer function"""
-    if (y < 0.):
-        return -abs(x) 
-    else:
-        return abs(x) 
-    
+    try:
+        cmp = (y < 0.)
+    except TypeError:
+        # y should be complex
+        if abs(y.imag) < 1e-6 * abs(y.real):
+            y = y.real
+        else:
+            raise
+    finally:
+        if (y < 0.):
+            return -abs(x) 
+        else:
+            return abs(x) 
 
 def sxxxxx(p,nss):
     """initialize a scalar wavefunction"""

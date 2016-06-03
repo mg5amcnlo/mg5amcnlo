@@ -366,7 +366,19 @@ Press ctrl-C to force the update.''' % self.options['cluster_status_update'][0])
         
 
         if job_id not in self.retry_args:
-            return True
+            if job_id in self.id_to_packet:
+                nb_in_packet = self.id_to_packet[job_id].remove_one()
+                if nb_in_packet == 0:
+                    # packet done run the associate function
+                    packet = self.id_to_packet[job_id]
+                    # fully ensure that the packet is finished (thread safe)
+                    packet.queue.join()
+                    #running the function
+                    packet.fct(*packet.args)                    
+                del self.id_to_packet[job_id]
+                return 'resubmit'
+            else:
+                return True
 
         args = self.retry_args[job_id]
         if 'time_check' in args:
@@ -629,7 +641,7 @@ class MultiCore(Cluster):
                         # the error message otherwise
                         returncode = exe(*arg, **opt)
                         if returncode != 0:
-                            logger.warning("fct %s does not return 0. Starts to stop the code in a clean way.", exe)
+                            logger.warning("fct %s does not return 0. Stopping the code in a clean way. The error was:\n%s", exe, returncode)
                             self.stoprequest.set()
                             self.remove("fct %s does not return 0:\n %s" % (exe, returncode))
                 except Exception,error:
@@ -1655,6 +1667,7 @@ class SLURMCluster(Cluster):
 
         if not id.isdigit():
             raise ClusterManagmentError, 'fail to submit to the cluster: \n%s' \
+                    % (output[0] + '\n' + output[1])
 
         self.submitted += 1
         self.submitted_ids.append(id)

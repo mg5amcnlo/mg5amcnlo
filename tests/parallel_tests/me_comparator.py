@@ -404,6 +404,7 @@ class MG5Runner(MG4Runner):
         proc_card = open(proc_card_location, 'r').read()
         new_proc_list = []
         cmd = cmd_interface.MasterCmd()
+        cmd.no_notification()
         for line in proc_card.split('\n'):
             try:
                 cmd.exec_cmd(line, errorhandling=False)

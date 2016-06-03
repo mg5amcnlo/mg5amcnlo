@@ -30,8 +30,8 @@ c Temporary quantities relevant to degenerate terms
       common/cwgtaux1/wgtdegrem_xi,wgtdegrem_lxi,wgtdegrem_muF
 
 c Temporary quantities relevant to n-body terms
-      double precision wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody,wgtvirttmp
-      common/cwgtaux2/wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody,wgtvirttmp
+      double precision wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody,wgtvirttmp,wgtnstmp_avgvirt
+      common/cwgtaux2/wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtref_nbody,wgtvirttmp,wgtnstmp_avgvirt
 
 c Temporary weights for pure-NLO computations: event, counterevents+Born, 
 c and Born, with the same conventions as in fks_singular

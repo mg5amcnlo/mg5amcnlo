@@ -14,8 +14,7 @@ C
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=%(nSquaredSO)d)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=%(loop_max_coefs)d)
+      include 'loop_max_coefs.inc'
 	  INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
       LOGICAL checkPConservation
@@ -32,7 +31,8 @@ C
       INTEGER I_SQSO,I_LOOPGROUP,I_LIB
       INTEGER NLOOPLINE, RANK
       %(real_dp_format)s PL(0:3,NLOOPLINE)
-      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      %(real_dp_format)s REF_P
       %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
       %(mass_dp_format)s M2L(NLOOPLINE)
       %(complex_dp_format)s M2LCT(0:NLOOPLINE-1)	  
@@ -43,8 +43,8 @@ C LOCAL VARIABLES
 C
 	  INTEGER I, J, K
 	  INTEGER NLOOPCOEFS
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 
 c This variable will be used to detect changes in the TIR library used so as to force the reset of the TIR filter.
 	  INTEGER LAST_LIB_USED
@@ -71,6 +71,10 @@ C
 	  INTEGER CTMODE
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
+
+C     The variables below are just for monitoring purposes. 
+      INTEGER ID,SQSOINDEX,R
+      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
 
 c The argument ILIB is the TIR library to be used for that specific library.
       INTEGER LIBINDEX
@@ -134,6 +138,7 @@ C  CONVERT THE MASSES TO BE COMPLEX
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
+        ABSPCT(I) = 0.D0
         do J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         enddo
@@ -141,21 +146,27 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         enddo
       enddo
-      if (checkPConservation) then
-        if (PCT(0,0).gt.1.d-6) then
-          write(*,*) 'energy is not conserved ',PCT(0,0)
-          stop 'energy is not conserved'
-        elseif (PCT(1,0).gt.1.d-6) then
-         write(*,*) 'px is not conserved ',PCT(1,0)
-         stop 'px is not conserved'
-        elseif (PCT(2,0).gt.1.d-6) then
-         write(*,*) 'py is not conserved ',PCT(2,0)
-         stop 'py is not conserved'
-        elseif (PCT(3,0).gt.1.d-6) then
-         write(*,*) 'pz is not conserved ',PCT(3,0)
-         stop 'pz is not conserved'
+      ref_p = max(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+       do I=0,3
+           ABSPCT(I) = MAX(ref_p*1e-6, ABSPCT(I))
+       enddo
+
+      if (checkPConservation.and.ref_p.gt.1d-8) then
+        if ((PCT(0,0)/ABSPCT(0)).gt.1.d-6) then
+          write(*,*) 'energy is not conserved (flag: TIR)',PCT(0,0)
+          stop 'energy is not conserved (flag: TIR)'
+        elseif ((PCT(1,0)/ABSPCT(1)).gt.1.d-6) then
+         write(*,*) 'px is not conserved (flag: TIR)',PCT(1,0)
+         stop 'px is not conserved (flag: TIR)'
+        elseif ((PCT(2,0)/ABSPCT(2)).gt.1.d-6) then
+         write(*,*) 'py is not conserved (flag: TIR)',PCT(2,0)
+         stop 'py is not conserved (flag: TIR)'
+        elseif ((PCT(3,0)/ABSPCT(3)).gt.1.d-6) then
+         write(*,*) 'pz is not conserved (flag: TIR)',PCT(3,0)
+         stop 'pz is not conserved (flag: TIR)'
         endif
       endif
       do I=0,3
@@ -247,7 +258,11 @@ C The zero index is dummy and means no caching at all since TIR_CACHE_SIZE=0.
       RES(2)=NORMALIZATION*2.0d0*DBLE(RES(2))
       RES(3)=NORMALIZATION*2.0d0*DBLE(RES(3))
 ## }
-C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     IF(MLReductionLib(I_LIB).EQ.2) THEN
+C       WRITE(*,*) 'PJFry: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ELSEIF(MLReductionLib(I_LIB).EQ.3) THEN
+C       WRITE(*,*) 'Iregi: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ENDIF
       END
 
       SUBROUTINE %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
@@ -257,14 +272,68 @@ C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
 
       %(real_dp_format)s PL(0:3,NLOOPLINE)
       %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
-      COMPLEX*16 M2L(NLOOPLINE)
+      %(complex_dp_format)s M2L(NLOOPLINE)
       %(real_dp_format)s NEW_PL(0:3,NLOOPLINE)
       %(real_dp_format)s NEW_PDEN(0:3,NLOOPLINE-1)
       %(complex_dp_format)s NEW_M2L(NLOOPLINE)
 
       INTEGER I,J,K
 
-      IF (CTMode.ne.2.and.CTMode.ne.4) THEN
+      IF (CTMode.ne.2.and.CTMode.ne.5) THEN
+        RETURN 
+      ENDIF
+
+      IF (NLOOPLINE.le.2) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           NEW_PDEN(J,NLOOPLINE-I) = PDEN(J,I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+           PDEN(J,I) = NEW_PDEN(J,I)
+        ENDDO
+      ENDDO
+
+      DO I=2,NLOOPLINE
+        NEW_M2L(I)=M2L(NLOOPLINE-I+2)
+      ENDDO
+      DO I=2,NLOOPLINE
+        M2L(I)=NEW_M2L(I)
+      ENDDO
+
+
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          NEW_PL(J,I) = -PL(J,NLOOPLINE+1-I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE
+        DO J=0,3
+           PL(J,I) = NEW_PL(J,I)
+        ENDDO
+      ENDDO
+
+      end
+
+      SUBROUTINE %(proc_prefix)sMP_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      IMPLICIT NONE
+
+      INTEGER CTMODE,NLOOPLINE
+
+      %(real_mp_format)s PL(0:3,NLOOPLINE)
+      %(real_mp_format)s PDEN(0:3,NLOOPLINE-1)
+      %(complex_mp_format)s M2L(NLOOPLINE)
+      %(real_mp_format)s NEW_PL(0:3,NLOOPLINE)
+      %(real_mp_format)s NEW_PDEN(0:3,NLOOPLINE-1)
+      %(complex_mp_format)s NEW_M2L(NLOOPLINE)
+
+      INTEGER I,J,K
+
+      IF (CTMode.ne.2.and.CTMode.ne.5) THEN
         RETURN 
       ENDIF
 
@@ -316,8 +385,8 @@ C
 C GLOBAL VARIABLES 
 C
 	  include 'MadLoopParams.inc'
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
 	  
 C ----------
 C BEGIN CODE
@@ -345,7 +414,7 @@ C      The initialization below is for CT v1.9.2+
 	   ENDIF
 	  END
 
-	  SUBROUTINE %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,doing_qp,I_LIB)
+	  SUBROUTINE %(proc_prefix)sCHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK,complex_mass,loop_ID,doing_qp,I_LIB)
 C
 C CHOOSE THE CORRECT LOOP LIB
 C Example:
@@ -358,26 +427,39 @@ C
 C
 C CONSTANTS
 C
-            INTEGER NLOOPLIB,QP_NLOOPLIB
-            PARAMETER (NLOOPLIB=4,QP_NLOOPLIB=1)
+            INTEGER NLOOPLIB
+			PARAMETER (NLOOPLIB=4)
+			INTEGER QP_NLOOPLIB
+## if(ninja_supports_quad_prec) {
+      		PARAMETER (QP_NLOOPLIB=2)
+## } else {
+      		PARAMETER (QP_NLOOPLIB=1)
+## }
+            INTEGER NLOOPGROUPS
+            PARAMETER (NLOOPGROUPS=%(nloop_groups)d)
 C
 C ARGUMENTS
 C
-            INTEGER LIBINDEX,NLOOPLINE,RANK,I_LIB
+            INTEGER LIBINDEX,NLOOPLINE,RANK,I_LIB,loop_ID
             LOGICAL complex_mass,doing_qp
 C
 C LOCAL VARIABLES
 C
             INTEGER I,J_LIB,LIBNUM,SELECT_LIBINDEX
-	    LOGICAL LPASS
+	        LOGICAL LPASS
+C           This list specifies what loop involve an Higgs effective vertex so that CutTools limitations can be correctly implemented
+            LOGICAL HAS_AN_HEFT_VERTEX(NLOOPGROUPS)
+            %(has_HEFT_list)s
 C
 C GLOBAL VARIABLES
 C
-	    INCLUDE 'MadLoopParams.inc'
-C TILL NOW, ONLY CUTTOOLS PROVIDE QP
+	        INCLUDE 'MadLoopParams.inc'
+			INCLUDE 'process_info.inc'
+C Change the list 'LOOPLIBS_QPAVAILABLE' in loop_matrix_standalone.inc to change the list of QPTools availables
             LOGICAL QP_TOOLS_AVAILABLE
-            INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
+            INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
             common/%(proc_prefix)sLOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -405,7 +487,7 @@ C  QP EVALUATION, ONLY CUTTOOLS
 		I_LIB=SELECT_LIBINDEX
 		LIBNUM=MLReductionLib(I_LIB)
 		DO
-		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
+		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 		  IF(LPASS)EXIT
 		  I=I+1
 		  IF(I.GT.QP_NLOOPLIB.AND.INDEX_QP_TOOLS(I).EQ.0)THEN
@@ -422,7 +504,7 @@ C  DP EVALUATION
       		I_LIB=LIBINDEX
 		LIBNUM=MLReductionLib(I_LIB)
 		DO
-		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,LPASS)
+		  CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,complex_mass,HAS_AN_HEFT_VERTEX(loop_ID),MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 		  IF(LPASS)EXIT
 		  I_LIB=I_LIB+1
 		  IF(I_LIB.GT.NLOOPLIB.OR.MLReductionLib(I_LIB).EQ.0)THEN

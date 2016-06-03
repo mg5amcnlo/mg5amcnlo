@@ -7,7 +7,7 @@ C
 C     Computes all the AMP and WFS in quadruple precision for the 
 C     phase space point P(0:3,NEXTERNAL)
 C     
-C     Process: g g > t t~ QED=0 QCD=2 [ virt = QCD ]
+C     Process: g g > t t~ QED=0 QCD<=2 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -93,7 +93,7 @@ C     But it is really not time consuming and I would rather be safe.
 
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.((CHECKPHASE.OR.
-     $   .NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+     $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO
@@ -187,14 +187,14 @@ C         Counter-term amplitude(s) for loop diagram number 14
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQG_1EPS
      $     ,AMPL(2,42))
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),R2_GQQ,AMPL(1,43))
-          CALL MP_FFV1_1(W(1,3,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,10
-     $     ,H))
+          CALL MP_FFV1_1(W(1,3,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,10,H)
+     $     )
 C         Counter-term amplitude(s) for loop diagram number 16
           CALL MP_R2_QQ_1_R2_QQ_2_0(W(1,7,H),W(1,10,H),R2_QQQ,R2_QQT
      $     ,AMPL(1,44))
           CALL MP_R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS,AMPL(1,45))
-          CALL MP_R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS_1EPS,AMPL(2
-     $     ,46))
+          CALL MP_R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS_1EPS,AMPL(2,46)
+     $     )
 C         Counter-term amplitude(s) for loop diagram number 17
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS
      $     ,AMPL(2,47))
@@ -222,12 +222,12 @@ C         Counter-term amplitude(s) for loop diagram number 19
      $     ,AMPL(2,59))
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS
      $     ,AMPL(2,60))
-          CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQB,AMPL(1
-     $     ,61))
+          CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQB,AMPL(1,61)
+     $     )
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS
      $     ,AMPL(2,62))
-          CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQT,AMPL(1
-     $     ,63))
+          CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQT,AMPL(1,63)
+     $     )
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS
      $     ,AMPL(2,64))
           CALL MP_FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQG_1EPS
@@ -264,24 +264,24 @@ C         Amplitude(s) for UVCT diagram with ID 40
      $     +2.0D0*UVWFCT_T_0)
 C         Amplitude(s) for UVCT diagram with ID 41
           CALL MP_FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(2,81))
-          AMPL(2,81)=AMPL(2,81)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0*UVWFCT_G_2
-     $     _1EPS)
+          AMPL(2,81)=AMPL(2,81)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
+     $     *UVWFCT_G_2_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 42
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),GC_5,AMPL(1,82))
           AMPL(1,82)=AMPL(1,82)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
      $     +2.0D0*UVWFCT_T_0)
 C         Amplitude(s) for UVCT diagram with ID 43
           CALL MP_FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),GC_5,AMPL(2,83))
-          AMPL(2,83)=AMPL(2,83)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0*UVWFCT_G_2
-     $     _1EPS)
+          AMPL(2,83)=AMPL(2,83)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
+     $     *UVWFCT_G_2_1EPS)
 C         Amplitude(s) for UVCT diagram with ID 44
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),GC_5,AMPL(1,84))
           AMPL(1,84)=AMPL(1,84)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
      $     +2.0D0*UVWFCT_T_0)
 C         Amplitude(s) for UVCT diagram with ID 45
           CALL MP_FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),GC_5,AMPL(2,85))
-          AMPL(2,85)=AMPL(2,85)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0*UVWFCT_G_2
-     $     _1EPS)
+          AMPL(2,85)=AMPL(2,85)*(2.0D0*UVWFCT_B_0_1EPS+4.0D0
+     $     *UVWFCT_G_2_1EPS)
 C         Copy the qp wfs to the dp ones as they are used to setup the
 C          CT calls.
           DO I=1,NWAVEFUNCS

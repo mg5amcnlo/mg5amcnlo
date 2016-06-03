@@ -357,7 +357,7 @@ C HEL_MULT is the helicity multiplier which can be more than one if several heli
 C  
 C LOCAL VARIABLES 
 C
-	  INTEGER I, J, M, N, K, SQSOINDEX, DOUBLEFACT
+	  INTEGER I, J, M, N, K, ISQSO, DOUBLEFACT
 	  %(complex_dp_format)s COLOR_COEF
 C  
 C FUNCTIONS
@@ -401,8 +401,8 @@ DO I=1,NLOOPFLOWS
   IF (LoopColorFlowMatrix(I,I)%%Denom.LT.0) COLOR_COEF=COLOR_COEF*IMAG1
   DO M=1,NLOOPAMPSO
     DO N=M,NLOOPAMPSO
-      SQSOINDEX = %(proc_prefix)sML5SQSOINDEX(M,N)
-      IF(CHOSEN_SO_CONFIGS(SQSOINDEX)) THEN
+      ISQSO = %(proc_prefix)sML5SQSOINDEX(M,N)
+      IF(CHOSEN_SO_CONFIGS(ISQSO)) THEN
         IF(M.ne.N) THEN
           DOUBLEFACT=2 
         ELSE 
@@ -452,7 +452,7 @@ C HEL_MULT is the helicity multiplier which can be more than one if several heli
 C  
 C LOCAL VARIABLES 
 C
-	  INTEGER I, J, M, N, K, SQSOINDEX, DOUBLEFACT
+	  INTEGER I, J, M, N, K, ISQSO, DOUBLEFACT
 ## if(LoopInduced) {
 	  INTEGER LOWERBOUND
 ## }
@@ -550,15 +550,15 @@ C First fetch what orders the split order indices M, N correspond to
       	CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(M,ORDERS_A)
       	CALL %(proc_prefix)sML5GET_ORDERS_FOR_AMPSOINDEX(N,ORDERS_B)
 C Now figure out to which SQSOINDEX these orders together correspond to *in the Born subroutine* (Notice the absence of the ML5 prefix in the functions used then)
-        SQSOINDEX = %(proc_prefix)sSQSOINDEX(%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_A),%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_B))
+        ISQSO = %(proc_prefix)sSQSOINDEX(%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_A),%(proc_prefix)sSOINDEX_FOR_AMPORDERS(ORDERS_B))
         IF(J.ne.I) THEN
           DOUBLEFACT=2 
         ELSE 
           DOUBLEFACT=1
         ENDIF
         TEMP(1) = DOUBLEFACT*HEL_MULT*DBLE(COLOR_COEF*JAMPB(I,M)*DCONJG(JAMPB(J,N)))
-        RES(0,SQSOINDEX) = RES(0,SQSOINDEX) + TEMP(1)
-        IF((.not.FILTER_SO).or.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
+        RES(0,ISQSO) = RES(0,ISQSO) + TEMP(1)
+        IF((.not.FILTER_SO).or.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.ISQSO) THEN
           RES(0,0) = RES(0,0) + TEMP(1)
         ENDIF
       ENDDO
@@ -591,7 +591,7 @@ C Same for contributions of split order index N by the Born amps
 	  ENDIF
       DO N=LOWERBOUND,NLOOPAMPSO
 ## }
-        SQSOINDEX = %(proc_prefix)sML5SQSOINDEX(M,N)
+        ISQSO = %(proc_prefix)sML5SQSOINDEX(M,N)
 ## if(LoopInduced){
         IF(J.ne.I) THEN
           DOUBLEFACT=2 
@@ -626,14 +626,14 @@ c          DO config_j=1,nconfigs
 ## if(not LoopInduced){      
           TEMP(K) = 2.0d0*HEL_MULT*DBLE(COLOR_COEF*JAMPL(K,I,M)*DCONJG(JAMPB(J,N)))
 ## }
-          RES(K,SQSOINDEX) = RES(K,SQSOINDEX) + TEMP(K)
+          RES(K,ISQSO) = RES(K,ISQSO) + TEMP(K)
 ## if(LoopInduced and MadEventOutput){
 		  DO config_i=1,nconfigs
-            AMP2_ALL(K,config_i,SQSOINDEX) = AMP2_ALL(K,config_i,SQSOINDEX) + TEMP_AMP2(K,config_i)
+            AMP2_ALL(K,config_i,ISQSO) = AMP2_ALL(K,config_i,ISQSO) + TEMP_AMP2(K,config_i)
 		  ENDDO
 ## }
         ENDDO
-        IF((.NOT.FILTER_SO).OR.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.SQSOINDEX) THEN
+        IF((.NOT.FILTER_SO).OR.SQSO_TARGET.eq.-1.or.SQSO_TARGET.eq.ISQSO) THEN
           DO K=1,3
             RES(K,0) = RES(K,0) + TEMP(K)
 ## if(LoopInduced and MadEventOutput){

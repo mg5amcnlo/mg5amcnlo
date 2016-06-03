@@ -46,8 +46,7 @@ c
       integer nwgt,max_weight,nwgt_analysis,kk,l
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*50 weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)
@@ -149,7 +148,10 @@ C----------------------------------------------------------------------
      # njdble,njcdble,y_central
       integer nwgt_analysis,max_weight,l
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+       integer maxRWGT
+      parameter (maxRWGT=100)
+      double precision wgtxsecRWGT(maxRWGT)
+      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
       double precision ww(max_weight),www(max_weight)
       common/cww/ww
       DATA TINY/.1D-5/

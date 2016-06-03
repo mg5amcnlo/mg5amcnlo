@@ -49,7 +49,76 @@ else:
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
+
+#===============================================================================
+# Return a warning (if applicable) on the consistency of the current Pythia8
+# and MG5_aMC version specified. It is placed here because it should be accessible
+# from both madgraph5_interface and madevent_interface
+#===============================================================================
+def mg5amc_py8_interface_consistency_warning(options):
+    """ Check the consistency of the mg5amc_py8_interface installed with
+    the current MG5 and Pythia8 versions. """
+
+    return None
+    # All this is only relevant is Pythia8 is interfaced to MG5
+    if not options['pythia8_path']:
+        return None
+    
+    if not options['mg5amc_py8_interface_path']:
+        return \
+"""
+A Pythia8 path is specified via the option 'pythia8_path' but no path for option
+'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
+leading order simulations with MadEvent.
+Consider installing the MG5_aMC-PY8 interface with the following command:
+ MG5_aMC>install mg5amc_py8_interface
+"""
+    
+    # Retrieve all the on-install and current versions  
+    MG5_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                       'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+    if MG5_version_on_install == 'UNSPECIFIED':
+        MG5_version_on_install = None
+    PY8_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                          'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+    MG5_curr_version = get_pkg_info()['version']
+    try:
+        p = subprocess.Popen(['./get_pythia8_version.py',options['pythia8_path']],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                   cwd=options['mg5amc_py8_interface_path'])
+        (out, err) = p.communicate()
+        out = out.replace('\n','')
+        PY8_curr_version = out
+        # In order to test that the version is correctly formed, we try to cast
+        # it to a float
+        float(out)
+    except:
+        PY8_curr_version = None
+
+    if not MG5_version_on_install is None and not MG5_curr_version is None:
+        if MG5_version_on_install != MG5_curr_version:
+            return \
+"""
+The current version of MG5_aMC (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(MG5_curr_version, MG5_version_on_install)
+
+    if not PY8_version_on_install is None and not PY8_curr_version is None:
+        if PY8_version_on_install != PY8_curr_version:
+            return \
+"""
+The current version of Pythia8 (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(PY8_curr_version,PY8_version_on_install)
+
+    return None
    
+
+
 #===============================================================================
 # Return a warning (if applicable) on the consistency of the current Pythia8
 # and MG5_aMC version specified. It is placed here because it should be accessible
@@ -138,6 +207,12 @@ def parse_info_str(fsock):
     return info_dict
 
 
+def glob(name, path=''):
+    """call to glob.glob with automatic security on path"""
+    import glob as glob_module
+    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    return glob_module.glob(pjoin(path, name))
+
 #===============================================================================
 # mute_logger (designed to be a decorator)
 #===============================================================================
@@ -225,6 +300,29 @@ def find_includes_path(start_path, extension):
     return None
 
 #===============================================================================
+# Given the path of a ninja installation, this function determines if it 
+# supports quadruple precision or not. 
+#===============================================================================
+def get_ninja_quad_prec_support(ninja_lib_path):
+    """ Get whether ninja supports quad prec in different ways"""
+    
+    # First try with the ninja-config executable if present
+    ninja_config = os.path.abspath(pjoin(
+                                 ninja_lib_path,os.pardir,'bin','ninja-config'))
+    if os.path.exists(ninja_config):
+        try:    
+            p = Popen([ninja_config, '-quadsupport'], stdout=subprocess.PIPE, 
+                                                         stderr=subprocess.PIPE)
+            output, error = p.communicate()
+            return 'TRUE' in output.upper()
+        except Exception:
+            pass
+    
+    # If no ninja-config is present, then simply use the presence of
+    # 'quadninja' in the include
+    return False
+
+#===============================================================================
 # find a executable
 #===============================================================================
 def which(program):
@@ -276,12 +374,12 @@ def deactivate_dependence(dependency, cmd=None, log = None):
             log(msg)
     
 
-    if dependency in ['pjfry','golem']:
+    if dependency in ['pjfry','golem','samurai','ninja']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
-            cmd.options[dependency] = 'None'
+            cmd.options[dependency] = None
 
-def activate_dependence(dependency, cmd=None, log = None):
+def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
     """ Checks whether the specfieid MG dependency can be activated if it was
     not turned off in MG5 options."""
     
@@ -308,6 +406,16 @@ def activate_dependence(dependency, cmd=None, log = None):
             tell("Installing Golem95...")
             cmd.do_install('Golem95')
     
+    if dependency=='samurai':
+        raise MadGraph5Error, 'Samurai cannot yet be automatically installed.' 
+
+    if dependency=='ninja':
+        if cmd.options['ninja'] in ['None',None,''] or\
+         (cmd.options['ninja'] == './HEPTools/lib' and not MG5dir is None and\
+         which_lib(pjoin(MG5dir,cmd.options['ninja'],'libninja.a')) is None):
+            tell("Installing ninja...")
+            cmd.do_install('ninja')
+ 
 #===============================================================================
 # find a library
 #===============================================================================
@@ -397,8 +505,8 @@ def get_scan_name(first, last):
     # find the common string at the beginning     
     base = [first[i] for i in range(len(first)) if first[:i+1] == last[:i+1]]
     # remove digit even if in common
-    while base[-1].isdigit():
-        base = base[:-1] 
+    while base and base[0].isdigit():
+        base = base[1:] 
     # find the common string at the end 
     end = [first[-(i+1)] for i in range(len(first)) if first[-(i+1):] == last[-(i+1):]]
     # remove digit even if in common    
@@ -418,6 +526,18 @@ def get_scan_name(first, last):
 #===============================================================================
 def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
+
+    if 'nocompile' in opt:
+        if opt['nocompile'] == True:
+            if not arg:
+                return
+            if cwd:
+                executable = pjoin(cwd, arg[0])
+            else:
+                executable = arg[0]
+            if os.path.exists(executable):
+                return
+        del opt['nocompile']
 
     cmd = ['make']
     try:
@@ -476,8 +596,8 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         error_text += 'The compilation fails with the following output message:\n'
         error_text += '    '+out.replace('\n','\n    ')+'\n'
         error_text += 'Please try to fix this compilations issue and retry.\n'
-        error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
-        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
+        error_text += 'Help might be found at https://answers.launchpad.net/mg5amcnlo.\n'
+        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/mg5amcnlo'
         raise MadGraph5Error, error_text
     return p.returncode
 
@@ -516,9 +636,14 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
         for iline, line in enumerate(lines):
             result = comp_re.match(line)
             if result:
-                if new != result.group(2):
+                if new != result.group(2) and '$' not in result.group(2):
                     mod = True
-                lines[iline] = result.group(1) + var + "=" + new
+                    lines[iline] = result.group(1) + var + "=" + new
+            elif compiler_type == 'gfortran' and line.startswith('DEFAULT_F_COMPILER'):
+                lines[iline] = "DEFAULT_F_COMPILER = %s" % new
+            elif compiler_type == 'cpp' and line.startswith('DEFAULT_CPP_COMPILER'):    
+                lines[iline] = "DEFAULT_CPP_COMPILER = %s" % new
+                
         if mod:
             open(name,'w').write('\n'.join(lines))
             # reset it to change the next file
@@ -657,6 +782,41 @@ def get_open_fds():
         
     return nprocs
 
+def detect_if_cpp_compiler_is_clang(cpp_compiler):
+    """ Detects whether the specified C++ compiler is clang."""
+    
+    try:
+        p = Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
+        output, error = p.communicate()
+    except Exception, error:
+        # Cannot probe the compiler, assume not clang then
+        return False
+    return 'LLVM' in output
+
+def detect_cpp_std_lib_dependence(cpp_compiler):
+    """ Detects if the specified c++ compiler will normally link against the C++
+    standard library -lc++ or -libstdc++."""
+
+    is_clang = detect_if_cpp_compiler_is_clang(cpp_compiler)
+    if is_clang:
+        try:
+            import platform
+            v, _,_ = platform.mac_ver()
+            if not v:
+                # We will not attempt to support clang elsewhere than on macs, so
+                # we venture a guess here.
+                return '-lc++'
+            else:
+                v = float(v.rsplit('.')[1])
+                if v >= 9:
+                   return '-lc++'
+                else:
+                   return '-lstdc++'
+        except:
+            return '-lstdc++'
+    return '-lstdc++'
+
 def detect_current_compiler(path, compiler_type='fortran'):
     """find the current compiler for the current directory"""
     
@@ -673,6 +833,10 @@ def detect_current_compiler(path, compiler_type='fortran'):
         if comp.search(line):
             compiler = comp.search(line).groups()[0]
             return compiler
+        elif compiler_type == 'fortran' and line.startswith('DEFAULT_F_COMPILER'):
+            return line.split('=')[1].strip()
+        elif compiler_type == 'cpp' and line.startswith('DEFAULT_CPP_COMPILER'):
+            return line.split('=')[1].strip()
 
 def find_makefile_in_dir(directory):
     """ return a list of all file starting with makefile in the given directory"""
@@ -1283,6 +1447,9 @@ def equal(a,b,sig_fig=6, zero_limit=True):
 
 ################################################################################
 # class to change directory with the "with statement"
+# Exemple:
+# with chdir(path) as path:
+#     pass
 ################################################################################
 class chdir:
     def __init__(self, newPath):
@@ -1387,8 +1554,11 @@ class ProcessTimer:
       return False
 
     self.t1 = time.time()
+    # I redirect stderr to void, because from MacOX snow leopard onward, this
+    # ps -p command writes a million times the following stupid warning
+    # dyld: DYLD_ environment variables being ignored because main executable (/bin/ps) is setuid or setgid
     flash = subprocess.Popen("ps -p %i -o rss"%self.p.pid,
-                                              shell=True,stdout=subprocess.PIPE)
+                  shell=True,stdout=subprocess.PIPE,stderr=open(os.devnull,"w"))
     stdout_list = flash.communicate()[0].split('\n')
     rss_memory = int(stdout_list[1])
     # for now we ignore vms

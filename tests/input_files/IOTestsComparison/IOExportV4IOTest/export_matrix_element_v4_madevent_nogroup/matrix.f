@@ -114,12 +114,12 @@ C     ----------
         !   If the helicity grid status is 0, this means that it is not yet initialized.
       IF (ISUM_HEL.EQ.0.OR.(DS_GET_DIM_STATUS('Helicity').EQ.0)) THEN
         DO I=1,NCOMB
-          IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0)
-     $     ) THEN
+          IF (GOODHEL(I) .OR. NTRY .LE. MAXTRIES.OR.(ISUM_HEL.NE.0))
+     $      THEN
             T=MATRIX(P ,NHEL(1,I),JC(1))
             DO JJ=1,NINCOMING
-              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
-     $         ,POL(JJ)))) THEN
+              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
+     $         )) THEN
                 T=T*ABS(POL(JJ))
               ELSE IF(POL(JJ).NE.1D0)THEN
                 T=T*(2D0-ABS(POL(JJ)))
@@ -150,8 +150,8 @@ C     ----------
           JHEL = 1
           IF(NTRY.LE.MAXTRIES)THEN
             DO I=1,NCOMB
-              IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB)
-     $         ) THEN
+              IF (.NOT.GOODHEL(I) .AND. (TS(I).GT.ANS*LIMHEL/NCOMB))
+     $          THEN
                 GOODHEL(I)=.TRUE.
                 NGOOD = NGOOD +1
                 IGOOD(NGOOD) = I
@@ -171,8 +171,8 @@ C        in a common block defined in genps.inc.
 
         T=MATRIX(P ,NHEL(1,I),JC(1))
         DO JJ=1,NINCOMING
-          IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
-     $     ) THEN
+          IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))))
+     $      THEN
             T=T*ABS(POL(JJ))
           ELSE IF(POL(JJ).NE.1D0)THEN
             T=T*(2D0-ABS(POL(JJ)))
@@ -337,8 +337,8 @@ C     This functions plays the role of the interference matrix. It can
 C      be hardcoded or 
 C     made more elegant using hashtables if its execution speed ever
 C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
+C     factor. From two split order indices, it return the
+C      corresponding index in the squared 
 C     order canonical ordering.
 C     
 C     CONSTANTS
@@ -366,7 +366,7 @@ C     BEGIN CODE
 C     
       DO I=1,NSO
         SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
+     $NDEXB,I)
       ENDDO
       SQSOINDEX=SOINDEX_FOR_SQUARED_ORDERS(SQORDERS)
       END
@@ -460,8 +460,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOI'
-     $ //'NDEX'
+      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
+     $ //'DEX'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -506,8 +506,8 @@ C
 
       END SUBROUTINE
 
-C     This function is not directly useful, but included for completene
-C     ss
+C     This function is not directly useful, but included for
+C      completeness
       INTEGER FUNCTION SOINDEX_FOR_AMPORDERS(ORDERS)
 C     
 C     This functions returns the integer index identifying the

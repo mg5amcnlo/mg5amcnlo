@@ -30,4 +30,4 @@ sys.argv.pop(0)
 if __debug__:
     os.system('%s -tt %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
 else:
-    os.system('%s -O %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
+    os.system('%s -O -W ignore::DeprecationWarning %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))

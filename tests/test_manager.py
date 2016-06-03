@@ -126,7 +126,7 @@ class MyTextTestRunner(unittest.TextTestRunner):
             self.stream.writeln("Some of the tests Bypassed due to Ctrl-C")
         return result 
 
-    def run_border(self, test):
+    def run_border(self, test, to_check):
         "Run the given test case or test suite."
         MyTextTestRunner.stream = self.stream
         result = self._makeResult()
@@ -149,7 +149,17 @@ class MyTextTestRunner(unittest.TextTestRunner):
                 if failed: self.stream.write(", ")
                 self.stream.write("errors=%d" % errored)
             self.stream.writeln(")")
-            sys.exit(0)
+            print to_check
+            to_check= to_check.rsplit('.',1)[1]
+            print to_check
+            if result.failures:
+                print 'fail', to_check,[str(R[0]) for R in result.failures]
+            if result.errors:
+                print 'errors',to_check,[str(R[0]) for R in result.errors]
+
+            if any(to_check in str(R[0]) for R in result.failures) or\
+               any(to_check in str(R[0]) for R in result.errors):
+                sys.exit(0)
         #else:
         #    self.stream.writeln("OK")
         #if self.bypassed:
@@ -214,7 +224,6 @@ def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit
     print "to_crash"
     to_crash = TestFinder(package=package, expression=to_crash, re_opt=re_opt)
     to_crash.collect_dir(package, checking=True)
-    print dir(to_crash)
 
     for test_fct in all_test:
         testsuite = unittest.TestSuite()
@@ -228,7 +237,7 @@ def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit
         testsuite.addTest(data)
         # Running it
         print "run it for %s" % test_fct
-        output =  MyTextTestRunner(verbosity=verbosity).run_border(testsuite)
+        output =  MyTextTestRunner(verbosity=verbosity).run_border(testsuite, to_crash[0])
     
     return output
     #import tests
@@ -931,6 +940,10 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     parser.add_option("", "--border_effect", default=None,
           help="Define the test which are sensitive to a border effect, the test will find which test creates this border effect")        
 
+    parser.add_option("-N", "--notification", default=45,
+          help="Running time, below which no notification is raised. (-1 for no notification)")        
+
+    
     (options, args) = parser.parse_args()
 
     if options.IOTestsUpdate:
@@ -992,6 +1005,7 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         else:
             options.timed = 0 
 
+    start_time = time.time()
 
     try:
         logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
@@ -1009,10 +1023,10 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
     if options.IOTests=='No' and not options.synchronize:
         if not options.border_effect:
             #logging.basicConfig(level=vars(logging)[options.logging])
-            run(args, re_opt=options.reopt, verbosity=options.verbose, \
+            output = run(args, re_opt=options.reopt, verbosity=options.verbose, \
                 package=options.path, timelimit=options.timed)
         else:
-            run_border_search(options.border_effect, args, re_opt=options.reopt, verbosity=options.verbose, \
+            output = run_border_search(options.border_effect, args, re_opt=options.reopt, verbosity=options.verbose, \
                 package=options.path, timelimit=options.timed)
     else:
         if options.IOTests=='L':
@@ -1027,9 +1041,18 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         else:
             force = 0 
 
-        runIOTests(args,update=options.IOTests=='U',force=force,
+        output = runIOTests(args,update=options.IOTests=='U',force=force,
                                                 synchronize=options.synchronize)
-    
+
+
+    if 0 < float(options.notification) < time.time()-start_time:
+        if isinstance(output, unittest.runner.TextTestResult):
+            run = output.testsRun
+            failed, errored, skipped = map(len, 
+                               (output.failures, output.errors, output.skipped))
+            output = "run: %s, failed: %s error: %s, skipped: %s" % \
+                                                 (run, failed, errored, skipped)
+        misc.apple_notify("tests finished", str(output))
 #some example
 #    run('iolibs')
 #    run('test_test_manager.py')

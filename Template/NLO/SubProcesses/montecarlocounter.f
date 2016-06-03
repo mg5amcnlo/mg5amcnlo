@@ -1014,11 +1014,13 @@ c the same method
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       common/cparticle_types/i_type,j_type,m_type
-
+      
 c
 c BORN
       call sborn(p_born,wgt1)
@@ -1149,7 +1151,7 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
 c BARRED AMPLITUDES
       do i=1,max_bcol
          if (sumborn.ne.0d0) then
-            bornbars(i)=jamp2(i)/sumborn * born
+            bornbars(i)=jamp2(i)/sumborn * born *iden_comp
          elseif (born.eq.0d0 .or. jamp2(i).eq.0d0) then
             bornbars(i)=0d0
          else
@@ -1157,7 +1159,7 @@ c BARRED AMPLITUDES
             stop
          endif
          if (sumborn.ne.0d0) then
-            bornbarstilde(i)=jamp2(i)/sumborn * borntilde
+            bornbarstilde(i)=jamp2(i)/sumborn * borntilde *iden_comp
          elseif (borntilde.eq.0d0 .or. jamp2(i).eq.0d0) then
             bornbarstilde(i)=0d0
          else

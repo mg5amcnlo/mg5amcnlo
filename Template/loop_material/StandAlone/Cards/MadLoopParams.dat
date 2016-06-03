@@ -4,18 +4,33 @@
 
 !     
 #MLReductionLib
-!1|3|2
-! Default :: 1|3|2
+!6|1|2
+! Default :: 6|1|2
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
 !     2 | PJFry++
 !     3 | IREGI
 !     4 | Golem95
+!     5 | Samurai
+!     6 | Ninja
 !     One can use the combinations to reduce integral,e.g.
 !     1|2|3 means first use CutTools, if it is not stable, use PJFry++, 
 !     if it is still unstable, use IREGI. If it failed, use QP of CutTools.
-!  
+!     Notice that any reduction tool not avaialble on the system will be automatically
+!     skipped. 
 
+!     When using quadruple precision with Ninja or CutTools, the reduction will 
+!     always be done in quadruple precision, but the parameters below allow you to
+!     chose if you want to also recompute the *integrand* in quadruple precision.
+!     Doing so is slow and typically does not improve the accuracy for Ninja, so it 
+!     is disabled by default in this case.
+#UseQPIntegrandForCutTools
+!.TRUE.
+! Default :: .TRUE.
+#UseQPIntegrandForNinja
+!.FALSE.
+! Default :: .FALSE.
+!
 !     =================================================================================
 !     The parameters below set the parameters for IREGI
 !     =================================================================================

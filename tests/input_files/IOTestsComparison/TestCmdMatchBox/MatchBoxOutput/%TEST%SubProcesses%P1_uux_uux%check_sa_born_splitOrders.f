@@ -128,12 +128,12 @@ C
       WRITE(*,*) '1) Matrix element for (QCD=4) = ',MATELEMS(1)
 C     
       IF (NCHOSEN.NE.NSPLITORDERS) THEN
-        WRITE (*,*) 'Selected squared coupling orders combination fo'
-     $   //'r the sum below:'
+        WRITE (*,*) 'Selected squared coupling orders combination for'
+     $   //' the sum below:'
         WRITE (*,*) (CHOSEN_SO_INDICES(I),I=1,NCHOSEN)
       ENDIF
-      WRITE (*,*) 'Total Matrix element = ', MATELEM, ' GeV^',
-     $ -(2*NEXTERNAL-8)
+      WRITE (*,*) 'Total Matrix element = ', MATELEM, ' GeV^',-(2
+     $ *NEXTERNAL-8)
       WRITE (*,*) '-----------------------------'
 
 C     c
@@ -170,8 +170,8 @@ C
 C     CALL SMATRIX(P,MATELEM)
 C     
 C     write (*,*) "-------------------------------------------------"
-C     write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8
-C     )	
+C     write (*,*) "Matrix element = ", MATELEM, " GeV^",-(2*nexternal-8)
+C     	
 C     write (*,*) "-------------------------------------------------"
 
       END
@@ -293,9 +293,9 @@ C      the me
       INTEGER NEXTERNAL, NINCOMING
       PARAMETER (NEXTERNAL=4,NINCOMING=2)
       DIMENSION XM(NEXTERNAL-NINCOMING),P(4,NEXTERNAL-NINCOMING)
-      DIMENSION Q(4,NEXTERNAL-NINCOMING),Z(NEXTERNAL-NINCOMING),R(4)
-     $ , B(3),P2(NEXTERNAL-NINCOMING),XM2(NEXTERNAL-NINCOMING)
-     $ , E(NEXTERNAL-NINCOMING),V(NEXTERNAL-NINCOMING),IWARN(5)
+      DIMENSION Q(4,NEXTERNAL-NINCOMING),Z(NEXTERNAL-NINCOMING),R(4),
+     $  B(3),P2(NEXTERNAL-NINCOMING),XM2(NEXTERNAL-NINCOMING),
+     $  E(NEXTERNAL-NINCOMING),V(NEXTERNAL-NINCOMING),IWARN(5)
       SAVE ACC,ITMAX,IBEGIN,IWARN
       DATA ACC/1.D-14/,ITMAX/6/,IBEGIN/0/,IWARN/5*0/
 C     *
@@ -425,12 +425,12 @@ C     * RETURN LOG OF WEIGHT
       RETURN
 C     *
  1001 FORMAT(' RAMBO FAILS: # OF PARTICLES =',I5,' IS NOT ALLOWED')
- 1002 FORMAT(' RAMBO FAILS: TOTAL MASS =',D15.6,' IS NOT SMALLER THA'
-     $ //'N TOTAL ENERGY =',D15.6)
+ 1002 FORMAT(' RAMBO FAILS: TOTAL MASS =',D15.6,' IS NOT SMALLER THAN'
+     $ //' TOTAL ENERGY =',D15.6)
  1004 FORMAT(' RAMBO WARNS: WEIGHT = EXP(',F20.9,') MAY UNDERFLOW')
  1005 FORMAT(' RAMBO WARNS: WEIGHT = EXP(',F20.9,') MAY  OVERFLOW')
- 1006 FORMAT(' RAMBO WARNS:',I3,' ITERATIONS DID NOT GIVE THE DESIRE'
-     $ //'D ACCURACY =',D15.6)
+ 1006 FORMAT(' RAMBO WARNS:',I3,' ITERATIONS DID NOT GIVE THE DESIRED'
+     $ //' ACCURACY =',D15.6)
       END
 
       FUNCTION RN(IDUMMY)

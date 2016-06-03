@@ -152,7 +152,7 @@ class ShowerCard(dict):
             newlines = []
             for line in self.text.split('\n'):
                 key_match = key_re.match(line)
-                if key_match and not str(key).upper().startswith('DM'):
+                if key_match and not ( str(key).upper().startswith('DM') ):
                     try:
                         comment = line.split('#')[1]
                     except:
@@ -164,14 +164,14 @@ class ShowerCard(dict):
                             newlines.append('%s = %s #%s' % (key, 'T', comment))
                         else:
                             newlines.append('%s = %s #%s' % (key, 'F', comment))
-                elif key_match and str(key).upper().startswith('DM'):
+                elif key_match and ( str(key).upper().startswith('DM') ):
                     pass
                 else:
                     newlines.append(line)
 
             if str(key).upper().startswith('DM') and not value.lower() in ['','none','default']:
                 newlines.append('%s = %s' % (str(key).upper(), value[0:len(value)]))
-                logger.info('please specify a decay through set dm_1 M > D1 D2 @ BR @ ME; see shower_card.dat for details')
+                logger.info('please specify a decay through set DM_1 decay; see shower_card.dat for details')
                 
             self.text = '\n'.join(newlines) + '\n'
 

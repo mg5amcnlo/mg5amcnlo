@@ -46,18 +46,15 @@ c
       integer j,kk,l,jpr,i,nnn
       character*5 cc(2)
       data cc/'     ','Born '/
-      integer nwgt,max_weight,nwgt_analysis
-      common/cnwgt/nwgt
+      integer nwgt_analysis
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight),wwwi(max_weight)
-      common/cwgtsinfo/weights_info
+      character*50 weights_info(max_weight_shower)
+     $     ,wwwi(max_weight_shower)
 c
-      weights_info(1)="central value  "
-      do i=1,nnn+1
+      do i=1,nnn
          weights_info(i+1)=wwwi(i)
       enddo
-      nwgt=nnn+1
+      nwgt=nnn
 c Initialize histograms
       call HwU_inithist(nwgt,weights_info)
 c Set method for error estimation to '0', i.e., use Poisson statistics
@@ -116,13 +113,15 @@ C----------------------------------------------------------------------
       DATA XME/5.11D-4/
       integer nwgt_analysis,max_weight
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      integer maxRWGT
+      parameter (maxRWGT=100)
+      double precision wgtxsecRWGT(maxRWGT)
+      parameter (max_weight=maxscales*maxscales+maxpdfs+maxRWGT+1)
       double precision ww(max_weight),www(max_weight),xww(max_weight)
       common/cww/ww
 c
-      ww(1)=xww(2)
       if(nnn.eq.0)ww(1)=1d0
-      do i=2,nnn+1
+      do i=1,nnn
          ww(i)=xww(i)
       enddo
 c

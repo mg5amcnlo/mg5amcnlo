@@ -498,7 +498,8 @@ class UFOMG5Converter(object):
         particle = base_objects.Particle()
 
         # MG5 doesn't use goldstone boson 
-        if hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson:
+        if (hasattr(particle_info, 'GoldstoneBoson') and particle_info.GoldstoneBoson) \
+                or (hasattr(particle_info, 'goldstoneboson') and particle_info.goldstoneboson):
             particle.set('type', 'goldstone')
         elif hasattr(particle_info, 'goldstone') and particle_info.goldstone:
             particle.set('type', 'goldstone')
@@ -671,14 +672,16 @@ class UFOMG5Converter(object):
                                'Parenthesis of expression %s are malformed'%expr
             return [expr[:start],expr[start+1:end],expr[end+1:]]
         
-        start_parenthesis = re.compile(r".*\s*[\+\-\*\/\)\(]\s*$")        
+        start_parenthesis = re.compile(r".*\s*[\+\-\*\/\)\(]\s*$")
+
         def is_value_zero(value):
             """Check whether an expression like ((A+B)*ZERO+C)*ZERO is zero.
             Only +,-,/,* operations are allowed and 'ZERO' is a tag for an
             analytically zero quantity."""
-            
-            parenthesis = find_parenthesis(value)
-            if parenthesis:
+
+            curr_value = value
+            parenthesis = find_parenthesis(curr_value)
+            while parenthesis:
                 # Allow the complexconjugate function
                 if parenthesis[0].endswith('complexconjugate'):
                     # Then simply remove it
@@ -691,11 +694,10 @@ class UFOMG5Converter(object):
                         new_parenthesis = 'PARENTHESIS'
                 else:
                     new_parenthesis = '_FUNCTIONARGS'
-                new_value = parenthesis[0]+new_parenthesis+parenthesis[2] 
-                return is_value_zero(new_value)
-            else:
-               return is_expr_zero(value)
-            
+                curr_value = parenthesis[0]+new_parenthesis+parenthesis[2]
+                parenthesis = find_parenthesis(curr_value)
+            return is_expr_zero(curr_value)
+
         def CTCoupling_pole(CTCoupling, pole):
             """Compute the pole of the CTCoupling in two cases:
                a) Its value is a dictionary, then just return the corresponding
@@ -740,7 +742,7 @@ class UFOMG5Converter(object):
             # Remember that when the value of a CT_coupling is not a dictionary
             # then the only operators allowed in the definition are +,-,*,/
             # and each term added or subtracted must contain *exactly one*
-            # CTParameter and never at the denominator. 
+            # CTParameter and never at the denominator.   
             if n_CTparams > 0 and is_value_zero(new_expression):
                 return 'ZERO', [], n_CTparams
             else:
@@ -808,51 +810,67 @@ class UFOMG5Converter(object):
 
         # Now we create a couplings dictionary for each element of the loop_particles list
         # and for each expansion order of the laurent serie in the coupling.
+        # and for each coupling order
         # Format is new_couplings[loop_particles][laurent_order] and each element
         # is a couplings dictionary.
-        new_couplings=[[{} for j in range(0,3)] for i in \
-                       range(0,max(1,len(interaction_info.loop_particles)))]
+        order_to_interactions= {}
+        # will contains the new coupling of form
+        #new_couplings=[[{} for j in range(0,3)] for i in \
+        #               range(0,max(1,len(interaction_info.loop_particles)))]
         # So sort all entries in the couplings dictionary to put them a the
         # correct place in new_couplings.
-        for key, coupling in interaction_info.couplings.items():
-            for poleOrder in range(0,3):
-                expression = coupling.pole(poleOrder)
-                if expression!='ZERO':
-                    if poleOrder==2:
-                        raise InvalidModel, """
-The CT coupling %s was found with a contribution to the double pole. 
-This is either an error in the model or a parsing error in the function 'is_value_zero'.
-The expression of the non-zero double pole coupling is:
-%s
-"""%(coupling.name,str(coupling.value))
-                    # It is actually safer that the new coupling associated to
-                    # the interaction added is not a reference to an original 
-                    # coupling in the ufo model. So copy.copy is right here.   
-                    newCoupling = copy.copy(coupling)
-                    if poleOrder!=0:
-                        newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
-                    newCoupling.value = expression
-                    # assign the CT parameter dependences
-                    #if hasattr(coupling,'CTparam_dependence') and \
-                    #        (-poleOrder in coupling.CTparam_dependence) and \
-                    #        coupling.CTparam_dependence[-poleOrder]:
-                    #    newCoupling.CTparam_dependence = coupling.CTparam_dependence[-poleOrder]
-                    #elif hasattr(newCoupling,'CTparam_dependence'):
-                    #    delattr(newCoupling,"CTparam_dependence")
-                    new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling  
-              
-        # Now we can add an interaction for each.         
-        for i, all_couplings in enumerate(new_couplings):
-            loop_particles=[[]]
-            if len(interaction_info.loop_particles)>0:
-                loop_particles=[[part.pdg_code for part in loop_parts] \
-                    for loop_parts in interaction_info.loop_particles[i]]
-            for poleOrder in range(0,3):
-                if all_couplings[poleOrder]!={}:
-                    interaction_info.couplings=all_couplings[poleOrder]
-                    self.add_interaction(interaction_info, color_info,\
-                      (intType if poleOrder==0 else (intType+str(poleOrder)+\
-                                                         'eps')),loop_particles)
+        for key, couplings in interaction_info.couplings.items():
+            if not isinstance(couplings, list):
+                couplings = [couplings]
+            for coupling in couplings:
+                order = tuple(coupling.order.items())
+                if order not in order_to_interactions:
+                    order_to_interactions[order] = [
+                           [{} for j in range(0,3)] for i in \
+                           range(0,max(1,len(interaction_info.loop_particles)))]
+                    new_couplings = order_to_interactions[order]
+                else:
+                    new_couplings = order_to_interactions[order]
+                    
+                for poleOrder in range(0,3):
+                    expression = coupling.pole(poleOrder)
+                    if expression!='ZERO':
+                        if poleOrder==2:
+                            raise InvalidModel, """
+    The CT coupling %s was found with a contribution to the double pole. 
+    This is either an error in the model or a parsing error in the function 'is_value_zero'.
+    The expression of the non-zero double pole coupling is:
+    %s
+    """%(coupling.name,str(coupling.value))
+                        # It is actually safer that the new coupling associated to
+                        # the interaction added is not a reference to an original 
+                        # coupling in the ufo model. So copy.copy is right here.   
+                        newCoupling = copy.copy(coupling)
+                        if poleOrder!=0:
+                            newCoupling.name=newCoupling.name+"_"+str(poleOrder)+"eps"
+                        newCoupling.value = expression
+                        # assign the CT parameter dependences
+                        #if hasattr(coupling,'CTparam_dependence') and \
+                        #        (-poleOrder in coupling.CTparam_dependence) and \
+                        #        coupling.CTparam_dependence[-poleOrder]:
+                        #    newCoupling.CTparam_dependence = coupling.CTparam_dependence[-poleOrder]
+                        #elif hasattr(newCoupling,'CTparam_dependence'):
+                        #    delattr(newCoupling,"CTparam_dependence")
+                        new_couplings[key[2]][poleOrder][(key[0],key[1])] = newCoupling  
+            
+        for new_couplings in order_to_interactions.values():
+            # Now we can add an interaction for each.         
+            for i, all_couplings in enumerate(new_couplings):
+                loop_particles=[[]]
+                if len(interaction_info.loop_particles)>0:
+                    loop_particles=[[part.pdg_code for part in loop_parts] \
+                        for loop_parts in interaction_info.loop_particles[i]]
+                for poleOrder in range(0,3):
+                    if all_couplings[poleOrder]!={}:
+                        interaction_info.couplings=all_couplings[poleOrder]
+                        self.add_interaction(interaction_info, color_info,\
+                          (intType if poleOrder==0 else (intType+str(poleOrder)+\
+                                                             'eps')),loop_particles)
 
 
     def find_color_anti_color_rep(self, output=None):
@@ -1561,7 +1579,7 @@ class RestrictModel(model_reader.ModelReader):
         # Simplify conditional statements
         logger.debug('Simplifying conditional expressions')
         modified_params, modified_couplings = \
-           self.detect_conditional_statements_simplifications(model_definitions)
+            self.detect_conditional_statements_simplifications(model_definitions)
         
         # Apply simplifications
         self.apply_conditional_simplifications(modified_params, modified_couplings)
@@ -1879,6 +1897,12 @@ class RestrictModel(model_reader.ModelReader):
                     if coupling in zero_couplings:
                         modify=True
                         del vertex['couplings'][key]
+                    elif coupling.startswith('-'):
+                        coupling = coupling[1:]
+                        if coupling in zero_couplings:
+                            modify=True
+                            del vertex['couplings'][key]                      
+                        
                 if modify:
                     mod_vertex.append(vertex)
             
@@ -1905,7 +1929,7 @@ class RestrictModel(model_reader.ModelReader):
                 self['interactions'].remove(vertex)
             else:
                 logger_mod.debug('modify interactions: %s at order: %s' % \
-                                (' '.join(part_name),', '.join(orders)))       
+                                (' '.join(part_name),', '.join(orders)))
 
         # print useful log and clean the empty counterterm values
         for pct in mod_particle_ct:
@@ -1927,7 +1951,7 @@ class RestrictModel(model_reader.ModelReader):
 
         return
                 
-    def remove_couplings(self, couplings):                
+    def remove_couplings(self, couplings):               
         #clean the coupling list:
         for name, data in self['couplings'].items():
             for coupling in data[:]:

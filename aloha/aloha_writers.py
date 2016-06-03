@@ -74,7 +74,16 @@ class WriteALOHA:
         if len(indices) == 1:
             return indices[0] + start + self.momentum_size
 
-        ind_name = self.routine.expr.lorentz_ind
+        try:
+            # When the expr is not a SplitCoefficient
+            ind_name = self.routine.expr.lorentz_ind
+        except:
+            # When the expr is a loop one, i.e. with SplitCoefficient
+            if len(set([tuple(expr.lorentz_ind) for expr in self.routine.expr.values()]))!=1:
+                raise Exception('All SplitCoefficients do not share the same indices names.')
+            for expr in self.routine.expr.values():
+              ind_name = expr.lorentz_ind
+              break
 
         if ind_name == ['I3', 'I2']:
             return  4 * indices[1] + indices[0] + start + self.momentum_size
@@ -266,7 +275,7 @@ class WriteALOHA:
             vartype = obj.vartype
         except Exception:
             return self.change_number_format(obj)
-        
+
         # The order is from the most current one to the les probable one
         if vartype == 1 : # AddVariable
             return self.write_obj_Add(obj, prefactor)

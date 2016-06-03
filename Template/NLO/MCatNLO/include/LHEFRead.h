@@ -16,75 +16,41 @@ class MyReader {
   LHEF::Reader reader;
 
 
-  void lhef_read_wgtsinfo_(int &cwgtinfo_nn, char (cwgtinfo_weights_info[350][15])) {
+  void lhef_read_wgtsinfo_(int &cwgtinfo_nn, char (cwgtinfo_weights_info[1024][50])) {
 
     // Read header of event file
     std::stringstream hss;
-    std::string hs,hsvec[5];
-    cwgtinfo_nn=0;
-
+    std::string hs;
+    sprintf(cwgtinfo_weights_info[0], "%50s","central value");
+    cwgtinfo_nn=1;
     while (true){
       hss << reader.headerBlock;
       std::getline(hss,hs,'\n');
       if (hs.find("</header>") != std::string::npos) break;
-
-      // Read the scale block
-      if (hs.find("<weightgroup type='scale_variation'") != std::string::npos) {
+      // Read the wgt information
+      if (hs.find("<initrwgt>") != std::string::npos) {
 	while (true) {
 	  std::getline(hss,hs,'\n');
-	  if (hs.find("</weightgroup>") != std::string::npos) break;
-          //find the values of muR and muF
-	  std::string xmuR = hs.substr(hs.find("muR")+4,hs.length());
-	  xmuR = xmuR.substr(0,xmuR.find("muF")-1);
-	  std::string xmuF = hs.substr(hs.find("muF")+4,hs.length());
-	  xmuF = xmuF.substr(0,xmuF.find("</w")-1);
-	  double muR = atof(xmuR.c_str());
-	  double muF = atof(xmuF.c_str());
-          //store the plot label
-          sprintf(cwgtinfo_weights_info[cwgtinfo_nn], "muR=%2.1f muF=%2.1f", muR, muF);
-	  ++cwgtinfo_nn;
-	}
-      }
-
-      // Read the PDF block
-      if (hs.find("<weightgroup type='PDF_variation'") != std::string::npos) {
-	while (true) {
-	  std::getline(hss,hs,'\n');
-	  if (hs.find("</weightgroup>") != std::string::npos) break;
-          //find the PDF set used
-	  std::string PDF = hs.substr(hs.find("pdfset")+8,hs.length());
-	  PDF = PDF.substr(0,PDF.find("</w")-1);
-          int iPDF = atoi(PDF.c_str());
-          //store the plot label
-          sprintf(cwgtinfo_weights_info[cwgtinfo_nn], "PDF=%8d   ", iPDF);
-	  ++cwgtinfo_nn;
-	}
-      }
-
-      // Read the mg_reweighting block
-      if (hs.find("<weightgroup type='mg_reweighting'") != std::string::npos) {
-	while (true) {
-	  std::getline(hss,hs,'\n');
-	  if (hs.find("</weightgroup>") != std::string::npos) break;
+	  if (hs.find("</initrwgt>") != std::string::npos) break;
+	  if (hs.find("<weightgroup") != std::string::npos) continue;
+	  if (hs.find("</weightgroup>") != std::string::npos) continue;
 	  if (hs.find("<weight id") != std::string::npos) {
-	    std::string sRWGT = hs.substr(hs.find("weight id")+11,hs.length());
-	    sRWGT = sRWGT.substr(0,sRWGT.find("'>"));
-	    //store the reweight label
-	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn], "%15s", sRWGT.c_str());
+	    std::string sRWGT = hs.substr(hs.find("'>")+2,hs.find("</w")-3);
+	    sRWGT = sRWGT.substr(0,sRWGT.find("<"));
+	    sprintf(cwgtinfo_weights_info[cwgtinfo_nn],"%50s",sRWGT.c_str());
 	    ++cwgtinfo_nn;
 	  }
 	}
       }
-
+      
     }
   }
 
 
-  void lhef_read_wgts_(double (cwgt_ww[350])) {
+  void lhef_read_wgts_(double (cwgt_ww[1024])) {
     
     // Read events
     if (reader.readEvent()) {
-      double wgtxsecmu[4][4],wgtxsecPDF[200];
       std::string svec[16],isvec[4],refstr;
       std::stringstream ss;
       int i,j;
@@ -129,7 +95,6 @@ class MyReader {
 	    ++iww;
 	  }
 	}
-	iww-=1;
       }
     }
   }

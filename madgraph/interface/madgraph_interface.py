@@ -37,7 +37,7 @@ import traceback
 import time
 import inspect
 import urllib
-
+import random
 
 #useful shortcut
 pjoin = os.path.join
@@ -134,11 +134,11 @@ class CmdExtended(cmd.Cmd):
     }
 
     debug_output = 'MG5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n'
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
     keyboard_stop_msg = """stopping all operation
             in order to quit mg5 please enter exit"""
@@ -555,7 +555,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("-- generate diagrams for a given process",'$MG:color:BLUE')
         logger.info("General leading-order syntax:",'$MG:color:BLACK')
         logger.info(" o generate INITIAL STATE > REQ S-CHANNEL > FINAL STATE $ EXCL S-CHANNEL / FORBIDDEN PARTICLES COUP1=ORDER1 COUP2^2=ORDER2 @N")
-        logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED=3 QCD=0 @1",'$MG:color:GREEN')
+        logger.info(" o Example: generate l+ vl > w+ > l+ vl a $ z / a h QED<=3 QCD=0 @1",'$MG:color:GREEN')
         logger.info(" > Alternative required s-channels can be separated by \"|\":")
         logger.info("   b b~ > W+ W- | H+ H- > ta+ vt ta- vt~")
         logger.info(" > If no coupling orders are given, MG5 will try to determine")
@@ -566,6 +566,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   interference terms only. The other two operators '<=' and '>' are")
         logger.info("   supported. Finally, a negative value COUP^2==-I refers to the")
         logger.info("   N^(-I+1)LO term in the expansion of the COUP order.")
+        logger.info(" > allowed coupling operator are: \"==\", \"=\", \"<=\" and \">\".")
+        logger.info("    \"==\" request exactly that number of coupling while \"=\" is interpreted as \"<=\".")
         logger.info(" > To generate a second process use the \"add process\" command")
         logger.info("Decay chain syntax:",'$MG:color:BLACK')
         logger.info(" o core process, decay1, (decay2, (decay2', ...)), ...  etc")
@@ -869,6 +871,7 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_check(self, args):
         """check the validity of args"""
+
         if  not self._curr_model:
             raise self.InvalidCmd("No model currently active, please import a model!")
 
@@ -912,7 +915,8 @@ class CheckValidForCmd(cmd.CheckCmd):
             raise self.InvalidCmd('Decay chains not allowed in check')
         
         user_options = {'--energy':'1000','--split_orders':'-1',
-                   '--reduction':'1|2|3|4','--CTModeRun':'-1','--helicity':'-1'}
+                   '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
+                   '--helicity':'-1','--seed':'-1'}
         
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
@@ -961,6 +965,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             user_options['--name']='auto'
             # Select what resonances must be run
             user_options['--resonances']='1'
+        
         for arg in args[:]:
             if arg.startswith('--') and '=' in arg:
                 parsed = arg.split('=')
@@ -1358,7 +1363,8 @@ This will take effect only in a NEW terminal
 
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output',\
-                                          'loop_color_flows']:
+                                          'loop_color_flows',\
+                                          'low_mem_multicore_nlo_generation']:
             args.append('True')
 
         if len(args) > 2 and '=' == args[1]:
@@ -1407,7 +1413,7 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
-        if args[0] in ['loop_optimized_output', 'loop_color_flows']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -2407,7 +2413,8 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
-                           'loop_optimized_output', 'loop_color_flows']:
+                           'loop_optimized_output', 'loop_color_flows',\
+                           'low_mem_multicore_nlo_generation']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
@@ -2663,7 +2670,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5',
-                              'hepmc','mg5amc_py8_interface']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop']
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
@@ -2682,7 +2689,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'max_npoint_for_channel']
     _valid_nlo_modes = ['all','real','virt','sqrvirt','tree','noborn','LOonly']
     _valid_sqso_types = ['==','<=','=','>']
-    _valid_amp_so_types = ['=','<=']
+    _valid_amp_so_types = ['=','<=', '==', '>']
     _OLP_supported = ['MadLoop', 'GoSam']
     _output_dependencies_supported = ['external', 'internal','environment_paths']
 
@@ -2712,12 +2719,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'fastjet':'fastjet-config',
                        'pjfry':'auto',
                        'golem':'auto',
+                       'samurai':None,
+                       'ninja':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
-                       'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
                        'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
+                       'cluster_local_path': None,
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -2727,6 +2736,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
+                          'low_mem_multicore_nlo_generation': False,
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,
@@ -2959,6 +2969,7 @@ This implies that with decay chains:
             nprocs = len(myproc.get('amplitudes'))
             ndiags = sum([amp.get_number_of_diagrams() for \
                               amp in myproc.get('amplitudes')])
+            
             logger.info("%i processes with %i diagrams generated in %0.3f s" % \
                   (nprocs, ndiags, (cpu_time2 - cpu_time1)))
             ndiags = sum([amp.get_number_of_diagrams() for \
@@ -3014,7 +3025,12 @@ This implies that with decay chains:
         new_model_name = output_dir
         if restrict_name:
             new_model_name = '%s-%s' % (output_dir, restrict_name)
-        self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+            
+        if 'modelname' in self.history.get('full_model_line'):
+            opts = '--modelname'
+        else:
+            opts='' 
+        self.exec_cmd('import model %s %s' % (new_model_name, opts), errorhandling=False, 
                               printcmd=False, precmd=True, postcmd=True)         
         
         
@@ -3025,6 +3041,7 @@ This implies that with decay chains:
         self.avoid_history_duplicate('define %s' % line, ['define'])
         if not self._curr_model:
             self.do_import('model sm')
+            self.history.append('define %s' % line)
         if not self._curr_model['case_sensitive']:
             # Particle names lowercase
             line = line.lower()
@@ -3326,11 +3343,18 @@ This implies that with decay chains:
             pydoc.pager(outstr)
 
         elif args[0] == 'options':
+            if len(args) == 1:
+                to_print = lambda name: True
+            else:
+                to_print = lambda name: any(poss in name for poss in args[1:])
+
             outstr = "                          MadGraph5_aMC@NLO Options    \n"
             outstr += "                          ----------------    \n"
             keys = self.options_madgraph.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madgraph[key] 
                 value = self.options[key]
                 if value == default:
@@ -3343,6 +3367,8 @@ This implies that with decay chains:
             keys = self.options_madevent.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madevent[key]
                 value = self.options[key]
                 if value == default:
@@ -3355,6 +3381,8 @@ This implies that with decay chains:
             keys = self.options_configuration.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_configuration[key]
                 value = self.options[key]
                 if value == default:
@@ -3492,6 +3520,7 @@ This implies that with decay chains:
                 lCMS_values.append(lower_bound)
                 
             return lCMS_values
+        
         ###### BEGIN do_check
 
         args = self.split_arg(line)
@@ -3552,7 +3581,7 @@ This implies that with decay chains:
             elif option[0]=='--report':
                 options['report'] = option[1].lower()
             elif option[0]=='--seed':
-                CMS_options['seed'] = int(option[1])
+                options['seed'] = int(option[1])
             elif option[0]=='--name':
                 if '.' in option[1]:
                     raise self.InvalidCmd("Do not specify the extension in the"+
@@ -3777,6 +3806,14 @@ This implies that with decay chains:
                 logger_check.info("{:<20} =   {}".format('--%s'%key,str(value)))
             return        
         
+        # Set the seed here if not in cms check and if specified
+        if args[0]!='cms' and options['seed']!=-1:
+            # Not necessarily optimal as there could be additional call to
+            # random() as the code develops, but at least it will encompass
+            # everything in this way.
+            logger_check.info('Setting random seed to %d.'%options['seed'])
+            random.seed(options['seed'])
+        
         proc_line = " ".join(args[1:])
         # Don't try to extract the process if just re-analyzing a saved run
         if not (args[0]=='cms' and options['analyze']!='None'):
@@ -3881,6 +3918,22 @@ This implies that with decay chains:
                 if 4 in MLoptions["MLReductionLib"]:
                     logger_check.warning('GOLEM not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(4)
+        
+        if 'samurai' in self.options and isinstance(self.options['samurai'],str):
+            TIR_dir['samurai_dir']=self.options['samurai']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 5 in MLoptions["MLReductionLib"]:
+                    logger_check.warning('Samurai not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(5)
+        
+        if 'ninja' in self.options and isinstance(self.options['ninja'],str):
+            TIR_dir['ninja_dir']=self.options['ninja']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 6 in MLoptions["MLReductionLib"]:
+                    logger_check.warning('Ninja not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(6)
         
         if args[0] in ['timing']:
             timings = process_checks.check_timing(myprocdef,
@@ -4166,6 +4219,7 @@ This implies that with decay chains:
         """Extract a process definition from a string. Returns
         a ProcessDefinition."""
 
+        orig_line = line
         # Check basic validity of the line
         if not len(re.findall('>\D', line)) in [1,2]:
             self.do_help('generate')
@@ -4186,32 +4240,9 @@ This implies that with decay chains:
         proc_number_re = proc_number_pattern.match(line)
         if proc_number_re:
             proc_number = int(proc_number_re.group(2))
-            line = proc_number_re.group(1) + \
-                   proc_number_re.group(3)
-
-        # Now check for squared orders, specified after the perturbation orders.
-        # If it turns out there is no perturbation order then we will use these orders
-        # for the regular orders.
-        squared_order_pattern = re.compile(\
-            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
-                    "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
-        squared_order_re = squared_order_pattern.match(line)
-        squared_orders = {}
-        # The 'split_orders' (i.e. those for which individual matrix element
-        # evalutations must be provided for each corresponding order value) are
-        # defined from the orders specified in between [] and any order for
-        # which there are squared order constraints.
-        split_orders = []
-        while squared_order_re:
-            type = squared_order_re.group('type')
-            if type not in self._valid_sqso_types:
-                raise self.InvalidCmd, "Type of squared order constraint '%s'"\
-                                                      %type+" is not supported."
-            squared_orders[squared_order_re.group('name')] = \
-                                     (int(squared_order_re.group('value')),type)
-            line = squared_order_re.group('before')
-            squared_order_re = squared_order_pattern.match(line)
-
+            line = proc_number_re.group(1)+ proc_number_re.group(3)
+            #overall_order are already handle but it is better to pass the info to each group
+        
         # Now check for perturbation orders, specified in between squared brackets
         perturbation_couplings_pattern = \
           re.compile("^(?P<proc>.+>.+)\s*\[\s*((?P<option>\w+)\s*\=)?\s*"+\
@@ -4239,57 +4270,66 @@ This implies that with decay chains:
 
             line = perturbation_couplings_re.group("proc")+\
                      perturbation_couplings_re.group("rest")
-
-        # Now if perturbation orders placeholders [] have been found,
-        # we will scan for the amplitudes orders. If not we will use the 
-        # squared orders above instead.
-        orders = {}
-        if not perturbation_couplings_re:
-            new_squared_orders = {}
-            for order in squared_orders.keys():
-                if order.endswith('^2'):
-                    new_squared_orders[order[:-2]]=squared_orders[order]
-                else:
-                    if squared_orders[order][1] not in self._valid_amp_so_types:
-                        raise self.InvalidCmd, \
-                          "Amplitude order constraints can only be of type %s"%\
-                                         (', '.join(self._valid_amp_so_types))+\
-                                          ", not '%s'."%squared_orders[order][1]
-                    orders[order]=squared_orders[order][0]
-            squared_orders=new_squared_orders
-        else:
-            # Make sure all squared orders defined at this stage do no include
-            # the appended ^2
-            new_squared_orders = {}
-            for order in squared_orders.keys():
-                new_squared_orders[order[:-2] if order.endswith('^2') else order]=\
-                                                           squared_orders[order]
-            squared_orders=new_squared_orders                
-            # We take the coupling orders (identified by "=")
-            # Notice that one can have a negative value of the squared order to
-            # indicate that one should take the N^{n}LO contribution into account.
-            order_pattern = re.compile(\
+                        
+        ## Now check for orders/squared orders/constrained orders
+        order_pattern = re.compile(\
            "^(?P<before>.+>.+)\s+(?P<name>(\w|(\^2))+)\s*(?P<type>"+\
                     "(=|(<=)|(==)|(===)|(!=)|(>=)|<|>))\s*(?P<value>-?\d+)\s*$")
-            order_re = order_pattern.match(line)
-            while order_re:
-                type = order_re.group('type')
-                if order_re.group('name').endswith('^2'):
-                    if type not in self._valid_sqso_types:
-                        raise self.InvalidCmd, "Type of squared order "+\
-                                     "constraint '%s'"%type+" is not supported."
-                    squared_orders[order_re.group('name')[:-2]] = \
-                                             (int(order_re.group('value')),type)
-                else:
-                    if type not in self._valid_amp_so_types:
-                        raise self.InvalidCmd, \
-                          "Amplitude order constraints can only be of type %s"%\
-                        (', '.join(self._valid_amp_so_types))+", not '%s'."%type
-
-                    orders[order_re.group('name')] = \
-                                                    int(order_re.group('value'))                    
-                line = order_re.group('before')
-                order_re = order_pattern.match(line)
+        order_re = order_pattern.match(line)
+        squared_orders = {}
+        orders = {}
+        constrained_orders = {}
+        ## The 'split_orders' (i.e. those for which individual matrix element
+        ## evalutations must be provided for each corresponding order value) are
+        ## defined from the orders specified in between [] and any order for
+        ## which there are squared order constraints.
+        split_orders = []
+        while order_re:
+            type = order_re.group('type')
+            if order_re.group('name').endswith('^2'):
+                if type not in self._valid_sqso_types:
+                    raise self.InvalidCmd, "Type of squared order "+\
+                                 "constraint '%s'"% type+" is not supported."
+                if type == '=':
+                    name =  order_re.group('name')
+                    value = order_re.group('value')
+                    logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
+                                       {'n':name, 'v': value})
+                    type = "<="
+                squared_orders[order_re.group('name')[:-2]] = \
+                                         (int(order_re.group('value')),type)
+            else:
+                if type not in self._valid_amp_so_types:
+                    raise self.InvalidCmd, \
+                      "Amplitude order constraints can only be of type %s"%\
+                    (', '.join(self._valid_amp_so_types))+", not '%s'."%type
+                name = order_re.group('name')
+                value = int(order_re.group('value'))
+                if type in ['=', '<=']:
+                    if type == '=' and value != 0:
+                        logger.warning("Interpreting '%(n)s=%(v)s' as '%(n)s<=%(v)s'" %\
+                                       {'n':name, 'v': value}) 
+                    orders[name] = value
+                elif type == "==":
+                    constrained_orders[name] = (value, type)
+                    if name not in squared_orders:
+                        squared_orders[name] = (2 * value,'==')
+                    if True:#name not in orders:
+                        orders[name] = value
+                    
+                elif type == ">":
+                    constrained_orders[name] = (value, type)
+                    if name not in squared_orders:
+                        squared_orders[name] = (2 * value,'>')
+                                          
+            line = order_re.group('before')
+            order_re = order_pattern.match(line)          
+            
+        #only allow amplitue restrctions >/ == for LO/tree level
+        if constrained_orders and LoopOption != 'tree':
+            raise self.InvalidCmd, \
+                          "Amplitude order constraints (for not LO processes) can only be of type %s"%\
+                        (', '.join(['<=']))+", not '%s'."%type
 
         # If the squared orders are defined but not the orders, assume 
         # orders=sq_orders. In case the squared order has a negative value or is
@@ -4396,7 +4436,8 @@ This implies that with decay chains:
             split_orders=list(set(perturbation_couplings_list+squared_orders.keys()))
             try:
                 split_orders.sort(key=lambda elem: 0 if elem=='WEIGHTED' else
-                                       self._curr_model['order_hierarchy'][elem])
+                                       self._curr_model['order_hierarchy']
+                                       [elem if not elem.endswith('.sqrt') else elem[:-5]])
             except KeyError:
                 raise self.InvalidCmd, "The loaded model does not defined a "+\
                     " coupling order hierarchy for these couplings: %s"%\
@@ -4461,13 +4502,14 @@ This implies that with decay chains:
             
             sqorders_types = dict([(k,v[1]) for k, v in squared_orders.items()]) 
                         
-            return \
-                base_objects.ProcessDefinition({'legs': myleglist,
+            
+            out = base_objects.ProcessDefinition({'legs': myleglist,
                               'model': self._curr_model,
                               'id': proc_number,
                               'orders': orders,
                               'squared_orders':sqorders_values,
                               'sqorders_types':sqorders_types,
+                              'constrained_orders': constrained_orders,
                               'forbidden_particles': forbidden_particle_ids,
                               'forbidden_onsh_s_channels': forbidden_onsh_schannel_ids,
                               'forbidden_s_channels': forbidden_schannel_ids,
@@ -4478,6 +4520,7 @@ This implies that with decay chains:
                               'NLO_mode':LoopOption,
                               'split_orders':split_orders
                               })
+            return out
         #                       'is_decay_chain': decay_process\
 
 
@@ -5099,6 +5142,7 @@ This implies that with decay chains:
         removed_multiparticles = []
         # First check if the defined multiparticles are allowed in the
         # new model
+        
         for key in self._multiparticles.keys():
             try:
                 for part in self._multiparticles[key]:
@@ -5124,6 +5168,10 @@ This implies that with decay chains:
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
+                if self.history[-1] == 'define %s' % line.strip():
+                    self.history.pop(-1)
+                else:
+                    misc.sprint([self.history[-1], 'define %s' % line.strip()])
 
         scheme = "old"
         for qcd_container in ['p', 'j']:
@@ -5149,7 +5197,11 @@ This implies that with decay chains:
             for container in ['p', 'j']:
                 if container in defined_multiparticles:
                     defined_multiparticles.remove(container)
-
+            self.history.append("define p = %s # pass to %s flavors" % \
+                                (' ' .join([`i` for i in self._multiparticles['p']]), 
+                                 scheme) 
+                               )
+            self.history.append("define j = p")
                 
         
         if defined_multiparticles:
@@ -5192,16 +5244,23 @@ This implies that with decay chains:
         if not HepToolsInstaller_web_address is None:
             logger.info('Downloading the HEPToolInstaller at:\n   %s'%
                                                   HepToolsInstaller_web_address)
-            if sys.platform == "darwin":
-                misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
-                  %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
-                  stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
-                                                                     cwd=MG5DIR)
+            # Guess if it is a local or web address
+            if '//' in HepToolsInstaller_web_address:
+                if sys.platform == "darwin":
+                    misc.call(['curl', HepToolsInstaller_web_address, '-o%s' 
+                      %pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz')],
+                      stderr=open(os.devnull,'w'), stdout=open(os.devnull,'w'),
+                                                                         cwd=MG5DIR)
+                else:
+                    misc.call(['wget', HepToolsInstaller_web_address, 
+                      '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
+                      'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
+                                           stdout=open(os.devnull, 'w'), cwd=MG5DIR)
             else:
-                misc.call(['wget', HepToolsInstaller_web_address, 
-                  '--output-document=%s'% pjoin(MG5DIR,'HEPTools',
-                  'HEPToolsInstallers.tar.gz')], stderr=open(os.devnull, 'w'),
-                                       stdout=open(os.devnull, 'w'), cwd=MG5DIR)
+                # If it is a local tarball, then just copy it
+                shutil.copyfile(HepToolsInstaller_web_address,
+                           pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
+
             # Untar the file
             returncode = misc.call(['tar', '-xzpf', 'HEPToolsInstallers.tar.gz'],
                      cwd=pjoin(MG5DIR,'HEPTools'), stdout=open(os.devnull, 'w'))
@@ -5214,7 +5273,6 @@ This implies that with decay chains:
 #            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
 #           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
-
         # Potential change in naming convention
         name_map = {}
         try:
@@ -5227,6 +5285,12 @@ This implies that with decay chains:
         if not self.options['cpp_compiler'] is None:
             compiler_options.append('--cpp_compiler=%s'%
                                                    self.options['cpp_compiler'])
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+        else:
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
@@ -5248,8 +5312,8 @@ This implies that with decay chains:
 
 ##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
 #            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
-#                   pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
-#                                                'MG5aMC_PY8_interface.tar.gz'))
+#                    pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
+#                                                 'MG5aMC_PY8_interface.tar.gz'))
 ################################################################################
 
         # Special rules for certain tools  
@@ -5301,6 +5365,8 @@ This implies that with decay chains:
             elif lhapdf_version==6:
                 lhapdf_option.append('--with_lhapdf5=OFF')
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
+            # Make sure each otion in additional_options appears only once
+            additional_options = list(set(additional_options))
              # And that the option '--force' is placed last.
             additional_options = [opt for opt in additional_options if opt!='--force']+\
                         (['--force'] if '--force' in additional_options else [])
@@ -5310,6 +5376,8 @@ This implies that with decay chains:
                         + lhapdf_option + compiler_options + additional_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
+            # Make sure each otion in additional_options appears only once
+            additional_options = list(set(additional_options))
              # And that the option '--force' is placed last.
             additional_options = [opt for opt in additional_options if opt!='--force']+\
                         (['--force'] if '--force' in additional_options else [])
@@ -5353,12 +5421,25 @@ This implies that with decay chains:
             self.exec_cmd('save options')            
 
         elif tool == 'mg5amc_py8_interface':
-            # At this stage, pythia is guaranteed to be installed, s
+            # At this stage, pythia is guaranteed to be installed
             if self.options['pythia8_path'] in ['',None,'None']:
                 self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
             self.exec_cmd('save options')      
+
+        elif tool == 'ninja':
+            if not misc.get_ninja_quad_prec_support(pjoin(
+                                              MG5DIR,'HEPTools','ninja','lib')):
+                logger.warning(
+"""Successful installation of Ninja, but without support for quadruple precision
+arithmetics. If you want to enable this (hence improving the treatment of numerically
+unstable points in the loop matrix elements) you can try to reinstall Ninja with:
+  MG5aMC>install ninja
+After having made sure to have selected a C++ compiler in the 'cpp' option of
+MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
+            self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
+            self.exec_cmd('save options')
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
@@ -5394,18 +5475,20 @@ This implies that with decay chains:
                                                 for var,path in path_to_be_set))
             elif shell_type=='tcsh':
                 modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.cshrc"%\
-                (r'\n'.join('setenv %s %s'%
+                (r'\n'.join('setenv %s %s%s'%
                 (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '')
                                                 for var,path in path_to_be_set))
-            
             logger.warning("==========")
             logger.warning("We recommend that you add to the following paths"+\
-             " to your environment variables, so that you are garanteed that"+\
+             " to your environment variables, so that you are guaranteed that"+\
              " at runtime, MG5_aMC will use the tools you have just installed"+\
-             " and not some other versions installed elsewhere on your system:"+\
+             " and not some other versions installed elsewhere on your system.\n"+\
+             "You can do so by running the following command in your terminal:"
              "\n   %s"%modification_line) 
             logger.warning("==========")
     
+         # Return true for successful installation
+        return True
     def do_install(self, line, paths=None, user_additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
@@ -5428,26 +5511,31 @@ This implies that with decay chains:
             self.install_update(['update']+install_options['update_options'],wget=program)
             return
 
-        advertisements = {'pythia-pgs':'[arXiv:0603175]',
-                          'Delphes':'[arXiv:1307.6346]',
-                          'Delphes2':'[arXiv:0903.2225]',
-                          'SysCalc':'[arXiv:XXXX.YYYYY]',
-                          'Golem95':'[arXiv:0807.0605]',
-                          'PJFry':'[arXiv:1210.4095,1112.0500]',
-                          'QCDLoop':'[arXiv:0712.1851]',
-                          'pythia8':'[arXiv:1410.3012]',
-                          'lhapdf6':'[arXiv:1412.7420]',
-                          'lhapdf5':'[arXiv:0605240]',
-                          'hepmc':'[CPC 134 (2001) 41-46]',
-                          'mg5amc_py8_interface':'[arXiv:1410.3012,XXXX.YYYYY]'}
+        advertisements = {'pythia-pgs':['arXiv:0603175'],
+                          'Delphes':['arXiv:1307.6346'],
+                          'Delphes2':['arXiv:0903.2225'],
+                          'SysCalc':['arXiv:XXXX.YYYYY'],
+                          'Golem95':['arXiv:0807.0605'],
+                          'PJFry':['arXiv:1210.4095','arXiv:1112.0500'],
+                          'QCDLoop':['arXiv:0712.1851'],
+                          'pythia8':['arXiv:1410.3012'],
+                          'lhapdf6':['arXiv:1412.7420'],
+                          'lhapdf5':['arXiv:0605240'],
+                          'hepmc':['CPC 134 (2001) 41-46'],
+                          'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
+                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
+                          'oneloop':['arXiv:1007.4716']}
 
         if args[0] in advertisements:
-            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
-            logger.info("   You are installing '%s', please cite ref(s). "%args[0], '$MG:color:BLACK')
-            logger.info("         %s"%advertisements[args[0]], '$MG:color:BLACK')
+            logger.info("------------------------------------------------------", '$MG:color:GREEN')
+            logger.info("   You are installing '%s', please cite ref(s): "%args[0], '$MG:color:BLACK')
+            for ad in advertisements[args[0]]:
+              logger.info("                 %s"%ad, '$MG:color:GREEN')
+            logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
             logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
-            logger.info("---------------------------------------------------------------", '$MG:color:BLACK')
-            
+            logger.info("------------------------------------------------------", '$MG:color:GREEN')
+
+
         # Load file with path of the different program:
         import urllib
         if paths:
@@ -5488,8 +5576,10 @@ This implies that with decay chains:
             # path['HEPToolsInstaller'] is the online adress where to downlaod
             # the installers if necessary.
             # Specify the path of the MG5_aMC_interface
+            MG5aMC_PY8_interface_path = path['MG5aMC_PY8_interface'] if \
+                                        'MG5aMC_PY8_interface' in path else 'NA'
             additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
-                                                   path['MG5aMC_PY8_interface'])
+                                                   MG5aMC_PY8_interface_path)
             additional_options.extend(install_options['options_for_HEPToolsInstaller'])
             return self.advanced_install(args[0], path['HEPToolsInstaller'],
                                         additional_options = additional_options)
@@ -5501,7 +5591,6 @@ This implies that with decay chains:
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
-        
         try:
             name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
@@ -5551,7 +5640,7 @@ This implies that with decay chains:
             files.mv(pjoin(MG5DIR, created_name), pjoin(MG5DIR, name))
 
 
-        logger.info('compile %s. This might takes a while.' % name)
+        logger.info('compile %s. This might take a while.' % name)
 
         # Modify Makefile for pythia-pgs on Mac 64 bit
         if args[0] == "pythia-pgs" and sys.maxsize > 2**32:
@@ -5614,6 +5703,18 @@ This implies that with decay chains:
             'F77=%s'%os.environ['FC']], cwd=pjoin(MG5DIR,name),
                                         stdout=subprocess.PIPE).communicate()[0]
 
+        # For Delphes edit the makefile to add the proper link to correct library
+        if args[0] == 'Delphes3':
+            #change in the makefile 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)
+            # to 
+            #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,/Applications/root_v6.04.08/lib/
+            rootsys = os.environ['ROOTSYS']
+            text = open('./Delphes/Makefile').read()
+            text = text.replace('DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)', 
+                         'DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,%s/lib/' % rootsys)
+            open('./Delphes/Makefile','w').write(text)
+            
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
             if self.options['lhapdf']:
@@ -5661,7 +5762,7 @@ This implies that with decay chains:
                 status = misc.compile(['install'], mode='', 
                                           cwd = os.path.join(MG5DIR, name))
             else:
-                status = self.compile(make_flags, mode='', 
+                status = self.compile(make_flags, mode='',
                                                cwd = os.path.join(MG5DIR, name))
 
         if not status:
@@ -5867,15 +5968,15 @@ This implies that with decay chains:
             #        files.cp(old,new)
 
             # check that all files in bin directory are executable
-            for path in glob.glob(pjoin(MG5DIR, 'bin','*')):
+            for path in misc.glob('*', pjoin(MG5DIR, 'bin')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','*')):
+            for path in misc.glob(pjoin('*','bin','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','internal','*')):
+            for path in misc.glob(pjoin('*','bin','internal','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*', '*.py')):
+            for path in misc.glob(pjoin('*','*', '*.py'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*','*.sh')):
+            for path in misc.glob(pjoin('*','*','*.sh'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
 
             #add empty files/directory
@@ -6113,8 +6214,7 @@ This implies that with decay chains:
         if not config_path:
             if os.environ.has_key('MADGRAPH_BASE'):
                 config_path = pjoin(os.environ['MADGRAPH_BASE'],'mg5_configuration.txt')
-                self.set_configuration(config_path, final)
-                return
+                self.set_configuration(config_path, final=False)
             if 'HOME' in os.environ:
                 config_path = pjoin(os.environ['HOME'],'.mg5',
                                                         'mg5_configuration.txt')
@@ -6191,21 +6291,42 @@ This implies that with decay chains:
                     else:
                         continue
 
-            elif key in ['pjfry','golem']:
+            elif key in ['pjfry','golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
                     if program != None:
-                        fpath, fname = os.path.split(program)
-                        logger.info('Using %s library in %s'%(key,fpath))
+                        fpath, _ = os.path.split(program)
+                        logger.info('Using %s library in %s' % (key,fpath))
                         self.options[key]=fpath
                     else:
                         # Try to look for it locally
-                        local_install = {'pjfry':'PJFRY', 'golem':'golem95'}
+                        local_install = {'pjfry':'PJFRY', 'golem':'golem95',
+                                         'samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:
                             self.options[key]=None
+                    # Make sure that samurai version is recent enough
+                    if key=='samurai' and \
+                       isinstance(self.options[key],str) and \
+                       self.options[key].lower() != 'auto':
+                        if os.path.isfile(pjoin(self.options[key],os.pardir,'AUTHORS')):
+                            try:
+                                version = open(pjoin(self.options[key],os.pardir,
+                                                          'VERSION'),'r').read()
+                            except IOError:
+                                version = None
+                            if version is None:
+                                self.options[key] = None
+                                logger.info('--------')
+                                logger.info(
+"""The version of 'samurai' automatically detected seems too old to be compatible
+with MG5aMC and it will be turned off. Ask the authors for the latest version if
+you want to use samurai. 
+If you want to enforce its use as-it-is, then specify directly its library folder
+in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto').""")
+                                logger.info('--------')
 
             elif key.endswith('path'):
                 pass
@@ -6215,8 +6336,8 @@ This implies that with decay chains:
                 pass
             elif key in ['notification_center']:
                 if self.options[key] in ['False', 'True']:
-                   self.allow_notification_center = eval(self.options[key])
-                   self.options[key] = self.allow_notification_center
+                    self.allow_notification_center = eval(self.options[key])
+                    self.options[key] = self.allow_notification_center
             elif key not in ['text_editor','eps_viewer','web_browser', 'stdout_level']:
                 # Default: try to set parameter
                 try:
@@ -6533,7 +6654,7 @@ This implies that with decay chains:
             # First look at options which should be put in MG5DIR/input
             to_define = {}
             for key, default in self.options_configuration.items():
-                if  self.options_configuration[key] != self.options[key] != None:
+                if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
                     to_define[key] = self.options[key]
 
             if not '--auto' in args:
@@ -6763,19 +6884,23 @@ This implies that with decay chains:
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ["pjfry","golem"]:
-            program = misc.which_lib(os.path.join(args[1],"lib%s.a"%args[0]))
-            if program!=None:
-                res = 0
-                logger.info('set %s to %s' % (args[0],args[1]))
-                self.options[args[0]] = args[1]
+        elif args[0] in ['pjfry','golem','samurai','ninja'] and \
+                           not (args[0]=='ninja' and args[1]=='./HEPTools/lib'):
+            if args[1] in ['None',"''",'""']:
+                self.options[args[0]] = None
             else:
-                res = 1
-
-            if res != 0 :
-                logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
-                        '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
-                        'You will NOT be able to run %s otherwise.\n'%args[0])
+                program = misc.which_lib(os.path.join(args[1],'lib%s.a'%args[0]))
+                if program!=None:
+                    res = 0
+                    logger.info('set %s to %s' % (args[0],args[1]))
+                    self.options[args[0]] = args[1]
+                else:
+                    res = 1
+    
+                if res != 0 :
+                    logger.warning('%s does not seem to correspond to a valid %s lib ' % (args[1],args[0]) + \
+                            '. Please enter the full PATH/TO/%s/lib .\n'%args[0] + \
+                            'You will NOT be able to run %s otherwise.\n'%args[0])
                 
         elif args[0] == 'lhapdf':
             try:
@@ -6819,7 +6944,14 @@ This implies that with decay chains:
 
         elif args[0] =='output_dependencies':
             self.options[args[0]] = args[1]
-        
+        elif args[0] =='notification_center':
+            if args[1] in ['None','True','False']:
+                self.options[args[0]] = eval(args[1])
+                self.allow_notification_center = self.options[args[0]]
+            else:
+                raise self.InvalidCmd('expected bool for notification_center')
+        elif args[0] in ['cluster_queue']:
+            self.options[args[0]] = args[1].strip()
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
                 self.options[args[0]] = eval(args[1])
@@ -7526,6 +7658,11 @@ This implies that with decay chains:
                     elif value < 0:
                         raise Exception, 'Partial width for %s > %s negative: %s' % \
                                        (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+                    elif value < 0.1 and particle['color'] !=1:
+                        logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
+                                   % (particle.get('name'), value, decay_to))
+                        value = 0
+                                     
                     decay_info[particle.get('pdg_code')].append([decay_to, value])
                     total += value
             else:
@@ -7547,8 +7684,11 @@ This implies that with decay chains:
 
         if self._curr_amps:
             logger.info('Pass to numerical integration for computing the widths:')
-        else:
+        else:            
             logger.info('No need for N body-decay (N>2). Results are in %s' % opts['output'])
+            
+            
+            
             return
 
         # Do the MadEvent integration!!

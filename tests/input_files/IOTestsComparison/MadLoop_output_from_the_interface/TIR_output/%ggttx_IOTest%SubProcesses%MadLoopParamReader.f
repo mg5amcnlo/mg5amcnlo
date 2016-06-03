@@ -3,7 +3,7 @@
       implicit none
 
       CHARACTER(512) fileName, buff, buff2, mode
-      CHARACTER*10 MLReductionLib_str,MLReductionLib_str_save
+      CHARACTER*20 MLReductionLib_str,MLReductionLib_str_save
       CHARACTER*2  MLReductionLib_char
       INTEGER MLRed,i,j,k
 
@@ -105,6 +105,12 @@
           else if (buff .eq. '#WriteOutFilters') then
              read(666,*,end=999) WriteOutFilters
 
+          else if (buff .eq. '#UseQPIntegrandForNinja') then
+             read(666,*,end=999) UseQPIntegrandForNinja
+
+          else if (buff .eq. '#UseQPIntegrandForCutTools') then
+             read(666,*,end=999) UseQPIntegrandForCutTools
+
           else if (buff .eq. '#ImprovePSPoint') then
              read(666,*,end=999) ImprovePSPoint
              if (ImprovePSPoint .lt. -1 .or.
@@ -121,7 +127,7 @@
 
           else if (buff .eq. '#MLReductionLib') then
              read(666,*,end=999) MLReductionLib_str
-             MLReductionLib(1:5)=0
+             MLReductionLib(1:6)=0
              MLReductionLib_str_save=MLReductionLib_str
              j=0
              DO
@@ -139,6 +145,10 @@
                    MLRed=3
                 ELSEIF(MLReductionLib_char.EQ.'4 ')THEN
                    MLRed=4
+                ELSEIF(MLReductionLib_char.EQ.'5 ')THEN
+                   MLRed=5
+                ELSEIF(MLReductionLib_char.EQ.'6 ')THEN
+                   MLRed=6
                 ELSE
                    PRINT *, 'MLReductionLib is wrong: '//
      $                  TRIM(MLReductionLib_str_save)
@@ -228,7 +238,11 @@ C     a non existing or malformed parameter file
       write(*,*) ' > HelInitStartOver          = ',HelInitStartOver
       write(*,*) ' > ZeroThres                 = ',ZeroThres
       write(*,*) ' > OSThres                   = ',OSThres
-      write(*,*) ' > WriteOutFilters           = ',WriteOutFilters      
+      write(*,*) ' > WriteOutFilters           = ',WriteOutFilters
+      write(*,*) ' > UseQPIntegrandForNinja    = ',
+     &UseQPIntegrandForNinja
+      write(*,*) ' > UseQPIntegrandForCutTools = ',
+     &UseQPIntegrandForCutTools
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -244,8 +258,8 @@ C     a non existing or malformed parameter file
       
       include "MadLoopParams.inc"
 
-      MLReductionLib(1)=1
-      MLReductionLib(2:5)=0
+      MLReductionLib(1)=6
+      MLReductionLib(2:6)=0
       IREGIMODE=2
       IREGIRECY=.TRUE.
       CTModeInit=0
@@ -266,5 +280,7 @@ C     a non existing or malformed parameter file
       ZeroThres=1.0d-9
       OSThres=1.0d-13
       ImprovePSPoint=2
+      UseQPIntegrandForCutTools=.True.
+      UseQPIntegrandForNinja=.False.
 
       end
