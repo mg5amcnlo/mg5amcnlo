@@ -1172,22 +1172,26 @@ class OneTagResults(dict):
                 linked_analysis = False
                 for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
                                        '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
-                    if os.path.basename(result).startswith('reco_'):
-                        continue
-                    linked_analysis = True
                     target    = pjoin(os.curdir,os.path.relpath(result,self.me_dir),'HTML','index.html')
                     link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]
+                    if link_name.startswith('_reco_'):
+                        continue
+                    # Also, do not put a link to the Recasting as it does not
+                    # have an HTML yet
+                    if link_name=='_Recasting':
+                        continue
+                    linked_analysis = True
                     out += """ <a href="%s">%s</a> """%(target, link_name.strip('_'))
     
                 # Also link reco results if no analysis was found
                 if not linked_analysis:
                     for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
                                        '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
-                        if not os.path.basename(result).startswith('reco_'):
-                            continue
                         target    = pjoin(os.curdir,os.path.relpath(
                                         result,self.me_dir),'HTML','index.html')
                         link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]
+                        if not link_name.startswith('_reco_'):
+                            continue
                         out += """ <a href="%s">%s</a> """%(target, link_name.strip('_'))
 
             return out % self        
