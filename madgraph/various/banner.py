@@ -2950,7 +2950,7 @@ class MadAnalysis5Card(dict):
                             continue
                         if self['reconstruction'][reco]['reco_output']=='lhe':
                             # For the reconstructed lhe output we must be in parton mode
-                            analysis_cmds = ['init_parton_mode']
+                            analysis_cmds = ['set main.mode = parton']
                         else:
                             analysis_cmds = []
                         analysis_cmds.extend(sum([get_import(rec_out) for 
