@@ -465,7 +465,7 @@ c***************************************************
       return
       end
 
-      logical function setclscales(p)
+      logical function setclscales(p, docluster)
 c**************************************************
 c     Calculate dynamic scales based on clustering
 c     Also perform xqcut and xmtc cuts
@@ -485,6 +485,7 @@ C
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
+      LOGICAL DOCLUSTER !if false do not reperform the clustering
 
 C   global variables
 C     Present process number
@@ -561,7 +562,11 @@ c      are flagged as jets)
       if(njetstore(iconfig).eq.-1)then
          chcluster=.true.
       endif
- 100  clustered = cluster(p(0,1))
+ 100  if (docluster)then
+          clustered = cluster(p(0,1))
+      else
+         clustered = .true.
+      endif
       if(.not.clustered) then
          open(unit=26,file='../../../error',status='unknown',err=999)
          write(26,*) 'Error: Clustering failed in cluster.f.'
@@ -1214,10 +1219,12 @@ c     Store pdf information for systematics studies (initial)
       endif
 
 
-      if(.not.setclscales(p)) then ! recluster to have the correct iqjets
-        rewgt = 0d0
+      if(.not.setclscales(p,.false.)) then ! assign the correct id information. keep current clustering
+         stop 1
+c        rewgt = 0d0
         return
       endif
+
 
 c     Store pdf information for systematics studies (initial)
 c     need to be done after      setclscales since that one clean the syscalc value
