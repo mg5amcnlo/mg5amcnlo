@@ -3275,9 +3275,8 @@ RESTART = %(mint_mode)s
                        'shower': ['shower'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
+                       'madanalysis5_hadron':['madanalysis5_hadron'],
                        'plot':[]}
-        
-        
 
         if name == self.run_name:        
             if reload_card:

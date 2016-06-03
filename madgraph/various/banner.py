@@ -2639,6 +2639,8 @@ class MadAnalysis5Card(dict):
         # This is just for the structure
         self['reconstruction'] = {'lhco_input':
                                         MadAnalysis5Card.empty_reconstruction()}
+        self['reconstruction']['lhco_input']['reco_output']='lhco'
+
         # Specify in which order the analysis/recasting were specified
         self['order'] = []
 
