@@ -54,6 +54,7 @@ class Testmadweight(unittest.TestCase):
             pass
 
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
         interface.onecmd('import model %s' % model)
         if isinstance(process, str):
             interface.onecmd('generate %s' % process)

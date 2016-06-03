@@ -1,63 +1,93 @@
-# Environment variables
+DEFAULT_F2PY_COMPILER=f2py
+DEFAULT_F_COMPILER=gfortran
+MACFLAG=
+DEFAULT_CPP_COMPILER=g++
+STDLIB=-lstdc++
+STDLIB_FLAG=
+#end_of_make_opts_variables
+# Rest of the makefile
 
 ifeq ($(origin FFLAGS),undefined)
-  FFLAGS= -O -w -fbounds-check -fPIC
-  #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
+FFLAGS= -O -w -fbounds-check -fPIC
+#FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
 endif
+
+
+# REMOVE MACFLAG IF NOT ON MAC OR FOR F2PY
+UNAME := $(shell uname -s)
+ifdef f2pymode
+MACFLAG=
+else
+ifneq ($(UNAME), Darwin)
+MACFLAG=
+endif
+endif
+
+
+ifeq ($(origin CXXFLAGS),undefined)
+CXXFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)
+endif
+
+ifeq ($(origin CFLAGS),undefined)
+CFLAGS= -O $(STDLIB_FLAG) $(MACFLAG)
+endif
+
+# Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
-   FC=gfortran
+FC=gfortran
 endif
 ifeq ($(origin F2PY), undefined)
-   F2PY=f2py
+F2PY=f2py
 endif
 
-
+UNAME := $(shell uname -s)
+ifeq ($(origin LDFLAGS), undefined)
+LDFLAGS=$(STDLIB) $(MACFLAG)
+endif
 
 # Options: dynamic, lhapdf
-
-UNAME := $(shell uname)
-
 # Option dynamic
 
 ifeq ($(UNAME), Darwin)
-  dylibext=dylib
+dylibext=dylib
 else
-  dylibext=so  
+dylibext=so
 endif
 
 ifdef dynamic
-  ifeq ($(UNAME), Darwin)
-    libext=dylib
-    FFLAGS+= -fno-common
-    LDFLAGS += -bundle
-    define CREATELIB
-      $(FC) -dynamiclib -undefined dynamic_lookup -o $(1) $(2)
-    endef
-  else
-    libext=so
-    FFLAGS+= -fPIC
-    LDFLAGS += -shared
-    define CREATELIB
-      $(FC) $(FFLAGS) $(LDFLAGS) -o $(1) $(2)
-    endef
-  endif
+ifeq ($(UNAME), Darwin)
+libext=dylib
+FFLAGS+= -fno-common
+LDFLAGS += -bundle
+define CREATELIB
+$(FC) -dynamiclib -undefined dynamic_lookup -o $(1) $(2)
+endef
 else
-  libext=a
-  define CREATELIB
-    $(AR) cru $(1) $(2)
-    ranlib $(1)
-  endef
+libext=so
+FFLAGS+= -fPIC
+LDFLAGS += -shared
+define CREATELIB
+$(FC) $(FFLAGS) $(LDFLAGS) -o $(1) $(2)
+endef
+endif
+else
+libext=a
+define CREATELIB
+$(AR) cru $(1) $(2)
+ranlib $(1)
+endef
 endif
 
 # Option lhapdf
 
-ifdef lhapdf
-  alfas_functions=alfas_functions_lhapdf
-  lhapdf=-lLHAPDF -lstdc++
+ifneq ($(lhapdf),)
+CXXFLAGS += $(shell $(lhapdf) --cppflags)
+alfas_functions=alfas_functions_lhapdf
+llhapdf+= -lLHAPDF
 else
-  alfas_functions=alfas_functions
-  lhapdf=
+alfas_functions=alfas_functions
+llhapdf=
 endif

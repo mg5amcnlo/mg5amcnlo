@@ -22,8 +22,7 @@ C----------------------------------------------------------------------
       integer nwgt,max_weight,nwgt_analysis
       common/cnwgt/nwgt
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight)
+      character*50 weights_info(max_weight_shower)
       common/cwgtsinfo/weights_info
       call inihist
       nwgt_analysis=nwgt
@@ -251,7 +250,7 @@ c
       etalb=getpseudorap(pplb(4),pplb(1),pplb(2),pplb(3))
 c
       ptpair=ptv
-      azi=getdelphi(ppl(1),pplb(1),ppl(2),pplb(2))
+      azi=getdelphi(ppl(1),ppl(2),pplb(1),pplb(2))
       azinorm=(pi-azi)/pi
       xmll=xmv
       detallb=etal-etalb

@@ -2982,6 +2982,14 @@ class test_aloha_creation(unittest.TestCase):
         rank_massive = routine.get_info('rank')
         self.assertEqual(rank_massive, 2)
         self.assertEqual(rank_massless, 0)
+
+        UUT1 = self.Lorentz(name = 'UUT1',
+           spins = [ -1, -1, 5 ],
+               structure = 'P(1003,2)*P(2003,1) + P(1003,1)*P(2003,2) + P(-1,2)*P(-1,2)*Metric(1003,2003)')
+        abs = create_aloha.AbstractRoutineBuilder(UUT1)
+        routine = abs.compute_routine(1, ['L2'], factorize=False)
+        rank = routine.get_info('rank')
+        self.assertEqual(rank, 2) 
    
     def test_short_aloha_FFV(self):
         """ test the FFV creation of vertex """

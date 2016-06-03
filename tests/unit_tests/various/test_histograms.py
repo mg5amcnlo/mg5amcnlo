@@ -44,25 +44,25 @@ class TestHistograms(unittest.TestCase):
         my_hist = histo_list[0]+2.0
         my_hist = my_hist-2.0
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
 
         # "Testing 'Hist1 - Hist2 + Hist2 == Hist1'"
         my_hist = histo_list[0]+histo_list[1]
         my_hist = my_hist-histo_list[1]
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
         
         #"Testing 'Hist1 * 2.0 / 2.0 == Hist1'"
         my_hist = histo_list[0]*2.0
         my_hist = my_hist/2.0
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
 
         #"Testing 'Hist1 * Hist2 / Hist2 == Hist1'"
         my_hist = histo_list[0]*histo_list[1]
         my_hist = my_hist/histo_list[1]
         self.assertTrue(abs(2.0-(my_hist.bins[0].wgts['central']/histo_list[0].bins[0].wgts['central'])-\
-        (my_hist.bins[0].wgts[(1.0,2.0)]/histo_list[0].bins[0].wgts[(1.0,2.0)]))<1.0e-14)
+        (my_hist.bins[0].wgts[('scale',1.0,2.0)]/histo_list[0].bins[0].wgts[('scale',1.0,2.0)]))<1.0e-14)
     
     def test_output_reload(self):
         """ Outputs existing HwU histograms in the gnuplot format and makes sure
@@ -89,14 +89,3 @@ class TestHistograms(unittest.TestCase):
                                              set(new_histo.bins[i].wgts.keys()))
              for label, wgt in bin.wgts.items():
                  self.assertEqual(wgt,new_histo.bins[i].wgts[label])
-        
-class IOTest_Histogram(IOTests.IOTestManager):
-    """To compare the gnuplot and HwU output of a full-fledged output."""
-    
-    @IOTests.createIOTest()
-    def testIO_gnuplot_histo_output(self):
-        """ target: HistoOut.HwU
-            target: HistoOut.gnuplot
-        """
-        histo_list = histograms.HwUList(_HwU_source)
-        histo_list.output(pjoin(self.IOpath,'HistoOut'), format = 'gnuplot')

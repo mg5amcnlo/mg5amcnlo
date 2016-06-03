@@ -7,7 +7,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and TIR.
 C     
-C     Process: g g > t t~ QED=0 QCD=2 [ virt = QCD ]
+C     Process: g g > t t~ QED=0 QCD<=2 [ virt = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -17,8 +17,7 @@ C
 C     These are constants related to the split orders
       INTEGER NSQUAREDSO
       PARAMETER (NSQUAREDSO=0)
-      INTEGER LOOPMAXCOEFS
-      PARAMETER (LOOPMAXCOEFS=35)
+      INCLUDE 'loop_max_coefs.inc'
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       LOGICAL CHECKPCONSERVATION
@@ -32,7 +31,8 @@ C
       INTEGER I_SQSO,I_LOOPGROUP,I_LIB
       INTEGER NLOOPLINE, RANK
       REAL*8 PL(0:3,NLOOPLINE)
-      REAL*8 PCT(0:3,0:NLOOPLINE-1)
+      REAL*8 PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      REAL*8 REF_P
       REAL*8 PDEN(0:3,NLOOPLINE-1)
       COMPLEX*16 M2L(NLOOPLINE)
       COMPLEX*16 M2LCT(0:NLOOPLINE-1)
@@ -43,8 +43,9 @@ C     LOCAL VARIABLES
 C     
       INTEGER I, J, K
       INTEGER NLOOPCOEFS
-      LOGICAL CTINIT, TIRINIT, GOLEMINIT
-      COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
+      LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
+     $ ,NINJAINIT
 
 C     This variable will be used to detect changes in the TIR library
 C      used so as to force the reset of the TIR filter.
@@ -64,6 +65,10 @@ C
       INTEGER CTMODE
       REAL*8 LSCALE
       COMMON/ML5_0_CT/LSCALE,CTMODE
+
+C     The variables below are just for monitoring purposes. 
+      INTEGER ID,SQSOINDEX,R
+      COMMON/ML5_0_LOOP/ID,SQSOINDEX,R
 
 C     The argument ILIB is the TIR library to be used for that
 C      specific library.
@@ -107,6 +112,7 @@ C     CONVERT THE MASSES TO BE COMPLEX
 
 C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
+        ABSPCT(I) = 0.D0
         DO J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         ENDDO
@@ -114,21 +120,27 @@ C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
         DO J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         ENDDO
       ENDDO
-      IF (CHECKPCONSERVATION) THEN
-        IF (PCT(0,0).GT.1.D-6) THEN
-          WRITE(*,*) 'energy is not conserved ',PCT(0,0)
-          STOP 'energy is not conserved'
-        ELSEIF (PCT(1,0).GT.1.D-6) THEN
-          WRITE(*,*) 'px is not conserved ',PCT(1,0)
-          STOP 'px is not conserved'
-        ELSEIF (PCT(2,0).GT.1.D-6) THEN
-          WRITE(*,*) 'py is not conserved ',PCT(2,0)
-          STOP 'py is not conserved'
-        ELSEIF (PCT(3,0).GT.1.D-6) THEN
-          WRITE(*,*) 'pz is not conserved ',PCT(3,0)
-          STOP 'pz is not conserved'
+      REF_P = MAX(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+      DO I=0,3
+        ABSPCT(I) = MAX(REF_P*1E-6, ABSPCT(I))
+      ENDDO
+
+      IF (CHECKPCONSERVATION.AND.REF_P.GT.1D-8) THEN
+        IF ((PCT(0,0)/ABSPCT(0)).GT.1.D-6) THEN
+          WRITE(*,*) 'energy is not conserved (flag: TIR)',PCT(0,0)
+          STOP 'energy is not conserved (flag: TIR)'
+        ELSEIF ((PCT(1,0)/ABSPCT(1)).GT.1.D-6) THEN
+          WRITE(*,*) 'px is not conserved (flag: TIR)',PCT(1,0)
+          STOP 'px is not conserved (flag: TIR)'
+        ELSEIF ((PCT(2,0)/ABSPCT(2)).GT.1.D-6) THEN
+          WRITE(*,*) 'py is not conserved (flag: TIR)',PCT(2,0)
+          STOP 'py is not conserved (flag: TIR)'
+        ELSEIF ((PCT(3,0)/ABSPCT(3)).GT.1.D-6) THEN
+          WRITE(*,*) 'pz is not conserved (flag: TIR)',PCT(3,0)
+          STOP 'pz is not conserved (flag: TIR)'
         ENDIF
       ENDIF
       DO I=0,3
@@ -168,7 +180,11 @@ C     IREGI
       RES(1)=NORMALIZATION*2.0D0*DBLE(RES(1))
       RES(2)=NORMALIZATION*2.0D0*DBLE(RES(2))
       RES(3)=NORMALIZATION*2.0D0*DBLE(RES(3))
-C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     IF(MLReductionLib(I_LIB).EQ.2) THEN
+C     WRITE(*,*) 'PJFry: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ELSEIF(MLReductionLib(I_LIB).EQ.3) THEN
+C     WRITE(*,*) 'Iregi: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ENDIF
       END
 
       SUBROUTINE ML5_0_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
@@ -185,7 +201,61 @@ C     WRITE(*,*) 'Loop ID',ID,' =',RES(1),RES(2),RES(3)
 
       INTEGER I,J,K
 
-      IF (CTMODE.NE.2.AND.CTMODE.NE.4) THEN
+      IF (CTMODE.NE.2.AND.CTMODE.NE.5) THEN
+        RETURN
+      ENDIF
+
+      IF (NLOOPLINE.LE.2) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+          NEW_PDEN(J,NLOOPLINE-I) = PDEN(J,I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE-1
+        DO J=0,3
+          PDEN(J,I) = NEW_PDEN(J,I)
+        ENDDO
+      ENDDO
+
+      DO I=2,NLOOPLINE
+        NEW_M2L(I)=M2L(NLOOPLINE-I+2)
+      ENDDO
+      DO I=2,NLOOPLINE
+        M2L(I)=NEW_M2L(I)
+      ENDDO
+
+
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          NEW_PL(J,I) = -PL(J,NLOOPLINE+1-I)
+        ENDDO
+      ENDDO
+      DO I=1,NLOOPLINE
+        DO J=0,3
+          PL(J,I) = NEW_PL(J,I)
+        ENDDO
+      ENDDO
+
+      END
+
+      SUBROUTINE ML5_0_MP_SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
+      IMPLICIT NONE
+
+      INTEGER CTMODE,NLOOPLINE
+
+      REAL*16 PL(0:3,NLOOPLINE)
+      REAL*16 PDEN(0:3,NLOOPLINE-1)
+      COMPLEX*32 M2L(NLOOPLINE)
+      REAL*16 NEW_PL(0:3,NLOOPLINE)
+      REAL*16 NEW_PDEN(0:3,NLOOPLINE-1)
+      COMPLEX*32 NEW_M2L(NLOOPLINE)
+
+      INTEGER I,J,K
+
+      IF (CTMODE.NE.2.AND.CTMODE.NE.5) THEN
         RETURN
       ENDIF
 
@@ -237,8 +307,9 @@ C
 C     GLOBAL VARIABLES 
 C     
       INCLUDE 'MadLoopParams.inc'
-      LOGICAL CTINIT, TIRINIT, GOLEMINIT
-      COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT
+      LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
+     $ ,NINJAINIT
 
 C     ----------
 C     BEGIN CODE
@@ -266,7 +337,7 @@ C     The initialization below is for CT v1.9.2+
       END
 
       SUBROUTINE ML5_0_CHOOSE_LOOPLIB(LIBINDEX,NLOOPLINE,RANK
-     $ ,COMPLEX_MASS,DOING_QP,I_LIB)
+     $ ,COMPLEX_MASS,LOOP_ID,DOING_QP,I_LIB)
 C     
 C     CHOOSE THE CORRECT LOOP LIB
 C     Example:
@@ -279,26 +350,42 @@ C
 C     
 C     CONSTANTS
 C     
-      INTEGER NLOOPLIB,QP_NLOOPLIB
-      PARAMETER (NLOOPLIB=4,QP_NLOOPLIB=1)
+      INTEGER NLOOPLIB
+      PARAMETER (NLOOPLIB=4)
+      INTEGER QP_NLOOPLIB
+      PARAMETER (QP_NLOOPLIB=1)
+      INTEGER NLOOPGROUPS
+      PARAMETER (NLOOPGROUPS=26)
 C     
 C     ARGUMENTS
 C     
-      INTEGER LIBINDEX,NLOOPLINE,RANK,I_LIB
+      INTEGER LIBINDEX,NLOOPLINE,RANK,I_LIB,LOOP_ID
       LOGICAL COMPLEX_MASS,DOING_QP
 C     
 C     LOCAL VARIABLES
 C     
       INTEGER I,J_LIB,LIBNUM,SELECT_LIBINDEX
       LOGICAL LPASS
+C     This list specifies what loop involve an Higgs effective vertex
+C      so that CutTools limitations can be correctly implemented
+      LOGICAL HAS_AN_HEFT_VERTEX(NLOOPGROUPS)
+      DATA (HAS_AN_HEFT_VERTEX(I),I=     1,     9) /.TRUE.,.TRUE.
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
+      DATA (HAS_AN_HEFT_VERTEX(I),I=    10,    18) /.FALSE.,.FALSE.
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
+      DATA (HAS_AN_HEFT_VERTEX(I),I=    19,    26) /.FALSE.,.FALSE.
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE.,.FALSE./
 C     
 C     GLOBAL VARIABLES
 C     
       INCLUDE 'MadLoopParams.inc'
-C     TILL NOW, ONLY CUTTOOLS PROVIDE QP
+      INCLUDE 'process_info.inc'
+C     Change the list 'LOOPLIBS_QPAVAILABLE' in loop_matrix_standalone.
+C     inc to change the list of QPTools availables
       LOGICAL QP_TOOLS_AVAILABLE
-      INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB)
+      INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
       COMMON/ML5_0_LOOP_TOOLS/QP_TOOLS_AVAILABLE,INDEX_QP_TOOLS
+
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -306,8 +393,8 @@ C     ----------
       IF(DOING_QP)THEN
 C       QP EVALUATION, ONLY CUTTOOLS
         IF(.NOT.QP_TOOLS_AVAILABLE)THEN
-          STOP 'No qp tools available, please make sure MLReductionLi'
-     $     //'b is correct'
+          STOP 'No qp tools available, please make sure MLReductionLib'
+     $     //' is correct'
         ENDIF
         J_LIB=0
         SELECT_LIBINDEX=LIBINDEX
@@ -321,14 +408,15 @@ C       QP EVALUATION, ONLY CUTTOOLS
           IF(J_LIB.EQ.0)THEN
             SELECT_LIBINDEX=SELECT_LIBINDEX+1
             IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLREDUCTIONLIB(SELECT_LIB
-     $       INDEX).EQ.0)SELECT_LIBINDEX=1
+     $INDEX).EQ.0)SELECT_LIBINDEX=1
           ENDIF
         ENDDO
         I=J_LIB
         I_LIB=SELECT_LIBINDEX
         LIBNUM=MLREDUCTIONLIB(I_LIB)
         DO
-        CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+        CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,COMPLEX_MASS
+     $   ,HAS_AN_HEFT_VERTEX(LOOP_ID),MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
         IF(LPASS)EXIT
         I=I+1
         IF(I.GT.QP_NLOOPLIB.AND.INDEX_QP_TOOLS(I).EQ.0)THEN
@@ -345,7 +433,8 @@ C       DP EVALUATION
         I_LIB=LIBINDEX
         LIBNUM=MLREDUCTIONLIB(I_LIB)
         DO
-        CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+        CALL DETECT_LOOPLIB(LIBNUM,NLOOPLINE,RANK,COMPLEX_MASS
+     $   ,HAS_AN_HEFT_VERTEX(LOOP_ID),MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
         IF(LPASS)EXIT
         I_LIB=I_LIB+1
         IF(I_LIB.GT.NLOOPLIB.OR.MLREDUCTIONLIB(I_LIB).EQ.0)THEN

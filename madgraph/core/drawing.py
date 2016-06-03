@@ -670,7 +670,7 @@ class FeynmanDiagram(object):
         assert isinstance(diagram, base_objects.Diagram), \
                            'first argument should derivate from Diagram object'
         assert isinstance(model, base_objects.Model), \
-                            'second argument should derivate from Model object'
+                            'second argument should derivate from Model object, get %s' % type(model)
         
        
         self.diagram = diagram

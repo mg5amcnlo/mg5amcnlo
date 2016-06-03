@@ -832,9 +832,12 @@ class OneTagResults(dict):
                 self.parton.append('syst')
 
             for kind in ['top','HwU','pdf','ps']:
-                if glob.glob(pjoin(path,"*.%s" % kind)):
+                if misc.glob("*.%s" % kind, path):
                     if self['run_mode'] in ['LO', 'NLO']:
                         self.parton.append('%s' % kind)
+            if exists(pjoin(path,'summary.txt')):
+                self.parton.append('summary.txt')
+                            
 
         if level in ['madanalysis5_parton','all'] and 'madanalysis5_parton' not in nolevel:
 
@@ -875,24 +878,24 @@ class OneTagResults(dict):
         if level in ['shower','all'] and 'shower' not in nolevel \
           and self['run_mode'] != 'madevent':
             # this is for hep/top/HwU files from amcatnlo
-            if glob.glob(pjoin(path,"*.hep")) + \
-               glob.glob(pjoin(path,"*.hep.gz")):
+            if misc.glob("*.hep", path) + \
+               misc.glob("*.hep.gz", path):
                 self.shower.append('hep')
 
             if 'plot' not in self.shower and \
                           exists(pjoin(html_path,"plots_shower_%s.html" % tag)):
                 self.shower.append('plot')                
-            if glob.glob(pjoin(path,"*.hepmc")) + \
-               glob.glob(pjoin(path,"*.hepmc.gz")):
+
+            if misc.glob("*.hepmc", path) + \
+               misc.glob("*.hepmc.gz", path):
                 self.shower.append('hepmc')
 
             for kind in ['top','HwU','pdf','ps']:
-                if glob.glob(pjoin(path,'*.' + kind)):
+                if misc.glob('*.' + kind, path):
                     if self['run_mode'] in ['LO', 'NLO']:
                         self.parton.append('%s' % kind)
                     else:
                         self.shower.append('%s' % kind)
-
         if level in ['pythia', 'all']:
             
             if 'plot' not in self.pythia and \
@@ -1044,7 +1047,7 @@ class OneTagResults(dict):
                 if kind in self.parton:
             # fixed order plots
                     for f in \
-                        glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)):
+                        misc.glob('*.' + kind, pjoin(self.me_dir, 'Events', self['run_name'])):
                         out += " <a href=\"%s\">%s</a> " % (f, '%s' % kind.upper())
             
             if 'ma5_html' in self.parton:
@@ -1057,10 +1060,13 @@ class OneTagResults(dict):
             if 'HwU' in self.parton:
             # fixed order plots
                 for f in \
-                  glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.HwU')):
+                  misc.glob('*.HwU', pjoin(self.me_dir, 'Events', self['run_name'])):
                     out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
                     out += " <a href=\"%s\">%s</a> " % \
                                            (f.replace('.HwU','.gnuplot'), 'GnuPlot')
+            if 'summary.txt' in self.parton:
+                out += ' <a href="./Events/%(run_name)s/summary.txt">summary</a>'
+
             #if 'rwt' in self.parton:
             #    out += ' <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematic variation</a>'
 
@@ -1172,8 +1178,8 @@ class OneTagResults(dict):
             for kind in ['hep', 'hepmc', 'top', 'HwU', 'pdf', 'ps']:
                 if kind in self.shower:
                     for f in \
-                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind)) + \
-                      glob.glob(pjoin(self.me_dir, 'Events', self['run_name'], '*.' + kind + '.gz')):
+                      misc.glob('*.' + kind, pjoin(self.me_dir, 'Events', self['run_name'])) + \
+                      misc.glob('*.%s.gz' % kind, pjoin(self.me_dir, 'Events', self['run_name'])):
                         if kind == 'HwU':
                             out += " <a href=\"%s\">%s</a> " % (f, 'HwU data')
                             out += " <a href=\"%s\">%s</a> " % (f.replace('.HwU','.gnuplot'), 'GnuPlot')

@@ -27,6 +27,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       DOUBLE COMPLEX R2_GGHB, R2_GGHT, R2_GGHHB, R2_GGHHT, GC_5, GC_30
      $ , GC_33, GC_37
 
-      COMMON/COUPLINGS/ R2_GGHB, R2_GGHT, R2_GGHHB, R2_GGHHT, GC_5
-     $ , GC_30, GC_33, GC_37
+      COMMON/COUPLINGS/ R2_GGHB, R2_GGHT, R2_GGHHB, R2_GGHHT, GC_5,
+     $  GC_30, GC_33, GC_37
 

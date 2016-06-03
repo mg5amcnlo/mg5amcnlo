@@ -120,11 +120,11 @@ class CmdExtended(common_run.CommonRunCmd):
     }
     
     debug_output = 'ME5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
 
     keyboard_stop_msg = """stopping all operation
@@ -509,7 +509,7 @@ class CheckValidForCmd(object):
         else:
             name = args[0]
             type = 'run'
-            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            banners = misc.glob('*_banner.txt', pjoin(self.me_dir,'Events', args[0]))
             if not banners:
                 raise self.InvalidCmd('No banner associates to this name.')    
             elif len(banners) == 1:
@@ -873,10 +873,11 @@ class CheckValidForCmd(object):
         elif not args[0].isdigit():
             self.help_multi_run()
             raise self.InvalidCmd("The first argument of multi_run should be a integer.")
+        #pass nb run to an integer
         nb_run = args.pop(0)
-        self.check_survey(args, cmd='multi_run')
         args.insert(0, int(nb_run))
-        
+         
+
         return run
 
     def check_refine(self, args):
@@ -1336,9 +1337,9 @@ class CheckValidForCmd(object):
                                   'systematics information needed for syscalc.')
         
     
-    def check_pgs(self, arg):
+    def check_pgs(self, arg, no_default=False):
         """Check the argument for pythia command
-        syntax: pgs [NAME] 
+        syntax is  "pgs [NAME]" 
         Note that other option are already remove at this point
         """
         
@@ -1371,7 +1372,8 @@ class CheckValidForCmd(object):
         
         if not len(arg) and \
            not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.help_pgs()
+            if not no_default:
+                self.help_pgs()
             raise self.InvalidCmd('''No file file pythia_events.hep currently available
             Please specify a valid run_name''')
         
@@ -1393,9 +1395,66 @@ class CheckValidForCmd(object):
         
         return lock
 
+    def check_delphes(self, arg):
+        """Check the argument for pythia command
+        syntax is "delphes [NAME]" 
+        Note that other option are already remove at this point
+        """
+        
+        # If not pythia-pgs path
+        if not self.options['delphes_path']:
+            logger.info('Retry to read configuration file to find delphes path')
+            self.set_configuration()
+      
+        if not self.options['delphes_path']:
+            error_msg = 'No valid Delphes path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            raise self.InvalidCmd(error_msg)  
+
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            arg.remove(tag[0])
+            tag = tag[0][6:]
+            
+                  
+        if len(arg) == 0 and not self.run_name:
+            if self.results.lastrun:
+                arg.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+        
+        if len(arg) == 1 and self.run_name == arg[0]:
+            arg.pop(0)
+        
+        if not len(arg) and \
+           not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
+            self.help_pgs()
+            raise self.InvalidCmd('''No file file pythia_events.hep currently available
+            Please specify a valid run_name''')
+        
+        lock = None                
+        if len(arg) == 1:
+            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
+            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
+                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
+                    % (self.run_name, prev_tag, 
+                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
+            else:
+                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
+                output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
+                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
+                                                    argument=['-c', input_file])
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'delphes')
+            
+        return lock               
+
     def check_display(self, args):
         """check the validity of line
-        syntax: display XXXXX
+        syntax is "display XXXXX"
         """
             
         if len(args) < 1 or args[0] not in self._display_opts:
@@ -1438,7 +1497,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             return  self.list_completion(text, data + ['--threshold='], line)
         elif args[-1].endswith(os.path.sep):
@@ -1463,7 +1522,7 @@ class CompleteForCmd(CheckValidForCmd):
         
         if len(args) > 1:
             # only options are possible
-            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = misc.glob('%s_*_banner.txt' % args[1], pjoin(self.me_dir, 'Events' , args[1]))
             tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
 
             if args[-1] != '--tag=':
@@ -1482,7 +1541,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             possibilites['Path from ./'] = comp
 
-        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list =  misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events'))
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
@@ -1703,7 +1762,7 @@ class CompleteForCmd(CheckValidForCmd):
         elif len(args) > 1:
             return self.list_completion(text, self._clean_mode + ['-f','--tag='])
         else:
-            data = glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt'))
+            data = misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             return self.list_completion(text, ['all'] + data)
          
@@ -1801,7 +1860,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -1819,7 +1878,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx], error=False) 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*', '*_pythia_events.hep.gz'))
+            data = misc.glob(pjoin('*', '*_pythia_events.hep.gz'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -1900,32 +1959,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
 
-        
-        # load the current status of the directory
-        if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
-            try:
-                self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
-            except Exception:
-                #the pickle fail -> need to recreate the library
-                model = self.find_model_name()
-                process = self.process # define in find_model_name
-                self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
-                self.results.resetall(self.me_dir)
-            else:
-                try:                                
-                    self.results.resetall(self.me_dir)
-                except Exception, error:
-                    logger.debug(error)
-                    # Maybe the format was updated -> try fresh
-                    model = self.find_model_name()
-                    process = self.process # define in find_model_name
-                    self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
-                    self.results.resetall(self.me_dir)                    
-        else:
-            model = self.find_model_name()
-            process = self.process # define in find_model_name
-            self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
-            self.results.resetall(self.me_dir)
+        self.load_results_db()        
         self.results.def_web_mode(self.web)
         
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
@@ -2100,7 +2134,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         if args[0] == 'run_name':
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+            data = misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1:] for n in data]
             
             if data:
@@ -2225,7 +2259,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             self.set_run_name(args[0], None, 'parton', True)
             args.pop(0)
-            
+
+        if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
+            # Also the single core mode is not supported for loop-induced.
+            # We therefore emulate it with multi-core mode with one core
+            logger.warning(
+"""Single-core mode not supported for loop-induced processes.
+Beware that MG5aMC now changes your runtime options to a multi-core mode with only one active core.""")
+            self.do_set('run_mode 2')
+            self.do_set('nb_core 1')
+
         if self.run_card['gridpack'] in self.true:        
             # Running gridpack warmup
             gridpack_opts=[('accuracy', 0.01),
@@ -2293,7 +2336,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
                     orig_name = self.run_name
                     for card in param_card_iterator:
                         card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
-                        self.exec_cmd("generate_events -f ",precmd=True, postcmd=True,errorhandling=False)
+                        next_name = param_card_iterator.get_next_name(self.run_name)
+                        self.exec_cmd("generate_events -f %s" % next_name,
+                                      precmd=True, postcmd=True,errorhandling=False)
                         param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
                     param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                     name = misc.get_scan_name(orig_name, self.run_name)
@@ -2321,8 +2366,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('treatcards loop --no_MadLoopInit')
 
         if options['refresh']:
-            for filter in glob.glob(pjoin(
-                   self.me_dir,'SubProcesses','MadLoop5_resources','*Filter*')):
+            for filter in misc.glob('*Filter*', 
+                       pjoin(self.me_dir,'SubProcesses','MadLoop5_resources')):
                 logger.debug("Resetting filter '%s'."%os.path.basename(filter))
                 os.remove(filter)
 
@@ -2608,8 +2653,9 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if nb_run == 1:
             logger.warn("'multi_run 1' command is not optimal. Think of using generate_events instead")
         self.ask_run_configuration(mode)
-        main_name = self.run_name
 
+        self.check_survey(args, cmd='multi_run')
+        main_name = self.run_name
         # check if the param_card requires a scan over parameter.
         path=pjoin(self.me_dir, 'Cards', 'param_card.dat')
         self.check_param_card(path, run=False)
@@ -2822,19 +2868,21 @@ Beware that this can be dangerous for local multicore runs.""")
                 run_card = self.run_card
             if run_card['nhel'] == 0:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
-                            self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    (self.MadLoopparam.get('MLReductionLib').startswith('1') or
+                     self.MadLoopparam.get('MLReductionLib').startswith('6')):
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|3|1', changeifuserset=False)
+                self.MadLoopparam.set('MLReductionLib','2|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
-                    not self.MadLoopparam.get('MLReductionLib').startswith('1'):
+                    not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
+                         self.MadLoopparam.get('MLReductionLib').startswith('6')):
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','1|2|3|4', changeifuserset=False)
+                self.MadLoopparam.set('MLReductionLib','6|1|2', ifnotdefault=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
@@ -3038,7 +3086,7 @@ Beware that this can be dangerous for local multicore runs.""")
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses', subdir)
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+            for match in misc.glob('*ajob*', Pdir):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(match)
 
@@ -3083,7 +3131,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 if os.path.exists(pjoin(Pdir, 'ajob1')):
                     self.compile(['madevent'], cwd=Pdir)
                     
-                    alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                    alljobs = misc.glob('ajob*', Pdir)
                     
                     #remove associated results.dat (ensure to not mix with all data)
                     Gre = re.compile("\s*j=(G[\d\.\w]+)")
@@ -3262,6 +3310,7 @@ Beware that this can be dangerous for local multicore runs.""")
             
             self.results.add_detail('nb_event', nb_event)
         
+        self.to_store.append('event')
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
@@ -3954,6 +4003,13 @@ You can follow PY8 run with the following command (in a separate terminal):
             pass        
         
         ## LAUNCHING PYTHIA
+        # check that LHAPATH is define.
+        if not re.search(r'^\s*LHAPATH=%s/PDFsets'  % pythia_src,
+                          open(pjoin(self.me_dir,'Cards','pythia_card.dat')).read(), 
+                          re.M):
+            f = open(pjoin(self.me_dir,'Cards','pythia_card.dat'),'a')
+            f.write('\n     LHAPATH=%s/PDFsets' % pythia_src)
+            f.close()
         tag = self.run_tag
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
         self.cluster.launch_and_wait('../bin/internal/run_pythia', 
@@ -4034,16 +4090,17 @@ You can follow PY8 run with the following command (in a separate terminal):
             except SysCalcError, error:
                 logger.error(str(error))
             else:
-                # Store syst.dat
-                misc.gzip(pjoin(self.me_dir,'Events', 'syst.dat'),
-                          stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
-                         
-                # Store syscalc.dat
-                if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
-                    filename = pjoin(self.me_dir, 'Events' ,self.run_name,
-                                              '%s_syscalc.dat' % self.run_tag)
-                    misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
-                              stdout = "%s.gz" % filename)
+                if os.path.exists(pjoin(self.me_dir,'Events', 'syst.dat')):
+                    # Store syst.dat
+                    misc.gzip(pjoin(self.me_dir,'Events', 'syst.dat'),
+                              stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_syst.dat.gz'))
+                             
+                    # Store syscalc.dat
+                    if os.path.exists(pjoin(self.me_dir, 'Events', 'syscalc.dat')):
+                        filename = pjoin(self.me_dir, 'Events' ,self.run_name,
+                                                  '%s_syscalc.dat' % self.run_tag)
+                        misc.gzip(pjoin(self.me_dir, 'Events','syscalc.dat'),
+                                  stdout = "%s.gz" % filename)
 
         # Plot for pythia
         self.create_plot('Pythia')
@@ -4074,7 +4131,7 @@ You can follow PY8 run with the following command (in a separate terminal):
             if os.path.exists(pjoin(self.me_dir, 'Events', 'all')):
                 logger.warning('A run with name all exists. So we will not supress all processes.')
             else:
-                for match in glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt')):
+                for match in misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events')):
                     run = match.rsplit(os.path.sep,2)[1]
                     if self.force:
                         args.append('-f')
@@ -4099,8 +4156,8 @@ You can follow PY8 run with the following command (in a separate terminal):
 
         # Found the file to delete
         
-        to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
-        to_delete += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
+        to_delete = misc.glob('*', pjoin(self.me_dir, 'Events', run))
+        to_delete += misc.glob('*', pjoin(self.me_dir, 'HTML', run))
         # forbid the banner to be removed
         to_delete = [os.path.basename(f) for f in to_delete if 'banner' not in f]
         if tag:
@@ -4164,9 +4221,9 @@ You can follow PY8 run with the following command (in a separate terminal):
             except Exception:
                 pass
             else:
-                to_delete = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
-                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
-                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
+                to_delete = misc.glob('%s*' % run, pjoin(self.me_dir, 'SubProcesses'))
+                to_delete += misc.glob(pjoin('*','%s*' % run), pjoin(self.me_dir, 'SubProcesses'))
+                to_delete += misc.glob(pjoin('*','*','%s*' % run), pjoin(self.me_dir, 'SubProcesses'))
 
                 if self.force or len(to_delete) == 0:
                     ans = 'y'
@@ -4180,7 +4237,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                         os.remove(file2rm)
                         
         if 'banner' in mode:
-            to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+            to_delete = misc.glob('*', pjoin(self.me_dir, 'Events', run))
             if tag:
                 # remove banner
                 try:
@@ -4297,7 +4354,6 @@ You can follow PY8 run with the following command (in a separate terminal):
         
         self.ask_edit_cards(['run_card'], args)
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-                
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
@@ -4348,8 +4404,12 @@ You can follow PY8 run with the following command (in a separate terminal):
         self.update_status('storing files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
-            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')):
+            if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
+               os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe')):
+                logger.info("gzipping output file: unweighted_events.lhe")
                 misc.gzip(pjoin(self.me_dir,'Events',self.run_name,"unweighted_events.lhe"))
+            if os.path.exists(pjoin(self.me_dir,'Events','reweight.lhe')):
+                os.remove(pjoin(self.me_dir,'Events', 'reweight.lhe'))
         
         if 'pythia' in self.to_store:
             self.update_status('Storing Pythia files of previous run', level='pythia', error=True)
@@ -4402,8 +4462,9 @@ You can follow PY8 run with the following command (in a separate terminal):
 
 
         elif mode in [1,2]:
+            exename = os.path.basename(exe)
             # For condor cluster, create the input/output files
-            if 'ajob' in exe: 
+            if 'ajob' in exename: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
@@ -4447,7 +4508,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
-            elif 'survey' in exe:
+            elif 'survey' in exename:
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
@@ -4499,7 +4560,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,
                              required_output=required_output, **opt)
-            elif "refine_splitted.sh" in exe:
+            elif "refine_splitted.sh" in exename:
                 input_files = ['madevent','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
@@ -4527,7 +4588,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 
             
             else:
-                self.cluster.submit(exe, stdout=stdout, cwd=cwd, **opt)
+                self.cluster.submit(exe, argument=argument, stdout=stdout, cwd=cwd, **opt)
             
 
     ############################################################################
@@ -4588,6 +4649,9 @@ You can follow PY8 run with the following command (in a separate terminal):
 
         # Basic check
         assert os.path.exists(pjoin(self.me_dir,'SubProcesses'))
+
+        # environmental variables to be included in make_opts
+        self.make_opts_var = {}
         
         #see when the last file was modified
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
@@ -4619,17 +4683,16 @@ You can follow PY8 run with the following command (in a separate terminal):
         # lhapdf
         misc.compile(['clean4pdf'], cwd = pjoin(self.me_dir, 'Source'))
         
-        # set environment variable for lhapdf.
+        # set  lhapdf.
         if self.run_card['pdlabel'] == "lhapdf":
-            os.environ['lhapdf'] = 'True'
+            self.make_opts_var['lhapdf'] = 'True'
             self.link_lhapdf(pjoin(self.me_dir,'lib'))
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
             lhaid_list = [int(self.run_card['lhaid'])]
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
-        elif 'lhapdf' in os.environ.keys():
-            del os.environ['lhapdf']
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
+            self.make_opts_var['lhapdf'] = ""
             
         # set random number
         if self.run_card['iseed'] != 0:
@@ -4650,6 +4713,9 @@ You can follow PY8 run with the following command (in a separate terminal):
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
             self.treat_ckkw_matching()
+
+        # add the make_opts_var to make_opts
+        self.update_make_opts()
             
         # create param_card.inc and run_card.inc
         self.do_treatcards('')
@@ -4868,7 +4934,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         return CmdExtended.do_quit(self, *args, **opts)
         
     ############################################################################
-    def treat_ckkw_matching(self):
+    def treat_CKKW_matching(self):
         """check for ckkw"""
         
         lpp1 = self.run_card['lpp1']
@@ -4950,6 +5016,16 @@ You can follow PY8 run with the following command (in a separate terminal):
             
         
         logger.info('running syscalc on mode %s' % mode)        
+
+        # Check that all pdfset are correctly installed
+        lhaid = [self.run_card.get_lhapdf_id()]
+        sys_pdf = self.run_card['sys_pdf'].split('&&')
+        lhaid += [l.split()[0] for l in sys_pdf]
+        pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        # Copy all the relevant PDF sets
+        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+        
+        
         scdir = self.options['syscalc_path']
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
@@ -4960,6 +5036,9 @@ You can follow PY8 run with the following command (in a separate terminal):
             self.run_card['sys_pdf'] = ''
         if self.run_card['sys_alpsfact'].lower() in ['', 'f', 'false', 'none','.false.']:
             self.run_card['sys_alpsfact'] = ''
+
+
+
         
         # check if the scalecorrelation parameter is define:
         if not 'sys_scalecorrelation' in self.run_card:
@@ -5014,10 +5093,11 @@ You can follow PY8 run with the following command (in a separate terminal):
         except OSError, error:
             logger.error('fail to run syscalc: %s. Please check that SysCalc is correctly installed.' % error)
         else:
-            if mode == 'parton' and os.path.exists(output):
-                files.mv(output, event_path)
-            else:
+            if not os.path.exists(output):
                 logger.warning('SysCalc Failed. Please read the associate log to see the reason. Did you install the associate PDF set?')
+            elif mode == 'parton':
+                files.mv(output, event_path)
+                
         self.update_status('End syscalc for %s level' % mode, level = mode.lower(),
                                                                  makehtml=False)
         
@@ -5593,7 +5673,7 @@ class GridPackCmd(MadEventCmd):
                            
             logger.info('    %s ' % subdir)
             # clean previous run
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+            for match in misc.glob('*ajob*', Pdir):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
@@ -5605,7 +5685,7 @@ class GridPackCmd(MadEventCmd):
                                     cwd=Pdir)
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                alljobs = misc.glob('ajob*', Pdir)
                 nb_tot = len(alljobs)            
                 self.total_jobs += nb_tot
                 for i, job in enumerate(alljobs):
@@ -5719,7 +5799,7 @@ class MadLoopInitializer(object):
                                    not os.path.basename(dir_path)=='check_sa.f':
             file_path = pjoin(dir_path,'check_sa.f')
             if not os.path.isfile(file_path):
-                directories = [d for d in glob.glob(pjoin(dir_path,'P*_*')) \
+                directories = [d for d in misc.glob('P*_*', dir_path) \
                          if (re.search(r'.*P\d+_\w*$', d) and os.path.isdir(d))]
                 if len(directories)>0:
                      file_path = pjoin(directories[0],'check_sa.f')
@@ -5783,8 +5863,8 @@ class MadLoopInitializer(object):
             SubProc_dir = os.path.abspath(pjoin(run_dir,os.pardir))
             
         if run_dir is None:
-            directories =[ dir for dir in glob.glob(pjoin(SubProc_dir,\
-                                             'P[0-9]*')) if os.path.isdir(dir) ]
+            directories =[ dir for dir in misc.glob('P[0-9]*', SubProc_dir)
+                                                         if os.path.isdir(dir) ]
             if directories:
                 run_dir = directories[0]
             else:
@@ -5819,7 +5899,7 @@ class MadLoopInitializer(object):
                 my_req_files.remove('LoopFilter.dat')
             except ValueError:
                 pass
-        
+
         if MLCard['HelicityFilterLevel']==0:
             try:
                 my_req_files.remove('HelFilter.dat')
@@ -6030,4 +6110,112 @@ class MadLoopInitializer(object):
         logger.info('MadLoop initialization finished.')        
 
 AskforEditCard = common_run.AskforEditCard
+
+
+if '__main__' == __name__:
+    # Launch the interface without any check if one code is already running.
+    # This can ONLY run a single command !!
+    import sys
+    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
+               'Please upgrate your version of python.')
+
+    import os
+    import optparse
+    # Get the directory of the script real path (bin)                                                                                                                                                           
+    # and add it to the current PYTHONPATH                                                                                                                                                                      
+    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    sys.path.insert(0, root_path)
+
+    class MyOptParser(optparse.OptionParser):    
+        class InvalidOption(Exception): pass
+        def error(self, msg=''):
+            raise MyOptParser.InvalidOption(msg)
+    # Write out nice usage message if called with -h or --help                                                                                                                                                  
+    usage = "usage: %prog [options] [FILE] "
+    parser = MyOptParser(usage=usage)
+    parser.add_option("-l", "--logging", default='INFO',
+                      help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+    parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                     help='force toce to be in secure mode')
+    parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                     help='force to launch debug mode')
+    parser_error = ''
+    done = False
+    
+    for i in range(len(sys.argv)-1):
+        try:
+            (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
+            done = True
+        except MyOptParser.InvalidOption, error:
+            pass
+        else:
+            args += sys.argv[len(sys.argv)-i:]
+    if not done:
+        # raise correct error:                                                                                                                                                                                  
+        try:
+            (options, args) = parser.parse_args()
+        except MyOptParser.InvalidOption, error:
+            print error
+            sys.exit(2)
+
+    if len(args) == 0:
+        args = ''
+
+    import subprocess
+    import logging
+    import logging.config
+    # Set logging level according to the logging level given by options                                                                                                                                         
+    #logging.basicConfig(level=vars(logging)[options.logging])                                                                                                                                                  
+    import internal.coloring_logging
+    try:
+        if __debug__ and options.logging == 'INFO':
+            options.logging = 'DEBUG'
+        if options.logging.isdigit():
+            level = int(options.logging)
+        else:
+            level = eval('logging.' + options.logging)
+        print os.path.join(root_path, 'internal', 'me5_logging.conf')
+        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        logging.root.setLevel(level)
+        logging.getLogger('madgraph').setLevel(level)
+    except:
+        raise
+        pass
+
+    # Call the cmd interface main loop                                                                                                                                                                          
+    try:
+        if args:
+            # a single command is provided
+            if '--web' in args:
+                i = args.index('--web') 
+                args.pop(i)                                                                                                                                                                     
+                cmd_line = MadEventCmd(force_run=True)
+            else:
+                cmd_line = MadEventCmdShell(force_run=True)
+            if not hasattr(cmd_line, 'do_%s' % args[0]):
+                if parser_error:
+                    print parser_error
+                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                else:
+                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+            else:
+                cmd_line.use_rawinput = False
+                cmd_line.run_cmd(' '.join(args))
+                cmd_line.run_cmd('quit')
+
+    except KeyboardInterrupt:
+        print 'quit on KeyboardInterrupt'
+        pass
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+
 

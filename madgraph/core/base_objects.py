@@ -2669,6 +2669,22 @@ class DiagramList(PhysicsObjectList):
                     break
         return new_diag_list
 
+    def filter_constrained_orders(self, order, value, operator):
+        """ This function modifies the current object and remove the diagram
+        which do not obey the condition """ 
+        
+        new = []
+        for tested_diag in self:
+            if operator == '==':
+                if tested_diag['orders'][order] == value:
+                    new.append(tested_diag)
+            elif operator == '>':
+                if tested_diag['orders'][order] > value:
+                    new.append(tested_diag)                
+        self[:] = new
+        return self
+
+
     def get_min_order(self,order):
         """ Return the order of the diagram in the list with the mimimum coupling
         order for the coupling specified """
@@ -2741,6 +2757,8 @@ class Process(PhysicsObject):
         # in the user input. This choice is stored in the dictionary below.
         # Notice that the upper bound is the default
         self['sqorders_types'] = {}
+        # other type of constraint at amplitude level
+        self['constrained_orders'] = {} # {QED: (4,'>')}
         self['has_born'] = True
         # The NLO_mode is always None for a tree-level process and can be
         # 'all', 'real', 'virt' for a loop process.
@@ -2766,6 +2784,11 @@ class Process(PhysicsObject):
 
         if name in ['orders', 'overall_orders','squared_orders']:
             Interaction.filter(Interaction(), 'orders', value)
+
+        if name == 'constrained_orders':
+            if not isinstance(value, dict):
+                raise self.PhysicsObjectError, \
+                        "%s is not a valid dictionary" % str(value)            
 
         if name == 'sqorders_types':
             if not isinstance(value, dict):
@@ -2917,19 +2940,23 @@ class Process(PhysicsObject):
         """Return process property names as a nicely sorted list."""
 
         return ['legs', 'orders', 'overall_orders', 'squared_orders',
+                'constrained_orders',
                 'model', 'id', 'required_s_channels', 
                 'forbidden_onsh_s_channels', 'forbidden_s_channels',
                 'forbidden_particles', 'is_decay_chain', 'decay_chains',
                 'legs_with_decays', 'perturbation_couplings', 'has_born', 
                 'NLO_mode','split_orders']
 
-    def nice_string(self, indent=0, print_weighted = True):
+    def nice_string(self, indent=0, print_weighted = True, prefix=True):
         """Returns a nicely formated string about current process
         content. Since the WEIGHTED order is automatically set and added to 
         the user-defined list of orders, it can be ommitted for some info
         displays."""
 
-        mystr = " " * indent + "Process: "
+        if prefix:
+            mystr = " " * indent + "Process: "
+        else:
+            mystr = ""
         prevleg = None
         for leg in self['legs']:
             mypart = self['model'].get('particle_dict')[leg['id']]
@@ -2952,9 +2979,33 @@ class Process(PhysicsObject):
 
         # Add orders
         if self['orders']:
-            mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
-              for key in self['orders'] if (print_weighted or key!='WEIGHTED') \
-              and not key in self['squared_orders'].keys()]) + ' '
+            to_add = []
+            for key in self['orders']:
+                if not print_weighted and key == 'WEIGHTED':
+                    continue
+                value = int(self['orders'][key])
+                if key in self['squared_orders']:
+                    if self.get_squared_order_type(key) in ['<=', '==', '='] and \
+                        self['squared_orders'][key] == value:
+                        continue 
+                    if self.get_squared_order_type(key) in ['>'] and value == 99:
+                        continue
+                if key in self['constrained_orders']:
+                    if value == self['constrained_orders'][key][0] and\
+                       self['constrained_orders'][key][1] in ['=', '<=', '==']:
+                        continue
+                if value == 0:
+                    to_add.append('%s=0' % key)
+                else:
+                    to_add.append('%s<=%s' % (key,value))
+                 
+            if to_add:
+                mystr = mystr + " ".join(to_add) + ' '
+
+        if self['constrained_orders']:
+            mystr = mystr + " ".join('%s%s%d' % (key, type, value) for 
+                                     (key,(value,type)) 
+                                         in self['constrained_orders'].items())  + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -2970,10 +3021,20 @@ class Process(PhysicsObject):
 
         # Add squared orders
         if self['squared_orders']:
-            mystr = mystr + " ".join([key + '^2%s%d'%\
-                (self.get_squared_order_type(key),self['squared_orders'][key]) \
-              for key in self['squared_orders'].keys() \
-                                    if print_weighted or key!='WEIGHTED']) + ' '
+            to_add = []
+            for key in self['squared_orders'].keys():
+                if not print_weighted and key == 'WEIGHTED':
+                    continue
+                if key in self['constrained_orders']:
+                    if self['constrained_orders'][key][0] == self['squared_orders'][key]/2 and \
+                       self['constrained_orders'][key][1] == self.get_squared_order_type(key):
+                        continue
+                to_add.append(key + '^2%s%d'%\
+                (self.get_squared_order_type(key),self['squared_orders'][key]))
+            
+            if to_add:
+                mystr = mystr + " ".join(to_add) + ' '
+            
 
         # Add forbidden s-channels
         if self['forbidden_onsh_s_channels']:
@@ -3591,11 +3652,42 @@ class ProcessDefinition(Process):
 
         return max_order_now, particles, hierarchy
 
-    def nice_string(self, indent=0, print_weighted=False):
+    def __iter__(self):
+        """basic way to loop over all the process definition. 
+           not used by MG which used some smarter version (use by ML)"""
+        
+        isids = [leg['ids'] for leg in self['legs'] \
+                 if leg['state'] == False]
+        fsids = [leg['ids'] for leg in self['legs'] \
+                 if leg['state'] == True]
+
+        red_isidlist = []
+        # Generate all combinations for the initial state
+        for prod in itertools.product(*isids):
+            islegs = [Leg({'id':id, 'state': False}) for id in prod]  
+            if tuple(sorted(prod)) in red_isidlist:
+                    continue        
+            red_isidlist.append(tuple(sorted(prod)))      
+            red_fsidlist = []
+            for prod in itertools.product(*fsids):
+                # Remove double counting between final states
+                if tuple(sorted(prod)) in red_fsidlist:
+                    continue        
+                red_fsidlist.append(tuple(sorted(prod)))
+                leg_list = [copy.copy(leg) for leg in islegs]
+                leg_list.extend([Leg({'id':id, 'state': True}) for id in prod])
+                legs = LegList(leg_list)
+                process = self.get_process_with_legs(legs)
+                yield process
+
+    def nice_string(self, indent=0, print_weighted=False, prefix=True):
         """Returns a nicely formated string about current process
         content"""
 
-        mystr = " " * indent + "Process: "
+        if prefix:
+            mystr = " " * indent + "Process: "
+        else:
+            mystr=""
         prevleg = None
         for leg in self['legs']:
             myparts = \
@@ -3642,6 +3734,11 @@ class ProcessDefinition(Process):
         if self['orders']:
             mystr = mystr + " ".join([key + '=' + repr(self['orders'][key]) \
                        for key in sorted(self['orders'])]) + ' '
+
+        if self['constrained_orders']:
+            mystr = mystr + " ".join('%s%s%d' % (key, operator, value) for 
+                                     (key,(value, operator)) 
+                                   in self['constrained_orders'].items()) + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -3691,6 +3788,7 @@ class ProcessDefinition(Process):
             'orders': self.get('orders'),
             'sqorders_types': self.get('sqorders_types'),
             'squared_orders': self.get('squared_orders'),
+            'constrained_orders': self.get('constrained_orders'),
             'has_born': self.get('has_born'),
             'required_s_channels': self.get('required_s_channels'),
             'forbidden_onsh_s_channels': self.get('forbidden_onsh_s_channels'),            

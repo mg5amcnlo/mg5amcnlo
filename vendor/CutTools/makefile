@@ -17,6 +17,10 @@ endif
 FFLAGS += -fPIC -fno-automatic -O2 -funroll-all-loops
 #FFLAGS += -fno-automatic -Ofast -funroll-all-loops  
 
+# make sure no bound checks is used as it crashes avholo because of string message too long
+tmp := $(FFLAGS)
+FFLAGS = $(tmp:-fbounds-check=)
+
 EXE = 
 BLD = includects
 

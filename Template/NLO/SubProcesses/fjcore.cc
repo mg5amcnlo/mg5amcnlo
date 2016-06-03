@@ -1,4 +1,4 @@
-// fjcore -- extracted from FastJet v3.0.5 (http://fastjet.fr)
+// fjcore -- extracted from FastJet v3.1.3 (http://fastjet.fr)
 //
 // fjcore constitutes a digest of the main FastJet functionality.
 // The files fjcore.hh and fjcore.cc are meant to provide easy access to these 
@@ -19,7 +19,7 @@
 //
 //   - access to all native pp and ee algorithms, kt, anti-kt, C/A.
 //     For C/A, the NlnN method is available, while anti-kt and kt
-//     are limited to the N^2 one (still the fastest for N < 20k particles)
+//     are limited to the N^2 one (still the fastest for N < 100k particles)
 //   - access to selectors, for implementing cuts and selections
 //   - access to all functionalities related to pseudojets (e.g. a jet's
 //     structure or user-defined information)
@@ -42,13 +42,13 @@
 // Like FastJet, fjcore is released under the terms of the GNU General Public
 // License version 2 (GPLv2). If you use this code as part of work towards a
 // scientific publication, whether directly or contained within another program
-// (e.g. Delphes, SpartyJet, Rivet, LHC collaboration software frameworks, 
+// (e.g. Delphes, MadGraph, SpartyJet, Rivet, LHC collaboration software frameworks, 
 // etc.), you should include a citation to
 // 
 //   EPJC72(2012)1896 [arXiv:1111.6097] (FastJet User Manual)
 //   and, optionally, Phys.Lett.B641 (2006) 57 [arXiv:hep-ph/0512210]
 //
-// Copyright (c) 2005-2013, Matteo Cacciari, Gavin P. Salam and Gregory Soyez
+// Copyright (c) 2005-2014, Matteo Cacciari, Gavin P. Salam and Gregory Soyez
 //
 //----------------------------------------------------------------------
 // This file is part of FastJet.
@@ -171,25 +171,20 @@ public:
     if (second >= twopi) second -= twopi;
   }
 };
-class DnnError {
+class DnnError : public Error {
 public:
-  DnnError() {;};
-  DnnError(const std::string & message_in) {
-    _message = message_in; std::cerr << message_in << std::endl;};
-  std::string message() const {return _message;};
-private:
-  std::string _message;
+  DnnError(const std::string & message_in) : Error(message_in) {}
 };
 class DynamicNearestNeighbours {
 public:
-  virtual int NearestNeighbourIndex(const int & ii) const = 0;
-  virtual double NearestNeighbourDistance(const int & ii) const = 0;
-  virtual bool Valid(const int & index) const = 0;
+  virtual int NearestNeighbourIndex(const int ii) const = 0;
+  virtual double NearestNeighbourDistance(const int ii) const = 0;
+  virtual bool Valid(const int index) const = 0;
   virtual void RemoveAndAddPoints(const std::vector<int> & indices_to_remove,
 			  const std::vector<EtaPhi> & points_to_add,
 			  std::vector<int> & indices_added,
 			  std::vector<int> & indices_of_updated_neighbours) = 0;
-  inline void RemovePoint (const int & index,
+  inline void RemovePoint (const int index,
 			   std::vector<int> & indices_of_updated_neighbours) {
     std::vector<int> indices_added;
     std::vector<EtaPhi> points_to_add;
@@ -199,7 +194,7 @@ public:
 		       indices_of_updated_neighbours
 		       );};
   inline void RemoveCombinedAddCombination(
-			const int & index1, const int & index2,
+			const int index1, const int index2,
 			const EtaPhi & newpoint,
 			int & index3,
 			std::vector<int> & indices_of_updated_neighbours) {
@@ -290,7 +285,7 @@ template<class T> void SearchTree<T>::Node::reset_parents_link_to_me(typename Se
 }
 template<class T> class SearchTree<T>::circulator{
 public:
-  template<class U> friend class SearchTree<U>::const_circulator;
+  friend class SearchTree<T>::const_circulator;
   friend class SearchTree<T>;
   circulator() : _node(NULL) {}
   circulator(Node * node) : _node(node) {}
@@ -644,13 +639,15 @@ FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
 class MinHeap {
 public:
   MinHeap (const std::vector<double> & values, unsigned int max_size) :
-    _heap(max_size) {_initialise(values);};
+    _heap(max_size) {initialise(values);}
+  MinHeap (unsigned int max_size) : _heap(max_size) {}
   MinHeap (const std::vector<double> & values) :
-    _heap(values.size()) {_initialise(values);};
+    _heap(values.size()) {initialise(values);}
+  void initialise(const std::vector<double> & values);
   inline unsigned int minloc() const {
-    return (_heap[0].minloc) - &(_heap[0]);};
-  inline double       minval() const {return _heap[0].minloc->value;};
-  inline double operator[](int i) const {return _heap[i].value;};
+    return (_heap[0].minloc) - &(_heap[0]);}
+  inline double       minval() const {return _heap[0].minloc->value;}
+  inline double operator[](int i) const {return _heap[i].value;}
   void remove(unsigned int loc) {
     update(loc,std::numeric_limits<double>::max());};
   void update(unsigned int, double);
@@ -660,7 +657,6 @@ private:
     ValueLoc * minloc;
   };
   std::vector<ValueLoc> _heap;
-  void _initialise(const std::vector<double> & values);
 };
 FJCORE_END_NAMESPACE
 #endif // __FJCORE_MINHEAP__HH__
@@ -818,12 +814,349 @@ inline unsigned int ClosestPair2D::size() {
 }
 FJCORE_END_NAMESPACE
 #endif // __FJCORE_CLOSESTPAIR2D__HH__
+#ifndef __FJCORE_LAZYTILING9ALT_HH__
+#define __FJCORE_LAZYTILING9ALT_HH__
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+const double tile_edge_security_margin=1.0e-7;
+class TiledJet {
+public:
+  double     eta, phi, kt2, NN_dist;
+  TiledJet * NN, *previous, * next; 
+  int        _jets_index, tile_index;
+  bool _minheap_update_needed;
+  inline void label_minheap_update_needed() {_minheap_update_needed = true;}
+  inline void label_minheap_update_done()   {_minheap_update_needed = false;}
+  inline bool minheap_update_needed() const {return _minheap_update_needed;}
+};
+const int n_tile_neighbours = 9;
+class Tile {
+public:
+  typedef double (Tile::*DistToTileFn)(const TiledJet*) const;
+  typedef std::pair<Tile *, DistToTileFn> TileFnPair;
+  TileFnPair begin_tiles[n_tile_neighbours]; 
+  TileFnPair *  surrounding_tiles; 
+  TileFnPair *  RH_tiles;  
+  TileFnPair *  end_tiles; 
+  TiledJet * head;    
+  bool     tagged;    
+  bool     use_periodic_delta_phi;
+  double max_NN_dist;
+  double eta_min, eta_max, phi_min, phi_max;
+  double distance_to_centre(const TiledJet *) const {return 0;}
+  double distance_to_left(const TiledJet * jet) const {
+    double deta = jet->eta - eta_min;
+    return deta*deta;
+  }
+  double distance_to_right(const TiledJet * jet) const {
+    double deta = jet->eta - eta_max;
+    return deta*deta;
+  }
+  double distance_to_bottom(const TiledJet * jet) const {
+    double dphi = jet->phi - phi_min;
+    return dphi*dphi;
+  }
+  double distance_to_top(const TiledJet * jet) const {
+    double dphi = jet->phi - phi_max;
+    return dphi*dphi;
+  }
+  double distance_to_left_top(const TiledJet * jet) const {
+    double deta = jet->eta - eta_min;
+    double dphi = jet->phi - phi_max;
+    return deta*deta + dphi*dphi;
+  }
+  double distance_to_left_bottom(const TiledJet * jet) const {
+    double deta = jet->eta - eta_min;
+    double dphi = jet->phi - phi_min;
+    return deta*deta + dphi*dphi;
+  }
+  double distance_to_right_top(const TiledJet * jet) const {
+    double deta = jet->eta - eta_max;
+    double dphi = jet->phi - phi_max;
+    return deta*deta + dphi*dphi;
+  }
+  double distance_to_right_bottom(const TiledJet * jet) const {
+    double deta = jet->eta - eta_max;
+    double dphi = jet->phi - phi_min;
+    return deta*deta + dphi*dphi;
+  }
+};
+class LazyTiling9Alt {
+public:
+  LazyTiling9Alt(ClusterSequence & cs);
+  void run();
+protected:
+  ClusterSequence & _cs;
+  const std::vector<PseudoJet> & _jets;
+  std::vector<Tile> _tiles;
+  double _Rparam, _R2, _invR2;
+  double _tiles_eta_min, _tiles_eta_max;
+  double _tile_size_eta, _tile_size_phi;
+  double _tile_half_size_eta, _tile_half_size_phi;
+  int    _n_tiles_phi,_tiles_ieta_min,_tiles_ieta_max;
+  std::vector<TiledJet *> _jets_for_minheap;
+  void _initialise_tiles();
+  inline int _tile_index (int ieta, int iphi) const {
+    return (ieta-_tiles_ieta_min)*_n_tiles_phi
+                  + (iphi+_n_tiles_phi) % _n_tiles_phi;
+  }
+  void  _bj_remove_from_tiles(TiledJet * const jet);
+  int _tile_index(const double eta, const double phi) const;
+  void _tj_set_jetinfo(TiledJet * const jet, const int _jets_index);
+  void _print_tiles(TiledJet * briefjets ) const;
+  void _add_neighbours_to_tile_union(const int tile_index, 
+		 std::vector<int> & tile_union, int & n_near_tiles) const;
+  void _add_untagged_neighbours_to_tile_union(const int tile_index, 
+		 std::vector<int> & tile_union, int & n_near_tiles);
+  void _add_untagged_neighbours_to_tile_union_using_max_info(const TiledJet * const jet, 
+		 std::vector<int> & tile_union, int & n_near_tiles);
+  void _update_jetX_jetI_NN(TiledJet * jetX, TiledJet * jetI, std::vector<TiledJet *> & jets_for_minheap);
+  void _set_NN(TiledJet * jetI, std::vector<TiledJet *> & jets_for_minheap);
+  template <class J> double _bj_diJ(const J * const jet) const {
+    double kt2 = jet->kt2;
+    if (jet->NN != NULL) {if (jet->NN->kt2 < kt2) {kt2 = jet->NN->kt2;}}
+    return jet->NN_dist * kt2;
+  }
+  template <class J> inline void _bj_set_jetinfo(
+                            J * const jetA, const int _jets_index) const {
+    jetA->eta  = _jets[_jets_index].rap();
+    jetA->phi  = _jets[_jets_index].phi_02pi();
+    jetA->kt2  = _cs.jet_scale_for_algorithm(_jets[_jets_index]);
+    jetA->_jets_index = _jets_index;
+    jetA->NN_dist = _R2;
+    jetA->NN      = NULL;
+  }
+  template <class J> inline double _bj_dist(
+                const J * const jetA, const J * const jetB) const {
+    double dphi = std::abs(jetA->phi - jetB->phi);
+    double deta = (jetA->eta - jetB->eta);
+    if (dphi > pi) {dphi = twopi - dphi;}
+    return dphi*dphi + deta*deta;
+  }
+  template <class J> inline double _bj_dist_not_periodic(
+                const J * const jetA, const J * const jetB) const {
+    double dphi = jetA->phi - jetB->phi;
+    double deta = (jetA->eta - jetB->eta);
+    return dphi*dphi + deta*deta;
+  }
+};
+FJCORE_END_NAMESPACE
+#endif // __FJCORE_LAZYTILING9ALT_HH__
+#ifndef __FJCORE_LAZYTILING9_HH__
+#define __FJCORE_LAZYTILING9_HH__
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+template<int NN>
+class Tile2Base {
+public:
+  Tile2Base *   begin_tiles[NN]; 
+  Tile2Base **  surrounding_tiles; 
+  Tile2Base **  RH_tiles;  
+  Tile2Base **  end_tiles; 
+  TiledJet * head;    
+  bool     tagged;    
+  bool     use_periodic_delta_phi;
+  double max_NN_dist;
+  double eta_centre, phi_centre;
+  int jet_count() const {
+    int count = 0;
+    const TiledJet * jet = head;
+    while (jet != 0) {
+      count++;
+      jet = jet->next;
+    }
+    return count;
+  }
+};
+typedef Tile2Base<9> Tile2;
+class LazyTiling9 {
+public:
+  LazyTiling9(ClusterSequence & cs);
+  void run();
+protected:
+  ClusterSequence & _cs;
+  const std::vector<PseudoJet> & _jets;
+  std::vector<Tile2> _tiles;
+#ifdef INSTRUMENT2
+  int _ncall; // GPS tmp
+  int _ncall_dtt; // GPS tmp
+#endif // INSTRUMENT2
+  double _Rparam, _R2, _invR2;
+  double _tiles_eta_min, _tiles_eta_max;
+  double _tile_size_eta, _tile_size_phi;
+  double _tile_half_size_eta, _tile_half_size_phi;
+  int    _n_tiles_phi,_tiles_ieta_min,_tiles_ieta_max;
+  std::vector<TiledJet *> _jets_for_minheap;
+  void _initialise_tiles();
+  inline int _tile_index (int ieta, int iphi) const {
+    return (ieta-_tiles_ieta_min)*_n_tiles_phi
+                  + (iphi+_n_tiles_phi) % _n_tiles_phi;
+  }
+  void  _bj_remove_from_tiles(TiledJet * const jet);
+  int _tile_index(const double eta, const double phi) const;
+  void _tj_set_jetinfo(TiledJet * const jet, const int _jets_index);
+  void _print_tiles(TiledJet * briefjets ) const;
+  void _add_neighbours_to_tile_union(const int tile_index, 
+		 std::vector<int> & tile_union, int & n_near_tiles) const;
+  void _add_untagged_neighbours_to_tile_union(const int tile_index, 
+		 std::vector<int> & tile_union, int & n_near_tiles);
+  void _add_untagged_neighbours_to_tile_union_using_max_info(const TiledJet * const jet, 
+		 std::vector<int> & tile_union, int & n_near_tiles);
+  double _distance_to_tile(const TiledJet * bj, const Tile2 *) 
+#ifdef INSTRUMENT2
+    ;
+#else
+    const;
+#endif 
+  void _update_jetX_jetI_NN(TiledJet * jetX, TiledJet * jetI, std::vector<TiledJet *> & jets_for_minheap);
+  void _set_NN(TiledJet * jetI, std::vector<TiledJet *> & jets_for_minheap);
+  template <class J> double _bj_diJ(const J * const jet) const {
+    double kt2 = jet->kt2;
+    if (jet->NN != NULL) {if (jet->NN->kt2 < kt2) {kt2 = jet->NN->kt2;}}
+    return jet->NN_dist * kt2;
+  }
+  template <class J> inline void _bj_set_jetinfo(
+                            J * const jetA, const int _jets_index) const {
+    jetA->eta  = _jets[_jets_index].rap();
+    jetA->phi  = _jets[_jets_index].phi_02pi();
+    jetA->kt2  = _cs.jet_scale_for_algorithm(_jets[_jets_index]);
+    jetA->_jets_index = _jets_index;
+    jetA->NN_dist = _R2;
+    jetA->NN      = NULL;
+  }
+  template <class J> inline double _bj_dist(
+                const J * const jetA, const J * const jetB) 
+#ifdef INSTRUMENT2
+    {
+    _ncall++; // GPS tmp
+#else
+    const {
+#endif 
+    double dphi = std::abs(jetA->phi - jetB->phi);
+    double deta = (jetA->eta - jetB->eta);
+    if (dphi > pi) {dphi = twopi - dphi;}
+    return dphi*dphi + deta*deta;
+  }
+  template <class J> inline double _bj_dist_not_periodic(
+                const J * const jetA, const J * const jetB)
+#ifdef INSTRUMENT2
+    {
+    _ncall++; // GPS tmp
+#else
+    const {
+#endif 
+    double dphi = jetA->phi - jetB->phi;
+    double deta = (jetA->eta - jetB->eta);
+    return dphi*dphi + deta*deta;
+  }
+};
+FJCORE_END_NAMESPACE
+#endif // __FJCORE_LAZYTILING9_HH__
+#ifndef __FJCORE_LAZYTILING25_HH__
+#define __FJCORE_LAZYTILING25_HH__
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+typedef Tile2Base<25> Tile25;
+class LazyTiling25 {
+public:
+  LazyTiling25(ClusterSequence & cs);
+  void run();
+protected:
+  ClusterSequence & _cs;
+  const std::vector<PseudoJet> & _jets;
+  std::vector<Tile25> _tiles;
+#ifdef INSTRUMENT2
+  int _ncall; // GPS tmp
+  int _ncall_dtt; // GPS tmp
+#endif // INSTRUMENT2
+  double _Rparam, _R2, _invR2;
+  double _tiles_eta_min, _tiles_eta_max;
+  double _tile_size_eta, _tile_size_phi;
+  double _tile_half_size_eta, _tile_half_size_phi;
+  int    _n_tiles_phi,_tiles_ieta_min,_tiles_ieta_max;
+  std::vector<TiledJet *> _jets_for_minheap;
+  void _initialise_tiles();
+  inline int _tile_index (int ieta, int iphi) const {
+    return (ieta-_tiles_ieta_min)*_n_tiles_phi
+                  + (iphi+_n_tiles_phi) % _n_tiles_phi;
+  }
+  void  _bj_remove_from_tiles(TiledJet * const jet);
+  int _tile_index(const double eta, const double phi) const;
+  void _tj_set_jetinfo(TiledJet * const jet, const int _jets_index);
+  void _print_tiles(TiledJet * briefjets ) const;
+  void _add_neighbours_to_tile_union(const int tile_index, 
+		 std::vector<int> & tile_union, int & n_near_tiles) const;
+  void _add_untagged_neighbours_to_tile_union(const int tile_index, 
+		 std::vector<int> & tile_union, int & n_near_tiles);
+  void _add_untagged_neighbours_to_tile_union_using_max_info(const TiledJet * const jet, 
+		 std::vector<int> & tile_union, int & n_near_tiles);
+  double _distance_to_tile(const TiledJet * bj, const Tile25 *) 
+#ifdef INSTRUMENT2
+    ;
+#else
+    const;
+#endif 
+  void _update_jetX_jetI_NN(TiledJet * jetX, TiledJet * jetI, std::vector<TiledJet *> & jets_for_minheap);
+  void _set_NN(TiledJet * jetI, std::vector<TiledJet *> & jets_for_minheap);
+  template <class J> double _bj_diJ(const J * const jet) const {
+    double kt2 = jet->kt2;
+    if (jet->NN != NULL) {if (jet->NN->kt2 < kt2) {kt2 = jet->NN->kt2;}}
+    return jet->NN_dist * kt2;
+  }
+  template <class J> inline void _bj_set_jetinfo(
+                            J * const jetA, const int _jets_index) const {
+    jetA->eta  = _jets[_jets_index].rap();
+    jetA->phi  = _jets[_jets_index].phi_02pi();
+    jetA->kt2  = _cs.jet_scale_for_algorithm(_jets[_jets_index]);
+    jetA->_jets_index = _jets_index;
+    jetA->NN_dist = _R2;
+    jetA->NN      = NULL;
+  }
+  template <class J> inline double _bj_dist(
+                const J * const jetA, const J * const jetB) 
+#ifdef INSTRUMENT2
+    {
+    _ncall++; // GPS tmp
+#else
+    const {
+#endif 
+    double dphi = std::abs(jetA->phi - jetB->phi);
+    double deta = (jetA->eta - jetB->eta);
+    if (dphi > pi) {dphi = twopi - dphi;}
+    return dphi*dphi + deta*deta;
+  }
+  template <class J> inline double _bj_dist_not_periodic(
+                const J * const jetA, const J * const jetB)
+#ifdef INSTRUMENT2
+    {
+    _ncall++; // GPS tmp
+#else
+    const {
+#endif 
+    double dphi = jetA->phi - jetB->phi;
+    double deta = (jetA->eta - jetB->eta);
+    return dphi*dphi + deta*deta;
+  }
+};
+FJCORE_END_NAMESPACE
+#endif // __FJCORE_LAZYTILING25_HH__
+#ifndef __FJCORE_TILINGEXTENT_HH__
+#define __FJCORE_TILINGEXTENT_HH__
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+class TilingExtent {
+public:
+  TilingExtent(ClusterSequence & cs);
+  double minrap() const {return _minrap;}
+  double maxrap() const {return _maxrap;}
+  double sum_of_binned_squared_multiplicity() const {return _cumul2;}
+private:
+  double _minrap, _maxrap, _cumul2;
+  void _determine_rapidity_extent(const std::vector<PseudoJet> & particles);
+};
+FJCORE_END_NAMESPACE      // defined in fastjet/internal/base.hh
+#endif // __FJCORE_TILINGEXTENT_HH__
 #include<limits>
 #include<iostream>
 #include<iomanip>
 #include<algorithm>
 FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
-const unsigned int huge_unsigned = 4294967295U;
 const unsigned int twopow31      = 2147483648U;
 using namespace std;
 void ClosestPair2D::_point2shuffle(Point & point, Shuffle & shuffle, 
@@ -1120,6 +1453,11 @@ void ClusterSequence::_initialise_and_run_no_decant () {
     throw Error("A ClusterSequence cannot be created with an uninitialised JetDefinition");
   }
   if (_strategy == Best) {
+    _strategy = _best_strategy();
+#ifdef __FJCORE_DROP_CGAL
+    if (_strategy == NlnN) _strategy = N2MHTLazy25;
+#endif  // __FJCORE_DROP_CGAL
+  } else if (_strategy == BestFJ30) {
     int N = _jets.size();
     if (min(1.0,max(0.1,_Rparam)*3.3)*N <= 30) {
       _strategy = N2Plain;
@@ -1163,6 +1501,23 @@ void ClusterSequence::_initialise_and_run_no_decant () {
     this->_faster_tiled_N2_cluster();
   } else if (_strategy == N2MinHeapTiled) {
     this->_minheap_faster_tiled_N2_cluster();
+  } else if (_strategy == N2MHTLazy9Alt) {
+    _plugin_activated = true;
+    LazyTiling9Alt tiling(*this);
+    tiling.run();
+    _plugin_activated = false;
+  } else if (_strategy == N2MHTLazy25) {
+    _plugin_activated = true;
+    LazyTiling25 tiling(*this);
+    tiling.run();
+    _plugin_activated = false;
+  } else if (_strategy == N2MHTLazy9) {
+    _plugin_activated = true;
+    LazyTiling9 tiling(*this);
+    tiling.run();
+    _plugin_activated = false;
+  } else if (_strategy == N2MHTLazy9AntiKtSeparateGhosts) {
+    throw Error("N2MHTLazy9AntiKtSeparateGhosts strategy not supported with FJCORE");
   } else if (_strategy == NlnN) {
     this->_delaunay_cluster();
   } else if (_strategy == NlnNCam) {
@@ -1184,7 +1539,7 @@ void ClusterSequence::_initialise_and_run_no_decant () {
   }
 }
 bool ClusterSequence::_first_time = true;
-int ClusterSequence::_n_exclusive_warnings = 0;
+LimitedWarning ClusterSequence::_exclusive_warnings;
 string fastjet_version_string() {
   return "FastJet version "+string(fastjet_version)+" [fjcore]";
 }
@@ -1266,6 +1621,14 @@ string ClusterSequence::strategy_string (Strategy strategy_in)  const {
     strategy = "N2MinHeapTiled"; break;
   case N2PoorTiled:
     strategy = "N2PoorTiled"; break;
+  case N2MHTLazy9:
+    strategy = "N2MHTLazy9"; break;
+  case N2MHTLazy9Alt:
+    strategy = "N2MHTLazy9Alt"; break;
+  case N2MHTLazy25:
+    strategy = "N2MHTLazy25"; break;
+  case N2MHTLazy9AntiKtSeparateGhosts:
+    strategy = "N2MHTLazy9AntiKtSeparateGhosts"; break;
   case N3Dumb:
     strategy = "N3Dumb"; break;
   case NlnNCam4pi:
@@ -1300,6 +1663,103 @@ double ClusterSequence::jet_scale_for_algorithm(
       return 1.0/kt2;
     } else {return 1.0;}
   } else {throw Error("Unrecognised jet algorithm");}
+}
+Strategy ClusterSequence::_best_strategy() const {
+  int N = _jets.size();
+  double bounded_R = max(_Rparam, 0.1);
+  if (N <= 30 || N <= 39.0/(bounded_R + 0.6)) {
+    return N2Plain;
+  } 
+  const static _Parabola N_Tiled_to_MHT_lowR             (-45.4947,54.3528,44.6283);
+  const static _Parabola L_MHT_to_MHTLazy9_lowR          (0.677807,-1.05006,10.6994);
+  const static _Parabola L_MHTLazy9_to_MHTLazy25_akt_lowR(0.169967,-0.512589,12.1572);
+  const static _Parabola L_MHTLazy9_to_MHTLazy25_kt_lowR (0.16237,-0.484612,12.3373);
+  const static _Parabola L_MHTLazy9_to_MHTLazy25_cam_lowR = L_MHTLazy9_to_MHTLazy25_kt_lowR;
+  const static _Parabola L_MHTLazy25_to_NlnN_akt_lowR    (0.0472051,-0.22043,15.9196);
+  const static _Parabola L_MHTLazy25_to_NlnN_kt_lowR     (0.118609,-0.326811,14.8287);
+  const static _Parabola L_MHTLazy25_to_NlnN_cam_lowR    (0.10119,-0.295748,14.3924);
+  const static _Line     L_Tiled_to_MHTLazy9_medR         (-1.31304,7.29621);
+  const static _Parabola L_MHTLazy9_to_MHTLazy25_akt_medR = L_MHTLazy9_to_MHTLazy25_akt_lowR;
+  const static _Parabola L_MHTLazy9_to_MHTLazy25_kt_medR  = L_MHTLazy9_to_MHTLazy25_kt_lowR;
+  const static _Parabola L_MHTLazy9_to_MHTLazy25_cam_medR = L_MHTLazy9_to_MHTLazy25_cam_lowR;
+  const static _Parabola L_MHTLazy25_to_NlnN_akt_medR     = L_MHTLazy25_to_NlnN_akt_lowR;
+  const static _Parabola L_MHTLazy25_to_NlnN_kt_medR      = L_MHTLazy25_to_NlnN_kt_lowR;
+  const static _Parabola L_MHTLazy25_to_NlnN_cam_medR     = L_MHTLazy25_to_NlnN_cam_lowR;
+  const static double    N_Plain_to_MHTLazy9_largeR         = 75;
+  const static double    N_MHTLazy9_to_MHTLazy25_akt_largeR = 700;
+  const static double    N_MHTLazy9_to_MHTLazy25_kt_largeR  = 1000;
+  const static double    N_MHTLazy9_to_MHTLazy25_cam_largeR = 1000;
+  const static double    N_MHTLazy25_to_NlnN_akt_largeR     = 100000;
+  const static double    N_MHTLazy25_to_NlnN_kt_largeR      = 40000;
+  const static double    N_MHTLazy25_to_NlnN_cam_largeR     = 15000;
+  JetAlgorithm jet_algorithm;
+  if (_jet_algorithm == genkt_algorithm) {
+    double p   = jet_def().extra_param();
+    if (p < 0.0) jet_algorithm = antikt_algorithm;
+    else         jet_algorithm =     kt_algorithm;
+  } else if (_jet_algorithm == cambridge_for_passive_algorithm) {
+    jet_algorithm = kt_algorithm;
+  } else {
+    jet_algorithm = _jet_algorithm;
+  }
+  if (bounded_R < 0.65) {
+    if          (N    < N_Tiled_to_MHT_lowR(bounded_R))              return N2Tiled;
+    double logN = log(double(N));
+    if          (logN < L_MHT_to_MHTLazy9_lowR(bounded_R))           return N2MinHeapTiled;
+    else {
+      if (jet_algorithm == antikt_algorithm){
+        if      (logN < L_MHTLazy9_to_MHTLazy25_akt_lowR(bounded_R)) return N2MHTLazy9;
+        else if (logN < L_MHTLazy25_to_NlnN_akt_lowR(bounded_R))     return N2MHTLazy25;
+        else                                                         return NlnN;
+      } else if (jet_algorithm == kt_algorithm){
+        if      (logN < L_MHTLazy9_to_MHTLazy25_kt_lowR(bounded_R))  return N2MHTLazy9;
+        else if (logN < L_MHTLazy25_to_NlnN_kt_lowR(bounded_R))      return N2MHTLazy25;
+        else                                                         return NlnN;
+      } else if (jet_algorithm == cambridge_algorithm)  {
+        if      (logN < L_MHTLazy9_to_MHTLazy25_cam_lowR(bounded_R)) return N2MHTLazy9;
+        else if (logN < L_MHTLazy25_to_NlnN_cam_lowR(bounded_R))     return N2MHTLazy25;
+        else                                                         return NlnNCam;
+      }
+    }
+  } else if (bounded_R < 0.5*pi) {
+    double logN = log(double(N));
+    if      (logN < L_Tiled_to_MHTLazy9_medR(bounded_R))             return N2Tiled;
+    else {
+      if (jet_algorithm == antikt_algorithm){
+        if      (logN < L_MHTLazy9_to_MHTLazy25_akt_medR(bounded_R)) return N2MHTLazy9;
+        else if (logN < L_MHTLazy25_to_NlnN_akt_medR(bounded_R))     return N2MHTLazy25;
+        else                                                         return NlnN;
+      } else if (jet_algorithm == kt_algorithm){
+        if      (logN < L_MHTLazy9_to_MHTLazy25_kt_medR(bounded_R))  return N2MHTLazy9;
+        else if (logN < L_MHTLazy25_to_NlnN_kt_medR(bounded_R))      return N2MHTLazy25;
+        else                                                         return NlnN;
+      } else if (jet_algorithm == cambridge_algorithm)  {
+        if      (logN < L_MHTLazy9_to_MHTLazy25_cam_medR(bounded_R)) return N2MHTLazy9;
+        else if (logN < L_MHTLazy25_to_NlnN_cam_medR(bounded_R))     return N2MHTLazy25;
+        else                                                         return NlnNCam;
+      }
+    }
+  } else {
+    if      (N    < N_Plain_to_MHTLazy9_largeR)                      return N2Plain;
+    else {
+      if (jet_algorithm == antikt_algorithm){
+        if      (N < N_MHTLazy9_to_MHTLazy25_akt_largeR)             return N2MHTLazy9;
+        else if (N < N_MHTLazy25_to_NlnN_akt_largeR)                 return N2MHTLazy25;
+        else                                                         return NlnN;
+      } else if (jet_algorithm == kt_algorithm){
+        if      (N < N_MHTLazy9_to_MHTLazy25_kt_largeR)              return N2MHTLazy9;
+        else if (N < N_MHTLazy25_to_NlnN_kt_largeR)                  return N2MHTLazy25;
+        else                                                         return NlnN;
+      } else if (jet_algorithm == cambridge_algorithm)  {
+        if      (N < N_MHTLazy9_to_MHTLazy25_cam_largeR)             return N2MHTLazy9;
+        else if (N < N_MHTLazy25_to_NlnN_cam_largeR)                 return N2MHTLazy25;
+        else                                                         return NlnNCam;
+      }
+    }
+  }
+  bool code_should_never_reach_here = false;
+  assert(code_should_never_reach_here); 
+  return N2MHTLazy9;
 }
 void ClusterSequence::transfer_from_sequence(const ClusterSequence & from_seq,
 					     const FunctionOfPseudoJet<PseudoJet> * action_on_jets){
@@ -1342,7 +1802,7 @@ void ClusterSequence::plugin_record_ij_recombination(
   _jets[newjet_k].set_cluster_hist_index(tmp_index);
   _set_structure_shared_ptr(_jets[newjet_k]);
 }
-vector<PseudoJet> ClusterSequence::inclusive_jets (const double & ptmin) const{
+vector<PseudoJet> ClusterSequence::inclusive_jets (const double ptmin) const{
   double dcut = ptmin*ptmin;
   int i = _history.size() - 1; // last jet
   vector<PseudoJet> jets_local;
@@ -1380,7 +1840,7 @@ vector<PseudoJet> ClusterSequence::inclusive_jets (const double & ptmin) const{
   } else {throw Error("cs::inclusive_jets(...): Unrecognized jet algorithm");}
   return jets_local;
 }
-int ClusterSequence::n_exclusive_jets (const double & dcut) const {
+int ClusterSequence::n_exclusive_jets (const double dcut) const {
   int i = _history.size() - 1; // last jet
   while (i >= 0) {
     if (_history[i].max_dij_so_far <= dcut) {break;}
@@ -1390,11 +1850,11 @@ int ClusterSequence::n_exclusive_jets (const double & dcut) const {
   int njets = 2*_initial_n - stop_point;
   return njets;
 }
-vector<PseudoJet> ClusterSequence::exclusive_jets (const double & dcut) const {
+vector<PseudoJet> ClusterSequence::exclusive_jets (const double dcut) const {
   int njets = n_exclusive_jets(dcut);
   return exclusive_jets(njets);
 }
-vector<PseudoJet> ClusterSequence::exclusive_jets (const int & njets) const {
+vector<PseudoJet> ClusterSequence::exclusive_jets (const int njets) const {
   if (njets > _initial_n) {
     ostringstream err;
     err << "Requested " << njets << " exclusive jets, but there were only " 
@@ -1403,7 +1863,7 @@ vector<PseudoJet> ClusterSequence::exclusive_jets (const int & njets) const {
   }
   return exclusive_jets_up_to(njets);
 }
-vector<PseudoJet> ClusterSequence::exclusive_jets_up_to (const int & njets) const {
+vector<PseudoJet> ClusterSequence::exclusive_jets_up_to (const int njets) const {
   if (( _jet_def.jet_algorithm() != kt_algorithm) &&
       ( _jet_def.jet_algorithm() != cambridge_algorithm) &&
       ( _jet_def.jet_algorithm() != ee_kt_algorithm) &&
@@ -1411,10 +1871,8 @@ vector<PseudoJet> ClusterSequence::exclusive_jets_up_to (const int & njets) cons
 	(_jet_def.jet_algorithm() != ee_genkt_algorithm)) || 
        (_jet_def.extra_param() <0)) &&
       ((_jet_def.jet_algorithm() != plugin_algorithm) ||
-       (!_jet_def.plugin()->exclusive_sequence_meaningful())) &&
-      (_n_exclusive_warnings < 5)) {
-    _n_exclusive_warnings++;
-    cerr << "FastJet WARNING: dcut and exclusive jets for jet-finders other than kt should be interpreted with care." << endl;
+       (!_jet_def.plugin()->exclusive_sequence_meaningful()))) {
+    _exclusive_warnings.warn("dcut and exclusive jets for jet-finders other than kt, C/A or genkt with p>=0 should be interpreted with care.");
   }
   int stop_point = 2*_initial_n - njets;
   if (stop_point < _initial_n) stop_point = _initial_n;
@@ -1443,18 +1901,18 @@ vector<PseudoJet> ClusterSequence::exclusive_jets_up_to (const int & njets) cons
   }
   return jets_local;
 }
-double ClusterSequence::exclusive_dmerge (const int & njets) const {
+double ClusterSequence::exclusive_dmerge (const int njets) const {
   assert(njets >= 0);
   if (njets >= _initial_n) {return 0.0;}
   return _history[2*_initial_n-njets-1].dij;
 }
-double ClusterSequence::exclusive_dmerge_max (const int & njets) const {
+double ClusterSequence::exclusive_dmerge_max (const int njets) const {
   assert(njets >= 0);
   if (njets >= _initial_n) {return 0.0;}
   return _history[2*_initial_n-njets-1].max_dij_so_far;
 }
 std::vector<PseudoJet> ClusterSequence::exclusive_subjets 
-   (const PseudoJet & jet, const double & dcut) const {
+   (const PseudoJet & jet, const double dcut) const {
   set<const history_element*> subhist;
   get_subhist_set(subhist, jet, dcut, 0);
   vector<PseudoJet> subjets;
@@ -1466,7 +1924,7 @@ std::vector<PseudoJet> ClusterSequence::exclusive_subjets
   return subjets;
 }
 int ClusterSequence::n_exclusive_subjets(const PseudoJet & jet, 
-                        const double & dcut) const {
+                        const double dcut) const {
   set<const history_element*> subhist;
   get_subhist_set(subhist, jet, dcut, 0);
   return subhist.size();
@@ -1659,9 +2117,9 @@ void ClusterSequence::add_constituents (
   }
 }
 void ClusterSequence::_add_step_to_history (
-	       const int & step_number, const int & parent1, 
-	       const int & parent2, const int & jetp_index,
-	       const double & dij) {
+	       const int step_number, const int parent1, 
+	       const int parent2, const int jetp_index,
+	       const double dij) {
   history_element element;
   element.parent1 = parent1;
   element.parent2 = parent2;
@@ -1673,8 +2131,16 @@ void ClusterSequence::_add_step_to_history (
   int local_step = _history.size()-1;
   assert(local_step == step_number);
   assert(parent1 >= 0);
+  if (_history[parent1].child != Invalid){
+    throw InternalError("trying to recomine an object that has previsously been recombined");
+  }
   _history[parent1].child = local_step;
-  if (parent2 >= 0) {_history[parent2].child = local_step;}
+  if (parent2 >= 0) {
+    if (_history[parent2].child != Invalid){
+      throw InternalError("trying to recomine an object that has previsously been recombined");
+    }
+    _history[parent2].child = local_step;
+  }
   if (jetp_index != Invalid) {
     assert(jetp_index >= 0);
     _jets[jetp_index].set_cluster_hist_index(local_step);
@@ -1761,8 +2227,8 @@ void ClusterSequence::_extract_tree_parents(
   }
 }
 void ClusterSequence::_do_ij_recombination_step(
-                               const int & jet_i, const int & jet_j, 
-			       const double & dij, 
+                               const int jet_i, const int jet_j, 
+			       const double dij, 
 			       int & newjet_k) {
   PseudoJet newjet(false); 
   _jet_def.recombiner()->recombine(_jets[jet_i], _jets[jet_j], newjet);
@@ -1776,7 +2242,7 @@ void ClusterSequence::_do_ij_recombination_step(
 		       newjet_k, dij);
 }
 void ClusterSequence::_do_iB_recombination_step(
-				  const int & jet_i, const double & diB) {
+				  const int jet_i, const double diB) {
   int newstep_k = _history.size();
   _add_step_to_history(newstep_k,_jets[jet_i].cluster_hist_index(),BeamJet,
 		       Invalid, diB);
@@ -1989,8 +2455,8 @@ void ClusterSequence::_delaunay_cluster () {
     points[i].sanitize(); // make sure things are in the right range
   }
   auto_ptr<DynamicNearestNeighbours> DNN;
-#ifndef __FJCORE_DROP_CGAL // strategy = NlnN* are not supported if we drop CGAL...
   bool verbose = false;
+#ifndef __FJCORE_DROP_CGAL // strategy = NlnN* are not supported if we drop CGAL...
   bool ignore_nearest_is_mirror = (_Rparam < twopi);
   if (_strategy == NlnN4pi) {
     DNN.reset(new Dnn4piCylinder(points,verbose));
@@ -2005,13 +2471,10 @@ void ClusterSequence::_delaunay_cluster () {
     err << "ERROR: Requested strategy "<<strategy_string()<<" but it is not"<<endl;
     err << "       supported because FastJet was compiled without CGAL"<<endl;
     throw Error(err.str());
-  }
+  } else
 #endif // __FJCORE_DROP_CGAL
   {
-    ostringstream err;
-    err << "ERROR: Unrecognized value for strategy: "<<_strategy<<endl;
     assert(false);
-    throw Error(err.str());
   }
   DistMap DijMap;
   for (int ii = 0; ii < n; ii++) {
@@ -2028,18 +2491,22 @@ void ClusterSequence::_delaunay_cluster () {
       SmallestDijPair = DijMap.begin()->second;
       jet_i = SmallestDijPair.first;
       jet_j = SmallestDijPair.second;
+      if (verbose) cout << "CS_Delaunay found recombination candidate: " << jet_i << " " << jet_j << " " << SmallestDij << endl; // GPS debugging
       DijMap.erase(DijMap.begin());
       recombine_with_beam = (jet_j == BeamJet);
       if (!recombine_with_beam) {Valid2 = DNN->Valid(jet_j);} 
       else {Valid2 = true;}
+      if (verbose) cout << "CS_Delaunay validities i & j: " << DNN->Valid(jet_i) << " " << Valid2 << endl;
     } while ( !DNN->Valid(jet_i) || !Valid2);
     if (! recombine_with_beam) {
       int nn; // will be index of new jet
+      if (verbose) cout << "CS_Delaunay call _do_ij_recomb: " << jet_i << " " << jet_j << " " << SmallestDij << endl; // GPS debug
       _do_ij_recombination_step(jet_i, jet_j, SmallestDij, nn);
       EtaPhi newpoint(_jets[nn].rap(), _jets[nn].phi_02pi());
       newpoint.sanitize(); // make sure it is in correct range
       points.push_back(newpoint);
     } else {
+      if (verbose) cout << "CS_Delaunay call _do_iB_recomb: " << jet_i << " " << SmallestDij << endl; // GPS debug
       _do_iB_recombination_step(jet_i, SmallestDij);
     }
     if (i == n-1) {break;}
@@ -2062,7 +2529,7 @@ void ClusterSequence::_delaunay_cluster () {
   } // end clustering loop 
 }
 void ClusterSequence::_add_ktdistance_to_map(
-                          const int & ii, 
+                          const int ii, 
 			  DistMap & DijMap,
 			  const DynamicNearestNeighbours * DNN) {
   double yiB = jet_scale_for_algorithm(_jets[ii]);
@@ -2283,16 +2750,9 @@ void ClusterSequence::_initialise_tiles() {
   _tile_size_eta = default_size;
   _n_tiles_phi   = max(3,int(floor(twopi/default_size)));
   _tile_size_phi = twopi / _n_tiles_phi; // >= _Rparam and fits in 2pi
-  _tiles_eta_min = 0.0;
-  _tiles_eta_max = 0.0;
-  const double maxrap = 7.0;
-  for(unsigned int i = 0; i < _jets.size(); i++) {
-    double eta = _jets[i].rap();
-    if (abs(eta) < maxrap) {
-      if (eta < _tiles_eta_min) {_tiles_eta_min = eta;}
-      if (eta > _tiles_eta_max) {_tiles_eta_max = eta;}
-    }
-  }
+  TilingExtent tiling_analysis(*this);
+  _tiles_eta_min = tiling_analysis.minrap();
+  _tiles_eta_max = tiling_analysis.maxrap();
   _tiles_ieta_min = int(floor(_tiles_eta_min/_tile_size_eta));
   _tiles_ieta_max = int(floor( _tiles_eta_max/_tile_size_eta));
   _tiles_eta_min = _tiles_ieta_min * _tile_size_eta;
@@ -2331,7 +2791,7 @@ void ClusterSequence::_initialise_tiles() {
     }
   }
 }
-int ClusterSequence::_tile_index(const double & eta, const double & phi) const {
+int ClusterSequence::_tile_index(const double eta, const double phi) const {
   int ieta, iphi;
   if      (eta <= _tiles_eta_min) {ieta = 0;}
   else if (eta >= _tiles_eta_max) {ieta = _tiles_ieta_max-_tiles_ieta_min;}
@@ -2392,7 +2852,7 @@ void ClusterSequence::_tiled_N2_cluster() {
   TiledJet * briefjets = new TiledJet[n];
   TiledJet * jetA = briefjets, * jetB;
   TiledJet oldB;
-  oldB.tile_index=0; // prevents a gcc warning  
+  oldB.tile_index=0; // prevents a gcc warning
   vector<int> tile_union(3*n_tile_neighbours);
   for (int i = 0; i< n; i++) {
     _tj_set_jetinfo(jetA, i);
@@ -2546,7 +3006,7 @@ void ClusterSequence::_faster_tiled_N2_cluster() {
   TiledJet * briefjets = new TiledJet[n];
   TiledJet * jetA = briefjets, * jetB;
   TiledJet oldB;
-  oldB.tile_index=0; // prevents a gcc warning  
+  oldB.tile_index=0; // prevents a gcc warning
   vector<int> tile_union(3*n_tile_neighbours);
   for (int i = 0; i< n; i++) {
     _tj_set_jetinfo(jetA, i);
@@ -2846,36 +3306,30 @@ std::vector<PseudoJet> CompositeJetStructure::pieces(const PseudoJet & /*jet*/) 
 }
 FJCORE_END_NAMESPACE      // defined in fastjet/internal/base.hh
 #include <sstream>
-#ifdef FJCORE_HAVE_EXECINFO_H
-#include <execinfo.h>
-#include <cstdlib>
-#endif
 FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
 using namespace std;
 bool Error::_print_errors = true;
 bool Error::_print_backtrace = false;
 ostream * Error::_default_ostr = & cerr;
+#if (!defined(FJCORE_HAVE_EXECINFO_H)) || defined(__FJCORE__)
+  LimitedWarning Error::_execinfo_undefined;
+#endif
 Error::Error(const std::string & message_in) {
   _message = message_in; 
   if (_print_errors && _default_ostr){
     ostringstream oss;
     oss << "fjcore::Error:  "<< message_in << endl;
-#ifdef FJCORE_HAVE_EXECINFO_H
-    if (_print_backtrace){
-      void * array[10];
-      char ** messages;
-      int size = backtrace(array, 10);
-      messages = backtrace_symbols(array, size);
-      oss << "stack:" << endl;
-      for (int i = 1; i < size && messages != NULL; ++i){
-	oss << "  #" << i << ": " << messages[i] << endl;
-      }
-      free(messages);
-    }
-#endif
     *_default_ostr << oss.str();
     _default_ostr->flush(); 
   }
+}
+void Error::set_print_backtrace(bool enabled) {
+#if (!defined(FJCORE_HAVE_EXECINFO_H)) || defined(__FJCORE__)
+  if (enabled) {
+    _execinfo_undefined.warn("Error::set_print_backtrace(true) will not work with this build of FastJet");
+  }
+#endif    
+  _print_backtrace = enabled;
 }
 FJCORE_END_NAMESPACE
 #include <string>
@@ -2902,80 +3356,103 @@ JetDefinition::JetDefinition(JetAlgorithm jet_algorithm_in,
       throw Error(oss.str());
     }
   }
-  switch (jet_algorithm_in) {
-  case ee_kt_algorithm:
-    if (nparameters != 0) {
-      ostringstream oss;
-      oss << "ee_kt_algorithm should be constructed with 0 parameters but was called with " 
-          << nparameters << " parameter(s)\n";
-      throw Error(oss.str()); 
-    }
-    break;
-  case genkt_algorithm: 
-  case ee_genkt_algorithm: 
-    if (nparameters != 2) {
-      ostringstream oss;
-      oss << "(ee_)genkt_algorithm should be constructed with 2 parameters but was called with " 
-          << nparameters << " parameter(s)\n";
-      throw Error(oss.str()); 
-    }
-    break;
-  default:
-    if (nparameters != 1) {
-      ostringstream oss;
-      oss << "The jet algorithm you requested ("
-          << jet_algorithm_in << ") should be constructed with 1 parameter but was called with " 
-          << nparameters << " parameter(s)\n";
-      throw Error(oss.str()); 
-    }
+  unsigned int nparameters_expected = n_parameters_for_algorithm(jet_algorithm_in);
+  if (nparameters != (int) nparameters_expected){
+    ostringstream oss;
+    oss << "The jet algorithm you requested ("
+        << jet_algorithm_in << ") should be constructed with " << nparameters_expected 
+        << " parameter(s) but was called with " << nparameters << " parameter(s)\n";
+    throw Error(oss.str()); 
   }
   assert (_strategy  != plugin_strategy);
   _plugin = NULL;
   set_recombination_scheme(recomb_scheme_in);
   set_extra_param(0.0); // make sure it's defined
 }
+bool JetDefinition::is_spherical() const {
+  if (jet_algorithm() == plugin_algorithm) {
+    return plugin()->is_spherical();
+  } else {
+    return (jet_algorithm() == ee_kt_algorithm ||  // as of 2013-02-14, the two
+            jet_algorithm() == ee_genkt_algorithm  // native spherical algorithms
+            );
+  }
+}
 string JetDefinition::description() const {
+  ostringstream name;
+  name << description_no_recombiner();
+  if ((jet_algorithm() == plugin_algorithm) || (jet_algorithm() == undefined_jet_algorithm)){
+    return name.str();
+  }
+  if (n_parameters_for_algorithm(jet_algorithm()) == 0)
+    name << " with ";
+  else 
+    name << " and ";
+  name << recombiner()->description();
+  return name.str();
+}
+string JetDefinition::description_no_recombiner() const {
   ostringstream name;
   if (jet_algorithm() == plugin_algorithm) {
     return plugin()->description();
-  } else if (jet_algorithm() == kt_algorithm) {
-    name << "Longitudinally invariant kt algorithm with R = " << R();
-    name << " and " << recombiner()->description();
-  } else if (jet_algorithm() == cambridge_algorithm) {
-    name << "Longitudinally invariant Cambridge/Aachen algorithm with R = " 
-	 << R() ;
-    name << " and " << recombiner()->description();
-  } else if (jet_algorithm() == antikt_algorithm) {
-    name << "Longitudinally invariant anti-kt algorithm with R = " 
-	 << R() ;
-    name << " and " << recombiner()->description();
-  } else if (jet_algorithm() == genkt_algorithm) {
-    name << "Longitudinally invariant generalised kt algorithm with R = " 
-	 << R() << ", p = " << extra_param();
-    name << " and " << recombiner()->description();
-  } else if (jet_algorithm() == cambridge_for_passive_algorithm) {
-    name << "Longitudinally invariant Cambridge/Aachen algorithm with R = " 
-	 << R() << "and a special hack whereby particles with kt < " 
-         << extra_param() << "are treated as passive ghosts";
-  } else if (jet_algorithm() == ee_kt_algorithm) {
-    name << "e+e- kt (Durham) algorithm (NB: no R)";
-    name << " with " << recombiner()->description();
-  } else if (jet_algorithm() == ee_genkt_algorithm) {
-    name << "e+e- generalised kt algorithm with R = " 
-	 << R() << ", p = " << extra_param();
-    name << " and " << recombiner()->description();
   } else if (jet_algorithm() == undefined_jet_algorithm) {
-    name << "uninitialised JetDefinition (jet_algorithm=undefined_jet_algorithm)" ;
-  } else {
-    throw Error("JetDefinition::description(): unrecognized jet_algorithm");
+    return "uninitialised JetDefinition (jet_algorithm=undefined_jet_algorithm)" ;
   }
+  name << algorithm_description(jet_algorithm());
+  switch (n_parameters_for_algorithm(jet_algorithm())){
+  case 0: name << " (NB: no R)"; break;
+  case 1: name << " with R = " << R(); break; // the parameter is always R
+  case 2: 
+    name << " with R = " << R();
+    if (jet_algorithm() == cambridge_for_passive_algorithm){
+      name << "and a special hack whereby particles with kt < " 
+           << extra_param() << "are treated as passive ghosts";
+    } else {
+      name << ", p = " << extra_param();
+    }
+  };
   return name.str();
+}
+string JetDefinition::algorithm_description(const JetAlgorithm jet_alg){
+  ostringstream name;
+  switch (jet_alg){
+  case plugin_algorithm:                return "plugin algorithm";
+  case kt_algorithm:                    return "Longitudinally invariant kt algorithm";
+  case cambridge_algorithm:             return "Longitudinally invariant Cambridge/Aachen algorithm";
+  case antikt_algorithm:                return "Longitudinally invariant anti-kt algorithm";
+  case genkt_algorithm:                 return "Longitudinally invariant generalised kt algorithm";
+  case cambridge_for_passive_algorithm: return "Longitudinally invariant Cambridge/Aachen algorithm";
+  case ee_kt_algorithm:                 return "e+e- kt (Durham) algorithm (NB: no R)";
+  case ee_genkt_algorithm:              return "e+e- generalised kt algorithm";
+  case undefined_jet_algorithm:         return "undefined jet algorithm";
+  default:
+    throw Error("JetDefinition::algorithm_description(): unrecognized jet_algorithm");
+  };
+}
+unsigned int JetDefinition::n_parameters_for_algorithm(const JetAlgorithm jet_alg){
+  switch (jet_alg) {
+  case ee_kt_algorithm:    return 0;
+  case genkt_algorithm:
+  case ee_genkt_algorithm: return 2;
+  default:                 return 1;
+  };
 }
 void JetDefinition::set_recombination_scheme(
                                RecombinationScheme recomb_scheme) {
   _default_recombiner = JetDefinition::DefaultRecombiner(recomb_scheme);
-  if (_recombiner_shared()) _recombiner_shared.reset();
+  if (_shared_recombiner()) _shared_recombiner.reset();
   _recombiner = 0;
+}
+void JetDefinition::set_recombiner(const JetDefinition &other_jet_def){
+  assert(other_jet_def._recombiner || 
+         other_jet_def.recombination_scheme() != external_scheme);
+  if (other_jet_def._recombiner == 0){
+    set_recombination_scheme(other_jet_def.recombination_scheme());
+    return;
+  }
+  _recombiner = other_jet_def._recombiner;
+  _default_recombiner = DefaultRecombiner(external_scheme);
+  _shared_recombiner.reset(other_jet_def._shared_recombiner);
 }
 bool JetDefinition::has_same_recombiner(const JetDefinition &other_jd) const{
   const RecombinationScheme & scheme = recombination_scheme();
@@ -2986,8 +3463,10 @@ bool JetDefinition::has_same_recombiner(const JetDefinition &other_jd) const{
 void JetDefinition::delete_recombiner_when_unused(){
   if (_recombiner == 0){
     throw Error("tried to call JetDefinition::delete_recombiner_when_unused() for a JetDefinition without a user-defined recombination scheme");
+  } else if (_shared_recombiner.get()) {
+    throw Error("Error in JetDefinition::delete_recombiner_when_unused: the recombiner is already scheduled for deletion when unused (or was already set as shared)");
   }
-  _recombiner_shared.reset(_recombiner);
+  _shared_recombiner.reset(_recombiner);
 }
 void JetDefinition::delete_plugin_when_unused(){
   if (_plugin == 0){
@@ -3011,6 +3490,10 @@ string JetDefinition::DefaultRecombiner::description() const {
     return "boost-invariant pt scheme recombination";
   case BIpt2_scheme:
     return "boost-invariant pt2 scheme recombination";
+  case WTA_pt_scheme:
+    return "pt-ordered Winner-Takes-All recombination";
+  case WTA_modp_scheme:
+    return "|3-momentum|-ordered Winner-Takes-All recombination";
   default:
     ostringstream err;
     err << "DefaultRecombiner: unrecognized recombination scheme " 
@@ -3041,6 +3524,25 @@ void JetDefinition::DefaultRecombiner::recombine(
     weighta = pa.perp2(); 
     weightb = pb.perp2();
     break;
+  case WTA_pt_scheme:{
+    const PseudoJet & phard = (pa.pt2() >= pb.pt2()) ? pa : pb;
+    pab.reset_PtYPhiM(pa.pt()+pb.pt(), 
+                      phard.rap(), phard.phi(), phard.m());
+    return;}
+  case WTA_modp_scheme:{
+    bool a_hardest = (pa.modp2() >= pb.modp2());
+    const PseudoJet & phard = a_hardest ? pa : pb;
+    const PseudoJet & psoft = a_hardest ? pb : pa;
+    double modp_hard = phard.modp();
+    double modp_ab = modp_hard + psoft.modp();
+    if (phard.modp2()==0.0){
+      pab.reset(0.0, 0.0, 0.0, phard.m());
+    } else {
+      double scale = modp_ab/modp_hard;
+      pab.reset(phard.px()*scale, phard.py()*scale, phard.pz()*scale,
+                sqrt(modp_ab*modp_ab + phard.m2()));
+    }
+    return;}
   default:
     ostringstream err;
     err << "DefaultRecombiner: unrecognized recombination scheme " 
@@ -3064,6 +3566,8 @@ void JetDefinition::DefaultRecombiner::preprocess(PseudoJet & p) const {
   case E_scheme:
   case BIpt_scheme:
   case BIpt2_scheme:
+  case WTA_pt_scheme:
+  case WTA_modp_scheme:
     break;
   case pt_scheme:
   case pt2_scheme:
@@ -3136,17 +3640,14 @@ FJCORE_BEGIN_NAMESPACE
 ostream * LimitedWarning::_default_ostr = &cerr;
 std::list< LimitedWarning::Summary > LimitedWarning::_global_warnings_summary;
 int LimitedWarning::_max_warn_default = 5;
-void LimitedWarning::warn(const std::string & warning) {
-  warn(warning, _default_ostr);
-}
-void LimitedWarning::warn(const std::string & warning, std::ostream * ostr) {
+void LimitedWarning::warn(const char * warning, std::ostream * ostr) {
   if (_this_warning_summary == 0) {
     _global_warnings_summary.push_back(Summary(warning, 0));
     _this_warning_summary = & (_global_warnings_summary.back());
   }
   if (_n_warn_so_far < _max_warn) {
     ostringstream warnstr;
-    warnstr << "WARNING: ";
+    warnstr << "WARNING from FastJet: ";
     warnstr << warning;
     _n_warn_so_far++;
     if (_n_warn_so_far == _max_warn) warnstr << " (LAST SUCH WARNING)";
@@ -3174,7 +3675,7 @@ FJCORE_END_NAMESPACE
 #include<limits>
 FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
 using namespace std;
-void MinHeap::_initialise(const std::vector<double> & values){
+void MinHeap::initialise(const std::vector<double> & values){
   for (unsigned i = values.size(); i < _heap.size(); i++) {
     _heap[i].value = std::numeric_limits<double>::max();
     _heap[i].minloc = &(_heap[i]);
@@ -3305,6 +3806,7 @@ PseudoJet operator- (const PseudoJet & jet1, const PseudoJet & jet2) {
 		   jet1.E() -jet2.E()  );
 } 
 PseudoJet operator* (double coeff, const PseudoJet & jet) {
+  jet._ensure_valid_rap_phi(); 
   PseudoJet coeff_times_jet(jet);
   coeff_times_jet *= coeff;
   return coeff_times_jet;
@@ -3316,6 +3818,7 @@ PseudoJet operator/ (const PseudoJet & jet, double coeff) {
   return (1.0/coeff)*jet;
 } 
 void PseudoJet::operator*=(double coeff) {
+  _ensure_valid_rap_phi(); 
   _px *= coeff;
   _py *= coeff;
   _pz *= coeff;
@@ -3504,10 +4007,10 @@ vector<PseudoJet> PseudoJet::constituents() const{
 bool PseudoJet::has_exclusive_subjets() const{
   return (_structure()) && (_structure->has_exclusive_subjets());
 }
-std::vector<PseudoJet> PseudoJet::exclusive_subjets (const double & dcut) const {
+std::vector<PseudoJet> PseudoJet::exclusive_subjets (const double dcut) const {
   return validated_structure_ptr()->exclusive_subjets(*this, dcut);
 }
-int PseudoJet::n_exclusive_subjets(const double & dcut) const {
+int PseudoJet::n_exclusive_subjets(const double dcut) const {
   return validated_structure_ptr()->n_exclusive_subjets(*this, dcut);
 }
 std::vector<PseudoJet> PseudoJet::exclusive_subjets_up_to (int nsub) const {
@@ -3588,12 +4091,14 @@ PseudoJet join(const PseudoJet & j1){
 }
 PseudoJet join(const PseudoJet & j1, const PseudoJet & j2){
   vector<PseudoJet> pieces;
+  pieces.reserve(2);
   pieces.push_back(j1);
   pieces.push_back(j2);
   return join(pieces);
 }
 PseudoJet join(const PseudoJet & j1, const PseudoJet & j2, const PseudoJet & j3){
   vector<PseudoJet> pieces;
+  pieces.reserve(3);
   pieces.push_back(j1);
   pieces.push_back(j2);
   pieces.push_back(j3);
@@ -3601,6 +4106,7 @@ PseudoJet join(const PseudoJet & j1, const PseudoJet & j2, const PseudoJet & j3)
 }
 PseudoJet join(const PseudoJet & j1, const PseudoJet & j2, const PseudoJet & j3, const PseudoJet & j4){
   vector<PseudoJet> pieces;
+  pieces.reserve(4);
   pieces.push_back(j1);
   pieces.push_back(j2);
   pieces.push_back(j3);
@@ -3692,6 +4198,44 @@ unsigned int Selector::count(const std::vector<PseudoJet> & jets) const {
     }
   }
   return n;
+}
+PseudoJet Selector::sum(const std::vector<PseudoJet> & jets) const {
+  PseudoJet this_sum(0,0,0,0);
+  const SelectorWorker * worker_local = validated_worker();
+  if (worker_local->applies_jet_by_jet()) {
+    for (unsigned i = 0; i < jets.size(); i++) {
+      if (worker_local->pass(jets[i])) this_sum += jets[i];
+    }
+  } else {
+    std::vector<const PseudoJet *> jetptrs(jets.size());
+    for (unsigned i = 0; i < jets.size(); i++) {
+      jetptrs[i] = & jets[i];
+    }
+    worker_local->terminator(jetptrs);
+    for (unsigned i = 0; i < jetptrs.size(); i++) {
+      if (jetptrs[i]) this_sum += jets[i];
+    }
+  }
+  return this_sum;
+}
+double Selector::scalar_pt_sum(const std::vector<PseudoJet> & jets) const {
+  double this_sum = 0.0;
+  const SelectorWorker * worker_local = validated_worker();
+  if (worker_local->applies_jet_by_jet()) {
+    for (unsigned i = 0; i < jets.size(); i++) {
+      if (worker_local->pass(jets[i])) this_sum += jets[i].pt();
+    }
+  } else {
+    std::vector<const PseudoJet *> jetptrs(jets.size());
+    for (unsigned i = 0; i < jets.size(); i++) {
+      jetptrs[i] = & jets[i];
+    }
+    worker_local->terminator(jetptrs);
+    for (unsigned i = 0; i < jetptrs.size(); i++) {
+      if (jetptrs[i]) this_sum += jets[i].pt();
+    }
+  }
+  return this_sum;
 }
 void Selector::sift(const std::vector<PseudoJet> & jets,
 		    std::vector<PseudoJet> & jets_that_pass,
@@ -4232,7 +4776,7 @@ protected:
 };
 class SW_Circle : public SW_WithReference {
 public:
-  SW_Circle(const double &radius) : _radius2(radius*radius) {}
+  SW_Circle(const double radius) : _radius2(radius*radius) {}
   virtual SelectorWorker* copy(){ return new SW_Circle(*this);}
   virtual bool pass(const PseudoJet & jet) const {
     if (! _is_initialised)
@@ -4259,12 +4803,12 @@ public:
 protected:
   double _radius2;
 };
-Selector SelectorCircle(const double & radius) {
+Selector SelectorCircle(const double radius) {
   return Selector(new SW_Circle(radius));
 }
 class SW_Doughnut : public SW_WithReference {
 public:
-  SW_Doughnut(const double &radius_in, const double &radius_out)
+  SW_Doughnut(const double radius_in, const double radius_out)
     : _radius_in2(radius_in*radius_in), _radius_out2(radius_out*radius_out) {}
   virtual SelectorWorker* copy(){ return new SW_Doughnut(*this);}
   virtual bool pass(const PseudoJet & jet) const {
@@ -4293,12 +4837,12 @@ public:
 protected:
   double _radius_in2, _radius_out2;
 };
-Selector SelectorDoughnut(const double & radius_in, const double & radius_out) {
+Selector SelectorDoughnut(const double radius_in, const double radius_out) {
   return Selector(new SW_Doughnut(radius_in, radius_out));
 }
 class SW_Strip : public SW_WithReference {
 public:
-  SW_Strip(const double &delta) : _delta(delta) {}
+  SW_Strip(const double delta) : _delta(delta) {}
   virtual SelectorWorker* copy(){ return new SW_Strip(*this);}
   virtual bool pass(const PseudoJet & jet) const {
     if (! _is_initialised)
@@ -4325,12 +4869,12 @@ public:
 protected:
   double _delta;
 };
-Selector SelectorStrip(const double & half_width) {
+Selector SelectorStrip(const double half_width) {
   return Selector(new SW_Strip(half_width));
 }
 class SW_Rectangle : public SW_WithReference {
 public:
-  SW_Rectangle(const double &delta_rap, const double &delta_phi)
+  SW_Rectangle(const double delta_rap, const double delta_phi)
     : _delta_rap(delta_rap),  _delta_phi(delta_phi) {}
   virtual SelectorWorker* copy(){ return new SW_Rectangle(*this);}
   virtual bool pass(const PseudoJet & jet) const {
@@ -4358,7 +4902,7 @@ public:
 protected:
   double _delta_rap, _delta_phi;
 };
-Selector SelectorRectangle(const double & half_rap_width, const double & half_phi_width) {
+Selector SelectorRectangle(const double half_rap_width, const double half_phi_width) {
   return Selector(new SW_Rectangle(half_rap_width, half_phi_width));
 }
 class SW_PtFractionMin : public SW_WithReference {
@@ -4401,3 +4945,1234 @@ Selector & Selector::operator |=(const Selector & b){
   return *this;
 }
 FJCORE_END_NAMESPACE      // defined in fastjet/internal/base.hh
+#include <iomanip>
+using namespace std;
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+LazyTiling25::LazyTiling25(ClusterSequence & cs) :
+  _cs(cs), _jets(cs.jets())
+{
+#ifdef INSTRUMENT2
+  _ncall = 0; // gps tmp
+  _ncall_dtt = 0; // gps tmp
+#endif // INSTRUMENT2
+  _Rparam = cs.jet_def().R();
+  _R2 = _Rparam * _Rparam;
+  _invR2 = 1.0 / _R2;
+  _initialise_tiles();
+}
+void LazyTiling25::_initialise_tiles() {
+  double default_size = max(0.1,_Rparam)/2;
+  _tile_size_eta = default_size;
+  _n_tiles_phi   = max(5,int(floor(twopi/default_size)));
+  _tile_size_phi = twopi / _n_tiles_phi; // >= _Rparam and fits in 2pi
+#define _FASTJET_TILING25_USE_TILING_ANALYSIS_
+#ifdef  _FASTJET_TILING25_USE_TILING_ANALYSIS_
+  TilingExtent tiling_analysis(_cs);
+  _tiles_eta_min = tiling_analysis.minrap();
+  _tiles_eta_max = tiling_analysis.maxrap();
+#else // not _FASTJET_TILING25_USE_TILING_ANALYSIS_
+  _tiles_eta_min = 0.0;
+  _tiles_eta_max = 0.0;
+  const double maxrap = 7.0;
+  for(unsigned int i = 0; i < _jets.size(); i++) {
+    double eta = _jets[i].rap();
+    if (abs(eta) < maxrap) {
+      if (eta < _tiles_eta_min) {_tiles_eta_min = eta;}
+      if (eta > _tiles_eta_max) {_tiles_eta_max = eta;}
+    }
+  }
+#endif // _FASTJET_TILING25_USE_TILING_ANALYSIS_
+#define FASTJET_LAZY25_MIN3TILESY
+#ifdef FASTJET_LAZY25_MIN3TILESY
+   if (_tiles_eta_max - _tiles_eta_min < 3*_tile_size_eta) {
+     _tile_size_eta = (_tiles_eta_max - _tiles_eta_min)/3;
+     _tiles_ieta_min = 0;
+     _tiles_ieta_max = 2;
+     _tiles_eta_max -= _tile_size_eta;
+   } else {
+#endif //FASTJET_LAZY25_MIN3TILESY
+    _tiles_ieta_min = int(floor(_tiles_eta_min/_tile_size_eta));
+    _tiles_ieta_max = int(floor( _tiles_eta_max/_tile_size_eta));
+    _tiles_eta_min = _tiles_ieta_min * _tile_size_eta;
+    _tiles_eta_max = _tiles_ieta_max * _tile_size_eta;
+#ifdef FASTJET_LAZY25_MIN3TILESY
+   }
+#endif
+  _tile_half_size_eta = _tile_size_eta * 0.5;
+  _tile_half_size_phi = _tile_size_phi * 0.5;
+  vector<bool> use_periodic_delta_phi(_n_tiles_phi, false);
+  if (_n_tiles_phi <= 5) {
+    fill(use_periodic_delta_phi.begin(), use_periodic_delta_phi.end(), true);
+  } else {
+    use_periodic_delta_phi[0] = true;
+    use_periodic_delta_phi[1] = true;
+    use_periodic_delta_phi[_n_tiles_phi-2] = true;
+    use_periodic_delta_phi[_n_tiles_phi-1] = true;
+  }
+  _tiles.resize((_tiles_ieta_max-_tiles_ieta_min+1)*_n_tiles_phi);
+  for (int ieta = _tiles_ieta_min; ieta <= _tiles_ieta_max; ieta++) {
+    for (int iphi = 0; iphi < _n_tiles_phi; iphi++) {
+      Tile25 * tile = & _tiles[_tile_index(ieta,iphi)];
+      tile->head = NULL; // first element of tiles points to itself
+      tile->begin_tiles[0] =  tile;
+      Tile25 ** pptile = & (tile->begin_tiles[0]);
+      pptile++;
+      tile->surrounding_tiles = pptile;
+      if (ieta > _tiles_ieta_min) {
+	// with the itile subroutine, we can safely run tiles from
+	// idphi=-1 to idphi=+1, because it takes care of
+	// negative and positive boundaries
+	for (int idphi = -2; idphi <=+2; idphi++) {
+	  *pptile = & _tiles[_tile_index(ieta-1,iphi+idphi)];
+	  pptile++;
+	}	
+      }
+      if (ieta > _tiles_ieta_min + 1) {
+	// with the itile subroutine, we can safely run tiles from
+	// idphi=-1 to idphi=+1, because it takes care of
+	// negative and positive boundaries
+	for (int idphi = -2; idphi <= +2; idphi++) {
+	  *pptile = & _tiles[_tile_index(ieta-2,iphi+idphi)];
+	  pptile++;
+	}	
+      }
+      *pptile = & _tiles[_tile_index(ieta,iphi-1)];
+      pptile++;
+      *pptile = & _tiles[_tile_index(ieta,iphi-2)];
+      pptile++;
+      tile->RH_tiles = pptile;
+      *pptile = & _tiles[_tile_index(ieta,iphi+1)];
+      pptile++;
+      *pptile = & _tiles[_tile_index(ieta,iphi+2)];
+      pptile++;
+      if (ieta < _tiles_ieta_max) {
+	for (int idphi = -2; idphi <= +2; idphi++) {
+	  *pptile = & _tiles[_tile_index(ieta+1,iphi+idphi)];
+	  pptile++;
+	}	
+      }
+      if (ieta < _tiles_ieta_max - 1) {
+	for (int idphi = -2; idphi <= +2; idphi++) {
+	  *pptile = & _tiles[_tile_index(ieta+2,iphi+idphi)];
+	  pptile++;
+	}	
+      }
+      tile->end_tiles = pptile;
+      tile->tagged = false;
+      tile->use_periodic_delta_phi = use_periodic_delta_phi[iphi];
+      tile->max_NN_dist = 0;
+      tile->eta_centre = (ieta-_tiles_ieta_min+0.5)*_tile_size_eta + _tiles_eta_min;
+      tile->phi_centre = (iphi+0.5)*_tile_size_phi;
+    }
+  }
+}
+int LazyTiling25::_tile_index(const double eta, const double phi) const {
+  int ieta, iphi;
+  if      (eta <= _tiles_eta_min) {ieta = 0;}
+  else if (eta >= _tiles_eta_max) {ieta = _tiles_ieta_max-_tiles_ieta_min;}
+  else {
+    ieta = int(((eta - _tiles_eta_min) / _tile_size_eta));
+    if (ieta > _tiles_ieta_max-_tiles_ieta_min) {
+      ieta = _tiles_ieta_max-_tiles_ieta_min;} 
+  }
+  iphi = int((phi+twopi)/_tile_size_phi) % _n_tiles_phi;
+  return (iphi + ieta * _n_tiles_phi);
+}
+inline void LazyTiling25::_tj_set_jetinfo( TiledJet * const jet,
+					      const int _jets_index) {
+  _bj_set_jetinfo<>(jet, _jets_index);
+  jet->tile_index = _tile_index(jet->eta, jet->phi);
+  Tile25 * tile = &_tiles[jet->tile_index];
+  jet->previous   = NULL;
+  jet->next       = tile->head;
+  if (jet->next != NULL) {jet->next->previous = jet;}
+  tile->head      = jet;
+}
+void LazyTiling25::_bj_remove_from_tiles(TiledJet * const jet) {
+  Tile25 * tile = & _tiles[jet->tile_index];
+  if (jet->previous == NULL) {
+    tile->head = jet->next;
+  } else {
+    jet->previous->next = jet->next;
+  }
+  if (jet->next != NULL) {
+    jet->next->previous = jet->previous;
+  }
+}
+void LazyTiling25::_print_tiles(TiledJet * briefjets ) const {
+  for (vector<Tile25>::const_iterator tile = _tiles.begin(); 
+       tile < _tiles.end(); tile++) {
+    cout << "Tile " << tile - _tiles.begin()
+         << " at " << setw(10) << tile->eta_centre << "," << setw(10) << tile->phi_centre
+         << " = ";
+    vector<int> list;
+    for (TiledJet * jetI = tile->head; jetI != NULL; jetI = jetI->next) {
+      list.push_back(jetI-briefjets);
+    }
+    sort(list.begin(),list.end());
+    for (unsigned int i = 0; i < list.size(); i++) {cout <<" "<<list[i];}
+    cout <<"\n";
+  }
+}
+void LazyTiling25::_add_neighbours_to_tile_union(const int tile_index, 
+	       vector<int> & tile_union, int & n_near_tiles) const {
+  for (Tile25 * const * near_tile = _tiles[tile_index].begin_tiles; 
+       near_tile != _tiles[tile_index].end_tiles; near_tile++){
+    tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+    n_near_tiles++;
+  }
+}
+inline void LazyTiling25::_add_untagged_neighbours_to_tile_union(
+               const int tile_index, 
+	       vector<int> & tile_union, int & n_near_tiles)  {
+  for (Tile25 ** near_tile = _tiles[tile_index].begin_tiles; 
+       near_tile != _tiles[tile_index].end_tiles; near_tile++){
+    if (! (*near_tile)->tagged) {
+      (*near_tile)->tagged = true;
+      tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+      n_near_tiles++;
+    }
+  }
+}
+inline void LazyTiling25::_add_untagged_neighbours_to_tile_union_using_max_info(
+               const TiledJet * jet, 
+	       vector<int> & tile_union, int & n_near_tiles)  {
+  Tile25 & tile = _tiles[jet->tile_index];
+  for (Tile25 ** near_tile = tile.begin_tiles; near_tile != tile.end_tiles; near_tile++){
+    if ((*near_tile)->tagged) continue;
+    double dist = _distance_to_tile(jet, *near_tile) - tile_edge_security_margin;
+    if (dist > (*near_tile)->max_NN_dist) continue;
+    (*near_tile)->tagged = true;
+    tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+    n_near_tiles++;
+  }
+}
+inline double LazyTiling25::_distance_to_tile(const TiledJet * bj, const Tile25 * tile) 
+#ifdef INSTRUMENT2
+   {
+  _ncall_dtt++; // GPS tmp
+#else
+  const {
+#endif // INSTRUMENT2
+  double deta;
+  if (_tiles[bj->tile_index].eta_centre == tile->eta_centre) deta = 0;
+  else   deta = std::abs(bj->eta - tile->eta_centre) - _tile_half_size_eta;
+  double dphi = std::abs(bj->phi - tile->phi_centre);
+  if (dphi > pi) dphi = twopi-dphi;
+  dphi -= _tile_half_size_phi;
+  if (dphi < 0) dphi = 0;
+  return dphi*dphi + deta*deta;
+}
+inline void LazyTiling25::_update_jetX_jetI_NN(TiledJet * jetX, TiledJet * jetI, vector<TiledJet *> & jets_for_minheap) {
+  double dist = _bj_dist(jetI,jetX);
+  if (dist < jetI->NN_dist) {
+    if (jetI != jetX) {
+      jetI->NN_dist = dist;
+      jetI->NN = jetX;
+      if (!jetI->minheap_update_needed()) {
+	jetI->label_minheap_update_needed();
+	jets_for_minheap.push_back(jetI);
+      }
+    }
+  }
+  if (dist < jetX->NN_dist) {
+    if (jetI != jetX) {
+      jetX->NN_dist = dist;
+      jetX->NN      = jetI;}
+  }
+}
+inline void LazyTiling25::_set_NN(TiledJet * jetI, 
+                              vector<TiledJet *> & jets_for_minheap) {
+  jetI->NN_dist = _R2;
+  jetI->NN      = NULL;
+  if (!jetI->minheap_update_needed()) {
+    jetI->label_minheap_update_needed();
+    jets_for_minheap.push_back(jetI);}
+  Tile25 * tile_ptr = &_tiles[jetI->tile_index];
+    for (Tile25 ** near_tile  = tile_ptr->begin_tiles; 
+         near_tile != tile_ptr->end_tiles; near_tile++) {
+      if (jetI->NN_dist < _distance_to_tile(jetI, *near_tile)) continue;
+      for (TiledJet * jetJ  = (*near_tile)->head; 
+           jetJ != NULL; jetJ = jetJ->next) {
+        double dist = _bj_dist(jetI,jetJ);
+        if (dist < jetI->NN_dist && jetJ != jetI) {
+          jetI->NN_dist = dist; jetI->NN = jetJ;
+        }
+      }
+    }
+}
+void LazyTiling25::run() {
+  int n = _jets.size();
+  if (n == 0) return; 
+  TiledJet * briefjets = new TiledJet[n];
+  TiledJet * jetA = briefjets, * jetB;
+  TiledJet oldB = briefjets[0]; 
+  vector<int> tile_union(3*25);
+  for (int i = 0; i< n; i++) {
+    _tj_set_jetinfo(jetA, i);
+    jetA++; // move on to next entry of briefjets
+  }
+  TiledJet * head = briefjets; // a nicer way of naming start
+  vector<Tile25>::iterator tile;
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      for (jetB = tile->head; jetB != jetA; jetB = jetB->next) {
+	double dist = _bj_dist_not_periodic(jetA,jetB);
+	if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+	if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+      }
+    }
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      if (jetA->NN_dist > tile->max_NN_dist) tile->max_NN_dist = jetA->NN_dist;
+    }
+  }
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    if (tile->use_periodic_delta_phi) {
+      for (Tile25 ** RTile = tile->RH_tiles; RTile != tile->end_tiles; RTile++) {
+        for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+          double dist_to_tile = _distance_to_tile(jetA, *RTile);
+          bool relevant_for_jetA  = dist_to_tile <= jetA->NN_dist;
+          bool relevant_for_RTile = dist_to_tile <= (*RTile)->max_NN_dist;
+          if (relevant_for_jetA || relevant_for_RTile) {
+            for (jetB = (*RTile)->head; jetB != NULL; jetB = jetB->next) {
+              double dist = _bj_dist(jetA,jetB);
+              if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+              if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+            }
+          } 
+        }
+      }
+    } else {
+      for (Tile25 ** RTile = tile->RH_tiles; RTile != tile->end_tiles; RTile++) {
+        for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+          double dist_to_tile = _distance_to_tile(jetA, *RTile);
+          bool relevant_for_jetA  = dist_to_tile <= jetA->NN_dist;
+          bool relevant_for_RTile = dist_to_tile <= (*RTile)->max_NN_dist;
+          if (relevant_for_jetA || relevant_for_RTile) {
+            for (jetB = (*RTile)->head; jetB != NULL; jetB = jetB->next) {
+              double dist = _bj_dist_not_periodic(jetA,jetB);
+              if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+              if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+            }
+          } 
+        }
+      }
+    }
+  }
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    tile->max_NN_dist = 0;
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      if (jetA->NN_dist > tile->max_NN_dist) tile->max_NN_dist = jetA->NN_dist;
+    }
+  }
+#ifdef INSTRUMENT2
+  cout << "intermediate ncall, dtt = " << _ncall << " " << _ncall_dtt << endl; // GPS tmp
+#endif // INSTRUMENT2
+  vector<double> diJs(n);
+  for (int i = 0; i < n; i++) {
+    diJs[i] = _bj_diJ(&briefjets[i]);
+    briefjets[i].label_minheap_update_done();
+  }
+  MinHeap minheap(diJs);
+  vector<TiledJet *> jets_for_minheap;
+  jets_for_minheap.reserve(n); 
+  int history_location = n-1;
+  while (n > 0) {
+    double diJ_min = minheap.minval() *_invR2;
+    jetA = head + minheap.minloc();
+    history_location++;
+    jetB = jetA->NN;
+    if (jetB != NULL) {
+      if (jetA < jetB) {std::swap(jetA,jetB);}
+      int nn; // new jet index
+      _cs.plugin_record_ij_recombination(jetA->_jets_index, jetB->_jets_index, diJ_min, nn);
+      _bj_remove_from_tiles(jetA);
+      oldB = * jetB;  // take a copy because we will need it...
+      _bj_remove_from_tiles(jetB);
+      _tj_set_jetinfo(jetB, nn); // cause jetB to become _jets[nn]
+    } else {
+      _cs.plugin_record_iB_recombination(jetA->_jets_index, diJ_min);
+      _bj_remove_from_tiles(jetA);
+    }
+    minheap.remove(jetA-head);
+    int n_near_tiles = 0;
+    if (jetB != NULL) {
+      Tile25 & jetB_tile = _tiles[jetB->tile_index];
+      for (Tile25 ** near_tile  = jetB_tile.begin_tiles; 
+	           near_tile != jetB_tile.end_tiles; near_tile++) {
+    	double dist_to_tile = _distance_to_tile(jetB, *near_tile);
+    	bool relevant_for_jetB  = dist_to_tile <= jetB->NN_dist;
+    	bool relevant_for_near_tile = dist_to_tile <= (*near_tile)->max_NN_dist;
+        bool relevant = relevant_for_jetB || relevant_for_near_tile;
+        if (! relevant) continue;
+        tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+        (*near_tile)->tagged = true;
+        n_near_tiles++;
+        for (TiledJet * jetI = (*near_tile)->head; jetI != NULL; jetI = jetI->next) {
+          if (jetI->NN == jetA || jetI->NN == jetB) _set_NN(jetI, jets_for_minheap);
+          _update_jetX_jetI_NN(jetB, jetI, jets_for_minheap);
+        }
+      }
+    }
+    int n_done_tiles = n_near_tiles;
+    _add_untagged_neighbours_to_tile_union_using_max_info(jetA, 
+       					   tile_union, n_near_tiles);
+    if (jetB != NULL) {
+	_add_untagged_neighbours_to_tile_union_using_max_info(&oldB,
+							      tile_union,n_near_tiles);
+      jetB->label_minheap_update_needed();
+      jets_for_minheap.push_back(jetB);
+    }
+    for (int itile = 0; itile < n_done_tiles; itile++) {
+      _tiles[tile_union[itile]].tagged = false;
+    }
+    for (int itile = n_done_tiles; itile < n_near_tiles; itile++) {
+      Tile25 * tile_ptr = &_tiles[tile_union[itile]];
+      tile_ptr->tagged = false;
+      for (TiledJet * jetI = tile_ptr->head; jetI != NULL; jetI = jetI->next) {
+        if (jetI->NN == jetA || (jetI->NN == jetB && jetB != NULL)) {
+          _set_NN(jetI, jets_for_minheap);
+        }
+      }
+    }
+    while (jets_for_minheap.size() > 0) {
+      TiledJet * jetI = jets_for_minheap.back(); 
+      jets_for_minheap.pop_back();
+      minheap.update(jetI-head, _bj_diJ(jetI));
+      jetI->label_minheap_update_done();
+      Tile25 & tile_I = _tiles[jetI->tile_index];
+      if (tile_I.max_NN_dist < jetI->NN_dist) tile_I.max_NN_dist = jetI->NN_dist;
+    }
+    n--;
+  }
+  delete[] briefjets;
+#ifdef INSTRUMENT2
+  cout << "ncall, dtt = " << _ncall << " " << _ncall_dtt << endl; // GPS tmp
+#endif // INSTRUMENT2
+}
+FJCORE_END_NAMESPACE
+#include <iomanip>
+#include <limits>
+#include <cmath>
+using namespace std;
+#define _FASTJET_TILING2_USE_TILING_ANALYSIS_
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+LazyTiling9::LazyTiling9(ClusterSequence & cs) :
+  _cs(cs), _jets(cs.jets())
+{
+#ifdef INSTRUMENT2
+  _ncall = 0; // gps tmp
+  _ncall_dtt = 0; // gps tmp
+#endif // INSTRUMENT2
+  _Rparam = cs.jet_def().R();
+  _R2 = _Rparam * _Rparam;
+  _invR2 = 1.0 / _R2;
+  _initialise_tiles();
+}
+void LazyTiling9::_initialise_tiles() {
+  double default_size = max(0.1,_Rparam);
+  _tile_size_eta = default_size;
+  _n_tiles_phi   = max(3,int(floor(twopi/default_size)));
+  _tile_size_phi = twopi / _n_tiles_phi; // >= _Rparam and fits in 2pi
+#ifdef _FASTJET_TILING2_USE_TILING_ANALYSIS_
+  TilingExtent tiling_analysis(_cs);
+  _tiles_eta_min = tiling_analysis.minrap();
+  _tiles_eta_max = tiling_analysis.maxrap();
+#else
+  _tiles_eta_min = 0.0;
+  _tiles_eta_max = 0.0;
+  const double maxrap = 7.0;
+  for(unsigned int i = 0; i < _jets.size(); i++) {
+    double eta = _jets[i].rap();
+    if (abs(eta) < maxrap) {
+      if (eta < _tiles_eta_min) {_tiles_eta_min = eta;}
+      if (eta > _tiles_eta_max) {_tiles_eta_max = eta;}
+    }
+  }
+#endif
+#define FASTJET_LAZY9_MIN2TILESY
+#ifdef FASTJET_LAZY9_MIN2TILESY
+   if (_tiles_eta_max - _tiles_eta_min < 2*_tile_size_eta) {
+     _tile_size_eta = (_tiles_eta_max - _tiles_eta_min)/2;
+     _tiles_ieta_min = 0;
+     _tiles_ieta_max = 1;
+     _tiles_eta_max -= _tile_size_eta;
+   } else {
+#endif //FASTJET_LAZY9_MIN2TILESY
+  _tiles_ieta_min = int(floor(_tiles_eta_min/_tile_size_eta));
+  _tiles_ieta_max = int(floor( _tiles_eta_max/_tile_size_eta));
+  _tiles_eta_min = _tiles_ieta_min * _tile_size_eta;
+  _tiles_eta_max = _tiles_ieta_max * _tile_size_eta;
+#ifdef FASTJET_LAZY9_MIN2TILESY
+   }
+#endif
+  _tile_half_size_eta = _tile_size_eta * 0.5;
+  _tile_half_size_phi = _tile_size_phi * 0.5;
+  vector<bool> use_periodic_delta_phi(_n_tiles_phi, false);
+  if (_n_tiles_phi <= 3) {
+    fill(use_periodic_delta_phi.begin(), use_periodic_delta_phi.end(), true);
+  } else {
+    use_periodic_delta_phi[0] = true;
+    use_periodic_delta_phi[_n_tiles_phi-1] = true;
+  }
+  _tiles.resize((_tiles_ieta_max-_tiles_ieta_min+1)*_n_tiles_phi);
+  for (int ieta = _tiles_ieta_min; ieta <= _tiles_ieta_max; ieta++) {
+    for (int iphi = 0; iphi < _n_tiles_phi; iphi++) {
+      Tile2 * tile = & _tiles[_tile_index(ieta,iphi)];
+      tile->head = NULL; // first element of tiles points to itself
+      tile->begin_tiles[0] =  tile;
+      Tile2 ** pptile = & (tile->begin_tiles[0]);
+      pptile++;
+      tile->surrounding_tiles = pptile;
+      if (ieta > _tiles_ieta_min) {
+	// with the itile subroutine, we can safely run tiles from
+	// idphi=-1 to idphi=+1, because it takes care of
+	// negative and positive boundaries
+	for (int idphi = -1; idphi <=+1; idphi++) {
+	  *pptile = & _tiles[_tile_index(ieta-1,iphi+idphi)];
+	  pptile++;
+	}	
+      }
+      *pptile = & _tiles[_tile_index(ieta,iphi-1)];
+      pptile++;
+      tile->RH_tiles = pptile;
+      *pptile = & _tiles[_tile_index(ieta,iphi+1)];
+      pptile++;
+      if (ieta < _tiles_ieta_max) {
+	for (int idphi = -1; idphi <= +1; idphi++) {
+	  *pptile = & _tiles[_tile_index(ieta+1,iphi+idphi)];
+	  pptile++;
+	}	
+      }
+      tile->end_tiles = pptile;
+      tile->tagged = false;
+      tile->use_periodic_delta_phi = use_periodic_delta_phi[iphi];
+      tile->max_NN_dist = 0;
+      tile->eta_centre = (ieta-_tiles_ieta_min+0.5)*_tile_size_eta + _tiles_eta_min;
+      tile->phi_centre = (iphi+0.5)*_tile_size_phi;
+    }
+  }
+}
+int LazyTiling9::_tile_index(const double eta, const double phi) const {
+  int ieta, iphi;
+  if      (eta <= _tiles_eta_min) {ieta = 0;}
+  else if (eta >= _tiles_eta_max) {ieta = _tiles_ieta_max-_tiles_ieta_min;}
+  else {
+    ieta = int(((eta - _tiles_eta_min) / _tile_size_eta));
+    if (ieta > _tiles_ieta_max-_tiles_ieta_min) {
+      ieta = _tiles_ieta_max-_tiles_ieta_min;} 
+  }
+  iphi = int((phi+twopi)/_tile_size_phi) % _n_tiles_phi;
+  return (iphi + ieta * _n_tiles_phi);
+}
+inline void LazyTiling9::_tj_set_jetinfo( TiledJet * const jet,
+					      const int _jets_index) {
+  _bj_set_jetinfo<>(jet, _jets_index);
+  jet->tile_index = _tile_index(jet->eta, jet->phi);
+  Tile2 * tile = &_tiles[jet->tile_index];
+  jet->previous   = NULL;
+  jet->next       = tile->head;
+  if (jet->next != NULL) {jet->next->previous = jet;}
+  tile->head      = jet;
+}
+void LazyTiling9::_bj_remove_from_tiles(TiledJet * const jet) {
+  Tile2 * tile = & _tiles[jet->tile_index];
+  if (jet->previous == NULL) {
+    tile->head = jet->next;
+  } else {
+    jet->previous->next = jet->next;
+  }
+  if (jet->next != NULL) {
+    jet->next->previous = jet->previous;
+  }
+}
+void LazyTiling9::_print_tiles(TiledJet * briefjets ) const {
+  for (vector<Tile2>::const_iterator tile = _tiles.begin(); 
+       tile < _tiles.end(); tile++) {
+    cout << "Tile " << tile - _tiles.begin()<<" = ";
+    vector<int> list;
+    for (TiledJet * jetI = tile->head; jetI != NULL; jetI = jetI->next) {
+      list.push_back(jetI-briefjets);
+    }
+    sort(list.begin(),list.end());
+    for (unsigned int i = 0; i < list.size(); i++) {cout <<" "<<list[i];}
+    cout <<"\n";
+  }
+}
+void LazyTiling9::_add_neighbours_to_tile_union(const int tile_index, 
+	       vector<int> & tile_union, int & n_near_tiles) const {
+  for (Tile2 * const * near_tile = _tiles[tile_index].begin_tiles; 
+       near_tile != _tiles[tile_index].end_tiles; near_tile++){
+    tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+    n_near_tiles++;
+  }
+}
+inline void LazyTiling9::_add_untagged_neighbours_to_tile_union(
+               const int tile_index, 
+	       vector<int> & tile_union, int & n_near_tiles)  {
+  for (Tile2 ** near_tile = _tiles[tile_index].begin_tiles; 
+       near_tile != _tiles[tile_index].end_tiles; near_tile++){
+    if (! (*near_tile)->tagged) {
+      (*near_tile)->tagged = true;
+      tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+      n_near_tiles++;
+    }
+  }
+}
+inline void LazyTiling9::_add_untagged_neighbours_to_tile_union_using_max_info(
+               const TiledJet * jet, 
+	       vector<int> & tile_union, int & n_near_tiles)  {
+  Tile2 & tile = _tiles[jet->tile_index];
+  for (Tile2 ** near_tile = tile.begin_tiles; near_tile != tile.end_tiles; near_tile++){
+    if ((*near_tile)->tagged) continue;
+    double dist = _distance_to_tile(jet, *near_tile) - tile_edge_security_margin;
+    if (dist > (*near_tile)->max_NN_dist) continue;
+    (*near_tile)->tagged = true;
+    tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+    n_near_tiles++;
+  }
+}
+inline double LazyTiling9::_distance_to_tile(const TiledJet * bj, const Tile2 * tile) 
+#ifdef INSTRUMENT2
+   {
+  _ncall_dtt++; // GPS tmp
+#else
+  const {
+#endif // INSTRUMENT2
+  double deta;
+  if (_tiles[bj->tile_index].eta_centre == tile->eta_centre) deta = 0;
+  else   deta = std::abs(bj->eta - tile->eta_centre) - _tile_half_size_eta;
+  double dphi = std::abs(bj->phi - tile->phi_centre);
+  if (dphi > pi) dphi = twopi-dphi;
+  dphi -= _tile_half_size_phi;
+  if (dphi < 0) dphi = 0;
+  return dphi*dphi + deta*deta;
+}
+inline void LazyTiling9::_update_jetX_jetI_NN(TiledJet * jetX, TiledJet * jetI, vector<TiledJet *> & jets_for_minheap) {
+  double dist = _bj_dist(jetI,jetX);
+  if (dist < jetI->NN_dist) {
+    if (jetI != jetX) {
+      jetI->NN_dist = dist;
+      jetI->NN = jetX;
+      if (!jetI->minheap_update_needed()) {
+	jetI->label_minheap_update_needed();
+	jets_for_minheap.push_back(jetI);
+      }
+    }
+  }
+  if (dist < jetX->NN_dist) {
+    if (jetI != jetX) {
+      jetX->NN_dist = dist;
+      jetX->NN      = jetI;}
+  }
+}
+inline void LazyTiling9::_set_NN(TiledJet * jetI, 
+                              vector<TiledJet *> & jets_for_minheap) {
+  jetI->NN_dist = _R2;
+  jetI->NN      = NULL;
+  if (!jetI->minheap_update_needed()) {
+    jetI->label_minheap_update_needed();
+    jets_for_minheap.push_back(jetI);}
+  Tile2 * tile_ptr = &_tiles[jetI->tile_index];
+    for (Tile2 ** near_tile  = tile_ptr->begin_tiles; 
+         near_tile != tile_ptr->end_tiles; near_tile++) {
+      if (jetI->NN_dist < _distance_to_tile(jetI, *near_tile)) continue;
+      for (TiledJet * jetJ  = (*near_tile)->head; 
+           jetJ != NULL; jetJ = jetJ->next) {
+        double dist = _bj_dist(jetI,jetJ);
+        if (dist < jetI->NN_dist && jetJ != jetI) {
+          jetI->NN_dist = dist; jetI->NN = jetJ;
+        }
+      }
+    }
+}
+void LazyTiling9::run() {
+  int n = _jets.size();
+  if (n == 0) return; 
+  TiledJet * briefjets = new TiledJet[n];
+  TiledJet * jetA = briefjets, * jetB;
+  TiledJet oldB = briefjets[0]; 
+  vector<int> tile_union(3*n_tile_neighbours);
+  for (int i = 0; i< n; i++) {
+    _tj_set_jetinfo(jetA, i);
+    jetA++; // move on to next entry of briefjets
+  }
+  TiledJet * head = briefjets; // a nicer way of naming start
+  vector<Tile2>::iterator tile;
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      for (jetB = tile->head; jetB != jetA; jetB = jetB->next) {
+	double dist = _bj_dist_not_periodic(jetA,jetB);
+	if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+	if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+      }
+    }
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      if (jetA->NN_dist > tile->max_NN_dist) tile->max_NN_dist = jetA->NN_dist;
+    }
+  }
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    if (tile->use_periodic_delta_phi) {
+      for (Tile2 ** RTile = tile->RH_tiles; RTile != tile->end_tiles; RTile++) {
+        for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+          double dist_to_tile = _distance_to_tile(jetA, *RTile);
+          bool relevant_for_jetA  = dist_to_tile <= jetA->NN_dist;
+          bool relevant_for_RTile = dist_to_tile <= (*RTile)->max_NN_dist;
+          if (relevant_for_jetA || relevant_for_RTile) {
+            for (jetB = (*RTile)->head; jetB != NULL; jetB = jetB->next) {
+              double dist = _bj_dist(jetA,jetB);
+              if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+              if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+            }
+          } 
+        }
+      }
+    } else {
+      for (Tile2 ** RTile = tile->RH_tiles; RTile != tile->end_tiles; RTile++) {
+        for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+          double dist_to_tile = _distance_to_tile(jetA, *RTile);
+          bool relevant_for_jetA  = dist_to_tile <= jetA->NN_dist;
+          bool relevant_for_RTile = dist_to_tile <= (*RTile)->max_NN_dist;
+          if (relevant_for_jetA || relevant_for_RTile) {
+            for (jetB = (*RTile)->head; jetB != NULL; jetB = jetB->next) {
+              double dist = _bj_dist_not_periodic(jetA,jetB);
+              if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+              if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+            }
+          } 
+        }
+      }
+    }
+  }
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    tile->max_NN_dist = 0;
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      if (jetA->NN_dist > tile->max_NN_dist) tile->max_NN_dist = jetA->NN_dist;
+    }
+  }
+#ifdef INSTRUMENT2
+  cout << "intermediate ncall, dtt = " << _ncall << " " << _ncall_dtt << endl; // GPS tmp
+#endif // INSTRUMENT2
+  vector<double> diJs(n);
+  for (int i = 0; i < n; i++) {
+    diJs[i] = _bj_diJ(&briefjets[i]);
+    briefjets[i].label_minheap_update_done();
+  }
+  MinHeap minheap(diJs);
+  vector<TiledJet *> jets_for_minheap;
+  jets_for_minheap.reserve(n); 
+  int history_location = n-1;
+  while (n > 0) {
+    double diJ_min = minheap.minval() *_invR2;
+    jetA = head + minheap.minloc();
+    history_location++;
+    jetB = jetA->NN;
+    if (jetB != NULL) {
+      if (jetA < jetB) {std::swap(jetA,jetB);}
+      int nn; // new jet index
+      _cs.plugin_record_ij_recombination(jetA->_jets_index, jetB->_jets_index, diJ_min, nn);
+      _bj_remove_from_tiles(jetA);
+      oldB = * jetB;  // take a copy because we will need it...
+      _bj_remove_from_tiles(jetB);
+      _tj_set_jetinfo(jetB, nn); // cause jetB to become _jets[nn]
+    } else {
+      _cs.plugin_record_iB_recombination(jetA->_jets_index, diJ_min);
+      _bj_remove_from_tiles(jetA);
+    }
+    minheap.remove(jetA-head);
+    int n_near_tiles = 0;
+    if (jetB != NULL) {
+      Tile2 & jetB_tile = _tiles[jetB->tile_index];
+      for (Tile2 ** near_tile  = jetB_tile.begin_tiles; 
+	           near_tile != jetB_tile.end_tiles; near_tile++) {
+    	double dist_to_tile = _distance_to_tile(jetB, *near_tile);
+    	bool relevant_for_jetB  = dist_to_tile <= jetB->NN_dist;
+    	bool relevant_for_near_tile = dist_to_tile <= (*near_tile)->max_NN_dist;
+        bool relevant = relevant_for_jetB || relevant_for_near_tile;
+        if (! relevant) continue;
+        tile_union[n_near_tiles] = *near_tile - & _tiles[0];
+        (*near_tile)->tagged = true;
+        n_near_tiles++;
+        for (TiledJet * jetI = (*near_tile)->head; jetI != NULL; jetI = jetI->next) {
+          if (jetI->NN == jetA || jetI->NN == jetB) _set_NN(jetI, jets_for_minheap);
+          _update_jetX_jetI_NN(jetB, jetI, jets_for_minheap);
+        }
+      }
+    }
+    int n_done_tiles = n_near_tiles;
+    _add_untagged_neighbours_to_tile_union_using_max_info(jetA, 
+       					   tile_union, n_near_tiles);
+    if (jetB != NULL) {
+	_add_untagged_neighbours_to_tile_union_using_max_info(&oldB,
+							      tile_union,n_near_tiles);
+      jetB->label_minheap_update_needed();
+      jets_for_minheap.push_back(jetB);
+    }
+    for (int itile = 0; itile < n_done_tiles; itile++) {
+      _tiles[tile_union[itile]].tagged = false;
+    }
+    for (int itile = n_done_tiles; itile < n_near_tiles; itile++) {
+      Tile2 * tile_ptr = &_tiles[tile_union[itile]];
+      tile_ptr->tagged = false;
+      for (TiledJet * jetI = tile_ptr->head; jetI != NULL; jetI = jetI->next) {
+        if (jetI->NN == jetA || (jetI->NN == jetB && jetB != NULL)) {
+          _set_NN(jetI, jets_for_minheap);
+        }
+      }
+    }
+    while (jets_for_minheap.size() > 0) {
+      TiledJet * jetI = jets_for_minheap.back(); 
+      jets_for_minheap.pop_back();
+      minheap.update(jetI-head, _bj_diJ(jetI));
+      jetI->label_minheap_update_done();
+      Tile2 & tile_I = _tiles[jetI->tile_index];
+      if (tile_I.max_NN_dist < jetI->NN_dist) tile_I.max_NN_dist = jetI->NN_dist;
+    }
+    n--;
+  }
+  delete[] briefjets;
+#ifdef INSTRUMENT2
+  cout << "ncall, dtt = " << _ncall << " " << _ncall_dtt << endl; // GPS tmp
+#endif // INSTRUMENT2
+}
+FJCORE_END_NAMESPACE
+#include <iomanip>
+using namespace std;
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+LazyTiling9Alt::LazyTiling9Alt(ClusterSequence & cs) :
+  _cs(cs), _jets(cs.jets())
+{
+  _Rparam = cs.jet_def().R();
+  _R2 = _Rparam * _Rparam;
+  _invR2 = 1.0 / _R2;
+  _initialise_tiles();
+}
+void LazyTiling9Alt::_initialise_tiles() {
+  double default_size = max(0.1,_Rparam);
+  _tile_size_eta = default_size;
+  _n_tiles_phi   = max(3,int(floor(twopi/default_size)));
+  _tile_size_phi = twopi / _n_tiles_phi; // >= _Rparam and fits in 2pi
+  _tiles_eta_min = 0.0;
+  _tiles_eta_max = 0.0;
+  const double maxrap = 7.0;
+  for(unsigned int i = 0; i < _jets.size(); i++) {
+    double eta = _jets[i].rap();
+    if (abs(eta) < maxrap) {
+      if (eta < _tiles_eta_min) {_tiles_eta_min = eta;}
+      if (eta > _tiles_eta_max) {_tiles_eta_max = eta;}
+    }
+  }
+  _tiles_ieta_min = int(floor(_tiles_eta_min/_tile_size_eta));
+  _tiles_ieta_max = int(floor( _tiles_eta_max/_tile_size_eta));
+  _tiles_eta_min = _tiles_ieta_min * _tile_size_eta;
+  _tiles_eta_max = _tiles_ieta_max * _tile_size_eta;
+  _tile_half_size_eta = _tile_size_eta * 0.5;
+  _tile_half_size_phi = _tile_size_phi * 0.5;
+  vector<bool> use_periodic_delta_phi(_n_tiles_phi, false);
+  if (_n_tiles_phi <= 3) {
+    fill(use_periodic_delta_phi.begin(), use_periodic_delta_phi.end(), true);
+  } else {
+    use_periodic_delta_phi[0] = true;
+    use_periodic_delta_phi[_n_tiles_phi-1] = true;
+  }
+  _tiles.resize((_tiles_ieta_max-_tiles_ieta_min+1)*_n_tiles_phi);
+  for (int ieta = _tiles_ieta_min; ieta <= _tiles_ieta_max; ieta++) {
+    for (int iphi = 0; iphi < _n_tiles_phi; iphi++) {
+      Tile * tile = & _tiles[_tile_index(ieta,iphi)];
+      tile->head = NULL; // first element of tiles points to itself
+      tile->begin_tiles[0] =  Tile::TileFnPair(tile,&Tile::distance_to_centre);
+      Tile::TileFnPair * pptile = & (tile->begin_tiles[0]);
+      pptile++;
+      tile->surrounding_tiles = pptile;
+      if (ieta > _tiles_ieta_min) {
+	// with the itile subroutine, we can safely run tiles from
+	// idphi=-1 to idphi=+1, because it takes care of
+	// negative and positive boundaries
+	//for (int idphi = -1; idphi <=+1; idphi++) {
+        *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta-1,iphi-1)],
+                                   &Tile::distance_to_left_bottom);
+        pptile++;
+        *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta-1,iphi)],
+                                   &Tile::distance_to_left);
+        pptile++;
+        *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta-1,iphi+1)],
+                                   &Tile::distance_to_left_top);
+        pptile++;
+      }
+      *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta,iphi-1)], 
+                                 &Tile::distance_to_bottom);
+      pptile++;
+      tile->RH_tiles = pptile;
+      *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta,iphi+1)], 
+                                 &Tile::distance_to_top);
+      pptile++;
+      if (ieta < _tiles_ieta_max) {
+	//for (int idphi = -1; idphi <= +1; idphi++) {
+	//  *pptile = & _tiles[_tile_index(ieta+1,iphi+idphi)];
+	//  pptile++;
+	//}	
+        *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta+1,iphi-1)],
+                                   &Tile::distance_to_right_bottom);
+        pptile++;
+        *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta+1,iphi)],
+                                   &Tile::distance_to_right);
+        pptile++;
+        *pptile = Tile::TileFnPair(& _tiles[_tile_index(ieta+1,iphi+1)],
+                                   &Tile::distance_to_right_top);
+        pptile++;
+      }
+      tile->end_tiles = pptile;
+      tile->tagged = false;
+      tile->use_periodic_delta_phi = use_periodic_delta_phi[iphi];
+      tile->max_NN_dist = 0;
+      tile->eta_min = ieta*_tile_size_eta;
+      tile->eta_max = (ieta+1)*_tile_size_eta;
+      tile->phi_min = iphi*_tile_size_phi;
+      tile->phi_max = (iphi+1)*_tile_size_phi;
+    }
+  }
+}
+int LazyTiling9Alt::_tile_index(const double eta, const double phi) const {
+  int ieta, iphi;
+  if      (eta <= _tiles_eta_min) {ieta = 0;}
+  else if (eta >= _tiles_eta_max) {ieta = _tiles_ieta_max-_tiles_ieta_min;}
+  else {
+    ieta = int(((eta - _tiles_eta_min) / _tile_size_eta));
+    if (ieta > _tiles_ieta_max-_tiles_ieta_min) {
+      ieta = _tiles_ieta_max-_tiles_ieta_min;} 
+  }
+  iphi = int((phi+twopi)/_tile_size_phi) % _n_tiles_phi;
+  return (iphi + ieta * _n_tiles_phi);
+}
+inline void LazyTiling9Alt::_tj_set_jetinfo( TiledJet * const jet,
+					      const int _jets_index) {
+  _bj_set_jetinfo<>(jet, _jets_index);
+  jet->tile_index = _tile_index(jet->eta, jet->phi);
+  Tile * tile = &_tiles[jet->tile_index];
+  jet->previous   = NULL;
+  jet->next       = tile->head;
+  if (jet->next != NULL) {jet->next->previous = jet;}
+  tile->head      = jet;
+}
+void LazyTiling9Alt::_bj_remove_from_tiles(TiledJet * const jet) {
+  Tile * tile = & _tiles[jet->tile_index];
+  if (jet->previous == NULL) {
+    tile->head = jet->next;
+  } else {
+    jet->previous->next = jet->next;
+  }
+  if (jet->next != NULL) {
+    jet->next->previous = jet->previous;
+  }
+}
+void LazyTiling9Alt::_print_tiles(TiledJet * briefjets ) const {
+  for (vector<Tile>::const_iterator tile = _tiles.begin(); 
+       tile < _tiles.end(); tile++) {
+    cout << "Tile " << tile - _tiles.begin()<<" = ";
+    vector<int> list;
+    for (TiledJet * jetI = tile->head; jetI != NULL; jetI = jetI->next) {
+      list.push_back(jetI-briefjets);
+    }
+    sort(list.begin(),list.end());
+    for (unsigned int i = 0; i < list.size(); i++) {cout <<" "<<list[i];}
+    cout <<"\n";
+  }
+}
+void LazyTiling9Alt::_add_neighbours_to_tile_union(const int tile_index, 
+	       vector<int> & tile_union, int & n_near_tiles) const {
+  for (Tile::TileFnPair const * near_tile = _tiles[tile_index].begin_tiles; 
+       near_tile != _tiles[tile_index].end_tiles; near_tile++){
+    tile_union[n_near_tiles] = near_tile->first - & _tiles[0];
+    n_near_tiles++;
+  }
+}
+inline void LazyTiling9Alt::_add_untagged_neighbours_to_tile_union(
+               const int tile_index, 
+	       vector<int> & tile_union, int & n_near_tiles)  {
+  for (Tile::TileFnPair * near_tile = _tiles[tile_index].begin_tiles; 
+       near_tile != _tiles[tile_index].end_tiles; near_tile++){
+    if (! (near_tile->first)->tagged) {
+      (near_tile->first)->tagged = true;
+      tile_union[n_near_tiles] = near_tile->first - & _tiles[0];
+      n_near_tiles++;
+    }
+  }
+}
+inline void LazyTiling9Alt::_add_untagged_neighbours_to_tile_union_using_max_info(
+               const TiledJet * jet, 
+	       vector<int> & tile_union, int & n_near_tiles)  {
+  Tile & tile = _tiles[jet->tile_index];
+  for (Tile::TileFnPair * near_tile = tile.begin_tiles; near_tile != tile.end_tiles; near_tile++){
+    if ((near_tile->first)->tagged) continue;
+    double dist = (tile.*(near_tile->second))(jet) - tile_edge_security_margin;
+    if (dist > (near_tile->first)->max_NN_dist) continue;
+    (near_tile->first)->tagged = true;
+    tile_union[n_near_tiles] = near_tile->first - & _tiles[0];
+    n_near_tiles++;
+  }
+}
+ostream & operator<<(ostream & ostr, const TiledJet & jet) {
+  ostr << "j" << setw(3) << jet._jets_index << ":pt2,rap,phi=" ; ostr.flush();
+  ostr     << jet.kt2 << ","; ostr.flush();
+  ostr     << jet.eta << ","; ostr.flush();
+  ostr     << jet.phi; ostr.flush();
+  ostr     << ", tile=" << jet.tile_index; ostr.flush();
+  return ostr;
+}
+inline void LazyTiling9Alt::_update_jetX_jetI_NN(TiledJet * jetX, TiledJet * jetI, vector<TiledJet *> & jets_for_minheap) {
+  double dist = _bj_dist(jetI,jetX);
+  if (dist < jetI->NN_dist) {
+    if (jetI != jetX) {
+      jetI->NN_dist = dist;
+      jetI->NN = jetX;
+      if (!jetI->minheap_update_needed()) {
+	jetI->label_minheap_update_needed();
+	jets_for_minheap.push_back(jetI);
+      }
+    }
+  }
+  if (dist < jetX->NN_dist) {
+    if (jetI != jetX) {
+      jetX->NN_dist = dist;
+      jetX->NN      = jetI;}
+  }
+}
+inline void LazyTiling9Alt::_set_NN(TiledJet * jetI, 
+                            vector<TiledJet *> & jets_for_minheap) {
+  jetI->NN_dist = _R2;
+  jetI->NN      = NULL;
+  if (!jetI->minheap_update_needed()) {
+    jetI->label_minheap_update_needed();
+    jets_for_minheap.push_back(jetI);}
+  Tile * tile_ptr = &_tiles[jetI->tile_index];
+    for (Tile::TileFnPair * near_tile  = tile_ptr->begin_tiles; 
+         near_tile != tile_ptr->end_tiles; near_tile++) {
+      if (jetI->NN_dist < (tile_ptr->*(near_tile->second))(jetI)) continue;
+      for (TiledJet * jetJ  = (near_tile->first)->head; 
+           jetJ != NULL; jetJ = jetJ->next) {
+        double dist = _bj_dist(jetI,jetJ);
+        if (dist < jetI->NN_dist && jetJ != jetI) {
+          jetI->NN_dist = dist; jetI->NN = jetJ;
+        }
+      }
+    }
+}
+void LazyTiling9Alt::run() {
+  int n = _jets.size();
+  TiledJet * briefjets = new TiledJet[n];
+  TiledJet * jetA = briefjets, * jetB;
+  TiledJet oldB;
+  vector<int> tile_union(3*n_tile_neighbours);
+  for (int i = 0; i< n; i++) {
+    _tj_set_jetinfo(jetA, i);
+    jetA++; // move on to next entry of briefjets
+  }
+  TiledJet * head = briefjets; // a nicer way of naming start
+  vector<Tile>::iterator tile;
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      for (jetB = tile->head; jetB != jetA; jetB = jetB->next) {
+	double dist = _bj_dist_not_periodic(jetA,jetB);
+	if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+	if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+      }
+    }
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      if (jetA->NN_dist > tile->max_NN_dist) tile->max_NN_dist = jetA->NN_dist;
+    }
+  }
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    if (tile->use_periodic_delta_phi) {
+      for (Tile::TileFnPair * RTileFnPair = tile->RH_tiles; 
+           RTileFnPair != tile->end_tiles; RTileFnPair++) {
+        Tile *RTile = RTileFnPair->first;
+        for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+          double dist_to_tile = ((*tile).*(RTileFnPair->second))(jetA);
+          bool relevant_for_jetA  = dist_to_tile <= jetA->NN_dist;
+          bool relevant_for_RTile = dist_to_tile <= RTile->max_NN_dist;
+          if (relevant_for_jetA || relevant_for_RTile) {
+            for (jetB = RTile->head; jetB != NULL; jetB = jetB->next) {
+              double dist = _bj_dist(jetA,jetB);
+              if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+              if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+            }
+          } 
+        }
+      }
+    } else {
+      for (Tile::TileFnPair* RTileFnPair = tile->RH_tiles;
+           RTileFnPair != tile->end_tiles; RTileFnPair++) {
+        Tile *RTile = RTileFnPair->first;
+        for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+          double dist_to_tile = ((*tile).*(RTileFnPair->second))(jetA);
+          bool relevant_for_jetA  = dist_to_tile <= jetA->NN_dist;
+          bool relevant_for_RTile = dist_to_tile <= RTile->max_NN_dist;
+          if (relevant_for_jetA || relevant_for_RTile) {
+            for (jetB = RTile->head; jetB != NULL; jetB = jetB->next) {
+              double dist = _bj_dist_not_periodic(jetA,jetB);
+              if (dist < jetA->NN_dist) {jetA->NN_dist = dist; jetA->NN = jetB;}
+              if (dist < jetB->NN_dist) {jetB->NN_dist = dist; jetB->NN = jetA;}
+            }
+          } 
+        }
+      }
+    }
+  }
+  for (tile = _tiles.begin(); tile != _tiles.end(); tile++) {
+    tile->max_NN_dist = 0;
+    for (jetA = tile->head; jetA != NULL; jetA = jetA->next) {
+      if (jetA->NN_dist > tile->max_NN_dist) tile->max_NN_dist = jetA->NN_dist;
+    }
+  }
+  vector<double> diJs(n);
+  for (int i = 0; i < n; i++) {
+    diJs[i] = _bj_diJ(&briefjets[i]);
+    briefjets[i].label_minheap_update_done();
+  }
+  MinHeap minheap(diJs);
+  vector<TiledJet *> jets_for_minheap;
+  jets_for_minheap.reserve(n); 
+  int history_location = n-1;
+  while (n > 0) {
+    double diJ_min = minheap.minval() *_invR2;
+    jetA = head + minheap.minloc();
+    history_location++;
+    jetB = jetA->NN;
+    if (jetB != NULL) {
+      if (jetA < jetB) {std::swap(jetA,jetB);}
+      int nn; // new jet index
+      _cs.plugin_record_ij_recombination(jetA->_jets_index, jetB->_jets_index, diJ_min, nn);
+      _bj_remove_from_tiles(jetA);
+      oldB = * jetB;  // take a copy because we will need it...
+      _bj_remove_from_tiles(jetB);
+      _tj_set_jetinfo(jetB, nn); // cause jetB to become _jets[nn]
+    } else {
+      _cs.plugin_record_iB_recombination(jetA->_jets_index, diJ_min);
+      _bj_remove_from_tiles(jetA);
+    }
+    minheap.remove(jetA-head);
+    int n_near_tiles = 0;
+    _add_untagged_neighbours_to_tile_union_using_max_info(jetA, 
+       					   tile_union, n_near_tiles);
+    if (jetB != NULL) {
+	_add_untagged_neighbours_to_tile_union_using_max_info(&oldB,
+							      tile_union,n_near_tiles);
+      jetB->label_minheap_update_needed();
+      jets_for_minheap.push_back(jetB);
+    }
+    if (jetB != NULL) {
+      Tile & jetB_tile = _tiles[jetB->tile_index];
+      for (Tile::TileFnPair * near_tile_fn_pair  = jetB_tile.begin_tiles; 
+	           near_tile_fn_pair != jetB_tile.end_tiles; near_tile_fn_pair++) {
+        Tile * near_tile = near_tile_fn_pair->first;
+    	double dist_to_tile = (jetB_tile.*(near_tile_fn_pair->second))(jetB);
+    	bool relevant_for_jetB  = dist_to_tile <= jetB->NN_dist;
+    	bool relevant_for_near_tile = dist_to_tile <= near_tile->max_NN_dist;
+        bool relevant = relevant_for_jetB || relevant_for_near_tile;
+        if (relevant) {
+          if (near_tile->tagged) {
+            for (TiledJet * jetI = near_tile->head; jetI != NULL; jetI = jetI->next) {
+              if (jetI->NN == jetA || jetI->NN == jetB) _set_NN(jetI, jets_for_minheap);
+              _update_jetX_jetI_NN(jetB, jetI, jets_for_minheap);
+            }
+          near_tile->tagged = false;
+          } else {
+            for (TiledJet * jetI = near_tile->head; jetI != NULL; jetI = jetI->next) {
+              _update_jetX_jetI_NN(jetB, jetI, jets_for_minheap);
+            }
+          }
+        }
+	//     // -- Keep this old inline code for later speed tests
+      }
+    }
+    for (int itile = 0; itile < n_near_tiles; itile++) {
+      Tile * tile_ptr = &_tiles[tile_union[itile]];
+      if (!tile_ptr->tagged) continue; // because earlier loop may have undone the tag
+      tile_ptr->tagged = false;
+      for (TiledJet * jetI = tile_ptr->head; jetI != NULL; jetI = jetI->next) {
+        if (jetI->NN == jetA || (jetI->NN == jetB && jetB != NULL)) {
+          _set_NN(jetI, jets_for_minheap);
+        }
+      }
+    }
+    while (jets_for_minheap.size() > 0) {
+      TiledJet * jetI = jets_for_minheap.back(); 
+      jets_for_minheap.pop_back();
+      minheap.update(jetI-head, _bj_diJ(jetI));
+      jetI->label_minheap_update_done();
+      Tile & tile_I = _tiles[jetI->tile_index];
+      if (tile_I.max_NN_dist < jetI->NN_dist) tile_I.max_NN_dist = jetI->NN_dist;
+    }
+    n--;
+  }
+  delete[] briefjets;
+}
+FJCORE_END_NAMESPACE
+#include <iomanip>
+#include <limits>
+#include <cmath>
+using namespace std;
+FJCORE_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
+TilingExtent::TilingExtent(ClusterSequence & cs) {
+  _determine_rapidity_extent(cs.jets());
+}
+void TilingExtent::_determine_rapidity_extent(const vector<PseudoJet> & particles) {
+  int nrap = 20; 
+  int nbins = 2*nrap;
+  vector<double> counts(nbins, 0);
+  _minrap =  numeric_limits<double>::max();
+  _maxrap = -numeric_limits<double>::max();
+  int ibin;
+  for (unsigned i = 0; i < particles.size(); i++) {
+    if (particles[i].E() == abs(particles[i].pz())) continue;
+    double rap = particles[i].rap();
+    if (rap < _minrap) _minrap = rap;
+    if (rap > _maxrap) _maxrap = rap;
+    ibin = int(rap+nrap); 
+    if (ibin < 0) ibin = 0;
+    if (ibin >= nbins) ibin = nbins - 1;
+    counts[ibin]++;
+  }
+  double max_in_bin = 0;
+  for (ibin = 0; ibin < nbins; ibin++) {
+    if (max_in_bin < counts[ibin]) max_in_bin = counts[ibin];
+  }
+  const double allowed_max_fraction = 0.25;
+  const double min_multiplicity = 4;
+  double allowed_max_cumul = floor(max(max_in_bin * allowed_max_fraction, min_multiplicity));
+  if (allowed_max_cumul > max_in_bin) allowed_max_cumul = max_in_bin;
+  double cumul_lo = 0;
+  _cumul2 = 0;
+  for (ibin = 0; ibin < nbins; ibin++) {
+    cumul_lo += counts[ibin];
+    if (cumul_lo >= allowed_max_cumul) {
+      double y = ibin-nrap;
+      if (y > _minrap) _minrap = y;
+      break;
+    }
+  }
+  assert(ibin != nbins); // internal consistency check that you found a bin
+  _cumul2 += cumul_lo*cumul_lo;
+  int ibin_lo = ibin;
+  double cumul_hi = 0;
+  for (ibin = nbins-1; ibin >= 0; ibin--) {
+    cumul_hi += counts[ibin];
+    if (cumul_hi >= allowed_max_cumul) {
+      double y = ibin-nrap+1; // +1 here is the rapidity bin width
+      if (y < _maxrap) _maxrap = y;
+      break;
+    }
+  }
+  assert(ibin >= 0); // internal consistency check that you found a bin
+  int ibin_hi = ibin;
+  assert(ibin_hi >= ibin_lo); 
+  if (ibin_hi == ibin_lo) {
+    _cumul2 = pow(double(cumul_lo + cumul_hi - counts[ibin_hi]), 2);
+  } else {
+    _cumul2 += cumul_hi*cumul_hi;
+    for (ibin = ibin_lo+1; ibin < ibin_hi; ibin++) {
+      _cumul2 += counts[ibin]*counts[ibin];
+    }
+  }
+}
+FJCORE_END_NAMESPACE

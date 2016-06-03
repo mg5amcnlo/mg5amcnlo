@@ -157,7 +157,7 @@ c get info on beam and PDFs
       XERRUP(1)=uncer
       XMAXUP(1)=absint/ievents
       LPRUP(1)=66
-      if (event_norm(1:5).eq.'unity') then
+      if (event_norm(1:5).eq.'unity'.or.event_norm(1:3).eq.'sum') then
          IDWTUP=-3
       else
          IDWTUP=-4
@@ -229,12 +229,6 @@ c get info on beam and PDFs
       logical firsttime
       data firsttime/.true./
 c
-      if (firsttime) then
-         call write_header_init
-         firsttime=.false.
-      endif
-      ievent=66
-
       if (ickkw.eq.4) then
          scale = sqrt(muF12_current)
       elseif (ickkw.eq.-1) then
@@ -245,7 +239,16 @@ c
 
       aqcd=g**2/(4d0*pi)
       aqed=gal(1)**2/(4d0*pi)
-
+c
+c 'write_header_init' should be called after 'aqcd' has been set,
+c because it includes a call to 'setrun', which resets the value of
+c alpha_s to the one in the param_card.dat (without any running).
+      if (firsttime) then
+         call write_header_init
+         firsttime=.false.
+      endif
+      ievent=66
+c
       if(AddInfoLHE)then
         if(.not.doreweight)then
            write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
