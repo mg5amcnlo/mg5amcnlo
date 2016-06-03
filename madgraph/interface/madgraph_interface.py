@@ -5489,14 +5489,13 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
     
          # Return true for successful installation
         return True
-    def do_install(self, line, paths=None, user_additional_options=[]):
+    def do_install(self, line, paths=None, additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
         functions. If it contains the option '--force', then the advanced_install
         function will overwrite any existing installation of the tool without 
         warnings.
         """
-        additional_options = list(user_additional_options)
         args = self.split_arg(line)
         #check the validity of the arguments
         install_options = self.check_install(args)
