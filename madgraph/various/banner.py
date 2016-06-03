@@ -2705,7 +2705,7 @@ class MadAnalysis5Card(dict):
                 option = option.strip()
                 
                 if option=='inputs':
-                    self['inputs'] = [v.strip() for v in value.split(',')]
+                    self['inputs'].extend([v.strip() for v in value.split(',')])
                 
                 elif option=='stdout_lvl':
                     try: # It is likely an int
@@ -2891,10 +2891,18 @@ class MadAnalysis5Card(dict):
         if UFO_model_path:
             UFO_load.append('import %s'%UFO_model_path)
         
+        def get_import(input, type=None):
+            """ Generates the MA5 import commands for that event file. """
+            dataset_name = os.path.basename(input).split('.')[0]
+            res = ['import %s as %s'%(input, dataset_name)]
+            if not type is None:
+                res.append('set %s.type = %s'%(dataset_name, type))
+            return res
+        
         # Then the event file(s) input(s)
         inputs_load = []
         for input in inputs:
-            inputs_load.append('import %s'%input)
+            inputs_load.extend(get_import(input))
             
         submit_command = 'submit %s'%submit_folder+'_%s'
         
@@ -2906,7 +2914,6 @@ class MadAnalysis5Card(dict):
         # If a recasting card has to be written out, chose here its path
         recasting_card_path = pjoin(run_dir_path,
        '_'.join([run_tag,os.path.basename(submit_folder),'recasting_card.dat']))
-        
 
         for definition_type, name in self['order']:
             if definition_type == 'reconstruction':   
@@ -2942,12 +2949,12 @@ class MadAnalysis5Card(dict):
                         if len(reconstruction_outputs[reco])==0:
                             continue
                         if self['reconstruction'][reco]['reco_output']=='lhe':
-                            # For the lhe output we must specify again the clustering parameters
-                            analysis_cmds = list(self['reconstruction'][reco]['commands'])
+                            # For the reconstructed lhe output we must be in parton mode
+                            analysis_cmds = ['init_parton_mode']
                         else:
                             analysis_cmds = []
-                        analysis_cmds.extend(['import %s'%rec_out for rec_out in
-                                                  reconstruction_outputs[reco]])
+                        analysis_cmds.extend(sum([get_import(rec_out) for 
+                                   rec_out in reconstruction_outputs[reco]],[]))
                         analysis_cmds.extend(self['analyses'][name]['commands'])
                         analysis_cmds.append(submit_command%('%s_%s'%(name,reco)))
                         cmds_list.append( ('%s_%s'%(name,reco),analysis_cmds)  )
@@ -2964,7 +2971,8 @@ class MadAnalysis5Card(dict):
                     for input in inputs:
                         if input.endswith('.lhco') or input.endswith('.lhco.gz'):
                             continue
-                        recasting_cmds.append('import %s'%input)
+                        recasting_cmds.extend(get_import(input,'signal'))
+
                     recasting_cmds.append('set main.recast.card_path=%s'%recasting_card_path)
                     recasting_cmds.append(submit_command%'Recasting')
                     cmds_list.append( ('Recasting',recasting_cmds))
@@ -2974,7 +2982,6 @@ class MadAnalysis5Card(dict):
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
 
-        
     def default_setup(self):
         """define the default value"""
         

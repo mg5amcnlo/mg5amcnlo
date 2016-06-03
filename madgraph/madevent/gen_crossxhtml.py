@@ -869,7 +869,11 @@ class OneTagResults(dict):
                glob.glob(pjoin(html_path,'%s_MA5_HADRON_ANALYSIS_*'%self['tag'],
                                  'HTML','index.html')):
                 self.madanalysis5_hadron.append('ma5_html')                
-            
+
+            if 'ma5_cls' not in self.madanalysis5_hadron and \
+                       os.path.isfile(pjoin(path,"%s_MA5_CLs.dat"%self['tag'])):
+                self.madanalysis5_hadron.append('ma5_cls') 
+     
             if 'ma5_card' not in self.madanalysis5_hadron and \
                glob.glob(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS_*'%self['tag'],
                                                                 'history.ma5')):
@@ -1161,17 +1165,32 @@ class OneTagResults(dict):
             return out % self
 
         if level == 'madanalysis5_hadron':
+            if 'ma5_cls' in self.madanalysis5_hadron:
+                out += """ <a href="./Events/%(run_name)s/%(tag)s_MA5_CLs.dat">Recasting_CLs</a>"""
             if 'ma5_html' in self.madanalysis5_hadron:
+                # First link analysis results
+                linked_analysis = False
                 for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
                                        '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
-                    # Chose here whether to also include the reports of the reconstructions
                     if os.path.basename(result).startswith('reco_'):
-                        # Change the line below to 'continue' to ignore thess reports
-                        pass
+                        continue
+                    linked_analysis = True
                     target    = pjoin(os.curdir,os.path.relpath(result,self.me_dir),'HTML','index.html')
                     link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]
                     out += """ <a href="%s">%s</a> """%(target, link_name.strip('_'))
-            return out % self
+    
+                # Also link reco results if no analysis was found
+                if not linked_analysis:
+                    for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
+                                       '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
+                        if not os.path.basename(result).startswith('reco_'):
+                            continue
+                        target    = pjoin(os.curdir,os.path.relpath(
+                                        result,self.me_dir),'HTML','index.html')
+                        link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]
+                        out += """ <a href="%s">%s</a> """%(target, link_name.strip('_'))
+
+            return out % self        
 
         if level == 'shower':
         # this is to add the link to the results after shower for amcatnlo

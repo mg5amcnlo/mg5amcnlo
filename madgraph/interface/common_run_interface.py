@@ -2057,27 +2057,32 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,link))
                 continue
 
-            if not os.path.isfile(pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
-                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')):
+            if MA5_runtag.upper()=='RECASTING':
+                target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+              %(mode.upper(),MA5_runtag),'Output','CLs_output_summary.dat')
+            else:
+                target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')
+            if not os.path.isfile(target):
                 raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
-                    "an output for the parton analysis '%s' in\n   %s"%\
-                       (MA5_runtag,pjoin(self.me_dir,
-                            'MA5_%s_ANALYSIS_%s'%(mode.upper(),MA5_runtag),
-                                                              'PDF','main.pdf'))
+          "an output for the parton analysis '%s' in\n   %s"%(MA5_runtag,target)
 
-            # Copy the PDF report in the Events/run directory.
-            PDF_in_run_path = pjoin(self.me_dir,'Events',self.run_name,
-                     '%s_MA5_%s_analysis_%s.pdf'%(self.run_tag,mode,MA5_runtag))
-            shutil.copy(pjoin(self.me_dir,
-                   'MA5_%s_ANALYSIS_%s'%(mode.upper(),MA5_runtag),
-                                             'PDF','main.pdf'), PDF_in_run_path)
+            # Copy the PDF report or CLs in the Events/run directory.
+            if MA5_runtag.upper()=='RECASTING':
+                carboncopy_name = '%s_MA5_CLs.dat'%(self.run_tag)
+            else:
+                carboncopy_name = '%s_MA5_%s_analysis_%s.pdf'%(
+                                                   self.run_tag,mode,MA5_runtag)
+            shutil.copy(target, pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
             if MA5_runtag!='default':
-                logger.info("MadAnalysis5 successfully completed the analysis "+
-                                 "'%s'. Its PDF report is placed in:"%MA5_runtag)
+                logger.info("MadAnalysis5 successfully completed the "+
+                  "%s. Reported results are placed in:"%("analysis '%s'"%MA5_runtag 
+                           if MA5_runtag.upper()!='RECASTING' else "recasting"))
             else:
                 logger.info("MadAnalysis5 successfully completed the analysis."+
-                                                " Its PDF report is placed in:")
-            logger.info('  --> %s'%PDF_in_run_path)
+                                            " Reported results are placed in:")
+            logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
+
             # Copy the entire analysis in the HTML directory
             shutil.move(pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
               %(mode.upper(),MA5_runtag)), pjoin(self.me_dir,'HTML',self.run_name,
