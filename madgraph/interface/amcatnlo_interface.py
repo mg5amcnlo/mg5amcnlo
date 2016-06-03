@@ -422,6 +422,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
+        self._curr_proc_defs.append(myprocdef)
+
 #        if myprocdef['perturbation_couplings']!=['QCD']:
 #            message = ""FKS for reals only available in QCD for now, you asked %s" \
 #                        % ', '.join(myprocdef['perturbation_couplings'])"

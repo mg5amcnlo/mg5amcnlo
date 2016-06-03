@@ -2963,7 +2963,7 @@ class RunCardNLO(RunCard):
     def check_validity(self):
         """check the validity of the various input"""
         
-        super(RunCardLO, self).check_validity()
+        super(RunCardNLO, self).check_validity()
         
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 

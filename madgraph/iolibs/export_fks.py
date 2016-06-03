@@ -702,10 +702,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     def finalize_fks_directory(self, matrix_elements, history, makejpg = False,
             online = False, 
             compiler_dict={'fortran': 'gfortran', 'cpp': 'g++'}, 
-            output_dependencies = 'external', MG5DIR = None):
+            output_dependencies = 'external', MG5DIR = None, proc_defs = None):
         """Finalize FKS directory by creating jpeg diagrams, html
-        pages,proc_card_mg5.dat and madevent.tar.gz."""
-        
+        pages,proc_card_mg5.dat and madevent.tar.gz and create the MA5 card if
+        necessary."""
         self.proc_characteristic['grouped_matrix'] = False
         self.create_proc_charac()
 
@@ -863,6 +863,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             raise MadGraph5Error, 'output_dependencies option %s not recognized'\
                                                             %output_dependencies
            
+        # Create the default MadAnalysis5 cards
+        if 'madanalysis5_path' in self.opt and not \
+                self.opt['madanalysis5_path'] is None and not proc_defs is None:
+            processes = sum([me.get('processes') for me in matrix_elements.get('matrix_elements')],[])
+            # For now, simply assign all processes to each proc_defs.
+            # That shouldn't really affect the default analysis card created by MA5
+            self.create_default_madanalysis5_cards(
+                history, proc_defs, [processes,]*len(proc_defs),
+                self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'),
+                levels =['hadron'])
 
     def write_real_from_born_configs(self, writer, matrix_element, fortran_model):
         """Writes the real_from_born_configs.inc file that contains

@@ -7401,7 +7401,8 @@ This implies that with decay chains:
                                            online,
                                            compiler_dict,
                                            output_dependencies = self.options['output_dependencies'],
-                                           MG5DIR = MG5DIR)
+                                           MG5DIR = MG5DIR,
+                                           proc_defs = self._curr_proc_defs)
             
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
