@@ -2373,7 +2373,7 @@ class RunCardLO(RunCard):
         self.add_param("ktdurham", -1.0, fortran_name="kt_durham", cut=True)
         self.add_param("dparameter", 0.4, fortran_name="d_parameter", cut=True)
         self.add_param("ptlund", -1.0, fortran_name="pt_lund", cut=True)
-        self.add_param("pdgs_for_merging_cut", "[21 1 2 3 4 5 6]")
+        self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6])
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
@@ -2413,7 +2413,7 @@ class RunCardLO(RunCard):
         if int(self['maxjetflavor']) > 6:
             raise InvalidRunCard, 'maxjetflavor should be lower than 5! (6 is partly supported)'
   
-        if len(self['pdgs_for_merging_cut'].strip()[1:-1].split()) > 1000:
+        if len(self['pdgs_for_merging_cut']) > 1000:
             raise InvalidRunCard, "The number of elements in "+\
                                "'pdgs_for_merging_cut' should not exceed 1000."
   
@@ -2500,8 +2500,7 @@ class RunCardLO(RunCard):
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
             
-        self['pdgs_for_merging_cut'] = '[ %s ]'%(' '.join('%d'%pdg for pdg in 
-                                     eval(proc_characteristic['colored_pdgs'])))
+        self['pdgs_for_merging_cut'] = eval(proc_characteristic['colored_pdgs'])
 
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
