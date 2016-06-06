@@ -115,9 +115,12 @@ class Parameter (object):
             except:
                 format = 'str'
         self.comment = self.comment.strip()
+        if not precision:
+            precision = 6
+        
         if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,basestring):
-                return 'DECAY %s %{}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+                return 'DECAY %s %.{}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
                 return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             elif self.lhablock and self.lhablock.startswith('qnumbers'):
@@ -260,7 +263,6 @@ class Block(list):
         text = """###################################""" + \
                """\n## INFORMATION FOR %s""" % self.name.upper() +\
                """\n###################################\n"""
-
         #special case for decay chain
         if self.name == 'decay':
             for param in self:
@@ -421,7 +423,6 @@ class ParamCard(dict):
         blocks = self.order_block()
         text = self.header
         text += ''.join([block.__str__(precision) for block in blocks])
-
         if not outpath:
             return text
         elif isinstance(outpath, str):
