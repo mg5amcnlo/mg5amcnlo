@@ -1790,13 +1790,13 @@ class PY8Card(ConfigFile):
                 continue
             # Read parameter
             try:
-                param, value = line.split('=')
+                param, value = line.split('=',1)
                 param = param.strip()
                 value = value.strip()
             except ValueError:
                 line = line.replace('\n','')
                 raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
-                                                                            line
+                                                                          line
             # Read a subrun if detected:
             if param=='Main:subrun':
                 if read_subrun:
@@ -2507,8 +2507,7 @@ class RunCardLO(RunCard):
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
-            
-        self['pdgs_for_merging_cut'] = eval(proc_characteristic['colored_pdgs'])
+        self['pdgs_for_merging_cut'] = proc_characteristic['colored_pdgs']
 
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
@@ -2603,8 +2602,14 @@ class MadAnalysis5Card(dict):
     
     _MG5aMC_escape_tag = '@MG5aMC'
     
-    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco']
+    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco','*.root']
     _default_parton_inputs = ['*.lhe']
+    
+    @classmethod
+    def events_can_be_reconstructed(cls, file_path):
+        """ Checks from the type of an event file whether it can be reconstructed or not."""
+        return not (file_path.endswith('.lhco') or file_path.endswith('.lhco.gz') or \
+                          file_path.endswith('.root') or file_path.endswith('.root.gz'))
     
     @classmethod
     def empty_analysis(cls):
@@ -2638,8 +2643,11 @@ class MadAnalysis5Card(dict):
         # Add the default trivial reconstruction to use an lhco input
         # This is just for the structure
         self['reconstruction'] = {'lhco_input':
+                                        MadAnalysis5Card.empty_reconstruction(),
+                                  'root_input':
                                         MadAnalysis5Card.empty_reconstruction()}
         self['reconstruction']['lhco_input']['reco_output']='lhco'
+        self['reconstruction']['root_input']['reco_output']='root'        
 
         # Specify in which order the analysis/recasting were specified
         self['order'] = []
@@ -2908,9 +2916,13 @@ class MadAnalysis5Card(dict):
         
         # Keep track of the reconstruction outpus in the MA5 workflow
         # Keys are reconstruction names and values are .lhe.gz reco file paths.
-        # We put by default already the lhco ones present
-        reconstruction_outputs = {'lhco_input':[f for f in inputs if 
-                                 f.endswith('.lhco') or f.endswith('.lhco.gz')]}
+        # We put by default already the lhco/root ones present
+        reconstruction_outputs = {
+                'lhco_input':[f for f in inputs if 
+                                 f.endswith('.lhco') or f.endswith('.lhco.gz')],
+                'root_input':[f for f in inputs if 
+                                 f.endswith('.root') or f.endswith('.root.gz')]}
+
         # If a recasting card has to be written out, chose here its path
         recasting_card_path = pjoin(run_dir_path,
        '_'.join([run_tag,os.path.basename(submit_folder),'recasting_card.dat']))
@@ -2920,8 +2932,8 @@ class MadAnalysis5Card(dict):
                 analysis_cmds = list(self['reconstruction'][name]['commands'])
                 reco_outputs = []
                 for i_input, input in enumerate(inputs):
-                    # Skip lhco as they must not be reconstructed
-                    if input.endswith('.lhco') or input.endswith('.lhco.gz'):
+                    # Skip lhco/root as they must not be reconstructed
+                    if not MadAnalysis5Card.events_can_be_reconstructed(input):
                         continue
                     analysis_cmds.append('import %s as reco_events'%input)
                     if self['reconstruction'][name]['reco_output']=='lhe':
@@ -2945,7 +2957,9 @@ class MadAnalysis5Card(dict):
                     cmds_list.append( (name, UFO_load+inputs_load+
                       self['analyses'][name]['commands']+[submit_command%name]) )
                 elif self['mode']=='hadron':
-                    for reco in self['analyses'][name]['reconstructions']+['lhco_input']:
+                    # Also run on the already reconstructed root/lhco files if found.
+                    for reco in self['analyses'][name]['reconstructions']+\
+                                                    ['lhco_input','root_input']:
                         if len(reconstruction_outputs[reco])==0:
                             continue
                         if self['reconstruction'][reco]['reco_output']=='lhe':
@@ -2969,7 +2983,7 @@ class MadAnalysis5Card(dict):
                     recasting_cmds = list(self['recasting']['commands'])
                     # Exclude LHCO files here of course
                     for input in inputs:
-                        if input.endswith('.lhco') or input.endswith('.lhco.gz'):
+                        if not MadAnalysis5Card.events_can_be_reconstructed(input):
                             continue
                         recasting_cmds.extend(get_import(input,'signal'))
 

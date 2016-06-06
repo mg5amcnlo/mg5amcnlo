@@ -1246,64 +1246,7 @@ class CheckValidForCmd(object):
                 self.run_card['run_tag'] = tag
             self.set_run_name(self.run_name, tag, 'pgs')
         
-        return lock
-
-    def check_delphes(self, arg):
-        """Check the argument for pythia command
-        syntax is "delphes [NAME]" 
-        Note that other option are already remove at this point
-        """
-        
-        # If not pythia-pgs path
-        if not self.options['delphes_path']:
-            logger.info('Retry to read configuration file to find delphes path')
-            self.set_configuration()
-      
-        if not self.options['delphes_path']:
-            error_msg = 'No valid Delphes path set.\n'
-            error_msg += 'Please use the set command to define the path and retry.\n'
-            error_msg += 'You can also define it in the configuration file.\n'
-            raise self.InvalidCmd(error_msg)  
-
-        tag = [a for a in arg if a.startswith('--tag=')]
-        if tag: 
-            arg.remove(tag[0])
-            tag = tag[0][6:]
-            
-                  
-        if len(arg) == 0 and not self.run_name:
-            if self.results.lastrun:
-                arg.insert(0, self.results.lastrun)
-            else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
-        
-        if len(arg) == 1 and self.run_name == arg[0]:
-            arg.pop(0)
-        
-        if not len(arg) and \
-           not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.help_pgs()
-            raise self.InvalidCmd('''No file file pythia_events.hep currently available
-            Please specify a valid run_name''')
-        
-        lock = None                
-        if len(arg) == 1:
-            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
-            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
-                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
-                    % (self.run_name, prev_tag, 
-                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
-            else:
-                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
-                output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
-        else:
-            if tag:
-                self.run_card['run_tag'] = tag
-            self.set_run_name(self.run_name, tag, 'delphes')
-            
-        return lock               
+        return lock            
 
     def check_display(self, args):
         """check the validity of line
@@ -5010,9 +4953,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         if self.options['delphes_path']:
             if valid_options['shower'] != ['OFF']:
                 available_mode.append('2')
-                valid_options['detector'].append('DELPHES')
-                valid_options['detector'].append('DELPHES-CMS')
-                valid_options['detector'].append('DELPHES-ATLAS')  
+                valid_options['detector'].append('DELPHES') 
                 options += ['delphes',   'delphes=ON', 'delphes=OFF']             
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['detector'] = 'DELPHES'

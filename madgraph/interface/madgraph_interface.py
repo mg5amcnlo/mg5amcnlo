@@ -5430,7 +5430,7 @@ This implies that with decay chains:
         # Post-installation treatment
         if tool == 'pythia8':
             self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
-            self.exec_cmd('save options')
+            self.exec_cmd('save options', printcmd=False, log=False)
             # Automatically re-install the mg5amc_py8_interface after a fresh
             # Pythia8 installation
             self.advanced_install('mg5amc_py8_interface',
@@ -5453,7 +5453,7 @@ This implies that with decay chains:
                 self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
-            self.exec_cmd('save options')      
+            self.exec_cmd('save options', printcmd=False)      
 
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
@@ -5466,7 +5466,7 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
-            self.exec_cmd('save options')
+            self.exec_cmd('save options', log=False, printcmd=False)
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
@@ -5553,14 +5553,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'oneloop':['arXiv:1007.4716'],
                           'MadAnalysis5':['arXiv:1206.1599']}
         if args[0] in advertisements:
-            logger.info("------------------------------------------------------", '$MG:color:GREEN')
-            logger.info("   You are installing '%s', please cite ref(s): "%args[0], '$MG:color:BLACK')
-            for ad in advertisements[args[0]]:
-              logger.info("                 %s"%ad, '$MG:color:GREEN')
-            logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
-            logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
-            logger.info("------------------------------------------------------", '$MG:color:GREEN')
-
+            logger.info("   You are installing '%s', please cite ref: %s. " % (args[0], advertisements[args[0]][0]), '$MG:color:BLACK')
 
         # Load file with path of the different program:
         import urllib
@@ -5620,6 +5613,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                                         'MG5aMC_PY8_interface' in path else 'NA'
             additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
                                                    MG5aMC_PY8_interface_path)
+            additional_options.append('--logging=%d' % logger.level)
             additional_options.extend(install_options['options_for_HEPToolsInstaller'])
             return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = additional_options)
@@ -5898,13 +5892,13 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options')
+                self.exec_cmd('save options', printcmd=False)
             elif opt=='pjfry':
                 self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
-                self.exec_cmd('save options')            
+                self.exec_cmd('save options', printcmd=False)            
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
-                self.exec_cmd('save options')
+                self.exec_cmd('save options',printcmd=False)
 
 
 
