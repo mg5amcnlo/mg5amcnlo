@@ -1404,7 +1404,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             Cmd.check_save(self, args)
             
         # find base file for the configuration
-        if'HOME' in os.environ and os.environ['HOME']  and \
+        if 'HOME' in os.environ and os.environ['HOME']  and \
         os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
             base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
             if hasattr(self, 'me_dir'):

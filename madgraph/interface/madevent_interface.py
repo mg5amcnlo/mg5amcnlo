@@ -4910,9 +4910,7 @@ Please install this tool with the following MG5_aMC command:
         if self.options['delphes_path']:
             if valid_options['shower'] != ['OFF']:
                 available_mode.append('2')
-                valid_options['detector'].append('DELPHES')
-                valid_options['detector'].append('DELPHES-CMS')
-                valid_options['detector'].append('DELPHES-ATLAS')  
+                valid_options['detector'].append('DELPHES') 
                 options += ['delphes',   'delphes=ON', 'delphes=OFF']             
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['detector'] = 'DELPHES'

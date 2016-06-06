@@ -2892,7 +2892,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if var in self.run_set:
                 self.conflict.append(var)        
                 
-        
+
+        self.has_delphes = False        
+        if 'delphes_card.dat' in cards:
+            self.has_delphes = True
+
         #check if Madweight_card is present:
         self.has_mw = False
         if 'madweight_card.dat' in cards:
@@ -3106,6 +3110,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
          import traceback
          traceback.print_exc()
          print error
+         
     def complete_set(self, text, line, begidx, endidx, return_cat=False):
         """ Complete the set command"""
 
@@ -3132,6 +3137,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['madloop_card'] = ''
             if self.has_PY8:
                 allowed['pythia8_card'] = ''
+            if self.has_delphes:
+                allowed['delphes_card'] = ''
+                
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -3151,12 +3159,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'mw_block':args[1]}
             elif args[1] == 'shower_card':
                 allowed = {'shower_card':'default'}
+            elif args[1] == 'delphes_card':
+                allowed = {'delphes_card':'default'}
             else:
                 allowed = {'value':''}
         else:
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
-                            'MadLoop_card','pythia8_card']:
+                            'MadLoop_card','pythia8_card','delphes_card']:
                 start = 2
             if args[-1] in self.pname2block.keys():
                 allowed['value'] = 'default'
@@ -3187,7 +3197,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.has_ml:
                 categories.append('MadLoop_card')
             if self.has_PY8:
-                categories.append('pythia8_card')  
+                categories.append('pythia8_card')
+            if self.has_delphes:
+                categories.append('delphes_card')
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -3231,6 +3243,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if allowed['shower_card'] == 'default':
                 opts.append('default')
             possibilities['Shower Card'] = self.list_completion(text, opts)            
+
+        if 'delphes_card' in allowed:
+            if allowed['delphes_card'] == 'default':
+                opts = ['default', 'atlas', 'cms']
+            possibilities['Delphes Card'] = self.list_completion(text, opts)              
 
         if 'value' in allowed.keys():
             opts = ['default']
@@ -3405,8 +3422,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('Invalid Command: No Pythia8 card defined.')
                 return
             args[0] = 'pythia8_card'
-
-        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card']:
+            
+        if args[0] == 'delphes_card':
+            if not self.has_delphes:
+                logger.warning('Invalid Command: No Delphes card defined.')
+                return
+            if args[1] == 'atlas':
+                logger.info("set default ATLAS configuratin for Delphes")
+                files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_ATLAS.dat'),
+                         pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
+                return
+            elif args[1] == 'cms':
+                logger.info("set default CMS configuratin for Delphes")
+                files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_CMS.dat'),
+                         pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
+                return
+            
+            
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
+                       'delphes_card']:
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
@@ -3682,7 +3716,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 value = self.PY8CardDefault[args[start]]
                 default = True
             else:
-                value = args[start+1]
+                value = ' '.join(args[start+1:])
                 default = False
             self.setPY8(args[start], value, default=default)
             self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),

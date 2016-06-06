@@ -1782,13 +1782,13 @@ class PY8Card(ConfigFile):
                 continue
             # Read parameter
             try:
-                param, value = line.split('=')
+                param, value = line.split('=',1)
                 param = param.strip()
                 value = value.strip()
             except ValueError:
                 line = line.replace('\n','')
                 raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
-                                                                            line
+                                                                          line
             # Read a subrun if detected:
             if param=='Main:subrun':
                 if read_subrun:
@@ -2499,8 +2499,7 @@ class RunCardLO(RunCard):
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
-            
-        self['pdgs_for_merging_cut'] = eval(proc_characteristic['colored_pdgs'])
+        self['pdgs_for_merging_cut'] = proc_characteristic['colored_pdgs']
 
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
