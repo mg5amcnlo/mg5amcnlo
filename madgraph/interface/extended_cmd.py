@@ -1071,7 +1071,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if answer in alias:
                 answer = alias[answer]
             if ask_class:
-                answer = question_instance.default(answer)
+                line=answer
+                answer = question_instance.default(line)
+                question_instance.postcmd(answer, line)
+                return question_instance.answer 
             if hasattr(question_instance, 'check_answer_consistency'):
                 question_instance.check_answer_consistency()
             return answer
@@ -1133,6 +1136,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
                 logger.info('Use %s value' % default, '$MG:color:BLACK')
                 return str(default)
+            
         
         line = line.replace('\n','').strip()
         if '#' in line: 
@@ -1889,6 +1893,9 @@ class SmartQuestion(BasicCmd):
         self.value = None
         BasicCmd.preloop(self)
         
+    @property
+    def answer(self):
+        return self.value
 
     def __init__(self, question, allow_arg=[], default=None, 
                                             mother_interface=None, *arg, **opt):
@@ -1979,6 +1986,13 @@ class SmartQuestion(BasicCmd):
             if not prev_timer:
                 self.question = pat.sub('',self.question)
             print self.question
+            
+        if self.mother_interface:
+            answer = self.mother_interface.check_answer_in_input_file(self, 'EOF')
+            stop = self.default(answer)
+            self.postcmd(stop, answer)
+            return False
+            
         return False
         
     def default(self, line):
@@ -2025,7 +2039,7 @@ class SmartQuestion(BasicCmd):
                 
     def cmdloop(self, intro=None):
         super(SmartQuestion,self).cmdloop(intro)
-        return self.value
+        return self.answer
     
 # a function helper
 def smart_input(input_text, allow_arg=[], default=None):
@@ -2107,8 +2121,9 @@ class OneLinePathCompletion(SmartQuestion):
                           % ','.join(self.allow_arg)
             print 'please retry'
             reprint_opt = False 
-            
-        return self.reask(reprint_opt)
+
+        if line != 'EOF':
+            return self.reask(reprint_opt)
 
             
 # a function helper
