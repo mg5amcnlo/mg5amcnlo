@@ -1989,9 +1989,10 @@ class SmartQuestion(BasicCmd):
             
         if self.mother_interface:
             answer = self.mother_interface.check_answer_in_input_file(self, 'EOF')
-            stop = self.default(answer)
-            self.postcmd(stop, answer)
-            return False
+            if answer:
+                stop = self.default(answer)
+                self.postcmd(stop, answer)
+                return False
             
         return False
         
