@@ -2968,6 +2968,7 @@ This implies that with decay chains:
         
         model_path = args[0]
         recreate = ('--recreate' in args)
+        keep_decay = ('--keep_decay' in args)
         output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
         if output_dir:
             output_dir = output_dir[0]
@@ -3007,6 +3008,10 @@ This implies that with decay chains:
         identify = dict(tuple(a.split('=')) for a in args if '=' in a)
         base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
+        
+        if keep_decay and os.path.exists(pjoin(self._curr_model.get('modelpath'), 'decays.py')):
+            base_model.mod_file(pjoin(pjoin(self._curr_model.get('modelpath'), 'decays.py')),
+                                pjoin(pjoin(output_dir, 'decays.py')))
         
         new_model_name = output_dir
         if restrict_name:
