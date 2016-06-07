@@ -2189,8 +2189,8 @@ class decay_all_events(object):
             if production_tag == 0 == event_map: #end of file
                 break
 
-            if  event_nb and True:#\
-                #(event_nb % max(int(10**int(math.log10(float(event_nb)))),1)==0): 
+            if  event_nb and \
+                (event_nb % max(int(10**int(math.log10(float(event_nb)))),1000)==0): 
                 running_time = misc.format_timer(time.time()-starttime)
                 logger.info('Event nb %s %s' % (event_nb, running_time))
                 self.mscmd.update_status(('$events',1,event_nb, 'decaying events'), 
@@ -3175,14 +3175,14 @@ class decay_all_events(object):
             self.terminate_fortran_executables()
             self.calculator = {}
             self.calculator_nbcall = {}
-            if ev % 1 == 0:
+            if ev % 5 == 0:
                 running_time = misc.format_timer(time.time()-starttime)
                 info_text = 'Event %s/%s : %s \n' % (ev + 1, len(decay_set)*numberev, running_time) 
                 #for  index,tag_decay in enumerate(max_decay):
                 #    info_text += '            decay_config %s [%s] : %s\n' % \
                 #       (index+1, ','.join(tag_decay), probe_weight[decaying][nb_decay[decaying]-1][tag_decay])
                 logger.info(info_text[:-1])
-                misc.sprint(len(self.calculator))
+        
         
         
         # Computation of the maximum weight used in the unweighting procedure
@@ -3301,7 +3301,6 @@ class decay_all_events(object):
         """ call the fortran executable """
 
         tmpdir = ''
-        misc.sprint(len(self.calculator.keys()), ('full',path) in self.calculator)
         if ('full',path) in self.calculator:
             external = self.calculator[('full',path)]
             self.calculator_nbcall[('full',path)] += 1
@@ -3315,12 +3314,8 @@ class decay_all_events(object):
             self.calculator[('full',path,)] = external 
             self.calculator_nbcall[('full',path)] = 1 
 
-        try:
-            external.stdin.write(stdin_text)
-        except IOError, error:
-            misc.sprint(error)
-            del self.calculator[('full',path)]
-            return self.loadfortran(mode, path, stdin_text)
+        external.stdin.write(stdin_text)
+        
         if mode == 'maxweight':
             maxweight=float(external.stdout.readline())
             output = maxweight
@@ -3337,9 +3332,7 @@ class decay_all_events(object):
                 failed= float(firstline[4])
                 use_mc_masses=int(firstline[5])
             except ValueError:
-                misc.sprint(firstline)
                 logger.debug(firstline)
-                #raise Exception
                 return
             momenta=[external.stdout.readline() for i in range(nexternal)]
             lastline=external.stdout.readline().split()
