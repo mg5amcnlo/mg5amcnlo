@@ -5780,8 +5780,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
                 misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
-                os.chmod(pjoin(MG5DIR,'td','td'), 0775)
-                self.options['td_path'] = pjoin(MG5DIR,'td')
+            os.chmod(pjoin(MG5DIR,'td','td'), 0775)
+            self.options['td_path'] = pjoin(MG5DIR,'td')
 
             if not misc.which('gs'):
                 logger.warning('''gosthscript not install on your system. This is not required to run MA.
