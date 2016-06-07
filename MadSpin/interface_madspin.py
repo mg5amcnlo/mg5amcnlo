@@ -392,6 +392,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         self.check_set(args)
         
+        if args[0] not in ['ms_dir', 'run_card']:
+            args[1] = args[1].lower()
+        
         if args[0] in  ['max_weight', 'BW_effect','ms_dir', 'spinmode']:
             self.options[args[0]] = args[1]
             if args[0] == 'ms_dir':
