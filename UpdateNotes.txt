@@ -3,6 +3,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.4.1 (xx/xx/xx)
         OM: Fix a bug in fix target experiment with PDF on the particle at rest.
             The cross-section was correct but the z-boost was not performed correctly.
+        OM: Fix various bug in MadSpin
+        OM: Fix some bug in MLM merging, where chcluster was forced to True (introduced in 2.2.0)
+        OM: Allow to specify a path for a custom directory where to look for model via the environment 
+            variable UFO_PATH. Note this used AFTER the standard location.
 
 2.4.0 (12/06/16)
         OM: Allowing the proper NLO reweighting for NLO sample

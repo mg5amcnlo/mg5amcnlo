@@ -63,15 +63,23 @@ class InvalidModel(MadGraph5Error):
 def find_ufo_path(model_name):
     """ find the path to a model """
 
+
     # Check for a valid directory
     if model_name.startswith('./') and os.path.isdir(model_name):
-        model_path = model_name
+        return model_name
     elif os.path.isdir(os.path.join(MG5DIR, 'models', model_name)):
-        model_path = os.path.join(MG5DIR, 'models', model_name)
+        return os.path.join(MG5DIR, 'models', model_name)
     elif os.path.isdir(model_name):
-        model_path = model_name
+        return model_name
+    elif 'UFO_PATH' in os.environ:
+        for p in os.environ['UFO_PATH'].split(':'):
+            if os.path.isdir(os.path.join(MG5DIR, p, model_name)):
+                return os.path.join(MG5DIR, p, model_name)
+        else:
+            raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     else:
-        raise UFOImportError("Path %s is not a valid pathname" % model_name)
+        raise UFOImportError("Path %s is not a valid pathname" % model_name)    
+    
 
     return model_path
 
@@ -185,7 +193,7 @@ def import_full_model(model_path, decay=False, prefix=''):
     # Check the validity of the model
     files_list_prov = ['couplings.py','lorentz.py','parameters.py',
                        'particles.py', 'vertices.py', 'function_library.py',
-                       'propagators.py' ]
+                       'propagators.py', 'coupling_orders.py']
     
     if decay:
         files_list_prov.append('decays.py')    
@@ -194,11 +202,10 @@ def import_full_model(model_path, decay=False, prefix=''):
     for filename in files_list_prov:
         filepath = os.path.join(model_path, filename)
         if not os.path.isfile(filepath):
-            if filename not in ['propagators.py', 'decays.py']:
+            if filename not in ['propagators.py', 'decays.py', 'coupling_orders.py']:
                 raise UFOImportError,  "%s directory is not a valid UFO model: \n %s is missing" % \
                                                          (model_path, filename)
         files_list.append(filepath)
-    
     # use pickle files if defined and up-to-date
     if aloha.unitary_gauge: 
         pickle_name = 'model.pkl'
