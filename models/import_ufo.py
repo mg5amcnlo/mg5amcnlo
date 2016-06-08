@@ -60,23 +60,29 @@ class UFOImportError(MadGraph5Error):
 class InvalidModel(MadGraph5Error):
     """ a class for invalid Model """
 
+last_model_path =''
 def find_ufo_path(model_name):
     """ find the path to a model """
 
+    global last_model_path
 
     # Check for a valid directory
     if model_name.startswith('./') and os.path.isdir(model_name):
         return model_name
     elif os.path.isdir(os.path.join(MG5DIR, 'models', model_name)):
         return os.path.join(MG5DIR, 'models', model_name)
-    elif os.path.isdir(model_name):
-        return model_name
-    elif 'UFO_PATH' in os.environ:
-        for p in os.environ['UFO_PATH'].split(':'):
+    elif 'PYTHONPATH' in os.environ:
+        for p in os.environ['PYTHONPATH'].split(':'):
             if os.path.isdir(os.path.join(MG5DIR, p, model_name)):
+                if last_model_path != os.path.join(MG5DIR, p, model_name):
+                    logger.info("model loaded from PYTHONPATH: %s", os.path.join(MG5DIR, p, model_name))
+                    last_model_path = os.path.join(MG5DIR, p, model_name)
                 return os.path.join(MG5DIR, p, model_name)
-        else:
-            raise UFOImportError("Path %s is not a valid pathname" % model_name)    
+    elif os.path.isdir(model_name):
+        if last_model_path != os.path.join(MG5DIR, p, model_name):
+            logger.info("model loaded from: %s", os.path.join(os.getcwd(), model_name))
+            last_model_path = os.path.join(MG5DIR, p, model_name)
+        return model_name   
     else:
         raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     
