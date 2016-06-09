@@ -2408,6 +2408,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     % (filename, pdfsets_dir))
             CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, alternate_path, filename,
                                                       lhapdf_version=lhapdf_version)
+        elif lhapdf_version.startswith('6.') and '.LHgrid' in filename:
+            logger.info('Could not download %s: Try %s', filename, filename.replace('.LHgrid',''))
+            return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, 
+                                                              filename.replace('.LHgrid',''), 
+                                        lhapdf_version, alternate_path)
+            
         else:
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
