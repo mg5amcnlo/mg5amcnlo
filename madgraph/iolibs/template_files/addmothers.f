@@ -441,7 +441,7 @@ c       Need to flip initial state color, since might be overwritten
                  float=''
                  Write(float,'(f16.5)') ptclus(i)
                  write(integfour,'(i4)') ito(i)
-                 temp=trim(temp)//' pt_start_'//trim(adjustl(integfour))//'="'//trim(adjustl(float))//'"'
+                 temp=trim(temp)//' pt_clust_'//trim(adjustl(integfour))//'="'//trim(adjustl(float))//'"'
               enddo
               ptclusstring=trim(adjustl(temp0//trim(temp)//'></scales>'))
 c             write(*,*)'WRITING THE ptclusscale:',trim(adjustl(ptclusstring))
