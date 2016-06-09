@@ -34,10 +34,10 @@ SYMMETRY = symmetry.o idenparts.o
 # Binaries
 
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
-	$(FC) $(LDFLAGS) -o $(PROG) $(PROCESS) $(LINKLIBS)
+	$(FC) -o $(PROG) $(PROCESS) $(LINKLIBS) $(LDFLAGS)
 
 gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
-	$(FC) $(LDFLAGS) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric
+	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric $(LDFLAGS)
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 	cd ../../Source/MODEL; make

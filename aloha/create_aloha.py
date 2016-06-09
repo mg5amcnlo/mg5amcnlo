@@ -664,7 +664,7 @@ class AbstractALOHAModel(dict):
         # Check that all routine are generated at default places:
         for (name, outgoing), abstract in self.items():
             routine_name = AbstractRoutineBuilder.get_routine_name(name, outgoing)
-            if not glob.glob(os.path.join(output_dir, routine_name) + '.' + ext[format]):
+            if not os.path.exists(os.path.join(output_dir, routine_name) + '.' + ext[format]):
                 abstract.write(output_dir, format) 
             else:
                 logger.info('File for %s already present, skip the writing of this file' % routine_name)
@@ -1045,7 +1045,7 @@ class AbstractALOHAModel(dict):
 
         ext_files  = []
         for path in paths:
-            ext_files = glob.glob(os.path.join(path, '%s.%s' % (name, ext)))
+            ext_files = misc.glob('%s.%s' % (name, ext), path)
             if ext_files:
                 break
         else: 

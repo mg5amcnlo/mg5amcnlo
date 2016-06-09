@@ -891,6 +891,14 @@ class FromGolem95FortranCodeGenerator():
 if __name__ == '__main__':
     """I test here the write_golem95_mapping function"""
     
+    P=Polynomial(7)
+    print "Coef (6,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0])
+    print "Coef (1,1,2,2) is at pos %s"%P.get_coef_position([0,1,2,2,3,3])
+    print "Coef (7,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0,0])
+    print "Coef (1,2,2,2) is at pos %s"%P.get_coef_position([0,1,1,2,2,3,3])
+    
+    sys.exit(0)
+
     max_rank=6
     FPR=FortranPolynomialRoutines(max_rank)
     print "Output of write_golem95_mapping function for max_rank=%d:\n\n"%max_rank

@@ -141,6 +141,12 @@ def parse_info_str(fsock):
     return info_dict
 
 
+def glob(name, path=''):
+    """call to glob.glob with automatic security on path"""
+    import glob as glob_module
+    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    return glob_module.glob(pjoin(path, name))
+
 #===============================================================================
 # mute_logger (designed to be a decorator)
 #===============================================================================
@@ -454,6 +460,18 @@ def get_scan_name(first, last):
 #===============================================================================
 def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
+
+    if 'nocompile' in opt:
+        if opt['nocompile'] == True:
+            if not arg:
+                return
+            if cwd:
+                executable = pjoin(cwd, arg[0])
+            else:
+                executable = arg[0]
+            if os.path.exists(executable):
+                return
+        del opt['nocompile']
 
     cmd = ['make']
     try:

@@ -205,7 +205,6 @@ try:
     if cmd_line.history[-1] not in ['EOF','quit','exit']:
         cmd_line.results.store_result()
 except:
-    print error
     pass
 
 
