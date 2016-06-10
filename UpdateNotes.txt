@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.4.2 (10/06/16)
+        OM: fix a compilation problem for non standard gfortran system
+        OM: reduce the need of lhapdf for standard LO run. (was making some run to test due to missing dependencies)
+
 2.4.1 (10/06/16)
         OM: Fix a bug in fix target experiment with PDF on the particle at rest.
             The cross-section was correct but the z-boost was not performed correctly.
