@@ -13,6 +13,7 @@ c
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
+      include 'cuts.inc'
       
       double precision ZERO,one
       parameter       (ZERO = 0d0)
@@ -145,6 +146,9 @@ c helicity stuff
       integer fks_conf_number,fks_loop_min,fks_loop_max,fks_loop
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
@@ -222,8 +226,14 @@ c When doing hadron-hadron collision reduce the effect collision energy.
 c Note that tests are always performed at fixed energy with Bjorken x=1.
       totmass = 0.0d0
       include 'pmass.inc' ! make sure to set the masses after the model has been included
-      do i=1,nexternal
-        totmass = totmass + pmass(i)
+      do i=nincoming+1,nexternal
+         if (is_a_j(i) .and. i.ne.nexternal) then
+            totmass = totmass + max(ptj,pmass(i))
+         elseif ((is_a_lp(i).or.is_a_lm(i)) .and. i.ne.nexternal) then
+            totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
+         else
+            totmass = totmass + pmass(i)
+         endif
       enddo
       if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
       if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
@@ -394,7 +404,6 @@ c configurations close to the soft-collinear limit
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          calculatedBorn=.false.
-
          call set_cms_stuff(0)
          calculatedBorn=.false.
 

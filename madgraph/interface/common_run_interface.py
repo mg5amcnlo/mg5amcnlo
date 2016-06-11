@@ -2706,6 +2706,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     % (filename, pdfsets_dir))
             CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, alternate_path, filename,
                                                       lhapdf_version=lhapdf_version)
+        elif lhapdf_version.startswith('6.') and '.LHgrid' in filename:
+            logger.info('Could not download %s: Try %s', filename, filename.replace('.LHgrid',''))
+            return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, 
+                                                              filename.replace('.LHgrid',''), 
+                                        lhapdf_version, alternate_path)
+            
         else:
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
@@ -2761,10 +2767,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_version(self):
         """returns the lhapdf version number"""
         if not hasattr(self, 'lhapdfversion'):
-            self.lhapdf_version = \
+            try:
+                self.lhapdf_version = \
                     subprocess.Popen([self.options['lhapdf'], '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
-
+            except OSError, error:
+                if error.errno == 2:
+                    raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
+                else:
+                    raise
+                
         # this will be removed once some issues in lhapdf6 will be fixed
         if self.lhapdf_version.startswith('6.0'):
             raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')

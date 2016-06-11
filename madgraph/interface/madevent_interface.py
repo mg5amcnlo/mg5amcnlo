@@ -3364,7 +3364,11 @@ Please install this tool with the following MG5_aMC command:
     'The MLM merging qCut parameter you chose (%f) is less than'%PY8_Card['JetMatching:qCut']+
     '1.5*xqcut, with xqcut your run_card parameter (=%f).\n'%self.run_card['xqcut']+
     'It would be better/safer to use a larger qCut or a smaller xqcut.')
-               
+
+            # Also make sure to use the shower starting scales specified in the LHE
+            # unless the user specified it
+            PY8_Card.systemSet('Beams:setProductionScalesFromLHEF',True)
+
             # Automatically set qWeed to xqcut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
                 PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
@@ -4760,24 +4764,27 @@ Please install this tool with the following MG5_aMC command:
         if self.run_card['use_syst'] not in self.true:
             return
         
-        if self.run_card['event_norm'] != 'sum':
-            logger.critical('SysCalc works only when event_norm is on \'sum\'.')
-            logger.critical('MG5aMC will still run it, but beware that the xsecs'+\
-                        ' in SysCalc log files will be incorrectly normalized.')            
-            
-        
-        logger.info('running syscalc on mode %s' % mode)        
-
+        scdir = self.options['syscalc_path']
+        if not scdir or not os.path.exists(scdir):
+            return
+        logger.info('running syscalc on mode %s' % mode)    
+    
         # Check that all pdfset are correctly installed
         lhaid = [self.run_card.get_lhapdf_id()]
         sys_pdf = self.run_card['sys_pdf'].split('&&')
         lhaid += [l.split()[0] for l in sys_pdf]
-        pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        try:
+            pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('Systematic computation requires lhapdf to run. Bypass SysCalc')
+            return
+        
         # Copy all the relevant PDF sets
         [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
         
         
-        scdir = self.options['syscalc_path']
+        
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
@@ -4796,9 +4803,11 @@ Please install this tool with the following MG5_aMC command:
             self.run_card['sys_scalecorrelation'] = -1
         open(card,'w').write(template % self.run_card)
         
-        if not scdir or \
-            not os.path.exists(card):
+        if not os.path.exists(card):
             return False
+
+        
+        
         event_dir = pjoin(self.me_dir, 'Events')
 
         if not event_path:

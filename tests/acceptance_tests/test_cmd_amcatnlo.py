@@ -906,7 +906,7 @@ class MECmdShell(IOTests.IOTestManager):
                 break
         #      Run at p-p collider (6500 + 6500 GeV)
         self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+1])
-        cross_section = data[i+3]
+        cross_section = data[i+2]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         try:
             # By default run to 1% precision: set delta=120 for ~2sigma effect.

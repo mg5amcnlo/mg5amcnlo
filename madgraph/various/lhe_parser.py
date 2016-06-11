@@ -1723,6 +1723,12 @@ class FourMomentum(object):
         norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
         return  0.5* math.log((norm - self.pz) / (norm + self.pz))
     
+    @property
+    def rapidity(self):
+        return  0.5* math.log((self.E +self.pz) / (self.E - self.pz))
+    
+    
+    
     def pt2(self):
         """ return the pt square """
         

@@ -3433,7 +3433,8 @@ if __name__ == "__main__":
                       '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', 
                       '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
                       '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
-                      '--variations','--band','--central_only', '--lhapdf-config','--titles']
+                      '--variations','--band','--central_only', '--lhapdf-config','--titles',
+                      '--keep_all_weights']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact']
     # The list of type of uncertainties for which to use bands. None is a 'smart' default

@@ -3110,7 +3110,7 @@ class decay_all_events(object):
 
         
         probe_weight = []
-        
+       
 
         starttime = time.time()
         ev = -1
@@ -3297,7 +3297,7 @@ class decay_all_events(object):
 
         return max_weight
         
-    def loadfortran(self, mode, path, stdin_text):
+    def loadfortran(self, mode, path, stdin_text, first=True):
         """ call the fortran executable """
 
         tmpdir = ''
@@ -3314,8 +3314,18 @@ class decay_all_events(object):
             self.calculator[('full',path,)] = external 
             self.calculator_nbcall[('full',path)] = 1 
 
-        external.stdin.write(stdin_text)
-        
+        try:
+            external.stdin.write(stdin_text)
+        except IOError:
+            if not first:
+                raise
+            try:
+                external.terminate()
+            except:
+                pass
+            del self.calculator[('full',path,)]
+            return self.loadfortran(mode, path, stdin_text, first=False)
+
         if mode == 'maxweight':
             maxweight=float(external.stdout.readline())
             output = maxweight

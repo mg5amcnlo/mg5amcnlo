@@ -1326,6 +1326,9 @@ class PY8Card(ConfigFile):
         self.add_param("HEPMCoutput:file", '_MG5aMC_auto_set_',
             hidden=True,
             comment='HepMC output file name or *relative* path.')
+        # By default it is important to disable any cut on the rapidity of the showered jets
+        # during MLML merging and by default it is set to 2.5
+        self.add_param("JetMatching:etaJetMax", 1000.0, hidden=True, always_write_to_card=True)
 
         # Hidden parameters written out only if user_set or system_set
         # ============================================================
@@ -1339,6 +1342,9 @@ class PY8Card(ConfigFile):
             comment='This allows to turn on/off hadronization alltogether.')
         self.add_param("partonlevel:mpi", True, hidden=True, always_write_to_card=False,
             comment='This allows to turn on/off MPI alltogether.')
+        self.add_param("Beams:setProductionScalesFromLHEF", False, hidden=True, 
+            always_write_to_card=False,
+            comment='This parameter is automatically set to True by MG5aMC when doing MLM merging with PY8.')
         
         # for MLM merging
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
@@ -1351,8 +1357,7 @@ class PY8Card(ConfigFile):
         self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
         self.add_param("JetMatching:setMad", False, hidden=True, always_write_to_card=False,
               comment='Specify one must read inputs from the MadGraph banner.') 
-        self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False) 
-        self.add_param("JetMatching:etaJetMax", 10.0, hidden=True, always_write_to_card=False)
+        self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False)
         self.add_param("JetMatching:nQmatch",4,hidden=True, always_write_to_card=False)
         # for CKKWL merging (common with UMEPS, UNLOPS)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
@@ -2257,7 +2262,7 @@ class RunCardLO(RunCard):
         self.add_param("lhe_version", 3.0)
         self.add_param("event_norm", "average", include=False, sys_default='sum')
         #cut
-        self.add_param("auto_ptj_mjj", True)
+        self.add_param("auto_ptj_mjj", False)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False)
         self.add_param("nhel", 0, include=False)
