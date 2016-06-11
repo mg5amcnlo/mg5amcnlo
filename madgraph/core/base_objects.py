@@ -1265,8 +1265,6 @@ class Model(PhysicsObject):
         self.name2part = {}
         for part in self.get("particle_dict").values():
             self.name2part[part.get('name')] = part
-        
-            
 
     def get_lorentz(self, name):
         """return the lorentz object from the associate name"""

@@ -919,8 +919,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
-            
-
 
     @staticmethod
     def detect_card_type(path):
@@ -1680,8 +1678,445 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.print_results_in_shell(data)
 
+    def configure_directory(self, *args, **opts):
+        """ All action require before any type of run. Typically overloaded by
+        daughters if need be."""
+        pass
 
     ############################################################################
+    # Start of MadAnalysis5 related function
+    ############################################################################
+    
+    def check_madanalysis5(self, args, mode='parton'):
+        """Check the argument for the madanalysis5 command
+        syntax: madanalysis5_parton [NAME]
+        """
+
+        MA5_options = {'MA5_stdout_lvl':'default'}
+        
+        stdout_level_tags = [a for a in args if a.startswith('--MA5_stdout_lvl=')]
+        for slt in stdout_level_tags:
+            lvl = slt.split('=')[1].strip()
+            try:
+                # It is likely an int
+                MA5_options['MA5_stdout_lvl']=int(lvl)
+            except ValueError:
+                try:
+                    # Maybe the user used something like 'logging.INFO'
+                    MA5_options['MA5_stdout_lvl']=eval(lvl)
+                except:
+                    try:
+                        MA5_options['MA5_stdout_lvl']=eval('logging.%s'%lvl)
+                    except:
+                        raise InvalidCmd("MA5 output level specification"+\
+                                                 " '%s' is incorrect."%str(lvl))
+            args.remove(slt)
+
+        if mode=='parton':
+            # We will attempt to run MA5 on the parton level output
+            # found in the last run if not specified.
+            MA5_options['inputs'] = '*.lhe'
+        elif mode=='hadron':
+            # We will run MA5 on all sources of post-partonic output we
+            # can find if not specified. PY8 is a keyword indicating shower
+            # piped to MA5.
+            MA5_options['inputs'] = ['fromCard']
+        else:
+            raise MadGraph5Error('Mode %s not reckognized'%mode+
+                                             ' in function check_madanalysis5.')
+        # If not madanalysis5 path
+        if not self.options['madanalysis5_path']:
+            logger.info('Now trying to read the configuration file again'+
+                                                   ' to find MadAnalysis5 path')
+            self.set_configuration()
+            
+        if not self.options['madanalysis5_path'] or not \
+            os.path.exists(pjoin(self.options['madanalysis5_path'],'bin','ma5')):
+            error_msg = 'No valid MadAnalysis5 path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            error_msg += 'Finally, it can be installed automatically using the'
+            error_msg += ' install command.\n'
+            raise self.InvalidCmd(error_msg)
+
+        # Now make sure that the corresponding default card exists
+        if not os.path.isfile(pjoin(self.me_dir,
+                               'Cards','madanalysis5_%s_card.dat'%mode)):
+            raise self.InvalidCmd('Your installed version of MadAnalysis5 and/or'+\
+                    ' MadGraph5_aMCatNLO does not seem to support analysis at'+
+                                                            '%s level.'%mode)
+        
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+
+        if len(args) == 0 and not self.run_name:
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently defined. '+
+                                                 'Please add this information.')
+        
+        if len(args) >= 1:
+            if mode=='parton' and args[0] != self.run_name and \
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 
+             'unweighted_events.lhe.gz')) and not os.path.exists(
+                                           pjoin(self.me_dir,'Events',args[0])):
+                raise self.InvalidCmd('No events file in the %s run.'%args[0])
+            self.set_run_name(args[0], tag, level='madanalysis5_%s'%mode)            
+        else:
+            if tag:
+                self.run_card['run_tag'] = args[0]
+            self.set_run_name(self.run_name, tag, level='madanalysis5_%s'%mode)  
+        
+        if mode=='parton':
+            if any(t for t in args if t.startswith('--input=')):
+                raise InvalidCmd('The option --input=<input_file> is not'+
+                  ' available when running partonic MadAnalysis5 analysis. The'+
+                      ' .lhe output of the selected run is used automatically.')
+            input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
+            MA5_options['inputs'] = '%s.gz'%input_file
+            if not os.path.exists('%s.gz'%input_file):
+                if os.path.exists(input_file):
+                    misc.gzip(input_file, keep=True, stdout=output_file)
+                else:
+                    logger.warning("LHE event file not found in \n%s\ns"%input_file+
+                                       "AboringParton level MA5 analysis is disabled.")                    
+    
+        if mode=='hadron':
+            # Make sure to store current results (like Pythia8 hep files)
+            # so that can be found here
+            self.store_result()
+            
+            hadron_tag = [t for t in args if t.startswith('--input=')]
+            if hadron_tag and hadron_tag[0][8:]:
+                hadron_inputs = hadron_tag[0][8:].split(',')
+            
+            # If not set above, then we must read it from the card
+            elif MA5_options['inputs'] == ['fromCard']:
+                hadron_inputs = banner_mod.MadAnalysis5Card(pjoin(self.me_dir,
+                'Cards','madanalysis5_hadron_card.dat'),mode='hadron')['inputs']
+
+            # Make sure the corresponding input files are present and unfold
+            # potential wildcard while making their path absolute as well.
+            MA5_options['inputs'] = []
+            special_source_tags = []
+            for htag in hadron_inputs:
+                # Possible pecial tag for MA5 run inputs
+                if htag in special_source_tags:
+                    # Special check/actions
+                    continue
+                # Check if the specified file exists and is not a wildcard
+                if os.path.isfile(htag) or (os.path.exists(htag) and 
+                                          stat.S_ISFIFO(os.stat(htag).st_mode)):
+                    MA5_options['inputs'].append(htag)
+                    continue
+
+                # Now select one source per tag, giving priority to unzipped 
+                # files with 'events' in their name (case-insensitive).
+                file_candidates = glob.glob(pjoin(self.me_dir,'Events',self.run_name,htag))+\
+                            glob.glob(pjoin(self.me_dir,'Events',self.run_name,'%s.gz'%htag))
+                priority_files = [f for f in file_candidates if 
+                                self.run_card['run_tag'] in os.path.basename(f)]
+                priority_files = [f for f in priority_files if
+                                        'EVENTS' in os.path.basename(f).upper()]
+                # Make sure to always prefer the original partonic event file
+                for f in file_candidates:
+                    if os.path.basename(f).startswith('unweighted_events.lhe'):
+                        priority_files.append(f)
+                if priority_files:
+                    MA5_options['inputs'].append(priority_files[-1])
+                    continue
+                if file_candidates:
+                    MA5_options['inputs'].append(file_candidates[-1])
+                    continue
+
+        return MA5_options
+    
+    def ask_madanalysis5_run_configuration(self, runtype='parton',mode=None):
+        """Ask the question when launching madanalysis5.
+        In the future we can ask here further question about the MA5 run, but
+        for now we just edit the cards"""
+
+        cards = ['madanalysis5_%s_card.dat'%runtype]
+        self.keep_cards(cards)
+        
+        if self.force:
+            return runtype
+        
+        # This heavy-looking structure of auto is just to mimick what is done
+        # for ask_pythia_configuration
+        auto=False
+        if mode=='auto':
+            auto=True
+        if auto:
+            self.ask_edit_cards(cards, mode='auto', plot=False)
+        else:
+            self.ask_edit_cards(cards, plot=False)
+
+        # For now, we don't pass any further information and simply return the
+        # input mode asked for
+        mode = runtype 
+        return mode
+
+    def complete_madanalysis5_hadron(self,text, line, begidx, endidx):
+        "Complete the madanalysis5 command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            #return valid run_name
+            data = []
+            for name in banner_mod.MadAnalysis5Card._default_hadron_inputs:
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, ['-f',
+                '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
+                return tmp1 + tmp2
+            
+        elif '--MA5_stdout_lvl=' in line and not any(arg.startswith(
+                                          '--MA5_stdout_lvl=') for arg in args):
+            return self.list_completion(text, 
+                ['--MA5_stdout_lvl=%s'%opt for opt in 
+                ['logging.INFO','logging.DEBUG','logging.WARNING',
+                                                'logging.CRITICAL','90']], line)
+        elif '--input=' in line and not any(arg.startswith(
+                                                  '--input=') for arg in args):
+            return self.list_completion(text, ['--input=%s'%opt for opt in
+         (banner_mod.MadAnalysis5Card._default_hadron_inputs +['path'])], line)
+        else:
+            return self.list_completion(text, ['-f', 
+                '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
+
+    def do_madanalysis5_hadron(self, line):
+        """launch MadAnalysis5 at the hadron level."""
+        return self.run_madanalysis5(line,mode='hadron')
+
+    def run_madanalysis5(self, line, mode='parton'):
+        """launch MadAnalysis5 at the parton level or at the hadron level with
+        a specific command line."""
+        
+        # Check argument's validity
+        args = self.split_arg(line)
+        
+        if '--no_default' in args:
+            no_default = True
+            args.remove('--no_default')
+        else:
+            no_default = False
+
+        if no_default:
+            # Called issued by MG5aMC itself during a generate_event action
+            if mode=='parton' and not os.path.exists(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_parton_card.dat')):
+                return
+            if mode=='hadron' and not os.path.exists(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_hadron_card.dat')):
+                return
+        else:
+            # Called issued by the user itself and only MA5 will be run.
+            # we must therefore ask wheter the user wants to edit the card
+            self.ask_madanalysis5_run_configuration(runtype=mode)        
+        
+        if not self.options['madanalysis5_path'] or \
+            all(not os.path.exists(pjoin(self.me_dir, 'Cards',card)) for card in
+               ['madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat']):
+            if no_default:
+                return
+            else:
+                raise InvalidCmd('You must have MadAnalysis5 available to run'+
+           " this command. Consider installing it with the 'install' function.")
+
+        if not self.run_name:
+            MA5_opts = self.check_madanalysis5(args, mode=mode)
+            self.configure_directory(html_opening =False)
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory(html_opening =False)
+            MA5_opts = self.check_madanalysis5(args, mode=mode)
+
+        # Now check that there is at least one input to run
+        if MA5_opts['inputs']==[]:
+            if no_default:
+                logger.warning('No hadron level input found to run MadAnalysis5 on.'+
+                                         ' Skipping its hadron-level analysis.')
+                return
+            else:
+                raise self.InvalidCmd('\nNo input files specified or availabled for'+
+        ' this MadAnalysis5 hadron-level run.\nPlease double-check the options of this'+
+        ' MA5 command (or card) and which output files\nare currently in the chosen'+
+        " run directory '%s'."%self.run_name)
+
+        MA5_card = banner_mod.MadAnalysis5Card(pjoin(self.me_dir, 'Cards',
+                                    'madanalysis5_%s_card.dat'%mode), mode=mode)
+        
+        MA5_cmds_list = MA5_card.get_MA5_cmds(MA5_opts['inputs'],
+                pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper()),
+                run_dir_path = pjoin(self.me_dir,'Events', self.run_name),
+                UFO_model_path=pjoin(self.me_dir,'bin','internal','ufomodel'),
+                run_tag = self.run_tag)
+
+############################# TEMPORARY ########################################
+#       Here's how to print the MA5 commands generated by MG5aMC
+#        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+#            misc.sprint('****************************************')
+#            misc.sprint('* Commands for MA5 runtag %s:'%MA5_runtag)
+#            misc.sprint('\n'+('\n'.join('* %s'%cmd for cmd in MA5_cmds)))
+#            misc.sprint('****************************************')
+############################# TEMPORARY ########################################
+        
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+        logger.info('Now starting MadAnalysis5 [arXiv:1206.1599]','$MG:color:GREEN')
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+        if mode=='hadron':
+            logger.info('Hadron input files considered:')
+            for input in MA5_opts['inputs']:
+                logger.info('  --> %s'%input)
+        elif mode=='parton':
+            logger.info('Parton input file considered:')
+            logger.info('  --> %s'%MA5_opts['inputs'])
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+
+        # Obtain a main MA5 interpreter
+        # Ideally we would like to do it all with a single interpreter
+        # but we'd need a way to reset it for this.
+        if MA5_opts['MA5_stdout_lvl']=='default':
+            if MA5_card['stdout_lvl'] is None:
+                MA5_lvl = self.options['stdout_level']
+            else:
+                MA5_lvl = MA5_card['stdout_lvl']                
+        else:
+            MA5_lvl = MA5_opts['MA5_stdout_lvl']
+
+        MA5_interpreter = misc.get_MadAnalysis5_interpreter(
+                self.options['mg5_path'], 
+                self.options['madanalysis5_path'],
+                logstream=sys.stdout,
+                loglevel=MA5_lvl,
+                forced=True)
+
+        # Now loop over the different MA5_runs
+        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+            
+            # Make sure to properly initialize MA5 interpreter
+            if mode=='hadron':
+                MA5_interpreter.init_reco()
+            else:
+                MA5_interpreter.init_parton()
+            
+            if MA5_runtag!='default':
+                if MA5_runtag.startswith('_reco_'):
+                    logger.info("MadAnalysis5 now running the reconstruction '%s'..."%
+                                              MA5_runtag[6:],'$MG:color:GREEN')
+                elif MA5_runtag=='Recasting':
+                    logger.info("MadAnalysis5 now running the recasting...",
+                                                              '$MG:color:GREEN') 
+                else:
+                    logger.info("MadAnalysis5 now running the '%s' analysis..."%
+                                                   MA5_runtag,'$MG:color:GREEN')                    
+            # Now the magic, finally call MA5.
+            MA5_interpreter.load(MA5_cmds)
+                     
+            if MA5_runtag.startswith('_reco_'):
+                # When doing a reconstruction we must first copy the event file
+                # created and then directly proceed to the next batch of instructions
+                # There can be several output directory if there were several
+                # input files.
+                links_created=[]
+                for i, input in enumerate(MA5_opts['inputs']):
+                    # Make sure it is not an lhco or root input, which would not
+                    # undergo any reconstruction of course.
+                    if not banner_mod.MadAnalysis5Card.events_can_be_reconstructed(input):
+                        continue
+                    reco_output = pjoin(self.me_dir,
+                           'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
+                    # Look for either a root or .lhe.gz output
+                    reco_event_file = glob.glob(pjoin(reco_output,'Output',
+                      '_reco_events','*.lhe.gz')) + glob.glob(pjoin(
+                                  reco_output,'Output','_reco_events','*.root'))
+                    if len(reco_event_file)==0:
+                        raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
+                  "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
+                    reco_event_file = reco_event_file[0]
+                    # move the reconstruction output to the HTML directory
+                    shutil.move(reco_output,pjoin(self.me_dir,'HTML',
+                                 self.run_name,'%s_MA5_%s_ANALYSIS%s_%d'%
+                                    (self.run_tag,mode.upper(),MA5_runtag,i+1)))
+                    # link the reconstructed event file to the run directory
+                    links_created.append(os.path.basename(reco_event_file))
+                    files.ln(pjoin(self.me_dir,'HTML',self.run_name,
+                      '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),
+                      MA5_runtag,i+1),'Output','_reco_events',links_created[-1]),
+                                      pjoin(self.me_dir,'Events',self.run_name))
+                    
+                logger.info("MadAnalysis5 successfully completed the reconstruction "+
+                  "'%s'. Links to the reconstructed event files are:"%MA5_runtag[6:])
+                for link in links_created:
+                    logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,link))
+                continue
+
+            if MA5_runtag.upper()=='RECASTING':
+                target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+              %(mode.upper(),MA5_runtag),'Output','CLs_output_summary.dat')
+            else:
+                target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')
+            if not os.path.isfile(target):
+                raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
+          "an output for the parton analysis '%s' in\n   %s"%(MA5_runtag,target)
+
+            # Copy the PDF report or CLs in the Events/run directory.
+            if MA5_runtag.upper()=='RECASTING':
+                carboncopy_name = '%s_MA5_CLs.dat'%(self.run_tag)
+            else:
+                carboncopy_name = '%s_MA5_%s_analysis_%s.pdf'%(
+                                                   self.run_tag,mode,MA5_runtag)
+            shutil.copy(target, pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
+            if MA5_runtag!='default':
+                logger.info("MadAnalysis5 successfully completed the "+
+                  "%s. Reported results are placed in:"%("analysis '%s'"%MA5_runtag 
+                           if MA5_runtag.upper()!='RECASTING' else "recasting"))
+            else:
+                logger.info("MadAnalysis5 successfully completed the analysis."+
+                                            " Reported results are placed in:")
+            logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
+
+            # Copy the entire analysis in the HTML directory
+            shutil.move(pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+              %(mode.upper(),MA5_runtag)), pjoin(self.me_dir,'HTML',self.run_name,
+                '%s_MA5_%s_ANALYSIS_%s'%(self.run_tag,mode.upper(),MA5_runtag)))
+
+        # Set the number of events and cross-section to the last one 
+        # (maybe do something smarter later)
+        new_details={}
+        for detail in ['nb_event','cross','error']:
+            new_details[detail] = \
+                      self.results[self.run_name].get_current_info()[detail]
+        for detail in new_details:
+            self.results.add_detail(detail,new_details[detail])
+
+        self.update_status('finish', level='madanalysis5_%s'%mode,
+                                                                 makehtml=False)
+ 
+        #Update the banner
+        self.banner.add(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_%s_card.dat'%mode))
+        banner_path = pjoin(self.me_dir,'Events', self.run_name,
+                               '%s_%s_banner.txt'%(self.run_name, self.run_tag))
+        self.banner.write(banner_path)
+ 
+        if not no_default:
+            logger.info('Find more information about this run on the HTML local page')
+            logger.info('  --> %s'%pjoin(self.me_dir,'index.html'))
+    
+    ############################################################################
+    # End of MadAnalysis5 related function
+    ############################################################################
+    
     def do_delphes(self, line):
         """ run delphes and make associate root file/plot """
 
@@ -2115,7 +2550,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
                       'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
-                      'reweight_card.dat','pythia8_card.dat']
+                      'reweight_card.dat','pythia8_card.dat',
+                      'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',]
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:

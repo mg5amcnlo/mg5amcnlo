@@ -441,6 +441,41 @@ def which_lib(lib):
     return None
 
 #===============================================================================
+# Return a Main instance of MadAnlysis5, provided its path
+#===============================================================================
+def get_MadAnalysis5_interpreter(mg5_path, ma5_path, mg5_interface=None, 
+                logstream = sys.stdout, loglevel = logging.INFO, forced = True):
+    """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
+    
+    MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
+    
+    if MA5path is None or not os.path.isfile(pjoin(MA5path,'bin','ma5')):
+        return None
+    if MA5path not in sys.path:
+        sys.path.insert(0, MA5path) 
+    try:
+        # We must backup the readline module attributes because they get modified
+        # when MA5 imports root and that supersedes MG5 autocompletion
+        import readline
+        old_completer = readline.get_completer()
+        old_delims    = readline.get_completer_delims()
+        from madanalysis.interpreter.ma5_interpreter import MA5Interpreter
+        MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
+                             LoggerStream=logstream,forced=forced)
+        # Now restore the readline MG5 state
+        readline.set_completer(old_completer)
+        readline.set_completer_delims(old_delims)
+        # Also restore the completion_display_matches_hook if an mg5 interface
+        # is specified as it could also have been potentially modified
+        if not mg5_interface is None:
+            mg5_interface.set_readline_completion_display_matches_hook()
+    except KeyError as e:
+        raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%str(e)
+        return None
+
+    return MA5_interpreter
+
+#===============================================================================
 # Return Nice display for a random variable
 #===============================================================================
 def nice_representation(var, nb_space=0):
@@ -975,6 +1010,17 @@ def tail(f, n, offset=None):
         avg_line_length *= 1.3
         avg_line_length = int(avg_line_length)
 
+def mkfifo(fifo_path):
+    """ makes a piping fifo (First-in First-out) file and nicely intercepts 
+    error in case the file format of the target drive doesn't suppor tit."""
+
+    try:
+        os.mkfifo(fifo_path)
+    except:
+        raise OSError('MadGraph5_aMCatNLO could not create a fifo file at:\n'+
+          '   %s\n'%fifo_path+'Make sure that this file does not exist already'+
+          ' and that the file format of the target drive supports fifo file (i.e not NFS).')
+
 ################################################################################
 # LAST LINE FUNCTION
 ################################################################################
@@ -982,7 +1028,7 @@ def get_last_line(fsock):
     """return the last line of a file"""
     
     return tail(fsock, 1)[0]
-    
+
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()
 This actually just reads blocks (4096 bytes by default) of data from the end of

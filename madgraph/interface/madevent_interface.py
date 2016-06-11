@@ -1006,8 +1006,7 @@ class CheckValidForCmd(object):
         """Check the argument for pythia command
         syntax: pythia8 [NAME] 
         Note that other option are already removed at this point
-        """
-        
+        """        
         mode = None
         laststep = [arg for arg in args if arg.startswith('--laststep=')]
         if laststep and len(laststep)==1:
@@ -1050,20 +1049,19 @@ class CheckValidForCmd(object):
                                                   'unweighted_events.lhe.gz')):
                 raise self.InvalidCmd('No events file corresponding to %s run. '
                                                                       % args[0])
-            # Here pythia is just the level keyword, so it shouldn't be changed to pythia8
-            self.set_run_name(args[0], tag, 'pythia')
+            self.set_run_name(args[0], tag, 'pythia8')
         else:
             if tag:
                 self.run_card['run_tag'] = tag
-            # Here pythia is just the level keyword, so it shouldn't be changed to pythia8
-            self.set_run_name(self.run_name, tag, 'pythia')
+            self.set_run_name(self.run_name, tag, 'pythia8')
 
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         #output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
         if not os.path.exists('%s.gz'%input_file):
-            if not os.path.exists(input_file):
+            if os.path.exists(input_file):
                 misc.gzip(input_file, keep=True, stdout=output_file)
-            raise self.InvalidCmd('No event file corresponding to %s run. '
+            else:
+                raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)
         
         args.append(mode)
@@ -1248,64 +1246,7 @@ class CheckValidForCmd(object):
                 self.run_card['run_tag'] = tag
             self.set_run_name(self.run_name, tag, 'pgs')
         
-        return lock
-
-    def check_delphes(self, arg):
-        """Check the argument for pythia command
-        syntax is "delphes [NAME]" 
-        Note that other option are already remove at this point
-        """
-        
-        # If not pythia-pgs path
-        if not self.options['delphes_path']:
-            logger.info('Retry to read configuration file to find delphes path')
-            self.set_configuration()
-      
-        if not self.options['delphes_path']:
-            error_msg = 'No valid Delphes path set.\n'
-            error_msg += 'Please use the set command to define the path and retry.\n'
-            error_msg += 'You can also define it in the configuration file.\n'
-            raise self.InvalidCmd(error_msg)  
-
-        tag = [a for a in arg if a.startswith('--tag=')]
-        if tag: 
-            arg.remove(tag[0])
-            tag = tag[0][6:]
-            
-                  
-        if len(arg) == 0 and not self.run_name:
-            if self.results.lastrun:
-                arg.insert(0, self.results.lastrun)
-            else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
-        
-        if len(arg) == 1 and self.run_name == arg[0]:
-            arg.pop(0)
-        
-        if not len(arg) and \
-           not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.help_pgs()
-            raise self.InvalidCmd('''No file file pythia_events.hep currently available
-            Please specify a valid run_name''')
-        
-        lock = None                
-        if len(arg) == 1:
-            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
-            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
-                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
-                    % (self.run_name, prev_tag, 
-                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
-            else:
-                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
-                output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
-        else:
-            if tag:
-                self.run_card['run_tag'] = tag
-            self.set_run_name(self.run_name, tag, 'delphes')
-            
-        return lock               
+        return lock            
 
     def check_display(self, args):
         """check the validity of line
@@ -1635,7 +1576,6 @@ class CompleteForCmd(CheckValidForCmd):
     def complete_pythia8(self,text, line, begidx, endidx):
         "Complete the pythia8 command"
         args = self.split_arg(line[0:begidx], error=False)
-
         if len(args) == 1:
             #return valid run_name
             data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
@@ -1650,7 +1590,34 @@ class CompleteForCmd(CheckValidForCmd):
         elif line[-1] != '=':
             return self.list_completion(text, self._run_options + ['-f', 
                                                  '--no_default','--tag='], line)
-    
+
+    def complete_madanalysis5_parton(self,text, line, begidx, endidx):
+        "Complete the madanalysis5 command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            #return valid run_name
+            data = []
+            for name in ['unweighted_events.lhe']:
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, ['-f',
+                '--MA5_stdout_lvl=','--no_default','--tag='], line)
+                return tmp1 + tmp2            
+        elif '--MA5_stdout_lvl=' in line and not any(arg.startswith(
+                                          '--MA5_stdout_lvl=') for arg in args):
+            return self.list_completion(text, 
+                ['--MA5_stdout_lvl=%s'%opt for opt in 
+                ['logging.INFO','logging.DEBUG','logging.WARNING',
+                                                'logging.CRITICAL','90']], line)
+        else:
+            return self.list_completion(text,  ['-f', 
+                             '--MA5_stdout_lvl=','--no_default','--tag='], line)
+
     def complete_pythia(self,text, line, begidx, endidx):
         "Complete the pythia command"     
         args = self.split_arg(line[0:begidx], error=False)
@@ -2117,7 +2084,9 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             if self.run_card['time_of_flight']>=0:
                 self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
             
-            self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)            
+            self.exec_cmd('madanalysis5_parton --no_default', postcmd=False, printcmd=False)
+            self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
+            self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
             
             # shower launches pgs/delphes if needed    
             self.store_result()
@@ -3258,6 +3227,10 @@ Beware that this can be dangerous for local multicore runs.""")
             self.exec_cmd('%s %s'%(shower,' '.join(args)), 
                                                   postcmd=False, printcmd=False)
 
+    def do_madanalysis5_parton(self, line):
+        """launch MadAnalysis5 at the parton level."""
+        return self.run_madanalysis5(line,mode='parton')
+
     def do_pythia8(self, line):
         """launch pythia8"""
 
@@ -3339,17 +3312,45 @@ Please install this tool with the following MG5_aMC command:
 
         PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
 
-        HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
+        HepMC_event_output = None
+        if PY8_Card['HEPMCoutput:file']=='auto':
+            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
-        if PY8_Card['HEPMCoutput:file']=='_MG5aMC_auto_set_':
             PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag)
+        elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
+            fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
+            fifo_path  = None
+            if len(fifo_specs)<=1:
+                fifo_path = pjoin(self.me_dir,'Events', self.run_name,'PY8_hepmc.fifo')
+                if os.path.exists(fifo_path):
+                    os.remove(fifo_path)
+                misc.mkfifo(fifo_path)
+                # Use defaultSet not to overwrite the current userSet status
+                PY8_Card.defaultSet('HEPMCoutput:file','PY8_hepmc.fifo')
+            else:
+                fifo_path = fifo_specs[1]
+                if os.path.exists(fifo_path):
+                    if stat.S_ISFIFO(os.stat(fifo_path).st_mode):
+                        logger.warning('PY8 will be reusing already existing '+
+                                         'custom fifo file at:\n  %s'%fifo_path)
+                    else:
+                        raise InvalidCmd(
+"""The fifo path speficied for the PY8 parameter 'HEPMCoutput:file':
+   %s
+already exists and is not a fifo file."""%fifo_path)
+                else:
+                    misc.mkfifo(fifo_path)
+                # Use defaultSet not to overwrite the current userSet status
+                PY8_Card.defaultSet('HEPMCoutput:file',fifo_path)
+            HepMC_event_output=fifo_path    
         elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null']:
-            open(HepMC_event_output,'w').write('HepMC output of Pythia8 disabled!')
+            logger.warning('User disabled the HepMC output of Pythia8.')
             HepMC_event_output = None
         else:
+            # Normalize the relative path if given as relative by the user.
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                    PY8_Card['HEPMCoutput:file'])
-        
+
         # We specify by hand all necessary parameters, so that there is no
         # need to read parameters from the Banner.
         PY8_Card.MadGraphSet('JetMatching:setMad',False)
@@ -3546,25 +3547,43 @@ Please install this tool with the following MG5_aMC command:
                       os.path.basename(pythia_cmd_card)]))
 
         wrapper.write(exe_cmd)
-        
         wrapper.close()
+
         # Set it as executable
         st = os.stat(wrapper_path)
         os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
 
-        logger.info('Follow Pythia8 shower by running the '+
-            'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
+        # If the target HEPMC output file is a fifo, don't hang MG5_aMC and let
+        # it proceed.
+        is_HepMC_output_fifo = os.path.exists(HepMC_event_output) and \
+                              stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode)        
+        if is_HepMC_output_fifo:
+            logger.info(
+"""Pythia8 is set to output HEPMC events to to a fifo file.
+You can follow PY8 run with the following command (in a separate terminal):
+    tail -f %s"""%pythia_log)
+            py8_log = open(pythia_log,'w')
+            py8_bkgrd_proc = misc.Popen([wrapper_path],
+                    stdout=py8_log,stderr=py8_log,
+                                  cwd=pjoin(self.me_dir,'Events',self.run_name))
+            # Now directly return to madevent interactive interface if we are piping PY8
+            if not no_default:
+                logger.info('You can now run a tool that reads the following fifo file:'+\
+                '\n   %s\nwhere PY8 outputs HEPMC events (e.g. MadAnalysis5).'
+                                          %HepMC_event_output,'$MG:color:GREEN')
+            return
+        else:
+            logger.info('Follow Pythia8 shower by running the '+
+                'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
+    
+            ret_code = self.cluster.launch_and_wait(wrapper_path, 
+                    argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
+                                  cwd=pjoin(self.me_dir,'Events',self.run_name))
+            if ret_code != 0:
+                raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
+                    ' code %d.\n'%ret_code+\
+                    'You can find more information in this log file:\n%s'%pythia_log
 
-        ret_code = self.cluster.launch_and_wait(wrapper_path, 
-                        argument= [],
-                        stdout= pythia_log,
-                        stderr=subprocess.STDOUT,
-                        cwd=pjoin(self.me_dir,'Events',self.run_name))
-        
-        if ret_code != 0:
-            raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
-                ' code %d.\n'%ret_code+\
-                'You can find more information in this log file:\n%s'%pythia_log
         
         # Properly rename the djr and pts output if present.
         djr_output = pjoin(self.me_dir,'Events', self.run_name, 'djrs.dat')
@@ -3689,7 +3708,6 @@ Please install this tool with the following MG5_aMC command:
             xsecs_file.close()
             
         #Update the banner
-        # self.banner.add(pjoin(self.me_dir, 'Cards','pythia8_card.dat'))
         # We add directly the pythia command card because it has the full 
         # information
         self.banner.add(pythia_cmd_card)
@@ -4523,13 +4541,13 @@ Please install this tool with the following MG5_aMC command:
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
                      allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
-    
+
         def get_last_tag(self, level):
             # Return the tag of the previous run having the required data for this
             # tag/run to working wel.
             if level == 'parton':
                 return
-            elif level in ['pythia','pythia8']:
+            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron']:
                 return self.results[self.run_name][0]['tag']
             else:
                 for i in range(-1,-len(self.results[self.run_name])-1,-1):
@@ -4539,14 +4557,15 @@ Please install this tool with the following MG5_aMC command:
     
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
-                       'pythia': ['pythia','pgs','delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+                       'pythia': ['pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
+                       'madanalysis5_hadron':['madanalysis5_hadron'],
+                       'madanalysis5_parton':['madanalysis5_parton'],
                        'plot':[],
                        'syscalc':[]}
-        
-        
 
         if name == self.run_name:        
             if reload_card:
@@ -4564,7 +4583,7 @@ Please install this tool with the following MG5_aMC command:
                         tag = self.get_available_tag()
                         self.run_card['run_tag'] = tag
                         self.run_tag = tag
-                        self.results.add_run(self.run_name, self.run_card)                        
+                        self.results.add_run(self.run_name, self.run_card)
                         break
             return get_last_tag(self, level)
 
@@ -4618,12 +4637,6 @@ Please install this tool with the following MG5_aMC command:
 
         return get_last_tag(self, level)
             
-            
-        
-        
-        
-        
-        
 
     ############################################################################
     def find_model_name(self):
@@ -4870,8 +4883,8 @@ Please install this tool with the following MG5_aMC command:
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0']
-        void = 'NOT INSTALLED'
-        switch_order = ['shower', 'detector', 'madspin', 'reweight']
+        void = 'Not installed'
+        switch_order = ['shower', 'detector', 'madspin', 'reweight', 'madanalysis5']
         
         switch = dict((k, void) for k in switch_order)
 
@@ -4879,11 +4892,15 @@ Please install this tool with the following MG5_aMC command:
                        'detector': 'Choose the detector simulation program:',
                        'madspin': 'Decay particles with the MadSpin module:',
                        'reweight':'Add weights to the events based on changing model parameters:',
+                       'madanalysis5':'Run MadAnalysis5 on the events generated:'
                        }
 
         force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
                        ('detector', 'PGS'): {'shower':'PYTHIA6'},
-                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
+                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']},
+                       ('madanalysis5','HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
+                       ('madanalysis5','PARTON+HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
+                       ('shower', 'OFF'): {'madanalysis5': ['PARTON','OFF']} }
 
         switch_assign = lambda key, value: switch.__setitem__(key, value if value \
                                          in valid_options[key] else switch[key])
@@ -4914,7 +4931,33 @@ Please install this tool with the following MG5_aMC command:
                 switch['shower'] = 'PYTHIA8'
             elif switch['shower'] == void:
                 switch['shower'] = 'OFF'            
-            
+        
+        # MadAnalysis5 options
+        if self.options['madanalysis5_path']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')):
+                valid_options['madanalysis5'].append('PARTON')           
+            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
+                valid_options['madanalysis5'].append('HADRON')
+            if 'HADRON' in valid_options['madanalysis5'] and 'PARTON' in valid_options['madanalysis5']:
+                valid_options['madanalysis5'].append('PARTON+HADRON')
+            if len(valid_options['madanalysis5'])>1:                
+                available_mode.append('5')
+            else:
+                switch['madanalysis5'] = 'Not available yet for this output/process'
+
+            parton_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
+                                                'madanalysis5_parton_card.dat'))
+            hadron_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
+                                                'madanalysis5_hadron_card.dat'))
+            if parton_card_present and not hadron_card_present:
+                switch['madanalysis5'] = 'PARTON'                
+            elif hadron_card_present and not parton_card_present:
+                switch['madanalysis5'] = 'HADRON'
+            elif hadron_card_present and parton_card_present:
+                switch['madanalysis5'] = 'PARTON+HADRON'
+            elif switch['madanalysis5'] == void:
+                switch['madanalysis5'] = 'OFF'
+
         # Need to allow Delphes only if a shower exists                
         if self.options['delphes_path']:
             if valid_options['shower'] != ['OFF']:
@@ -4966,16 +5009,32 @@ Please install this tool with the following MG5_aMC command:
         options += ['parton'] + sorted(list(set(available_mode)))    
         #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
+        
+        def color(switch_value):
+            green = '\x1b[32m%s\x1b[0m' 
+            bold = '\x1b[33m%s\x1b[0m'
+            red   = '\x1b[31m%s\x1b[0m'
+            if switch_value in ['OFF',void,'Requires a shower',
+                    'Not available (requires NumPy)',
+                    'Not available yet for this output/process']:
+                return red%switch_value
+            elif switch_value in ['ON','PARTON','HADRON','PARTON+HADRON',
+                                  'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
+                                  'DELPHES-CMS','DELPHES']:
+                return green%switch_value
+            else:
+                return bold%switch_value                
+
         if mode or not self.force:
             answer = ''
             while answer not in ['0', 'done', 'auto']:
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " %i %-61s %10s=%s\n"
+                    switch_format = " %i %-61s %12s = %s\n"
                     question = "The following switches determine which programs are run:\n"
                     for id, key in enumerate(switch_order):
-                        question += switch_format % (id+1, description[key], key, switch[key])
+                        question += switch_format % (id+1, description[key], key, color(switch[key]))
                     question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
                     question += '  Type \'help\' for the list of all valid option\n' 
@@ -5046,7 +5105,8 @@ Please install this tool with the following MG5_aMC command:
                                     switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
+                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 
+                                'delphes','madanalysis5']:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
@@ -5067,6 +5127,9 @@ Please install this tool with the following MG5_aMC command:
                     elif answer == 'madspin':
                         switch_assign('madspin', 'ON')
                         switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF')
+                    elif answer == 'madanalysis5':
+                        switch_assign('madanalysis5', valid_options['madanalysis5'][-1])
                         switch_assign('detector', 'OFF')
                     elif answer == 'reweight':
                         switch_assign('reweight', 'ON')
@@ -5098,6 +5161,11 @@ Please install this tool with the following MG5_aMC command:
             cards.append('madspin_card.dat')
         if switch['reweight'] == 'ON':
             cards.append('reweight_card.dat')
+        if switch['madanalysis5'] in ['PARTON','PARTON+HADRON']:
+            cards.append('madanalysis5_parton_card.dat')
+        if switch['madanalysis5'] in ['HADRON','PARTON+HADRON']:
+            cards.append('madanalysis5_hadron_card.dat')
+
         self.keep_cards(cards)
         
         if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):

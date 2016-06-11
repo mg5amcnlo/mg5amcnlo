@@ -58,13 +58,16 @@ class Banner(dict):
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
                      'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
-                     'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
+                     'mgdelphescard', 'mgdelphestrigger','mgshowercard',
+                     'ma5card_parton','ma5card_hadron','run_settings']
 
     capitalized_items = {
             'mgversion': 'MGVersion',
             'mg5proccard': 'MG5ProcCard',
             'mgproccard': 'MGProcCard',
             'mgruncard': 'MGRunCard',
+            'ma5card_parton' : 'MA5Card_parton',
+            'ma5card_hadron' : 'MA5Card_hadron',            
             'mggenerationinfo': 'MGGenerationInfo',
             'mgpythiacard': 'MGPythiaCard',
             'mgpgscard': 'MGPGSCard',
@@ -116,6 +119,8 @@ class Banner(dict):
       'madspin':'madspin_card.dat',
       'mgshowercard':'shower_card.dat',
       'pythia8':'pythia8_card.dat',
+      'ma5card_parton':'madanalysis5_parton_card.dat',
+      'ma5card_hadron':'madanalysis5_hadron_card.dat',      
       'run_settings':''
       }
     
@@ -450,6 +455,10 @@ class Banner(dict):
                 tag = 'foanalyse'
             elif 'reweight_card' in card_name:
                 tag='reweight_card'
+            elif 'madanalysis5_parton_card' in card_name:
+                tag='MA5Card_parton'
+            elif 'madanalysis5_hadron_card' in card_name:
+                tag='MA5Card_hadron'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -912,7 +921,7 @@ class ConfigFile(dict):
             dict.__init__(self, finput)
             assert finput.__dict__.keys()
             for key in finput.__dict__:
-                setattr(self, key, copy.copy(getattr(finput, key)) )
+                setattr(self, key, dict(getattr(finput, key)) )
             return
         else:
             dict.__init__(self)
@@ -924,8 +933,6 @@ class ConfigFile(dict):
         self.list_parameter = set()
         self.default_setup()
 
-        
-        
         # if input is define read that input
         if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput)
@@ -1272,7 +1279,7 @@ class GridpackCard(ConfigFile):
         fsock = open(output_file,'w')
         fsock.write(text)
         fsock.close()
-
+        
 class PY8Card(ConfigFile):
     """ Implements the Pythia8 card."""
 
@@ -1314,6 +1321,10 @@ class PY8Card(ConfigFile):
         # for both merging, chose whether to also consider different merging
         # scale values for the extra weights related to scale and PDF variations.
         self.add_param("SysCalc:fullCutVariation", False)
+        # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
+        # to indicate that he wants to pipe the output. Or \dev\null to turn the
+        # output off.
+        self.add_param("HEPMCoutput:file", 'auto')
 
         # Hidden parameters always written out
         # ====================================
@@ -2590,10 +2601,409 @@ class RunCardLO(RunCard):
                                     python_template=python_template)            
 
 
+class InvalidMadAnalysis5Card(InvalidCmd):
+    pass
+
+class MadAnalysis5Card(dict):
+    """ A class to store a MadAnalysis5 card. Very basic since it is basically
+    free format."""
+    
+    _MG5aMC_escape_tag = '@MG5aMC'
+    
+    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco','*.root']
+    _default_parton_inputs = ['*.lhe']
+    
+    @classmethod
+    def events_can_be_reconstructed(cls, file_path):
+        """ Checks from the type of an event file whether it can be reconstructed or not."""
+        return not (file_path.endswith('.lhco') or file_path.endswith('.lhco.gz') or \
+                          file_path.endswith('.root') or file_path.endswith('.root.gz'))
+    
+    @classmethod
+    def empty_analysis(cls):
+        """ A method returning the structure of an empty analysis """
+        return {'commands':[],
+                'reconstructions':[]}
+
+    @classmethod
+    def empty_reconstruction(cls):
+        """ A method returning the structure of an empty reconstruction """
+        return {'commands':[],
+                'reco_output':'lhe'}
+
+    def default_setup(self):
+        """define the default value""" 
+        self['mode']      = 'parton'
+        self['inputs']    = []
+        # None is the default stdout level, it will be set automatically by MG5aMC
+        self['stdout_lvl'] = None
+        # These two dictionaries are formated as follows:
+        #     {'analysis_name':
+        #          {'reconstructions' : ['associated_reconstructions_name']}
+        #          {'commands':['analysis command lines here']}    }
+        # with values being of the form of the empty_analysis() attribute
+        # of this class and some other property could be added to this dictionary
+        # in the future.
+        self['analyses']       = {}
+        # The recasting structure contains on set of commands and one set of 
+        # card lines. 
+        self['recasting']      = {'commands':[],'card':[]}
+        # Add the default trivial reconstruction to use an lhco input
+        # This is just for the structure
+        self['reconstruction'] = {'lhco_input':
+                                        MadAnalysis5Card.empty_reconstruction(),
+                                  'root_input':
+                                        MadAnalysis5Card.empty_reconstruction()}
+        self['reconstruction']['lhco_input']['reco_output']='lhco'
+        self['reconstruction']['root_input']['reco_output']='root'        
+
+        # Specify in which order the analysis/recasting were specified
+        self['order'] = []
+
+    def __init__(self, finput=None,mode=None):
+        if isinstance(finput, self.__class__):
+            dict.__init__(self, finput)
+            assert finput.__dict__.keys()
+            for key in finput.__dict__:
+                setattr(self, key, copy.copy(getattr(finput, key)) )
+            return
+        else:
+            dict.__init__(self)
+        
+        # Initialize it with all the default value
+        self.default_setup()
+        if not mode is None:
+            self['mode']=mode
+
+        # if input is define read that input
+        if isinstance(finput, (file, str, StringIO.StringIO)):
+            self.read(finput, mode=mode)
+    
+    def read(self, input, mode=None):
+        """ Read an MA5 card"""
+        
+        if mode not in [None,'parton','hadron']:
+            raise MadGraph5Error('A MadAnalysis5Card can be read online the modes'+
+                                                         "'parton' or 'hadron'")
+        card_mode = mode
+        
+        if isinstance(input, (file, StringIO.StringIO)):
+            input_stream = input
+        elif isinstance(input, str):
+            if not os.path.isfile(input):
+                raise InvalidMadAnalysis5Card("Cannot read the MadAnalysis5 card."+\
+                                                    "File '%s' not found."%input)
+            if mode is None and 'hadron' in input:
+                card_mode = 'hadron'
+            input_stream = open(input,'r')
+        else:
+            raise MadGraph5Error('Incorrect input for the read function of'+\
+              ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(input)))
+
+        # Reinstate default values
+        self.__init__()
+        current_name = 'default'
+        current_type = 'analyses'
+        for line in input_stream:
+            # Skip comments for now
+            if line.startswith('#'):
+                continue
+            if line.endswith('\n'):
+                line = line[:-1]
+            if line.strip()=='':
+                continue
+            if line.startswith(self._MG5aMC_escape_tag):
+                try:
+                    option,value = line[len(self._MG5aMC_escape_tag):].split('=')
+                    value = value.strip()
+                except ValueError:
+                    option = line[len(self._MG5aMC_escape_tag):]
+                option = option.strip()
+                
+                if option=='inputs':
+                    self['inputs'].extend([v.strip() for v in value.split(',')])
+                
+                elif option=='stdout_lvl':
+                    try: # It is likely an int
+                        self['stdout_lvl']=int(value)
+                    except ValueError:
+                        try: # Maybe the user used something like 'logging.INFO'
+                            self['stdout_lvl']=eval(value)
+                        except:
+                            try:
+                               self['stdout_lvl']=eval('logging.%s'%value)
+                            except:
+                                raise InvalidMadAnalysis5Card(
+                 "MA5 output level specification '%s' is incorrect."%str(value))
+                
+                elif option=='analysis_name':
+                    current_type = 'analyses'
+                    current_name = value
+                    if current_name in self[current_type]:
+                        raise InvalidMadAnalysis5Card(
+               "Analysis '%s' already defined in MadAnalysis5 card"%current_name)
+                    else:
+                        self[current_type][current_name] = MadAnalysis5Card.empty_analysis()
+                
+                elif option=='set_reconstructions':
+                    try:
+                        reconstructions = eval(value)
+                        if not isinstance(reconstructions, list):
+                            raise
+                    except:
+                        raise InvalidMadAnalysis5Card("List of reconstructions"+\
+                         " '%s' could not be parsed in MadAnalysis5 card."%value)
+                    if current_type!='analyses' and current_name not in self[current_type]:
+                        raise InvalidMadAnalysis5Card("A list of reconstructions"+\
+                                   "can only be defined in the context of an "+\
+                                             "analysis in a MadAnalysis5 card.")
+                    self[current_type][current_name]['reconstructions']=reconstructions
+                    continue
+                
+                elif option=='reconstruction_name':
+                    current_type = 'reconstruction'
+                    current_name = value
+                    if current_name in self[current_type]:
+                        raise InvalidMadAnalysis5Card(
+               "Reconstruction '%s' already defined in MadAnalysis5 hadron card"%current_name)
+                    else:
+                        self[current_type][current_name] = MadAnalysis5Card.empty_reconstruction()
+
+                elif option=='reco_output':
+                    if current_type!='reconstruction' or current_name not in \
+                                                         self['reconstruction']:
+                        raise InvalidMadAnalysis5Card(
+               "Option '%s' is only available within the definition of a reconstruction"%option)
+                    if not value.lower() in ['lhe','root']:
+                        raise InvalidMadAnalysis5Card(
+                                  "Option '%s' can only take the values 'lhe' or 'root'"%option)
+                    self['reconstruction'][current_name]['reco_output'] = value.lower()
+                
+                elif option.startswith('recasting'):
+                    current_type = 'recasting'
+                    try:
+                        current_name = option.split('_')[1]
+                    except:
+                        raise InvalidMadAnalysis5Card('Malformed MA5 recasting option %s.'%option)
+                    if len(self['recasting'][current_name])>0:
+                        raise InvalidMadAnalysis5Card(
+               "Only one recasting can be defined in MadAnalysis5 hadron card")
+                
+                else:
+                    raise InvalidMadAnalysis5Card(
+               "Unreckognized MG5aMC instruction in MadAnalysis5 card: '%s'"%option)
+                
+                if option in ['analysis_name','reconstruction_name'] or \
+                                                 option.startswith('recasting'):
+                    self['order'].append((current_type,current_name))
+                continue
+
+            # Add the default analysis if needed since the user does not need
+            # to specify it.
+            if current_name == 'default' and current_type == 'analyses' and\
+                                          'default' not in self['analyses']:
+                    self['analyses']['default'] = MadAnalysis5Card.empty_analysis()
+                    self['order'].append(('analyses','default'))
+
+            if current_type in ['recasting']:
+                self[current_type][current_name].append(line)
+            elif current_type in ['reconstruction']:
+                self[current_type][current_name]['commands'].append(line)
+            elif current_type in ['analyses']:
+                self[current_type][current_name]['commands'].append(line)
+
+        if 'reconstruction' in self['analyses'] or len(self['recasting']['card'])>0:
+            if mode=='parton':
+                raise InvalidMadAnalysis5Card(
+      "A parton MadAnalysis5 card cannot specify a recombination or recasting.")
+            card_mode = 'hadron'
+        elif mode is None:
+            card_mode = 'parton'
+
+        self['mode'] = card_mode
+        if self['inputs'] == []:
+            if self['mode']=='hadron':
+                self['inputs']  = self._default_hadron_inputs
+            else:
+                self['inputs']  = self._default_parton_inputs
+        
+        # Make sure at least one reconstruction is specified for each hadron
+        # level analysis and that it exists.
+        if self['mode']=='hadron':
+            for analysis_name, analysis in self['analyses'].items():
+                if len(analysis['reconstructions'])==0:
+                    raise InvalidMadAnalysis5Card('Hadron-level analysis '+\
+                      "'%s' is not specified any reconstruction(s)."%analysis_name)
+                if any(reco not in self['reconstruction'] for reco in \
+                                                   analysis['reconstructions']):
+                    raise InvalidMadAnalysis5Card('A reconstructions specified in'+\
+                                 " analysis '%s' is not defined."%analysis_name)
+    
+    def write(self, output):
+        """ Write an MA5 card."""
+
+        if isinstance(output, (file, StringIO.StringIO)):
+            output_stream = output
+        elif isinstance(output, str):
+            output_stream = open(output,'w')
+        else:
+            raise MadGraph5Error('Incorrect input for the write function of'+\
+              ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(output)))
+        
+        output_lines = ['%s inputs = %s'%(self._MG5aMC_escape_tag,','.join(self['inputs']))]
+        if not self['stdout_lvl'] is None:
+            output_lines.append('%s stdout_lvl=%s'%(self._MG5aMC_escape_tag,self['stdout_lvl']))
+        for definition_type, name in self['order']:
+            
+            if definition_type=='analyses':
+                output_lines.append('%s analysis_name = %s'%(self._MG5aMC_escape_tag,name))
+                output_lines.append('%s set_reconstructions = %s'%(self._MG5aMC_escape_tag,
+                                str(self['analyses'][name]['reconstructions'])))                
+            elif definition_type=='reconstruction':
+                output_lines.append('%s reconstruction_name = %s'%(self._MG5aMC_escape_tag,name))
+            elif definition_type=='recasting':
+                output_lines.append('%s recasting_%s'%(self._MG5aMC_escape_tag,name))
+
+            if definition_type in ['recasting']:
+                output_lines.extend(self[definition_type][name])
+            elif definition_type in ['reconstruction']:
+                output_lines.append('%s reco_output = %s'%(self._MG5aMC_escape_tag,
+                                    self[definition_type][name]['reco_output']))                
+                output_lines.extend(self[definition_type][name]['commands'])
+            elif definition_type in ['analyses']:
+                output_lines.extend(self[definition_type][name]['commands'])                
+        
+        output_stream.write('\n'.join(output_lines))
+        
+        return
+    
+    def get_MA5_cmds(self, inputs_arg, submit_folder, run_dir_path=None, 
+                                               UFO_model_path=None, run_tag=''):
+        """ Returns a list of tuples ('AnalysisTag',['commands']) specifying 
+        the commands of the MadAnalysis runs required from this card. 
+        At parton-level, the number of such commands is the number of analysis 
+        asked for. In the future, the idea is that the entire card can be
+        processed in one go from MA5 directly."""
+        
+        if isinstance(inputs_arg, list):
+            inputs = inputs_arg
+        elif isinstance(inputs_arg, str):
+            inputs = [inputs_arg]
+        else:
+            raise MadGraph5Error("The function 'get_MA5_cmds' can only take "+\
+                            " a string or a list for the argument 'inputs_arg'")
+        
+        if len(inputs)==0:
+            raise MadGraph5Error("The function 'get_MA5_cmds' must have "+\
+                                              " at least one input specified'")
+        
+        if run_dir_path is None:
+            run_dir_path = os.path.dirname(inputs_arg)
+        
+        cmds_list = []
+        
+        UFO_load = []
+        # first import the UFO if provided
+        if UFO_model_path:
+            UFO_load.append('import %s'%UFO_model_path)
+        
+        def get_import(input, type=None):
+            """ Generates the MA5 import commands for that event file. """
+            dataset_name = os.path.basename(input).split('.')[0]
+            res = ['import %s as %s'%(input, dataset_name)]
+            if not type is None:
+                res.append('set %s.type = %s'%(dataset_name, type))
+            return res
+        
+        # Then the event file(s) input(s)
+        inputs_load = []
+        for input in inputs:
+            inputs_load.extend(get_import(input))
+            
+        submit_command = 'submit %s'%submit_folder+'_%s'
+        
+        # Keep track of the reconstruction outpus in the MA5 workflow
+        # Keys are reconstruction names and values are .lhe.gz reco file paths.
+        # We put by default already the lhco/root ones present
+        reconstruction_outputs = {
+                'lhco_input':[f for f in inputs if 
+                                 f.endswith('.lhco') or f.endswith('.lhco.gz')],
+                'root_input':[f for f in inputs if 
+                                 f.endswith('.root') or f.endswith('.root.gz')]}
+
+        # If a recasting card has to be written out, chose here its path
+        recasting_card_path = pjoin(run_dir_path,
+       '_'.join([run_tag,os.path.basename(submit_folder),'recasting_card.dat']))
+
+        for definition_type, name in self['order']:
+            if definition_type == 'reconstruction':   
+                analysis_cmds = list(self['reconstruction'][name]['commands'])
+                reco_outputs = []
+                for i_input, input in enumerate(inputs):
+                    # Skip lhco/root as they must not be reconstructed
+                    if not MadAnalysis5Card.events_can_be_reconstructed(input):
+                        continue
+                    analysis_cmds.append('import %s as reco_events'%input)
+                    if self['reconstruction'][name]['reco_output']=='lhe':
+                        reco_outputs.append('%s_%s.lhe.gz'%(os.path.basename(
+                               input).replace('_events','').split('.')[0],name))
+                        analysis_cmds.append('set main.outputfile=%s'%reco_outputs[-1])
+                    elif self['reconstruction'][name]['reco_output']=='root':
+                        reco_outputs.append('%s_%s.root'%(os.path.basename(
+                               input).replace('_events','').split('.')[0],name))
+                        analysis_cmds.append('set main.fastsim.rootfile=%s'%reco_outputs[-1])
+                    analysis_cmds.append(
+                                 submit_command%('reco_%s_%d'%(name,i_input+1)))
+                    analysis_cmds.append('remove reco_events')
+                    
+                reconstruction_outputs[name]= [pjoin(run_dir_path,rec_out) 
+                                                    for rec_out in reco_outputs]
+                cmds_list.append(('_reco_%s'%name,analysis_cmds))
+
+            elif definition_type == 'analyses':
+                if self['mode']=='parton':
+                    cmds_list.append( (name, UFO_load+inputs_load+
+                      self['analyses'][name]['commands']+[submit_command%name]) )
+                elif self['mode']=='hadron':
+                    # Also run on the already reconstructed root/lhco files if found.
+                    for reco in self['analyses'][name]['reconstructions']+\
+                                                    ['lhco_input','root_input']:
+                        if len(reconstruction_outputs[reco])==0:
+                            continue
+                        if self['reconstruction'][reco]['reco_output']=='lhe':
+                            # For the reconstructed lhe output we must be in parton mode
+                            analysis_cmds = ['set main.mode = parton']
+                        else:
+                            analysis_cmds = []
+                        analysis_cmds.extend(sum([get_import(rec_out) for 
+                                   rec_out in reconstruction_outputs[reco]],[]))
+                        analysis_cmds.extend(self['analyses'][name]['commands'])
+                        analysis_cmds.append(submit_command%('%s_%s'%(name,reco)))
+                        cmds_list.append( ('%s_%s'%(name,reco),analysis_cmds)  )
+
+            elif definition_type == 'recasting':
+                if len(self['recasting']['card'])==0:
+                    continue
+                if name == 'card':
+                    # Create the card here
+                    open(recasting_card_path,'w').write('\n'.join(self['recasting']['card']))
+                if name == 'commands':
+                    recasting_cmds = list(self['recasting']['commands'])
+                    # Exclude LHCO files here of course
+                    for input in inputs:
+                        if not MadAnalysis5Card.events_can_be_reconstructed(input):
+                            continue
+                        recasting_cmds.extend(get_import(input,'signal'))
+
+                    recasting_cmds.append('set main.recast.card_path=%s'%recasting_card_path)
+                    recasting_cmds.append(submit_command%'Recasting')
+                    cmds_list.append( ('Recasting',recasting_cmds))
+
+        return cmds_list
+
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
 
-        
     def default_setup(self):
         """define the default value"""
         
