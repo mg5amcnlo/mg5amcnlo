@@ -3048,14 +3048,14 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(G_path, 'events.lhe'))
                     except Exception:
                         continue
-                    try:
-                        # Store results.dat
-                        if os.path.exists(pjoin(G_path, 'results.dat')):
-                            input = pjoin(G_path, 'results.dat')
-                            output = pjoin(G_path, '%s_results.dat' % run)
-                            files.cp(input, output) 
-                    except Exception:
-                        continue                    
+                    #try:
+                    #    # Store results.dat
+                    #    if os.path.exists(pjoin(G_path, 'results.dat')):
+                    #        input = pjoin(G_path, 'results.dat')
+                    #        output = pjoin(G_path, '%s_results.dat' % run)
+                    #        files.cp(input, output) 
+                    #except Exception:
+                    #    continue                    
                     # Store log
                     try:
                         if os.path.exists(pjoin(G_path, 'log.txt')):
