@@ -2906,8 +2906,7 @@ Beware that this can be dangerous for local multicore runs.""")
             except Exception:
                 pass
 
-            tmpcluster = cluster.MultiCore(nb_core=1)
-            tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+            cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
                                        args=[self.run_name],
                                        cwd=pjoin(self.me_dir,'SubProcesses'),
                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
@@ -5056,7 +5055,7 @@ class MadLoopInitializer(object):
         if MG_options:
             mcore = cluster.MultiCore(**MG_options)
         else:
-            mcore = cluster.MultiCore(nb_core=1)
+            mcore = cluster.onecore
         def run_initialization_wrapper(run_dir, infos, attempts):
                 if attempts is None:
                     n_PS = MadLoopInitializer.run_initialization(

@@ -2126,3 +2126,5 @@ from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster,
              'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster, 
              'htcaas':HTCaaSCluster, 'htcaas2':HTCaaS2Cluster}
 
+onecore=MultiCore(1) # create a thread to run simple bash job without having to
+                     #fork the main process
