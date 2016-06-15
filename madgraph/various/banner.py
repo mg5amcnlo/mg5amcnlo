@@ -1334,9 +1334,6 @@ class PY8Card(ConfigFile):
         self.add_param("Check:epTolErr", 1e-2,
             hidden=True,
             comment='Be more forgiving with momentum mismatches.')
-        self.add_param("HEPMCoutput:file", '_MG5aMC_auto_set_',
-            hidden=True,
-            comment='HepMC output file name or *relative* path.')
         # By default it is important to disable any cut on the rapidity of the showered jets
         # during MLML merging and by default it is set to 2.5
         self.add_param("JetMatching:etaJetMax", 1000.0, hidden=True, always_write_to_card=True)

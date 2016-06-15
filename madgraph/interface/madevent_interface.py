@@ -3556,8 +3556,9 @@ already exists and is not a fifo file."""%fifo_path)
 
         # If the target HEPMC output file is a fifo, don't hang MG5_aMC and let
         # it proceed.
-        is_HepMC_output_fifo = os.path.exists(HepMC_event_output) and \
-                              stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode)        
+        is_HepMC_output_fifo = False if not HepMC_event_output else \
+                              ( os.path.exists(HepMC_event_output) and \
+                              stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode))    
         if is_HepMC_output_fifo:
             logger.info(
 """Pythia8 is set to output HEPMC events to to a fifo file.
