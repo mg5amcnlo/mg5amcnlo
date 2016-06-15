@@ -109,7 +109,7 @@ c For checking the consistency of the grouping and the cuts defined here
 c
 c     count the number of j/bjet/photon/lepton
 c
-      integer nb_j, nb_b, nb_a, nb_l
+      integer nb_j, nb_b, nb_a, nb_l, nb_nocut
       double precision smin_p, smin_m ! local variable to compute smin
 c
 c     setup masses for the final-state particles
@@ -487,95 +487,148 @@ c     check for the jet
       smin_m = 0d0
       smin_p = 0d0
       nb_j = 0
+      nb_nocut = 0
       do i=nincoming+1,nexternal
           if (is_a_j(i)) then
               nb_j = nb_j + 1
               smin_m = smin_m - pmass(i)**2
-              write(*,*) 'mmjj', mmjj, 'pmass', pmass(i)
-              if (nb_j.eq.1) then
+              if (do_cuts(i))then
+                 if (nb_j.eq.1) then
                   smin_p = smin_p + max(ej,ptj,xptj,0d0,
      &                                    max(ptj1min,ptj2min,ptj3min,ptj4min))
-              elseif(nb_j.eq.2) then
+                 elseif(nb_j.eq.2) then
                   smin_p = max(ht2min, smin_p + max(ej,ptj,0d0,
      &                                            max(ptj2min,ptj3min,ptj4min)))
-              elseif(nb_j.eq.3) then
+                 elseif(nb_j.eq.3) then
                   smin_p = max(ht3min, smin_p + max(ej,ptj,0d0,
      &                                                    max(ptj3min,ptj4min)))
-              elseif(nb_j.eq.4) then
+                 elseif(nb_j.eq.4) then
                   smin_p = max(ht4min, smin_p + max(ej,ptj,ptj4min,0d0))
-              else
+                 else
                   smin_p = smin_p + max(ej,ptj,0d0)
+                 endif
+              else
+                 nb_nocut = nb_nocut + 1
+                 if (nb_j.eq.1) then
+                  smin_p = smin_p + max(0d0,ptj1min,ptj2min,ptj3min,ptj4min)
+                 elseif(nb_j.eq.2) then
+                  smin_p = max(ht2min, smin_p + max(ptj2min,ptj3min,ptj4min,0d0))
+                 elseif(nb_j.eq.3) then
+                  smin_p = max(ht3min, smin_p + max(0d0,ptj3min,ptj4min))
+                 elseif(nb_j.eq.4) then
+                  smin_p = max(ht4min, smin_p + max(ptj4min,0d0))
+                 endif
               endif
           endif
         enddo
       if (nb_j.gt.0)then
-        smin_m = smin + nb_j*(nb_j-1)/2d0*mmjj**2
+         if ((nb_j-nb_nocut).gt.0)then
+            smin_m = smin + (nb_j-nb_nocut)*(nb_j-nb_nocut-1)/2d0*mmjj**2
+         endif
         smin = smin + max(smin_p**2, smin_m, htjmin**2)
-        write(*,*) "so smin is", smin
       endif
 c     check for the bjet
       smin_m = 0d0
       smin_p = 0d0
       nb_b = 0
+      nb_nocut = 0
       do i=nincoming+1,nexternal
-          if (is_a_b(i)) then
+          if (is_a_b(i).and.do_cuts(i)) then
               nb_b = nb_b + 1
               smin_m = smin_m - pmass(i)**2
-              if (nb_b.eq.1) then
-                  smin_p = smin_p + max(eb,ptb,xptb,0d0)
+              if (do_cuts(i)) then
+                 if (nb_b.eq.1) then
+                    smin_p = smin_p + max(eb,ptb,xptb,0d0)
+                 else
+                    smin_p = smin_p + max(eb,ptb,0d0)
+                 endif
               else
-                  smin_p = smin_p + max(eb,ptb,0d0)
+                 nb_nocut = nb_nocut +1
+                 if (nb_b.eq.1) then
+                    smin_p = smin_p + max(xptb,0d0)
+                 endif
               endif
           endif
       enddo
-      if (nb_b.gt.0) then
-        smin_m = smin + nb_b*(nb_b-1)/2d0*mmbb**2
-        smin = smin + max(smin_p**2, smin_m, (ihtmin**2-htjmin**2))
+      if (nb_b.gt.0)then
+         if ((nb_b-nb_nocut).gt.0) then
+            smin_m = smin + (nb_b-nb_nocut)*(nb_b-nb_nocut-1)/2d0*mmbb**2
+         endif
+         smin = smin + max(smin_p**2, smin_m, (ihtmin**2-htjmin**2))
       endif
 c     check for the photon
       smin_m = 0d0
       smin_p = 0d0
       nb_a = 0
+      nb_nocut = 0
       do i=nincoming+1,nexternal
-          if (is_a_a(i))then
-              nb_a = nb_a + 1
-              if (ptgmin.eq.0d0) then
-                if (nb_a.eq.1) then
-                    smin_p = smin_p + max(ea,pta,xpta,0d0)
-                else
-                    smin_p = smin_p + max(ea,pta,0d0)
-                endif
-              endif
-          endif
+         if (is_a_a(i))then
+            nb_a = nb_a + 1
+            if (do_cuts(i))then
+               if (ptgmin.eq.0d0) then
+                  if (nb_a.eq.1) then
+                     smin_p = smin_p + max(ea,pta,xpta,0d0)
+                  else
+                     smin_p = smin_p + max(ea,pta,0d0)
+                  endif
+               endif
+            else
+               nb_nocut = nb_nocut + 1
+               if(ptgmin.eq.0d0)then
+                  if (nb_a.eq.1) then
+                     smin_p = smin_p + max(xpta,0d0)
+                  endif
+               endif
+            endif
+         endif
       enddo
       if (nb_a.gt.0) then
-        smin_m = nb_a*(nb_a-1)/2d0*mmaa**2
+         if ((nb_a-nb_nocut).gt.0)then
+            smin_m = (nb_a-nb_nocut)*(nb_a-nb_nocut-1)/2d0*mmaa**2
+         endif
         smin = smin + max(smin_p**2, smin_m)
       endif
 c     check for lepton
       smin_m = 0d0
       smin_p = 0d0
       nb_l = 0
+      nb_nocut = 0
       do i=nincoming+1,nexternal-1
-          if (is_a_l(i))then
-              nb_l = nb_l + 1
-              smin_m = smin_m - pmass(i)**2
-              if (nb_l.eq.1) then
+         if (is_a_l(i))then
+            nb_l = nb_l + 1
+            smin_m = smin_m - pmass(i)**2
+            if (do_cuts(i))then 
+               if (nb_l.eq.1) then
                   smin_p = smin_p + max(el,ptl,xptl,0d0,
-     &                                    max(ptl1min,ptl2min,ptl3min,ptl4min))
-              elseif(nb_l.eq.2) then
+     &                 max(ptl1min,ptl2min,ptl3min,ptl4min))
+               elseif(nb_l.eq.2) then
                   smin_p = smin_p + max(el,ptl,0d0,max(ptl2min,ptl3min,ptl4min))
-              elseif(nb_l.eq.3) then
-                  smin_p = smin_p + max(el,ptl,0d0, max(ptj3min,ptl4min))
-              elseif(nb_l.eq.4) then
+               elseif(nb_l.eq.3) then
+                  smin_p = smin_p + max(el,ptl,0d0, max(ptl3min,ptl4min))
+               elseif(nb_l.eq.4) then
                   smin_p = smin_p + max(el,ptl,ptl4min,0d0)
-              else
+               else
                   smin_p = smin_p + max(el,ptl,0d0)
-              endif
-          endif
+               endif
+            else
+               nb_nocut = nb_nocut + 1
+               if (nb_l.eq.1) then
+                  smin_p = smin_p + max(xptl,0d0,
+     &                 max(ptl1min,ptl2min,ptl3min,ptl4min))
+               elseif(nb_l.eq.2) then
+                  smin_p = smin_p + max(0d0,ptl2min,ptl3min,ptl4min)
+               elseif(nb_l.eq.3) then
+                  smin_p = smin_p + max(0d0,ptl3min,ptl4min)
+               elseif(nb_l.eq.4) then
+                  smin_p = smin_p + max(ptl4min,0d0)
+               endif
+            endif
+         endif
       enddo
       if (nb_l.gt.0)then
-        smin_m = smin_m + nb_l*(nb_l-1)/2d0*mmll**2
+         if ((nb_l-nb_nocut).gt.0)then
+            smin_m = smin_m + (nb_l-nb_nocut)*((nb_l-nb_nocut)-1)/2d0*mmll**2
+         endif
         smin = smin + max(smin_p**2, smin_m, mmnl**2, ptllmin**2, misset**2)
       endif
 c     ensure symmetry of s_min(i,j)
