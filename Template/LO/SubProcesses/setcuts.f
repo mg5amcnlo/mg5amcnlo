@@ -523,7 +523,7 @@ c     check for the jet
         enddo
       if (nb_j.gt.0)then
          if ((nb_j-nb_nocut).gt.0)then
-            smin_m = smin + (nb_j-nb_nocut)*(nb_j-nb_nocut-1)/2d0*mmjj**2
+            smin_m = smin_m + (nb_j-nb_nocut)*(nb_j-nb_nocut-1)/2d0*mmjj**2
          endif
         smin = smin + max(smin_p**2, smin_m, htjmin**2)
       endif
@@ -552,7 +552,7 @@ c     check for the bjet
       enddo
       if (nb_b.gt.0)then
          if ((nb_b-nb_nocut).gt.0) then
-            smin_m = smin + (nb_b-nb_nocut)*(nb_b-nb_nocut-1)/2d0*mmbb**2
+            smin_m = smin_m + (nb_b-nb_nocut)*(nb_b-nb_nocut-1)/2d0*mmbb**2
          endif
          smin = smin + max(smin_p**2, smin_m, (ihtmin**2-htjmin**2))
       endif
