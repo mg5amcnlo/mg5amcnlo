@@ -2688,7 +2688,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
-                       'collier':'auto',
+                       'collier':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
@@ -6283,7 +6283,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     else:
                         continue
 
-            elif key in ['pjfry','golem','samurai','collier']:
+            elif key in ['pjfry','golem','samurai']:
                 if isinstance(self.options[key],str) and self.options[key].lower() == 'auto':
                     # try to find it automatically on the system                                                                                                                                            
                     program = misc.which_lib('lib%s.a'%key)
@@ -6294,8 +6294,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     else:
                         # Try to look for it locally
                         local_install = {'pjfry':'PJFRY', 'golem':'golem95',
-                                         'samurai':'samurai',
-                                         'collier':'HEPTools'}
+                                         'samurai':'samurai'}
                         if os.path.isfile(pjoin(MG5DIR,local_install[key],'lib', 'lib%s.a' % key)):
                             self.options[key]=pjoin(MG5DIR,local_install[key],'lib')
                         else:

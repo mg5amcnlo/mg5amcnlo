@@ -10,7 +10,8 @@ C
 C
 C MODULES
 C
-	  USE COLLIER 
+	  USE COLLIER
+	  USE CACHE
 	  IMPLICIT NONE
 C  
 C CONSTANTS 
@@ -122,6 +123,12 @@ C     Initialize COLLIER if needed
 	    COLLIERINIT=.FALSE.
 	    CALL INITCOLLIER()
       ENDIF
+
+C     The local caches are bugged in COLLIER for rank >= 7 for now.
+C     We must turn it off temporarily for such loops.
+      IF (RANK.ge.7) THEN
+	    CALL SwitchOffCacheSystem0_cll()
+	  ENDIF
 
 C     Initialize the event if it is the first time collier is called on this PS point
       IF(MUST_INIT_EVENT) THEN
@@ -420,6 +427,12 @@ c       Finish by caching the coefficients and error just computed
           	ENDIF
           ENDDO
 	    ENDIF
+	  ENDIF
+
+C     The local caches are bugged in COLLIER for rank >= 7 for now.
+C     We must turn it back on if it was turned off in this case then.
+      IF (RANK.ge.7) THEN
+	    CALL SwitchOnCacheSystem0_cll()
 	  ENDIF
 
 	  END SUBROUTINE %(proc_prefix)sCOLLIERLOOP 

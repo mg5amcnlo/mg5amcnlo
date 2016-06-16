@@ -264,18 +264,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         calls = self.write_loop_makefile_definitions(
                         writers.MakefileWriter(filePath),link_tir_libs,tir_libs)
 
-            
         # We need minimal editing of MadLoopCommons.f
+        # For the optimized output, this file will be overwritten once the 
+        # availability of COLLIER has been determined.
         MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
                                     "SubProcesses","MadLoopCommons.inc")).read()
         writer = writers.FortranWriter(os.path.join(self.dir_path, 
                                              "SubProcesses","MadLoopCommons.f"))
         writer.writelines(MadLoopCommon%{
           'print_banner_commands':self.MadLoop_banner}, context={
-                'collier_available':(self.tir_available_dict['collier'] if 
-                                hasattr(self,'tir_available_dict') else False)})
+                'collier_available':False})
         writer.close()
-        
         
         # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
@@ -1661,7 +1660,6 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             tir_name=tir
             libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
                                               libpath,libname,tir_name=tir_name)
-            setattr(self,tir_dir,libpath)
             if libpath != "":
                 if tir in ['ninja','pjfry','golem','samurai','collier']:
                     # It is cleaner to use the original location of the libraries
@@ -1707,6 +1705,17 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         writers.MakefileWriter(MadLoop_makefile_definitions),
                                 link_tir_libs,tir_libs, tir_include=tir_include)
 
+        # Finally overwrite MadLoopCommons.f now that we know the availibility of
+        # COLLIER.
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+          'print_banner_commands':self.MadLoop_banner}, context={
+                'collier_available':self.tir_available_dict['collier']})
+        writer.close()
+
     def link_files_from_Subprocesses(self,proc_name):
         """ Does the same as the mother routine except that it also links
         coef_specs.inc in the HELAS folder."""
@@ -1724,7 +1733,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """Link the TIR source directory inside the target path given
         in argument"""
         
-        if tir_name in ['pjfry','golem','samurai','ninja']:
+        if tir_name in ['pjfry','golem','samurai','ninja','collier']:
             # not self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
             or (not os.path.isfile(pjoin(libpath,libname))):
