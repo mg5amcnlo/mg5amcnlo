@@ -60,6 +60,8 @@ C
       double complex TNtenuv(0:RANK,0:RANK,0:RANK,0:RANK)
       double precision TNtenerr(0:RANK)
 
+	  %(real_dp_format)s MaxCoefForRank(0:RANK)
+
 C     These quantities are for the pole evaluation
       double complex TNten_UV(0:RANK,0:RANK,0:RANK,0:RANK)
       double complex TNtenuv_UV(0:RANK,0:RANK,0:RANK,0:RANK)
@@ -201,11 +203,24 @@ C       by using coefficients shifted by COLLIER internal error estimate.
 		  ENDIF
         ELSEIF (CTMODE.EQ.2) THEN
 	      IF (LOOP_ID_DONE(ID)) THEN
+		    DO I=0,RANK
+			  MaxCoefForRank(I) = 0.0d0
+			ENDDO
+		    DO I=0,CURR_MAXCOEF-1
+		      CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)			  
+			  MaxCoefForRank(CURR_RANK)=max(MaxCoefForRank(CURR_RANK),abs(TIR_COEFS_DIRECT_MODE(I,1,ID)))
+			ENDDO
 		    DO I=0,CURR_MAXCOEF-1
 		      CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
-		      DO K=1,3
-			    TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)+TIR_COEFS_ERROR(CURR_RANK,ID)
-			  ENDDO
+			  IF (MaxCoefForRank(CURR_RANK).ne.0.0d0) THEN		      
+			    DO K=1,3
+			      TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)*(1.0d0+(TIR_COEFS_ERROR(CURR_RANK,ID)/MaxCoefForRank(CURR_RANK)))
+			    ENDDO				  
+		      ELSE
+			    DO K=1,3			  
+			      TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)
+			    ENDDO				  
+			  ENDIF
 	        ENDDO
 		    RETURN
 		  ENDIF
@@ -384,12 +399,25 @@ c       Finish by caching the coefficients and error just computed
 	      TIR_COEFS_ERROR(J,ID)=TNtenerr(J)
 	    ENDDO
 
-        IF (CTMODE.EQ.2) THEN 
-	      DO I=0,(CURR_MAXCOEF-1)
-	        CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)		
-		    DO J=1,3
-		      TIRCOEFS(I,J) = TIRCOEFS(I,J) + TNtenerr(CURR_RANK)
-		    ENDDO
+        IF (CTMODE.EQ.2) THEN
+          DO I=0,RANK
+            MaxCoefForRank(I) = 0.0d0
+          ENDDO
+          DO I=0,CURR_MAXCOEF-1
+            CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)			  
+            MaxCoefForRank(CURR_RANK)=max(MaxCoefForRank(CURR_RANK),abs(TIRCOEFS(I,1)))
+          ENDDO
+          DO I=0,CURR_MAXCOEF-1
+            CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
+            IF (MaxCoefForRank(CURR_RANK).ne.0.0d0) THEN
+              DO K=1,3			
+                TIRCOEFS(I,K)=TIRCOEFS(I,K)*(1.0d0+(TNtenerr(CURR_RANK)/MaxCoefForRank(CURR_RANK)))
+			  ENDDO
+          	ELSE
+              DO K=1,3			
+                TIRCOEFS(I,K)=TIRCOEFS(I,K)
+			  ENDDO				
+          	ENDIF
           ENDDO
 	    ENDIF
 	  ENDIF
