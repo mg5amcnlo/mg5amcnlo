@@ -20,22 +20,23 @@ logger = logging.getLogger("madgraph.lhe_parser")
 
 class Particle(object):
     """ """
-    pattern=re.compile(r'''^\s*
-        (?P<pid>-?\d+)\s+           #PID
-        (?P<status>-?\d+)\s+            #status (1 for output particle)
-        (?P<mother1>-?\d+)\s+       #mother
-        (?P<mother2>-?\d+)\s+       #mother
-        (?P<color1>[+-e.\d]*)\s+    #color1
-        (?P<color2>[+-e.\d]*)\s+    #color2
-        (?P<px>[+-e.\d]*)\s+        #px
-        (?P<py>[+-e.\d]*)\s+        #py
-        (?P<pz>[+-e.\d]*)\s+        #pz
-        (?P<E>[+-e.\d]*)\s+         #E
-        (?P<mass>[+-e.\d]*)\s+      #mass
-        (?P<vtim>[+-e.\d]*)\s+      #displace vertex
-        (?P<helicity>[+-e.\d]*)\s*      #helicity
-        ($|(?P<comment>\#[\d|D]*))  #comment/end of string
-        ''',66) #verbose+ignore case
+    # regular expression not use anymore to speed up the computation
+    #pattern=re.compile(r'''^\s*
+    #    (?P<pid>-?\d+)\s+           #PID
+    #    (?P<status>-?\d+)\s+            #status (1 for output particle)
+    #    (?P<mother1>-?\d+)\s+       #mother
+    #    (?P<mother2>-?\d+)\s+       #mother
+    #    (?P<color1>[+-e.\d]*)\s+    #color1
+    #    (?P<color2>[+-e.\d]*)\s+    #color2
+    #    (?P<px>[+-e.\d]*)\s+        #px
+    #    (?P<py>[+-e.\d]*)\s+        #py
+    #    (?P<pz>[+-e.\d]*)\s+        #pz
+    #    (?P<E>[+-e.\d]*)\s+         #E
+    #    (?P<mass>[+-e.\d]*)\s+      #mass
+    #    (?P<vtim>[+-e.\d]*)\s+      #displace vertex
+    #    (?P<helicity>[+-e.\d]*)\s*      #helicity
+    #    ($|(?P<comment>\#[\d|D]*))  #comment/end of string
+    #    ''',66) #verbose+ignore case
     
     
     
@@ -78,17 +79,19 @@ class Particle(object):
             
     def parse(self, line):
         """parse the line"""
-    
-        obj = self.pattern.search(line)
-        if not obj:
-            raise Exception, 'the line\n%s\n is not a valid format for LHE particle' % line
-        for key, value in obj.groupdict().items():
-            if key not in  ['comment','pid']:
-                setattr(self, key, float(value))
-            elif key in ['pid', 'mother1', 'mother2']:
-                setattr(self, key, int(value))
-            else:
-                self.comment = value
+        
+        args = line.split()
+        keys = ['pid', 'status','mother1','mother2','color1', 'color2', 'px','py','pz','E',
+                'mass','vtim','helicity']
+        
+        for key,value in zip(keys,args):
+            setattr(self, key, float(value))
+        self.pid = int(self.pid)
+            
+        self.comment = ' '.join(args[len(keys):])
+        if self.comment.startswith(('|','#')):
+            self.comment = self.comment[1:]
+
         # Note that mother1/mother2 will be modified by the Event parse function to replace the
         # integer by a pointer to the actual particle object.
     
@@ -235,7 +238,7 @@ class EventFile(object):
         line = ''
         mode = 0
         while '</event>' not in line:
-            line = super(EventFile, self).next().lower()
+            line = super(EventFile, self).next()
             if '<event' in line:
                 mode = 1
                 text = ''
@@ -877,16 +880,16 @@ class Event(list):
             
     def parse(self, text):
         """Take the input file and create the structured information"""
-        text = re.sub(r'</?event>', '', text) # remove pointless tag
+        #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
         for line in text.split('\n'):
             line = line.strip()
             if not line: 
                 continue
-            if line.startswith('#'):
+            elif line[0] == '#':
                 self.comment += '%s\n' % line
                 continue
-            if "<event" in line:
+            elif line.startswith('<event'):
                 if '=' in line:
                     found = re.findall(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""",line)
                     #for '<event line=4 value=\'3\' error="5" test=" 1 and 2">\n'
@@ -895,23 +898,23 @@ class Event(list):
                     # return {'test': ' 1 and 2', 'line': '4', 'value': '3', 'error': '5'}
                 continue
             
-            if 'first' == status:
+            elif 'first' == status:
                 if '<rwgt>' in line:
                     status = 'tag'
-                    
-            if 'first' == status:
-                self.assign_scale_line(line)
-                status = 'part' 
-                continue
-            
+                else:
+                    self.assign_scale_line(line)
+                    status = 'part' 
+                    continue
             if '<' in line:
                 status = 'tag'
                 
             if 'part' == status:
                 self.append(Particle(line, event=self))
             else:
+                if '</event>' in line:
+                    line = line.replace('</event>','',1)
                 self.tag += '%s\n' % line
-
+                
         self.assign_mother()
         
     def assign_mother(self):
