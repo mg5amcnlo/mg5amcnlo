@@ -2900,7 +2900,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Combining Events', level='parton')
 
         
-        if not hasattr(self, "refine_mode") or self.refine_mode == "old":
+        if False: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
@@ -2957,7 +2957,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                     out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
                     
-        elif self.refine_mode == "new":
+        elif True:#self.refine_mode == "new":
             # Define The Banner
             tag = self.run_card['run_tag']
             # Update the banner with the pythia card
@@ -2974,9 +2974,12 @@ Beware that this can be dangerous for local multicore runs.""")
                                     '%s_%s_banner.txt' % (self.run_name, tag)))
             
             
+            get_wgt = lambda event: event.wgt            
             AllEvent = lhe_parser.MultiEventFile()
             AllEvent.banner = self.banner
             
+            partials = 0 # if too many file make some partial unweighting
+            sum_xsec, sum_xerru, sum_axsec = 0,[],0
             for Gdir,mfactor in self.get_Gdir():
                 if os.path.exists(pjoin(Gdir, 'events.lhe')):
                     result = sum_html.OneResult('')
@@ -2986,11 +2989,27 @@ Beware that this can be dangerous for local multicore runs.""")
                                  result.get('xerru'),
                                  result.get('axsec')
                                  )
-                    
-            get_wgt = lambda event: event.wgt
+                    sum_xsec += result.get('xsec')
+                    sum_xerru.append(result.get('xerru'))
+                    sum_axsec += result.get('axsec')
+                    if len(AllEvent) >= 80: #perform a partial unweighting
+                        AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                              get_wgt, log_level=logging.DEBUG)
+                        AllEvent = lhe_parser.MultiEventFile()
+                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                     sum_xsec,
+                                     math.sqrt(sum(x**2 for x in sum_xerru)),
+                                     sum_axsec) 
+                        partials +=1
+                        
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                               log_level=logging.DEBUG)
+            
+            if partials:
+                misc.sprint("used partials")
+                for i in range(partials):
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
             
             self.results.add_detail('nb_event', nb_event)
         
