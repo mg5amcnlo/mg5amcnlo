@@ -1526,7 +1526,7 @@ class RunCard(ConfigFile):
             elif lpp in (3,-3):
                 return math.copysign(11, lpp)
             elif lpp == 0:
-                logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
+                #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
                 return 0
             else:
                 return lpp

@@ -714,6 +714,17 @@ class MultiEventFile(EventFile):
             run_card = self.banner.charge_card("run_card")
         
         init_information = run_card.get_banner_init_information()
+        if init_information["idbmup1"] == 0:
+            event = self.next()
+            init_information["idbmup1"]= event[0].pdg
+            if init_information["idbmup2"] == 0:
+                init_information["idbmup2"]= event[1].pdg
+            self.seek(0)
+        if init_information["idbmup2"] == 0:
+            event = self.next()
+            init_information["idbmup2"] = event[1].pdg
+            self.seek(0)
+        
         init_information["nprup"] = nb_group
         
         if run_card["lhe_version"] < 3:
