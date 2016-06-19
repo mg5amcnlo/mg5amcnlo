@@ -3043,9 +3043,9 @@ Beware that this can be dangerous for local multicore runs.""")
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
         # 1) Store overall process information
-        input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
-        output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
-        files.cp(input, output) 
+        #input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
+        #output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
+        #files.cp(input, output) 
 
 
         # 2) Treat the files present in the P directory
@@ -3082,18 +3082,18 @@ Beware that this can be dangerous for local multicore runs.""")
                             files.mv(input, output) 
                     except Exception:
                         continue
-                    try:   
-                        # Grid
-                        for name in ['ftn26']:
-                            if os.path.exists(pjoin(G_path, name)):
-                                if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
-                                    os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
-                                input = pjoin(G_path, name)
-                                output = pjoin(G_path, '%s_%s' % (run,name))
-                                files.mv(input, output)
-                                misc.gzip(pjoin(G_path, output), error=None) 
-                    except Exception:
-                        continue
+                    #try:   
+                    #    # Grid
+                    #    for name in ['ftn26']:
+                    #        if os.path.exists(pjoin(G_path, name)):
+                    #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                    #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                    #            input = pjoin(G_path, name)
+                    #            output = pjoin(G_path, '%s_%s' % (run,name))
+                    #            files.mv(input, output)
+                    #            misc.gzip(pjoin(G_path, output), error=None) 
+                    #except Exception:
+                    #    continue
                     # Delete ftn25 to ensure reproducible runs
                     if os.path.exists(pjoin(G_path, 'ftn25')):
                         os.remove(pjoin(G_path, 'ftn25'))
