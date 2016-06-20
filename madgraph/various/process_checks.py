@@ -729,8 +729,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             sys.stdout.flush()
          
         shell_name = None
-        directories = glob.glob(pjoin(working_dir, 'SubProcesses',
-                                  'P%i_*' % proc_id))
+        directories = misc.glob('P%i_*' % proc_id, pjoin(working_dir, 'SubProcesses'))
         if directories and os.path.isdir(directories[0]):
             shell_name = os.path.basename(directories[0])
 
@@ -882,7 +881,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
                                                 " in function apply_log_tweak.")
         
         model_path = pjoin(proc_path,'Source','MODEL')
-        directories = glob.glob(pjoin(proc_path,'SubProcesses','P0_*'))
+        directories = misc.glob('P0_*', pjoin(proc_path,'SubProcesses'))
         if directories and os.path.isdir(directories[0]):
             exe_path = directories[0]
         else:
@@ -992,7 +991,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
         flexible solution but it works for this particular case."""
         
         shell_name = None
-        directories = glob.glob(pjoin(working_dir,'P0_*'))
+        directories = misc.glob('P0_*', working_dir)
         if directories and os.path.isdir(directories[0]):
             shell_name = os.path.basename(directories[0])
         
@@ -1180,7 +1179,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                             mp = False, loop_filter = True,MLOptions=MLOptions)
         
         shell_name = None
-        directories = glob.glob(pjoin(export_dir, 'SubProcesses','P0_*'))
+        directories = misc.glob('P0_*', pjoin(export_dir, 'SubProcesses'))
         if directories and os.path.isdir(directories[0]):
             shell_name = os.path.basename(directories[0])
         dir_name = pjoin(export_dir, 'SubProcesses', shell_name)
@@ -2472,7 +2471,7 @@ def clean_up(mg_root):
     if mg_root is None:
         pass
     
-    directories = glob.glob(pjoin(mg_root, '%s*'%temp_dir_prefix))
+    directories = misc.glob('%s*' % temp_dir_prefix, mg_root)
     if directories != []:
         logger.debug("Cleaning temporary %s* check runs."%temp_dir_prefix)
     for dir in directories:
@@ -4407,7 +4406,7 @@ def check_complex_mass_scheme_process(process, evaluator, opt = [],
    
         # And recompile while making sure to recreate the executable and 
         # modified sources
-        for dir in glob.glob(pjoin(proc_dir,'SubProcesses','P*_*')):
+        for dir in misc.glob('P*_*', pjoin(proc_dir,'SubProcesses')):
             if not (re.search(r'.*P\d+_\w*$', dir) or not os.path.isdir(dir)):
                 continue
             try:

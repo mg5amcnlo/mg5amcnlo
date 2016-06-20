@@ -563,7 +563,7 @@ class MadWeightCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunC
             fsock2 = open(out_path,'w')
             fsock.write('<subprocess id=\'%s\'>\n' % MWdir)
             fsock2.write('<subprocess id=\'%s\'>\n' % MWdir)
-            for output in glob.glob(pjoin(input_dir, 'output_*_*.xml')):
+            for output in misc.glob('output_*_*.xml', input_dir):
                 at_least_one = True
                 text = open(output).read()
                 fsock2.write(text)

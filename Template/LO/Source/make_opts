@@ -37,10 +37,10 @@ FFLAGS+= -ffixed-line-length-132
 
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)
-FC=gfortran
+FC=$(DEFAULT_F_COMPILER)
 endif
 ifeq ($(origin F2PY), undefined)
-F2PY=f2py
+F2PY=$(DEFAULT_F2PY_COMPILER)
 endif
 
 UNAME := $(shell uname -s)
@@ -83,7 +83,7 @@ endif
 
 # Option lhapdf
 
-ifdef lhapdf
+ifneq ($(lhapdf),)
 CXXFLAGS += $(shell $(lhapdf) --cppflags)
 alfas_functions=alfas_functions_lhapdf
 llhapdf+= -lLHAPDF

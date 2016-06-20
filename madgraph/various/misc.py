@@ -60,6 +60,7 @@ def mg5amc_py8_interface_consistency_warning(options):
     """ Check the consistency of the mg5amc_py8_interface installed with
     the current MG5 and Pythia8 versions. """
 
+    return None
     # All this is only relevant is Pythia8 is interfaced to MG5
     if not options['pythia8_path']:
         return None
@@ -140,6 +141,12 @@ def parse_info_str(fsock):
 
     return info_dict
 
+
+def glob(name, path=''):
+    """call to glob.glob with automatic security on path"""
+    import glob as glob_module
+    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    return glob_module.glob(pjoin(path, name))
 
 #===============================================================================
 # mute_logger (designed to be a decorator)
@@ -454,6 +461,18 @@ def get_scan_name(first, last):
 #===============================================================================
 def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
+
+    if 'nocompile' in opt:
+        if opt['nocompile'] == True:
+            if not arg:
+                return
+            if cwd:
+                executable = pjoin(cwd, arg[0])
+            else:
+                executable = arg[0]
+            if os.path.exists(executable):
+                return
+        del opt['nocompile']
 
     cmd = ['make']
     try:

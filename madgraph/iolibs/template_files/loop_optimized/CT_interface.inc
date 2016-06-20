@@ -313,6 +313,7 @@ C
 C     Module used
 C
       use msamurai
+      IMPLICIT NONE	  
 C  
 %(info_lines)s
 C 
@@ -421,7 +422,7 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO SAMURAI CONVENTIONS
         elseif ((P_TMP(2,0)/ABSP_TMP(2)).gt.1.d-6) then
          write(*,*) 'py is not conserved  (flag:CT404)',P_TMP(2,0)
          stop 'py is not conserved (flag:CT404)'
-        elseif ((P_TMP(3,0)/ABS_TMP(3)).gt.1.d-6) then
+        elseif ((P_TMP(3,0)/ABSP_TMP(3)).gt.1.d-6) then
          write(*,*) 'pz is not conserved (flag:CT404)',P_TMP(3,0)
          stop 'pz is not conserved (flag:CT404)'
         endif

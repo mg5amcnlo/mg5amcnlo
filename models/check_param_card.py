@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import logging
+import random
 
 logger = logging.getLogger('madgraph.models') # -> stdout
 

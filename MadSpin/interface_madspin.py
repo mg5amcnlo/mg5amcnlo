@@ -392,6 +392,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         self.check_set(args)
         
+        if args[0] not in ['ms_dir', 'run_card']:
+            args[1] = args[1].lower()
+        
         if args[0] in  ['max_weight', 'BW_effect','ms_dir', 'spinmode']:
             self.options[args[0]] = args[1]
             if args[0] == 'ms_dir':
@@ -460,11 +463,11 @@ class MadSpinInterface(extended_cmd.Cmd):
         """ """
 
         try:
-            self.mg5cmd.do_define(line)
+            self.mg5cmd.exec_cmd('define %s' % line)
         except:
             #cleaning if the error is recover later
             key = line.split()[0]
-            if hasattr(self, 'multiparticles_ms' and key in self.multiparticles_ms):
+            if hasattr(self, 'multiparticles_ms') and key in self.multiparticles_ms:
                 del self.multiparticles_ms[key]
             raise
            
@@ -662,7 +665,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             #seed is specified need to use that one:
             open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.seed)
             #remove all ranmar_state
-            for name in glob.glob(pjoin(self.options['ms_dir'], '*', 'SubProcesses','*','ranmar_state.dat')):
+            for name in misc.glob(pjoin('*', 'SubProcesses','*','ranmar_state.dat'), 
+                                                        self.options['ms_dir']):
                 os.remove(name)    
         
         generate_all.ending_run()
@@ -786,7 +790,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 os.mkdir(self.path_me) 
         else:
             # cleaning
-            for name in glob.glob(pjoin(self.path_me, "decay_*_*")):
+            for name in misc.glob("decay_*_*", self.path_me):
                 shutil.rmtree(name)
 
         self.events_file.close()

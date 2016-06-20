@@ -238,6 +238,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         for file in cpfiles:
             shutil.copy(os.path.join(self.loop_dir,'StandAlone/', file),
                         os.path.join(self.dir_path, file))
+        
+        # Also put a copy of MadLoopParams.dat into MadLoopParams_default.dat
+        shutil.copy(pjoin(self.dir_path, 'Cards','MadLoopParams.dat'),
+                      pjoin(self.dir_path, 'Cards','MadLoopParams_default.dat'))
 
         self.MadLoopparam = banner_mod.MadLoopParam(pjoin(self.loop_dir,'StandAlone',
                                                   'Cards', 'MadLoopParams.dat'))

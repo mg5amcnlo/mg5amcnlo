@@ -506,7 +506,7 @@ class CheckValidForCmd(object):
         else:
             name = args[0]
             type = 'run'
-            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            banners = misc.glob('*_banner.txt', pjoin(self.me_dir,'Events', args[0]))
             if not banners:
                 raise self.InvalidCmd('No banner associates to this name.')    
             elif len(banners) == 1:
@@ -1283,7 +1283,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             return  self.list_completion(text, data + ['--threshold='], line)
         elif args[-1].endswith(os.path.sep):
@@ -1308,7 +1308,7 @@ class CompleteForCmd(CheckValidForCmd):
         
         if len(args) > 1:
             # only options are possible
-            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = misc.glob('%s_*_banner.txt' % args[1], pjoin(self.me_dir, 'Events' , args[1]))
             tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
 
             if args[-1] != '--tag=':
@@ -1327,7 +1327,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             possibilites['Path from ./'] = comp
 
-        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list =  misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events'))
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
@@ -1548,7 +1548,7 @@ class CompleteForCmd(CheckValidForCmd):
         elif len(args) > 1:
             return self.list_completion(text, self._clean_mode + ['-f','--tag='])
         else:
-            data = glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt'))
+            data = misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             return self.list_completion(text, ['all'] + data)
          
@@ -1559,7 +1559,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -1577,7 +1577,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx], error=False) 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*', '*_pythia_events.hep.gz'))
+            data = misc.glob(pjoin('*', '*_pythia_events.hep.gz'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -1832,7 +1832,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
 
         if args[0] == 'run_name':
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+            data = misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1:] for n in data]
             
             if data:
@@ -1957,7 +1957,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             self.set_run_name(args[0], None, 'parton', True)
             args.pop(0)
-            
+
+        if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
+            # Also the single core mode is not supported for loop-induced.
+            # We therefore emulate it with multi-core mode with one core
+            logger.warning(
+"""Single-core mode not supported for loop-induced processes.
+Beware that MG5aMC now changes your runtime options to a multi-core mode with only one active core.""")
+            self.do_set('run_mode 2')
+            self.do_set('nb_core 1')
+
         if self.run_card['gridpack'] in self.true:        
             # Running gridpack warmup
             gridpack_opts=[('accuracy', 0.01),
@@ -2051,8 +2060,8 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
             self.exec_cmd('treatcards loop --no_MadLoopInit')
 
         if options['refresh']:
-            for filter in glob.glob(pjoin(
-                   self.me_dir,'SubProcesses','MadLoop5_resources','*Filter*')):
+            for filter in misc.glob('*Filter*', 
+                       pjoin(self.me_dir,'SubProcesses','MadLoop5_resources')):
                 logger.debug("Resetting filter '%s'."%os.path.basename(filter))
                 os.remove(filter)
 
@@ -2764,7 +2773,7 @@ Beware that this can be dangerous for local multicore runs.""")
         for nb_proc,subdir in enumerate(subproc):
             subdir = subdir.strip()
             Pdir = pjoin(self.me_dir, 'SubProcesses', subdir)
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+            for match in misc.glob('*ajob*', Pdir):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(match)
 
@@ -2809,7 +2818,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 if os.path.exists(pjoin(Pdir, 'ajob1')):
                     self.compile(['madevent'], cwd=Pdir)
                     
-                    alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                    alljobs = misc.glob('ajob*', Pdir)
                     
                     #remove associated results.dat (ensure to not mix with all data)
                     Gre = re.compile("\s*j=(G[\d\.\w]+)")
@@ -2891,14 +2900,13 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Combining Events', level='parton')
 
         
-        if not hasattr(self, "refine_mode") or self.refine_mode == "old":
+        if False: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
                 pass
 
-            tmpcluster = cluster.MultiCore(nb_core=1)
-            tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+            cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
                                        args=[self.run_name],
                                        cwd=pjoin(self.me_dir,'SubProcesses'),
                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
@@ -2949,7 +2957,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                     out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
                     
-        elif self.refine_mode == "new":
+        elif True:#self.refine_mode == "new":
             # Define The Banner
             tag = self.run_card['run_tag']
             # Update the banner with the pythia card
@@ -2966,9 +2974,12 @@ Beware that this can be dangerous for local multicore runs.""")
                                     '%s_%s_banner.txt' % (self.run_name, tag)))
             
             
+            get_wgt = lambda event: event.wgt            
             AllEvent = lhe_parser.MultiEventFile()
             AllEvent.banner = self.banner
             
+            partials = 0 # if too many file make some partial unweighting
+            sum_xsec, sum_xerru, sum_axsec = 0,[],0
             for Gdir,mfactor in self.get_Gdir():
                 if os.path.exists(pjoin(Gdir, 'events.lhe')):
                     result = sum_html.OneResult('')
@@ -2978,11 +2989,27 @@ Beware that this can be dangerous for local multicore runs.""")
                                  result.get('xerru'),
                                  result.get('axsec')
                                  )
-                    
-            get_wgt = lambda event: event.wgt
+                    sum_xsec += result.get('xsec')
+                    sum_xerru.append(result.get('xerru'))
+                    sum_axsec += result.get('axsec')
+                    if len(AllEvent) >= 80: #perform a partial unweighting
+                        AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                              get_wgt, log_level=logging.DEBUG)
+                        AllEvent = lhe_parser.MultiEventFile()
+                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                     sum_xsec,
+                                     math.sqrt(sum(x**2 for x in sum_xerru)),
+                                     sum_axsec) 
+                        partials +=1
+                        
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                               log_level=logging.DEBUG)
+            
+            if partials:
+                misc.sprint("used partials")
+                for i in range(partials):
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
             
             self.results.add_detail('nb_event', nb_event)
         
@@ -3016,9 +3043,9 @@ Beware that this can be dangerous for local multicore runs.""")
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
         # 1) Store overall process information
-        input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
-        output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
-        files.cp(input, output) 
+        #input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
+        #output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
+        #files.cp(input, output) 
 
 
         # 2) Treat the files present in the P directory
@@ -3039,14 +3066,14 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(G_path, 'events.lhe'))
                     except Exception:
                         continue
-                    try:
-                        # Store results.dat
-                        if os.path.exists(pjoin(G_path, 'results.dat')):
-                            input = pjoin(G_path, 'results.dat')
-                            output = pjoin(G_path, '%s_results.dat' % run)
-                            files.cp(input, output) 
-                    except Exception:
-                        continue                    
+                    #try:
+                    #    # Store results.dat
+                    #    if os.path.exists(pjoin(G_path, 'results.dat')):
+                    #        input = pjoin(G_path, 'results.dat')
+                    #        output = pjoin(G_path, '%s_results.dat' % run)
+                    #        files.cp(input, output) 
+                    #except Exception:
+                    #    continue                    
                     # Store log
                     try:
                         if os.path.exists(pjoin(G_path, 'log.txt')):
@@ -3055,18 +3082,18 @@ Beware that this can be dangerous for local multicore runs.""")
                             files.mv(input, output) 
                     except Exception:
                         continue
-                    try:   
-                        # Grid
-                        for name in ['ftn26']:
-                            if os.path.exists(pjoin(G_path, name)):
-                                if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
-                                    os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
-                                input = pjoin(G_path, name)
-                                output = pjoin(G_path, '%s_%s' % (run,name))
-                                files.mv(input, output)
-                                misc.gzip(pjoin(G_path, output), error=None) 
-                    except Exception:
-                        continue
+                    #try:   
+                    #    # Grid
+                    #    for name in ['ftn26']:
+                    #        if os.path.exists(pjoin(G_path, name)):
+                    #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                    #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                    #            input = pjoin(G_path, name)
+                    #            output = pjoin(G_path, '%s_%s' % (run,name))
+                    #            files.mv(input, output)
+                    #            misc.gzip(pjoin(G_path, output), error=None) 
+                    #except Exception:
+                    #    continue
                     # Delete ftn25 to ensure reproducible runs
                     if os.path.exists(pjoin(G_path, 'ftn25')):
                         os.remove(pjoin(G_path, 'ftn25'))
@@ -3302,7 +3329,7 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(pjoin(self.me_dir, 'Events', 'all')):
                 logger.warning('A run with name all exists. So we will not supress all processes.')
             else:
-                for match in glob.glob(pjoin(self.me_dir, 'Events','*','*_banner.txt')):
+                for match in misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events')):
                     run = match.rsplit(os.path.sep,2)[1]
                     if self.force:
                         args.append('-f')
@@ -3327,8 +3354,8 @@ Beware that this can be dangerous for local multicore runs.""")
 
         # Found the file to delete
         
-        to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
-        to_delete += glob.glob(pjoin(self.me_dir, 'HTML', run, '*'))
+        to_delete = misc.glob('*', pjoin(self.me_dir, 'Events', run))
+        to_delete += misc.glob('*', pjoin(self.me_dir, 'HTML', run))
         # forbid the banner to be removed
         to_delete = [os.path.basename(f) for f in to_delete if 'banner' not in f]
         if tag:
@@ -3392,9 +3419,9 @@ Beware that this can be dangerous for local multicore runs.""")
             except Exception:
                 pass
             else:
-                to_delete = glob.glob(pjoin(self.me_dir, 'SubProcesses', '%s*' % run))
-                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','%s*' % run))
-                to_delete += glob.glob(pjoin(self.me_dir, 'SubProcesses', '*','*','%s*' % run))
+                to_delete = misc.glob('%s*' % run, pjoin(self.me_dir, 'SubProcesses'))
+                to_delete += misc.glob(pjoin('*','%s*' % run), pjoin(self.me_dir, 'SubProcesses'))
+                to_delete += misc.glob(pjoin('*','*','%s*' % run), pjoin(self.me_dir, 'SubProcesses'))
 
                 if self.force or len(to_delete) == 0:
                     ans = 'y'
@@ -3408,7 +3435,7 @@ Beware that this can be dangerous for local multicore runs.""")
                         os.remove(file2rm)
                         
         if 'banner' in mode:
-            to_delete = glob.glob(pjoin(self.me_dir, 'Events', run, '*'))
+            to_delete = misc.glob('*', pjoin(self.me_dir, 'Events', run))
             if tag:
                 # remove banner
                 try:
@@ -3525,17 +3552,7 @@ Beware that this can be dangerous for local multicore runs.""")
         
         self.ask_edit_cards(['run_card'], args)
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-        
-        # Check that all pdfset are correctly installed
-        lhaid = [self.run_card.get_lhapdf_id()]
-        sys_pdf = self.run_card['sys_pdf'].split('&&')
-        lhaid += [l.split()[0] for l in sys_pdf]
-        pdfsets_dir = self.get_lhapdf_pdfsetsdir()
-        # Copy all the relevant PDF sets
-        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
-        
-        
-            
+                    
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
@@ -3633,8 +3650,9 @@ Beware that this can be dangerous for local multicore runs.""")
 
 
         elif mode in [1,2]:
+            exename = os.path.basename(exe)
             # For condor cluster, create the input/output files
-            if 'ajob' in exe: 
+            if 'ajob' in exename: 
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
@@ -3678,7 +3696,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.cluster.submit2(exe, stdout=stdout, cwd=cwd, 
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
-            elif 'survey' in exe:
+            elif 'survey' in exename:
                 input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
@@ -3730,7 +3748,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.cluster.cluster_submit(exe, stdout=stdout, cwd=cwd, argument=argument,  
                              input_files=input_files, output_files=output_files,
                              required_output=required_output, **opt)
-            elif "refine_splitted.sh" in exe:
+            elif "refine_splitted.sh" in exename:
                 input_files = ['madevent','symfact.dat','iproc.dat',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
@@ -3758,7 +3776,7 @@ Beware that this can be dangerous for local multicore runs.""")
                 
             
             else:
-                self.cluster.submit(exe, stdout=stdout, cwd=cwd, **opt)
+                self.cluster.submit(exe, argument=argument, stdout=stdout, cwd=cwd, **opt)
             
 
     ############################################################################
@@ -3863,6 +3881,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
         if self.run_card['pdlabel'] != "lhapdf":
             self.pdffile = None
+            self.make_opts_var['lhapdf'] = ""
             
         # set random number
         if self.run_card['iseed'] != 0:
@@ -4179,8 +4198,28 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['use_syst'] not in self.true:
             return
         
-        logger.info('running syscalc on mode %s' % mode)        
         scdir = self.options['syscalc_path']
+        if not scdir or not os.path.exists(scdir):
+            return
+        logger.info('running syscalc on mode %s' % mode)    
+    
+
+        # Check that all pdfset are correctly installed
+        lhaid = [self.run_card.get_lhapdf_id()]
+        sys_pdf = self.run_card['sys_pdf'].split('&&')
+        lhaid += [l.split()[0] for l in sys_pdf]
+        try:
+            pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('Systematic computation requires lhapdf to run. Bypass SysCalc')
+            return
+        
+        # Copy all the relevant PDF sets
+        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+        
+        
+        
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
@@ -4190,15 +4229,20 @@ Beware that this can be dangerous for local multicore runs.""")
             self.run_card['sys_pdf'] = ''
         if self.run_card['sys_alpsfact'].lower() in ['', 'f', 'false', 'none','.false.']:
             self.run_card['sys_alpsfact'] = ''
+
+
+
         
         # check if the scalecorrelation parameter is define:
         if not 'sys_scalecorrelation' in self.run_card:
             self.run_card['sys_scalecorrelation'] = -1
         open(card,'w').write(template % self.run_card)
         
-        if not scdir or \
-            not os.path.exists(card):
+        if not os.path.exists(card):
             return False
+
+        
+        
         event_dir = pjoin(self.me_dir, 'Events')
 
         if not event_path:
@@ -4658,7 +4702,7 @@ class GridPackCmd(MadEventCmd):
                            
             logger.info('    %s ' % subdir)
             # clean previous run
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+            for match in misc.glob('*ajob*', Pdir):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(pjoin(Pdir, match))
             
@@ -4670,7 +4714,7 @@ class GridPackCmd(MadEventCmd):
                                     cwd=Pdir)
 
             if os.path.exists(pjoin(Pdir, 'ajob1')):
-                alljobs = glob.glob(pjoin(Pdir,'ajob*'))
+                alljobs = misc.glob('ajob*', Pdir)
                 nb_tot = len(alljobs)            
                 self.total_jobs += nb_tot
                 for i, job in enumerate(alljobs):
@@ -4784,7 +4828,7 @@ class MadLoopInitializer(object):
                                    not os.path.basename(dir_path)=='check_sa.f':
             file_path = pjoin(dir_path,'check_sa.f')
             if not os.path.isfile(file_path):
-                directories = [d for d in glob.glob(pjoin(dir_path,'P*_*')) \
+                directories = [d for d in misc.glob('P*_*', dir_path) \
                          if (re.search(r'.*P\d+_\w*$', d) and os.path.isdir(d))]
                 if len(directories)>0:
                      file_path = pjoin(directories[0],'check_sa.f')
@@ -4848,8 +4892,8 @@ class MadLoopInitializer(object):
             SubProc_dir = os.path.abspath(pjoin(run_dir,os.pardir))
             
         if run_dir is None:
-            directories =[ dir for dir in glob.glob(pjoin(SubProc_dir,\
-                                             'P[0-9]*')) if os.path.isdir(dir) ]
+            directories =[ dir for dir in misc.glob('P[0-9]*', SubProc_dir)
+                                                         if os.path.isdir(dir) ]
             if directories:
                 run_dir = directories[0]
             else:
@@ -5030,7 +5074,7 @@ class MadLoopInitializer(object):
         if MG_options:
             mcore = cluster.MultiCore(**MG_options)
         else:
-            mcore = cluster.MultiCore(nb_core=1)
+            mcore = cluster.onecore
         def run_initialization_wrapper(run_dir, infos, attempts):
                 if attempts is None:
                     n_PS = MadLoopInitializer.run_initialization(

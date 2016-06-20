@@ -82,7 +82,7 @@ C      and Ninja
 C     Only CutTools or possibly Ninja (if installed with qp support)
 C      provide QP
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=1)
+      PARAMETER (QP_NLOOPLIB=2)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/ML5_0_STABILITY_TESTS/MAXSTABILITYLENGTH
@@ -251,7 +251,7 @@ C      loop_library is not available
 C     in which case neither is its quadruple precision version.
       LOGICAL LOOPLIBS_QPAVAILABLE(0:6)
       DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
-     $ ,.FALSE.,.FALSE.,.FALSE./
+     $ ,.FALSE.,.FALSE.,.TRUE./
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT

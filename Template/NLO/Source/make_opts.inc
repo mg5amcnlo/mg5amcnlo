@@ -89,7 +89,7 @@ endif
 
 # Option lhapdf
 
-ifdef lhapdf
+ifneq ($(lhapdf),)
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
   llhapdf+=-lLHAPDF 
@@ -101,7 +101,7 @@ else
 endif
 
 # Option APPLGrid
-ifdef applgrid
+ifneq ($(applgrid),)
   APPLLIBS=$(shell applgrid-config --ldcflags) $(shell amcfast-config --ldflags)
   applgrid_interface=appl_interface.o
 else

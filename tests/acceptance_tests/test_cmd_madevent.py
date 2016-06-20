@@ -753,7 +753,6 @@ class TestMEfromPdirectory(unittest.TestCase):
             self.assertTrue(abs(cross - float(data[0]['cross']))/float(data[0]['error']) < 3)
 
 
-        
     def test_run_fromP(self):
         """ """
                 
@@ -762,20 +761,18 @@ class TestMEfromPdirectory(unittest.TestCase):
         self.assertEqual(cmd, os.getcwd())
         shutil.copy(os.path.join(_file_path, 'input_files', 'run_card_matching.dat'),
                     '/tmp/MGPROCESS/Cards/run_card.dat')
-        os.chdir('/tmp/MGPROCESS/')
-        ff = open('cmd.cmd','w')
-        ff.write('set automatic_html_opening False --nosave\n')
-        ff.write('set notification_center False --nosave\n')
-        ff.write('display options\n')
-        ff.write('display variable allow_notification_center\n')
-        ff.write('generate_events -f \n') 
-        ff.close()
-        if logger.getEffectiveLevel() > 20:
-            output = open(os.devnull,'w')
-        else:
-            output = None
-        id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
-        self.assertEqual(id, 0)
-        self.check_parton_output(cross=947.9)
-        os.chdir(cmd)
-        
+        with misc.chdir('/tmp/MGPROCESS/'):
+            ff = open('cmd.cmd','w')
+            ff.write('set automatic_html_opening False --nosave\n')
+            ff.write('set notification_center False --nosave\n')
+            ff.write('display options\n')
+            ff.write('display variable allow_notification_center\n')
+            ff.write('generate_events -f \n') 
+            ff.close()
+            if logger.getEffectiveLevel() > 20:
+                output = open(os.devnull,'w')
+            else:
+                output = None
+            id = subprocess.call(['./bin/madevent','cmd.cmd'], stdout=output, stderr=output)
+            self.assertEqual(id, 0)
+            self.check_parton_output(cross=947.9) 

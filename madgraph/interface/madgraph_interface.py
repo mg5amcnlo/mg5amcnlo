@@ -2706,7 +2706,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'fastjet':'fastjet-config',
                        'pjfry':'auto',
                        'golem':'auto',
-                       'samurai':'auto',
+                       'samurai':None,
                        'ninja':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
@@ -5792,8 +5792,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
                 misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
-                os.chmod(pjoin(MG5DIR,'td','td'), 0775)
-                self.options['td_path'] = pjoin(MG5DIR,'td')
+            os.chmod(pjoin(MG5DIR,'td','td'), 0775)
+            self.options['td_path'] = pjoin(MG5DIR,'td')
 
             if not misc.which('gs'):
                 logger.warning('''gosthscript not install on your system. This is not required to run MA.
@@ -5945,15 +5945,15 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             #        files.cp(old,new)
 
             # check that all files in bin directory are executable
-            for path in glob.glob(pjoin(MG5DIR, 'bin','*')):
+            for path in misc.glob('*', pjoin(MG5DIR, 'bin')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','*')):
+            for path in misc.glob(pjoin('*','bin','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','internal','*')):
+            for path in misc.glob(pjoin('*','bin','internal','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*', '*.py')):
+            for path in misc.glob(pjoin('*','*', '*.py'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*','*.sh')):
+            for path in misc.glob(pjoin('*','*','*.sh'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
 
             #add empty files/directory
@@ -6153,8 +6153,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 fsock.write("version_nb   %s\n" % fail)
             fsock.write("last_check   %s\n" % int(time.time()))
             fsock.close()            
-            logger.info('Refreshing installation of MG5aMC_PY8_interface.')
-            self.do_install('mg5amc_py8_interface',additional_options=['--force'])
+#            logger.info('Refreshing installation of MG5aMC_PY8_interface.')
+#            self.do_install('mg5amc_py8_interface',additional_options=['--force'])
             logger.info('Checking current version. (type ctrl-c to bypass the check)')
             subprocess.call([os.path.join('tests','test_manager.py')],
                                                                   cwd=MG5DIR)            
@@ -6972,9 +6972,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         force = '-f' in args
         nojpeg = '-nojpeg' in args
         flaglist = []
-        
-
-            
+                    
         if '--postpone_model' in args:
             flaglist.append('store_model')
         
@@ -7586,6 +7584,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     elif value < 0:
                         raise Exception, 'Partial width for %s > %s negative: %s' % \
                                        (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+                    elif value < 0.1 and particle['color'] !=1:
+                        logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
+                                   % (particle.get('name'), value, decay_to))
+                        value = 0
+                                     
                     decay_info[particle.get('pdg_code')].append([decay_to, value])
                     total += value
             else:
@@ -7607,8 +7610,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         if self._curr_amps:
             logger.info('Pass to numerical integration for computing the widths:')
-        else:
+        else:            
             logger.info('No need for N body-decay (N>2). Results are in %s' % opts['output'])
+            
+            
+            
             return
 
         # Do the MadEvent integration!!
