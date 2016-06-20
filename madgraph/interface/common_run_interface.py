@@ -1688,6 +1688,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if cluster_name in cluster.from_name:
                 self.cluster = cluster.from_name[cluster_name](**opt)
             else:
+                if MADEVENT and ('mg5_path' not in self.options or not self.options['mg5_path']):
+                    raise self.InvalidCmd('%s not native cluster type and not MG5aMC found to check for plugin')
+                elif MADEVENT:
+                    MG5DIR = self.options['mg5_path']
+                    sys.path.append(MG5DIR)
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
                 for plug in os.listdir(pjoin(MG5DIR, 'PLUGIN')):
