@@ -137,7 +137,6 @@ class UFOModel(object):
             if hasattr(particle, 'replace') and particle.replace:
                 misc.sprint(particle.get('name'), particle.replace.get('name'))
         
-        misc.sprint(to_change)
         pattern = re.compile(r'\b(%s)\b' % ('|'.join(to_change)))
         for line in open(inputpath):
             line =  pattern.sub(lambda mo: to_change[mo.group()], line)

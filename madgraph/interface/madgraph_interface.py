@@ -7514,7 +7514,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             
         if not model:
             modelname = self._curr_model.get('modelpath+restriction')
-            misc.sprint('use model for width computation', modelname)
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
         else:

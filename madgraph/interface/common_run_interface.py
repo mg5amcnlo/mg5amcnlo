@@ -3383,7 +3383,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         line = line.strip()
         args = line.split()
-        misc.sprint(line, args)
         if line == '' and self.default_value is not None:
             self.value = self.default_value
         # check if input is a file
