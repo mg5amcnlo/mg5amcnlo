@@ -841,10 +841,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         try:
             cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
-           logger.error(error)
+            logger.error(error)
 
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
+        if hasattr(error, 'filename'):
+            debug_file.write("Related File: %s\n" % error.filename)
         # Create a nice error output
         if self.history and line == self.history[-1]:
             error_text = 'Command \"%s\" interrupted with error:\n' % line

@@ -2214,7 +2214,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         content_variables += '\n%s' % tag
 
         if diff:
-            open(make_opts, 'w').write(content_variables + '\n'.join(content))
+            with open(make_opts, 'w') as fsock: 
+                fsock.write(content_variables + '\n'.join(content))
         return       
 
 
@@ -2901,7 +2902,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n QCUT= %s' % (p_card, args[1])
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock: 
+                    fsock.write(p_card)
                 return
         # Special case for the showerkt value
         if args[0].lower() == 'showerkt':
@@ -2914,7 +2916,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n SHOWERKT= %s' % (p_card, args[1].upper())
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock:
+                    fsock.write(p_card)
                 return
             
 
@@ -3384,7 +3387,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
             
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)       
         else:
             # Here we have to remove all the previous definition of the decay
             #first find the particle
@@ -3395,8 +3397,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             text= open(path).read()
             text = decay_pattern.sub('', text)
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)
-        
+
+        with open(path,'w') as fsock:
+            fsock.write(text) 
+
         
 
     def do_compute_widths(self, line):
