@@ -24,6 +24,13 @@ import time
 import optparse
 import subprocess
 import shutil
+import multiprocessing
+import signal
+import tempfile
+import itertools
+import os
+import cPickle
+
 
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
@@ -51,6 +58,37 @@ pjoin = os.path.join
 
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
+
+# a new function for the improved NLO generation
+glob_directories_map = []
+def generate_directories_fks_async(i):
+        
+    arglist = glob_directories_map[i]
+    
+    curr_exporter = arglist[0]
+    mefile = arglist[1]
+    curr_fortran_model = arglist[2]
+    ime = arglist[3]
+    nme = arglist[4]
+    path = arglist[5]
+    olpopts = arglist[6]
+    
+    infile = open(mefile,'rb')
+    me = cPickle.load(infile)
+    infile.close()      
+    
+    calls = curr_exporter.generate_directories_fks(me, curr_fortran_model, ime, nme, path, olpopts)
+    nexternal = curr_exporter.proc_characteristic['nexternal']
+    ninitial = curr_exporter.proc_characteristic['ninitial']
+    processes = me.born_matrix_element.get('processes')
+    
+    #only available after export has been done, so has to be returned from here
+    max_loop_vertex_rank = -99
+    if me.virt_matrix_element:
+        max_loop_vertex_rank = me.virt_matrix_element.get_max_loop_vertex_rank()  
+    
+    return [calls, curr_exporter.fksdirs, max_loop_vertex_rank, ninitial, nexternal, processes]
+
 
 class CheckFKS(mg_interface.CheckValidForCmd):
 
@@ -407,7 +445,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         proc_type=self.extract_process_type(line)
         if proc_type[1] not in ['real', 'LOonly']:
             run_interface.check_compiler(self.options, block=False)
-        self.validate_model(proc_type[1])
+        self.validate_model(proc_type[1], coupling_type=proc_type[2])
 
         #now generate the amplitudes as usual
         #self.options['group_subprocesses'] = 'False'
@@ -422,6 +460,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
+        self._curr_proc_defs.append(myprocdef)
+
 #        if myprocdef['perturbation_couplings']!=['QCD']:
 #            message = ""FKS for reals only available in QCD for now, you asked %s" \
 #                        % ', '.join(myprocdef['perturbation_couplings'])"
@@ -431,16 +471,30 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 #                
 #                raise self.InvalidCmd("FKS for reals only available in QCD for now, you asked %s" \
 #                        % ', '.join(myprocdef['perturbation_couplings']))
+        ##
+
+        # if the new nlo process generation mode is enabled, the number of cores to be
+        # used has to be passed
+        # ncores_for_proc_gen has the following meaning
+        #   0 : do things the old way
+        #   > 0 use ncores_for_proc_gen
+        #   -1 : use all cores
+        if self.options['low_mem_multicore_nlo_generation']:
+            if self.options['nb_core']:
+                self.ncores_for_proc_gen = int(self.options['nb_core'])
+            else:
+                self.ncores_for_proc_gen = -1
+        else:
+            self.ncores_for_proc_gen = 0
+
+        # this is the options dictionary to pass to the FKSMultiProcess
+        fks_options = {'OLP': self.options['OLP'],
+                       'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
+                       'ncores_for_proc_gen': self.ncores_for_proc_gen}
         try:
-            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,
-                                   collect_mirror_procs,
-                                   ignore_six_quark_processes,
-                                   OLP=self.options['OLP']))
+            self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,fks_options))
         except AttributeError: 
-            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,
-                                   collect_mirror_procs,
-                                   ignore_six_quark_processes,
-                                   OLP=self.options['OLP'])
+            self._fks_multi_proc = fks_base.FKSMultiProcess(myprocdef,fks_options)
 
 
     def do_output(self, line):
@@ -498,7 +552,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Generate the virtuals if from OLP
         if self.options['OLP']!='MadLoop':
             self._curr_exporter.generate_virtuals_from_OLP(
-              self._curr_matrix_elements,self._export_dir,self.options['OLP'])
+              self.born_processes_for_olp,self._export_dir,self.options['OLP'])
                 
         # Remember that we have done export
         self._done_export = (self._export_dir, self._export_format)
@@ -531,41 +585,50 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                                 self._fks_multi_proc, 
                                 loop_optimized= self.options['loop_optimized_output'])
                     
-                    ndiags = sum([len(me.get('diagrams')) for \
-                                  me in self._curr_matrix_elements.\
-                                  get_matrix_elements()])
-                    # assign a unique id number to all process and
-                    # generate a list of possible PDF combinations
-                    uid = 0 
-                    initial_states=[]
-                    for me in self._curr_matrix_elements.get_matrix_elements():
-                        uid += 1 # update the identification number
-                        me.get('processes')[0].set('uid', uid)
-                        try:
-                            initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
-                                                                  p in me.born_matrix_element.get('processes')))))
-                        except IndexError:
-                            initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
-                                                                  p in me.born_matrix_element.get('processes')))))
-                    
-                        for fksreal in me.real_processes:
-                        # Pick out all initial state particles for the two beams
+                    if not self.options['low_mem_multicore_nlo_generation']: 
+                        # generate the code the old way
+                        ndiags = sum([len(me.get('diagrams')) for \
+                                      me in self._curr_matrix_elements.\
+                                      get_matrix_elements()])
+                        # assign a unique id number to all process and
+                        # generate a list of possible PDF combinations
+                        uid = 0 
+                        initial_states=[]
+                        for me in self._curr_matrix_elements.get_matrix_elements():
+                            uid += 1 # update the identification number
+                            me.get('processes')[0].set('uid', uid)
                             try:
                                 initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
-                                                             p in fksreal.matrix_element.get('processes')))))
+                                                                      p in me.born_matrix_element.get('processes')))))
                             except IndexError:
                                 initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
-                                                             p in fksreal.matrix_element.get('processes')))))
-                                
+                                                                      p in me.born_matrix_element.get('processes')))))
                         
-                    # remove doubles from the list
-                    checked = []
-                    for e in initial_states:
-                        if e not in checked:
-                            checked.append(e)
-                    initial_states=checked
+                            for fksreal in me.real_processes:
+                            # Pick out all initial state particles for the two beams
+                                try:
+                                    initial_states.append(sorted(list(set((p.get_initial_pdg(1),p.get_initial_pdg(2)) for \
+                                                                 p in fksreal.matrix_element.get('processes')))))
+                                except IndexError:
+                                    initial_states.append(sorted(list(set((p.get_initial_pdg(1)) for \
+                                                                 p in fksreal.matrix_element.get('processes')))))
+                                    
+                            
+                        # remove doubles from the list
+                        checked = []
+                        for e in initial_states:
+                            if e not in checked:
+                                checked.append(e)
+                        initial_states=checked
 
-                    self._curr_matrix_elements.set('initial_states',initial_states)
+                        self._curr_matrix_elements.set('initial_states',initial_states)
+
+                    else:
+                        #new NLO generation
+                        if self._curr_matrix_elements['has_loops']:
+                            self._curr_exporter.opt['mp'] = True
+                        self._curr_exporter.model = self._curr_model
+                        ndiags = 0
 
             cpu_time2 = time.time()
             return ndiags, cpu_time2 - cpu_time1
@@ -586,23 +649,84 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             for charac in ['has_isr', 'has_fsr', 'has_loops']:
                 proc_charac[charac] = self._curr_matrix_elements[charac]
 
+            # prepare for the generation
+            # glob_directories_map is for the new NLO generation
+            global glob_directories_map
+            glob_directories_map = []
 
+            self.born_processes_for_olp = []
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
-                #me is a FKSHelasProcessFromReals
-                calls = calls + \
-                        self._curr_exporter.generate_directories_fks(me, 
-                        self._curr_fortran_model, 
-                        ime, len(self._curr_matrix_elements.get('matrix_elements')), 
-                        path,self.options['OLP'])
-                self._fks_directories.extend(self._curr_exporter.fksdirs)
+                if not self.options['low_mem_multicore_nlo_generation']:
+                    #me is a FKSHelasProcessFromReals
+                    calls = calls + \
+                            self._curr_exporter.generate_directories_fks(me, 
+                            self._curr_fortran_model, 
+                            ime, len(self._curr_matrix_elements.get('matrix_elements')), 
+                            path,self.options['OLP'])
+                    self._fks_directories.extend(self._curr_exporter.fksdirs)
+                    self.born_processes_for_olp.append(me.born_matrix_element.get('processes')[0])
+                else:
+                    glob_directories_map.append(\
+                            [self._curr_exporter, me, self._curr_fortran_model, 
+                             ime, len(self._curr_matrix_elements.get('matrix_elements')), 
+                             path, self.options['OLP']])
+
+            if self.options['low_mem_multicore_nlo_generation']:
+                # start the pool instance with a signal instance to catch ctr+c
+                logger.info('Writing directories...')
+                original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+                if self.ncores_for_proc_gen < 0: # use all cores
+                    pool = multiprocessing.Pool(maxtasksperchild=1)
+                else:
+                    pool = multiprocessing.Pool(processes=self.ncores_for_proc_gen,maxtasksperchild=1)
+                signal.signal(signal.SIGINT, original_sigint_handler)
+                try:
+                    # the very large timeout passed to get is to be able to catch
+                    # KeyboardInterrupts
+                    diroutputmap = pool.map_async(generate_directories_fks_async,
+                                                  range(len(glob_directories_map))).get(9999999)
+                except KeyboardInterrupt:
+                    pool.terminate()
+                    raise KeyboardInterrupt 
+    
+                pool.close()
+                pool.join()
+                
+                #clean up tmp files containing final matrix elements
+                for mefile in self._curr_matrix_elements.get('matrix_elements'):
+                    os.remove(mefile)
+
+                for charac in ['nexternal', 'ninitial']:
+                    proc_charac[charac] = self._curr_exporter.proc_characteristic[charac]
+                # ninitial and nexternal
+                proc_charac['nexternal'] = max([diroutput[4] for diroutput in diroutputmap])
+                ninitial_set = set([diroutput[3] for diroutput in diroutputmap])
+                if len(ninitial_set) != 1:
+                    raise MadGraph5Error, ("Invalid ninitial values: %s" % ' ,'.join(list(ninitial_set)))    
+                proc_charac['ninitial'] = list(ninitial_set)[0]
+
+                self.born_processes = []
+                self.born_processes_for_olp = []
+                max_loop_vertex_ranks = []
+                
+                for diroutput in diroutputmap:
+                    calls = calls + diroutput[0]
+                    self._fks_directories.extend(diroutput[1])
+                    max_loop_vertex_ranks.append(diroutput[2])
+                    self.born_processes.extend(diroutput[5])
+                    self.born_processes_for_olp.append(diroutput[5][0])
+
+            else:
+                max_loop_vertex_ranks = [me.get_max_loop_vertex_rank() for \
+                                         me in self._curr_matrix_elements.get_virt_matrix_elements()]
+
             card_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'procdef_mg5.dat')
             
             if self.options['loop_optimized_output'] and \
-                    len(self._curr_matrix_elements.get_virt_matrix_elements()) > 0:
-                self._curr_exporter.write_coef_specs_file(\
-                        self._curr_matrix_elements.get_virt_matrix_elements())
+               len(max_loop_vertex_ranks) > 0:
+                self._curr_exporter.write_coef_specs_file(max_loop_vertex_ranks)
             if self._generate_info:
                 self._curr_exporter.write_procdef_mg5(card_path, #
                                 self._curr_model['name'],
@@ -615,7 +739,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             subproc_path = os.path.join(path, os.path.pardir, 'SubProcesses', \
                                      'initial_states_map.dat')
             self._curr_exporter.write_init_map(subproc_path,
-                                               self._curr_matrix_elements.get('initial_states'))
+                                self._curr_matrix_elements.get('initial_states'))
             
         cpu_time1 = time.time()
 

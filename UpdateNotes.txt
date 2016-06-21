@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.4.0(XX/XX/XX)
+2.5.0(XX/XX/XX)
         VH+OM: Adding an official interface to PY8 for the parton-shower
         VH: extend install command to install: lhapdf/pythia8
         VH+SP: extend support for CKKWL
@@ -8,10 +8,54 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Adding the possiblity of having detailled help at the time of the edition of the cards.
             help mass / help mt / help nevents provided some information on the parameters.
 
-2.3.3(XX/XX/XX)
-        OM: Allow new syntax for the param_card: instead of an entry you can enter scan:[val1, val2,...]
-            To perform a scan on this parameter.
-        OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
+2.4.1 (xx/xx/xx)
+        OM: Fix a bug in fix target experiment with PDF on the particle at rest.
+            The cross-section was correct but the z-boost was not performed correctly.
+        OM: Fix various bug in MadSpin
+        OM: Fix some bug in MLM merging, where chcluster was forced to True (introduced in 2.2.0)
+        OM: Allow to specify a path for a custom directory where to look for model via the environment 
+            variable PYTHONPATH. Note this used AFTER the standard ./models directory
+
+2.4.0 (12/06/16)
+        OM: Allowing the proper NLO reweighting for NLO sample
+	RF: For NLO processes allow for multiple PDF and scales reweighting, directy by inputting lists
+	    in the run_card.dat.
+        VH: Interfaced MadLoop to Samurai and Ninja (the latter is now the default)
+        HS: Turn IREGI to off by default
+        MZ: new NLO generation mode. It is more efficient from the memory and CPU point of 
+            view, in particular for high-multiplicity processes. 
+            Many thanks to Josh Bendavid for his fundamental contribution for this.
+            The mode can be enabled with
+            > set low_mem_multicore_nlo_generation True
+            before generating the process.
+        OM: Adding the possibility to use new syntax for tree-level processes:
+            QED==2 and QCD>2: The first allows to select exactly a power of the coupling (at amplitude level
+            While the second ask for a minimum value.   
+        RF: In the PDF uncertainty for fixed-order NLO runs, variations of alphaS were not included.
+        OM: In MLM matching, fix a bug where the alpha_s reweighting was not fully applied on some events. 
+            (This was leading to effects smaller than the theoretical uncertainty)
+        OM: Fixing the problem of using lhapdf6 on Mac
+        MZ: Faster interface for LHAPDF6
+        OM: Add support of epsilon_ijk in MadSpin
+        OM: Fix multiple problem with multiparticles in MadSpin
+        OM: Improve spinmode=None in MadSpin
+        OM: Update the TopEffTh model
+        MZ: Fix problem with slurm cluster
+        OM: Improve scan functionalities
+        PT: New way of handling Pythia8 decays
+	RF: Fixed a bug that resulted in wrong event weights for NLO processes when requiring
+            a very small number of events (introduced in 2.3.3)
+        OM: Allow to keep the reweight information in the final lhe file for future computation 
+        MZ: updated FJcore to version 3.1.3 (was 3.0.5)
+
+2.3.3 (15/10/15)
+	OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
+    OM: Allow new syntax for the param_card: instead of an entry you can enter scan:[val1, val2,...]
+        To perform a scan on this parameter.
+    OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
+    OM: Allow new syntax for the param_card: instead of an entry you can enter "scan:[val1, val2,...]"
+        To perform a scan on this parameter.
+    OM: Having two mode for "output pythia8" one (default) for pythia8.2 and one for pythia8.1 (with --version=8.1)
 	RF: Rewriting of job-control for NLO processes. Better accuracy estimates for FO processes
 	RF: Fix for factorisation scale setting in FxFx merging when very large difference in scale in the
  	    non-QCD part of a process. 
@@ -20,14 +64,15 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 	RF: Added an option to the run_card to allow for easier variation of the shower starting scale (NLO only).
 	RF: Fixed a problem in the setting of the flavour map used for runs with iAPPL >= 1. 
 	RF: Allow for decay processes to compute (partial) decay widths at NLO accuracy (fixed order only).
-        OM: (SysCalc interface) Allow to bypass the pdf reweighting/alpsfact reweighting
-        MZ: fixed bug related to slurm clusters
+    OM: (SysCalc interface) Allow to bypass the pdf reweighting/alpsfact reweighting
+    MZ: fixed bug related to slurm clusters
 	OM: remove the addmasses.py script of running by default on gridpack mode. 
             if you want to have it running, you just have to rename the file madevent/bin/internal/addmasses_optional.py to
  	    madevent/bin/internal/addmasses_optional.py and it will work as before. (Do not work with SysCalc tag)
+        OM: make the code compatible with "python -tt" option
 
 2.3.2.2 (06/09/15)
-        VH: Finalized the MG5aMC-GoSam interface
+    VH: Finalized the MG5aMC-GoSam interface
 
 2.3.2(20/08/15)   
         OM: Improve reweighting module. (https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight)

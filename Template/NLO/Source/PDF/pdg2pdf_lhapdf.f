@@ -35,7 +35,7 @@ C
       include 'pdf.inc'
 C      
       integer i,j,ihlast(20),ipart,iporg,ireuse,imemlast(20),iset,imem
-     &     ,i_replace,ii
+     &     ,i_replace,ii,isetlast(20)
       double precision xlast(20),xmulast(20),pdflast(-7:7,20)
       save ihlast,xlast,xmulast,pdflast,imemlast
       data ihlast/20*-99/
@@ -43,6 +43,7 @@ C
       data xmulast/20*-99d9/
       data pdflast/300*-99d9/
       data imemlast/20*-99/
+      data isetlast/20*-99/
       data i_replace/20/
 
       if (ih.eq.0) then
@@ -59,8 +60,6 @@ c     instead of stopping the code, as this might accidentally happen.
          return
       elseif (x.lt.0d0 .or. x.gt.1d0) then
          write (*,*) 'PDF not supported for Bjorken x ', x
-         open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
          stop 1
       endif
 
@@ -74,19 +73,11 @@ c     This will be called for any PDG code, but we only support up to 7
          write(*,*) 'PDF not supported for pdg ',ipdg
          write(*,*) 'For lepton colliders, please set the lpp* '//
      $    'variables to 0 in the run_card'  
-         open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for pdg ',ipdg
          stop 1
       endif
 
 c     Determine the iset used in lhapdf
       call getnset(iset)
-      if (iset.ne.1) then
-         write (*,*) 'PDF not supported for Bjorken x ', x
-         open(unit=26,file='../../../error',status='unknown')
-         write(26,*) 'Error: PDF not supported for Bjorken x ',x
-         stop 1
-      endif
 
 c     Determine the member of the set (function of lhapdf)
       call getnmem(iset,imem)
@@ -100,8 +91,10 @@ c     calls. Start checking with the last call and move back in time
             if (x.eq.xlast(ii)) then
                if (xmu.eq.xmulast(ii)) then
                   if (imem.eq.imemlast(ii)) then
-                     ireuse = ii
-                     exit
+                     if (iset.eq.isetlast(ii)) then
+                        ireuse = ii
+                        exit
+                     endif
                   endif
                endif
             endif
@@ -128,6 +121,7 @@ c     be saved
       xmulast(i_replace)=xmu
       ihlast(i_replace)=ih
       imemlast(i_replace)=imem
+      isetlast(i_replace)=iset
 c
       pdg2pdf=pdflast(ipart,i_replace)
       return

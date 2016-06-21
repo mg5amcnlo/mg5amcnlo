@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import logging
+import random
 
 logger = logging.getLogger('madgraph.models') # -> stdout
 
@@ -114,6 +115,7 @@ class Parameter (object):
             except:
                 format = 'str'
         
+        self.comment = self.comment.strip()
         if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,basestring):
                 return 'DECAY %s %e # %s' % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
@@ -766,8 +768,8 @@ class ParamCardIterator(ParamCard):
                         all_iterators[key] = []
                     try:
                         all_iterators[key].append( (param, eval(def_list)))
-                    except SyntaxError:
-                        raise Exception, "Fail to handle your scan definition. Please check your syntax."
+                    except SyntaxError, error:
+                        raise Exception, "Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error)
                     
         keys = all_iterators.keys() # need to fix an order for the scan
         param_card = ParamCard(self)
@@ -811,7 +813,17 @@ class ParamCardIterator(ParamCard):
             name = info['run_name']
             ff.write("%-20s %-20s %-20s \n" % (name,' '.join(bench) ,cross))
             #ff.write("%s %s %s \n" % (name,' '.join(bench) ,cross))
-            
+    
+    def get_next_name(self, run_name):
+        """returns a smart name for the next run"""
+    
+        if '_' in run_name:
+            name, value = run_name.rsplit('_',1)
+            if value.isdigit():
+                return '%s_%02i' % (name, float(value)+1)
+        # no valid '_' in the name
+        return '%s_scan_02' % run_name
+    
 
 class ParamCardRule(object):
     """ A class for storing the linked between the different parameter of

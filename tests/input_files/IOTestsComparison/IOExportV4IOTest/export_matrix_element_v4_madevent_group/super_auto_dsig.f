@@ -177,8 +177,8 @@ C       No finalize needed
       ENDIF
 
 C     IMODE.EQ.0, regular run mode
-      IF(MC_GROUPED_SUBPROC.AND.DS_GET_DIM_STATUS('grouped_processes'
-     $ ).EQ.-1) THEN
+      IF(MC_GROUPED_SUBPROC.AND.DS_GET_DIM_STATUS('grouped_processes')
+     $ .EQ.-1) THEN
         CALL DS_REGISTER_DIMENSION('grouped_processes', 0)
         CALL DS_SET_MIN_POINTS(10,'grouped_processes')
         DO J=1,SYMCONF(0)
@@ -194,10 +194,10 @@ C     IMODE.EQ.0, regular run mode
           ENDDO
         ENDDO
       ENDIF
-      IF(MC_GROUPED_SUBPROC.AND.DS_DIM_INDEX(RUN_GRID, 'PDF_convolutio'
-     $ //'n',.TRUE.).EQ.-1) THEN
-        CALL DS_REGISTER_DIMENSION('PDF_convolution', 0, ALL_GRIDS=.FAL
-     $   SE.)
+      IF(MC_GROUPED_SUBPROC.AND.DS_DIM_INDEX(RUN_GRID,
+     $  'PDF_convolution',.TRUE.).EQ.-1) THEN
+        CALL DS_REGISTER_DIMENSION('PDF_convolution', 0,
+     $    ALL_GRIDS=.FALSE.)
       ENDIF
 
 C     Select among the subprocesses based on PDF weight
@@ -324,8 +324,8 @@ C       Update weigth w.r.t SELPROC normalized to selection probability
 
       ELSE
 C       We are using the grouped_processes grid and it is initialized.
-        CALL DS_GET_POINT('grouped_processes',R,LMAPPED,MC_GROUPED_PROC
-     $   _JACOBIAN,'norm',(/'PDF_convolution'/))
+        CALL DS_GET_POINT('grouped_processes',R,LMAPPED
+     $   ,MC_GROUPED_PROC_JACOBIAN,'norm',(/'PDF_convolution'/))
         WGT=WGT*MC_GROUPED_PROC_JACOBIAN
         CALL MAP_1_TO_3(LMAPPED,MAXSPROC,2,ICONF,IPROC,IMIRROR)
       ENDIF
@@ -347,8 +347,8 @@ C     Reset ALLOW_HELICITY_GRID_ENTRIES
 
 C     Below is how one would go about adding each point to the
 C      grouped_processes grid
-C     However, keeping only the initialization grid is better becaus'
-C     //'e in that case all grouped ME's
+C     However, keeping only the initialization grid is better because'
+C     //' in that case all grouped ME's
 C     were computed with the same kinematics. For this reason, the
 C      code below remains commented.
 C     IF(grouped_MC_grid_status.ge.1) then

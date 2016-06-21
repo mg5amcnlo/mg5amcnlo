@@ -14,12 +14,11 @@ C     USER''S ROUTINE FOR INITIALIZATION
 C----------------------------------------------------------------------
       INCLUDE 'HEPMC.INC'
       include 'reweight0.inc'
-      integer nwgt,max_weight,nwgt_analysis,kk,l,nnn
-      common/cnwgt/nwgt
+      integer nwgt,nwgt_analysis,kk,l,nnn
+      integer nwgt_analysis
       common/c_analysis/nwgt_analysis
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      character*15 weights_info(max_weight),wwwi(max_weight)
-      common/cwgtsinfo/weights_info
+      character*50 weights_info(max_weight_shower)
+     $     ,wwwi(max_weight_shower)
 c
       call inihist
       weights_info(1)="central value  "

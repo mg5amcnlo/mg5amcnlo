@@ -277,7 +277,7 @@ c-onium
          if (idup(i,1,iproc).eq.545)   is_a_onium(i)=.true. ! Bc
 
 c        Remember mergeable particles
-         do j=1,pdgs_for_merging_cut_length
+         do j=1,pdgs_for_merging_cut(0)
            if (    pdgs_for_merging_cut(j) .ne. 0
      $       .and. abs(idup(i,1,iproc)) .eq.pdgs_for_merging_cut(j) ) then
              is_pdg_for_merging_cut(i)=.true.
@@ -335,8 +335,8 @@ c        BJET
             endif
 c        PHOTON
             if(is_a_a(i))then
-                 etmin(i) = max(pta, ptgmin, ea)
-                 SMIN = SMIN + etmin(i)
+                 etmin(i) = max(pta, ptgmin)
+                 SMIN = SMIN + max(etmin(i),ea)
                  etmax(i)=ptamax
                  emin(i)=ea
                  emax(i)=eamax

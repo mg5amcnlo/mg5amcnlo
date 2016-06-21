@@ -485,7 +485,6 @@ C
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
-
 C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
@@ -498,7 +497,8 @@ c     q2bck holds the central q2fact scales
       integer jlast(2)
       integer njetstore(lmaxconfigs),iqjetstore(nexternal-2,lmaxconfigs)
       real*8 q2bck(2)
-      common /to_rw/jlast,njetstore,iqjetstore,q2bck
+      integer njets,iqjets(nexternal)
+      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
       data njetstore/lmaxconfigs*-1/
       real*8 xptj,xptb,xpta,xptl,xmtc
       real*8 xetamin,xqcut,deltaeta
@@ -526,7 +526,6 @@ C   local variables
 
 c     Variables for keeping track of jets
       logical goodjet(n_max_cl)
-      integer njets,iqjets(nexternal)
       integer fsnum(2),ida(2),imo,jcode
       logical chclusold,fail,increasecode
       save chclusold
@@ -557,8 +556,8 @@ c
 c     First time, cluster according to this config and store jets
 c     (following times, only accept configurations if the same partons
 c      are flagged as jets)
+      chclusold=chcluster
       if(njetstore(iconfig).eq.-1)then
-         chclusold=chcluster
          chcluster=.true.
       endif
  100  clustered = cluster(p(0,1))
@@ -844,7 +843,7 @@ c               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
      $           write(*,*) 'Bad clustering, jets fail. Reclustering ',
      $           iconfig
             chcluster=.true.
-c            goto 100 ! not
+            goto 100
          endif
       endif
       
@@ -1128,17 +1127,19 @@ c     q2bck holds the central q2fact scales
       integer jlast(2)
       integer njetstore(lmaxconfigs),iqjetstore(nexternal-2,lmaxconfigs)
       real*8 q2bck(2)
-      common /to_rw/jlast,njetstore,iqjetstore,q2bck
+      integer njets,iqjets(nexternal)
+      common /to_rw/jlast,njetstore,iqjetstore,njets,iqjets,q2bck
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
 
 C   local variables
-      integer i, j, idi, idj,ijet
+      integer i, j, idi, idj
       real*8 PI
       parameter( PI = 3.14159265358979323846d0 )
 
+      logical setclscales
       integer mapconfig(0:lmaxconfigs), this_config
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       integer sprop(maxsproc,-max_branch:-1,lmaxconfigs)
@@ -1196,7 +1197,32 @@ c     Set incoming particle identities
 
       endif
       
+
+      if(ickkw.le.0)then
 c     Store pdf information for systematics studies (initial)
+         if(use_syst)then
+            do j=1,2
+                n_pdfrw(j)=1
+                i_pdgpdf(1,j)=ipdgcl(j,igraphs(1),iproc)
+                s_xpdf(1,j)=xbk(ib(j))
+                s_qpdf(1,j)=sqrt(q2fact(j))
+            enddo
+           endif
+         asref=0 ! usefull for syscalc
+         goto 100
+      endif
+
+
+      if(.not.setclscales(p)) then ! assign the correct id information.
+         write(*,*) "Fail to cluster the events from the rewgt function"
+         stop 1
+c        rewgt = 0d0
+        return
+      endif
+
+
+c     Store pdf information for systematics studies (initial)
+c     need to be done after      setclscales since that one clean the syscalc value
       if(use_syst)then
          do j=1,2
             n_pdfrw(j)=1
@@ -1206,10 +1232,6 @@ c     Store pdf information for systematics studies (initial)
          enddo
       endif
 
-      if(ickkw.le.0)then
-         asref=0 ! usefull for syscalc
-         goto 100
-      endif
 c   Preparing graph particle information (ipart, needed to keep track of
 c   external particle clustering scales)
       do i=1,nexternal
@@ -1259,7 +1281,6 @@ c     Prepare for resetting q2fact based on PDF reweighting
       endif
 
 c     Prepare checking for parton vertices
-      ijet=1
       do i=1,nexternal
          j=ishft(1,i-1)
 c        Set jet identities according to chosen subprocess
@@ -1270,10 +1291,8 @@ c        Set jet identities according to chosen subprocess
      $        i,ipdgcl(j,igraphs(1),iproc)
          if(i.le.2)then
             goodjet(j)=isparton(ipdgcl(j,igraphs(1),iproc))
-         elseif(ijet.le.njetstore(iconfig).and.
-     $        i.eq. iqjetstore(ijet,iconfig)) then
+         elseif(iqjets(i).gt.0) then
             goodjet(j)=.true.
-            ijet=ijet+1
          elseif(isparton(ipdgcl(j,igraphs(1),iproc)).and.
      $          .not.isjet(ipdgcl(j,igraphs(1),iproc))) then
             goodjet(j)=.true.            

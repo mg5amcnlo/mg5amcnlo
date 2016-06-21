@@ -53,7 +53,7 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = False
+    debugging = True
     
     def setUp(self):
         
@@ -89,6 +89,7 @@ class MECmdShell(IOTests.IOTestManager):
             pass
 
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
         
         run_cmd('import model %s' % model)
         for multi in multiparticles:
@@ -111,6 +112,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue('generate' in proc_card or 'add process' in proc_card)
         run_cmd('set automatic_html_opening False --no_save')
         self.cmd_line = NLOCmd.aMCatNLOCmdShell(me_dir= '%s' % self.path)
+        self.cmd_line.no_notification()
         self.cmd_line.run_cmd('set automatic_html_opening False --no_save')
         self.assertFalse(self.cmd_line.options['automatic_html_opening'])
 
@@ -277,6 +279,7 @@ class MECmdShell(IOTests.IOTestManager):
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
         self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
+        self.cmd_line.exec_cmd('set  pythia8_path None')
         self.do('generate_events -pf')
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
@@ -424,7 +427,9 @@ class MECmdShell(IOTests.IOTestManager):
         """test that ./bin/aMCatNLO can be launched with some scripts.
         Check also that two runs run without border effects"""
         self.generate_production()
-        script = "launch -p\n"
+        script = "set notification_center False --no_save\n"
+        script += "set automatic_html_opening False --no_save\n"
+        script += "launch -p\n"
         script += "launch -p\n"
         open(pjoin(self.path, 'script.txt'), 'w').write(script)
 
@@ -856,12 +861,12 @@ class MECmdShell(IOTests.IOTestManager):
             devnull =open(os.devnull,'w')
             stderr=devnull
 
-    
             
         subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5'), 
                          pjoin(_file_path, 'input_files','test_amcatnlo')],
                          cwd=self.tmpdir,
                         stdout=stdout,stderr=stderr)
+
         stdout.close()
         text = open('%s/test.log' % self.tmpdir,'r').read()
         data = text.split('\n')
@@ -871,16 +876,16 @@ class MECmdShell(IOTests.IOTestManager):
         #      Run at p-p collider (6500.0 + 6500.0 GeV)
         self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+2])
         #      Total cross-section: 1.249e+03 +- 3.2e+00 pb        
-        cross_section = data[i+3]
+        cross_section = data[i+4]
         cross_section = float(cross_section.split(':')[1].split('+-')[0])
         # warning, delta may not be compatible with python 2.6 
         try:
-            self.assertAlmostEqual(6754.0, cross_section,delta=50)
+            self.assertAlmostEqual(6700.0, cross_section,delta=50)
         except TypeError:
-            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
+            self.assertTrue(cross_section < 6750.0 and cross_section > 6650.0)
 
         #      Number of events generated: 10000        
-        self.assertTrue('Number of events generated: 100' in data[i+4])
+        self.assertTrue('Number of events generated: 100' in data[i+3])
 
 
     def test_jet_veto_xsec(self):

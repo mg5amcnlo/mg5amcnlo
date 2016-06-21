@@ -7,6 +7,20 @@
 !
 Main:numberOfEvents      = -1
 !
+! -------------------------------------------------------------------
+! Specify the HEPMC output of the Pythia8 shower. You can set it to:
+!   auto  : to let MG5aMC automatically assign it
+!   fifo  : to have MG5aMC setup the piping of the PY8 output to analysis
+!           tools such as MadAnalysis5. You can also use the syntax 
+!           fifo@<fifo_path> to select where the fifo file should be
+!           created (useful to select a mounted drive that supports fifo)
+!   /dev/null : to turn off the HEPMC output.
+!   <path>    : to select where the HEPMC file must written. It will 
+!               therefore *not* be available in the process output.
+! -------------------------------------------------------------------
+!
+HEPMCoutput:file         = auto
+!
 ! --------------------------------------------------------------------
 ! Parameters relevant only when performing MLM merging
 ! For details, see section 'Jet Matching' on the left-hand menu of 

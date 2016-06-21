@@ -792,6 +792,8 @@ c From dsample_fks
       logical               only_virt
       integer         imode
       common /c_imode/imode,only_virt
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
       sigintF=0d0
 c Find the nFKSprocess for which we compute the Born-like contributions
       if (firsttime) then
@@ -818,6 +820,8 @@ c "npNLO".
          born_wgt_mint=0d0
          virtual_over_born=0d0
          MCcntcalled=.false.
+         wgt_me_real=0d0
+         wgt_me_born=0d0
          if (ickkw.eq.3) call set_FxFx_scale(0,p)
          call update_vegas_x(xx,x)
          call get_MC_integer(1,proc_map(0,0),proc_map(0,1),vol1)
@@ -866,6 +870,8 @@ c for different nFKSprocess.
          if(sum.eq.0) calculatedBorn=.false.
          nbody=.false.
          do i=1,proc_map(proc_map(0,1),0)
+            wgt_me_real=0d0
+            wgt_me_born=0d0
             iFKS=proc_map(proc_map(0,1),i)
             call update_fks_dir(iFKS,iconfig)
             jac=1d0/vol1
@@ -1180,8 +1186,8 @@ c "npNLO".
       integer    maxflow
       parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow)
-      common /c_leshouche_inc/idup,mothup,icolup
+     &     icolup(2,nexternal,maxflow),niprocs
+      common /c_leshouche_inc/idup,mothup,icolup,niprocs
       character*4      abrv
       common /to_abrv/ abrv
       if ((shower_mc.eq.'PYTHIA8' .or. shower_mc.eq.'HERWIGPP') .and.

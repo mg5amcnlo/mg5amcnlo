@@ -32,6 +32,7 @@ if '__main__' == __name__:
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.madgraph_interface as mg_interface
 import madgraph.interface.master_interface as master_interface
+import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.various.misc as misc
 import madgraph.iolibs.files as files
 import madgraph.iolibs.export_v4 as export_v4
@@ -177,7 +178,13 @@ class MadSpinInterface(extended_cmd.Cmd):
         logger.info("process: %s" % process)
         logger.info("options: %s" % option)
 
-
+        if not hasattr(self,'multiparticles_ms'):
+            for key, value in self.banner.get_detail('proc_card','multiparticles'):
+                try:
+                    self.do_define('%s = %s' % (key, value))
+                except self.mg5cmd.InvalidCmd:  
+                    pass
+                
         # Read the final state of the production process:
         #     "_full" means with the complete decay chain syntax 
         #     "_compact" means without the decay chain syntax 
@@ -208,6 +215,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         # check particle which can be decayed:
         self.final_state = set()
+        final_model = False
         for line in self.banner.proc_card:
             line = ' '.join(line.strip().split())
             if line.startswith('generate'):
@@ -215,9 +223,20 @@ class MadSpinInterface(extended_cmd.Cmd):
             elif line.startswith('add process'):
                 self.final_state.update(self.mg5cmd.get_final_part(line[11:]))
             elif line.startswith('define'):
-                self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)            
+                try:
+                    self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                except self.mg5cmd.InvalidCmd:
+                    if final_model:
+                        raise
+                    else:
+                        key = line.split()[1]
+                        if key in self.multiparticles_ms:
+                            del self.multiparticles_ms[key]            
             elif line.startswith('set'):
                 self.mg5cmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+            elif line.startswith('import model'):
+                if model_name in line:
+                    final_model = True
                     
             
                 
@@ -373,12 +392,14 @@ class MadSpinInterface(extended_cmd.Cmd):
         args = self.split_arg(line)
         self.check_set(args)
         
+        if args[0] not in ['ms_dir', 'run_card']:
+            args[1] = args[1].lower()
+        
         if args[0] in  ['max_weight', 'BW_effect','ms_dir', 'spinmode']:
             self.options[args[0]] = args[1]
             if args[0] == 'ms_dir':
                 self.options['curr_dir'] = self.options['ms_dir']
         elif args[0] == 'seed':
-            import random
             random.seed(int(args[1]))
             self.seed = int(args[1])
         elif args[0] == 'BW_cut':
@@ -440,7 +461,19 @@ class MadSpinInterface(extended_cmd.Cmd):
     
     def do_define(self, line):
         """ """
-        return self.mg5cmd.do_define(line)
+
+        try:
+            self.mg5cmd.exec_cmd('define %s' % line)
+        except:
+            #cleaning if the error is recover later
+            key = line.split()[0]
+            if hasattr(self, 'multiparticles_ms') and key in self.multiparticles_ms:
+                del self.multiparticles_ms[key]
+            raise
+           
+        self.multiparticles_ms = dict([(k,list(pdgs)) for k, pdgs in \
+                                        self.mg5cmd._multiparticles.items()])
+    
     
     def update_status(self, *args, **opts):
         """ """
@@ -514,7 +547,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         model_line = self.banner.get('proc_card', 'full_model_line')
 
         if not self.seed:
-            import random
             self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)
@@ -633,7 +665,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             #seed is specified need to use that one:
             open(pjoin(self.options['ms_dir'],'seeds.dat'),'w').write('%s\n'%self.seed)
             #remove all ranmar_state
-            for name in glob.glob(pjoin(self.options['ms_dir'], '*', 'SubProcesses','*','ranmar_state.dat')):
+            for name in misc.glob(pjoin('*', 'SubProcesses','*','ranmar_state.dat'), 
+                                                        self.options['ms_dir']):
                 os.remove(name)    
         
         generate_all.ending_run()
@@ -693,24 +726,54 @@ class MadSpinInterface(extended_cmd.Cmd):
                     else:
                         mg5.exec_cmd("generate %s" % proc)
                         mg5.exec_cmd("output %s -f" % decay_dir)
-                options = dict(mg5.options)
-                import madgraph.interface.madevent_interface as madevent_interface
-                me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                    
+                    options = dict(mg5.options)
+                    if self.options['ms_dir']:
+                        misc.sprint("start gridpack!")
+                        # we are in gridpack mode -> create it
+                        me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                                 decay_dir), options=options)
-                me5_cmd.options["automatic_html_opening"] = False
-                if self.options["run_card"]:
-                    run_card = self.options["run_card"]
+                        me5_cmd.options["automatic_html_opening"] = False
+                        if self.options["run_card"]:
+                            run_card = self.options["run_card"]
+                        else:
+                            run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))                        
+                        
+                        run_card["iseed"] = self.seed
+                        run_card['gridpack'] = True
+                        run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                        param_card = self.banner['slha']
+                        open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
+                        self.seed += 1
+                        # actually creation
+                        me5_cmd.exec_cmd("generate_events run_01 -f")
+                        me5_cmd.exec_cmd("exit")                        
+                        #remove pointless informat
+                        misc.call(["rm", "Cards", "bin", 'Source', 'SubProcesses'], cwd=decay_dir)
+                        misc.call(['tar', '-xzpvf', 'run_01_gridpack.tar.gz'], cwd=decay_dir)
+                
+                # Now generate the events
+
+                if not self.options['ms_dir']:
+                    me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
+                                                    decay_dir), options=mg5.options)
+                    me5_cmd.options["automatic_html_opening"] = False
+                    if self.options["run_card"]:
+                        run_card = self.options["run_card"]
+                    else:
+                        run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    run_card["nevents"] = int(1.2*nb_event)
+                    run_card["iseed"] = self.seed
+                    run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
+                    param_card = self.banner['slha']
+                    open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
+                    self.seed += 1
+                    me5_cmd.exec_cmd("generate_events run_01 -f")
+                    me5_cmd.exec_cmd("exit")
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
                 else:
-                    run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
-                run_card["nevents"] = int(1.2*nb_event)
-                run_card["iseed"] = self.seed
-                run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
-                param_card = self.banner['slha']
-                open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
-                self.seed += 1
-                me5_cmd.exec_cmd("generate_events run_01 -f")
-                me5_cmd.exec_cmd("exit")     
-                out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
+                    misc.call(['run.sh', str(int(1.2*nb_event)), str(self.seed)], cwd=decay_dir)     
+                    out[i] = lhe_parser.EventFile(pjoin(decay_dir, 'events.lhe.gz'))            
                 if cumul:
                     break
             
@@ -727,7 +790,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 os.mkdir(self.path_me) 
         else:
             # cleaning
-            for name in glob.glob(pjoin(self.path_me, "decay_*_*")):
+            for name in misc.glob("decay_*_*", self.path_me):
                 shutil.rmtree(name)
 
         self.events_file.close()
@@ -744,7 +807,6 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         # Handle the banner of the output file
         if not self.seed:
-            import random
             self.seed = random.randint(0, int(30081*30081))
             self.do_set('seed %s' % self.seed)
             logger.info('Will use seed %s' % self.seed)
@@ -866,10 +928,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                 else:
                     #need to select the file according to the associate cross-section
                     r = random.random()
-                    tot = sum(events.cross for events in to_event[particle.pdg])
+                    tot = sum(to_event[particle.pdg][key].cross for key in to_event[particle.pdg])
                     r = r * tot
                     cumul = 0
-                    for j,events in enumerate(to_event[particle.pdg]):
+                    for j,events in to_event[particle.pdg].items():
                         cumul += events.cross
                         if r < cumul:
                             decay_file = events
@@ -924,6 +986,7 @@ class MadSpinInterface(extended_cmd.Cmd):
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
         
+        
         loop = False
         #if (name.startswith('loop_')):
         #    logger.info("The model in the banner is %s" % name)
@@ -946,7 +1009,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.model = base_model
         self.mg5cmd._curr_model = self.model
         self.mg5cmd.process_model()
-        
 
 if __name__ == '__main__':
     

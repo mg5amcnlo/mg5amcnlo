@@ -19,6 +19,8 @@ C
 C ARGUMENTS 
 C  
       REAL*8 P(0:3,NEXTERNAL),ANS
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 C  
 C LOCAL VARIABLES 
 C  
@@ -72,6 +74,7 @@ C add to the sum of helicities
         ENDIF
       ENDDO
       ANS=ANS/DBLE(IDEN)
+      wgt_ME_real=ans
       END
        
        
