@@ -4782,6 +4782,13 @@ You can follow PY8 run with the following command (in a separate terminal):
         scdir = self.options['syscalc_path']
         if not scdir or not os.path.exists(scdir):
             return
+
+        if self.run_card['event_norm'] != 'sum':
+            logger.critical('SysCalc works only when event_norm is on \'sum\'.')
+            logger.critical('MG5aMC will still run it, but beware that the xsecs'+\
+                           ' in SysCalc log files will be incorrectly normalized.')
+            logger.critical('Systematic studies obtained with Pythia8 will however be correct.')
+
         logger.info('running syscalc on mode %s' % mode)    
     
         # Check that all pdfset are correctly installed
