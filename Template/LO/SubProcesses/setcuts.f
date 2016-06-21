@@ -84,7 +84,7 @@ C
 
 c     Store which external particles undergo the ktdurham and ptlund cuts.
       LOGICAL  is_pdg_for_merging_cut(NEXTERNAL)
-      COMMON /TO_MERGE_CUTS/is_pdg_for_merging_cut
+      COMMON /TO_MERGE_CUTS/is_pdg_for_merging_cut, from_decay
 
 c
 c
