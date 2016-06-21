@@ -558,8 +558,18 @@ C       RESET JET MOMENTA
            endif
         enddo
 
+C       COUNT NUMBER OF MASSLESS OUTGOING PARTICLES, SINCE WE DO NOT WANT
+C       TO APPLY A CUT FOR JUST A SINGLE MASSIVE PARTICLE IN THE FINAL STATE.
+        NMASSLESS = 0
+        DO I=NINCOMING+1,NEXTERNAL
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and. 
+     &                          DSQRT(DOT( P(0,I), P(0,I))) .LT. 5D0) THEN
+            NMASSLESS = NMASSLESS + 1
+          ENDIF
+        ENDDO
+
 C       DURHAM KT SEPARATION CUT
-        IF(NJETS.GT.0) THEN
+        IF(NJETS.GT.0 .AND. NMASSLESS .GT. 0) THEN
 
         PTMIN = EBEAM(1) + EBEAM(2)
 
