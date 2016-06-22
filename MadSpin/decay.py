@@ -1224,6 +1224,7 @@ class AllMatrixElement(dict):
                                   'P%s' % me.get('processes')[0].shell_string())
             topo['decays'] = []
             topo['total_br'] = 0 
+            topo['Pid'] = proc.get('id')
         
             if skip:
                 self.add_me_symmetric(skip, topo)
@@ -2115,7 +2116,7 @@ class decay_all_events(object):
         # launch the decay and reweighting
         self.mscmd.update_status('MadSpin: Decaying Events')
         efficiency = self.decaying_events(self.inverted_decay_mapping)
-        if  efficiency != 1:
+        if  efficiency != 1 and any(v==-1 for v in self.br_per_id.values()):
             # need to change the banner information [nb_event/cross section]
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)
             self.outputfile = open(self.outputfile.name, 'w')
@@ -2685,13 +2686,13 @@ class decay_all_events(object):
                 proc_nb = '@ %i' % proc_nb 
             else:
                 proc_nb = ''
-            
+                        
             if ',' in proc:
                 raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
                         '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
             
             if '[' not in proc:
-                commandline+="add process %s  --no_warning=duplicate;" % proc
+                commandline+="add process %s %s  --no_warning=duplicate;" % (proc, proc_nb)
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
                 commandline+="add process %s %s --no_warning=duplicate;" % (process, proc_nb)
@@ -2723,6 +2724,7 @@ class decay_all_events(object):
                         commandline +='add process %s pert_%s  %s --no_warning=duplicate;' % (process,order, proc_nb)                                       
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
+        
         mgcmd.exec_cmd(commandline, precmd=True)
         commandline = 'output standalone_msP %s %s' % \
         (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))        
@@ -3876,16 +3878,24 @@ class decay_all_events(object):
         ms_banner = ""
         cross_section = True # tell if possible to write the cross-section in advance
         total_br = []
+        self.br_per_id = {}
         for production in self.all_ME.values():
             one_br = 0
+            partial_br = 0
             for decay in production['decays']:
                 if not decay['decay_tag']:
                     cross_section = False
                     one_br += decay['br']
                     continue
+                partial_br += decay['br']
                 ms_banner += "# %s\n" % ','.join(decay['decay_tag']).replace('\n',' ')
                 ms_banner += "# BR: %s\n# max_weight: %s\n" % (decay['br'], decay['max_weight'])
                 one_br += decay['br']
+            
+            if production['Pid'] not in self.br_per_id:
+                self.br_per_id[production['Pid']] = partial_br
+            elif self.br_per_id[production['Pid']] != partial_br:
+                self.br_per_id[production['Pid']] = -1
             total_br.append(one_br)
         
         if __debug__:
@@ -3893,7 +3903,6 @@ class decay_all_events(object):
                 assert production['total_br'] - min(total_br) < 1e-4
         
         self.branching_ratio = max(total_br) * eff
-
         #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in self.banner:
@@ -3924,18 +3933,29 @@ class decay_all_events(object):
                     mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)
                 self.banner['mggenerationinfo'] = '\n'.join(mg_info)
                 
-            
-        
-        if 'init' in self.banner:
+                   
+        if 'init' in self.banner and (eff!=1 or not any(v==-1 for v in self.br_per_id.values())):
             new_init =''
+            curr_proc = 0
+            has_missing=False
             for line in self.banner['init'].split('\n'):
                 if len(line.split()) != 4:
                     new_init += '%s\n' % line
                 else:
+                    curr_proc += 1 
                     data = [float(nb) for nb in line.split()]
-                    data[:3] = [ data[i] * self.branching_ratio for i  in range(3)]
+                    id = int(data[-1])
+                    if id in self.br_per_id and not any(v==-1 for v in self.br_per_id.values()):
+                        data[:3] = [data[i] * self.br_per_id[id] for i  in range(3)]
+                    else:
+                        data[:3] = [ data[i] * self.branching_ratio for i  in range(3)]
+                        has_missing=True
                     new_init += ' %.12E %.12E %.12E %i\n' % tuple(data)
             self.banner['init'] = new_init
+            if has_missing and curr_proc not in [0,1]:
+                logger.warning('''The partial cross section for each subprocess can not be determine. due
+    Reason: multiple final state in the same subprocess (and the presence of multiple BR)
+    Consequence: the <init> information of the lhe will therefore be incorrect. Please correct it if needed.''')
         self.banner.write(self.outputfile, close_tag=False)        
         
     def terminate_fortran_executables(self, path_to_decay=0 ):
