@@ -1955,7 +1955,7 @@ class FourMomentum(object):
         if power == 1:
             return FourMomentum(self)
         elif power == 2:
-            return self.mass_sqr()
+            return self.mass_sqr
     
     def __repr__(self):
         return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)

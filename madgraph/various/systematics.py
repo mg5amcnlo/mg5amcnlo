@@ -25,7 +25,7 @@ import time
 class Systematics(object):
     
     def __init__(self, input_file, output_file,
-                 start_event=0, stop_event=sys.maxint,
+                 start_event=0, stop_event=sys.maxint, write_banner=False,
                  mur=[0.5,1,2],
                  muf=[0.5,1,2],
                  alps=[1],
@@ -47,56 +47,54 @@ class Systematics(object):
             
         #get some information from the run_card.
         self.banner = banner_mod.Banner(self.input.banner)  
+        self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()             
             
         
         # MUR/MUF/ALPS PARSING
         if isinstance(mur, str):
-            self.mur=[float(i) for i in mur.split(',')]
-        else:
-            self.mur = mur    
+            mur = mur.split(',')
+        self.mur=[float(i) for i in mur]   
         if isinstance(muf, str):
-            self.muf=[float(i) for i in muf.split(',')]
-        else:
-            self.muf = muf         
+            muf = muf.split(',')
+        self.muf=[float(i) for i in muf]
+        
         if isinstance(alps, str):
-            self.alps=[float(i) for i in alps.split(',')]
-        else:
-            self.alps = alps  
+            alps = alps.split(',')
+        self.alps=[float(i) for i in alps]
 
         # DYNAMICAL SCALE PARSING + CORRELATED
         if isinstance(dyn, str):
-            self.dyn=[int(i) for i in dyn.split(',')]
-        else:
-            self.dyn = dyn  
+            dyn = dyn.split(',')
+        self.dyn=[int(i) for i in dyn]
+ 
         if isinstance(correlated, str):
             self.correlated = correlated.split(',')
         else:
             self.correlated = correlated
             
         # START/STOP EVENT                                   
-        if isinstance(start_event, str):
-            self.start_event=int(start_event)
-        else:
-            self.start_event = start_event 
-        if start_event !=0:
+        self.start_event=int(start_event)
+        self.stop_event=int(stop_event)
+        if start_event != 0:
             print "starting from event #%s" % start_event    
-        
-        if isinstance(stop_event, str):
-            self.stop_event=int(stop_event)
-        else:
-            self.stop_event = stop_event 
+        if stop_event != sys.maxint:
+            print "stoping at event #%s" % stop_event          
             
         # LHAPDF set 
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
         lhapdf.setVerbosity(0)
         self.pdfsets = {}  
         if isinstance(pdf, str):
+            pdf = pdf.split(',')
+        if isinstance(pdf,list) and isinstance(pdf[0],(str,int)):
             self.pdf = []
-            for data in pdf.split(','):
+            for data in pdf:
                 if data == 'errorset':
                     data = '%s*' % self.orig_pdf
+                if data == 'central':
+                    data = '%s' % self.orig_pdf
                 if data.isdigit():
                     self.pdf.append(lhapdf.mkPDF(int(data)))
                 elif '*' in data:
@@ -116,8 +114,13 @@ class Systematics(object):
                     
                     self.pdf.append(lhapdf.mkPDF(data))
         else:
-            self.pdf = pdf 
-        self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
+            self.pdf = pdf
+        for p in self.pdf:
+            if p.lhapdfID == self.orig_pdf:
+                self.orig_pdf = p
+                break
+        else:
+            self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
              
         
         # create all the function that need to be called
@@ -126,7 +129,7 @@ class Systematics(object):
     def run(self):
         """ """
         start_time = time.time()
-        if self.start_event == 0:
+        if self.start_event == 0 or self.force_write_banner:
             lowest_id = self.write_banner(self.output)
         else:
             lowest_id = self.get_id()        
@@ -137,6 +140,8 @@ class Systematics(object):
             if i < self.start_event:
                 continue
             elif i >= self.stop_event:
+                if self.force_write_banner:
+                    self.output.write('</LesHouchesEvents>\n')
                 break
             if (i-self.start_event)>=0 and (i-self.start_event) % 1000 ==0:
                 print 'currently at event', i, 'run in %.2g s' % (time.time()-start_time)
@@ -172,7 +177,7 @@ class Systematics(object):
                 if (pdf == self.orig_pdf and alps ==1):
                     pass
                 else:
-                    text += "</weightgroup>\n"
+                    text += "</weightgroup> # scale\n"
                     in_scale = False
                 
             if pdf == self.orig_pdf and mur == muf == 1 and dyn==-1 and alps!=1:
@@ -180,22 +185,22 @@ class Systematics(object):
                     text += "<weightgroup name=\"Emission scale variation\" combine=\"envelope\">\n"
                     in_alps=True
             elif in_alps:
-                text += "</weightgroup>\n"
+                text += "</weightgroup> # ALPS\n"
                 in_alps=False
             
             if pdf != self.orig_pdf and mur == muf == 1 and dyn==-1 and alps ==1:
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
-                        text += "</weightgroup>\n"
+                        text += "</weightgroup> # PDFSET -> PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID]
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, pdfset.description)
                     in_pdf=pdf.lhapdfID 
-                elif pdf.lhapdfID - pdf.memberID != in_pdf:
-                    text += "</weightgroup>\n"
+                elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
+                    text += "</weightgroup> # PDFSET -> PDF\n"
                     in_pdf = False 
             elif in_pdf:
-                text += "</weightgroup>\n"
+                text += "</weightgroup> PDF \n"
                 in_pdf=False                
                  
                 
@@ -213,11 +218,11 @@ class Systematics(object):
                 tag += 'MUF="%s" ' % muf
                 
             if alps!=1.:
-                tag += 'ALPSFACT="%s"' % alps
-                info += 'alpsfact=%s' % alps
+                tag += 'ALPSFACT="%s" ' % alps
+                info += 'alpsfact=%s ' % alps
             if dyn!=-1.:
-                tag += 'DYN_SCALE="%s"' % dyn
-                info += 'dyn_scale_choise=%s' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}
+                tag += 'DYN_SCALE="%s" ' % dyn
+                info += 'dyn_scale_choise=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
             if pdf != self.orig_pdf:
                 tag += 'LHAPDF="%s" ' % pdf.lhapdfID
@@ -259,7 +264,6 @@ class Systematics(object):
         default = [1.,1.,1.,-1,self.orig_pdf]
         #all_args.append(default)
         pos = {'mur':0, 'muf':1, 'alps':2, 'dyn':3, 'pdf':4}
-        print self.correlated
         done = set()
         for one_block in self.correlated:
             for name in one_block:
@@ -269,7 +273,6 @@ class Systematics(object):
                 for name,value in zip(one_block, correlated):
                     new_args[pos[name]] = value
                 all_args.append(new_args)
-        
         for name in pos:
             if name in done:
                 continue
@@ -280,12 +283,7 @@ class Systematics(object):
         
         self.args = [default]+ [arg for arg in all_args if arg!= default]
         
-        print self.args
-        #self.fcts = [lambda event: self.get_lo_wgt(event, *args) for args in self.args]    
-
-        #print "start", self.args[1]  
-        #self.fcts[1](0)
-        #sys.exit(0)        
+        print "Will Compute %s weights per event." % (len(self.args)-1)
         return
         
     def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
@@ -352,13 +350,15 @@ if __name__ == "__main__":
                     opts[key]=[tuple(values)]
             elif key in ['start_event', 'stop_event']:
                 opts[key] = int(values[0])
+            elif key == 'write_banner':
+                opts[key] = banner_mod.ConfigFile.format_variable(values[0], bool, 'write_banner')
             else:
                 if key in opts:
                     opts[key] += values
                 else:
                     opts[key] = values
         else:
-            print "unknow argurment", arg
+            print "unknow argument", arg
             sys.exit(1)
     
     obj = Systematics(input, output, **opts)
