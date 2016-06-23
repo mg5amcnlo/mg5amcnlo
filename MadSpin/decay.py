@@ -1223,7 +1223,7 @@ class AllMatrixElement(dict):
             topo['path'] = pjoin(path, 'SubProcesses', 
                                   'P%s' % me.get('processes')[0].shell_string())
             topo['decays'] = []
-            topo['total_br'] = 0 
+            topo['total_br'] = 0
         
             if skip:
                 self.add_me_symmetric(skip, topo)

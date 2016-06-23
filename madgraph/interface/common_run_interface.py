@@ -450,7 +450,6 @@ class CheckValidForCmd(object):
         """return the path to the output events
         """
 
-
         if self.mode == 'madevent':
             possible_path = [
                 pjoin(self.me_dir,'Events', run_name, 'unweighted_events.lhe.gz'),
@@ -465,7 +464,10 @@ class CheckValidForCmd(object):
                 correct_path = path
                 break
         else:
-            raise self.InvalidCmd('No events file corresponding to %s run. ' % run_name)
+            if os.path.exists(run_name):
+                correct_path = run_name
+            else:
+                raise self.InvalidCmd('No events file corresponding to %s run. ' % run_name)
         return correct_path
 
 
@@ -533,6 +535,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             del opts['force_run']
 
         cmd.Cmd.__init__(self, *args, **opts)
+        misc.sprint(me_dir)
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
             me_dir = root_path
@@ -1083,9 +1086,51 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
         """
         
+        #### Utility function
+        def check_multicore(self):
+            """ determine if the cards are save for multicore use"""
+            card = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+
+            multicore = True
+            if self.options['run_mode'] in [0,1]:
+                multicore = False
+
+            lines = [l.strip() for l in open(card) if not l.strip().startswith('#')]
+            while lines and not lines[0].startswith('launch'):
+                line = lines.pop(0)
+                # if not standard output mode forbid multicore mode
+                if line.startswith('change') and line[6:].strip().startswith('output'):
+                    return False
+                if line.startswith('change') and line[6:].strip().startswith('multicore'):
+                    split_line = line.split()
+                    if len(split_line) > 2: 
+                        multicore = bool(split_line[2])
+            # we have reached the first launch in the card ensure that no output change 
+            #are done after that point.
+            lines = [line[6:].strip() for line in lines if line.startswith('change')]
+            for line in lines:
+                if line.startswith(('process','model','output', 'rwgt_dir')):
+                    return False
+                elif line.startswith('multicore'):
+                    split_line = line.split()
+                    if len(split_line) > 1: 
+                        multicore = bool(split_line[1])
+
+            return multicore
+            
+        
+        
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
             return
-        
+        'print line:', line
+        # option for multicore to avoid that all of them create the same directory
+        if '--multicore=create' in line:
+            multicore='create'
+        elif '--multicore=wait' in line:
+            multicore='wait'
+        else:
+            multicore=False
+            
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
@@ -1112,6 +1157,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if self.run_name and self.results.current and  self.results.current['cross'] == 0:
                 self.results.delete_run(self.run_name, self.run_tag)
             self.results.save()
+            # ensure that the run_card is present
+            if not hasattr(self, 'run_card'):
+                self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+            
             # we want to run this in a separate shell to avoid hard f2py crash
             command =  [sys.executable]
             if os.path.exists(pjoin(self.me_dir, 'bin', 'madevent')):
@@ -1121,41 +1170,109 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not isinstance(self, cmd.CmdShell):
                 command.append('--web')
             command.append('reweight')
-            if self.run_name:
-                command.append(self.run_name)
-            else:
-                command += args
-            if '-from_cards' not in command:
-                command.append('-from_cards')
-            p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
-            while p.poll() is None:
-                line = p.stdout.readline()
-                if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
-                   not '***********' in line:
-                        print line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:','')
-                elif __debug__ and line:
-                    logger.debug(line[:-1])
-            if p.returncode !=0:
-                logger.error("Reweighting failed")
+            
+            #########   START SINGLE CORE MODE ############
+            if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
+                if self.run_name:
+                    command.append(self.run_name)
+                else:
+                    command += args
+                if '-from_cards' not in command:
+                    command.append('-from_cards')
+                p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
+                while p.poll() is None:
+                    line = p.stdout.readline()
+                    if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
+                       not '***********' in line:
+                            print line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:','')
+                    elif __debug__ and line:
+                        logger.debug(line[:-1])
+                if p.returncode !=0:
+                    logger.error("Reweighting failed")
+                    return
+                self.results = self.load_results_db()
+                # forbid this function to create an empty item in results.
+                try:
+                    if self.results[self.run_name][-2]['cross']==0:
+                        self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
+                except:
+                    pass
+                try:
+                    if self.results.current['cross'] == 0 and self.run_name:
+                        self.results.delete_run(self.run_name, self.run_tag)
+                except:
+                    pass                    
+                # re-define current run     
+                try:
+                    self.results.def_current(self.run_name, self.run_tag)
+                except Exception:
+                    pass
                 return
-            self.results = self.load_results_db()
-            # forbid this function to create an empty item in results.
-            try:
-                if self.results[self.run_name][-2]['cross']==0:
-                    self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
-            except:
-                pass
-            try:
-                if self.results.current['cross'] == 0 and self.run_name:
-                    self.results.delete_run(self.run_name, self.run_tag)
-            except:
-                pass                    
-            # re-define current run     
-            try:
-                self.results.def_current(self.run_name, self.run_tag)
-            except Exception:
-                pass
-            return              
+                ##########    END SINGLE CORE HANDLING #############
+            else:
+                ##########    START MULTI-CORE HANDLING #############
+                if not isinstance(self.cluster, cluster.MultiCore):
+                    mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
+                else:
+                    mycluster = self.cluster
+                
+                new_args=list(args)
+                self.check_decay_events(new_args) 
+                # prepare multi-core  job:
+                import madgraph.various.lhe_parser as lhe_parser
+                # args now alway content the path to the valid files
+                if 'nevt_job' in self.run_card and self.run_card['nevt_job'] !=-1:
+                    nevt_job = self.run_card['nevt_job']
+                else:
+                    nevt_job = max(5000, self.run_card['nevents']/50)
+                logger.info("split the event file in bunch of %s event" % nevt_job)
+                nb_file = lhe_parser.EventFile(new_args[0]).split(nevt_job)
+                starttime = time.time()
+                update_status = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, 'reweight'), level=None,
+                                       force=False, starttime=starttime)
+
+                all_lhe = []
+                devnull= open(os.devnull)
+                for i in range(nb_file):
+                    new_command = list(command) 
+                    new_command.append('%s_%s.lhe' % (new_args[0],i))
+                    all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    if '-from_cards' not in command:
+                        new_command.append('-from_cards')
+                    if i==0:
+                        if __debug__:
+                            stdout = None
+                        else:
+                            stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight.log'),'w')
+                        new_command.append('--multicore=create')
+                    else:
+                        stdout = devnull
+                        #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
+                        new_command.append('--multicore=wait')
+                    mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=self.me_dir)
+                mycluster.wait(self.me_dir,update_status)
+                devnull.close()
+                
+                lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
+                nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
+                if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
+                    for f in all_lhe:
+                        if os.path.exists('%s_%s_debug.log' % (f, self.run_tag)):
+                            raise Exception, "Some of the run failed: Please read %s_%s_debug.log" % (f, self.run_tag) 
+                
+                
+                if 'event_norm' in self.run_card and self.run_card['event_norm'] == 'average':
+                    for key, value in cross_sections.items():
+                        cross_sections[key] = value / (nb_event+1)
+                lhe.remove()
+                for key in cross_sections:
+                    if key == 'orig' or key.isdigit():
+                        continue
+                    logger.info('%s : %s pb' % (key, cross_sections[key]))
+                return
+            ##########    END MULTI-CORE HANDLING #############
+                              
 
         self.to_store.append('event')
         # forbid this function to create an empty item in results.
@@ -1176,6 +1293,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
+        reweight_cmd.multicore = multicore #allow the directory creation or not
+        print "We are in mode", multicore
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
             

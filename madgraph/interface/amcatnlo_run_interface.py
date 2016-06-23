@@ -4897,9 +4897,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line =  aMCatNLOCmd(force_run=True)
+                cmd_line =  aMCatNLOCmd(me_dir=os.path.dirname(root_path),force_run=True)
             else:
-                cmd_line =  aMCatNLOCmdShell(force_run=True)
+                cmd_line =  aMCatNLOCmdShell(me_dir=os.path.dirname(root_path),force_run=True)
 
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:

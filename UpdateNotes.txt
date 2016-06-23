@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+X.X.X (xx/xx/xx)
+        OM: NLO Re-weighting works in multi-core
+
+
 2.4.3 (xx/xx/xx)
         OM: Reduce the amount of log file/output generated for LO run (output can use up to three times less output).
         OM: For the LO combination of events (unweighting) pass to the method previously used for loop-induced.
