@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __future__ import division
 if __name__ == "__main__":
     import sys
     sys.path.append('../../')
@@ -51,7 +52,7 @@ class Systematics(object):
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()             
             
-        
+
         # MUR/MUF/ALPS PARSING
         if isinstance(mur, str):
             mur = mur.split(',')
@@ -135,6 +136,7 @@ class Systematics(object):
             lowest_id = self.get_id()        
 
         ids = [lowest_id+i for i in range(len(self.args)-1)]
+        all_cross = [0 for i in range(len(self.args))]
         
         for i,event in enumerate(self.input):
             if i < self.start_event:
@@ -143,17 +145,97 @@ class Systematics(object):
                 if self.force_write_banner:
                     self.output.write('</LesHouchesEvents>\n')
                 break
-            if (i-self.start_event)>=0 and (i-self.start_event) % 1000 ==0:
-                print 'currently at event', i, 'run in %.2g s' % (time.time()-start_time)
+            if (i-self.start_event)>=0 and (i-self.start_event) % 2500 ==0:
+                print '# currently at event', i, 'run in %.2g s' % (time.time()-start_time)
             
             wgts = [self.get_lo_wgt(event, *arg) for arg in self.args]
             wgt = [event.wgt*wgts[i]/wgts[0] for i in range(1,len(wgts))]
+            all_cross = [(all_cross[i] + event.wgt*wgts[i]/wgts[0]) for i in range(len(wgts))]
+            
+            
             rwgt_data = event.parse_reweight()
             rwgt_data.update(zip(ids, wgt))
             self.output.write(str(event))
         else:
             self.output.write('</LesHouchesEvents>\n')
+        
+        self.print_cross_sections(all_cross, min(i,self.stop_event)-self.start_event)
+        return all_cross
+        
+    def print_cross_sections(self, all_cross, nb_event):
+        """print the cross-section."""
+        
+        norm = self.banner.get('run_card', 'event_norm', default='sum')
+        #print "normalisation is ", norm
+        #print "nb_event is ", nb_event
+    
+        max_scale, min_scale = 0,sys.maxint
+        max_alps, min_alps = 0, sys.maxint
+        max_other, min_other = 0,sys.maxint
+        pdfs = {}
+        
+        if norm == 'sum':
+            norm = 1
+        elif norm == 'average':
+            norm = 1./nb_event
+        elif norm == 'unity':
+            norm = 1
             
+        all_cross = [c*norm for c in all_cross]
+        print "# mur\t\tmuf\t\talpsfact\tdynamical_scale\tpdf\t\tcross-section"
+        for i,arg in enumerate(self.args):
+            
+            to_print = list(arg)
+            to_print[-1] = to_print[-1].lhapdfID
+            to_print.append(all_cross[i])    
+            print '%s\t\t%s\t\t%s\t\t%s\t\t%s\t\t%s' % tuple(to_print) 
+            
+            mur, muf, alps, dyn, pdf = arg
+            if pdf == self.orig_pdf and alps ==1 and (mur!=1 or muf!=1 or dyn!=-1):
+                max_scale = max(max_scale,all_cross[i])
+                min_scale = min(min_scale,all_cross[i])
+            elif pdf == self.orig_pdf and mur==1 and muf==1 and dyn==-1 and alps!=1:
+                max_alps = max(max_alps,all_cross[i])
+                min_alps = min(min_alps,all_cross[i])                
+            elif alps==1 and mur==1 and muf==1 and dyn==-1:
+                pdfset = pdf.set()
+                if pdfset.lhapdfID in self.pdfsets:
+                    if pdfset.lhapdfID not in pdfs :
+                        pdfs[pdfset.lhapdfID] = [0] * pdfset.size
+                    pdfs[pdfset.lhapdfID][pdf.memberID] = all_cross[i]
+                else:
+                    max_other = max(max_other, all_cross[i])
+                    min_other = min(min_other, all_cross[i])                     
+            else:
+                max_other = max(max_other, all_cross[i])
+                min_other = min(min_other, all_cross[i])                 
+        print 
+        print '#*****************************************************************'
+        print "#"
+        print '# original cross-section:', all_cross[0]
+        if max_scale:
+            print '# scale variation: +%2.3g%% -%2.3g%%' % ((max_scale-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_scale)/all_cross[0]*100) 
+        if max_alps:
+            print '# emission scale variation: +%2.3g%% -%2.3g%%' % ((max_alps-all_cross[0])/all_cross[0]*100,(max_alps-min_scale)/all_cross[0]*100) 
+        for lhapdfid,values in pdfs.items():
+            pdfset = self.pdfsets[lhapdfid]
+            pdferr =  pdfset.uncertainty(values)
+            if lhapdfid == self.orig_pdf.lhapdfID:
+                print '# PDF variation: +%2.3g%% -%2.3g%%' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0])
+            else:
+                print '#PDF %s: %s +%2.3g%% -%2.3g%%' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0])
+        if max_other:
+            print '# Other variation: +%2.3g%% -%2.3g%%' % ((max_other-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_other)/all_cross[0]*100) 
+        print "#"            
+        print '#*****************************************************************'
+
+            
+            
+                
+        
+
+
+
 
     def write_banner(self, fsock):
         """create the new banner with the information of the weight"""
@@ -196,6 +278,13 @@ class Systematics(object):
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, pdfset.description)
                     in_pdf=pdf.lhapdfID 
+                elif pdf.memberID == 1 and (pdf.lhapdfID - pdf.memberID) in self.pdfsets:
+                    if in_pdf:
+                        text += "</weightgroup> # PDFSET -> PDFSET\n"
+                    pdfset = self.pdfsets[pdf.lhapdfID - 1]
+                    text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
+                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, pdfset.description)
+                    in_pdf=pdfset.lhapdfID 
                 elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
                     text += "</weightgroup> # PDFSET -> PDF\n"
                     in_pdf = False 
@@ -283,7 +372,7 @@ class Systematics(object):
         
         self.args = [default]+ [arg for arg in all_args if arg!= default]
         
-        print "Will Compute %s weights per event." % (len(self.args)-1)
+        print "#Will Compute %s weights per event." % (len(self.args)-1)
         return
         
     def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
