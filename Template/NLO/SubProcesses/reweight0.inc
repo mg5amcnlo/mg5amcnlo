@@ -126,11 +126,11 @@ c cpower: power of muR-dependent factor in the born
       common/cwgtcpower/wgtcpower
 
       integer cpower_pos
-      parameter (cpower_pos=3)
+      parameter (cpower_pos=0)
 
 c switch for running muR-dependent factor runfac=1(running)/0(fixed)
       integer runfac
-      parameter (runfac=1)
+      parameter (runfac=0)
 c WARNING: If you set runfac=1 to include a muR-dependent factor
 c          make sure you modified the function rwgt_muR_dep_fac in
 c	   reweight_xsec.f and compute_cpower in fks_singular.f
@@ -146,7 +146,7 @@ c muR-dependent factor,
 c e.g. for masses:      ren_group_coeff = gamma0 = 3/2*C_F,
 c i.e. also for Yukawa: ren_group_coeff = gamma0
       double precision ren_group_coeff_in
-      parameter (ren_group_coeff_in=2d0)
+      parameter (ren_group_coeff_in=0d0)
 
 c NLO+NNLL jet veto stuff
       double precision veto_multiplier,H1_factor_virt,
