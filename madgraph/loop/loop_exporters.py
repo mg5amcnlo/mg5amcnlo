@@ -1665,6 +1665,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     # It is cleaner to use the original location of the libraries
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
+                    # For Ninja, we must also link against OneLoop.
+                    if tir in ['ninja']:
+                        if not any(os.path.isfile(pjoin(libpath,'libavh_olo.%s'%ext)) 
+                                              for ext in ['a','dylib','so']):
+                            raise MadGraph5Error(
+"The OneLOop library 'libavh_olo.(a|dylib|so)' could no be found in path '%s'. Please place a symlink to it there."%libpath)
+                        link_tir_libs.append('-L%s/ -l%s'%(libpath,'avh_olo'))
+                        tir_libs.append('%s/lib%s.$(libext)'%(libpath,'avh_olo'))
                     if tir in ['ninja','golem', 'samurai','collier']:
                         trgt_path = pjoin(os.path.dirname(libpath),'include')
                         if os.path.isdir(trgt_path):

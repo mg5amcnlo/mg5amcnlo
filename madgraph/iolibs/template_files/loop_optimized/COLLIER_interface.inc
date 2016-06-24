@@ -11,15 +11,14 @@ C
 C MODULES
 C
 	  USE COLLIER
-	  USE CACHE
 	  IMPLICIT NONE
 C  
 C CONSTANTS 
 C  
       LOGICAL checkPConservation
       PARAMETER (checkPConservation=.TRUE.)
-      %(real_dp_format)s PI
-      PARAMETER(PI=3.14159265358979323846D0)
+      %(real_dp_format)s PIVALUE
+      PARAMETER(PIVALUE=3.14159265358979323846D0)
 	  integer MAXRANK
 	  parameter (MAXRANK=%(maxrank)d)
       INTEGER NLOOPGROUPS
@@ -124,12 +123,6 @@ C     Initialize COLLIER if needed
 	    CALL INITCOLLIER()
       ENDIF
 
-C     The local caches are bugged in COLLIER for rank >= 7 for now.
-C     We must turn it off temporarily for such loops.
-      IF (RANK.ge.7) THEN
-	    CALL SwitchOffCacheSystem0_cll()
-	  ENDIF
-
 C     Initialize the event if it is the first time collier is called on this PS point
       IF(MUST_INIT_EVENT) THEN
 	    MUST_INIT_EVENT = .False.
@@ -177,7 +170,7 @@ C             No need to check the other caches since we already had to reset he
 			NCOLLIERCALLS(4) = 0
 		  ENDIF
         ENDIF
-        CALL SetDeltaIR_cll(0.0d0,(PI**2)/6.0d0)
+        CALL SetDeltaIR_cll(0.0d0,(PIVALUE**2)/6.0d0)
         CALL SetDeltaUV_cll(0.0d0)
         CALL SetMuIR2_cll(mu_r**2)      
         CALL SetMuUV2_cll(mu_r**2)
@@ -337,7 +330,7 @@ C     Now compute the IR poles if asked for
 		    CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+3)
 		  ENDIF
         ENDIF
-        CALL SetDeltaIR_cll(1.0d0,(PI**2)/6.0d0)
+        CALL SetDeltaIR_cll(1.0d0,(PIVALUE**2)/6.0d0)
 	    IF (NLOOPLINE.ne.1) THEN
           CALL TNten_cll(TNten_IR1, TNtenuv_IR1, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR1)
         ELSE
@@ -350,7 +343,7 @@ C     Now compute the IR poles if asked for
 		  CALL SwitchOffCache_cll((unique_id-1)*N_CACHES+3)
 		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+4)			
         ENDIF
-        CALL SetDeltaIR_cll(0.0d0,1.0d0+(PI**2)/6.0d0)
+        CALL SetDeltaIR_cll(0.0d0,1.0d0+(PIVALUE**2)/6.0d0)
 	    IF (NLOOPLINE.ne.1) THEN
           CALL TNten_cll(TNten_IR2, TNtenuv_IR2, MomVec, MomInv, M2LCOLLIER, NLOOPLINE, RANK, TNtenerr_IR2)
         ELSE
@@ -365,7 +358,7 @@ C     Now compute the IR poles if asked for
 		  ENDIF
 		  CALL SwitchOnCache_cll((unique_id-1)*N_CACHES+1)		  
         ENDIF
-		CALL SetDeltaIR_cll(0.0d0,(PI**2)/6.0d0)
+		CALL SetDeltaIR_cll(0.0d0,(PIVALUE**2)/6.0d0)
 	  ENDIF
 
 	  DO I=0,(CURR_MAXCOEF-1)
@@ -427,12 +420,6 @@ c       Finish by caching the coefficients and error just computed
           	ENDIF
           ENDDO
 	    ENDIF
-	  ENDIF
-
-C     The local caches are bugged in COLLIER for rank >= 7 for now.
-C     We must turn it back on if it was turned off in this case then.
-      IF (RANK.ge.7) THEN
-	    CALL SwitchOnCacheSystem0_cll()
 	  ENDIF
 
 	  END SUBROUTINE %(proc_prefix)sCOLLIERLOOP 
