@@ -1,4 +1,4 @@
-	  SUBROUTINE %(proc_prefix)sCOLLIERLOOP(CTMODE, NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS)
+	  SUBROUTINE %(proc_prefix)sCOLLIERLOOP(CTMODE, NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS,TIRCOEFSERRORS)
 C  
 %(info_lines)s
 C 
@@ -33,6 +33,8 @@ C
       %(mass_dp_format)s M2L(NLOOPLINE)
       %(complex_dp_format)s RES(3)
 	  %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)
+	  %(complex_dp_format)s TIRCOEFSERRORS(0:LOOPMAXCOEFS-1,3)
+
 C  
 C LOCAL VARIABLES 
 C
@@ -189,42 +191,40 @@ C     Number of coefficients for the current rank
 	    stop 'Incorrect computational mode specified to the COLLIER MG5aMC interface.'
 	  ENDIF
 
+      DO I=0,CURR_MAXCOEF-1
+        DO K=1,3			
+          TIRCOEFSERRORS(I,K)=DCMPLX(0.0d0,0.0d0)
+	    ENDDO
+      ENDDO
+
 	  IF (COLLIERUseInternalStabilityTest) THEN
 C       Use MADLOOP internal cache dedicated to COLLIER that emulates the CTMODE 2
-C       by using coefficients shifted by COLLIER internal error estimate.
-        IF (CTMODE.EQ.1) THEN
-	      IF (LOOP_ID_DONE(ID)) THEN
-		    DO I=0,CURR_MAXCOEF-1
-		      DO K=1,3
-			    TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)
+	    IF (LOOP_ID_DONE(ID)) THEN
+		  DO I=0,CURR_MAXCOEF-1
+		    DO K=1,3
+			  TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)
+			ENDDO
+	      ENDDO
+		  DO I=0,RANK
+			MaxCoefForRank(I) = 0.0d0
+	      ENDDO
+		  DO I=0,CURR_MAXCOEF-1
+		    CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)			  
+			MaxCoefForRank(CURR_RANK)=max(MaxCoefForRank(CURR_RANK),abs(TIR_COEFS_DIRECT_MODE(I,1,ID)))
+		  ENDDO
+		  DO I=0,CURR_MAXCOEF-1
+		    CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
+            IF (MaxCoefForRank(CURR_RANK).ne.0.0d0) THEN
+              DO K=1,3
+C               The expression below is like taking the absolute value when summing errors linearly
+C                TIRCOEFSERRORS(I,K)=(TIR_COEFS_ERROR(CURR_RANK,ID)/MaxCoefForRank(CURR_RANK))*DCMPLX( ABS(DBLE(TIRCOEFS(I,K))),ABS(DIMAG(TIRCOEFS(I,K))) )
+C               But empirically, I observed that retaining the original complex phase leads to slightly more accurate estimates
+			    TIRCOEFSERRORS(I,K)=(TIR_COEFS_ERROR(CURR_RANK,ID)/MaxCoefForRank(CURR_RANK))*TIRCOEFS(I,K)           
 			  ENDDO
-	        ENDDO
-		    RETURN
-		  ENDIF
-        ELSEIF (CTMODE.EQ.2) THEN
-	      IF (LOOP_ID_DONE(ID)) THEN
-		    DO I=0,RANK
-			  MaxCoefForRank(I) = 0.0d0
-			ENDDO
-		    DO I=0,CURR_MAXCOEF-1
-		      CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)			  
-			  MaxCoefForRank(CURR_RANK)=max(MaxCoefForRank(CURR_RANK),abs(TIR_COEFS_DIRECT_MODE(I,1,ID)))
-			ENDDO
-		    DO I=0,CURR_MAXCOEF-1
-		      CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
-			  IF (MaxCoefForRank(CURR_RANK).ne.0.0d0) THEN		      
-			    DO K=1,3
-			      TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)*(1.0d0+(TIR_COEFS_ERROR(CURR_RANK,ID)/MaxCoefForRank(CURR_RANK)))
-			    ENDDO				  
-		      ELSE
-			    DO K=1,3			  
-			      TIRCOEFS(I,K)=TIR_COEFS_DIRECT_MODE(I,K,ID)
-			    ENDDO				  
-			  ENDIF
-	        ENDDO
-		    RETURN
-		  ENDIF
-	    ENDIF
+            ENDIF	
+	      ENDDO    
+		  RETURN
+		ENDIF	    
       ELSE
 C       Apply the loop-direction switching here.
         CALL %(proc_prefix)sSWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)	  
@@ -399,27 +399,26 @@ c       Finish by caching the coefficients and error just computed
 	      TIR_COEFS_ERROR(J,ID)=TNtenerr(J)
 	    ENDDO
 
-        IF (CTMODE.EQ.2) THEN
-          DO I=0,RANK
-            MaxCoefForRank(I) = 0.0d0
-          ENDDO
-          DO I=0,CURR_MAXCOEF-1
-            CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)			  
-            MaxCoefForRank(CURR_RANK)=max(MaxCoefForRank(CURR_RANK),abs(TIRCOEFS(I,1)))
-          ENDDO
-          DO I=0,CURR_MAXCOEF-1
-            CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
-            IF (MaxCoefForRank(CURR_RANK).ne.0.0d0) THEN
-              DO K=1,3			
-                TIRCOEFS(I,K)=TIRCOEFS(I,K)*(1.0d0+(TNtenerr(CURR_RANK)/MaxCoefForRank(CURR_RANK)))
-			  ENDDO
-          	ELSE
-              DO K=1,3			
-                TIRCOEFS(I,K)=TIRCOEFS(I,K)
-			  ENDDO				
-          	ENDIF
-          ENDDO
-	    ENDIF
+C       Now compute the errors on each coefficient
+        DO I=0,RANK
+          MaxCoefForRank(I) = 0.0d0
+        ENDDO
+        DO I=0,CURR_MAXCOEF-1
+          CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)			  
+          MaxCoefForRank(CURR_RANK)=max(MaxCoefForRank(CURR_RANK),abs(TIRCOEFS(I,1)))
+        ENDDO
+        DO I=0,CURR_MAXCOEF-1
+          CURR_RANK = COEFMAP_ZERO(I)+COEFMAP_ONE(I)+COEFMAP_TWO(I)+COEFMAP_THREE(I)
+          IF (MaxCoefForRank(CURR_RANK).ne.0.0d0) THEN
+            DO K=1,3
+C               The expression below is like taking the absolute value when summing errors linearly
+C			  TIRCOEFSERRORS(I,K)=(TNtenerr(CURR_RANK)/MaxCoefForRank(CURR_RANK))*DCMPLX( ABS(DBLE(TIRCOEFS(I,K))),ABS(DIMAG(TIRCOEFS(I,K))) )			
+C               But empirically, I observed that retaining the original complex phase leads to slightly more accurate estimates
+			  TIRCOEFSERRORS(I,K)=(TNtenerr(CURR_RANK)/MaxCoefForRank(CURR_RANK))*TIRCOEFS(I,K)
+			ENDDO
+          ENDIF
+        ENDDO
+	    
 	  ENDIF
 
 	  END SUBROUTINE %(proc_prefix)sCOLLIERLOOP 

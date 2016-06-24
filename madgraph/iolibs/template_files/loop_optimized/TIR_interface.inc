@@ -50,7 +50,7 @@ c This variable will be used to detect changes in the TIR library used so as to 
 	  INTEGER LAST_LIB_USED
 	  DATA LAST_LIB_USED/-1/
 
-       %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)
+       %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3),TIRCOEFSERRORS(0:LOOPMAXCOEFS-1,3)
        %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
 ## if(TIRCaching){
        integer TIR_CACHE_INDEX 
@@ -227,7 +227,16 @@ C     CONVERT TO MADLOOP CONVENTION
       CASE(7)
 C     COLLIER
 ## if(collier_available){
-      CALL %(proc_prefix)sCOLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS)
+      CALL %(proc_prefix)sCOLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS,TIRCOEFSERRORS)
+C     Shift the TIR coefficients by the corresponding COLLIER error if in CTMODE 2.
+	  if (COLLIERUseInternalStabilityTest.and.CTMODE.eq.2) THEN
+C       We add here the numerical inaccuracies linearly to be conservative 
+	    DO I=1,3
+      	  DO J=0,NLOOPCOEFS-1
+		    TIRCOEFS(J,I)=TIRCOEFS(J,I)+TIRCOEFSERRORS(J,I)
+		  ENDDO
+		ENDDO
+	  ENDIF
 ## } else {
       WRITE(*,*) 'ERROR:: COLLIER is not interfaced.'
       STOP
