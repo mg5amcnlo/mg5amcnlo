@@ -306,7 +306,9 @@ C     a non existing or malformed parameter file
       include "MadLoopParams.inc"
 
       MLReductionLib(1)=6
-      MLReductionLib(2:7)=0
+      MLReductionLib(2)=7
+      MLReductionLib(3)=1
+      MLReductionLib(4:7)=0
       IREGIMODE=2
       IREGIRECY=.TRUE.
       COLLIERComputeIRpoles = .TRUE.

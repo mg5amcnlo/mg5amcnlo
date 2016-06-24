@@ -4,8 +4,8 @@
 
 !     
 #MLReductionLib
-!7|6|1|2
-! Default :: 7|6|1|2
+!6|7|1
+! Default :: 6|7|1
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
 !     2 | PJFry++
