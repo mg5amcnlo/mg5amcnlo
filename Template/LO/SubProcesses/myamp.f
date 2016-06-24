@@ -606,7 +606,7 @@ c     tjs  4/29/2008 use analytic transform for s-hat
 c-----------------------
          if (swidth(i) .eq. 0d0) then
             if (xo.lt.smin/stot)then
-                xo = -1d0*smin/stot
+                xo = 1d0*smin/stot
             endif
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole

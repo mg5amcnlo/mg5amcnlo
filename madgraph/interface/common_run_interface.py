@@ -2214,7 +2214,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         content_variables += '\n%s' % tag
 
         if diff:
-            open(make_opts, 'w').write(content_variables + '\n'.join(content))
+            with open(make_opts, 'w') as fsock: 
+                fsock.write(content_variables + '\n'.join(content))
         return       
 
 
@@ -2408,6 +2409,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     % (filename, pdfsets_dir))
             CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, alternate_path, filename,
                                                       lhapdf_version=lhapdf_version)
+        elif lhapdf_version.startswith('6.') and '.LHgrid' in filename:
+            logger.info('Could not download %s: Try %s', filename, filename.replace('.LHgrid',''))
+            return CommonRunCmd.install_lhapdf_pdfset_static(lhapdf_config, pdfsets_dir, 
+                                                              filename.replace('.LHgrid',''), 
+                                        lhapdf_version, alternate_path)
+            
         else:
             raise MadGraph5Error, \
                 'Could not download %s into %s. Please try to install it manually.' \
@@ -2463,10 +2470,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def get_lhapdf_version(self):
         """returns the lhapdf version number"""
         if not hasattr(self, 'lhapdfversion'):
-            self.lhapdf_version = \
+            try:
+                self.lhapdf_version = \
                     subprocess.Popen([self.options['lhapdf'], '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
-
+            except OSError, error:
+                if error.errno == 2:
+                    raise Exception, 'lhapdf executable (%s) is not found on your system. Please install it and/or indicate the path to the correct executable in input/mg5_configuration.txt' % self.options['lhapdf']
+                else:
+                    raise
+                
         # this will be removed once some issues in lhapdf6 will be fixed
         if self.lhapdf_version.startswith('6.0'):
             raise MadGraph5Error('LHAPDF 6.0.x not supported. Please use v6.1 or later')
@@ -2889,7 +2902,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n QCUT= %s' % (p_card, args[1])
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock: 
+                    fsock.write(p_card)
                 return
         # Special case for the showerkt value
         if args[0].lower() == 'showerkt':
@@ -2902,7 +2916,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n SHOWERKT= %s' % (p_card, args[1].upper())
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock:
+                    fsock.write(p_card)
                 return
             
 
@@ -3372,7 +3387,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
             
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)       
         else:
             # Here we have to remove all the previous definition of the decay
             #first find the particle
@@ -3383,8 +3397,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             text= open(path).read()
             text = decay_pattern.sub('', text)
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)
-        
+
+        with open(path,'w') as fsock:
+            fsock.write(text) 
+
         
 
     def do_compute_widths(self, line):

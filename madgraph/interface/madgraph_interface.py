@@ -5699,10 +5699,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             # to 
             #DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,/Applications/root_v6.04.08/lib/
             rootsys = os.environ['ROOTSYS']
-            text = open('./Delphes/Makefile').read()
+            text = open(pjoin(MG5DIR, 'Delphes','Makefile')).read()
             text = text.replace('DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS)', 
                          'DELPHES_LIBS = $(shell $(RC) --libs) -lEG $(SYSLIBS) -Wl,-rpath,%s/lib/' % rootsys)
-            open('./Delphes/Makefile','w').write(text)
+            open(pjoin(MG5DIR, 'Delphes','Makefile'),'w').write(text)
             
         # For SysCalc link to lhapdf
         if name == 'SysCalc':
@@ -5804,8 +5804,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
                 misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
-                os.chmod(pjoin(MG5DIR,'td','td'), 0775)
-                self.options['td_path'] = pjoin(MG5DIR,'td')
+            os.chmod(pjoin(MG5DIR,'td','td'), 0775)
+            self.options['td_path'] = pjoin(MG5DIR,'td')
 
             if not misc.which('gs'):
                 logger.warning('''gosthscript not install on your system. This is not required to run MA.
@@ -6995,9 +6995,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         force = '-f' in args
         nojpeg = '-nojpeg' in args
         flaglist = []
-        
-
-            
+                    
         if '--postpone_model' in args:
             flaglist.append('store_model')
         

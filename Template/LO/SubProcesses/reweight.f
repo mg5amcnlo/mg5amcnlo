@@ -485,7 +485,6 @@ C
 C   ARGUMENTS 
 C   
       DOUBLE PRECISION P(0:3,NEXTERNAL)
-
 C   global variables
 C     Present process number
       INTEGER IMIRROR,IPROC
@@ -557,8 +556,8 @@ c
 c     First time, cluster according to this config and store jets
 c     (following times, only accept configurations if the same partons
 c      are flagged as jets)
+      chclusold=chcluster
       if(njetstore(iconfig).eq.-1)then
-         chclusold=chcluster
          chcluster=.true.
       endif
  100  clustered = cluster(p(0,1))
@@ -844,7 +843,7 @@ c               if (iqjetstore(njets,iconfig).ne.i) fail=.true.
      $           write(*,*) 'Bad clustering, jets fail. Reclustering ',
      $           iconfig
             chcluster=.true.
-c            goto 100 ! not
+            goto 100
          endif
       endif
       
@@ -1214,10 +1213,13 @@ c     Store pdf information for systematics studies (initial)
       endif
 
 
-      if(.not.setclscales(p)) then ! recluster to have the correct iqjets
-        write(*,*) "Fail to cluster the events from the rewgt function"
-        stop
+      if(.not.setclscales(p)) then ! assign the correct id information.
+         write(*,*) "Fail to cluster the events from the rewgt function"
+         stop 1
+c        rewgt = 0d0
+        return
       endif
+
 
 c     Store pdf information for systematics studies (initial)
 c     need to be done after      setclscales since that one clean the syscalc value

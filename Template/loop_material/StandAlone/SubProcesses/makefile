@@ -25,7 +25,7 @@ SHELL = /bin/bash
 OLP    = OLP
 STABCHECKDRIVER = StabilityCheckDriver
 CHECK_SA_BORN_SPLITORDERS = check_sa_born_splitOrders
-LINKLIBS =  $(LDFLAGS) -L$(LIBDIR) -ldhelas -lmodel $(LINK_LOOP_LIBS)
+LINKLIBS = -L$(LIBDIR) -ldhelas -lmodel $(LINK_LOOP_LIBS) $(LDFLAGS)
 LIBS =  $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libmodel.$(libext) $(LOOP_LIBS)
 
 PROCESS= MadLoopParamReader.o MadLoopCommons.o \

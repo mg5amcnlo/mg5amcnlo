@@ -1957,7 +1957,16 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         else:
             self.set_run_name(args[0], None, 'parton', True)
             args.pop(0)
-            
+
+        if self.proc_characteristics['loop_induced'] and self.options['run_mode']==0:
+            # Also the single core mode is not supported for loop-induced.
+            # We therefore emulate it with multi-core mode with one core
+            logger.warning(
+"""Single-core mode not supported for loop-induced processes.
+Beware that MG5aMC now changes your runtime options to a multi-core mode with only one active core.""")
+            self.do_set('run_mode 2')
+            self.do_set('nb_core 1')
+
         if self.run_card['gridpack'] in self.true:        
             # Running gridpack warmup
             gridpack_opts=[('accuracy', 0.01),
@@ -2891,14 +2900,13 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Combining Events', level='parton')
 
         
-        if not hasattr(self, "refine_mode") or self.refine_mode == "old":
+        if False: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
                 pass
 
-            tmpcluster = cluster.MultiCore(nb_core=1)
-            tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+            cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
                                        args=[self.run_name],
                                        cwd=pjoin(self.me_dir,'SubProcesses'),
                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
@@ -2949,7 +2957,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                     out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
                     
-        elif self.refine_mode == "new":
+        elif True:#self.refine_mode == "new":
             # Define The Banner
             tag = self.run_card['run_tag']
             # Update the banner with the pythia card
@@ -2966,9 +2974,12 @@ Beware that this can be dangerous for local multicore runs.""")
                                     '%s_%s_banner.txt' % (self.run_name, tag)))
             
             
+            get_wgt = lambda event: event.wgt            
             AllEvent = lhe_parser.MultiEventFile()
             AllEvent.banner = self.banner
             
+            partials = 0 # if too many file make some partial unweighting
+            sum_xsec, sum_xerru, sum_axsec = 0,[],0
             for Gdir,mfactor in self.get_Gdir():
                 if os.path.exists(pjoin(Gdir, 'events.lhe')):
                     result = sum_html.OneResult('')
@@ -2978,11 +2989,27 @@ Beware that this can be dangerous for local multicore runs.""")
                                  result.get('xerru'),
                                  result.get('axsec')
                                  )
-                    
-            get_wgt = lambda event: event.wgt
+                    sum_xsec += result.get('xsec')
+                    sum_xerru.append(result.get('xerru'))
+                    sum_axsec += result.get('axsec')
+                    if len(AllEvent) >= 80: #perform a partial unweighting
+                        AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                              get_wgt, log_level=logging.DEBUG)
+                        AllEvent = lhe_parser.MultiEventFile()
+                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                     sum_xsec,
+                                     math.sqrt(sum(x**2 for x in sum_xerru)),
+                                     sum_axsec) 
+                        partials +=1
+                        
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                               log_level=logging.DEBUG)
+            
+            if partials:
+                misc.sprint("used partials")
+                for i in range(partials):
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
             
             self.results.add_detail('nb_event', nb_event)
         
@@ -3016,9 +3043,9 @@ Beware that this can be dangerous for local multicore runs.""")
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
         # 1) Store overall process information
-        input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
-        output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
-        files.cp(input, output) 
+        #input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
+        #output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
+        #files.cp(input, output) 
 
 
         # 2) Treat the files present in the P directory
@@ -3039,14 +3066,14 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(G_path, 'events.lhe'))
                     except Exception:
                         continue
-                    try:
-                        # Store results.dat
-                        if os.path.exists(pjoin(G_path, 'results.dat')):
-                            input = pjoin(G_path, 'results.dat')
-                            output = pjoin(G_path, '%s_results.dat' % run)
-                            files.cp(input, output) 
-                    except Exception:
-                        continue                    
+                    #try:
+                    #    # Store results.dat
+                    #    if os.path.exists(pjoin(G_path, 'results.dat')):
+                    #        input = pjoin(G_path, 'results.dat')
+                    #        output = pjoin(G_path, '%s_results.dat' % run)
+                    #        files.cp(input, output) 
+                    #except Exception:
+                    #    continue                    
                     # Store log
                     try:
                         if os.path.exists(pjoin(G_path, 'log.txt')):
@@ -3055,18 +3082,18 @@ Beware that this can be dangerous for local multicore runs.""")
                             files.mv(input, output) 
                     except Exception:
                         continue
-                    try:   
-                        # Grid
-                        for name in ['ftn26']:
-                            if os.path.exists(pjoin(G_path, name)):
-                                if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
-                                    os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
-                                input = pjoin(G_path, name)
-                                output = pjoin(G_path, '%s_%s' % (run,name))
-                                files.mv(input, output)
-                                misc.gzip(pjoin(G_path, output), error=None) 
-                    except Exception:
-                        continue
+                    #try:   
+                    #    # Grid
+                    #    for name in ['ftn26']:
+                    #        if os.path.exists(pjoin(G_path, name)):
+                    #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                    #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                    #            input = pjoin(G_path, name)
+                    #            output = pjoin(G_path, '%s_%s' % (run,name))
+                    #            files.mv(input, output)
+                    #            misc.gzip(pjoin(G_path, output), error=None) 
+                    #except Exception:
+                    #    continue
                     # Delete ftn25 to ensure reproducible runs
                     if os.path.exists(pjoin(G_path, 'ftn25')):
                         os.remove(pjoin(G_path, 'ftn25'))
@@ -4171,18 +4198,28 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.run_card['use_syst'] not in self.true:
             return
         
-        logger.info('running syscalc on mode %s' % mode)        
+        scdir = self.options['syscalc_path']
+        if not scdir or not os.path.exists(scdir):
+            return
+        logger.info('running syscalc on mode %s' % mode)    
+    
 
         # Check that all pdfset are correctly installed
         lhaid = [self.run_card.get_lhapdf_id()]
         sys_pdf = self.run_card['sys_pdf'].split('&&')
         lhaid += [l.split()[0] for l in sys_pdf]
-        pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        try:
+            pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('Systematic computation requires lhapdf to run. Bypass SysCalc')
+            return
+        
         # Copy all the relevant PDF sets
         [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
         
         
-        scdir = self.options['syscalc_path']
+        
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
@@ -4201,9 +4238,11 @@ Beware that this can be dangerous for local multicore runs.""")
             self.run_card['sys_scalecorrelation'] = -1
         open(card,'w').write(template % self.run_card)
         
-        if not scdir or \
-            not os.path.exists(card):
+        if not os.path.exists(card):
             return False
+
+        
+        
         event_dir = pjoin(self.me_dir, 'Events')
 
         if not event_path:
@@ -5035,7 +5074,7 @@ class MadLoopInitializer(object):
         if MG_options:
             mcore = cluster.MultiCore(**MG_options)
         else:
-            mcore = cluster.MultiCore(nb_core=1)
+            mcore = cluster.onecore
         def run_initialization_wrapper(run_dir, infos, attempts):
                 if attempts is None:
                     n_PS = MadLoopInitializer.run_initialization(
