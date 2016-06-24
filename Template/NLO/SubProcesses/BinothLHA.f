@@ -174,11 +174,12 @@ c MadLoop initialization PS points.
          PoleDiff(1)=dabs(single - madfks_single)
          PoleDiff(2)=dabs(double - madfks_double)
          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
-            cpol = .not. (((PoleDiff(1)+PoleDiff(2))/
+            cpol = .not. ((((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           tolerance*10d0)
+     $           tolerance*10d0).or.(mod(ret_code,10).eq.7))
          else
-            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
+            cpol = .not.((PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0).or.
+     $                   (mod(ret_code,10).eq.7))
          endif
          if (tolerance.lt.0.0d0) then
             cpol = .false.
