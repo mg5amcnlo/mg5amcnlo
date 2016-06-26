@@ -20,6 +20,7 @@ import lhe_parser
 import banner as banner_mod
 import itertools
 import misc
+import math
 import re
 import time
 
@@ -32,7 +33,7 @@ class Systematics(object):
                  alps=[1],
                  pdf='errorset', #[(id, subset)]
                  dyn=[-1],
-                 correlated=[('mur', 'muf')],
+                 together=[('mur', 'muf')],
                  lhapdf_config=misc.which('lhapdf-config')
                  ):
         
@@ -51,7 +52,11 @@ class Systematics(object):
         self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()             
-            
+    
+        if isinstance(self.banner.run_card, banner_mod.RunCardLO):
+            self.is_lo = True
+        else:
+            self.is_lo = False
 
         # MUR/MUF/ALPS PARSING
         if isinstance(mur, str):
@@ -65,15 +70,15 @@ class Systematics(object):
             alps = alps.split(',')
         self.alps=[float(i) for i in alps]
 
-        # DYNAMICAL SCALE PARSING + CORRELATED
+        # DYNAMICAL SCALE PARSING + together
         if isinstance(dyn, str):
             dyn = dyn.split(',')
         self.dyn=[int(i) for i in dyn]
  
-        if isinstance(correlated, str):
-            self.correlated = correlated.split(',')
+        if isinstance(together, str):
+            self.together = together.split(',')
         else:
-            self.correlated = correlated
+            self.together = together
             
         # START/STOP EVENT                                   
         self.start_event=int(start_event)
@@ -93,14 +98,14 @@ class Systematics(object):
             self.pdf = []
             for data in pdf:
                 if data == 'errorset':
-                    data = '%s*' % self.orig_pdf
+                    data = '%s@*' % self.orig_pdf
                 if data == 'central':
                     data = '%s' % self.orig_pdf
                 if data.isdigit():
                     self.pdf.append(lhapdf.mkPDF(int(data)))
-                elif '*' in data:
-                    name, arg = data.rsplit('*',1)
-                    if not(arg):
+                elif '@' in data:
+                    name, arg = data.rsplit('@',1)
+                    if not(arg) or arg =='*':
                         if name.isdigit():
                             pdfset = lhapdf.mkPDF(int(name)).set()
                         else:
@@ -122,8 +127,7 @@ class Systematics(object):
                 break
         else:
             self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
-             
-        
+                    
         # create all the function that need to be called
         self.get_all_fct() # define self.fcts and self.args
 
@@ -148,7 +152,17 @@ class Systematics(object):
             if (i-self.start_event)>=0 and (i-self.start_event) % 2500 ==0:
                 print '# currently at event', i, 'run in %.2g s' % (time.time()-start_time)
             
-            wgts = [self.get_lo_wgt(event, *arg) for arg in self.args]
+            self.new_event() #re-init the caching of alphas/pdf
+            if self.is_lo:
+                wgts = [self.get_lo_wgt(event, *arg) for arg in self.args]
+            else:
+                wgts = [self.get_nlo_wgt(event, *arg) for arg in self.args]
+            
+            if wgts[0] == 0:
+                print wgts
+                print event
+                raise Exception
+            
             wgt = [event.wgt*wgts[i]/wgts[0] for i in range(1,len(wgts))]
             all_cross = [(all_cross[i] + event.wgt*wgts[i]/wgts[0]) for i in range(len(wgts))]
             
@@ -340,7 +354,7 @@ class Systematics(object):
         
         if 'initrwgt' in self.banner:
             pattern = re.compile('<weight id=\'([_\w]+)\'', re.S+re.I+re.M)
-            return  max([int(wid) for wid in  pattern.findall(self.baner['initrwgt'])])+1
+            return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt'])])+1
         else:
             return 1
         
@@ -354,12 +368,12 @@ class Systematics(object):
         #all_args.append(default)
         pos = {'mur':0, 'muf':1, 'alps':2, 'dyn':3, 'pdf':4}
         done = set()
-        for one_block in self.correlated:
+        for one_block in self.together:
             for name in one_block:
                 done.add(name)
-            for correlated in itertools.product(*[getattr(self,name) for name in one_block]):
+            for together in itertools.product(*[getattr(self,name) for name in one_block]):
                 new_args = list(default)
-                for name,value in zip(one_block, correlated):
+                for name,value in zip(one_block, together):
                     new_args[pos[name]] = value
                 all_args.append(new_args)
         for name in pos:
@@ -374,7 +388,36 @@ class Systematics(object):
         
         print "#Will Compute %s weights per event." % (len(self.args)-1)
         return
+    
+    def new_event(self):
+        self.alphas = {}
+        self.pdf = {}
         
+    def get_alphas(self, pdf, scale):
+        
+        lhapdfid = pdf.lhapdfID - pdf.memberID
+        try:
+            return self.alphas[(lhapdfid, scale)]
+        except:
+            alphas = pdf.alphasQ(scale)
+            self.alphas[(lhapdfid, scale)] = alphas
+            return alphas
+            
+    def get_pdf(self, pdf, pdg, x, scale):
+        
+        lhapdfid =  pdf.lhapdfID 
+        try:
+            return self.pdf[(lhapdfid, pdg, x, scale)]
+        except:
+            f = pdf.xfxQ(pdg, x, scale)
+            if f==0 and pdf.memberID ==0:
+                print "# central gives 0 recompute it from error set"
+                pdfset = pdf.set()
+                allnumber= [self.get_pdf(p, pdg, x, scale) for p in pdfset.mkPDFs()]
+                f = pdfset.uncertainty(allnumber).central
+            self.pdf[(lhapdfid, pdg, x, scale)] = f
+            return f
+                
     def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
         """ 
         pdf is a lhapdf object!"""
@@ -403,24 +446,86 @@ class Systematics(object):
         
             
         # MUR part
-        wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
+        wgt = self.get_alphas(pdf, Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
-        wgt *= pdf.xfxQ2(loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1)
-        wgt *= pdf.xfxQ2(loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2)
+        wgt *= self.get_pdf(pdf, loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1) 
+        wgt *= self.get_pdf(pdf, loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2) 
         
         # ALS part
         for i in range(loinfo['n_pdfrw1']-1):
             scale = min(Dalps*loinfo['pdf_q1'][i], Dmuf*muf1)
-            wgt *= pdf.xfxQ2(loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale)
-            wgt /= pdf.xfxQ2(loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale)
+            wgt *= self.get_pdf(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale)
+            wgt /= self.get_pdf(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale)
 
         for i in range(loinfo['n_pdfrw2']-1):
             scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf1)
-            wgt *= pdf.xfxQ2(loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale)
-            wgt /= pdf.xfxQ2(loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale)
-
+            wgt *= self.get_pdf(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale)
+            wgt /= self.get_pdf(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale)            
             
         return wgt
+
+    def get_nlo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
+        """return the new weight for NLO event --with weight information-- """
+        
+        wgt = 0 
+        print '***********'
+        nloinfo = event.parse_nlo_weight()
+        for cevent in nloinfo.cevents:
+            if dyn == 1: 
+                mur2 = cevent.get_pt_scale(1.)**2
+            elif dyn == 2:
+                mur2 = cevent.get_ht_scale(1.)**2
+            elif dyn == 3:
+                mur2 = cevent.get_ht_scale(0.5)**2
+            elif dyn == 4:
+                mur2 = cevent.get_sqrts_scale(1.)**2
+            else:
+                mur2 = 0
+            muf2 = mur2
+            
+            for onewgt in cevent.wgts:
+                if dyn == -1:
+                    mur2 = onewgt.scales2[1]
+                    muf2 = onewgt.scales2[2]
+                Q2 = onewgt.scales2[0] # Ellis-Sexton scale
+                tmp = onewgt.pwgt[0]
+                tmp +=  onewgt.pwgt[1] * math.log(Dmur**2 * mur2/ Q2)
+                tmp += onewgt.pwgt[2] * math.log(Dmuf**2 * muf2/ Q2)
+                
+                tmp *= pdf.xfxQ2(onewgt.pdgs[0], onewgt.bjks[0],
+                                      Dmuf**2 * muf2)
+                
+                #if pdf.xfxQ2(onewgt.pdgs[0], onewgt.bjks[0],
+                #                      Dmuf**2 * muf2)==0:
+                #    print 'tmp pdf1 is', tmp, onewgt.pdgs[0], onewgt.bjks[0],Dmuf**2 * muf2
+                #    print [ p.xfxQ2(onewgt.pdgs[0], onewgt.bjks[0],
+                #                      Dmuf**2 * muf2) for p in pdf.set().mkPDFs()]
+                             
+                tmp *= pdf.xfxQ2(onewgt.pdgs[1], onewgt.bjks[1],
+                                      Dmuf**2 * muf2)
+                for i in range(2):
+                    if pdf.xfxQ2(onewgt.pdgs[i], onewgt.bjks[i], Dmuf**2 * muf2)==0:
+                        print [onewgt.pdgs[i], onewgt.bjks[i], Dmuf**2 * muf2], 
+                        for j in range(-6,7):
+                            print (j,pdf.xfxQ2(j, onewgt.bjks[i], Dmuf**2 * muf2)),
+                        print (21,pdf.xfxQ2(21, onewgt.bjks[i], Dmuf**2 * muf2))
+                    
+                #    print 'tmp pdf2 is', tmp, onewgt.pdgs[1], onewgt.bjks[1],Dmuf**2 * muf2
+                #    print pdf.lhapdfID, pdf.inRangeX(onewgt.bjks[1]), pdf.inRangeQ2(Dmuf**2 * muf2), pdf.q2Max
+                #    print [ p.xfxQ2(onewgt.pdgs[1], onewgt.bjks[1],
+                #                      Dmuf**2 * muf2) for p in pdf.set().mkPDFs()]
+                                      
+
+                tmp *= self.get_alphas(pdf, Dmur*math.sqrt(mur2))**onewgt.qcdpower
+                
+                wgt += tmp
+                
+        if wgt ==0 and Dmur==Dmuf==Dalps==1 and dyn==-1 and pdf == self.orig_pdf:
+            print event
+            #raise Exception
+        return wgt
+                            
+            
         
 
 if __name__ == "__main__":
@@ -432,7 +537,7 @@ if __name__ == "__main__":
             key,values= arg.split('=')
             key = key.replace('-','')
             values = values.split(',')
-            if key == 'correlated':
+            if key == 'together':
                 if key in opts:
                     opts[key].append(tuple(values))
                 else:

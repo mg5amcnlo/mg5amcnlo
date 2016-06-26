@@ -526,43 +526,7 @@ class EventFile(object):
             current.write('</LesHouchesEvent>\n')
             current.close()   
         return nb_file +1
-    
-    def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
-        
-        first=True
-        def add_to_Hwu(event):
-            """function to update the HwU on the flight"""
 
-            value = fct(event)
-            
-            # initialise the curve for the first call
-            if first:
-                # register the variables
-                if isinstance(value, dict):
-                    hwu.add_line(value.keys())
-                else:
-                    hwu.add_line(name)
-                    if keep_wgt is True:
-                        hwu.add_line(['%s_%s' % (name, key)
-                                                for key in event.reweight_data])
-                first = False
-            # Fill the histograms
-            if isinstance(value, dict):
-                hwu.addEvent(value)
-            else:
-                hwu.addEvent({name:value})
-                if keep_wgt:
-                    event.parse_reweight()
-                    if keep_wgt is True:
-                        data = dict(('%s_%s' % (name, key),value)
-                                                for key in event.reweight_data)
-                        hwu.addEvent(data)
-    
-        
-        
-        self.apply_fct_on_event(add_to_Hwu, no_output=True)
-        return hwu
-    
     def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
         
         first=True
@@ -1145,6 +1109,7 @@ class Event(list):
         
             text = self.tag[start+8:stop]
             self.nloweight = NLO_PARTIALWEIGHT(text, self)
+        return self.nloweight
         
     def parse_lo_weight(self):
         """ """

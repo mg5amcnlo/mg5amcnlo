@@ -1650,4 +1650,5 @@ def import_python_lhapdf(lhapdfconfig):
         python_lhapdf = lhapdf
     else:
         python_lhapdf = None
+    python_lhapdf.setVerbosity(0)
     return python_lhapdf
