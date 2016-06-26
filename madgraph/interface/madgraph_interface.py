@@ -6762,6 +6762,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     able_to_mod = False
                     if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
+
+            if self.options['gauge'] == args[1]:
+                return
+            
+            
             self.options[args[0]] = args[1]
 
             if able_to_mod and log and args[0] == 'gauge' and \
@@ -6770,6 +6775,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                   not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
                 logger.warning('You will only be able to do tree level'+\
                                    ' and QCD corrections in the unitary gauge.')
+
+
 
             #re-init all variable
             model_name = self._curr_model.get('modelpath+restriction')

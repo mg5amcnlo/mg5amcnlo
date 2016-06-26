@@ -212,7 +212,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.load_model(model_name, mg_names, complex_mass)
         else:
             raise self.InvalidCmd('Only UFO model can be loaded in MadSpin.')
-        
         # check particle which can be decayed:
         self.final_state = set()
         final_model = False
