@@ -2979,7 +2979,10 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         # In this case, we need to sum up all amplitudes that have
         # identical topologies, as given by the config_map (which
         # gives the topology/config for each of the diagrams
-        diagrams = matrix_element.get('diagrams')
+        if isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement):
+            diagrams = matrix_element.get_loop_diagrams()            
+        else:
+            diagrams = matrix_element.get('diagrams')
                 
         # Note that we need to use AMP2 number corresponding to the first 
         # diagram number used for that AMP2.
@@ -2992,7 +2995,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         
         # Combine the diagrams with identical topologies
         config_to_diag_dict = {}
-        for idiag, diag in enumerate(matrix_element.get('diagrams')):
+        for idiag, diag in enumerate(diagrams):
             try:
                 config_to_diag_dict[config_map[idiag]].append(idiag)
             except KeyError:
