@@ -259,7 +259,9 @@ class TestCmdShell2(unittest.TestCase,
         self.do('generate e+ e- > e+ e-')
 #        self.do('load processes %s' % self.join_path(_pickle_path,'e+e-_e+e-.pkl'))
         self.do('output %s -nojpeg' % self.out_dir)
+        
         self.assertTrue(os.path.exists(self.out_dir))
+        self.assertTrue(os.path.exists(pjoin(self.out_dir, 'Cards', 'me5_configuration.txt')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'SubProcesses', 'P0_epem_epem')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
@@ -303,9 +305,10 @@ class TestCmdShell2(unittest.TestCase,
                         stdout=devnull, stderr=devnull, 
                         cwd=os.path.join(self.out_dir, 'temp'))
 
+        self.assertTrue(os.path.exists(pjoin(self.out_dir,'temp', 'Cards', 'me5_configuration.txt')))
         # Check that the Source directory compiles
         status = subprocess.call(['make'],
-                                 stdout=devnull, stderr=devnull, 
+                                stdout=devnull, stderr=devnull, 
                                  cwd=os.path.join(self.out_dir, 'temp', 'Source'))
         self.assertEqual(status, 0)
         self.assertTrue(os.path.exists(os.path.join(self.out_dir, 'temp',

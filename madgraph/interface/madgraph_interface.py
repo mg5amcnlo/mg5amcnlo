@@ -1465,7 +1465,12 @@ This will take effect only in a NEW terminal
             # check for PLUGIN format
             for plug in os.listdir(pjoin(MG5DIR, 'PLUGIN')):
                 if os.path.exists(pjoin(MG5DIR, 'PLUGIN', plug, '__init__.py')):
-                    __import__('PLUGIN.%s' % plug)
+                    try:
+                        __import__('PLUGIN.%s' % plug)
+                    except Exception, error:
+                        logger.warning("error detected in plugin: %s.", plug)
+                        logger.warning("%s", error)
+                        continue
                     plugin = sys.modules['PLUGIN.%s' % plug]                
                     if hasattr(plugin, 'new_output'):
                         if not misc.is_plugin_supported(plugin):
@@ -7337,7 +7342,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # grouping mode
         elif isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList) and\
             self._curr_exporter.grouped_mode:
-            misc.sprint(isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList), type(self._curr_matrix_elements))        
             modify, self._curr_matrix_elements = self._curr_exporter.modify_grouping(self._curr_matrix_elements)
             if modify:
                 matrix_elements = self._curr_matrix_elements.get_matrix_elements()
@@ -7431,11 +7435,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if online:
             flaglist.append('online')
             
-        # Dedicated finalize function.
-        self._curr_exporter.finalize(self._curr_matrix_elements,
-                                    self.history,
-                                    self.options,
-                                    flaglist)
 
         if self._export_format in ['NLO']:
             ## write fj_lhapdf_opts file            
@@ -7455,6 +7454,13 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             filename = os.path.join(self._export_dir, 'Cards', 'me5_configuration.txt')
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False,
                          to_keep={'mg5_path':MG5DIR})
+
+        # Dedicated finalize function.
+        self._curr_exporter.finalize(self._curr_matrix_elements,
+                                    self.history,
+                                    self.options,
+                                    flaglist)
+
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')

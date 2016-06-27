@@ -1137,7 +1137,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 logger.info('Use %s value' % default, '$MG:color:BLACK')
                 return str(default)
             
-        
         line = line.replace('\n','').strip()
         if '#' in line: 
             line = line.split('#')[0]
@@ -1887,6 +1886,7 @@ class CmdShell(Cmd):
 class SmartQuestion(BasicCmd):
     """ a class for answering a question with the path autocompletion"""
 
+    allowpath = False
     def preloop(self):
         """Initializing before starting the main loop"""
         self.prompt = '>'
@@ -1988,7 +1988,8 @@ class SmartQuestion(BasicCmd):
             print self.question
             
         if self.mother_interface:
-            answer = self.mother_interface.check_answer_in_input_file(self, 'EOF')
+            answer = self.mother_interface.check_answer_in_input_file(self, 'EOF', 
+                                                                path=self.allowpath)
             if answer:
                 stop = self.default(answer)
                 self.postcmd(stop, answer)
@@ -2055,6 +2056,7 @@ class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
     
     completion_prefix=''
+    allowpath=True
 
     def completenames(self, text, line, begidx, endidx, formatting=True):
         prev_timer = signal.alarm(0) # avoid timer if any

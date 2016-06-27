@@ -93,7 +93,7 @@ class OneProcessExporterCPP(object):
             self.matrix_elements = matrix_elements
         else:
             raise base_objects.PhysicsObject.PhysicsObjectError,\
-                  "Wrong object type for matrix_elements"
+                  "Wrong object type for matrix_elements: %s" % type(matrix_elements)
 
         if not self.matrix_elements:
             raise MadGraph5Error("No matrix elements to export")
@@ -1708,8 +1708,9 @@ class ProcessExporterCPP(VirtualExporter):
         """Generate the Pxxxxx directory for a subprocess in C++ standalone,
         including the necessary .h and .cc files"""
 
+        
         process_exporter_cpp = self.oneprocessclass(matrix_element,cpp_helas_call_writer)
- 
+
         
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = pjoin(self.dir_path, 'SubProcesses', "P%d_%s" % (process_exporter_cpp.process_number, 
