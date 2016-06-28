@@ -2992,16 +2992,18 @@ Beware that this can be dangerous for local multicore runs.""")
                     sum_xsec += result.get('xsec')
                     sum_xerru.append(result.get('xerru'))
                     sum_axsec += result.get('axsec')
+                    
                     if len(AllEvent) >= 80: #perform a partial unweighting
                         AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                              get_wgt, log_level=logging.DEBUG)
+                              get_wgt, log_level=logging.DEBUG, write_init=True)
                         AllEvent = lhe_parser.MultiEventFile()
+                        AllEvent.banner = self.banner
                         AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
                                      sum_xsec,
                                      math.sqrt(sum(x**2 for x in sum_xerru)),
                                      sum_axsec) 
                         partials +=1
-                        
+                       
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                               log_level=logging.DEBUG)

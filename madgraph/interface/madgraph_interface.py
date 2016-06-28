@@ -1893,7 +1893,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) > 0 and args[-1] != '>' and n_part_entered > 0:
             syntax.append('>')
         if '>' in args and args.index('>') < len(args) - 1:
-            couplings.extend(sum([[c+"=",c+'^2'] for c in \
+            couplings.extend(sum([[c+"<=", c+"==", c+">",c+'^2<=',c+'^2==',c+'^2>' ] for c in \
                                               self._couplings+['WEIGHTED']],[]))
             syntax.extend(['@','$','/','>',','])
             if '[' not in line and ',' not in line and len(pert_couplings_allowed)>0:
@@ -2454,7 +2454,10 @@ class CompleteForCmd(cmd.CompleteCmd):
             all_name = self.find_restrict_card(path, no_restrict=False)
             all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=pjoin(MG5DIR,'models'))
-
+            if os.environ['PYTHONPATH']:
+                for modeldir in os.environ['PYTHONPATH'].split(':'):
+                    all_name += self.find_restrict_card(path, no_restrict=False,
+                                        base_dir=modeldir)
             # select the possibility according to the current line
             all_name = [name+' ' for name in  all_name if name.startswith(text)
                                                        and name.strip() != text]
@@ -2527,6 +2530,13 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                 pjoin(MG5DIR,'models'),
                                                 only_dirs = True) \
                                                 if file_cond(name)]
+                if mode == 'model' and 'PYTHONPATH' in os.environ:
+                    for modeldir in os.environ['PYTHONPATH'].split(':'):
+                        model_list += [name for name in self.path_completion(text,
+                                       modeldir, only_dirs=True)
+                                       if os.path.exists(pjoin(modeldir,name, 'particles.py'))]
+                    
+                    
 
                 if mode == 'model_v4':
                     completion_categories['model name'] = model_list
@@ -2564,8 +2574,6 @@ class CompleteForCmd(cmd.CompleteCmd):
         else:
             #this means this function is called as a subgroup of another completion
             return completion_categories
-
-
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
         """find the restriction file associate to a given model"""
 
@@ -6786,6 +6794,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     able_to_mod = False
                     if log: logger.warning('Note that Feynman gauge is not allowed for your current model %s' \
                                            % self._curr_model.get('name'))
+
+            if self.options['gauge'] == args[1]:
+                return
+            
+            
             self.options[args[0]] = args[1]
 
             if able_to_mod and log and args[0] == 'gauge' and \
@@ -6794,6 +6807,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                   not self._curr_model['perturbation_couplings'] in [[],['QCD']]:
                 logger.warning('You will only be able to do tree level'+\
                                    ' and QCD corrections in the unitary gauge.')
+
+
 
             #re-init all variable
             model_name = self._curr_model.get('modelpath+restriction')

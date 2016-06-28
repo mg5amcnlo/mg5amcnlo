@@ -2652,13 +2652,12 @@ class decay_all_events(object):
                       if re.search('^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
-        modelpath = self.model.get('modelpath')
-        if os.path.basename(modelpath) != mgcmd._curr_model['name']:
-            name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
-            if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
-                modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
+        modelpath = self.model.get('modelpath+restriction')
+
+        commandline="import model %s" % modelpath
+        if not self.model.mg5_name:
+            commandline += ' --modelname'
             
-        commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
         # Handle the multiparticle of the banner        
         #for name, definition in self.mscmd.multiparticles:
