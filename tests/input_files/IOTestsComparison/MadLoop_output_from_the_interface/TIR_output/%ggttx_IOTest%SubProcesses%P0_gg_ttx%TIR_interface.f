@@ -53,7 +53,8 @@ C      used so as to force the reset of the TIR filter.
       INTEGER LAST_LIB_USED
       DATA LAST_LIB_USED/-1/
 
-      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3)
+      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3),TIRCOEFSERRORS(0:LOOPMAXC
+     $OEFS-1,3)
       COMPLEX*16 PJCOEFS(0:LOOPMAXCOEFS-1,3)
 C     
 C     EXTERNAL FUNCTIONS
@@ -183,7 +184,18 @@ C     CONVERT TO MADLOOP CONVENTION
       CASE(7)
 C     COLLIER
       CALL ML5_0_COLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L
-     $ ,TIRCOEFS)
+     $ ,TIRCOEFS,TIRCOEFSERRORS)
+C     Shift the TIR coefficients by the corresponding COLLIER error if
+C      in CTMODE 2.
+      IF (COLLIERUSEINTERNALSTABILITYTEST.AND.CTMODE.EQ.2) THEN
+C       We add here the numerical inaccuracies linearly to be
+C        conservative 
+        DO I=1,3
+          DO J=0,NLOOPCOEFS-1
+            TIRCOEFS(J,I)=TIRCOEFS(J,I)+TIRCOEFSERRORS(J,I)
+          ENDDO
+        ENDDO
+      ENDIF
       END SELECT
       DO I=1,3
         RES(I)=(0.0D0,0.0D0)
