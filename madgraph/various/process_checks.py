@@ -609,10 +609,9 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
 
             MLoptions.update(self.tir_dir)
             
-            FortranExporter = exporter_class(\
-                self.mg_root, export_dir, MLoptions)
+            FortranExporter = exporter_class(export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
-            FortranExporter.copy_template(modelname=model)
+            FortranExporter.copy_template(model)
             FortranExporter.generate_subprocess_directory(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
@@ -1149,9 +1148,9 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             MLoptions.update(self.tir_dir)
 
             start=time.time()
-            FortranExporter = exporter_class(self.mg_root, export_dir, MLoptions)
+            FortranExporter = exporter_class(export_dir, MLoptions)
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
-            FortranExporter.copy_template(modelname=model)
+            FortranExporter.copy_template(model)
             FortranExporter.generate_subprocess_directory(matrix_element, FortranModel)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
