@@ -16,6 +16,7 @@ if '__main__' == __name__:
 import misc
 import logging
 import gzip
+import banner as banner_mod
 logger = logging.getLogger("madgraph.lhe_parser")
 
 class Particle(object):
@@ -696,14 +697,32 @@ class MultiEventFile(EventFile):
         grouped_error = {}
         for i,ff in enumerate(self.files):
             filename = ff.name
-            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
-            group = Pdir.split("_")[0][1:]
-            if group in grouped_cross:
-                grouped_cross[group] += self.allcross[i]
-                grouped_error[group] += self.error[i]**2 
+            from_init = False
+            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')]
+            if Pdir:
+                Pdir = Pdir[-1]
+                group = Pdir.split("_")[0][1:]
+                if not group.isdigit():
+                    from_init = True  
             else:
-                grouped_cross[group] = self.allcross[i]
-                grouped_error[group] = self.error[i]**2                
+                from_init = True
+
+            if not from_init:
+                if group in grouped_cross:
+                    grouped_cross[group] += self.allcross[i]
+                    grouped_error[group] += self.error[i]**2 
+                else:
+                    grouped_cross[group] = self.allcross[i]
+                    grouped_error[group] = self.error[i]**2
+            else:
+                ban = banner_mod.Banner(ff.banner)
+                for line in  ban['init']:
+                    splitline = line.split()
+                    if len(splitline)==4:
+                        cross, error, wgt, group = splitline
+                        grouped_cross[int(group)] += cross
+                        grouped_error[int(group)] += error**2                        
+                
                 
         nb_group = len(grouped_cross)
         
@@ -856,6 +875,9 @@ class MultiEventFile(EventFile):
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt
+        elif 'write_init' in opts and opts['write_init']:
+            self.define_init_banner(0)
+            del opts['write_init']
 
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
