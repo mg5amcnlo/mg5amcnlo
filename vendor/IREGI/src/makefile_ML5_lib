@@ -11,7 +11,7 @@ olomod= avh_olo_foriregi.mod avh_olo_foriregi_dp_box.mod    avh_olo_foriregi_dp_
         avh_olo_foriregi_dp.mod        avh_olo_foriregi_dp_boxc.mod   avh_olo_foriregi_dp_prec.mod   avh_olo_foriregi_version.mod \
         avh_olo_foriregi_dp_arrays.mod avh_olo_foriregi_dp_bub.mod    avh_olo_foriregi_dp_print.mod \
         avh_olo_foriregi_dp_auxfun.mod avh_olo_foriregi_dp_dilog.mod  avh_olo_foriregi_dp_qmplx.mod \
-         avh_olo_foriregi_dp_bnlog.mod  avh_olo_foriregi_dp_kinds.mod  avh_olo_foriregi_dp_tri.mod
+        avh_olo_foriregi_dp_bnlog.mod  avh_olo_foriregi_dp_kinds.mod  avh_olo_foriregi_dp_tri.mod
 mod= global.mod funlib.mod linear_algebra.mod kinematics.mod matrices.mod matrix_base.mod cmatrix_base.mod mis_warp.mod special_fun.mod pave_reduce.mod cpave_reduce.mod si_reduce.mod csi_reduce.mod ti_reduce.mod cti_reduce.mod gti_reduce.mod $(olomod)
 libiregi.a: make_ql $(obj) $(mod)
 	@rm -f libiregi.a
