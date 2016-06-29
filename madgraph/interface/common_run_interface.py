@@ -1691,14 +1691,20 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if MADEVENT and ('mg5_path' not in self.options or not self.options['mg5_path']):
                     raise self.InvalidCmd('%s not native cluster type and not MG5aMC found to check for plugin')
                 elif MADEVENT:
-                    MG5DIR = self.options['mg5_path']
-                    if MG5DIR not in sys.path:
-                        sys.path.append(MG5DIR)
+                    mg5dir = self.options['mg5_path']
+                    if mg5dir not in sys.path:
+                        sys.path.append(mg5dir)
+                else:
+                    mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
-                for plug in os.listdir(pjoin(MG5DIR, 'PLUGIN')):
-                    if os.path.exists(pjoin(MG5DIR, 'PLUGIN', plug, '__init__.py')):
-                        __import__('PLUGIN.%s' % plug)
+                for plug in os.listdir(pjoin(mg5dir, 'PLUGIN')):
+                    if os.path.exists(pjoin(mg5dir, 'PLUGIN', plug, '__init__.py')):
+                        try:
+                            __import__('PLUGIN.%s' % plug)
+                        except Exception, error:
+                            logger.critical('plugin directory %s fail to be loaded. Please check it', plug)
+                            continue
                         plugin = sys.modules['PLUGIN.%s' % plug]  
                         if not hasattr(plugin, 'new_cluster'):
                             continue
