@@ -568,6 +568,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         generate_all.run()
                         
         self.branching_ratio = generate_all.branching_ratio
+        self.cross = generate_all.cross
+        self.error = generate_all.error
+        self.efficiency = generate_all.efficiency
         try:
             self.err_branching_ratio = generate_all.err_branching_ratio
         except Exception:

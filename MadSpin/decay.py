@@ -2116,6 +2116,7 @@ class decay_all_events(object):
         # launch the decay and reweighting
         self.mscmd.update_status('MadSpin: Decaying Events')
         efficiency = self.decaying_events(self.inverted_decay_mapping)
+        self.efficiency = efficiency
         if  efficiency != 1 and any(v==-1 for v in self.br_per_id.values()):
             # need to change the banner information [nb_event/cross section]
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)
@@ -3932,7 +3933,8 @@ class decay_all_events(object):
                     mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)
                 self.banner['mggenerationinfo'] = '\n'.join(mg_info)
                 
-                   
+        self.cross = 0
+        self.error = 0
         if 'init' in self.banner and (eff!=1 or not any(v==-1 for v in self.br_per_id.values())):
             new_init =''
             curr_proc = 0
@@ -3950,7 +3952,13 @@ class decay_all_events(object):
                         data[:3] = [ data[i] * self.branching_ratio for i  in range(3)]
                         has_missing=True
                     new_init += ' %.12E %.12E %.12E %i\n' % tuple(data)
+                    cross, error = [float(d) for d in data[:2]]
+                    self.cross += cross
+                    self.error += error**2
+                    
+                    
             self.banner['init'] = new_init
+            self.error = math.sqrt(self.error)
             if has_missing and curr_proc not in [0,1]:
                 logger.warning('''The partial cross section for each subprocess can not be determine. due
     Reason: multiple final state in the same subprocess (and the presence of multiple BR)
