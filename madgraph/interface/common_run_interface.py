@@ -516,7 +516,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madevent = {'automatic_html_opening':True,
                         'notification_center':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
+                         'cluster_queue':None,
                          'cluster_time':None,
                          'cluster_size':100,
                          'cluster_memory':None,
