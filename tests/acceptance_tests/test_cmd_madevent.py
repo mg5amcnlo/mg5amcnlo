@@ -56,7 +56,7 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        debugging = False
+        debugging = True
         if debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
@@ -576,7 +576,7 @@ class TestMEfromfile(unittest.TestCase):
         
         #a=rwa_input('freeze')
         self.check_parton_output(cross=150770.0, error=7.4e+02,target_event=1000)
-        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,target_event=1000)
+        self.check_parton_output('run_01_decayed_1', cross=66344.2066122, error=1.5e+03,target_event=666, delta_event=40)
         #logger.info('\nMS info: the number of events in the html file is not (always) correct after MS\n')
         self.check_parton_output('run_01_decayed_2', cross=100521.52517, error=8e+02,target_event=1000)
         self.check_pythia_output(run_name='run_01_decayed_1')
@@ -660,13 +660,16 @@ class TestMEfromfile(unittest.TestCase):
         result = save_load_object.load_from_file(pjoin(self.run_dir,'HTML/results.pkl'))
         return result[run_name]
 
-    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99):
+    def check_parton_output(self, run_name='run_01', target_event=100, cross=0, error=9e99, delta_event=0):
         """Check that parton output exists and reach the targert for event"""
                 
         # check that the number of event is fine:
         data = self.load_result(run_name)
         if target_event > 0:
-            self.assertEqual(int(data[0]['nb_event']), target_event)
+            if delta_event == 0:
+                self.assertEqual(target_event, int(data[0]['nb_event']))
+            else:
+                self.assertTrue(abs(int(data[0]['nb_event'])-target_event) <= delta_event)
         self.assertTrue('lhe' in data[0].parton)
         
         if cross:
