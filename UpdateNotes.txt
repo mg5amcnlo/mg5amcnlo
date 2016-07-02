@@ -10,6 +10,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
         OM: Fix a bug in MadSpin where the cross-section reported in the <init> block of the LHEF
             was wrongly assigned when multiple process were present in the LHEF and that different Brancing ratio
             were associated to each of those processes.
+	RF: For NLO process generation, fix a problem with turning on PDF reweighting with sets that have only a
+	    single member. Also, allow for reweighting with up to 25 PDF sets (and their error members) for a single run.
         
 
 2.4.2 (10/06/16)

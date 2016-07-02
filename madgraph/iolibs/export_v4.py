@@ -102,9 +102,11 @@ class ProcessExporterFortran(object):
         
         calls = 0
         if isinstance(matrix_elements, group_subprocs.SubProcessGroupList):
+            unique_id=1
             for (group_number, me_group) in enumerate(matrix_elements):
                 calls = calls + self.generate_subprocess_directory_v4(\
-                                          me_group, fortran_model, group_number)
+                    me_group, fortran_model, group_number, unique_id=unique_id)
+                unique_id += len(me_group.get('matrix_elements'))
         else:
             for me_number, me in enumerate(matrix_elements.get_matrix_elements()):
                 calls = calls + self.generate_subprocess_directory_v4(\
@@ -112,7 +114,16 @@ class ProcessExporterFortran(object):
                         
         return calls    
         
-
+    #===========================================================================
+    #  Generate an include file with global quantities about all ME's output.
+    #===========================================================================
+    def write_global_specs(self, matrix_elements):
+        """ Writes the file global_specs.inc which contains general information
+        about *all* the ME's output in this directory."""
+        
+        # Do nothing here, but daughter classes such as LoopOptimizedExporterFortran
+        # overwrites this.
+        pass
 
     #===========================================================================
     #  create the run_card 
@@ -4462,10 +4473,12 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
     #===========================================================================
     def generate_subprocess_directory_v4(self, subproc_group,
                                          fortran_model,
-                                         group_number):
+                                         group_number,
+                                         unique_id=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
-        other helper files"""
+        other helper files. Unique_id is dummy here, but not in 
+        LoopInducedExporterMEGroup, so it must be kept."""
 
         assert isinstance(subproc_group, group_subprocs.SubProcessGroup), \
                                       "subproc_group object not SubProcessGroup"
@@ -6261,34 +6274,58 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
     else:
         curr_proc = None
 
-    requires_ninja = opt['loop_optimized_output'] and (not curr_proc is None) and \
-      (curr_proc.get('perturbation_couplings') != [] and \
-      not curr_proc.get('NLO_mode') in [None,'real','tree','LO','LOonly'])
+    requires_reduction_tool = opt['loop_optimized_output'] and \
+                (not curr_proc is None) and \
+                (curr_proc.get('perturbation_couplings') != [] and \
+                not curr_proc.get('NLO_mode') in [None,'real','tree','LO','LOonly'])
     # An installation is required then, but only if the specified path is the
     # default local one and that the Ninja library appears missing.
-    if requires_ninja and (not opt['ninja'] is None) and\
+    if requires_reduction_tool:
+        if (not opt['ninja'] is None) and\
             os.path.abspath(opt['ninja'])==pjoin(MG5DIR,'HEPTools','lib') and\
             not os.path.isfile(pjoin(MG5DIR,'HEPTools','lib','libninja.a')):
-                # Then install Ninja here from the tarballs in the vendor
-                # directory so that it would work offline too.
-                logger.info(
+            # Then install Ninja here from the tarballs in the vendor
+            # directory so that it would work offline too.
+            logger.info(
 """MG5aMC will now install the loop reduction tool 'Ninja' from the local offline installer.
 Use the command 'install ninja' if you want to update to the latest online version.
 This installation can take some time but only needs to be performed once.""",'$MG:color:GREEN')
-                try:
-                    cmd.do_install('ninja',paths={'HEPToolsInstaller':
+            try:
+                cmd.do_install('ninja',paths={'HEPToolsInstaller':
                         pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
-                  additional_options=[
+                additional_options=[
                   '--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','ninja.tar.gz'),
                   '--oneloop_tarball=%s'%pjoin(MG5DIR,'vendor','oneloop.tar.gz')])
-                except InvalidCmd:
+            except InvalidCmd:
                     logger.warning(
 """The offline installation of Ninja was unsuccessful, and MG5aMC disabled it.
 In the future, if you want to reactivate Ninja, you can do so by re-attempting
 its online installation with the command 'install ninja' or install it on your
 own and set the path to its library in the MG5aMC option 'ninja'.""")
                     cmd.exec_cmd("set ninja ''")
-                    cmd.exec_cmd('save options')  
+                    cmd.exec_cmd('save options')
+        if (not opt['collier'] is None) and\
+            os.path.abspath(opt['collier'])==pjoin(MG5DIR,'HEPTools','lib') and\
+            not os.path.isfile(pjoin(MG5DIR,'HEPTools','lib','libcollier.a')):
+            # Then install Collier here from the tarballs in the vendor
+            # directory so that it would work offline too.
+            logger.info(
+"""MG5aMC will now install the loop reduction tool 'COLLIER' from the local offline installer.
+Use the command 'install collier' if you want to update to the latest online version.
+This installation can take some time but only needs to be performed once.""",'$MG:color:GREEN')
+            try:
+                cmd.do_install('collier',paths={'HEPToolsInstaller':
+                        pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
+                additional_options=[
+                  '--collier_tarball=%s'%pjoin(MG5DIR,'vendor','collier.tar.gz')])
+            except InvalidCmd:
+                    logger.warning(
+"""The offline installation of COLLIER was unsuccessful, and MG5aMC disabled it.
+In the future, if you want to reactivate COLLIER, you can do so by re-attempting
+its online installation with the command 'install collier' or install it on your
+own and set the path to its library in the MG5aMC option 'collier'.""")
+                    cmd.exec_cmd("set collier ''")
+                    cmd.exec_cmd('save options')
 
 
     # ==========================================================================
@@ -6304,6 +6341,7 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
       'golem_dir':cmd.options['golem'],
       'samurai_dir':cmd.options['samurai'],
       'ninja_dir':cmd.options['ninja'],
+      'collier_dir':cmd.options['collier'],
       'fortran_compiler':cmd.options['fortran_compiler'],
       'f2py_compiler':cmd.options['f2py_compiler'],
       'output_dependencies':cmd.options['output_dependencies'],
@@ -6431,10 +6469,12 @@ class ProcessExporterFortranMWGroup(ProcessExporterFortranMW):
     #===========================================================================
     def generate_subprocess_directory_v4(self, subproc_group,
                                          fortran_model,
-                                         group_number):
+                                         group_number,
+                                         unique_id=None):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
-        other helper files"""
+        other helper files. Unique_id is dummy here, but not in 
+        LoopInducedExporterMEGroup, so it must be kept."""
 
         if not isinstance(subproc_group, group_subprocs.SubProcessGroup):
             raise base_objects.PhysicsObject.PhysicsObjectError,\

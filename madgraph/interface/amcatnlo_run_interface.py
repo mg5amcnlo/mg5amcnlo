@@ -1932,7 +1932,8 @@ RESTART = %(mint_mode)s
 
     def combine_plots_FO(self,folder_name,jobs):
         """combines the plots and puts then in the Events/run* directory"""
-        devnull = os.open(os.devnull, os.O_RDWR) 
+        devnull = open(os.devnull, 'w') 
+        
         if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
             misc.call(['./combine_plots_FO.sh'] + folder_name, \
                       stdout=devnull, 
@@ -1963,7 +1964,6 @@ RESTART = %(mint_mode)s
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-        devnull.close()
 
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
@@ -2401,6 +2401,7 @@ RESTART = %(mint_mode)s
                               4 : 'Golem95',
                               5 : 'Samurai',
                               6 : 'Ninja (double precision)',
+                              7 : 'COLLIER',
                               8 : 'Ninja (quadruple precision)',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(
@@ -3626,20 +3627,20 @@ RESTART = %(mint_mode)s
             with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
                 data_line=f.readline()
                 if "scale variations:" in data_line:
-                    for i,scale in enumerate(self.run_card['dynamical_scale_choice']):
+                    for j,scale in enumerate(self.run_card['dynamical_scale_choice']):
                         data_line = f.readline().split()
                         scales_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
-                            scales[i] = [a + b for a, b in zip(scales[i], scales_this)]
+                            scales[j] = [a + b for a, b in zip(scales[j], scales_this)]
                         except IndexError:
                             scales+=[scales_this]
                     data_line=f.readline()
                 if "pdf variations:" in data_line:
-                    for i,pdf in enumerate(self.run_card['lhaid']):
+                    for j,pdf in enumerate(self.run_card['lhaid']):
                         data_line = f.readline().split()
                         pdfs_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
-                            pdfs[i] = [a + b for a, b in zip(pdfs[i], pdfs_this)]
+                            pdfs[j] = [a + b for a, b in zip(pdfs[j], pdfs_this)]
                         except IndexError:
                             pdfs+=[pdfs_this]
 

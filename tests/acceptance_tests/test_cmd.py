@@ -189,6 +189,7 @@ class TestCmdShell1(unittest.TestCase):
                     'f2py_compiler':None,
                     'cluster_retry_wait': 300,
                     'syscalc_path':'./SysCalc',
+                    'collier':'./HEPTools/lib',
                     'hepmc_path': './hepmc',
                     'hwpp_path': './herwigPP',
                     'thepeg_path': './thepeg',
