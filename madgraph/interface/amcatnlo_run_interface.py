@@ -1932,7 +1932,8 @@ RESTART = %(mint_mode)s
 
     def combine_plots_FO(self,folder_name,jobs):
         """combines the plots and puts then in the Events/run* directory"""
-        devnull = os.open(os.devnull, os.O_RDWR) 
+        devnull = open(os.devnull, 'w') 
+        
         if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
             misc.call(['./combine_plots_FO.sh'] + folder_name, \
                       stdout=devnull, 
