@@ -1143,6 +1143,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('ninitial', 0)
         self.add_param('grouped_matrix', True)
         self.add_param('has_loops', False)
+        self.add_param('bias_module','None')
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1601,6 +1602,12 @@ class RunCardLO(RunCard):
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
         self.add_param("dynamical_scale_choice", -1)
+        
+        # Bias module options
+        self.add_param("bias_module", 'None', include=False)
+        self.add_param("modify_cross_section", True)
+        self.add_param("ptj_bias_target_ptj", 1000.0)
+        self.add_param("ptj_bias_enhancement_power", 2.0)
         
         #matching
         self.add_param("scalefact", 1.0)

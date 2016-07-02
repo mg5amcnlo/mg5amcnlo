@@ -1133,6 +1133,9 @@ c     q2bck holds the central q2fact scales
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
+      double precision bias_weight
+      data bias_weight/0.0d0/
+      common /bias/bias_weight
 
 C   local variables
       integer i, j, idi, idj
@@ -1168,6 +1171,11 @@ c     ipart gives external particle number chain
 
       rewgt=1.0d0
       clustered=.false.
+
+C     Apply the bias weight. The default run_card entry 'None' for the 
+c     'bias_weight' option will implement a constant bias_weight of 1.0 below.
+      call bias_wgt(p,bias_weight)
+      rewgt=rewgt*bias_weight
 
       if(ickkw.le.0.and..not.use_syst) return
 

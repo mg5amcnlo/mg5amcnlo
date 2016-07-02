@@ -103,6 +103,13 @@
 #*************************************************************
    %(nhel)s  = nhel          ! Number of helicities used per event
 #*******************                                                 
+# Generation bias
+#*******************
+ %(bias_module)s = bias_module  ! Type of bias, in [None, ptj_bias]
+ %(modify_cross_section)s = modify_cross_section ! whether to correct bias after unweighting 
+ %(ptj_bias_target_ptj)s = ptj_bias_target_ptj ! target ptj
+ %(ptj_bias_enhancement_power)s = ptj_bias_enhancement_power ! exponent
+#*******************               
 # Standard Cuts
 #*******************                                                 
 #                                                                    

@@ -63,3 +63,12 @@ C     Controls wheter to perform Monte-Carlo sampling over grouped subprocesses
 C
       logical MC_grouped_subproc
       common/to_MC_grouped_subproc/MC_grouped_subproc
+
+C
+C     Parameters of bias modules
+C
+      logical modify_cross_section
+	  common/bias_module/modify_cross_section
+
+      double precision PTJ_BIAS_ENHANCEMENT_POWER,PTJ_BIAS_TARGET_PTJ
+	  common/ptj_bias_module/PTJ_BIAS_ENHANCEMENT_POWER,PTJ_BIAS_TARGET_PTJ

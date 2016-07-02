@@ -2804,7 +2804,6 @@ Beware that this can be dangerous for local multicore runs.""")
                 return
             logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
         
-
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
             # Splitted mode handle the cluster submition internally.
@@ -3916,7 +3915,25 @@ Beware that this can be dangerous for local multicore runs.""")
         for name in [ 'all', '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
-        
+        # Finally compile the bias module as well
+        if self.run_card['bias_module']!='None':
+            logger.debug("Compiling the bias module '%s'"%self.run_card['bias_module'])
+        # Check if it needs recompilation
+        if self.proc_characteristics['bias_module']!=self.run_card['bias_module']:
+            self.compile(arg=['clean'], cwd=os.path.join(self.me_dir, 'Source','BIAS'))
+            self.compile(arg=[self.run_card['bias_module']], 
+                                 cwd=os.path.join(self.me_dir, 'Source','BIAS'))
+            self.proc_characteristics['bias_module']=self.run_card['bias_module']
+            # Update the proc_characterstics file
+            self.proc_characteristics.write(
+                       pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 
+            # Make sure that madevent will be recompiled
+            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                                 'subproc.mg'))]
+            for nb_proc,subdir in enumerate(subproc):
+                Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
+                self.compile(['clean'], cwd=Pdir)
+
     ############################################################################
     ##  HELPING ROUTINE
     ############################################################################
