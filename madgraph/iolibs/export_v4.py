@@ -340,10 +340,11 @@ class ProcessExporterFortran(object):
             
             changer = {"pdf_systemwide": to_add}
 
-        ff = open(pjoin(self.dir_path, "Source", "PDF", "opendata.f"),"w")
+
+        ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "opendata.f"))        
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_opendata.f"),"r").read()
-        ff.write(template % changer)
-        
+        ff.writelines(template % changer)
+
         # Do the same for lhapdf set
         if not self.opt["cluster_local_path"]:
             changer = {"cluster_specific_path": ""}
@@ -362,9 +363,10 @@ class ProcessExporterFortran(object):
          """ % {"path" : self.opt["cluster_local_path"]}
             changer = {"cluster_specific_path": to_add}
 
-        ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
+        ff = writers.FortranWriter(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"))        
+        #ff = open(pjoin(self.dir_path, "Source", "PDF", "pdfwrap_lhapdf.f"),"w")
         template = open(pjoin(MG5DIR, "madgraph", "iolibs", "template_files", "pdf_wrap_lhapdf.f"),"r").read()
-        ff.write(template % changer)
+        ff.writelines(template % changer)
         
         
         return
