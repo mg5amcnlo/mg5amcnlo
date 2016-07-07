@@ -343,6 +343,12 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("   a successful installation, you will need to have an up-to-date")
         logger.info("   F77 and/or C and Root compiler.")
         logger.info(" ")
+        logger.info("   When installing any of the following programs:")
+        logger.info("     %s"%(', '.join(self._advanced_install_opts)))
+        logger.info("   The following options are available:")
+        logger.info("     --force        Overwrite without asking any existing installation.")
+        logger.info("     --keep_source  Keep a local copy of the sources of the tools MG5_aMC installed from.")         
+        logger.info(" ")
         logger.info("   \"install update\"",'$MG:color:BLACK')
         logger.info("   check if your MG5 installation is the latest one.")
         logger.info("   If not it load the difference between your current version and the latest one,")
@@ -747,8 +753,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
-#        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
-#        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
+        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
+        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")        
         logger.info("OLP ProgramName",'$MG:color:GREEN')
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
@@ -1115,10 +1121,34 @@ class CheckValidForCmd(cmd.CheckCmd):
 
     def check_install(self, args):
         """check that the install command is valid"""
+        
 
+        install_options = {'options_for_HEPToolsInstaller':[],
+                   'update_options':[]}
         if len(args) < 1:
             self.help_install()
             raise self.InvalidCmd('install command require at least one argument')
+        
+        if len(args) > 1:
+            for arg in args[1:]:
+                try:
+                    option, value = arg.split('=')
+                except ValueError:
+                    option = arg
+                    value = None
+                # Options related to the MadGraph installer can be treated here, i.e
+                if args[0]=='update':
+                    if value is None:
+                        install_options['update_options'].append(option)
+                    else:
+                        install_options['update_options'].append('='.join([option,value]))                        
+                else:
+                    # Other options will be directly added to the call to HEPToolsInstallers
+                    # in the advanced_install function
+                    install_options['options_for_HEPToolsInstaller'].append(arg)
+            # Now that the options have been treated keep only the target tool
+            # to install as argument.   
+            args = args[:1]
 
         if args[0] not in self._install_opts:
             if not args[0].startswith('td'):
@@ -1142,6 +1172,7 @@ This will take effect only in a NEW terminal
 ''' % os.path.realpath(pjoin(misc.which('root'), \
                                                os.path.pardir, os.path.pardir)))
 
+        return install_options
 
     def check_launch(self, args, options):
         """check the validity of the line"""
@@ -2633,12 +2664,23 @@ class CompleteForCmd(cmd.CompleteCmd):
         "Complete the import command"
 
         args = self.split_arg(line[0:begidx])
-
         # Format
         if len(args) == 1:
             return self.list_completion(text, self._install_opts)
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
+        elif len(args)==2 and args[1] in self._advanced_install_opts:           
+            options = ['--keep_source','--logging=']
+            if args[1]=='pythia8':
+                options.append('--pythia8_tarball=')
+            elif args[1]=='mg5amc_py8_interface':
+                options.append('--mg5amc_py8_interface_tarball=') 
+            elif args[1]=='MadAnalysis5':
+                options.append('--no_MA5_further_install')
+                options.append('--madanalysis5_tarball=')     
+            return self.list_completion(text, options)
+        else:
+            return self.list_completion(text, [])
 
 #===============================================================================
 # MadGraphCmd
@@ -2661,13 +2703,10 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
-                                                                      'QCDLoop']
+                     'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
-    _advanced_install_opts = ['ninja']
-    
-    # The options below are commented for now but already available
-#    _advanced_install_opts += ['pythia8','zlib','boost','lhapdf6','lhapdf5','hepmc','mg5amc_py8_interface','oneloop']
-    
+    _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5',
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
     _install_opts.extend(_advanced_install_opts)
 
     _v4_export_formats = ['madevent', 'standalone', 'standalone_msP','standalone_msF',
@@ -2697,6 +2736,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
+                       'madanalysis5_path':'./HEPTools/madanalysis5',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
@@ -2722,8 +2762,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
+                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'cluster_local_path': None,
-#                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -2752,6 +2792,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     # Variables to store object information
     _curr_model = None  #base_objects.Model()
     _curr_amps = diagram_generation.AmplitudeList()
+    _curr_proc_defs = base_objects.ProcessDefinitionList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
     _curr_helas_model = None
     _curr_exporter = None
@@ -2820,6 +2861,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         # Reset amplitudes and matrix elements
         self._done_export=False
         self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_proc_defs = base_objects.ProcessDefinitionList()
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
         self._v4_export_formats = ['madevent', 'standalone','standalone_msP','standalone_msF',
@@ -2923,6 +2965,8 @@ This implies that with decay chains:
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
                myprocdef.get_ninitial():
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
+
+            self._curr_proc_defs.append(myprocdef)
             
             # Negative coupling order contraints can be given on at most one
             # coupling order (and either in squared orders or orders, not both)
@@ -4202,6 +4246,8 @@ This implies that with decay chains:
         aloha_lib.KERNEL.clean()
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
+        # Reset Process definition
+        self._curr_proc_defs = base_objects.ProcessDefinitionList()
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         self._generate_info = line
@@ -4907,6 +4953,8 @@ This implies that with decay chains:
             self._model_v4_path = None
             # Reset amplitudes and matrix elements
             self._curr_amps = diagram_generation.AmplitudeList()
+            # Reset proc defs
+            self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             # Import model
             if args[0].endswith('_v4'):
@@ -4973,6 +5021,8 @@ This implies that with decay chains:
             self.process_model()
             # Reset amplitudes and matrix elements and global checks
             self._curr_amps = diagram_generation.AmplitudeList()
+            # Reset proc defs
+            self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             process_checks.store_aloha = []
 
@@ -5218,7 +5268,6 @@ This implies that with decay chains:
         """ Uses the HEPToolsInstaller.py script maintened online to install
         HEP tools with more complicated dependences.
         Additional options will be added to the list when calling HEPInstaller"""
-
         # Always refresh the installer if already present
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
             if HepToolsInstaller_web_address is None:
@@ -5257,11 +5306,10 @@ This implies that with decay chains:
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
             
 ############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
-            
         # Potential change in naming convention
         name_map = {}
         try:
@@ -5305,7 +5353,17 @@ This implies that with decay chains:
 #                                                 'MG5aMC_PY8_interface.tar.gz'))
 ################################################################################
 
-        # Special rules for certain tools  
+        # Special rules for certain tools
+        if tool=='madanalysis5':
+            additional_options.append('--mg5_path=%s'%MG5DIR)
+            fastjet_config  = misc.which(self.options['fastjet'])
+            if fastjet_config:
+                additional_options.append('--with_fastjet=%s'%fastjet_config)
+            if self.options['delphes_path'] and os.path.isdir(
+                  os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
+                additional_options.append('--with_delphes3=%s'%\
+                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path'])))
+
         if tool=='pythia8':
             # All what's below is to handle the lhapdf dependency of Pythia8
             lhapdf_config  = misc.which(self.options['lhapdf'])
@@ -5395,7 +5453,7 @@ This implies that with decay chains:
         # Post-installation treatment
         if tool == 'pythia8':
             self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
-            self.exec_cmd('save options')
+            self.exec_cmd('save options', printcmd=False, log=False)
             # Automatically re-install the mg5amc_py8_interface after a fresh
             # Pythia8 installation
             self.advanced_install('mg5amc_py8_interface',
@@ -5408,11 +5466,17 @@ This implies that with decay chains:
             self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf5','bin',
                                                                 'lhapdf-config')
             self.exec_cmd('save options')            
-
+        elif tool == 'madanalysis5':
+            self.options['madanalysis5_path'] = pjoin(os.curdir,'HEPTools',
+                                                  'madanalysis5','madanalysis5')
+            self.exec_cmd('save options')
         elif tool == 'mg5amc_py8_interface':
+            # At this stage, pythia is guaranteed to be installed
+            if self.options['pythia8_path'] in ['',None,'None']:
+                self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
-            self.exec_cmd('save options')      
+            self.exec_cmd('save options', printcmd=False)      
 
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
@@ -5425,7 +5489,7 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
-            self.exec_cmd('save options')
+            self.exec_cmd('save options', log=False, printcmd=False)
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
@@ -5464,7 +5528,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 (r'\n'.join('setenv %s %s%s'%
                 (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '')
                                                 for var,path in path_to_be_set))
-
             logger.warning("==========")
             logger.warning("We recommend that you add to the following paths"+\
              " to your environment variables, so that you are guaranteed that"+\
@@ -5474,9 +5537,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
              "\n   %s"%modification_line) 
             logger.warning("==========")
     
-        # Return true for successful installation
+         # Return true for successful installation
         return True
-    
     def do_install(self, line, paths=None, additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
@@ -5484,10 +5546,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         function will overwrite any existing installation of the tool without 
         warnings.
         """
-
         args = self.split_arg(line)
         #check the validity of the arguments
-        self.check_install(args)
+        install_options = self.check_install(args)
 
         if sys.platform == "darwin":
             program = "curl"
@@ -5496,7 +5557,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         # special command for auto-update
         if args[0] == 'update':
-            self.install_update(args, wget=program)
+            self.install_update(['update']+install_options['update_options'],wget=program)
             return
 
         advertisements = {'pythia-pgs':['arXiv:0603175'],
@@ -5512,16 +5573,15 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'hepmc':['CPC 134 (2001) 41-46'],
                           'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
                           'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
-                          'oneloop':['arXiv:1007.4716']}
-
+                          'oneloop':['arXiv:1007.4716'],
+                          'MadAnalysis5':['arXiv:1206.1599']}
         if args[0] in advertisements:
-            logger.info("------------------------------------------------------", '$MG:color:GREEN')
-            logger.info("   You are installing '%s', please cite ref(s): "%args[0], '$MG:color:BLACK')
-            for ad in advertisements[args[0]]:
-              logger.info("                 %s"%ad, '$MG:color:GREEN')
-            logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
-            logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
-            logger.info("------------------------------------------------------", '$MG:color:GREEN')
+#            logger.info("------------------------------------------------------", '$MG:color:GREEN')
+            logger.info("   You are installing '%s', please cite ref(s): %s "%(args[0],','.join(advertisements[args[0]]))
+                        , '$MG:color:BLACK')
+#            logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
+#            logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
+#            logger.info("------------------------------------------------------", '$MG:color:GREEN')
 
         # Load file with path of the different program:
         import urllib
@@ -5536,9 +5596,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             r = [r, (1-r)]
 ################################################################################
 #           Force her to choose one particular server
-#            r = [0]
+            r = [1]
 ################################################################################
-
             for index in r:
                 cluster_path = data_path[index]
                 try:
@@ -5549,7 +5608,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             else:
                 raise MadGraph5Error, '''Impossible to connect any of us servers.
                 Please check your internet connection or retry later'''
-    
             for line in data:
                 split = line.split()
                 path[split[0]] = split[1]
@@ -5560,6 +5618,20 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 #            path['XXX'] = 'YYY'
 ################################################################################
 
+        if args[0] == 'Delphes':
+            args[0] = 'Delphes3'
+
+        try:
+            name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
+                'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
+                'SysCalc':'SysCalc', 'Golem95': 'golem95',
+                'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5'
+                }
+            name = name[args[0]]
+        except KeyError:
+            name = args[0]
+
         if args[0] in self._advanced_install_opts:
             # Now launch the advanced installation of the tool args[0]
             # path['HEPToolsInstaller'] is the online adress where to downlaod
@@ -5568,8 +5640,10 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             MG5aMC_PY8_interface_path = path['MG5aMC_PY8_interface'] if \
                                         'MG5aMC_PY8_interface' in path else 'NA'
             additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
-                                                      MG5aMC_PY8_interface_path)
-            return self.advanced_install(args[0], path['HEPToolsInstaller'],
+                                                   MG5aMC_PY8_interface_path)
+            additional_options.append('--logging=%d' % logger.level)
+            additional_options.extend(install_options['options_for_HEPToolsInstaller'])
+            return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = additional_options)
 
         if args[0] == 'PJFry' and not os.path.exists(
@@ -5579,7 +5653,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
         if args[0] == 'Delphes':
             args[0] = 'Delphes3'
-
         try:
             name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
@@ -5594,7 +5667,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         #check outdated install
         if args[0] in ['Delphes2', 'pythia-pgs']:
             logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
-                           "  You should consider using an up-to-date version of the code.")
+               "  You should consider using installing and unsing Pythia8 + Delphes, with:\n"+
+               "   > install pythia8\n"
+               "   > install Delphes")
 
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
@@ -5638,7 +5713,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if not os.path.exists(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib')):
                 os.mkdir(pjoin(MG5DIR, 'pythia-pgs', 'libraries','pylib','lib'))
 
-        make_flags = [] #flags for the compilation        
+        make_flags = [] #flags for the compilation
         # Compile the file
         # Check for F77 compiler
         if 'FC' not in os.environ or not os.environ['FC']:
@@ -5845,13 +5920,13 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options')
+                self.exec_cmd('save options', printcmd=False)
             elif opt=='pjfry':
                 self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
-                self.exec_cmd('save options')            
+                self.exec_cmd('save options', printcmd=False)            
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
-                self.exec_cmd('save options')
+                self.exec_cmd('save options',printcmd=False)
 
 
 
@@ -6001,8 +6076,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 return True
             else:
                 return False
-
-        # load options
+        
         mode = [arg.split('=',1)[1] for arg in args if arg.startswith('--mode=')]
         if mode:
             mode = mode[-1]
@@ -6062,7 +6136,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             if mode == 'userrequest':
                 raise self.ConfigurationError(error_text)
             return
-
 
         # read the data present in .autoupdate
         data = {}
@@ -6162,9 +6235,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             else:
                 fsock.write("version_nb   %s\n" % fail)
             fsock.write("last_check   %s\n" % int(time.time()))
-            fsock.close()            
-#            logger.info('Refreshing installation of MG5aMC_PY8_interface.')
-#            self.do_install('mg5amc_py8_interface',additional_options=['--force'])
+            fsock.close()
+            logger.info('Refreshing installation of MG5aMC_PY8_interface.')
+            self.do_install('mg5amc_py8_interface',additional_options=['--force'])
             logger.info('Checking current version. (type ctrl-c to bypass the check)')
             subprocess.call([os.path.join('tests','test_manager.py')],
                                                                   cwd=MG5DIR)            
@@ -6244,7 +6317,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         # try absolute and relative path
         for key in self.options:
             if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path',
-                       'mg5amc_py8_interface_path']:
+                       'mg5amc_py8_interface_path','madanalysis5_path']:
                 if self.options[key] in ['None', None]:
                     self.options[key] = None
                     continue
@@ -6261,9 +6334,14 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                         self.options['pythia8_path'] = None
                     else:
                         continue
-
+                #this is for madanalysis5
+                if key == 'madanalysis5_path' and not os.path.isfile(pjoin(MG5DIR, path,'bin','ma5')):
+                    if not os.path.isfile(pjoin(path,'bin','ma5')):
+                        self.options['madanalysis5_path'] = None
+                    else:
+                        continue
                 #this is for hw++
-                elif key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
+                if key == 'hwpp_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                     if not os.path.isfile(pjoin(path, 'include', 'Herwig++', 'Analysis', 'BasicConsistency.hh')):
                         self.options['hwpp_path'] = None
                     else:
@@ -6340,9 +6418,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if key in self.options_madgraph:
                         self.history.append('set %s %s' % (key, self.options[key]))
         
-#        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
-#        if warnings:
-#            logger.warning(warnings)
+        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+        if warnings:
+            logger.warning(warnings)
 
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
@@ -6498,7 +6576,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 raise self.RWError('Could not load model from file %s' \
                                       % args[1])
         elif args[0] == 'processes':
-            amps = save_load_object.load_from_file(args[1])
+            amps,proc_defs = save_load_object.load_from_file(args[1])
             if isinstance(amps, diagram_generation.AmplitudeList):
                 cpu_time2 = time.time()
                 logger.info("Loaded processes from file in %0.3f s" % \
@@ -6516,6 +6594,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     # _curr_amps and _curr_model
                     self._curr_amps = amps
                     self._curr_model = model
+                    self._curr_proc_defs = proc_defs
                     logger.info("Model set from process.")
                     # Do post-processing of model
                     self.process_model()
@@ -6625,7 +6704,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 raise self.InvalidCmd('No model to save!')
         elif args[0] == 'processes':
             if self._curr_amps:
-                if save_load_object.save_to_file(args[1], self._curr_amps):
+                if save_load_object.save_to_file(args[1], (self._curr_amps,self._curr_proc_defs) ):
                     logger.info('Saved processes to file %s' % args[1])
             else:
                 raise self.InvalidCmd('No processes to save!')
@@ -6706,6 +6785,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                                     str(self.options[args[0]]))
                 logger.info('Note that you need to regenerate all processes')
             self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
 
         elif args[0] == "stdout_level":
@@ -6716,6 +6796,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             logging.root.setLevel(level)
             logging.getLogger('madgraph').setLevel(level)
             logging.getLogger('madevent').setLevel(level)
+            self.options[args[0]] = level
             if log:
                 logger.info('set output information to level: %s' % level)
         elif args[0].lower() == "ewscheme":
@@ -6787,6 +6868,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             model_name = self._curr_model.get('modelpath+restriction')
             self._curr_model = None
             self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self._curr_helas_model = None
             self._curr_exporter = None
@@ -6917,6 +6999,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # Reset the amplitudes, MatrixElements and exporter as they might
             # depend on this option
             self._curr_amps = diagram_generation.AmplitudeList()
+            self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
             self._curr_exporter = None
             self.options[args[0]] = args[1]
@@ -7434,6 +7517,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             flaglist.append('nojpeg')
         if online:
             flaglist.append('online')
+
             
 
         if self._export_format in ['NLO']:
@@ -7460,7 +7544,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                     self.history,
                                     self.options,
                                     flaglist)
-
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -7830,6 +7913,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # Reset amplitudes
         self._curr_amps = diagram_generation.AmplitudeList()
+        self._curr_proc_defs = base_objects.ProcessDefinitionList()
         # Reset Helas matrix elements
         self._curr_matrix_elements = helas_objects.HelasMultiProcess()
         # Reset _done_export, since we have new process
