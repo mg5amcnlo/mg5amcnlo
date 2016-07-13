@@ -3000,6 +3000,7 @@ RESTART = %(mint_mode)s
         if shower == 'HERWIGPP':
             try:
                 files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
+                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
@@ -3505,7 +3506,10 @@ RESTART = %(mint_mode)s
                                           stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            if self.shower_card['pdfcode']==1:
+            if self.shower_card['pdfcode']==0:
+                lhaid_list = ''
+                content += ''
+            elif self.shower_card['pdfcode']==1:
                 lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
                 content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
             else:
@@ -3932,6 +3936,7 @@ RESTART = %(mint_mode)s
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
             if shower == 'HERWIGPP':
                 input_files.append(pjoin(cwd, 'Herwig++'))
+                input_files.append(pjoin(cwd, 'Herwig'))
                 input_files.append(pjoin(cwd, 'HepMCFortran.so'))
             if len(args) == 3:
                 if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')):
