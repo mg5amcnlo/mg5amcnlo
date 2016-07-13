@@ -145,7 +145,16 @@ architecture
 
 EVTDIR=`pwd`"/../Events"
 
-if [ "$PDFCODE" -ne 0 ]
+HWEXE=Herwig++
+if [ -f $HWPPPATH/bin/Herwig ]; then HWEXE=Herwig ; fi
+HWVER=`$HWPPPATH/bin/$HWEXE --version`
+HWVER=($(echo "$HWVER" | sed 's/ / /g'))
+HWVER=($(echo ${HWVER[1]} | tr "." "\n"))
+HWVER=${HWVER[0]}
+if [ "$HWVER" -ge 7 ]; then HWNEW=1 ; HWEXE=Herwig   ; fi
+if [ "$HWVER" -le 2 ]; then HWNEW=0 ; HWEXE=Herwig++ ; fi
+
+if [[ "$PDFCODE" -ne 0 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -eq 1 ]
 then
   HERPDF='EXTPDF'
   PDFLIBRARY='LHAPDF'
@@ -157,6 +166,7 @@ then
   if [ "$PDFCODE" -gt 1 ]; then PDFSET=$PDFCODE; fi
   if [ "$PDFCODE" -lt 0 ]; then LHAOFL=EXTRAPOLATE; fi
   if [ "$PDFCODE" -lt -1 ]; then PDFSET=$((PDFCODE*-1)); fi
+  if [[ "$PDFCODE" -eq 0 && "$HWNEW" -eq 1 ]]; then PDFSET=25000 ; LHAOFL=FREEZE ; fi
   linklhapdf
 # convert PDF number to name reading PDFsets.index
   ISLHA5=0
@@ -172,6 +182,11 @@ then
       ISLHA6=1
   else
       echo 'Unable to understand LHAPDF version!'
+      exit 1
+  fi
+  if [[ "$ISLHA5" -eq 1 && "$HWNEW" -eq 1 ]]
+  then
+      echo " Please, use LHAPDF6 with HW7 "
       exit 1
   fi
   while read pdfline
@@ -259,17 +274,7 @@ then
   EXEC_NAME="$EXEC_NAMEF"
 fi
 EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
-
 rm -f $thisdir/$EXEC_NAMEFF
-
-HWEXE=Herwig++
-if [ -f $HWPPPATH/bin/Herwig ]; then HWEXE=Herwig ; fi
-HWVER=`$HWPPPATH/bin/$HWEXE --version`
-HWVER=($(echo "$HWVER" | sed 's/ / /g'))
-HWVER=($(echo ${HWVER[1]} | tr "." "\n"))
-HWVER=${HWVER[0]}
-HWNEW=1
-if [ "$HWVER" -le 2 ]; then HWNEW=0 ; fi
 
 HWPPMAKE="HWPPPATH="$HWPPPATH" HEPMC="$HEPMCPATH
 if [ "$HWPPUTI" != "" ]

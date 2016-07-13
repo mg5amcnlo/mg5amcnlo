@@ -3436,7 +3436,8 @@ RESTART = %(mint_mode)s
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm').lower()
         # check if need to link lhapdf
         if int(self.shower_card['pdfcode']) > 1 or \
-            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
+            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1) or \
+            shower=='HERWIGPP' : 
             # Use LHAPDF (should be correctly installed, because
             # either events were already generated with them, or the
             # user explicitly gives an LHAPDF number in the
