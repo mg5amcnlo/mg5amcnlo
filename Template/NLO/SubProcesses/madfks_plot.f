@@ -66,6 +66,10 @@ c     to "setrun")
                call initpdfsetbynamem(nn,lhaPDFsetname(nn))
                if (lpdfvar(nn)) then
                   call numberPDFm(nn,nmemPDF(nn))
+                  if (nmemPDF(nn).eq.1) then
+                     nmemPDF(nn)=0
+                     lpdfvar(nn)=.false.
+                  endif
                else
                   nmemPDF(nn)=0
                endif

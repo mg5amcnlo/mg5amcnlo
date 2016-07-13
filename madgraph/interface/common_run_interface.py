@@ -516,7 +516,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madevent = {'automatic_html_opening':True,
                         'notification_center':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
+                         'cluster_queue':None,
                          'cluster_time':None,
                          'cluster_size':100,
                          'cluster_memory':None,
@@ -2036,9 +2036,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cross = current['cross']
             error = current['error']
             self.results.add_run( new_run, self.run_card)
-            self.results.add_detail('nb_event', nb_event)
-            self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
-            self.results.add_detail('error', error * madspin_cmd.branching_ratio + cross * madspin_cmd.err_branching_ratio)
+            self.results.add_detail('nb_event', int(nb_event*madspin_cmd.efficiency))
+            self.results.add_detail('cross', madspin_cmd.cross)#cross * madspin_cmd.branching_ratio)
+            self.results.add_detail('error', madspin_cmd.error+ cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
@@ -2214,7 +2214,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         content_variables += '\n%s' % tag
 
         if diff:
-            open(make_opts, 'w').write(content_variables + '\n'.join(content))
+            with open(make_opts, 'w') as fsock: 
+                fsock.write(content_variables + '\n'.join(content))
         return       
 
 
@@ -2901,7 +2902,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n QCUT= %s' % (p_card, args[1])
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock: 
+                    fsock.write(p_card)
                 return
         # Special case for the showerkt value
         if args[0].lower() == 'showerkt':
@@ -2914,7 +2916,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n SHOWERKT= %s' % (p_card, args[1].upper())
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock:
+                    fsock.write(p_card)
                 return
             
 
@@ -3384,7 +3387,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
             
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)       
         else:
             # Here we have to remove all the previous definition of the decay
             #first find the particle
@@ -3395,8 +3397,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             text= open(path).read()
             text = decay_pattern.sub('', text)
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)
-        
+
+        with open(path,'w') as fsock:
+            fsock.write(text) 
+
         
 
     def do_compute_widths(self, line):

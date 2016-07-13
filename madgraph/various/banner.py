@@ -1526,7 +1526,7 @@ class RunCard(ConfigFile):
             elif lpp in (3,-3):
                 return math.copysign(11, lpp)
             elif lpp == 0:
-                logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
+                #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
                 return 0
             else:
                 return lpp
@@ -2112,8 +2112,8 @@ class RunCardNLO(RunCard):
             raise InvalidRunCard, "'reweight_scale' and 'dynamical_scale_choice' lists should have the same length"
         if len(self['dynamical_scale_choice']) > 10 :
             raise InvalidRunCard, "Length of list for 'dynamical_scale_choice' too long: max is 10."
-        if len(self['lhaid']) > 10 :
-            raise InvalidRunCard, "Length of list for 'lhaid' too long: max is 10."
+        if len(self['lhaid']) > 25 :
+            raise InvalidRunCard, "Length of list for 'lhaid' too long: max is 25."
         if len(self['rw_rscale']) > 9 :
             raise InvalidRunCard, "Length of list for 'rw_rscale' too long: max is 9."
         if len(self['rw_fscale']) > 9 :

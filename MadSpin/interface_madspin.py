@@ -212,7 +212,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             self.load_model(model_name, mg_names, complex_mass)
         else:
             raise self.InvalidCmd('Only UFO model can be loaded in MadSpin.')
-        
         # check particle which can be decayed:
         self.final_state = set()
         final_model = False
@@ -569,6 +568,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         generate_all.run()
                         
         self.branching_ratio = generate_all.branching_ratio
+        self.cross = generate_all.cross
+        self.error = generate_all.error
+        self.efficiency = generate_all.efficiency
         try:
             self.err_branching_ratio = generate_all.err_branching_ratio
         except Exception:
@@ -671,6 +673,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         generate_all.ending_run()
         self.branching_ratio = generate_all.branching_ratio
+        self.cross = generate_all.cross
+        self.error = generate_all.error
+        self.efficiency = generate_all.efficiency
         try:
             self.err_branching_ratio = generate_all.err_branching_ratio
         except Exception:

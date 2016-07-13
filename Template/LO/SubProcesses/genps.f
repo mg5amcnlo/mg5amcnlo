@@ -1159,7 +1159,7 @@ C     &     X(1),TAU,SJACOBI)
 
 C     IF THERE IS NO S CHANNEL POLE USE BELOW:
 
-      TAUMIN = SMIN/S
+      TAUMIN = 0d0 !SMIN/S !keep scale fix
       TAUMAX = 1D0
       TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
       SJACOBI=  sjacobi*(TAUMAX-TAUMIN)
