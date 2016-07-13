@@ -196,8 +196,11 @@ class TestCmdShell1(unittest.TestCase):
                     'applgrid': 'applgrid-config',
                     'cluster_size': 100,
                     'loop_color_flows': False,
-                    'cluster_local_path': '/cvmfs/cp3.uclouvain.be/madgraph/',
-                    'max_npoint_for_channel': 0
+                    'cluster_local_path': None,
+                    'max_npoint_for_channel': 0,
+                    'low_mem_multicore_nlo_generation': False,
+                    'ninja': './HEPTools/lib',
+                    'samurai': None,
                     }
 
         self.assertEqual(config, expected)
@@ -783,16 +786,16 @@ C
       P3(1) = -DBLE(V3(2))
       P3(2) = -DIMAG(V3(2))
       P3(3) = -DIMAG(V3(1))
-      DENOM = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 
-     $ -CI* W3))
-      V3(3)= DENOM*-CI*(F1(3)*F2(5)+F1(4)*F2(6)+F1(5)*F2(3)+F1(6)
-     $ *F2(4))
-      V3(4)= DENOM*-CI*(F1(5)*F2(4)+F1(6)*F2(3)-F1(3)*F2(6)-F1(4)
-     $ *F2(5))
+      DENOM = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -CI
+     $ * W3))
+      V3(3)= DENOM*-CI*(F1(3)*F2(5)+F1(4)*F2(6)+F1(5)*F2(3)+F1(6)*F2(4)
+     $ )
+      V3(4)= DENOM*-CI*(F1(5)*F2(4)+F1(6)*F2(3)-F1(3)*F2(6)-F1(4)*F2(5)
+     $ )
       V3(5)= DENOM*-CI*(-CI*(F1(3)*F2(6)+F1(6)*F2(3))+CI*(F1(4)*F2(5)
      $ +F1(5)*F2(4)))
-      V3(6)= DENOM*-CI*(F1(4)*F2(6)+F1(5)*F2(3)-F1(3)*F2(5)-F1(6)
-     $ *F2(4))
+      V3(6)= DENOM*-CI*(F1(4)*F2(6)+F1(5)*F2(3)-F1(3)*F2(5)-F1(6)*F2(4)
+     $ )
       END
 
 
@@ -831,8 +834,8 @@ C
       P3(3) = -DIMAG(V3(1))
       TMP1 = (F1(3)*(F2(5)*(P3(0)+P3(3))+F2(6)*(P3(1)+CI*(P3(2))))
      $ +F1(4)*(F2(5)*(P3(1)-CI*(P3(2)))+F2(6)*(P3(0)-P3(3))))
-      DENOM = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 
-     $ -CI* W3))
+      DENOM = COUP/(P3(0)**2-P3(1)**2-P3(2)**2-P3(3)**2 - M3 * (M3 -CI
+     $ * W3))
       V3(3)= DENOM*-CI*(F1(3)*F2(5)+F1(4)*F2(6)-P3(0)*OM3*TMP1)
       V3(4)= DENOM*-CI*(-F1(3)*F2(6)-F1(4)*F2(5)-P3(1)*OM3*TMP1)
       V3(5)= DENOM*-CI*(-CI*(F1(3)*F2(6))+CI*(F1(4)*F2(5))-P3(2)*OM3

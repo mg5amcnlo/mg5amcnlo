@@ -11,7 +11,11 @@ c and helicities for the point in phase space P(0:3,NEXTERNAL)
 c and external lines W(0:6,NEXTERNAL)
 C  
 %(process_lines)s
-C  
+C
+C Modules
+C
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+C
       IMPLICIT NONE
 C
 C USER CUSTOMIZABLE OPTIONS
@@ -74,8 +78,6 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
       %(real_dp_format)s     ZERO
@@ -181,6 +183,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 	  LOGICAL LTEMP
 	  %(real_dp_format)s BORNBUFF(0:NSQSO_BORN),TMPR
 	  %(real_dp_format)s BUFFR(3,0:NSQUAREDSO),BUFFR_BIS(3,0:NSQUAREDSO),TEMP(0:3,0:NSQUAREDSO),TEMP1(0:NSQUAREDSO)
+	  %(complex_dp_format)s CTEMP
 ## if(not AmplitudeReduction){
 	  %(real_dp_format)s TEMP2
 ## }else{
@@ -189,7 +192,7 @@ C QP_RES STORES THE QUADRUPLE PRECISION RESULT OBTAINED FROM DIFFERENT EVALUATIO
 ## if(ComputeColorFlows) {
 	  %(real_dp_format)s BUFFRES(0:3,0:NSQUAREDSO)
 ## }
-	  %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+      %(complex_dp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_dp_format)s CFTOT
 	  LOGICAL FOUNDHELFILTER,FOUNDLOOPFILTER
 	  DATA FOUNDHELFILTER/.TRUE./
@@ -561,7 +564,7 @@ CLOSE(1)
 C SETUP OF THE COMMON STARTING EXTERNAL LOOP WAVEFUNCTION
 C IT IS ALSO PS POINT INDEPENDENT, SO IT CAN BE DONE HERE.
   DO I=0,3
-    PL(I,0)=(0.0d0,0.0d0)
+    PL(I,0)=DCMPLX(0.0d0,0.0d0)
   ENDDO
   DO I=1,MAXLWFSIZE
     DO J=0,LOOPMAXCOEFS-1
@@ -1005,14 +1008,15 @@ c FeynRules, there are none of these type of counterterms.
   UVCT_REQ_SO_DONE=.TRUE.
 
 ## if(not AmplitudeReduction) {
-  DO I=1,NCTAMPS
-    DO J=1,NBORNAMPS
+  DO J=1,NBORNAMPS
+    CTEMP = 2.0d0*HEL_MULT*DCONJG(AMP(J))
+    DO I=1,NCTAMPS	
 	  CFTOT=DCMPLX(CF_N(I,J)/DBLE(ABS(CF_D(I,J))),0.0d0)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
 	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
         DO K=1,3
-          TEMP2 = 2.0d0*HEL_MULT*DBLE(CFTOT*AMPL(K,I)*DCONJG(AMP(J)))
+          TEMP2 = DBLE(CFTOT*AMPL(K,I)*CTEMP)
           ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
           ANS(K,0)=ANS(K,0)+TEMP2
         ENDDO

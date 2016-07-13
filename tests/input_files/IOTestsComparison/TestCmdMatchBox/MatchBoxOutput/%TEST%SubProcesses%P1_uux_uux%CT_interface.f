@@ -26,7 +26,8 @@ C     ARGUMENTS
 C     
       INTEGER NLOOPLINE, RANK
       REAL*8 PL(0:3,NLOOPLINE)
-      REAL*8 PCT(0:3,0:NLOOPLINE-1)
+      REAL*8 PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      REAL*8 REF_P
       COMPLEX*16 M2L(NLOOPLINE)
       COMPLEX*16 M2LCT(0:NLOOPLINE-1)
       COMPLEX*16 RES(3)
@@ -75,6 +76,7 @@ C     CONVERT THE MASSES TO BE COMPLEX
 
 C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
+        ABSPCT(I)=0.D0
         DO J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         ENDDO
@@ -82,21 +84,26 @@ C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
         DO J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         ENDDO
       ENDDO
-      IF (CHECKPCONSERVATION) THEN
-        IF (PCT(0,0).GT.1.D-6) THEN
-          WRITE(*,*) 'energy is not conserved ',PCT(0,0)
-          STOP 'energy is not conserved'
-        ELSEIF (PCT(1,0).GT.1.D-6) THEN
-          WRITE(*,*) 'px is not conserved ',PCT(1,0)
-          STOP 'px is not conserved'
-        ELSEIF (PCT(2,0).GT.1.D-6) THEN
-          WRITE(*,*) 'py is not conserved ',PCT(2,0)
-          STOP 'py is not conserved'
-        ELSEIF (PCT(3,0).GT.1.D-6) THEN
-          WRITE(*,*) 'pz is not conserved ',PCT(3,0)
-          STOP 'pz is not conserved'
+      REF_P = MAX(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+      DO I=0,3
+        ABSPCT(I) = MAX(REF_P*1E-6, ABSPCT(I))
+      ENDDO
+      IF (CHECKPCONSERVATION.AND.REF_P.GT.1D-8) THEN
+        IF ((PCT(0,0)/ABSPCT(0)).GT.1.D-6) THEN
+          WRITE(*,*) 'energy is not conserved (flag:CT95)',PCT(0,0)
+          STOP 'energy is not conserved (flag:CT95)'
+        ELSEIF ((PCT(1,0)/ABSPCT(1)).GT.1.D-6) THEN
+          WRITE(*,*) 'px is not conserved (flag:CT95)',PCT(1,0)
+          STOP 'px is not conserved (flag:CT95)'
+        ELSEIF ((PCT(2,0)/ABSPCT(2)).GT.1.D-6) THEN
+          WRITE(*,*) 'py is not conserved (flag:CT95)',PCT(2,0)
+          STOP 'py is not conserved (flag:CT95)'
+        ELSEIF ((PCT(3,0)/ABSPCT(3)).GT.1.D-6) THEN
+          WRITE(*,*) 'pz is not conserved (flag:CT95)',PCT(3,0)
+          STOP 'pz is not conserved (flag:CT95)'
         ENDIF
       ENDIF
       DO I=0,3
@@ -196,8 +203,8 @@ C     ----------
             DIFFSQ = (DCMPLX(P_LOOP(I,0),0.0D0)-DCMPLX(P_LOOP(J,0)
      $       ,0.0D0))**2
             DO K=1,3
-              DIFFSQ = DIFFSQ - (DCMPLX(P_LOOP(I,K),0.0D0)-DCMPLX(P_LOO
-     $         P(J,K),0.0D0))**2
+              DIFFSQ = DIFFSQ - (DCMPLX(P_LOOP(I,K),0.0D0)
+     $         -DCMPLX(P_LOOP(J,K),0.0D0))**2
             ENDDO
 C           Default value of the kinematic matrix
             S_MAT(I,J)=DIFFSQ-M2L(I)-M2L(J)
@@ -219,8 +226,8 @@ C           massless onshellness.
 C           Here, we chose to base the threshold only on the energy
 C            component
             DO K=0,0
-              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I
-     $         ,K)) + ABS(P_LOOP(J,K))
+              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I,K))
+     $          + ABS(P_LOOP(J,K))
             ENDDO
             REF_NORMALIZATION = (REF_NORMALIZATION/2.0D0)**2
             IF(REF_NORMALIZATION.NE.0.0D0)THEN
@@ -273,8 +280,8 @@ C     ----------
           IF(I.EQ.J)THEN
             S_MAT(I,J)=-(M2L(I)+M2L(J))
           ELSE
-            DIFFSQ = (CMPLX(P_LOOP(I,0),0.0E0_16,KIND=16)-CMPLX(P_LOOP(
-     $       J,0),0.0E0_16,KIND=16))**2
+            DIFFSQ = (CMPLX(P_LOOP(I,0),0.0E0_16,KIND=16)
+     $       -CMPLX(P_LOOP(J,0),0.0E0_16,KIND=16))**2
             DO K=1,3
               DIFFSQ = DIFFSQ - (CMPLX(P_LOOP(I,K),0.0E0_16,KIND=16)
      $         -CMPLX(P_LOOP(J,K),0.0E0_16,KIND=16))**2
@@ -299,8 +306,8 @@ C           massless onshellness.
 C           Here, we chose to base the threshold only on the energy
 C            component
             DO K=0,0
-              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I
-     $         ,K)) + ABS(P_LOOP(J,K))
+              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I,K))
+     $          + ABS(P_LOOP(J,K))
             ENDDO
             REF_NORMALIZATION = (REF_NORMALIZATION/2.0E0_16)**2
             IF(REF_NORMALIZATION.NE.0.0E0_16)THEN
@@ -362,7 +369,8 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      REAL*8 P_TMP(0:3,0:NLOOPLINE-1)
+      REAL*8 P_TMP(0:3,0:NLOOPLINE-1),ABSP_TMP(0:3)
+      REAL*8 REF_P
       REAL*8 P_NINJA(0:3,NLOOPLINE)
       REAL*8 P_S_MAT(NLOOPLINE,0:3)
       COMPLEX*16 M2L_NINJA(NLOOPLINE)
@@ -397,8 +405,8 @@ C
       COMMON/MG5_1_LCOEFS/LOOPCOEFS
 
       LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
-      COMMON/MG5_1_FPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDU
-     $ CTION
+      COMMON/MG5_1_FPE_IN_REDUCTION/FPE_IN_DP_REDUCTION,
+     $  FPE_IN_QP_REDUCTION
 
 C     ----------
 C     BEGIN CODE
@@ -427,9 +435,10 @@ C     CONVERT THE MASSES TO BE COMPLEX
         M2L_NINJA(I)=M2L(I)
       ENDDO
 
-C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTION
-C     S
+C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA
+C      CONVENTIONS
       DO I=0,3
+        ABSP_TMP = 0.D0
         DO J=0,(NLOOPLINE-1)
           P_TMP(I,J)=0.D0
         ENDDO
@@ -437,21 +446,27 @@ C     S
       DO I=0,3
         DO J=1,NLOOPLINE
           P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+          ABSP_TMP(I) = ABSP_TMP(I)+ABS(PL(I,J))
         ENDDO
       ENDDO
-      IF (CHECKPCONSERVATION) THEN
-        IF (P_TMP(0,0).GT.1.D-6) THEN
-          WRITE(*,*) 'energy is not conserved ',P_TMP(0,0)
-          STOP 'energy is not conserved'
-        ELSEIF (P_TMP(1,0).GT.1.D-6) THEN
-          WRITE(*,*) 'px is not conserved ',P_TMP(1,0)
-          STOP 'px is not conserved'
-        ELSEIF (P_TMP(2,0).GT.1.D-6) THEN
-          WRITE(*,*) 'py is not conserved ',P_TMP(2,0)
-          STOP 'py is not conserved'
-        ELSEIF (P_TMP(3,0).GT.1.D-6) THEN
-          WRITE(*,*) 'pz is not conserved ',P_TMP(3,0)
-          STOP 'pz is not conserved'
+      REF_P = MAX(ABSP_TMP(0), ABSP_TMP(1),ABSP_TMP(2),ABSP_TMP(3))
+      DO I=0,3
+        ABSP_TMP(I) = MAX(REF_P*1E-6, ABSP_TMP(I))
+      ENDDO
+
+      IF (CHECKPCONSERVATION.AND.REF_P.GT.1D-8) THEN
+        IF ((P_TMP(0,0)/ABSP_TMP(0)).GT.1.D-6) THEN
+          WRITE(*,*) 'energy is not conserved (flag:CT692)',P_TMP(0,0)
+          STOP 'energy is not conserved (flag:CT692)'
+        ELSEIF ((P_TMP(1,0)/ABSP_TMP(1)).GT.1.D-6) THEN
+          WRITE(*,*) 'px is not conserved (flag:CT692)',P_TMP(1,0)
+          STOP 'px is not conserved (flag:CT692)'
+        ELSEIF ((P_TMP(2,0)/ABSP_TMP(2)).GT.1.D-6) THEN
+          WRITE(*,*) 'py is not conserved (flag:CT692)',P_TMP(2,0)
+          STOP 'py is not conserved (flag:CT692)'
+        ELSEIF ((P_TMP(3,0)/ABSP_TMP(3)).GT.1.D-6) THEN
+          WRITE(*,*) 'pz is not conserved (flag:CT692)',P_TMP(3,0)
+          STOP 'pz is not conserved (flag:CT692)'
         ENDIF
       ENDIF
       DO I=0,3
@@ -572,7 +587,8 @@ C
 C     LOCAL VARIABLES 
 C     
       REAL*16 NINJA_SCALE
-      REAL*16 P_TMP(0:3,0:NLOOPLINE-1)
+      REAL*16 P_TMP(0:3,0:NLOOPLINE-1), ABSP_TMP(0:3)
+      REAL*8 REF_P
       REAL(KI_QNIN) MP_P_NINJA(0:3,NLOOPLINE)
       REAL*16 MP_P(0:3,NLOOPLINE)
       REAL*16 P_S_MAT(NLOOPLINE,0:3)
@@ -613,8 +629,8 @@ C
       COMMON/MG5_1_MP_LCOEFS/MP_LOOPCOEFS
 
       LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
-      COMMON/MG5_1_FPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDU
-     $ CTION
+      COMMON/MG5_1_FPE_IN_REDUCTION/FPE_IN_DP_REDUCTION,
+     $  FPE_IN_QP_REDUCTION
 
 C     ----------
 C     BEGIN CODE
@@ -643,9 +659,10 @@ C     INITIALIZE NINJA IF NEEDED
         CALL MG5_1_INITNINJA()
       ENDIF
 
-C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA CONVENTION
-C     S
+C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO NINJA
+C      CONVENTIONS
       DO I=0,3
+        ABSP_TMP(I)=0.E0+0_16
         DO J=0,(NLOOPLINE-1)
           P_TMP(I,J)=0.E0+0_16
         ENDDO
@@ -653,21 +670,30 @@ C     S
       DO I=0,3
         DO J=1,NLOOPLINE
           P_TMP(I,0)=P_TMP(I,0)+PL(I,J)
+          ABSP_TMP(I)=ABSP_TMP(I)+ABS(PL(I,J))
         ENDDO
       ENDDO
-      IF (CHECKPCONSERVATION) THEN
-        IF (P_TMP(0,0).GT.1.E-6_16) THEN
-          WRITE(*,*) 'energy is not conserved ',DBLE(P_TMP(0,0))
-          STOP 'energy is not conserved'
-        ELSEIF (P_TMP(1,0).GT.1.E-6_16) THEN
-          WRITE(*,*) 'px is not conserved ',DBLE(P_TMP(1,0))
-          STOP 'px is not conserved'
-        ELSEIF (P_TMP(2,0).GT.1.E-6_16) THEN
-          WRITE(*,*) 'py is not conserved ',DBLE(P_TMP(2,0))
-          STOP 'py is not conserved'
-        ELSEIF (P_TMP(3,0).GT.1.E-6_16) THEN
-          WRITE(*,*) 'pz is not conserved ',DBLE(P_TMP(3,0))
-          STOP 'pz is not conserved'
+      REF_P = MAX(ABSP_TMP(0), ABSP_TMP(1),ABSP_TMP(2),ABSP_TMP(3))
+      DO I=0,3
+        ABSP_TMP(I) = MAX(REF_P*1E-6, ABSP_TMP(I))
+      ENDDO
+      IF (CHECKPCONSERVATION.AND.REF_P.GT.1.E-8_16) THEN
+        IF ((P_TMP(0,0)/ABSP_TMP(0)).GT.1.E-6_16) THEN
+          WRITE(*,*) 'energy is not conserved (flag:CT968)'
+     $     ,DBLE(P_TMP(0,0))
+          STOP 'energy is not conserved (flag:CT968)'
+        ELSEIF ((P_TMP(1,0)/ABSP_TMP(1)).GT.1.E-6_16) THEN
+          WRITE(*,*) 'px is not conserved (flag:CT968)',DBLE(P_TMP(1,0)
+     $     )
+          STOP 'px is not conserved (flag:CT968)'
+        ELSEIF ((P_TMP(2,0)/ABSP_TMP(2)).GT.1.E-6_16) THEN
+          WRITE(*,*) 'py is not conserved (flag:CT968)',DBLE(P_TMP(2,0)
+     $     )
+          STOP 'py is not conserved (flag:CT968)'
+        ELSEIF ((P_TMP(3,0)/ABSP_TMP(3)).GT.1.E-6_16) THEN
+          WRITE(*,*) 'pz is not conserved (flag:CT968)',DBLE(P_TMP(3,0)
+     $     )
+          STOP 'pz is not conserved (flag:CT968)'
         ENDIF
       ENDIF
       DO I=0,3
@@ -728,8 +754,8 @@ C     Now typecast to Ninja's quadruple precision format
       ENDDO
       DO I=1,NLOOPLINE
         DO J=1,NLOOPLINE
-          MP_REAL_S_MAT_NINJA(I,J) = REAL(MP_REAL_S_MAT(I,J),KIND=KI_QN
-     $     IN)
+          MP_REAL_S_MAT_NINJA(I,J) = REAL(MP_REAL_S_MAT(I,J)
+     $     ,KIND=KI_QNIN)
         ENDDO
       ENDDO
       DO I=1,NLOOPLINE
@@ -750,8 +776,8 @@ C     Below is the call specifying the kinematic matrix
      $ ,NINJA_RES,NINJA_R1,NINJA_STATUS)
 C     Below is the call without specification of the kinematic matrix
 C     call ninja_tensor_evaluate(MP_NINJA_TENSORCOEFS,NLOOPLINE,RANK,MP
-C     _P_NINJA,MP_M2L_NINJA,NINJA_SCALE,NINJA_RES,NINJA_R1,NINJA_STATUS
-C     )
+C     _P_NINJA,MP_M2L_NINJA,NINJA_SCALE,NINJA_RES,NINJA_R1,NINJA_STATUS)
+C     
 
 C     If a floating point exception was found in Ninja (e.g. exactly
 C      zero gram. det.)
@@ -805,29 +831,29 @@ C     1 -> LOOPTOOLS
 C     2 -> AVH
 C     3 -> QCDLOOP
       IF (CTLOOPLIBRARY.EQ.1) THEN
-        WRITE(*,*) 'Warning in Ninja initialization. LoopTools is no'
-     $   //'t supported by the Ninja interface. It will use OneLOo'
-     $   //'p instead.'
+        WRITE(*,*) 'Warning in Ninja initialization. LoopTools is not'
+     $   //' supported by the Ninja interface. It will use OneLOop'
+     $   //' instead.'
         LOOPLIB = 1
       ELSEIF (CTLOOPLIBRARY.EQ.3) THEN
-        WRITE(*,*) 'Warning in Ninja initialization. LoopTools is no'
-     $   //'t supported by the Ninja interface. It will use OneLOo'
-     $   //'p instead.'
+        WRITE(*,*) 'Warning in Ninja initialization. LoopTools is not'
+     $   //' supported by the Ninja interface. It will use OneLOop'
+     $   //' instead.'
         LOOPLIB = 1
       ELSEIF (CTLOOPLIBRARY.EQ.2) THEN
         LOOPLIB = 1
       ELSE
         WRITE(*,*) 'Error in Ninja initialization. Loop library ID='
-     $   ,CTLOOPLIBRARY,' is not supported. Change variable CTLoopLibr'
-     $   //'ary in MadLoopParams.dat.'
+     $   ,CTLOOPLIBRARY,' is not supported. Change variable'
+     $   //' CTLoopLibrary in MadLoopParams.dat.'
         STOP 1
       ENDIF
       CALL NINJA_SET_INTEGRAL_LIBRARY(LOOPLIB)
 
       END
 
-      SUBROUTINE MG5_1_LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK
-     $ , SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE MG5_1_LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK,
+     $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NLOOPLINE
@@ -897,7 +923,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -946,8 +972,8 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL MG5_1_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL MG5_1_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
 C         Ninja is used
           IF (.NOT.DOING_QP) THEN
@@ -961,8 +987,8 @@ C         Ninja is used
         ELSE
 C         Tensor Integral Reduction is used 
           CALL MG5_1_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -972,8 +998,8 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE MG5_1_LOOP_3(W1, W2, W3, M1, M2, M3,  RANK, SQUAREDSOI
-     $ NDEX, LOOPNUM)
+      SUBROUTINE MG5_1_LOOP_3(W1, W2, W3, M1, M2, M3,  RANK,
+     $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NLOOPLINE
@@ -1043,7 +1069,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -1090,8 +1116,8 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL MG5_1_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL MG5_1_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
 C         Ninja is used
           IF (.NOT.DOING_QP) THEN
@@ -1105,8 +1131,8 @@ C         Ninja is used
         ELSE
 C         Tensor Integral Reduction is used 
           CALL MG5_1_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -1116,8 +1142,8 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE MG5_1_LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX
-     $ , LOOPNUM)
+      SUBROUTINE MG5_1_LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX,
+     $  LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NLOOPLINE
@@ -1187,7 +1213,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         M2L(1)=M2**2
@@ -1232,8 +1258,8 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL MG5_1_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL MG5_1_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSEIF (MLREDUCTIONLIB(I_LIB).EQ.6) THEN
 C         Ninja is used
           IF (.NOT.DOING_QP) THEN
@@ -1247,8 +1273,8 @@ C         Ninja is used
         ELSE
 C         Tensor Integral Reduction is used 
           CALL MG5_1_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)

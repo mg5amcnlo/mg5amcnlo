@@ -134,11 +134,11 @@ class CmdExtended(cmd.Cmd):
     }
 
     debug_output = 'MG5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n'
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
     keyboard_stop_msg = """stopping all operation
             in order to quit mg5 please enter exit"""
@@ -745,8 +745,8 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info(" > This allow to not run on the central disk. ")
         logger.info(" > This is not used by condor cluster (since condor has")
         logger.info("   its own way to prevent it).")
-        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
-        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
+#        logger.info("mg5amc_py8_interface_path PATH",'$MG:color:GREEN')
+#        logger.info(" > Necessary when showering events with Pythia8 from Madevent.")
         logger.info("OLP ProgramName",'$MG:color:GREEN')
         logger.info(" > (default 'MadLoop') [Used for virtual generation]")
         logger.info(" > Chooses what One-Loop Program to use for the virtual")
@@ -1332,7 +1332,8 @@ This will take effect only in a NEW terminal
 
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output',\
-                                          'loop_color_flows']:
+                                          'loop_color_flows',\
+                                          'low_mem_multicore_nlo_generation']:
             args.append('True')
 
         if len(args) > 2 and '=' == args[1]:
@@ -1381,7 +1382,7 @@ This will take effect only in a NEW terminal
             if not args[1].isdigit():
                 raise self.InvalidCmd('%s values should be a integer' % args[0])
 
-        if args[0] in ['loop_optimized_output', 'loop_color_flows']:
+        if args[0] in ['loop_optimized_output', 'loop_color_flows', 'low_mem_multicore_nlo_generation']:
             try:
                 args[1] = banner_module.ConfigFile.format_variable(args[1], bool, args[0])
             except Exception:
@@ -2381,7 +2382,8 @@ class CompleteForCmd(cmd.CompleteCmd):
 
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
-                           'loop_optimized_output', 'loop_color_flows']:
+                           'loop_optimized_output', 'loop_color_flows',\
+                           'low_mem_multicore_nlo_generation']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
                 return self.list_completion(text, self._multiparticles.keys())
@@ -2681,14 +2683,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'fastjet':'fastjet-config',
                        'pjfry':'auto',
                        'golem':'auto',
-                       'samurai':'auto',
+                       'samurai':None,
                        'ninja':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
                        'cluster_temp_path':None,
                        'cluster_local_path': None,
-                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
+#                       'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
                        'OLP': 'MadLoop',
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
@@ -2698,6 +2700,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     options_madgraph= {'group_subprocesses': 'Auto',
                           'ignore_six_quark_processes': False,
+                          'low_mem_multicore_nlo_generation': False,
                           'complex_mass_scheme': False,
                           'gauge':'unitary',
                           'stdout_level':None,
@@ -2986,7 +2989,12 @@ This implies that with decay chains:
         new_model_name = output_dir
         if restrict_name:
             new_model_name = '%s-%s' % (output_dir, restrict_name)
-        self.exec_cmd('import model %s' % new_model_name, errorhandling=False, 
+            
+        if 'modelname' in self.history.get('full_model_line'):
+            opts = '--modelname'
+        else:
+            opts='' 
+        self.exec_cmd('import model %s %s' % (new_model_name, opts), errorhandling=False, 
                               printcmd=False, precmd=True, postcmd=True)         
         
         
@@ -3299,11 +3307,18 @@ This implies that with decay chains:
             pydoc.pager(outstr)
 
         elif args[0] == 'options':
+            if len(args) == 1:
+                to_print = lambda name: True
+            else:
+                to_print = lambda name: any(poss in name for poss in args[1:])
+
             outstr = "                          MadGraph5_aMC@NLO Options    \n"
             outstr += "                          ----------------    \n"
             keys = self.options_madgraph.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madgraph[key] 
                 value = self.options[key]
                 if value == default:
@@ -3316,6 +3331,8 @@ This implies that with decay chains:
             keys = self.options_madevent.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_madevent[key]
                 value = self.options[key]
                 if value == default:
@@ -3328,6 +3345,8 @@ This implies that with decay chains:
             keys = self.options_configuration.keys()
             keys.sort()
             for key in keys:
+                if not to_print(key):
+                    continue
                 default = self.options_configuration[key]
                 value = self.options[key]
                 if value == default:
@@ -5087,6 +5106,7 @@ This implies that with decay chains:
         removed_multiparticles = []
         # First check if the defined multiparticles are allowed in the
         # new model
+        
         for key in self._multiparticles.keys():
             try:
                 for part in self._multiparticles[key]:
@@ -5112,6 +5132,10 @@ This implies that with decay chains:
             except self.InvalidCmd, why:
                 logger_stderr.warning('impossible to set default multiparticles %s because %s' %
                                         (line.split()[0],why))
+                if self.history[-1] == 'define %s' % line.strip():
+                    self.history.pop(-1)
+                else:
+                    misc.sprint([self.history[-1], 'define %s' % line.strip()])
 
         scheme = "old"
         for qcd_container in ['p', 'j']:
@@ -5227,6 +5251,12 @@ This implies that with decay chains:
         if not self.options['cpp_compiler'] is None:
             compiler_options.append('--cpp_compiler=%s'%
                                                    self.options['cpp_compiler'])
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+        else:
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
@@ -5458,7 +5488,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'lhapdf5':['arXiv:0605240'],
                           'hepmc':['CPC 134 (2001) 41-46'],
                           'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
-                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:XXXX.YYYYY'],
+                          'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
                           'oneloop':['arXiv:1007.4716']}
 
         if args[0] in advertisements:
@@ -5750,8 +5780,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                     logger.info('Downloading TD for Linux 32 bit')
                     target = 'http://madgraph.phys.ucl.ac.be/Downloads/td'
                 misc.call(['wget', target], cwd=pjoin(MG5DIR,'td'))
-                os.chmod(pjoin(MG5DIR,'td','td'), 0775)
-                self.options['td_path'] = pjoin(MG5DIR,'td')
+            os.chmod(pjoin(MG5DIR,'td','td'), 0775)
+            self.options['td_path'] = pjoin(MG5DIR,'td')
 
             if not misc.which('gs'):
                 logger.warning('''gosthscript not install on your system. This is not required to run MA.
@@ -5903,15 +5933,15 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             #        files.cp(old,new)
 
             # check that all files in bin directory are executable
-            for path in glob.glob(pjoin(MG5DIR, 'bin','*')):
+            for path in misc.glob('*', pjoin(MG5DIR, 'bin')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','*')):
+            for path in misc.glob(pjoin('*','bin','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','bin','internal','*')):
+            for path in misc.glob(pjoin('*','bin','internal','*'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*', '*.py')):
+            for path in misc.glob(pjoin('*','*', '*.py'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
-            for path in glob.glob(pjoin(MG5DIR, 'Template','*','*','*.sh')):
+            for path in misc.glob(pjoin('*','*','*.sh'), pjoin(MG5DIR, 'Template')):
                 misc.call(['chmod', '+x', path])
 
             #add empty files/directory
@@ -6111,8 +6141,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 fsock.write("version_nb   %s\n" % fail)
             fsock.write("last_check   %s\n" % int(time.time()))
             fsock.close()            
-            logger.info('Refreshing installation of MG5aMC_PY8_interface.')
-            self.do_install('mg5amc_py8_interface',additional_options=['--force'])
+#            logger.info('Refreshing installation of MG5aMC_PY8_interface.')
+#            self.do_install('mg5amc_py8_interface',additional_options=['--force'])
             logger.info('Checking current version. (type ctrl-c to bypass the check)')
             subprocess.call([os.path.join('tests','test_manager.py')],
                                                                   cwd=MG5DIR)            
@@ -6288,9 +6318,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if key in self.options_madgraph:
                         self.history.append('set %s %s' % (key, self.options[key]))
         
-        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
-        if warnings:
-            logger.warning(warnings)
+#        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+#        if warnings:
+#            logger.warning(warnings)
 
         # Configure the way to open a file:
         launch_ext.open_file.configure(self.options)
@@ -6592,7 +6622,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             # First look at options which should be put in MG5DIR/input
             to_define = {}
             for key, default in self.options_configuration.items():
-                if  self.options_configuration[key] != self.options[key] != None:
+                if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
                     to_define[key] = self.options[key]
 
             if not '--auto' in args:
@@ -6941,9 +6971,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         force = '-f' in args
         nojpeg = '-nojpeg' in args
         flaglist = []
-        
-
-            
+                    
         if '--postpone_model' in args:
             flaglist.append('store_model')
         
@@ -7596,6 +7624,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     elif value < 0:
                         raise Exception, 'Partial width for %s > %s negative: %s' % \
                                        (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
+                    elif value < 0.1 and particle['color'] !=1:
+                        logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
+                                   % (particle.get('name'), value, decay_to))
+                        value = 0
+                                     
                     decay_info[particle.get('pdg_code')].append([decay_to, value])
                     total += value
             else:
@@ -7617,8 +7650,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         if self._curr_amps:
             logger.info('Pass to numerical integration for computing the widths:')
-        else:
+        else:            
             logger.info('No need for N body-decay (N>2). Results are in %s' % opts['output'])
+            
+            
+            
             return
 
         # Do the MadEvent integration!!

@@ -51,6 +51,9 @@ C
       REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
       INTEGER NGOOD(2), IGOOD(NCOMB,2)
       INTEGER JHEL(2), J, JJ
+      INTEGER THIS_NTRY(2)
+      SAVE THIS_NTRY
+      DATA THIS_NTRY /0,0/
 C     This is just to temporarily store the reference grid for
 C      helicity of the DiscreteSampler so as to obtain its number of
 C      entries with ref_helicity_grid%%n_tot_entries
@@ -108,6 +111,7 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       NTRY(IMIRROR)=NTRY(IMIRROR)+1
+      THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1
       DO I=1,NEXTERNAL
         JC(I) = +1
       ENDDO
@@ -130,21 +134,21 @@ C     ----------
         !   If the helicity grid status is 0, this means that it is not yet initialized.
         !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
       IF ((ISHEL(IMIRROR).EQ.0.AND.ISUM_HEL.EQ.0).OR.(DS_GET_DIM_STATUS
-     $ ('Helicity').EQ.0).OR.(HEL_PICKED.EQ.-1)) THEN
+     $('Helicity').EQ.0).OR.(HEL_PICKED.EQ.-1)) THEN
         DO I=1,NCOMB
           IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.OR.(ISU
-     $     M_HEL.NE.0)) THEN
+     $M_HEL.NE.0).OR.THIS_NTRY(IMIRROR).LE.2) THEN
             T=MATRIX1(P ,NHEL(1,I),JC(1))
             DO JJ=1,NINCOMING
-              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0
-     $         ,POL(JJ)))) THEN
+              IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))
+     $         )) THEN
                 T=T*ABS(POL(JJ))
               ELSE IF(POL(JJ).NE.1D0)THEN
                 T=T*(2D0-ABS(POL(JJ)))
               ENDIF
             ENDDO
-            IF (ISUM_HEL.NE.0.AND.DS_GET_DIM_STATUS('Helicity'
-     $       ).EQ.0.AND.ALLOW_HELICITY_GRID_ENTRIES) THEN
+            IF (ISUM_HEL.NE.0.AND.DS_GET_DIM_STATUS('Helicity')
+     $       .EQ.0.AND.ALLOW_HELICITY_GRID_ENTRIES) THEN
               CALL DS_ADD_ENTRY('Helicity',I,T)
             ENDIF
             ANS=ANS+DABS(T)
@@ -162,7 +166,7 @@ C     ----------
             !         We don't want to re-update the helicity grid if it was already updated by another matrix<i>, so we make sure that the reference grid is empty.
           REF_HELICITY_GRID = DS_GET_DIMENSION(REF_GRID,'Helicity')
           IF((DS_GET_DIM_STATUS('Helicity').EQ.1).AND.(REF_HELICITY_GRI
-     $     D%%N_TOT_ENTRIES.EQ.0)) THEN
+     $D%%N_TOT_ENTRIES.EQ.0)) THEN
               !           If we finished the initialization we can update the grid so as to start sampling over it.
               !           However the grid will now be filled by dsample with different kind of weights (including pdf, flux, etc...) so by setting the grid_mode of the reference grid to 'initialization' we make sure it will be overwritten (as opposed to 'combined') by the running grid at the next update.
             CALL DS_UPDATE_GRID('Helicity')
@@ -170,15 +174,15 @@ C     ----------
           ENDIF
         ELSE
           JHEL(IMIRROR) = 1
-          IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+          IF(NTRY(IMIRROR).LE.MAXTRIES.OR.THIS_NTRY(IMIRROR).LE.2)THEN
             DO I=1,NCOMB
               IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS
      $         *LIMHEL/NCOMB)) THEN
                 GOODHEL(I,IMIRROR)=.TRUE.
                 NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                 IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-                PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS
-     $           ,' in event ',NTRY(IMIRROR)
+                PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in'
+     $           //' event ',NTRY(IMIRROR), 'local:',THIS_NTRY(IMIRROR)
               ENDIF
             ENDDO
           ENDIF
@@ -194,8 +198,8 @@ C        in a common block defined in genps.inc.
         T=MATRIX1(P ,NHEL(1,I),JC(1))
 
         DO JJ=1,NINCOMING
-          IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ)))
-     $     ) THEN
+          IF(POL(JJ).NE.1D0.AND.NHEL(JJ,I).EQ.INT(SIGN(1D0,POL(JJ))))
+     $      THEN
             T=T*ABS(POL(JJ))
           ELSE IF(POL(JJ).NE.1D0)THEN
             T=T*(2D0-ABS(POL(JJ)))
@@ -374,8 +378,8 @@ C     This functions plays the role of the interference matrix. It can
 C      be hardcoded or 
 C     made more elegant using hashtables if its execution speed ever
 C      becomes a relevant
-C     factor. From two split order indices, it return the corresponding
-C      index in the squared 
+C     factor. From two split order indices, it return the
+C      corresponding index in the squared 
 C     order canonical ordering.
 C     
 C     CONSTANTS
@@ -403,7 +407,7 @@ C     BEGIN CODE
 C     
       DO I=1,NSO
         SQORDERS(I)=AMPSPLITORDERS(ORDERINDEXA,I)+AMPSPLITORDERS(ORDERI
-     $   NDEXB,I)
+     $NDEXB,I)
       ENDDO
       SQSOINDEX1=SOINDEX_FOR_SQUARED_ORDERS1(SQORDERS)
       END
@@ -497,8 +501,8 @@ C
         RETURN
       ENDIF
 
-      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOI'
-     $ //'NDEX1'
+      WRITE(*,*) 'ERROR:: Stopping function GET_SQUARED_ORDERS_FOR_SOIN'
+     $ //'DEX1'
       WRITE(*,*) 'Could not find squared orders index ',SOINDEX
       STOP
 
@@ -543,8 +547,8 @@ C
 
       END SUBROUTINE
 
-C     This function is not directly useful, but included for completene
-C     ss
+C     This function is not directly useful, but included for
+C      completeness
       INTEGER FUNCTION SOINDEX_FOR_AMPORDERS1(ORDERS)
 C     
 C     This functions returns the integer index identifying the

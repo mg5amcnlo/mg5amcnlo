@@ -31,7 +31,8 @@ C
       INTEGER I_SQSO,I_LOOPGROUP,I_LIB
       INTEGER NLOOPLINE, RANK
       REAL*8 PL(0:3,NLOOPLINE)
-      REAL*8 PCT(0:3,0:NLOOPLINE-1)
+      REAL*8 PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      REAL*8 REF_P
       REAL*8 PDEN(0:3,NLOOPLINE-1)
       COMPLEX*16 M2L(NLOOPLINE)
       COMPLEX*16 M2LCT(0:NLOOPLINE-1)
@@ -111,6 +112,7 @@ C     CONVERT THE MASSES TO BE COMPLEX
 
 C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
+        ABSPCT(I) = 0.D0
         DO J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         ENDDO
@@ -118,21 +120,27 @@ C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
         DO J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         ENDDO
       ENDDO
-      IF (CHECKPCONSERVATION) THEN
-        IF (PCT(0,0).GT.1.D-6) THEN
-          WRITE(*,*) 'energy is not conserved ',PCT(0,0)
-          STOP 'energy is not conserved'
-        ELSEIF (PCT(1,0).GT.1.D-6) THEN
-          WRITE(*,*) 'px is not conserved ',PCT(1,0)
-          STOP 'px is not conserved'
-        ELSEIF (PCT(2,0).GT.1.D-6) THEN
-          WRITE(*,*) 'py is not conserved ',PCT(2,0)
-          STOP 'py is not conserved'
-        ELSEIF (PCT(3,0).GT.1.D-6) THEN
-          WRITE(*,*) 'pz is not conserved ',PCT(3,0)
-          STOP 'pz is not conserved'
+      REF_P = MAX(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+      DO I=0,3
+        ABSPCT(I) = MAX(REF_P*1E-6, ABSPCT(I))
+      ENDDO
+
+      IF (CHECKPCONSERVATION.AND.REF_P.GT.1D-8) THEN
+        IF ((PCT(0,0)/ABSPCT(0)).GT.1.D-6) THEN
+          WRITE(*,*) 'energy is not conserved (flag: TIR)',PCT(0,0)
+          STOP 'energy is not conserved (flag: TIR)'
+        ELSEIF ((PCT(1,0)/ABSPCT(1)).GT.1.D-6) THEN
+          WRITE(*,*) 'px is not conserved (flag: TIR)',PCT(1,0)
+          STOP 'px is not conserved (flag: TIR)'
+        ELSEIF ((PCT(2,0)/ABSPCT(2)).GT.1.D-6) THEN
+          WRITE(*,*) 'py is not conserved (flag: TIR)',PCT(2,0)
+          STOP 'py is not conserved (flag: TIR)'
+        ELSEIF ((PCT(3,0)/ABSPCT(3)).GT.1.D-6) THEN
+          WRITE(*,*) 'pz is not conserved (flag: TIR)',PCT(3,0)
+          STOP 'pz is not conserved (flag: TIR)'
         ENDIF
       ENDIF
       DO I=0,3
@@ -385,8 +393,8 @@ C     ----------
       IF(DOING_QP)THEN
 C       QP EVALUATION, ONLY CUTTOOLS
         IF(.NOT.QP_TOOLS_AVAILABLE)THEN
-          STOP 'No qp tools available, please make sure MLReductionLi'
-     $     //'b is correct'
+          STOP 'No qp tools available, please make sure MLReductionLib'
+     $     //' is correct'
         ENDIF
         J_LIB=0
         SELECT_LIBINDEX=LIBINDEX
@@ -400,7 +408,7 @@ C       QP EVALUATION, ONLY CUTTOOLS
           IF(J_LIB.EQ.0)THEN
             SELECT_LIBINDEX=SELECT_LIBINDEX+1
             IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLREDUCTIONLIB(SELECT_LIB
-     $       INDEX).EQ.0)SELECT_LIBINDEX=1
+     $INDEX).EQ.0)SELECT_LIBINDEX=1
           ENDIF
         ENDDO
         I=J_LIB

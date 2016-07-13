@@ -36,6 +36,8 @@ import tarfile
 import copy
 import datetime
 import tarfile
+import traceback
+import StringIO
 
 try:
     import readline
@@ -184,11 +186,11 @@ class CmdExtended(common_run.CommonRunCmd):
     }
     
     debug_output = 'ME5_debug'
-    error_debug = 'Please report this bug on https://bugs.launchpad.net/madgraph5\n'
+    error_debug = 'Please report this bug on https://bugs.launchpad.net/mg5amcnlo\n'
     error_debug += 'More information is found in \'%(debug)s\'.\n' 
     error_debug += 'Please attach this file to your report.'
 
-    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/madgraph5\n'
+    config_debug = 'If you need help with this issue please contact us on https://answers.launchpad.net/mg5amcnlo\n'
 
 
     keyboard_stop_msg = """stopping all operation
@@ -506,8 +508,8 @@ class CheckValidForCmd(object):
         lock = None              
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'pgs')
-            filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.hep.gz'))
+            filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events', self.run_name)) 
+
             if not filenames:
                 raise self.InvalidCmd('No events file corresponding to %s run with tag %s. '% (self.run_name, prev_tag))
             else:
@@ -563,8 +565,9 @@ class CheckValidForCmd(object):
                               
         if len(arg) == 1:
             prev_tag = self.set_run_name(arg[0], tag, 'delphes')
-            filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.hep.gz'))
+            filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events')) 
+            
+            
             if not filenames:
                 raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
                     % (self.run_name, prev_tag, 
@@ -654,7 +657,7 @@ class CheckValidForCmd(object):
         else:
             name = args[0]
             type = 'run'
-            banners = glob.glob(pjoin(self.me_dir,'Events', args[0], '*_banner.txt'))
+            banners = misc.glob('*_banner.txt', pjoin(self.me_dir,'Events', args[0]))
             if not banners:
                 raise self.InvalidCmd('No banner associates to this name.')    
             elif len(banners) == 1:
@@ -782,7 +785,7 @@ class CompleteForCmd(CheckValidForCmd):
         
         if len(args) > 1:
             # only options are possible
-            tags = glob.glob(pjoin(self.me_dir, 'Events' , args[1],'%s_*_banner.txt' % args[1]))
+            tags = misc.glob('%s_*_banner.txt' % args[1],pjoin(self.me_dir, 'Events' , args[1]))
             tags = ['%s' % os.path.basename(t)[len(args[1])+1:-11] for t in tags]
 
             if args[-1] != '--tag=':
@@ -801,7 +804,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             possibilites['Path from ./'] = comp
 
-        run_list =  glob.glob(pjoin(self.me_dir, 'Events', '*','*_banner.txt'))
+        run_list = misc.glob(pjoin('*','*_banner.txt'), pjoin(self.me_dir, 'Events')) 
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
@@ -848,7 +851,7 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx])
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','events.lhe.gz'))
+            data = misc.glob(pjoin('*','events.lhe.gz', pjoin(self.me_dir, 'Events')))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -861,7 +864,7 @@ class CompleteForCmd(CheckValidForCmd):
 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','events.lhe*'))
+            data = misc.glob(pjoin('*','events.lhe*', pjoin(self.me_dir, 'Events')))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -875,7 +878,8 @@ class CompleteForCmd(CheckValidForCmd):
         args = self.split_arg(line[0:begidx], error=False) 
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*', 'events_*.hep.gz'))
+            data = misc.glob(pjoin('*', 'events_*.hep.gz'),
+                             pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -915,6 +919,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
     cluster_mode = 0
     queue  = 'madgraph'
     nb_core = None
+    make_opts_var = {}
     
     next_possibility = {
         'start': ['generate_events [OPTIONS]', 'calculate_crossx [OPTIONS]', 'launch [OPTIONS]',
@@ -937,16 +942,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.nb_core = 0
         self.prompt = "%s>"%os.path.basename(pjoin(self.me_dir))
 
-        # load the current status of the directory
-        if os.path.exists(pjoin(self.me_dir,'HTML','results.pkl')):
-            self.results = save_load_object.load_from_file(pjoin(self.me_dir,'HTML','results.pkl'))
-            self.results.resetall(self.me_dir)
-            self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
-        else:
-            model = self.find_model_name()
-            process = self.process # define in find_model_name
-            self.results = gen_crossxhtml.AllResultsNLO(model, process, self.me_dir)
-            self.last_mode = ''
+
+        self.load_results_db()
         self.results.def_web_mode(self.web)
         # check that compiler is gfortran 4.6 or later if virtuals have been exported
         proc_card = open(pjoin(self.me_dir, 'Cards', 'proc_card_mg5.dat')).read()
@@ -966,7 +963,7 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         self.check_shower(argss, options)
         evt_file = pjoin(os.getcwd(), argss[0], 'events.lhe')
         self.ask_run_configuration('onlyshower', options)
-        self.run_mcatnlo(evt_file)
+        self.run_mcatnlo(evt_file, options)
 
         self.update_status('', level='all', update_results=True)
 
@@ -1026,11 +1023,9 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
                 os.remove(pjoin(self.me_dir, 'Events', 'plots.top'))
                 
         if any([arg in ['all','shower'] for arg in args]):
-            filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                        'events_*.lhe.gz'))
+            filenames = misc.glob('events_*.lhe.gz', pjoin(self.me_dir, 'Events', self.run_name))
             if len(filenames) != 1:
-                filenames = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.hep.gz'))
+                filenames = misc.glob('events_*.hep.gz', pjoin(self.me_dir, 'Events', self.run_name)) 
                 if len(filenames) != 1:
                     logger.info('No shower level file found for run %s' % \
                                 self.run_name)
@@ -1222,20 +1217,22 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
-            self.run_mcatnlo(evt_file)
+            self.run_mcatnlo(evt_file, options)
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
 
 
         self.update_status('', level='all', update_results=True)
-        if self.run_card['ickkw'] == 3 and mode in ['noshower', 'aMC@NLO']:
+        if self.run_card['ickkw'] == 3 and \
+           (mode in ['noshower'] or \
+            (('PYTHIA8' not in self.run_card['parton_shower'].upper()) and (mode in ['aMC@NLO']))):
             logger.warning("""You are running with FxFx merging enabled.
 To be able to merge samples of various multiplicities without double counting,
 you have to remove some events after showering 'by hand'.
 Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
 
-
+        self.store_result()
         #check if the param_card defines a scan.
         if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
@@ -1661,20 +1658,20 @@ RESTART = %(mint_mode)s
             return jobs_to_run_new,jobs_to_collect
         elif jobs_to_run_new:
             # print intermediate summary of results
-            scale_pdf_info={}
+            scale_pdf_info=[]
             self.print_summary(options,integration_step,mode,scale_pdf_info,done=False)
         else:
             # When we are done for (N)LO+PS runs, do not print
             # anything yet. This will be done after the reweighting
             # and collection of the events
-            scale_pdf_info={}
+            scale_pdf_info=[]
 # Prepare for the next integration/MINT step
         if (not fixed_order) and integration_step+1 == 2 :
             # next step is event generation (mint_step 2)
             jobs_to_run_new,jobs_to_collect_new= \
                     self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
-            self.write_nevents_unweighted_file(jobs_to_collect_new)
+            self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
@@ -1682,14 +1679,24 @@ RESTART = %(mint_mode)s
         return jobs_to_run_new,jobs_to_collect_new
 
 
-    def write_nevents_unweighted_file(self,jobs):
-        """writes the nevents_unweighted file in the SubProcesses directory"""
+    def write_nevents_unweighted_file(self,jobs,jobs0events):
+        """writes the nevents_unweighted file in the SubProcesses directory.
+           We also need to write the jobs that will generate 0 events,
+           because that makes sure that the cross section from those channels
+           is taken into account in the event weights (by collect_events.f).
+        """
         content=[]
         for job in jobs:
             path=pjoin(job['dirname'].split('/')[-2],job['dirname'].split('/')[-1])
             lhefile=pjoin(path,'events.lhe')
             content.append(' %s     %d     %9e     %9e' % \
                 (lhefile.ljust(40),job['nevents'],job['resultABS']*job['wgt_frac'],job['wgt_frac']))
+        for job in jobs0events:
+            if job['nevents']==0:
+                path=pjoin(job['dirname'].split('/')[-2],job['dirname'].split('/')[-1])
+                lhefile=pjoin(path,'events.lhe')
+                content.append(' %s     %d     %9e     %9e' % \
+                               (lhefile.ljust(40),job['nevents'],job['resultABS'],1.))
         with open(pjoin(self.me_dir,'SubProcesses',"nevents_unweighted"),'w') as f:
             f.write('\n'.join(content)+'\n')
 
@@ -1881,10 +1888,10 @@ RESTART = %(mint_mode)s
         """writes the res.txt files in the SubProcess dir"""
         jobs.sort(key = lambda job: -job['errorABS'])
         content=[]
-        content.append('\n\nCross-section per integration channel:')
+        content.append('\n\nCross section per integration channel:')
         for job in jobs:
             content.append('%(p_dir)20s  %(channel)15s   %(result)10.8e    %(error)6.4e       %(err_perc)6.4f%%  ' %  job)
-        content.append('\n\nABS cross-section per integration channel:')
+        content.append('\n\nABS cross section per integration channel:')
         for job in jobs:
             content.append('%(p_dir)20s  %(channel)15s   %(resultABS)10.8e    %(errorABS)6.4e       %(err_percABS)6.4f%%  ' %  job)
         totABS=0
@@ -1909,12 +1916,15 @@ RESTART = %(mint_mode)s
 
     def collect_scale_pdf_info(self,options,jobs):
         """read the scale_pdf_dependence.dat files and collects there results"""
-        scale_pdf_info={}
-        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF']:
-            data_files=[]
+        scale_pdf_info=[]
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
+            evt_files=[]
+            evt_wghts=[]
             for job in jobs:
-                data_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
-            scale_pdf_info = self.pdf_scale_from_reweighting(data_files)
+                evt_files.append(pjoin(job['dirname'],'scale_pdf_dependence.dat'))
+                evt_wghts.append(job['wgt_frac'])
+            scale_pdf_info = self.pdf_scale_from_reweighting(evt_files,evt_wghts)
         return scale_pdf_info
 
 
@@ -1930,11 +1940,8 @@ RESTART = %(mint_mode)s
             logger.info('The results of this run and the TopDrawer file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'hwu':
-            self.combine_plots_HwU(jobs)
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.HwU'),
-                     pjoin(self.me_dir, 'Events', self.run_name))
-            files.cp(pjoin(self.me_dir, 'SubProcesses', 'MADatNLO.gnuplot'),
-                     pjoin(self.me_dir, 'Events', self.run_name))
+            out=pjoin(self.me_dir,'Events',self.run_name,'MADatNLO')
+            self.combine_plots_HwU(jobs,out)
             try:
                 misc.call(['gnuplot','MADatNLO.gnuplot'],\
                           stdout=devnull,stderr=devnull,\
@@ -1956,24 +1963,37 @@ RESTART = %(mint_mode)s
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
 
 
-    def combine_plots_HwU(self,jobs):
+    def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
         logger.debug('Combining HwU plots.')
-        all_histo_paths=[]
-        for job in jobs:
-            all_histo_paths.append(pjoin(job['dirname'],"MADatNLO.HwU"))
-        histogram_list = histograms.HwUList(all_histo_paths[0])
-        for histo_path in all_histo_paths[1:]:
-            for i, histo in enumerate(histograms.HwUList(histo_path)):
-                # First make sure the plots have the same weight labels and such
-                histo.test_plot_compability(histogram_list[i])
-                # Now let the histogram module do the magic and add them.
-                histogram_list[i] += histo
-        
-        # And now output the finalized list
-        histogram_list.output(pjoin(self.me_dir,'SubProcesses',"MADatNLO"),
-                                                             format = 'gnuplot')
 
+        command =  []
+        command.append(pjoin(self.me_dir, 'bin', 'internal','histograms.py'))
+        for job in jobs:
+            if job['dirname'].endswith('.HwU'):
+                command.append(job['dirname'])
+            else:
+                command.append(pjoin(job['dirname'],'MADatNLO.HwU'))
+        command.append("--out="+out)
+        command.append("--gnuplot")
+        command.append("--band=[]")
+        command.append("--lhapdf-config="+self.options['lhapdf'])
+        if normalisation:
+            command.append("--multiply="+(','.join([str(n) for n in normalisation])))
+        command.append("--sum")
+        command.append("--keep_all_weights")
+        command.append("--no_open")
+
+        p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
+
+        while p.poll() is None:
+            line = p.stdout.readline()
+            if any(t in line for t in ['INFO:','WARNING:','CRITICAL:','ERROR:','KEEP:']):
+                print line[:-1]
+            elif __debug__ and line:
+                logger.debug(line[:-1])
+
+            
     def applgrid_combine(self,cross,error,jobs):
         """Combines the APPLgrids in all the SubProcess/P*/all_G*/ directories"""
         logger.debug('Combining APPLgrids \n')
@@ -2010,8 +2030,9 @@ RESTART = %(mint_mode)s
         # if no appl_start_grid argument given, guess it from the time stamps 
         # of the starting grid files
         if not('appl_start_grid' in options.keys() and options['appl_start_grid']):
-            gfiles=glob.glob(pjoin(self.me_dir, 'Events','*',
-                                            'aMCfast_obs_0_starting_grid.root'))
+            gfiles = misc.glob(pjoin('*', 'aMCfast_obs_0_starting_grid.root'),
+                               pjoin(self.me_dir,'Events')) 
+            
             time_stamps={}
             for root_file in gfiles:
                 time_stamps[root_file]=os.path.getmtime(root_file)
@@ -2087,7 +2108,7 @@ RESTART = %(mint_mode)s
     def finalise_run_FO(self,folder_name,jobs):
         """Combine the plots and put the res*.txt files in the Events/run.../ folder."""
         # Copy the res_*.txt files to the Events/run* folder
-        res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res_*.txt'))
+        res_files = misc.glob('res_*.txt', pjoin(self.me_dir, 'SubProcesses'))
         for res_file in res_files:
             files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
         # Collect the plots and put them in the Events/run* folder
@@ -2157,7 +2178,7 @@ RESTART = %(mint_mode)s
         return
 
 
-    def print_summary(self, options, step, mode, scale_pdf_info={}, done=True):
+    def print_summary(self, options, step, mode, scale_pdf_info=[], done=True):
         """print a summary of the results contained in self.cross_sect_dict.
         step corresponds to the mintMC step, if =2 (i.e. after event generation)
         some additional infos are printed"""
@@ -2181,91 +2202,87 @@ RESTART = %(mint_mode)s
             self.cross_sect_dict['axsec_string']='(Partial) abs(decay width)'
         else:
             self.cross_sect_dict['unit']='pb'
-            self.cross_sect_dict['xsec_string']='Total cross-section'
-            self.cross_sect_dict['axsec_string']='Total abs(cross-section)'
-        # Gather some basic statistics for the run and extracted from the log files.
-        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
-            log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','G*','log_MINT*.txt'))
-            all_log_files = log_GV_files
-        elif mode == 'NLO':
-            log_GV_files =  glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','all_G*','log_MINT*.txt'))
-            all_log_files = log_GV_files
+            self.cross_sect_dict['xsec_string']='Total cross section'
+            self.cross_sect_dict['axsec_string']='Total abs(cross section)'
 
-        elif mode == 'LO':
-            log_GV_files = ''
-            all_log_files = glob.glob(pjoin(self.me_dir, \
-                                    'SubProcesses', 'P*','born_G*','log_MINT*.txt'))
-        else:
-            raise aMCatNLOError, 'Running mode %s not supported.'%mode
-            
-        
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
             status = ['Determining the number of unweighted events per channel',
                       'Updating the number of unweighted events per channel',
                       'Summary:']
-            if step != 2:
-                message = status[step] + '\n\n      Intermediate results:' + \
-                    ('\n      Random seed: %(randinit)d' + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
-                     '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
-                     % self.cross_sect_dict
-            else:
-        
-                message = '\n      ' + status[step] + proc_info + \
-                          '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                        self.cross_sect_dict
-
-                if self.run_card['nevents']>=10000 and self.run_card['reweight_scale']:
-                   message = message + \
-                       ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                       (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                if self.run_card['nevents']>=10000 and self.run_card['reweight_PDF']:
-                   message = message + \
-                       ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
-                       (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
-
-                neg_frac = (self.cross_sect_dict['xseca'] - self.cross_sect_dict['xsect'])/\
-                       (2. * self.cross_sect_dict['xseca'])
-                message = message + \
-                    ('\n      Number of events generated: %s' + \
-                     '\n      Parton shower to be used: %s' + \
-                     '\n      Fraction of negative weights: %4.2f' + \
-                     '\n      Total running time : %s') % \
-                        (self.run_card['nevents'],
-                         self.run_card['parton_shower'].upper(),
-                         neg_frac, 
-                         misc.format_timer(time.time()-self.start_time))
-
+            computed='(computed from LHE events)'
         elif mode in ['NLO', 'LO']:
             status = ['Results after grid setup:','Current results:',
                       'Final results and run summary:']
-            if (not done) and (step == 0):
+            computed='(computed from histogram information)'
+
+        if step != 2 and mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
+            message = status[step] + '\n\n      Intermediate results:' + \
+                      ('\n      Random seed: %(randinit)d' + \
+                       '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' + \
+                       '\n      %(axsec_string)s: %(xseca)8.3e +- %(erra)6.1e %(unit)s \n') \
+                      % self.cross_sect_dict
+        elif mode in ['NLO','LO'] and not done:
+            if step == 0:
                 message = '\n      ' + status[0] + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-            elif not done:
+                          '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                          self.cross_sect_dict
+            else:
                 message = '\n      ' + status[1] + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-            elif done:
-                message = '\n      ' + status[2] + proc_info + \
-                     '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
-                             self.cross_sect_dict
-                if self.run_card['reweight_scale']:
-                    if self.run_card['ickkw'] != -1:
-                        message = message + \
-                            ('\n      Ren. and fac. scale uncertainty: +%0.1f%% -%0.1f%%') % \
-                            (scale_pdf_info['scale_upp'], scale_pdf_info['scale_low'])
-                    else:
-                        message = message + \
-                            ('\n      Soft and hard scale dependence (added in quadrature): +%0.1f%% -%0.1f%%') % \
-                            (scale_pdf_info['scale_upp_quad'], scale_pdf_info['scale_low_quad'])
-                if self.run_card['reweight_PDF']:
-                    message = message + \
-                        ('\n      PDF uncertainty: +%0.1f%% -%0.1f%%') % \
-                        (scale_pdf_info['pdf_upp'], scale_pdf_info['pdf_low'])
+                          '\n      %(xsec_string)s:      %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                          self.cross_sect_dict
+                
+        else:
+            message = '\n   --------------------------------------------------------------'
+            message = message + \
+                      '\n      ' + status[2] + proc_info 
+            if mode not in ['LO', 'NLO']:
+                message = message + \
+                      '\n      Number of events generated: %s' % self.run_card['nevents'] 
+            message = message + \
+                      '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
+                      self.cross_sect_dict
+            message = message + \
+                      '\n   --------------------------------------------------------------'
+            if scale_pdf_info and (self.run_card['nevents']>=10000 or mode in ['NLO', 'LO']):
+                if scale_pdf_info[0]:
+                        # scale uncertainties
+                    message = message + '\n      Scale variation %s:' % computed
+                    for s in scale_pdf_info[0]:
+                        if s['unc']:
+                            if self.run_card['ickkw'] != -1:
+                                message = message + \
+                                          ('\n          Dynamical_scale_choice %(label)i (envelope of %(size)s values): '\
+                                           '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % s
+                            else:
+                                message = message + \
+                                          ('\n          Soft and hard scale dependence (added in quadrature): '\
+                                           '\n              %(cen)8.3e pb  +%(max_q)0.1f%% -%(min_q)0.1f%%') % s
+                                    
+                        else:
+                            message = message + \
+                                          ('\n          Dynamical_scale_choice %(label)i: '\
+                                           '\n              %(cen)8.3e pb') % s
+                                
+                if scale_pdf_info[1]:
+                    message = message + '\n      PDF variation %s:' % computed
+                    for p in scale_pdf_info[1]:
+                        if p['unc']=='none':
+                            message = message + \
+                                          ('\n          %(name)s (central value only): '\
+                                           '\n              %(cen)8.3e pb') % p
+                            
+                        elif p['unc']=='unknown':
+                            message = message + \
+                                          ('\n          %(name)s (%(size)s members; combination method unknown): '\
+                                           '\n              %(cen)8.3e pb') % p
+                        else:
+                            message = message + \
+                                          ('\n          %(name)s (%(size)s members; using %(unc)s method): '\
+                                           '\n              %(cen)8.3e pb  +%(max)0.1f%% -%(min)0.1f%%') % p
+                        # pdf uncertainties
+                message = message + \
+                          '\n   --------------------------------------------------------------'
+
         
         if (mode in ['NLO', 'LO'] and not done) or \
            (mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO'] and step!=2):
@@ -2275,11 +2292,32 @@ RESTART = %(mint_mode)s
         # Some advanced general statistics are shown in the debug message at the
         # end of the run
         # Make sure it never stops a run
+        # Gather some basic statistics for the run and extracted from the log files.
+        if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']: 
+            log_GV_files =  misc.glob(pjoin('P*','G*','log_MINT*.txt'), 
+                                      pjoin(self.me_dir, 'SubProcesses'))
+            all_log_files = log_GV_files
+        elif mode == 'NLO':
+            log_GV_files = misc.glob(pjoin('P*','all_G*','log_MINT*.txt'), 
+                                      pjoin(self.me_dir, 'SubProcesses')) 
+            all_log_files = log_GV_files
+
+        elif mode == 'LO':
+            log_GV_files = ''
+            all_log_files = misc.glob(pjoin('P*','born_G*','log_MINT*.txt'), 
+                                      pjoin(self.me_dir, 'SubProcesses')) 
+        else:
+            raise aMCatNLOError, 'Running mode %s not supported.'%mode
+
         try:
             message, debug_msg = \
                self.compile_advanced_stats(log_GV_files, all_log_files, message)
         except Exception as e:
-            debug_msg = 'Advanced statistics collection failed with error "%s"'%str(e)
+            debug_msg = 'Advanced statistics collection failed with error "%s"\n'%str(e)
+            err_string = StringIO.StringIO()
+            traceback.print_exc(limit=4, file=err_string)
+            debug_msg += 'Please report this backtrace to a MadGraph developer:\n%s'\
+                                                          %err_string.getvalue()
 
         logger.debug(debug_msg+'\n')
         logger.info(message+'\n')
@@ -2320,6 +2358,15 @@ RESTART = %(mint_mode)s
         compiles statistics about MadLoop stability, virtual integration 
         optimization and detection of potential error messages into a nice
         debug message to printed at the end of the run """
+        
+        def safe_float(str_float):
+            try:
+                return float(str_float)
+            except ValueError:
+                logger.debug('Could not convert the following float during'+
+                             ' advanced statistics printout: %s'%str(str_float))
+                return -1.0
+        
         
         # > UPS is a dictionary of tuples with this format {channel:[nPS,nUPS]}
         # > Errors is a list of tuples with this format (log_file,nErrors)
@@ -2401,7 +2448,7 @@ RESTART = %(mint_mode)s
             nTot1  = [sum([chan[10][i] for chan in stats['UPS'].values()],0) \
                                                              for i in range(10)]
             UPSfracs = [(chan[0] , 0.0 if chan[1][0]==0 else \
-                 float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
+              safe_float(chan[1][4]*100)/chan[1][0]) for chan in stats['UPS'].items()]
             maxUPS = max(UPSfracs, key = lambda w: w[1])
 
             tmpStr = ""
@@ -2431,7 +2478,7 @@ RESTART = %(mint_mode)s
             if maxUPS[1]>0.001:
                 message += tmpStr
                 message += '\n  Total number of unstable PS point detected:'+\
-                                 ' %d (%4.2f%%)'%(nToteps,float(100*nToteps)/nTotPS)
+                        ' %d (%4.2f%%)'%(nToteps,safe_float(100*nToteps)/nTotPS)
                 message += '\n    Maximum fraction of UPS points in '+\
                           'channel %s (%4.2f%%)'%maxUPS
                 message += '\n    Please report this to the authors while '+\
@@ -2467,8 +2514,8 @@ RESTART = %(mint_mode)s
             for vf_stats in re.finditer(virt_frac_finder, log):
                 pass
             if not vf_stats is None:
-                v_frac = float(vf_stats.group('v_frac'))
-                v_average = float(vf_stats.group('v_average'))
+                v_frac = safe_float(vf_stats.group('v_frac'))
+                v_average = safe_float(vf_stats.group('v_average'))
                 try:
                     if v_frac < stats['virt_stats']['v_frac_min'][0]:
                         stats['virt_stats']['v_frac_min']=(v_frac,channel_name)
@@ -2486,7 +2533,7 @@ RESTART = %(mint_mode)s
             for ccontr_stats in re.finditer(channel_contr_finder, log):
                 pass
             if not ccontr_stats is None:
-                contrib = float(ccontr_stats.group('v_contr'))
+                contrib = safe_float(ccontr_stats.group('v_contr'))
                 try:
                     if contrib>channel_contr_list[channel_name]:
                         channel_contr_list[channel_name]=contrib
@@ -2528,10 +2575,10 @@ RESTART = %(mint_mode)s
                 pass
             if not vt_stats is None:
                 vt_stats_group = vt_stats.groupdict()
-                v_ratio = float(vt_stats.group('v_ratio'))
-                v_ratio_err = float(vt_stats.group('v_ratio_err'))
-                v_contr = float(vt_stats.group('v_abs_contr'))
-                v_contr_err = float(vt_stats.group('v_abs_contr_err'))
+                v_ratio = safe_float(vt_stats.group('v_ratio'))
+                v_ratio_err = safe_float(vt_stats.group('v_ratio_err'))
+                v_contr = safe_float(vt_stats.group('v_abs_contr'))
+                v_contr_err = safe_float(vt_stats.group('v_abs_contr_err'))
                 try:
                     if v_ratio < stats['virt_stats']['v_ratio_min'][0]:
                         stats['virt_stats']['v_ratio_min']=(v_ratio,channel_name)
@@ -2563,8 +2610,8 @@ RESTART = %(mint_mode)s
             for vf_stats in re.finditer(virt_frac_finder, log):
                 pass
             if not vf_stats is None:
-                v_frac = float(vf_stats.group('v_frac'))
-                v_average = float(vf_stats.group('v_average'))
+                v_frac = safe_float(vf_stats.group('v_frac'))
+                v_average = safe_float(vf_stats.group('v_average'))
                 try:
                     if v_average < stats['virt_stats']['v_average_min'][0]:
                         stats['virt_stats']['v_average_min']=(v_average,channel_name)
@@ -2585,7 +2632,7 @@ RESTART = %(mint_mode)s
             debug_msg += '\n    Minimum virt fraction computed         %.3f (%s)'\
                                        %tuple(stats['virt_stats']['v_frac_min'])
             debug_msg += '\n    Average virt fraction computed         %.3f'\
-              %float(stats['virt_stats']['v_frac_avg'][0]/float(stats['virt_stats']['v_frac_avg'][1]))
+              %safe_float(stats['virt_stats']['v_frac_avg'][0]/safe_float(stats['virt_stats']['v_frac_avg'][1]))
             debug_msg += '\n  Stats below exclude negligible channels (%d excluded out of %d)'%\
                  (len(excluded_channels),len(all_channels))
             debug_msg += '\n    Maximum virt ratio used                %.2f (%s)'\
@@ -2632,12 +2679,12 @@ RESTART = %(mint_mode)s
             for time_stats in re.finditer(timing_stat_finder, log):
                 try:
                     stats['timings'][time_stats.group('name')][channel_name]+=\
-                                                 float(time_stats.group('time'))
+                                                 safe_float(time_stats.group('time'))
                 except KeyError:
                     if time_stats.group('name') not in stats['timings'].keys():
                         stats['timings'][time_stats.group('name')] = {}
                     stats['timings'][time_stats.group('name')][channel_name]=\
-                                                 float(time_stats.group('time'))
+                                                 safe_float(time_stats.group('time'))
         
         # useful inline function
         Tstr = lambda secs: str(datetime.timedelta(seconds=int(secs)))
@@ -2677,7 +2724,7 @@ RESTART = %(mint_mode)s
             debug_msg += '\n  Timing profile for <%s> :'%name
             try:
                 debug_msg += '\n    Overall fraction of time         %.3f %%'%\
-                       float((100.0*(sum(stats['timings'][name].values())/
+                       safe_float((100.0*(sum(stats['timings'][name].values())/
                                       sum(stats['timings']['Total'].values()))))
             except KeyError, ZeroDivisionError:
                 debug_msg += '\n    Overall fraction of time unavailable.'
@@ -2728,12 +2775,13 @@ RESTART = %(mint_mode)s
         """this function calls the reweighting routines and creates the event file in the 
         Event dir. Return the name of the event file created
         """
-        scale_pdf_info={}
-        if self.run_card['reweight_scale'] or self.run_card['reweight_PDF'] :
+        scale_pdf_info=[]
+        if any(self.run_card['reweight_scale']) or any(self.run_card['reweight_PDF']) or \
+           len(self.run_card['dynamical_scale_choice']) > 1 or len(self.run_card['lhaid']) > 1:
             scale_pdf_info = self.run_reweight(options['reweightonly'])
         self.update_status('Collecting events', level='parton', update_results=True)
         misc.compile(['collect_events'], 
-                    cwd=pjoin(self.me_dir, 'SubProcesses'))
+                    cwd=pjoin(self.me_dir, 'SubProcesses'), nocompile=options['nocompile'])
         p = misc.Popen(['./collect_events'], cwd=pjoin(self.me_dir, 'SubProcesses'),
                 stdin=subprocess.PIPE, 
                 stdout=open(pjoin(self.me_dir, 'collect_events.log'), 'w'))
@@ -2754,7 +2802,7 @@ RESTART = %(mint_mode)s
         misc.gzip(pjoin(self.me_dir, 'SubProcesses', filename), stdout=evt_file)
         if not options['reweightonly']:
             self.print_summary(options, 2, mode, scale_pdf_info)
-            res_files=glob.glob(pjoin(self.me_dir, 'SubProcesses', 'res*.txt'))
+            res_files = misc.glob('res*.txt', pjoin(self.me_dir, 'SubProcesses'))
             for res_file in res_files:
                 files.mv(res_file,pjoin(self.me_dir, 'Events', self.run_name))
 
@@ -2764,7 +2812,7 @@ RESTART = %(mint_mode)s
         return evt_file[:-3]
 
 
-    def run_mcatnlo(self, evt_file):
+    def run_mcatnlo(self, evt_file, options):
         """runs mcatnlo on the generated event file, to produce showered-events
         """
         logger.info('Preparing MCatNLO run')
@@ -2913,22 +2961,20 @@ RESTART = %(mint_mode)s
 
         #look for the event files (don't resplit if one asks for the 
         # same number of event files as in the previous run)
-        event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.lhe'))
+        event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name))
         if max(len(event_files), 1) != self.shower_card['nsplit_jobs']:
             logger.info('Cleaning old files and splitting the event file...')
             #clean the old files
             files.rm([f for f in event_files if 'events.lhe' not in f])
             if self.shower_card['nsplit_jobs'] > 1:
-                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'))
+                misc.compile(['split_events'], cwd = pjoin(self.me_dir, 'Utilities'), nocompile=options['nocompile'])
                 p = misc.Popen([pjoin(self.me_dir, 'Utilities', 'split_events')],
                                 stdin=subprocess.PIPE,
                                 stdout=open(pjoin(self.me_dir, 'Events', self.run_name, 'split_events.log'), 'w'),
                                 cwd=pjoin(self.me_dir, 'Events', self.run_name))
                 p.communicate(input = 'events.lhe\n%d\n' % self.shower_card['nsplit_jobs'])
                 logger.info('Splitting done.')
-            event_files = glob.glob(pjoin(self.me_dir, 'Events', self.run_name,
-                                            'events_*.lhe'))
+            event_files = misc.glob('events_*.lhe', pjoin(self.me_dir, 'Events', self.run_name)) 
 
         event_files.sort()
 
@@ -3047,7 +3093,7 @@ RESTART = %(mint_mode)s
             elif out_id=='HWU':
                 ext='HwU'
             topfiles = []
-            top_tars = [tarfile.TarFile(f) for f in glob.glob(pjoin(rundir, 'histfile*.tar'))]
+            top_tars = [tarfile.TarFile(f) for f in misc.glob('histfile*.tar', rundir)]
             for top_tar in top_tars:
                 topfiles.extend(top_tar.getnames())
 
@@ -3086,9 +3132,10 @@ RESTART = %(mint_mode)s
                                          '%s%d.top' % (filename, i))
                         files.mv(pjoin(rundir, file), plotfile) 
                     elif out_id=='HWU':
-                        histogram_list=histograms.HwUList(pjoin(rundir,file))
-                        histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,
-                                                    '%s%d'% (filename,i)),format = 'gnuplot')
+                        out=pjoin(self.me_dir,'Events',
+                                  self.run_name,'%s%d'% (filename,i))
+                        histos=[{'dirname':pjoin(rundir,file)}]
+                        self.combine_plots_HwU(histos,out)
                         try:
                             misc.call(['gnuplot','%s%d.gnuplot' % (filename,i)],\
                                       stdout=os.open(os.devnull, os.O_RDWR),\
@@ -3148,23 +3195,19 @@ RESTART = %(mint_mode)s
                             files.mv(pjoin(self.me_dir, 'Events', self.run_name, 'sum.top'),
                                      pjoin(self.me_dir, 'Events', self.run_name, '%s%d.top' % (filename, i)))
                         elif out_id=='HWU':
-                            histogram_list=histograms.HwUList(plotfiles[0])
-                            for ii, histo in enumerate(histogram_list):
-                                histogram_list[ii] = histo*norm
-                            for histo_path in plotfiles[1:]:
-                                for ii, histo in enumerate(histograms.HwUList(histo_path)):
-                                    # First make sure the plots have the same weight labels and such
-                                    histo.test_plot_compability(histogram_list[ii])
-                                    # Now let the histogram module do the magic and add them.
-                                    histogram_list[ii] += histo*norm
-                            # And now output the finalized list
-                            histogram_list.output(pjoin(self.me_dir,'Events',self.run_name,'%s%d'% (filename, i)),
-                                                  format = 'gnuplot')
+                            out=pjoin(self.me_dir,'Events',
+                                      self.run_name,'%s%d'% (filename,i))
+                            histos=[]
+                            norms=[]
+                            for plotfile in plotfiles:
+                                histos.append({'dirname':plotfile})
+                                norms.append(norm)
+                            self.combine_plots_HwU(histos,out,normalisation=norms)
                             try:
                                 misc.call(['gnuplot','%s%d.gnuplot' % (filename, i)],\
                                           stdout=os.open(os.devnull, os.O_RDWR),\
                                           stderr=os.open(os.devnull, os.O_RDWR),\
-                                          cwd=pjoin(self.me_dir, 'Events', self.run_name))
+                                          cwd=pjoin(self.me_dir, 'Events',self.run_name))
                             except Exception:
                                 pass
 
@@ -3323,6 +3366,17 @@ RESTART = %(mint_mode)s
 
         if not self.to_store:
             return 
+
+        if 'event' in self.to_store:
+            if os.path.exists(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')):
+                if not  os.path.exists(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz')):
+                    self.update_status('gzipping output file: events.lhe', level='parton', error=True)
+                    misc.gzip(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+                else:
+                    os.remove(pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'))
+            if os.path.exists(pjoin(self.me_dir,'Events','reweight.lhe')):
+                os.remove(pjoin(self.me_dir,'Events', 'reweight.lhe'))
+                
         
         tag = self.run_card['run_tag']
         
@@ -3522,6 +3576,7 @@ RESTART = %(mint_mode)s
         # loop over lines (all but the last one whith is empty) and check that the
         #  number of events is not 0
         evt_files = [line.split()[0] for line in lines[:-1] if line.split()[1] != '0']
+        evt_wghts = [float(line.split()[3]) for line in lines[:-1] if line.split()[1] != '0']
         #prepare the job_dict
         job_dict = {}
         exe = 'reweight_xsec_events.local'
@@ -3550,9 +3605,9 @@ RESTART = %(mint_mode)s
                 newfile.write(line.replace(line.split()[0], line.split()[0] + '.rwgt') + '\n')
         newfile.close()
 
-        return self.pdf_scale_from_reweighting(evt_files)
+        return self.pdf_scale_from_reweighting(evt_files,evt_wghts)
 
-    def pdf_scale_from_reweighting(self, evt_files):
+    def pdf_scale_from_reweighting(self, evt_files,evt_wghts):
         """This function takes the files with the scale and pdf values
         written by the reweight_xsec_events.f code
         (P*/G*/pdf_scale_dependence.dat) and computes the overall
@@ -3561,108 +3616,158 @@ RESTART = %(mint_mode)s
         and returns it in percents.  The expected format of the file
         is: n_scales xsec_scale_central xsec_scale1 ...  n_pdf
         xsec_pdf0 xsec_pdf1 ...."""
-        scale_pdf_info={}
+
         scales=[]
         pdfs=[]
-        numofpdf = 0
-        numofscales = 0
-        for evt_file in evt_files:
+        for i,evt_file in enumerate(evt_files):
             path, evt=os.path.split(evt_file)
-            data_file=open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat')).read()
-            lines = data_file.replace("D", "E").split("\n")
-            if not numofscales:
-                numofscales = int(lines[0])
-            if not numofpdf:
-                numofpdf = int(lines[2])
-            scales_this = [float(val) for val in lines[1].split()]
-            pdfs_this = [float(val) for val in lines[3].split()]
-
-            if numofscales != len(scales_this) or numofpdf !=len(pdfs_this):
-                # the +1 takes the 0th (central) set into account
-                logger.info(data_file)
-                logger.info((' Expected # of scales: %d\n'+
-                             ' Found # of scales: %d\n'+
-                             ' Expected # of pdfs: %d\n'+
-                             ' Found # of pdfs: %d\n') %
-                        (numofscales, len(scales_this), numofpdf, len(pdfs_this)))
-                raise aMCatNLOError('inconsistent scale_pdf_dependence.dat')
-            if not scales:
-                scales = [0.] * numofscales
-            if not pdfs:
-                pdfs = [0.] * numofpdf
-
-            scales = [a + b for a, b in zip(scales, scales_this)]
-            pdfs = [a + b for a, b in zip(pdfs, pdfs_this)]
-
-        # get the central value
-        if numofscales>0 and numofpdf==0:
-            cntrl_val=scales[0]
-        elif numofpdf>0 and numofscales==0:
-            cntrl_val=pdfs[0]
-        elif numofpdf>0 and numofscales>0:
-            if abs(1-scales[0]/pdfs[0])>0.0001:
-                raise aMCatNLOError('Central values for scale and PDF variation not identical')
-            else:
-                cntrl_val=scales[0]
+            with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
+                data_line=f.readline()
+                if "scale variations:" in data_line:
+                    for i,scale in enumerate(self.run_card['dynamical_scale_choice']):
+                        data_line = f.readline().split()
+                        scales_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
+                        try:
+                            scales[i] = [a + b for a, b in zip(scales[i], scales_this)]
+                        except IndexError:
+                            scales+=[scales_this]
+                    data_line=f.readline()
+                if "pdf variations:" in data_line:
+                    for i,pdf in enumerate(self.run_card['lhaid']):
+                        data_line = f.readline().split()
+                        pdfs_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
+                        try:
+                            pdfs[i] = [a + b for a, b in zip(pdfs[i], pdfs_this)]
+                        except IndexError:
+                            pdfs+=[pdfs_this]
 
         # get the scale uncertainty in percent
-        if numofscales>0:
-            if cntrl_val != 0.0:
-            # max and min of the full envelope
-                scale_pdf_info['scale_upp'] = (max(scales)/cntrl_val-1)*100
-                scale_pdf_info['scale_low'] = (1-min(scales)/cntrl_val)*100
-            # ren and fac scale dependence added in quadrature
-                scale_pdf_info['scale_upp_quad'] = ((cntrl_val+math.sqrt(math.pow(max(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(max(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val-1)*100
-                scale_pdf_info['scale_low_quad'] = (1-(cntrl_val-math.sqrt(math.pow(min(scales[0]-cntrl_val,scales[1]-cntrl_val,scales[2]-cntrl_val),2)+math.pow(min(scales[0]-cntrl_val,scales[3]-cntrl_val,scales[6]-cntrl_val),2)))/cntrl_val)*100
+        scale_info=[]
+        for j,scale in enumerate(scales):
+            s_cen=scale[0]
+            if s_cen != 0.0 and self.run_card['reweight_scale'][j]:
+                # max and min of the full envelope
+                s_max=(max(scale)/s_cen-1)*100
+                s_min=(1-min(scale)/s_cen)*100
+                # ren and fac scale dependence added in quadrature
+                ren_var=[]
+                fac_var=[]
+                for i in range(len(self.run_card['rw_rscale'])):
+                    ren_var.append(scale[i]-s_cen) # central fac scale
+                for i in range(len(self.run_card['rw_fscale'])):
+                    fac_var.append(scale[i*len(self.run_card['rw_rscale'])]-s_cen) # central ren scale
+                s_max_q=((s_cen+math.sqrt(math.pow(max(ren_var),2)+math.pow(max(fac_var),2)))/s_cen-1)*100
+                s_min_q=(1-(s_cen-math.sqrt(math.pow(min(ren_var),2)+math.pow(min(fac_var),2)))/s_cen)*100
+                s_size=len(scale)
             else:
-                scale_pdf_info['scale_upp'] = 0.0
-                scale_pdf_info['scale_low'] = 0.0
+                s_max=0.0
+                s_min=0.0
+                s_max_q=0.0
+                s_min_q=0.0
+                s_size=len(scale)
+            scale_info.append({'cen':s_cen, 'min':s_min, 'max':s_max, \
+                               'min_q':s_min_q, 'max_q':s_max_q, 'size':s_size, \
+                               'label':self.run_card['dynamical_scale_choice'][j], \
+                               'unc':self.run_card['reweight_scale'][j]})
 
-        # get the pdf uncertainty in percent (according to the Hessian method)
-        lhaid=self.run_card['lhaid']
-        pdf_upp=0.0
-        pdf_low=0.0
-        if lhaid <= 90000:
-            # use Hessian method (CTEQ & MSTW)
-            if numofpdf>1:
-                for i in range(int(numofpdf/2)):
-                    pdf_upp=pdf_upp+math.pow(max(0.0,pdfs[2*i+1]-cntrl_val,pdfs[2*i+2]-cntrl_val),2)
-                    pdf_low=pdf_low+math.pow(max(0.0,cntrl_val-pdfs[2*i+1],cntrl_val-pdfs[2*i+2]),2)
-                if cntrl_val != 0.0:
-                    scale_pdf_info['pdf_upp'] = math.sqrt(pdf_upp)/cntrl_val*100
-                    scale_pdf_info['pdf_low'] = math.sqrt(pdf_low)/cntrl_val*100
+        # check if we can use LHAPDF to compute the PDF uncertainty
+        if any(self.run_card['reweight_pdf']):
+            use_lhapdf=False
+            lhapdf_libdir=subprocess.Popen([self.options['lhapdf'],'--libdir'],\
+                                           stdout=subprocess.PIPE).stdout.read().strip() 
+
+            try:
+                candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
+                            if os.path.isdir(pjoin(lhapdf_libdir,dirname))]
+            except OSError:
+                candidates=[]
+            for candidate in candidates:
+                if os.path.isfile(pjoin(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                    sys.path.insert(0,pjoin(lhapdf_libdir,candidate,'site-packages'))
+                    try:
+                        import lhapdf
+                        use_lhapdf=True
+                        break
+                    except ImportError:
+                        sys.path.pop(0)
+                        continue
+                
+            if not use_lhapdf:
+                try:
+                    candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
+                                if os.path.isdir(pjoin(lhapdf_libdir+'64',dirname))]
+                except OSError:
+                    candidates=[]
+                for candidate in candidates:
+                    if os.path.isfile(pjoin(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+                        sys.path.insert(0,pjoin(lhapdf_libdir+'64',candidate,'site-packages'))
+                        try:
+                            import lhapdf
+                            use_lhapdf=True
+                            break
+                        except ImportError:
+                            sys.path.pop(0)
+                            continue
+                
+            if not use_lhapdf:
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                except ImportError:
+                    logger.warning("Failed to access python version of LHAPDF: "\
+                                   "cannot compute PDF uncertainty from the "\
+                                   "weights in the events. The weights in the LHE " \
+                                   "event files will still cover all PDF set members, "\
+                                   "but there will be no PDF uncertainty printed in the run summary. \n "\
+                                   "If the python interface to LHAPDF is available on your system, try "\
+                                   "adding its location to the PYTHONPATH environment variable and the"\
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
+                    use_lhapdf=False
+
+        # turn off lhapdf printing any messages
+        if any(self.run_card['reweight_pdf']) and use_lhapdf: lhapdf.setVerbosity(0)
+
+        pdf_info=[]
+        for j,pdfset in enumerate(pdfs):
+            p_cen=pdfset[0]
+            if p_cen != 0.0 and self.run_card['reweight_pdf'][j]:
+                if use_lhapdf:
+                    pdfsetname=self.run_card['lhapdfsetname'][j]
+                    try:
+                        p=lhapdf.getPDFSet(pdfsetname)
+                        ep=p.uncertainty(pdfset,-1)
+                        p_cen=ep.central
+                        p_min=abs(ep.errminus/p_cen)*100
+                        p_max=abs(ep.errplus/p_cen)*100
+                        p_type=p.errorType
+                        p_size=p.size
+                        p_conf=p.errorConfLevel
+                    except:
+                        logger.warning("Could not access LHAPDF to compute uncertainties for %s" % pdfsetname)
+                        p_min=0.0
+                        p_max=0.0
+                        p_type='unknown'
+                        p_conf='unknown'
+                        p_size=len(pdfset)
                 else:
-                    scale_pdf_info['pdf_upp'] = 0.0
-                    scale_pdf_info['pdf_low'] = 0.0
-        elif lhaid in range(90200, 90303) or \
-             lhaid in range(90400, 90433) or \
-             lhaid in range(90700, 90801) or \
-             lhaid in range(90900, 90931) or \
-             lhaid in range(91200, 91303) or \
-             lhaid in range(91400, 91433) or \
-             lhaid in range(91700, 91801) or \
-             lhaid in range(91900, 90931):
-            # PDF4LHC15 Hessian sets
-            pdf_stdev = 0.0
-            for pdf in pdfs[1:]:
-                pdf_stdev += (pdf - cntrl_val)**2
-            pdf_stdev = math.sqrt(pdf_stdev)
-            if cntrl_val != 0.0:
-                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
+                    p_min=0.0
+                    p_max=0.0
+                    p_type='unknown'
+                    p_conf='unknown'
+                    p_size=len(pdfset)
+                    pdfsetname=self.run_card['lhaid'][j]
             else:
-                scale_pdf_info['pdf_upp'] = 0.0
-            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
-        else:
-            # use Gaussian method (NNPDF)
-            pdf_stdev=0.0
-            for i in range(int(numofpdf-1)):
-                pdf_stdev = pdf_stdev + pow(pdfs[i+1] - cntrl_val,2)
-            pdf_stdev = math.sqrt(pdf_stdev/int(numofpdf-2))
-            if cntrl_val != 0.0:
-                scale_pdf_info['pdf_upp'] = pdf_stdev/cntrl_val*100
-            else:
-                scale_pdf_info['pdf_upp'] = 0.0
-            scale_pdf_info['pdf_low'] = scale_pdf_info['pdf_upp']
+                p_min=0.0
+                p_max=0.0
+                p_type='none'
+                p_conf='unknown'
+                p_size=len(pdfset)
+                pdfsetname=self.run_card['lhaid'][j]
+            pdf_info.append({'cen':p_cen, 'min':p_min, 'max':p_max, \
+                             'unc':p_type, 'name':pdfsetname, 'size':p_size, \
+                             'label':self.run_card['lhaid'][j], 'conf':p_conf})
+
+        scale_pdf_info=[scale_info,pdf_info]
         return scale_pdf_info
 
 
@@ -4017,10 +4122,7 @@ RESTART = %(mint_mode)s
 
             self.link_lhapdf(libdir, [pjoin('SubProcesses', p) for p in p_dirs])
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            lhaid_list = [self.run_card['lhaid']]
-            if self.run_card['reweight_PDF']:
-                lhaid_list.append(self.run_card['PDF_set_min'])
-                lhaid_list.append(self.run_card['PDF_set_max'])
+            lhaid_list = self.run_card['lhaid']
             self.copy_lhapdf_set(lhaid_list, pdfsetsdir)
 
         else:
@@ -4028,6 +4130,7 @@ RESTART = %(mint_mode)s
                 logger.info('Using built-in libraries for PDFs')
             if self.run_card['lpp1'] == 0 == self.run_card['lpp2']:
                 logger.info('Lepton-Lepton collision: Ignoring \'pdlabel\' and \'lhaid\' in the run_card.')
+            self.make_opts_var['lhapdf'] = ""
 
         # read the run_card to find if applgrid is used or not
         if self.run_card['iappl'] != 0:
@@ -4060,6 +4163,8 @@ RESTART = %(mint_mode)s
                     line=appllibs
                 text_out.append(line)
             open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
+        else:
+            self.make_opts_var['applgrid'] = ""
 
         if 'fastjet' in self.options.keys() and self.options['fastjet']:
             self.make_opts_var['fastjet_config'] = self.options['fastjet']
@@ -4333,10 +4438,6 @@ RESTART = %(mint_mode)s
                                 'madspin': default_switch,
                                 'reweight': default_switch}
 
-            
-            
-        
-        
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
@@ -4539,9 +4640,14 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if mode =='onlyshower':
             cards = ['shower_card.dat']
         
+        
+        # automatically switch to keep_wgt option
+        first_cmd = [] # force to change some switch
+        
         if not options['force'] and not self.force:
-            self.ask_edit_cards(cards, plot=False)
+            self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
 
+        
         self.banner = banner_mod.Banner()
 
         # store the cards in the banner
@@ -4590,7 +4696,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
             analyse_card_path = pjoin(self.me_dir, 'Cards','FO_analyse_card.dat')
             self.analyse_card = self.banner.charge_card('FO_analyse_card')
 
-        
         return mode
 
 
@@ -4613,7 +4718,7 @@ _launch_usage = "launch [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     computation of the total cross section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
@@ -4642,7 +4747,7 @@ _launch_parser.add_option("-n", "--name", default=False, dest='run_name',
 _launch_parser.add_option("-a", "--appl_start_grid", default=False, dest='appl_start_grid',
                             help="For use with APPLgrid only: start from existing grids")
 _launch_parser.add_option("-R", "--reweight", default=False, dest='do_reweight', action='store_true',
-                            help="Run the reweight module (reweighting by different model parameter")
+                            help="Run the reweight module (reweighting by different model parameters)")
 _launch_parser.add_option("-M", "--madspin", default=False, dest='do_madspin', action='store_true',
                             help="Run the madspin package")
 
@@ -4652,7 +4757,7 @@ _generate_events_usage = "generate_events [MODE] [options]\n" + \
                 "-- execute aMC@NLO \n" + \
                 "   MODE can be either LO, NLO, aMC@NLO or aMC@LO (if omitted, it is asked in a separate question)\n" + \
                 "     If mode is set to LO/NLO, no event generation will be performed, but only the \n" + \
-                "     computation of the total cross-section and the filling of parton-level histograms \n" + \
+                "     computation of the total cross section and the filling of parton-level histograms \n" + \
                 "     specified in the DIRPATH/SubProcesses/madfks_plot.f file.\n" + \
                 "     If mode is set to aMC@LO/aMC@NLO, after the cross-section computation, a .lhe \n" + \
                 "     event file is generated which will be showered with the MonteCarlo specified \n" + \
@@ -4682,7 +4787,7 @@ _generate_events_parser.add_option("-n", "--name", default=False, dest='run_name
 
 
 _calculate_xsect_usage = "calculate_xsect [ORDER] [options]\n" + \
-                "-- calculate cross-section up to ORDER.\n" + \
+                "-- calculate cross section up to ORDER.\n" + \
                 "   ORDER can be either LO or NLO (if omitted, it is set to NLO). \n"
 
 _calculate_xsect_parser = misc.OptionParser(usage=_calculate_xsect_usage)
@@ -4710,4 +4815,100 @@ _shower_parser = misc.OptionParser(usage=_shower_usage)
 _shower_parser.add_option("-f", "--force", default=False, action='store_true',
                                 help="Use the shower_card present in the directory for the launch, without editing")
 
+if '__main__' == __name__:
+    # Launch the interface without any check if one code is already running.
+    # This can ONLY run a single command !!
+    import sys
+    if not sys.version_info[0] == 2 or sys.version_info[1] < 6:
+        sys.exit('MadGraph/MadEvent 5 works only with python 2.6 or later (but not python 3.X).\n'+\
+               'Please upgrate your version of python.')
+
+    import os
+    import optparse
+    # Get the directory of the script real path (bin)                                                                                                                                                           
+    # and add it to the current PYTHONPATH                                                                                                                                                                      
+    root_path = os.path.dirname(os.path.dirname(os.path.realpath( __file__ )))
+    sys.path.insert(0, root_path)
+
+    class MyOptParser(optparse.OptionParser):    
+        class InvalidOption(Exception): pass
+        def error(self, msg=''):
+            raise MyOptParser.InvalidOption(msg)
+    # Write out nice usage message if called with -h or --help                                                                                                                                                  
+    usage = "usage: %prog [options] [FILE] "
+    parser = MyOptParser(usage=usage)
+    parser.add_option("-l", "--logging", default='INFO',
+                      help="logging level (DEBUG|INFO|WARNING|ERROR|CRITICAL) [%default]")
+    parser.add_option("","--web", action="store_true", default=False, dest='web', \
+                     help='force toce to be in secure mode')
+    parser.add_option("","--debug", action="store_true", default=False, dest='debug', \
+                     help='force to launch debug mode')
+    parser_error = ''
+    done = False
+    
+    for i in range(len(sys.argv)-1):
+        try:
+            (options, args) = parser.parse_args(sys.argv[1:len(sys.argv)-i])
+            done = True
+        except MyOptParser.InvalidOption, error:
+            pass
+        else:
+            args += sys.argv[len(sys.argv)-i:]
+    if not done:
+        # raise correct error:                                                                                                                                                                                  
+        try:
+            (options, args) = parser.parse_args()
+        except MyOptParser.InvalidOption, error:
+            print error
+            sys.exit(2)
+
+    if len(args) == 0:
+        args = ''
+
+    import subprocess
+    import logging
+    import logging.config
+    # Set logging level according to the logging level given by options                                                                                                                                         
+    #logging.basicConfig(level=vars(logging)[options.logging])                                                                                                                                                  
+    import internal.coloring_logging
+    try:
+        if __debug__ and options.logging == 'INFO':
+            options.logging = 'DEBUG'
+        if options.logging.isdigit():
+            level = int(options.logging)
+        else:
+            level = eval('logging.' + options.logging)
+        print os.path.join(root_path, 'internal', 'me5_logging.conf')
+        logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
+        logging.root.setLevel(level)
+        logging.getLogger('madgraph').setLevel(level)
+    except:
+        raise
+        pass
+
+    # Call the cmd interface main loop                                                                                                                                                                          
+    try:
+        if args:
+            # a single command is provided   
+            if '--web' in args:
+                i = args.index('--web') 
+                args.pop(i)                                                                                                                                                                     
+                cmd_line =  aMCatNLOCmd(force_run=True)
+            else:
+                cmd_line =  aMCatNLOCmdShell(force_run=True)
+
+            if not hasattr(cmd_line, 'do_%s' % args[0]):
+                if parser_error:
+                    print parser_error
+                    print 'and %s  can not be interpreted as a valid command.' % args[0]
+                else:
+                    print 'ERROR: %s  not a valid command. Please retry' % args[0]
+            else:
+                cmd_line.use_rawinput = False
+                cmd_line.run_cmd(' '.join(args))
+                cmd_line.run_cmd('quit')
+
+    except KeyboardInterrupt:
+        print 'quit on KeyboardInterrupt'
+        pass
 

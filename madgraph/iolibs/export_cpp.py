@@ -45,7 +45,7 @@ import aloha.aloha_writers as aloha_writers
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] + '/'
 logger = logging.getLogger('madgraph.export_pythia8')
-
+pjoin = os.path.join
 
 
 
@@ -2129,8 +2129,7 @@ class UFOModelConverterCPP(object):
         compiler options and namespace options, and return in a list"""
 
         template_files = []
-        for filename in glob.glob(os.path.join(MG5DIR, 'aloha',
-                                               'template_files', '*.%s' % ext)):
+        for filename in misc.glob('*.%s' % ext, pjoin(MG5DIR, 'aloha','template_files')):
             file = open(filename, 'r')
             template_file_string = ""
             while file:

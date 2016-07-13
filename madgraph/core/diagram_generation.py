@@ -847,9 +847,6 @@ class Amplitude(base_objects.PhysicsObject):
         for name, (value, operator) in self['process'].get('constrained_orders').items():
             res.filter_constrained_orders(name, value, operator)
             
-        
-        
-        
         # Iterate the filtering since the applying the constraint on one
         # type of coupling order can impact what the filtering on a previous
         # one (relevant for the '==' type of constraint).

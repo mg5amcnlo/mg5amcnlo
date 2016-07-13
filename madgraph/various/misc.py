@@ -59,6 +59,7 @@ def mg5amc_py8_interface_consistency_warning(options):
     """ Check the consistency of the mg5amc_py8_interface installed with
     the current MG5 and Pythia8 versions. """
 
+    return None
     # All this is only relevant is Pythia8 is interfaced to MG5
     if not options['pythia8_path']:
         return None
@@ -139,6 +140,12 @@ def parse_info_str(fsock):
 
     return info_dict
 
+
+def glob(name, path=''):
+    """call to glob.glob with automatic security on path"""
+    import glob as glob_module
+    path = re.sub('(?P<name>\?|\*|\[|\])', '[\g<name>]', path)
+    return glob_module.glob(pjoin(path, name))
 
 #===============================================================================
 # mute_logger (designed to be a decorator)
@@ -454,6 +461,18 @@ def get_scan_name(first, last):
 def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt):
     """compile a given directory"""
 
+    if 'nocompile' in opt:
+        if opt['nocompile'] == True:
+            if not arg:
+                return
+            if cwd:
+                executable = pjoin(cwd, arg[0])
+            else:
+                executable = arg[0]
+            if os.path.exists(executable):
+                return
+        del opt['nocompile']
+
     cmd = ['make']
     try:
         if nb_core > 1:
@@ -511,8 +530,8 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         error_text += 'The compilation fails with the following output message:\n'
         error_text += '    '+out.replace('\n','\n    ')+'\n'
         error_text += 'Please try to fix this compilations issue and retry.\n'
-        error_text += 'Help might be found at https://answers.launchpad.net/madgraph5.\n'
-        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/madgraph5'
+        error_text += 'Help might be found at https://answers.launchpad.net/mg5amcnlo.\n'
+        error_text += 'If you think that this is a bug, you can report this at https://bugs.launchpad.net/mg5amcnlo'
         raise MadGraph5Error, error_text
     return p.returncode
 
@@ -551,9 +570,14 @@ def mod_compilator(directory, new='gfortran', current=None, compiler_type='gfort
         for iline, line in enumerate(lines):
             result = comp_re.match(line)
             if result:
-                if new != result.group(2):
+                if new != result.group(2) and '$' not in result.group(2):
                     mod = True
-                lines[iline] = result.group(1) + var + "=" + new
+                    lines[iline] = result.group(1) + var + "=" + new
+            elif compiler_type == 'gfortran' and line.startswith('DEFAULT_F_COMPILER'):
+                lines[iline] = "DEFAULT_F_COMPILER = %s" % new
+            elif compiler_type == 'cpp' and line.startswith('DEFAULT_CPP_COMPILER'):    
+                lines[iline] = "DEFAULT_CPP_COMPILER = %s" % new
+                
         if mod:
             open(name,'w').write('\n'.join(lines))
             # reset it to change the next file
@@ -692,6 +716,41 @@ def get_open_fds():
         
     return nprocs
 
+def detect_if_cpp_compiler_is_clang(cpp_compiler):
+    """ Detects whether the specified C++ compiler is clang."""
+    
+    try:
+        p = Popen([cpp_compiler, '--version'], stdout=subprocess.PIPE, 
+                    stderr=subprocess.PIPE)
+        output, error = p.communicate()
+    except Exception, error:
+        # Cannot probe the compiler, assume not clang then
+        return False
+    return 'LLVM' in output
+
+def detect_cpp_std_lib_dependence(cpp_compiler):
+    """ Detects if the specified c++ compiler will normally link against the C++
+    standard library -lc++ or -libstdc++."""
+
+    is_clang = detect_if_cpp_compiler_is_clang(cpp_compiler)
+    if is_clang:
+        try:
+            import platform
+            v, _,_ = platform.mac_ver()
+            if not v:
+                # We will not attempt to support clang elsewhere than on macs, so
+                # we venture a guess here.
+                return '-lc++'
+            else:
+                v = float(v.rsplit('.')[1])
+                if v >= 9:
+                   return '-lc++'
+                else:
+                   return '-lstdc++'
+        except:
+            return '-lstdc++'
+    return '-lstdc++'
+
 def detect_current_compiler(path, compiler_type='fortran'):
     """find the current compiler for the current directory"""
     
@@ -708,6 +767,10 @@ def detect_current_compiler(path, compiler_type='fortran'):
         if comp.search(line):
             compiler = comp.search(line).groups()[0]
             return compiler
+        elif compiler_type == 'fortran' and line.startswith('DEFAULT_F_COMPILER'):
+            return line.split('=')[1].strip()
+        elif compiler_type == 'cpp' and line.startswith('DEFAULT_CPP_COMPILER'):
+            return line.split('=')[1].strip()
 
 def find_makefile_in_dir(directory):
     """ return a list of all file starting with makefile in the given directory"""

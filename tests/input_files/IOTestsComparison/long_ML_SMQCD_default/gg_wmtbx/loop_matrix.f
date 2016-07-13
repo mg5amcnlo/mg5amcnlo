@@ -47,17 +47,17 @@ C     BEGIN CODE
 C     ----------
       IF(ABS(REFERENCE_VALUE).EQ.0.0D0) THEN
         ML5_0_ISZERO=.FALSE.
-        WRITE(*,*) '##E02 ERRROR Reference value for comparison i'
-     $   //'s zero.'
+        WRITE(*,*) '##E02 ERRROR Reference value for comparison is'
+     $   //' zero.'
         STOP
       ELSE
         ML5_0_ISZERO=((ABS(TOTEST)/ABS(REFERENCE_VALUE)).LT.ZEROTHRES)
       ENDIF
       IF(AMPLN.NE.-1) THEN
         IF((.NOT.ML5_0_ISZERO).AND.(.NOT.S(AMPLN))) THEN
-          WRITE(*,*) '##W01 WARNING Contribution ',AMPLN,' is detecte'
-     $     //'d as contributing with CR=',(ABS(TOTEST)/ABS(REFERENCE_VA
-     $     LUE)),' but is unstable.'
+          WRITE(*,*) '##W01 WARNING Contribution ',AMPLN,' is detected'
+     $     //' as contributing with CR=',(ABS(TOTEST)
+     $     /ABS(REFERENCE_VALUE)),' but is unstable.'
         ENDIF
       ENDIF
 
@@ -312,8 +312,8 @@ C      subroutine of MadLoopCommons.dat
 
 C     This variable controls the *local* initialization of this
 C      particular SubProcess.
-C     For example, the reading of the filters must be done independentl
-C     y by each SubProcess.
+C     For example, the reading of the filters must be done
+C      independently by each SubProcess.
       LOGICAL LOCAL_ML_INIT
       DATA LOCAL_ML_INIT/.TRUE./
 
@@ -345,10 +345,10 @@ C        Samurai could follow.
           ENDIF
         ENDDO
         IF (.NOT.FOUND_VALID_REDUCTION_METHOD) THEN
-          WRITE(*,*) 'ERROR:: For now, only CutTools is interfaced t'
-     $     //'o MadLoop in the non-optimized output.'
-          WRITE(*,*) 'ERROR:: Make sure to include 1 in the paramete'
-     $     //'r MLReductionLib of the card MadLoopParams.dat'
+          WRITE(*,*) 'ERROR:: For now, only CutTools is interfaced to'
+     $     //' MadLoop in the non-optimized output.'
+          WRITE(*,*) 'ERROR:: Make sure to include 1 in the parameter'
+     $     //' MLReductionLib of the card MadLoopParams.dat'
           STOP 1
         ENDIF
       ENDIF
@@ -365,13 +365,13 @@ C       Setup the file paths
 C       Make sure that the loop filter is disabled when there is
 C        spin-2 particles for 2>1 or 1>2 processes
         IF(MAX_SPIN_EXTERNAL_PARTICLE.GT.3.AND.(NEXTERNAL.LE.3.AND.HELI
-     $   CITYFILTERLEVEL.NE.0)) THEN
-          WRITE(*,*) '##INFO: Helicity filter deactivated for 2>'
-     $     //'1 processes involving spin 2 particles.'
+     $CITYFILTERLEVEL.NE.0)) THEN
+          WRITE(*,*) '##INFO: Helicity filter deactivated for 2>1'
+     $     //' processes involving spin 2 particles.'
           HELICITYFILTERLEVEL = 0
 C         We write a dummy filter for structural reasons here
-          OPEN(1, FILE=HELFILTERFN, ERR=6116, STATUS='NEW',ACTION='WRI'
-     $     //'TE')
+          OPEN(1, FILE=HELFILTERFN, ERR=6116, STATUS='NEW'
+     $     ,ACTION='WRITE')
           DO I=1,NCOMB
             WRITE(1,*) 'T'
           ENDDO
@@ -386,8 +386,8 @@ C         We write a dummy filter for structural reasons here
         ENDDO
         GOTO 105
  104    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorNumFactors.dat. File not found'
+        STOP 'Color factors could not be initialized from file'
+     $   //' ML5_0_ColorNumFactors.dat. File not found'
  105    CONTINUE
         CLOSE(1)
         OPEN(1, FILE=COLORDENOMFN, ERR=106, STATUS='OLD',          
@@ -397,8 +397,8 @@ C         We write a dummy filter for structural reasons here
         ENDDO
         GOTO 107
  106    CONTINUE
-        STOP 'Color factors could not be initialized from fil'
-     $   //'e ML5_0_ColorDenomFactors.dat. File not found'
+        STOP 'Color factors could not be initialized from file'
+     $   //' ML5_0_ColorDenomFactors.dat. File not found'
  107    CONTINUE
         CLOSE(1)
         OPEN(1, FILE=HELCONFIGFN, ERR=108, STATUS='OLD',              
@@ -408,8 +408,8 @@ C         We write a dummy filter for structural reasons here
         ENDDO
         GOTO 109
  108    CONTINUE
-        STOP 'Color helictiy configurations could not be initialize'
-     $   //'d from file ML5_0_HelConfigs.dat. File not found'
+        STOP 'Color helictiy configurations could not be initialized'
+     $   //' from file ML5_0_HelConfigs.dat. File not found'
  109    CONTINUE
         CLOSE(1)
         IF(BOOTANDSTOP) THEN
@@ -426,13 +426,13 @@ C      helicity is asked
       NROTATIONS_QP_BU = NROTATIONS_QP
       IF(MAX_SPIN_EXTERNAL_PARTICLE.GT.3.AND.USERHEL.NE.-1) THEN
         IF(.NOT.WARNED_LORENTZ_STAB_TEST_OFF) THEN
-          WRITE(*,*) '##WARNING: Evaluation of a specific helicity wa'
-     $     //'s asked for this PS point, and there is a spin-2 (o'
-     $     //'r higher) particle in the external states.'
-          WRITE(*,*) '##WARNING: As a result, MadLoop disabled th'
-     $     //'e Lorentz rotation test for this phase-space point only.'
-          WRITE(*,*) '##WARNING: Further warning of that typ'
-     $     //'e suppressed.'
+          WRITE(*,*) '##WARNING: Evaluation of a specific helicity was'
+     $     //' asked for this PS point, and there is a spin-2 (or'
+     $     //' higher) particle in the external states.'
+          WRITE(*,*) '##WARNING: As a result, MadLoop disabled the'
+     $     //' Lorentz rotation test for this phase-space point only.'
+          WRITE(*,*) '##WARNING: Further warning of that type'
+     $     //' suppressed.'
           WARNED_LORENTZ_STAB_TEST_OFF = .FALSE.
         ENDIF
         NROTATIONS_QP=0
@@ -441,8 +441,8 @@ C      helicity is asked
 
       IF(NTRY.EQ.0) THEN
         CALL ML5_0_SET_N_EVALS(N_DP_EVAL,N_QP_EVAL)
-        HELDOUBLECHECKED=(.NOT.DOUBLECHECKHELICITYFILTER).OR.(HELICITYF
-     $   ILTERLEVEL.EQ.0)
+        HELDOUBLECHECKED=(.NOT.DOUBLECHECKHELICITYFILTER)
+     $   .OR.(HELICITYFILTERLEVEL.EQ.0)
         DO J=1,NCOMB
           DO I=1,NCTAMPS
             GOODAMP(I,J)=.TRUE.
@@ -521,23 +521,23 @@ C        trust the evaluation for checks.
         DONEHELDOUBLECHECK=.FALSE.
       ENDIF
 
-      CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER
-     $ ).AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
+      CHECKPHASE=(NTRY.LE.CHECKCYCLE).AND.(((.NOT.FOUNDLOOPFILTER)
+     $ .AND.USELOOPFILTER).OR.(.NOT.FOUNDHELFILTER))
 
       IF (WRITEOUTFILTERS) THEN
         IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDHELFILTER)) THEN
-          OPEN(1, FILE=HELFILTERFN, ERR=110, STATUS='NEW',ACTION='WRIT'
-     $     //'E')
+          OPEN(1, FILE=HELFILTERFN, ERR=110, STATUS='NEW'
+     $     ,ACTION='WRITE')
           WRITE(1,*) (GOODHEL(I),I=1,NCOMB)
  110      CONTINUE
           CLOSE(1)
           FOUNDHELFILTER=.TRUE.
         ENDIF
 
-        IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDLOOPFILTER).AND.USELOOPFI
-     $   LTER) THEN
-          OPEN(1, FILE=LOOPFILTERFN, ERR=111, STATUS='NEW',ACTION='WRI'
-     $     //'TE')
+        IF ((.NOT. CHECKPHASE).AND.(.NOT.FOUNDLOOPFILTER)
+     $   .AND.USELOOPFILTER) THEN
+          OPEN(1, FILE=LOOPFILTERFN, ERR=111, STATUS='NEW'
+     $     ,ACTION='WRITE')
           DO J=1,NCOMB
             WRITE(1,*) (GOODAMP(I,J),I=NCTAMPS+1,NLOOPAMPS)
           ENDDO
@@ -591,8 +591,8 @@ C        trust the evaluation for checks.
       ENDDO
 
       IF (IMPROVEPSPOINT.GE.0) THEN
-C       Make the input PS more precise (exact onshell and energy-moment
-C       um conservation)
+C       Make the input PS more precise (exact onshell and
+C        energy-momentum conservation)
         CALL ML5_0_IMPROVE_PS_POINT_PRECISION(PS)
       ENDIF
 
@@ -633,7 +633,7 @@ C     We chose to use the born evaluation for the reference
       VALIDH=-1
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
-     $   .NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+     $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
           IF (VALIDH.EQ.-1) VALIDH=H
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
@@ -696,8 +696,8 @@ C         Counter-term amplitude(s) for loop diagram number 10
           CALL R2_GG_1_0(W(1,6,H),W(1,14,H),R2_GGQ,AMPL(1,7))
           CALL R2_GG_1_0(W(1,6,H),W(1,14,H),R2_GGQ,AMPL(1,8))
 C         Counter-term amplitude(s) for loop diagram number 11
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,13,H),UV_3GB_1EPS,AMPL(2
-     $     ,9))
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,13,H),UV_3GB_1EPS,AMPL(2,9)
+     $     )
           CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,13,H),UV_3GB_1EPS,AMPL(2
      $     ,10))
           CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,13,H),UV_3GB_1EPS,AMPL(2
@@ -1219,23 +1219,23 @@ C     Loop amplitude for loop diagram with ID 10
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,2,1,4,254,AMPL(1,254),S(254))
 C     Loop amplitude for loop diagram with ID 11
-      CALL ML5_0_LOOP_3_3(2,1,2,13,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
+      CALL ML5_0_LOOP_3_3(2,1,2,13,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,3,1,4,255,AMPL(1,255),S(255))
 C     Loop amplitude for loop diagram with ID 12
-      CALL ML5_0_LOOP_3_3(2,1,2,14,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
+      CALL ML5_0_LOOP_3_3(2,1,2,14,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,3,1,4,256,AMPL(1,256),S(256))
 C     Loop amplitude for loop diagram with ID 13
-      CALL ML5_0_LOOP_3_3(3,1,2,13,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
+      CALL ML5_0_LOOP_3_3(3,1,2,13,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,3,1,4,257,AMPL(1,257),S(257))
 C     Loop amplitude for loop diagram with ID 14
-      CALL ML5_0_LOOP_3_3(3,1,2,14,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
+      CALL ML5_0_LOOP_3_3(3,1,2,14,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,3,1,4,258,AMPL(1,258),S(258))
 C     Loop amplitude for loop diagram with ID 15
@@ -1253,9 +1253,9 @@ C     Loop amplitude for loop diagram with ID 17
      $ ,MP__GC_5,2,1,1,261,AMPL(1,261),S(261))
 C     Loop amplitude for loop diagram with ID 18
       CALL ML5_0_LOOP_3_3(6,5,6,7,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__M
-     $ DL_MB,KIND=16),GC_5,MP__GC_5,GC_4,MP__GC_4,GC_5,MP__GC_5,2,1,1
-     $ ,262,AMPL(1,262),S(262))
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
+     $ ,CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_4,MP__GC_4,GC_5
+     $ ,MP__GC_5,2,1,1,262,AMPL(1,262),S(262))
 C     Loop amplitude for loop diagram with ID 19
       CALL ML5_0_LOOP_2_2(1,6,14,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
@@ -1289,9 +1289,9 @@ C     Loop amplitude for loop diagram with ID 24
      $ ,KIND=16),GC_47,MP__GC_47,GC_5,MP__GC_5,GC_4,MP__GC_4,GC_5
      $ ,MP__GC_5,3,1,1,268,AMPL(1,268),S(268))
 C     Loop amplitude for loop diagram with ID 25
-      CALL ML5_0_LOOP_2_2(12,10,17,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,1,1,1,269,AMPL(1,269),S(269))
+      CALL ML5_0_LOOP_2_2(12,10,17,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,1,1,1,269,AMPL(1,269),S(269))
 C     Loop amplitude for loop diagram with ID 26
       CALL ML5_0_LOOP_3_3(7,3,9,10,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
@@ -1315,10 +1315,10 @@ C     Loop amplitude for loop diagram with ID 29
      $ ,MP__GC_5,2,1,1,273,AMPL(1,273),S(273))
 C     Loop amplitude for loop diagram with ID 30
       CALL ML5_0_LOOP_4_4(15,2,5,3,9,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5
-     $ ,MP__GC_5,3,1,1,274,AMPL(1,274),S(274))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47
+     $ ,MP__GC_47,GC_5,MP__GC_5,3,1,1,274,AMPL(1,274),S(274))
 C     Loop amplitude for loop diagram with ID 31
       CALL ML5_0_LOOP_4_4(16,2,3,5,9,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1331,9 +1331,9 @@ C     Loop amplitude for loop diagram with ID 32
      $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,2,1,1,276,AMPL(1,276),S(276))
 C     Loop amplitude for loop diagram with ID 33
-      CALL ML5_0_LOOP_2_2(12,11,19,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,1,1,1,277,AMPL(1,277),S(277))
+      CALL ML5_0_LOOP_2_2(12,11,19,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,1,1,1,277,AMPL(1,277),S(277))
 C     Loop amplitude for loop diagram with ID 34
       CALL ML5_0_LOOP_3_3(7,3,12,11,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
@@ -1355,9 +1355,9 @@ C     Loop amplitude for loop diagram with ID 37
      $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,1,1,1,281,AMPL(1,281),S(281))
 C     Loop amplitude for loop diagram with ID 38
-      CALL ML5_0_LOOP_2_2(12,11,21,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,1,1,1,282,AMPL(1,282),S(282))
+      CALL ML5_0_LOOP_2_2(12,11,21,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,1,1,1,282,AMPL(1,282),S(282))
 C     Loop amplitude for loop diagram with ID 39
       CALL ML5_0_LOOP_3_3(19,2,7,11,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1376,10 +1376,10 @@ C     Loop amplitude for loop diagram with ID 41
      $ ,MP__GC_5,3,1,1,285,AMPL(1,285),S(285))
 C     Loop amplitude for loop diagram with ID 42
       CALL ML5_0_LOOP_4_4(20,2,4,3,11,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5
-     $ ,MP__GC_5,3,1,1,286,AMPL(1,286),S(286))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47
+     $ ,MP__GC_47,GC_5,MP__GC_5,3,1,1,286,AMPL(1,286),S(286))
 C     Loop amplitude for loop diagram with ID 43
       CALL ML5_0_LOOP_3_3(13,1,5,19,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
@@ -1404,16 +1404,16 @@ C     Loop amplitude for loop diagram with ID 46
      $ ,MP__GC_5,3,1,1,290,AMPL(1,290),S(290))
 C     Loop amplitude for loop diagram with ID 47
       CALL ML5_0_LOOP_5_5(21,1,2,3,4,5,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,4,1,1,291,AMPL(1,291),S(291))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
+     $ ,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,4,1,1,291,AMPL(1,291),S(291))
 C     Loop amplitude for loop diagram with ID 48
       CALL ML5_0_LOOP_3_3(2,1,2,13,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,292,AMPL(1,292),S(292))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,292,AMPL(1,292),S(292))
 C     Loop amplitude for loop diagram with ID 49
       CALL ML5_0_LOOP_4_4(22,1,2,7,5,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1422,14 +1422,14 @@ C     Loop amplitude for loop diagram with ID 49
      $ ,MP__GC_5,3,1,1,293,AMPL(1,293),S(293))
 C     Loop amplitude for loop diagram with ID 50
       CALL ML5_0_LOOP_3_3(2,1,2,14,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,294,AMPL(1,294),S(294))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,294,AMPL(1,294),S(294))
 C     Loop amplitude for loop diagram with ID 51
       CALL ML5_0_LOOP_3_3(3,1,2,13,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,295,AMPL(1,295),S(295))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,295,AMPL(1,295),S(295))
 C     Loop amplitude for loop diagram with ID 52
       CALL ML5_0_LOOP_4_4(23,1,2,5,7,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1449,9 +1449,9 @@ C     Loop amplitude for loop diagram with ID 54
      $ ,MP__GC_5,3,1,1,298,AMPL(1,298),S(298))
 C     Loop amplitude for loop diagram with ID 55
       CALL ML5_0_LOOP_3_3(3,1,2,14,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,299,AMPL(1,299),S(299))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,299,AMPL(1,299),S(299))
 C     Loop amplitude for loop diagram with ID 56
       CALL ML5_0_LOOP_5_5(25,1,2,5,4,3,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1461,11 +1461,11 @@ C     Loop amplitude for loop diagram with ID 56
      $ ,MP__GC_47,4,1,1,300,AMPL(1,300),S(300))
 C     Loop amplitude for loop diagram with ID 57
       CALL ML5_0_LOOP_5_5(26,1,3,2,4,5,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,4,1,1,301,AMPL(1,301),S(301))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
+     $ ,KIND=16),GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,4,1,1,301,AMPL(1,301),S(301))
 C     Loop amplitude for loop diagram with ID 58
       CALL ML5_0_LOOP_5_5(27,1,3,4,2,5,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
@@ -1486,10 +1486,10 @@ C     Loop amplitude for loop diagram with ID 60
      $ ,MP__GC_5,3,1,1,304,AMPL(1,304),S(304))
 C     Loop amplitude for loop diagram with ID 61
       CALL ML5_0_LOOP_4_4(15,1,5,3,12,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5
-     $ ,MP__GC_5,3,1,1,305,AMPL(1,305),S(305))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47
+     $ ,MP__GC_47,GC_5,MP__GC_5,3,1,1,305,AMPL(1,305),S(305))
 C     Loop amplitude for loop diagram with ID 62
       CALL ML5_0_LOOP_3_3(17,1,5,19,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1500,9 +1500,9 @@ C     Loop amplitude for loop diagram with ID 63
      $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,1,1,1,307,AMPL(1,307),S(307))
 C     Loop amplitude for loop diagram with ID 64
-      CALL ML5_0_LOOP_2_2(12,10,24,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,1,1,1,308,AMPL(1,308),S(308))
+      CALL ML5_0_LOOP_2_2(12,10,24,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,1,1,1,308,AMPL(1,308),S(308))
 C     Loop amplitude for loop diagram with ID 65
       CALL ML5_0_LOOP_3_3(19,1,7,10,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1521,10 +1521,10 @@ C     Loop amplitude for loop diagram with ID 67
      $ ,MP__GC_5,3,1,1,311,AMPL(1,311),S(311))
 C     Loop amplitude for loop diagram with ID 68
       CALL ML5_0_LOOP_4_4(20,1,4,3,10,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5
-     $ ,MP__GC_5,3,1,1,312,AMPL(1,312),S(312))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47
+     $ ,MP__GC_47,GC_5,MP__GC_5,3,1,1,312,AMPL(1,312),S(312))
 C     Loop amplitude for loop diagram with ID 69
       CALL ML5_0_LOOP_3_3(13,2,5,24,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
@@ -1532,24 +1532,24 @@ C     Loop amplitude for loop diagram with ID 69
      $ ,MP__GC_5,2,1,1,313,AMPL(1,313),S(313))
 C     Loop amplitude for loop diagram with ID 70
       CALL ML5_0_LOOP_4_4(28,1,5,2,7,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,314,AMPL(1,314),S(314))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,314,AMPL(1,314),S(314))
 C     Loop amplitude for loop diagram with ID 71
       CALL ML5_0_LOOP_5_5(29,1,3,2,5,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5
-     $ ,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,4,1,1,315,AMPL(1,315),S(315))
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,4,1,1,315,AMPL(1,315),S(315))
 C     Loop amplitude for loop diagram with ID 72
       CALL ML5_0_LOOP_5_5(30,1,4,3,2,5,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5,MP__GC_5,4,1
-     $ ,1,316,AMPL(1,316),S(316))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(MDL_MB)
+     $ ,CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,4,1,1,316,AMPL(1,316),S(316))
 C     Loop amplitude for loop diagram with ID 73
       CALL ML5_0_LOOP_3_3(17,2,5,24,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1573,18 +1573,18 @@ C     Loop amplitude for loop diagram with ID 76
      $ ,GC_4,MP__GC_4,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,3,1,1
      $ ,320,AMPL(1,320),S(320))
 C     Loop amplitude for loop diagram with ID 77
-      CALL ML5_0_LOOP_3_4_3(33,1,2,1,5,1,2,7,DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
-     $ ,CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,1,1,1,321,AMPL(1,321),S(321))
-      CALL ML5_0_LOOP_3_4_3(34,1,2,1,5,1,2,7,DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
-     $ ,CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,1,1,1,322,AMPL(1,322),S(322))
-      CALL ML5_0_LOOP_3_4_3(35,1,2,1,5,1,2,7,DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
-     $ ,CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,1,1,1,323,AMPL(1,323),S(323))
+      CALL ML5_0_LOOP_3_4_3(33,1,2,1,5,1,2,7,DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,1,1,1,321,AMPL(1,321),S(321))
+      CALL ML5_0_LOOP_3_4_3(34,1,2,1,5,1,2,7,DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,1,1,1,322,AMPL(1,322),S(322))
+      CALL ML5_0_LOOP_3_4_3(35,1,2,1,5,1,2,7,DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,1,1,1,323,AMPL(1,323),S(323))
 C     Loop amplitude for loop diagram with ID 78
       CALL ML5_0_LOOP_5_5(36,1,3,5,2,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
@@ -1601,11 +1601,11 @@ C     Loop amplitude for loop diagram with ID 79
      $ ,MP__GC_47,4,1,1,325,AMPL(1,325),S(325))
 C     Loop amplitude for loop diagram with ID 80
       CALL ML5_0_LOOP_5_5(38,1,4,2,3,5,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,4,1
-     $ ,1,326,AMPL(1,326),S(326))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MB)
+     $ ,CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5
+     $ ,MP__GC_5,4,1,1,326,AMPL(1,326),S(326))
 C     Loop amplitude for loop diagram with ID 81
       CALL ML5_0_LOOP_5_5(39,1,2,4,3,5,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
@@ -1615,11 +1615,11 @@ C     Loop amplitude for loop diagram with ID 81
      $ ,1,327,AMPL(1,327),S(327))
 C     Loop amplitude for loop diagram with ID 82
       CALL ML5_0_LOOP_5_5(40,1,2,3,5,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MB
-     $ ),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,4,1,1,328,AMPL(1,328),S(328))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_47,MP__GC_47,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,4,1,1,328,AMPL(1,328),S(328))
 C     Loop amplitude for loop diagram with ID 83
       CALL ML5_0_LOOP_5_5(41,1,2,5,3,4,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
@@ -1630,19 +1630,19 @@ C     Loop amplitude for loop diagram with ID 83
 C     Loop amplitude for loop diagram with ID 84
       CALL ML5_0_LOOP_4_5_4(42,1,1,2,1,3,4,1,2,5,DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__M
-     $ DL_MB,KIND=16),GC_47,MP__GC_47,GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,2,1,1,330,AMPL(1,330),S(330))
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
+     $ ,CMPLX(MP__MDL_MB,KIND=16),GC_47,MP__GC_47,GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,2,1,1,330,AMPL(1,330),S(330))
       CALL ML5_0_LOOP_4_5_4(43,1,1,2,1,3,4,1,2,5,DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__M
-     $ DL_MB,KIND=16),GC_47,MP__GC_47,GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,2,1,1,331,AMPL(1,331),S(331))
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
+     $ ,CMPLX(MP__MDL_MB,KIND=16),GC_47,MP__GC_47,GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,2,1,1,331,AMPL(1,331),S(331))
       CALL ML5_0_LOOP_4_5_4(44,1,1,2,1,3,4,1,2,5,DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__M
-     $ DL_MB,KIND=16),GC_47,MP__GC_47,GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,2,1,1,332,AMPL(1,332),S(332))
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MB)
+     $ ,CMPLX(MP__MDL_MB,KIND=16),GC_47,MP__GC_47,GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,2,1,1,332,AMPL(1,332),S(332))
 C     Loop amplitude for loop diagram with ID 85
       CALL ML5_0_LOOP_2_2(1,6,13,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5
@@ -1661,8 +1661,8 @@ C     Loop amplitude for loop diagram with ID 88
      $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,2,1,1,336,AMPL(1,336),S(336))
 C     Loop amplitude for loop diagram with ID 89
-      CALL ML5_0_LOOP_3_3(46,4,6,8,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
+      CALL ML5_0_LOOP_3_3(46,4,6,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_4,MP__GC_4,GC_5
      $ ,MP__GC_5,2,1,1,337,AMPL(1,337),S(337))
 C     Loop amplitude for loop diagram with ID 90
@@ -1683,8 +1683,8 @@ C     Loop amplitude for loop diagram with ID 93
      $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,1,1,1,341,AMPL(1,341),S(341))
 C     Loop amplitude for loop diagram with ID 94
-      CALL ML5_0_LOOP_3_3(19,2,9,8,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+      CALL ML5_0_LOOP_3_3(19,2,9,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,2,1,1,342,AMPL(1,342),S(342))
 C     Loop amplitude for loop diagram with ID 95
@@ -1713,14 +1713,14 @@ C     Loop amplitude for loop diagram with ID 99
      $ ,MP__GC_5,2,1,1,347,AMPL(1,347),S(347))
 C     Loop amplitude for loop diagram with ID 100
       CALL ML5_0_LOOP_3_3(2,1,2,13,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,348,AMPL(1,348),S(348))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,348,AMPL(1,348),S(348))
 C     Loop amplitude for loop diagram with ID 101
       CALL ML5_0_LOOP_3_3(2,1,2,14,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,349,AMPL(1,349),S(349))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,349,AMPL(1,349),S(349))
 C     Loop amplitude for loop diagram with ID 102
       CALL ML5_0_LOOP_4_4(22,1,2,4,8,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
@@ -1729,14 +1729,14 @@ C     Loop amplitude for loop diagram with ID 102
      $ ,MP__GC_5,3,1,1,350,AMPL(1,350),S(350))
 C     Loop amplitude for loop diagram with ID 103
       CALL ML5_0_LOOP_3_3(3,1,2,13,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,351,AMPL(1,351),S(351))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,351,AMPL(1,351),S(351))
 C     Loop amplitude for loop diagram with ID 104
       CALL ML5_0_LOOP_3_3(3,1,2,14,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,352,AMPL(1,352),S(352))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,352,AMPL(1,352),S(352))
 C     Loop amplitude for loop diagram with ID 105
       CALL ML5_0_LOOP_4_4(23,1,2,8,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
@@ -1779,10 +1779,10 @@ C     Loop amplitude for loop diagram with ID 112
      $ ,MP__GC_5,2,1,1,360,AMPL(1,360),S(360))
 C     Loop amplitude for loop diagram with ID 113
       CALL ML5_0_LOOP_4_4(48,1,4,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT
-     $ ),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,361,AMPL(1,361),S(361))
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,361,AMPL(1,361),S(361))
 C     Loop amplitude for loop diagram with ID 114
       CALL ML5_0_LOOP_3_3(19,2,4,28,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
@@ -1806,18 +1806,18 @@ C     Loop amplitude for loop diagram with ID 117
      $ ,GC_4,MP__GC_4,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,3,1,1
      $ ,365,AMPL(1,365),S(365))
 C     Loop amplitude for loop diagram with ID 118
-      CALL ML5_0_LOOP_3_4_3(49,1,2,1,4,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,1,1,1,366,AMPL(1,366),S(366))
-      CALL ML5_0_LOOP_3_4_3(50,1,2,1,4,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,1,1,1,367,AMPL(1,367),S(367))
-      CALL ML5_0_LOOP_3_4_3(51,1,2,1,4,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZER
-     $ O,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_6,MP__GC_6,GC_5
-     $ ,MP__GC_5,1,1,1,368,AMPL(1,368),S(368))
+      CALL ML5_0_LOOP_3_4_3(49,1,2,1,4,1,2,8,DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,1,1,1,366,AMPL(1,366),S(366))
+      CALL ML5_0_LOOP_3_4_3(50,1,2,1,4,1,2,8,DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,1,1,1,367,AMPL(1,367),S(367))
+      CALL ML5_0_LOOP_3_4_3(51,1,2,1,4,1,2,8,DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_6
+     $ ,MP__GC_6,GC_5,MP__GC_5,1,1,1,368,AMPL(1,368),S(368))
 C     Loop amplitude for loop diagram with ID 119
       CALL ML5_0_LOOP_2_2(52,6,13,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4
@@ -1956,9 +1956,9 @@ C         SET THE HELICITY FILTER
                 WRITE(*,*) '##W02A WARNING Inconsistent helicity '
      $           ,HELPICKED
                 IF(HELINITSTARTOVER) THEN
-                  WRITE(*,*) '##I01 INFO Initialization starting ove'
-     $             //'r because of inconsistency in the helicit'
-     $             //'y filter setup.'
+                  WRITE(*,*) '##I01 INFO Initialization starting over'
+     $             //' because of inconsistency in the helicity filter'
+     $             //' setup.'
                   NTRY=0
                 ENDIF
               ENDIF
@@ -1967,9 +1967,9 @@ C         SET THE HELICITY FILTER
                 WRITE(*,*) '##W02B WARNING Inconsistent helicity '
      $           ,HELPICKED
                 IF(HELINITSTARTOVER) THEN
-                  WRITE(*,*) '##I01 INFO Initialization starting ove'
-     $             //'r because of inconsistency in the helicit'
-     $             //'y filter setup.'
+                  WRITE(*,*) '##I01 INFO Initialization starting over'
+     $             //' because of inconsistency in the helicity filter'
+     $             //' setup.'
                   NTRY=0
                 ELSE
                   GOODHEL(HELPICKED)=.TRUE.
@@ -1989,9 +1989,9 @@ C         SET THE LOOP FILTER
                   WRITE(*,*) '##W02 WARNING Inconsistent loop amp ',I
      $             ,' for helicity ',HELPICKED,'.'
                   IF(LOOPINITSTARTOVER) THEN
-                    WRITE(*,*) '##I01 INFO Initialization startin'
-     $               //'g over because of inconsistency in the loo'
-     $               //'p filter setup.'
+                    WRITE(*,*) '##I01 INFO Initialization starting'
+     $               //' over because of inconsistency in the loop'
+     $               //' filter setup.'
                     NTRY=0
                   ELSE
                     GOODAMP(I,HELPICKED)=.TRUE.
@@ -2002,24 +2002,24 @@ C         SET THE LOOP FILTER
           ENDIF
         ELSEIF (.NOT.HELDOUBLECHECKED)THEN
           IF ((.NOT.GOODHEL(HELPICKED)).AND.(.NOT.ML5_0_ISZERO(ABS(ANS(
-     $     1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
-            WRITE(*,*) '##W15 Helicity filter could not be successfull'
-     $       //'y double checked.'
-            WRITE(*,*) '##One reason for this is that you have change'
-     $       //'d sensible parameters which affected what are the zer'
-     $       //'o helicity configurations.'
-            WRITE(*,*) '##MadLoop will try to reset the Helicit'
-     $       //'y filter with the next PS points it receives.'
+     $1))+ABS(ANS(2))+ABS(ANS(3)),REF/DBLE(NCOMB),-1))) THEN
+            WRITE(*,*) '##W15 Helicity filter could not be'
+     $       //' successfully double checked.'
+            WRITE(*,*) '##One reason for this is that you have changed'
+     $       //' sensible parameters which affected what are the zero'
+     $       //' helicity configurations.'
+            WRITE(*,*) '##MadLoop will try to reset the Helicity'
+     $       //' filter with the next PS points it receives.'
             NTRY=0
             OPEN(30,FILE=HELFILTERFN,ERR=349)
  349        CONTINUE
             CLOSE(30,STATUS='delete')
           ENDIF
 C         SET HELDOUBLECHECKED TO .TRUE. WHEN DONE
-C         even if it failed we do not want to redo the check afterwards
-C          if HELINITSTARTOVER=.FALSE.
+C         even if it failed we do not want to redo the check
+C          afterwards if HELINITSTARTOVER=.FALSE.
           IF (HELPICKED.EQ.NCOMB.AND.(NTRY.NE.0.OR..NOT.HELINITSTARTOVE
-     $     R)) THEN
+     $R)) THEN
             DONEHELDOUBLECHECK=.TRUE.
           ENDIF
         ENDIF
@@ -2034,14 +2034,14 @@ C       GOTO NEXT HELICITY OR FINISH
           ANS(2)=BUFFR(2)
           ANS(3)=BUFFR(3)
 C         We add one here to the number of PS points used for building
-C          the reference scale for comparison (used only for loop-induc
-C         ed processes).
+C          the reference scale for comparison (used only for
+C          loop-induced processes).
           NPSPOINTS = NPSPOINTS+1
           IF(NTRY.EQ.0) THEN
             NATTEMPTS=NATTEMPTS+1
             IF(NATTEMPTS.EQ.MAXATTEMPTS) THEN
-              WRITE(*,*) '##E01 ERROR Could not initialize the filter'
-     $         //'s in ',MAXATTEMPTS,' trials'
+              WRITE(*,*) '##E01 ERROR Could not initialize the filters'
+     $         //' in ',MAXATTEMPTS,' trials'
               STOP
             ENDIF
           ENDIF
@@ -2056,8 +2056,8 @@ C         ed processes).
         ENDIF
       ENDDO
 
-      IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.LE.
-     $ -1)) THEN
+      IF(.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.(CTMODERUN.LE.-1))
+     $  THEN
         STAB_INDEX=STAB_INDEX+1
         IF(DOING_QP_EVALS) THEN
           QP_RES(1,STAB_INDEX)=ANS(1)
@@ -2087,7 +2087,7 @@ C        METHODS
         CTMODE=BASIC_CT_MODE
 
         IF(.NOT.EVAL_DONE(3).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $   .1).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
+     $.1).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.1)) ) THEN
           EVAL_DONE(3)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,1)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,1)
@@ -2095,7 +2095,7 @@ C        METHODS
         ENDIF
 
         IF(.NOT.EVAL_DONE(4).AND. ((DOING_QP_EVALS.AND.NROTATIONS_QP.GE
-     $   .2).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
+     $.2).OR.((.NOT.DOING_QP_EVALS).AND.NROTATIONS_DP.GE.2)) ) THEN
           EVAL_DONE(4)=.TRUE.
           CALL ML5_0_ROTATE_PS(PS,P,2)
           IF (DOING_QP_EVALS) CALL ML5_0_MP_ROTATE_PS(MP_PS,MP_P,2)
@@ -2115,8 +2115,8 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
             RET_CODE_H=4
             NEPS=NEPS+1
             CALL ML5_0_COMPUTE_ACCURACY(DP_RES,N_DP_EVAL,TEMP1,TEMP)
-            WRITE(*,*) '##W03 WARNING An unstable PS point was'
-     $       ,       ' detected.'
+            WRITE(*,*) '##W03 WARNING An unstable PS point was',      
+     $        ' detected.'
             WRITE(*,*) '##(DP,QP) accuracies : (',TEMP1,',',ACC,')'
             WRITE(*,*) '##Best estimate (fin,1eps,2eps) :',(ANS(I),I=1
      $       ,3)
@@ -2133,8 +2133,8 @@ C       END OF THE DEFINITIONS OF THE DIFFERENT EVALUATION METHODS
               ENDDO
             ENDIF
             IF(NEPS.EQ.10) THEN
-              WRITE(*,*) '##Further output of the details of thes'
-     $         //'e unstable PS points will now be suppressed.'
+              WRITE(*,*) '##Further output of the details of these'
+     $         //' unstable PS points will now be suppressed.'
             ENDIF
           ENDIF
         ELSE
@@ -2214,8 +2214,8 @@ C      bypassed
 
       END
 
-      SUBROUTINE ML5_0_COMPUTE_ACCURACY(FULLLIST, LENGTH, ACC
-     $ , ESTIMATE)
+      SUBROUTINE ML5_0_COMPUTE_ACCURACY(FULLLIST, LENGTH, ACC,
+     $  ESTIMATE)
       IMPLICIT NONE
 C     
 C     PARAMETERS 
@@ -2341,9 +2341,9 @@ C
 C     ----------
 C     BEGIN CODE
 C     ----------
-      WRITE(*,*) '##WARNING:: Ignored, the possibility of selectin'
-     $ //'g specific squared order contributions is not available i'
-     $ //'n the default mode.'
+      WRITE(*,*) '##WARNING:: Ignored, the possibility of selecting'
+     $ //' specific squared order contributions is not available in'
+     $ //' the default mode.'
 
       END
 
@@ -2429,8 +2429,8 @@ C     BEGIN CODE
 C     ----------
       USER_STAB_PREC = PREC_ASKED
       CALL ML5_0_SLOOPMATRIXHEL(P,HEL,ANS)
-      IF(ALWAYS_TEST_STABILITY.AND.(H.EQ.1.OR.ACCURACY(0).LT.0.0D0)
-     $ ) THEN
+      IF(ALWAYS_TEST_STABILITY.AND.(H.EQ.1.OR.ACCURACY(0).LT.0.0D0))
+     $  THEN
         BYPASS_CHECK = .TRUE.
         CALL ML5_0_SLOOPMATRIXHEL(P,HEL,ANS)
         BYPASS_CHECK = .FALSE.
@@ -2452,8 +2452,8 @@ C     Reset it to default value not to affect next runs
      $ ,RET_CODE)
 C     
 C     Inputs are:
-C     P(0:3, Nexternal)  double  :: Kinematic configuration (E,px,py,pz
-C     )
+C     P(0:3, Nexternal)  double  :: Kinematic configuration
+C      (E,px,py,pz)
 C     PEC_ASKED          double  :: Target relative accuracy, -1 for
 C      default
 C     
@@ -2525,8 +2525,8 @@ C     BEGIN CODE
 C     ----------
       USER_STAB_PREC = PREC_ASKED
       CALL ML5_0_SLOOPMATRIX(P,ANS)
-      IF(ALWAYS_TEST_STABILITY.AND.(H.EQ.1.OR.ACCURACY(0).LT.0.0D0)
-     $ ) THEN
+      IF(ALWAYS_TEST_STABILITY.AND.(H.EQ.1.OR.ACCURACY(0).LT.0.0D0))
+     $  THEN
         BYPASS_CHECK = .TRUE.
         CALL ML5_0_SLOOPMATRIX(P,ANS)
         BYPASS_CHECK = .FALSE.

@@ -21,7 +21,7 @@ extern "C" {
 #define cevwgt cevwgt_
 
 extern "C" { 
-  void pyabeg_(int&,char(*)[15]);
+  void pyabeg_(int&,char(*)[50]);
   void pyaend_(double&);
   void pyanal_(int&,double(*));
 }
@@ -30,8 +30,8 @@ int main() {
   Pythia pythia;
 
   int cwgtinfo_nn;
-  char cwgtinfo_weights_info[350][15];
-  double cwgt_ww[350];
+  char cwgtinfo_weights_info[1024][50];
+  double cwgt_ww[1024];
 
   string inputname="Pythia8.cmd",outputname="Pythia8.hep";
 
@@ -135,6 +135,7 @@ int main() {
     for (; iLHEFread<nTry ; ++iLHEFread) {
       read.lhef_read_wgts_(cwgt_ww);
     }
+    cwgt_ww[0]=cevwgt.EVWGT;
     pyanal_(cwgtinfo_nn,cwgt_ww);
 
     if (iEvent % nstep == 0 && iEvent >= 100){

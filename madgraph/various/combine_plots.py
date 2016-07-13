@@ -237,7 +237,7 @@ def merge_all_plots(path1, path2, outputpath='/tmp', td='../../td/td', MA=None):
     #find which plots correspond to what
     pattern = re.compile(r'''TITLE TOP\s+\"\s*([^\"]*)\s*\"''')
     all_plot1 = {}
-    for filepath in glob.glob(pjoin(path1, 'ma_*.top')):
+    for filepath in misc.glob('ma_*.top', path1):
         filename = os.path.basename(filepath)
         text = open(filepath).read()
         try:
@@ -247,7 +247,7 @@ def merge_all_plots(path1, path2, outputpath='/tmp', td='../../td/td', MA=None):
         all_plot1[title] = filename
         
     # find the plot to add:
-    for filepath in glob.glob(pjoin(path2, 'ma_*.top')):
+    for filepath in misc.glob('ma_*.top', path2):
         filename = os.path.basename(filepath)
         text = open(filepath).read()
         try:

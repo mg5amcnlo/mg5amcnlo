@@ -2612,7 +2612,7 @@ class decay_all_events(object):
         return decay_mapping
     
 
-    #@misc.mute_logger()
+    @misc.mute_logger()
     @test_aloha.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
@@ -3110,7 +3110,7 @@ class decay_all_events(object):
 
         
         probe_weight = []
-        
+       
 
         starttime = time.time()
         ev = -1
@@ -3148,6 +3148,7 @@ class decay_all_events(object):
             atleastonedecay=False
             for decay in self.all_ME[production_tag]['decays']:
                 tag = decay['decay_tag']
+
                 if decay_mapping and not tag in decay_mapping:
                     continue
                 if not tag:
@@ -3161,10 +3162,11 @@ class decay_all_events(object):
                 else:
                     max_decay[tag] = weight
                     #print weight, max_decay[name]
-                    #raise Exception   
+                    #raise Exception 
+                      
             if not atleastonedecay:
                 # NO decay [one possibility is all decay are identical to their particle]
-                logger.info('No independent decay for one type of final states -> skip those events')
+                logger.info('No independent decay for one type of final states -> skip those events for the maximum weight computation')
                 nb_decay[decaying] = numberev
                 ev += numberev -1
                 continue
@@ -3236,14 +3238,16 @@ class decay_all_events(object):
                         logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
 
-        if __debug__: 
+#        if __debug__: 
         # check that all decay have a max_weight and fix it if not the case.
-            for prod in self.all_ME.values():
-                for dec in prod['decays']:
-                    if dec['decay_tag']:                                                
-                        assert 'max_weight' in dec and dec['max_weight'] ,\
-                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
-                                                  os.path.basename(prod['path']))
+        for prod in self.all_ME.values():
+            for dec in prod['decays']:
+                if dec['decay_tag'] and not 'max_weight' in dec:
+                    dec['max_weight'] = 0. 
+
+#                        assert 'max_weight' in dec and dec['max_weight'] ,\
+#                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
+#                                                  os.path.basename(prod['path']))
         self.evtfile.seek(0)
         return
 
@@ -3293,7 +3297,7 @@ class decay_all_events(object):
 
         return max_weight
         
-    def loadfortran(self, mode, path, stdin_text):
+    def loadfortran(self, mode, path, stdin_text, first=True):
         """ call the fortran executable """
 
         tmpdir = ''
@@ -3310,8 +3314,18 @@ class decay_all_events(object):
             self.calculator[('full',path,)] = external 
             self.calculator_nbcall[('full',path)] = 1 
 
-        external.stdin.write(stdin_text)
-        
+        try:
+            external.stdin.write(stdin_text)
+        except IOError:
+            if not first:
+                raise
+            try:
+                external.terminate()
+            except:
+                pass
+            del self.calculator[('full',path,)]
+            return self.loadfortran(mode, path, stdin_text, first=False)
+
         if mode == 'maxweight':
             maxweight=float(external.stdout.readline())
             output = maxweight

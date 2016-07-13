@@ -8,6 +8,7 @@ import os
 import re
 import shutil
 import logging
+import random
 
 logger = logging.getLogger('madgraph.models') # -> stdout
 
@@ -742,8 +743,8 @@ class ParamCardIterator(ParamCard):
                         all_iterators[key] = []
                     try:
                         all_iterators[key].append( (param, eval(def_list)))
-                    except SyntaxError:
-                        raise Exception, "Fail to handle your scan definition. Please check your syntax."
+                    except SyntaxError, error:
+                        raise Exception, "Fail to handle your scan definition. Please check your syntax:\n entry: %s \n Error reported: %s" %(def_list, error)
                     
         keys = all_iterators.keys() # need to fix an order for the scan
         param_card = ParamCard(self)

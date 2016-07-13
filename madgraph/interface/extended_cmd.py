@@ -573,16 +573,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         if not line:
             return line
-        line = line.lstrip()
 
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
             self.save_line = ''
-        
+            
+        line = line.lstrip()        
         # Check if the line is complete
         if line.endswith('\\'):
-            self.save_line = line[:-1] + ' '
+            self.save_line = line[:-1] 
             return '' # do nothing   
                 
         # Remove comment
@@ -692,8 +692,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                    mother_interface=self, **opt)
         
         if first_cmd:
-            question_instance.onecmd(first_cmd)
-        
+            if isinstance(first_cmd, str):
+                question_instance.onecmd(first_cmd)
+            else:
+                for line in first_cmd:
+                    question_instance.onecmd(line)
         if not self.haspiping:
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
@@ -707,13 +710,13 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 answer = alias[answer]
             if ask_class:
                 answer = question_instance.default(answer)
+            if hasattr(question_instance, 'check_answer_consistency'):
+                question_instance.check_answer_consistency()
             return answer
         
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
-
         
         try:
             if value in alias:
@@ -765,8 +768,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.warning('The answer to the previous question is not set in your input file')
-                logger.warning('Use %s value' % default)
+                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
+                logger.info('Use %s value' % default, '$MG:color:BLACK')
                 return str(default)
         
         line = line.replace('\n','').strip()

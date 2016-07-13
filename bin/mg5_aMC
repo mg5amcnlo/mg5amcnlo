@@ -54,7 +54,7 @@ import subprocess
 # Check if optimize mode is (and should be) activated
 if __debug__ and not options.debug and \
     (not os.path.exists(os.path.join(root_path, 'bin','create_release.py')) or options.web):
-        os.system('%s -O %s' % (sys.executable, ' '.join(sys.argv)))
+        os.system('%s -O -W ignore::DeprecationWarning %s' % (sys.executable, ' '.join(sys.argv)))
         sys.exit()
 
 import logging

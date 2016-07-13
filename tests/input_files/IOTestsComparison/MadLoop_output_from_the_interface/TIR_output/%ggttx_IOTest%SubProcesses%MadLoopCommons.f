@@ -110,14 +110,14 @@ C         Try to automatically find the path
           CLOSE(1)
 C         We could not automatically find the auxiliary files
           WRITE(*,*) '==='
-          WRITE(*,*) 'ERROR: MadLoop5 could not automatically find th'
-     $     //'e file MadLoopParams.dat.'
+          WRITE(*,*) 'ERROR: MadLoop5 could not automatically find the'
+     $     //' file MadLoopParams.dat.'
           WRITE(*,*) '==='
-          WRITE(*,*) '(Try using <CALL setMadLoopPath(/my/pat'
-     $     //'h)> (before your first call to MadLoop) in order to se'
-     $     //'t the directory where this file is located as well as'
-     $     //'  other auxiliary files, such as <xxx>_ColorNumFactors.d'
-     $     //'at, <xxx>_ColorDenomFactors.dat, etc..)'
+          WRITE(*,*) '(Try using <CALL setMadLoopPath(/my/path)>'
+     $     //' (before your first call to MadLoop) in order to set the'
+     $     //' directory where this file is located as well as  other'
+     $     //' auxiliary files, such as <xxx>_ColorNumFactors.dat,'
+     $     //' <xxx>_ColorDenomFactors.dat, etc..)'
           STOP
  10       CONTINUE
           CLOSE(1)
@@ -143,8 +143,8 @@ C     Check that the FilePath set is correct
  3    CONTINUE
       CLOSE(1)
       WRITE(*,*) '==='
-      WRITE(*,*) 'ERROR: The MadLoop5 auxiliary files could not b'
-     $ //'e found in ',MLPATH
+      WRITE(*,*) 'ERROR: The MadLoop5 auxiliary files could not be'
+     $ //' found in ',MLPATH
       WRITE(*,*) '==='
       STOP
  11   CONTINUE
@@ -212,8 +212,8 @@ C
       IF(MLRED.GE.1.AND.MLRED.LE.6)THEN
         SET_RET_CODE_U=MLRED
       ELSE
-        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai an'
-     $   //'d Ninja are available'
+        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai and'
+     $   //' Ninja are available'
       ENDIF
       END
 
@@ -244,8 +244,8 @@ C     BEGIN CODE
 C     ----------
       IF(LIBNUM.EQ.1)THEN
 C       CutTools
-        CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,HAS_HEFT_VERTE
-     $   X,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
+        CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS
+     $   ,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
       ELSEIF(LIBNUM.EQ.2)THEN
 C       PJFry++
         CALL DETECT_PJFRY(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
@@ -262,14 +262,14 @@ C       Samurai
 C       Ninja 
         CALL DETECT_NINJA(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSE
-        STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai ar'
-     $   //'e available'
+        STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai are'
+     $   //' available'
       ENDIF
       RETURN
       END
 
-      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,HAS_HEFT_V
-     $ ERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
+      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS
+     $ ,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 C     
 C     DETECT whether CUTTOOLS CAN BE USED OR NOT
 C     
@@ -401,7 +401,7 @@ C     BEGIN CODE
 C     ----------
       LPASS=.TRUE.
       IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5.OR.NLOOPLINE.GT.5.OR.COMPLEX_MA
-     $ SS.OR.NLOOPLINE.EQ.1) THEN
+     $SS.OR.NLOOPLINE.EQ.1) THEN
         LPASS=.FALSE.
       ENDIF
       RETURN
@@ -562,64 +562,62 @@ C     arrays since these are not the most optimized sorting algorithms.
 
                 SUBROUTINE PRINT_MADLOOP_BANNER()
 
-                WRITE(*,*) ' ========================================='
-     $           //'================================================= '
-                WRITE(*,*) '{                                        '
-     $           //'                                                '
-     $           //'  }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'                '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                    ,,                           '
-     $           //'                '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'`7MMM.    '
-     $           //' ,MMF'//CHAR(39)//'             `7MM  `7MMF'/
+                WRITE(*,*) ' =========================================='
+     $           //'================================================ '
+                WRITE(*,*) '{                                         '
+     $           //'                                                 }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'            '
+     $           //'                                                  '
+     $           //'              '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'            '
+     $           //'                   ,,                             '
+     $           //'              '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'`7MMM.     '
+     $           //',MMF'//CHAR(39)//'             `7MM  `7MMF'/
      $           /CHAR(39)//'                                   '/
      $           /CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  MMMb  '
-     $           //'  dPMM                 MM    MM                  '
-     $           //'                   '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M YM  '
-     $           //' ,M MM   ,6'//CHAR(34)//'Yb.   ,M'//CHAR(34)//''/
-     $           /CHAR(34)//'bMM    MM         ,pW'//CHAR(34)/
-     $           /'Wq.   ,pW'//CHAR(34)//'Wq.`7MMpdMAo. '//CHAR(27)/
-     $           /'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  MMMb   '
+     $           //' dPMM                 MM    MM                    '
+     $           //'                 '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M YM   ,M'
+     $           //' MM   ,6'//CHAR(34)//'Yb.   ,M'//CHAR(34)//''/
+     $           /CHAR(34)//'bMM    MM         ,pW'//CHAR(34)//'Wq.   '
+     $           //',pW'//CHAR(34)//'Wq.`7MMpdMAo. '//CHAR(27)//'[0m'/
+     $           /'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  Mb  M'/
      $           /CHAR(39)//' MM  8)   MM ,AP    MM    MM        6W'/
      $           /CHAR(39)//'   `Wb 6W'//CHAR(39)//'   `Wb MM   `Wb '/
      $           /CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  YM.P'/
-     $           /CHAR(39)//'  MM   ,pm9MM 8MI    MM    MM     '
-     $           //' , 8M     M8 8M     M8 MM    M8 '//CHAR(27)//'[0m'
-     $           //'       }'
+     $           /CHAR(39)//'  MM   ,pm9MM 8MI    MM    MM      , 8M  '
+     $           //'   M8 8M     M8 MM    M8 '//CHAR(27)//'[0m'//'    '
+     $           //'   }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  `YM'/
-     $           /CHAR(39)//'   MM  8M   MM `Mb    MM    MM    '
-     $           //' ,M YA.   ,A9 YA.   ,A9 MM   ,AP '//CHAR(27)/
-     $           /'[0m'//'       }'
+     $           /CHAR(39)//'   MM  8M   MM `Mb    MM    MM     ,M YA.'
+     $           //'   ,A9 YA.   ,A9 MM   ,AP '//CHAR(27)//'[0m'//'   '
+     $           //'    }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'.JML. `'/
      $           /CHAR(39)//'  .JMML.`Moo9^Yo.`Wbmd'//CHAR(34)/
      $           /'MML..JMMmmmmMMM  `Ybmd9'//CHAR(39)//'   `Ybmd9'/
      $           /CHAR(39)//'  MMbmmd'//CHAR(39)//'  '//CHAR(27)/
      $           /'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'       MM       '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'     .JMML.     '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'            '
+     $           //'                                                  '
+     $           //'     MM       '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'            '
+     $           //'                                                  '
+     $           //'   .JMML.     '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)/
-     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.0621v'
-     $           //'2, arXiv:1405.0301'//CHAR(27)//'[32m'//'         '
-     $           //'       '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'                '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{                                        '
-     $           //'                                                '
-     $           //'  }'
-                WRITE(*,*) ' ========================================='
-     $           //'================================================= '
+     $           /'[0m'//'v%(version)s (%(date)s), Ref:'
+     $           //' arXiv:1103.0621v2, arXiv:1405.0301'//CHAR(27)/
+     $           /'[32m'//'           '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'            '
+     $           //'                                                  '
+     $           //'              '//CHAR(27)//'[0m'//'       }'
+                WRITE(*,*) '{                                         '
+     $           //'                                                 }'
+                WRITE(*,*) ' =========================================='
+     $           //'================================================ '
 
                 END
 

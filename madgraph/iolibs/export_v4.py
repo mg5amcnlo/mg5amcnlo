@@ -42,6 +42,7 @@ import madgraph.iolibs.gen_infohtml as gen_infohtml
 import madgraph.iolibs.template_files as template_files
 import madgraph.iolibs.ufo_expression_parsers as parsers
 import madgraph.iolibs.helas_call_writers as helas_call_writers
+import madgraph.interface.common_run_interface as common_run_interface
 import madgraph.various.diagram_symmetry as diagram_symmetry
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
@@ -176,7 +177,7 @@ class ProcessExporterFortran(object):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/LO'), 
                                self.dir_path)
-#            for name in glob.glob(pjoin(self.mgme_dir, 'Template/LO/*')):
+#            for name in misc.glob('Template/LO/*', self.mgme_dir):
 #                name = os.path.basename(name)
 #                filname = pjoin(self.mgme_dir, 'Template','LO',name)
 #                if os.path.isfile(filename):
@@ -786,10 +787,12 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         #copy Helas Template
         cp(MG5DIR + '/aloha/template_files/Makefile_F', write_dir+'/makefile')
         if any([any(['L' in tag for tag in d[1]]) for d in wanted_lorentz]):
-            cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', write_dir+'/aloha_functions.f')
+            cp(MG5DIR + '/aloha/template_files/aloha_functions_loop.f', 
+                                                 write_dir+'/aloha_functions.f')
             aloha_model.loop_mode = False
         else:
-            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', write_dir+'/aloha_functions.f')
+            cp(MG5DIR + '/aloha/template_files/aloha_functions.f', 
+                                                 write_dir+'/aloha_functions.f')
         create_aloha.write_aloha_file_inc(write_dir, '.f', '.o')
 
         # Make final link in the Process
@@ -1687,107 +1690,44 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         f2py_compiler = compilers['f2py']
         if not f2py_compiler:
             f2py_compiler = 'f2py'
-
-            
+        for_update= {'DEFAULT_F_COMPILER':compiler,
+                     'DEFAULT_F2PY_COMPILER':f2py_compiler}
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
-        lines = open(make_opts).read().split('\n')
-        FC_re = re.compile('^(\s*)(FC|F2PY)\s*=\s*(.+)\s*$')
-        for iline, line in enumerate(lines):
 
-            FC_result = FC_re.match(line)
-            if FC_result:
-                if 'FC' == FC_result.group(2):
-                    if compiler != FC_result.group(3):
-                        mod = True
-                    lines[iline] = FC_result.group(1) + "FC=" + compiler
-                elif 'F2PY' ==  FC_result.group(2):
-                    if f2py_compiler != FC_result.group(3):
-                        mod = True
-                    lines[iline] = FC_result.group(1) + "F2PY=" + f2py_compiler
-                                    
-        if not mod:
-            return
-        
         try:
-            outfile = open(make_opts, 'w')
+            common_run_interface.CommonRunCmd.update_make_opts_full(
+                            make_opts, for_update)
         except IOError:
             if root_dir == self.dir_path:
-                logger.info('Fail to set compiler. Trying to continue anyway.')
-            return
-        outfile.write('\n'.join(lines))
-
+                logger.info('Fail to set compiler. Trying to continue anyway.')            
 
     def replace_make_opt_c_compiler(self, compiler, root_dir = ""):
         """Set CXX=compiler in Source/make_opts.
         The version is also checked, in order to set some extra flags
         if the compiler is clang (on MACOS)"""
        
-        p = misc.Popen([compiler, '--version'], stdout=subprocess.PIPE, 
-                    stderr=subprocess.PIPE)
-        output, error = p.communicate()
-        is_clang = 'LLVM' in output
-        is_lc = False
-        if is_clang:
-            import platform
-            v, _,_ = platform.mac_ver()
-            if not v:
-                is_lc = True
-            else:
-                v = float(v.rsplit('.')[1])
-                if v >= 9:
-                    is_lc = True
-                else:
-                    is_lc = False
-    
-        mod = False #avoid to rewrite the file if not needed
+        is_clang = misc.detect_if_cpp_compiler_is_clang(compiler)
+        is_lc    = misc.detect_cpp_std_lib_dependence(compiler) == '-lc++'
+
+        # list of the variable to set in the make_opts file
+        for_update= {'DEFAULT_CPP_COMPILER':compiler,
+                     'MACFLAG':'-mmacosx-version-min=10.7' if is_clang and is_lc else '',
+                     'STDLIB': '-lc++' if is_lc else '-lstdc++',
+                     'STDLIB_FLAG': '-stdlib=libc++' if is_lc and is_clang else ''
+                     }
+        
         if not root_dir:
             root_dir = self.dir_path
         make_opts = pjoin(root_dir, 'Source', 'make_opts')
-        lines = open(make_opts).read().split('\n')
-        CC_re = re.compile('^(\s*)CXX\s*=\s*(.+)\s*$')
-        for iline, line in enumerate(lines):
-            CC_result = CC_re.match(line)
-            if CC_result:
-                if compiler != CC_result.group(2):
-                    mod = True
-                lines[iline] = CC_result.group(1) + "CXX=" + compiler
-            if 'LDFLAGS=-lc++' in line:
-                if not is_lc:
-                    lines[iline] = 'LDFLAGS=-lstdc++'
-                    mod = True
-                elif is_clang and not 'mmacosx-version' in line:
-                    lines[iline] += " -mmacosx-version-min=10.7"
-                    mod=True
-                elif not is_clang and 'mmacosx-version' in line:
-                    lines[iline] = lines[iline].replace('-mmacosx-version-min=10.7', '')
-                    mod = True
-            elif 'LDFLAGS=-lstdc++' in line:
-                if is_lc and is_clang:
-                    lines[iline] = 'LDFLAGS=-lc++  -mmacosx-version-min=10.7'
-                    mod = True
 
-        if is_clang and is_lc:
-            CFLAGS_re=re.compile('^(\s*)CFLAGS\s*=\s*(.+)\s*$')
-            CXXFLAGS_re=re.compile('^(\s*)CXXFLAGS\s*=\s*(.+)\s*$')
-            flags= '-O -stdlib=libc++ -mmacosx-version-min=10.7'
-            for iline, line in enumerate(lines):
-                CF_result = CFLAGS_re.match(line)
-                CXXF_result = CXXFLAGS_re.match(line)
-                if CF_result and CF_result.group(2) != flags:
-                    lines[iline] = CF_result.group(1) + "CFLAGS= " + flags
-                    mod=True
-                if CXXF_result and CXXF_result.group(1)!= flags:
-                    lines[iline] = CXXF_result.group(1) + "CXXFLAGS= " + flags
-                    mod=True                    
-        if not mod:
-            return
         try:
-            outfile = open(make_opts, 'w')
+            common_run_interface.CommonRunCmd.update_make_opts_full(
+                            make_opts, for_update)
         except IOError:
             if root_dir == self.dir_path:
-                logger.info('Fail to set compiler. Trying to continue anyway.')
-            return
-        outfile.write('\n'.join(lines))
+                logger.info('Fail to set compiler. Trying to continue anyway.')  
+    
+        return
 
 #===============================================================================
 # ProcessExporterFortranSA
@@ -1917,6 +1857,15 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                                              history, makejpg, online, compiler)
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
+
+        if 'mode' in self.opt and self.opt['mode'] == "reweight":
+            #add the module to hande the NLO weight
+            files.copytree(pjoin(MG5DIR, 'Template', 'RWGTNLO'),
+                          pjoin(self.dir_path, 'Source'))
+            files.copytree(pjoin(MG5DIR, 'Template', 'NLO', 'Source', 'PDF'),
+                           pjoin(self.dir_path, 'Source', 'PDF'))
+            self.write_pdf_opendata()
+
 
 
     def compiler_choice(self, compiler):
@@ -5217,7 +5166,6 @@ class UFO_model_to_mg4(object):
         if self.opt['mp']:
             self.create_intparam_def(dp=False,mp=True)
         
-        
         # definition of the coupling.
         self.create_actualize_mp_ext_param_inc()
         self.create_coupl_inc()
@@ -5245,7 +5193,6 @@ class UFO_model_to_mg4(object):
 
     def copy_standard_file(self):
         """Copy the standard files for the fortran model."""
-    
         
         #copy the library files
         file_to_link = ['formats.inc','printout.f', \
@@ -5751,7 +5698,7 @@ class UFO_model_to_mg4(object):
         fsock.writelines("""include \'input.inc\'
                             include \'coupl.inc\'""")
         fsock.writelines("""
-                            MU_R = mu_r2
+                            if (mu_r2.gt.0d0) MU_R = mu_r2
                             G = SQRT(4.0d0*PI*AS2) 
                             AS = as2
 
@@ -6301,14 +6248,22 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
     # First check whether Ninja must be installed.
     # Ninja would only be required if:
     #  a) Loop optimized output is selected
-    #  b) We are attempting to output in:
-    #      > MadLoop standalone mode
-    #      > aMC@NLO mode
-    #      > LoopInduced mode
-    requires_ninja = opt['loop_optimized_output'] and \
-                      (output_type.startswith('madloop') or \
-                       output_type=='amcatnlo' or 
-                       (output_type=='default' and cmd._export_format in ['madevent']))
+    #  b) the process gathered from the amplitude generated use loops
+
+    if len(cmd._curr_amps)>0:
+        try:
+            curr_proc = cmd._curr_amps[0].get('process')
+        except base_objects.PhysicsObject.PhysicsObjectError:
+            curr_proc = None
+    elif hasattr(cmd,'_fks_multi_proc') and \
+                          len(cmd._fks_multi_proc.get('process_definitions'))>0:
+        curr_proc = cmd._fks_multi_proc.get('process_definitions')[0]
+    else:
+        curr_proc = None
+
+    requires_ninja = opt['loop_optimized_output'] and (not curr_proc is None) and \
+      (curr_proc.get('perturbation_couplings') != [] and \
+      not curr_proc.get('NLO_mode') in [None,'real','tree','LO','LOonly'])
     # An installation is required then, but only if the specified path is the
     # default local one and that the Ninja library appears missing.
     if requires_ninja and (not opt['ninja'] is None) and\
@@ -6332,10 +6287,11 @@ This installation can take some time but only needs to be performed once.""",'$M
 In the future, if you want to reactivate Ninja, you can do so by re-attempting
 its online installation with the command 'install ninja' or install it on your
 own and set the path to its library in the MG5aMC option 'ninja'.""")
-                    cmd.exec_cmd('set ninja None')
+                    cmd.exec_cmd("set ninja ''")
                     cmd.exec_cmd('save options')  
-    # ==========================================================================
 
+
+    # ==========================================================================
     # First treat the MadLoop5 standalone case       
     MadLoop_SA_options = {'clean': not noclean, 
       'complex_mass':cmd.options['complex_mass_scheme'],
@@ -6353,10 +6309,11 @@ own and set the path to its library in the MG5aMC option 'ninja'.""")
       'output_dependencies':cmd.options['output_dependencies'],
       'SubProc_prefix':'P',
       'compute_color_flows':cmd.options['loop_color_flows'],
-      'mode': 'reweight' if cmd._export_format == "standalone_rw" else ''
+      'mode': 'reweight' if cmd._export_format == "standalone_rw" else '',
+      'cluster_local_path': cmd.options['cluster_local_path']
       }
 
-    if output_type.startswith('madloop'):
+    if output_type.startswith('madloop'):        
         import madgraph.loop.loop_exporters as loop_exporters
         if os.path.isdir(os.path.join(cmd._mgme_dir, 'Template/loop_material')):
             ExporterClass=None

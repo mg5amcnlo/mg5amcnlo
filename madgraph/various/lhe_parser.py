@@ -149,8 +149,12 @@ class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
 
     def __new__(self, path, mode='r', *args, **opt):
-
-        if  path.endswith(".gz"):
+        
+        if not path.endswith(".gz"):
+            return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
+        elif mode == 'r' and not os.path.exists(path) and os.path.exists(path[:-3]):
+            return EventFile.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
+        else:
             try:
                 return gzip.GzipFile.__new__(EventFileGzip, path, mode, *args, **opt)
             except IOError, error:
@@ -159,13 +163,18 @@ class EventFile(object):
                 if mode == 'r':
                     misc.gunzip(path)
                 return file.__new__(EventFileNoGzip, path[:-3], mode, *args, **opt)
-        else:
-            return file.__new__(EventFileNoGzip, path, mode, *args, **opt)
-    
+
+
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
-        super(EventFile, self).__init__(path, mode, *args, **opt)
+        try:
+            super(EventFile, self).__init__(path, mode, *args, **opt)
+        except IOError:
+            if '.gz' in path and isinstance(self, EventFileNoGzip) and\
+                mode == 'r' and os.path.exists(path[:-3]):
+                super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
+                
         self.banner = ''
         if mode == 'r':
             line = ''
@@ -260,7 +269,7 @@ class EventFile(object):
                 # drop the lowest weight
                 nb_keep = max(20, int(nb_event*trunc_error*15))
                 all_wgt = all_wgt[-nb_keep:]
-        
+
         #final selection of the interesting weight to keep
         all_wgt.sort()
         # drop the lowest weight
@@ -298,7 +307,7 @@ class EventFile(object):
             written_weight = lambda x: math.copysign(self.written_weight,float(x))
         else: 
             written_weight = lambda x: x
-            
+                    
         all_wgt, cross, nb_event = self.initialize_unweighting(get_wgt, trunc_error)
 
         # function that need to be define on the flight
@@ -372,7 +381,7 @@ class EventFile(object):
                             break   
                         else:
                             break
-                        
+
             #create output file (here since we are sure that we have to rewrite it)
             if outputpath:
                 outfile = EventFile(outputpath, "w")
@@ -392,7 +401,6 @@ class EventFile(object):
                 elif wgt > 0:
                     nb_keep += 1
                     event.wgt = written_weight(max(wgt, max_wgt))
-                    
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt 
                     if event_target ==0 or nb_keep <= event_target:
@@ -401,7 +409,7 @@ class EventFile(object):
 
                 elif wgt < 0:
                     nb_keep += 1
-                    event.wgt = -1 * max(abs(wgt), max_wgt)
+                    event.wgt =     -1* written_weight(max(abs(wgt), max_wgt))
                     if abs(wgt) > max_wgt:
                         trunc_cross += abs(wgt) - max_wgt
                     if outputpath and (event_target ==0 or nb_keep <= event_target):
@@ -466,7 +474,7 @@ class EventFile(object):
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000, "maxevent":float("inf")}
+        opt= {"print_step": 2000, "maxevent":float("inf"),'no_output':False}
         opt.update(opts)
         
         nb_fct = len(fcts)
@@ -483,7 +491,10 @@ class EventFile(object):
                 else:
                     logger.info("currently at %s event" % nb_event)
             for i in range(nb_fct):
-                out[i].append(fcts[i](event))
+                if opts['no_output']:
+                    fcts[i](event)
+                else:
+                    out[i].append(fcts[i](event))
             if nb_event > opt['maxevent']:
                 break
         if nb_fct == 1:
@@ -491,6 +502,42 @@ class EventFile(object):
         else:
             return out
 
+    
+    def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
+        
+        first=True
+        def add_to_Hwu(event):
+            """function to update the HwU on the flight"""
+
+            value = fct(event)
+            
+            # initialise the curve for the first call
+            if first:
+                # register the variables
+                if isinstance(value, dict):
+                    hwu.add_line(value.keys())
+                else:
+                    hwu.add_line(name)
+                    if keep_wgt is True:
+                        hwu.add_line(['%s_%s' % (name, key)
+                                                for key in event.reweight_data])
+                first = False
+            # Fill the histograms
+            if isinstance(value, dict):
+                hwu.addEvent(value)
+            else:
+                hwu.addEvent({name:value})
+                if keep_wgt:
+                    event.parse_reweight()
+                    if keep_wgt is True:
+                        data = dict(('%s_%s' % (name, key),value)
+                                                for key in event.reweight_data)
+                        hwu.addEvent(data)
+    
+        
+        
+        self.apply_fct_on_event(add_to_Hwu, no_output=True)
+        return hwu
     
     def create_syscalc_data(self, out_path, pythia_input=None):
         """take the lhe file and add the matchscale from the pythia_input file"""
@@ -790,11 +837,12 @@ class MultiEventFile(EventFile):
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
         
+
         if 'event_target' in opts and opts['event_target']:
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt
-          
+
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
            
@@ -817,6 +865,7 @@ class Event(list):
         self.aqcd = 0
         # Weight information
         self.tag = ''
+        self.eventflag = {} # for information in <event > 
         self.comment = ''
         self.reweight_data = {}
         self.matched_scale_data = None
@@ -838,6 +887,12 @@ class Event(list):
                 self.comment += '%s\n' % line
                 continue
             if "<event" in line:
+                if '=' in line:
+                    found = re.findall(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""",line)
+                    #for '<event line=4 value=\'3\' error="5" test=" 1 and 2">\n'
+                    #return [('line', '', '4'), ('value', '3', ''), ('error', '5', ''), ('test', ' 1 and 2', '')]
+                    self.eventflag = dict((n, a1) if a1 else (n,a2) for n,a1,a2 in found)
+                    # return {'test': ' 1 and 2', 'line': '4', 'value': '3', 'error': '5'}
                 continue
             
             if 'first' == status:
@@ -945,6 +1000,18 @@ class Event(list):
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
     
+    def parse_nlo_weight(self):
+        """ """
+        if hasattr(self, 'nloweight'):
+            return self.nloweight
+        
+        start, stop = self.tag.find('<mgrwgt>'), self.tag.find('</mgrwgt>')
+        if start != -1 != stop :
+        
+            text = self.tag[start+8:stop]
+            self.nloweight = NLO_PARTIALWEIGHT(text, self)
+        
+            
     def parse_matching_scale(self):
         """Parse the line containing the starting scale for the shower"""
         
@@ -1387,7 +1454,7 @@ class Event(list):
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
                 
-        out="""<event%(event_id)s>
+        out="""<event%(event_flag)s>
 %(scale)s
 %(particles)s
 %(comments)s
@@ -1396,8 +1463,13 @@ class Event(list):
 </event>
 """ 
         if event_id not in ['', None]:
-            event_id = ' event=%s' % event_id
-            
+            self.eventflag['event'] = str(event_id)
+
+        if self.eventflag:
+            event_flag = ' %s' % ' '.join('%s="%s"' % (k,v) for (k,v) in self.eventflag.items())
+        else:
+            event_flag = ''
+
         if self.nexternal:
             scale_str = "%2d %6d %+13.7e %14.8e %14.8e %14.8e" % \
             (self.nexternal,self.ievent,self.wgt,self.scale,self.aqed,self.aqcd)
@@ -1442,7 +1514,7 @@ class Event(list):
             sys_str += "</mgrwt>\n"
             reweight_str = sys_str + reweight_str
         
-        out = out % {'event_id': event_id,
+        out = out % {'event_flag': event_flag,
                      'scale': scale_str, 
                       'particles': '\n'.join([str(p) for p in self]),
                       'tag': tag_str,
@@ -1578,20 +1650,34 @@ class FourMomentum(object):
             py = obj.py
             pz = obj.pz
             E = obj.E
+        elif isinstance(obj, list):
+            assert len(obj) ==4
+            E = obj[0]
+            px = obj[1]
+            py = obj[2] 
+            pz = obj[3]
+        elif  isinstance(obj, str):
+            obj = [float(i) for i in obj.split()]
+            assert len(obj) ==4
+            E = obj[0]
+            px = obj[1]
+            py = obj[2] 
+            pz = obj[3]            
         else:
             E =obj
 
             
-        self.E = E
-        self.px = px
-        self.py = py
-        self.pz =pz
+        self.E = float(E)
+        self.px = float(px)
+        self.py = float(py)
+        self.pz = float(pz)
 
     @property
     def mass(self):
         """return the mass"""    
         return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
 
+    @property
     def mass_sqr(self):
         """return the mass square"""    
         return self.E**2 - self.px**2 - self.py**2 - self.pz**2
@@ -1604,6 +1690,12 @@ class FourMomentum(object):
     def pseudorapidity(self):
         norm = math.sqrt(self.px**2 + self.py**2+self.pz**2)
         return  0.5* math.log((norm - self.pz) / (norm + self.pz))
+    
+    @property
+    def rapidity(self):
+        return  0.5* math.log((self.E +self.pz) / (self.E - self.pz))
+    
+    
     
     def pt2(self):
         """ return the pt square """
@@ -1626,6 +1718,32 @@ class FourMomentum(object):
         self.py += obj.py
         self.pz += obj.pz
         return self
+
+    def __sub__(self, obj):
+        
+        assert isinstance(obj, FourMomentum)
+        new = FourMomentum(self.E-obj.E,
+                           self.px - obj.px,
+                           self.py - obj.py,
+                           self.pz - obj.pz)
+        return new
+
+    def __isub__(self, obj):
+        """update the object with the sum"""
+        self.E -= obj.E
+        self.px -= obj.px
+        self.py -= obj.py
+        self.pz -= obj.pz
+        return self
+    
+    def __mul__(self, obj):
+        if isinstance(obj, FourMomentum):
+            return self.E*obj.E - self.px *obj.px - self.py * obj.py - self.pz * obj.pz
+        elif isinstance(obj, (float, int)):
+            return FourMomentum(obj*self.E,obj*self.px,obj*self.py,obj*self.pz )
+        else:
+            raise NotImplemented
+    __rmul__ = __mul__
     
     def __pow__(self, power):
         assert power in [1,2]
@@ -1634,7 +1752,10 @@ class FourMomentum(object):
             return FourMomentum(self)
         elif power == 2:
             return self.mass_sqr()
-        
+    
+    def __repr__(self):
+        return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
+    
     def boost(self, mom):
         """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
         the output is the 4-momenta in the frame of this 4-momenta
@@ -1653,6 +1774,332 @@ class FourMomentum(object):
         else:
             return FourMomentum(mom)
                 
+
+class OneNLOWeight(object):
+        
+    def __init__(self, input):
+        """ """
+
+        if isinstance(input, str):
+            self.parse(input)
+        
+    def parse(self, text):
+        """parse the line and create the related object"""
+        #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
+        # below comment are from Rik description email
+        
+        data = text.split()
+        # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this
+        # contribution, and the ones multiplying the log[mu_R/QES] and the log[mu_F/QES]
+        # stripped of alpha_s and the PDFs.
+        self.pwgt = [float(f) for f in data[:3]]
+        # 2. The next two doubles are the values of the (corresponding) Born and 
+        #    real-emission matrix elements. You can either use these values to check 
+        #    that the newly computed original matrix element weights are correct, 
+        #    or directly use these so that you don't have to recompute the original weights. 
+        #    For contributions for which the real-emission matrix elements were 
+        #    not computed, the 2nd of these numbers is zero. The opposite is not true, 
+        #    because each real-emission phase-space configuration has an underlying Born one 
+        #    (this is not unique, but on our code we made a specific choice here). 
+        #    This latter information is useful if the real-emission matrix elements 
+        #    are unstable; you can then reweight with the Born instead. 
+        #    (see also point 9 below, where the momentum configurations are assigned). 
+        #    I don't think this instability is real problem when reweighting the real-emission 
+        #    with tree-level matrix elements (as we generally would do), but is important 
+        #    when reweighting with loop-squared contributions as we have been doing for gg->H. 
+        #    (I'm not sure that reweighting tree-level with loop^2 is something that 
+        #    we can do in general, because we don't really know what to do with the 
+        #    virtual matrix elements because we cannot generate 2-loop diagrams.)
+        self.born = float(data[3])
+        self.real = float(data[4])
+        # 3. integer: number of external particles of the real-emission configuration  (as before)
+        self.nexternal = int(data[5])
+        # 4. PDG codes corresponding to the real-emission configuration (as before)
+        self.pdgs = [int(i) for i in data[6:6+self.nexternal]]
+        flag = 6+self.nexternal # new starting point for the position
+        # 5. next integer is the power of g_strong in the matrix elements (as before)
+        self.qcdpower = int(data[flag])
+        # 6. 2 doubles: The bjorken x's used for this contribution (as before)
+        self.bjks = [float(f) for f in data[flag+1:flag+3]]
+        # 7. 3 doubles: The Ellis-sexton scale, the renormalisation scale and the factorisation scale, all squared, used for this contribution (as before)
+        self.scales2 = [float(f) for f in data[flag+3:flag+6]]
+        # 8.the value of g_strong
+        self.gs = float(data[flag+6])
+        # 9. 2 integers: the corresponding Born and real-emission type kinematics. (in the list of momenta)
+        #    Note that also the Born-kinematics has n+1 particles, with, in general, 
+        #    one particle with zero momentum (this is not ALWAYS the case, 
+        #    there could also be 2 particles with perfectly collinear momentum). 
+        #    To convert this from n+1 to a n particles, you have to sum the momenta 
+        #    of the two particles that 'merge', see point 12 below.
+        self.born_related = int(data[flag+7])
+        self.real_related = int(data[flag+8])
+        # 10. 1 integer: the 'type'. This is the information you should use to determine 
+        #     if to reweight with Born, virtual or real-emission matrix elements. 
+        #     (Apart from the possible problems with complicated real-emission matrix elements
+        #     that need to be computed very close to the soft/collinear limits, see point 2 above. 
+        #     I guess that for tree-level this is always okay, but when reweighting 
+        #     a tree-level contribution with a one-loop squared one, as we do 
+        #     for gg->Higgs, this is important). 
+        #     type=1 : real-emission:     
+        #     type=2 : Born: 
+        #     type=3 : integrated counter terms: 
+        #     type=4 : soft counter-term            : 
+        #     type=5 : collinear counter-term     : 
+        #     type=6 : soft-collinear counter-term: 
+        #     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO :  
+        #     type=8 : soft counter-term (with n+1-body kin.):     
+        #     type=9 : collinear counter-term (with n+1-body kin.): 
+        #     type=10: soft-collinear counter-term (with n+1-body kin.): 
+        #     type=11: real-emission (with n-body kin.): 
+        #     type=12: MC subtraction with n-body kin.: 
+        #     type=13: MC subtraction with n+1-body kin.: 
+        #     type=14: virtual corrections minus approximate virtual
+        #     type=15: approximate virtual corrections: 
+        self.type = int(data[flag+9])
+        # 11. 1 integer: The FKS configuration for this contribution (not really 
+        #     relevant for anything, but is used in checking the reweighting to 
+        #     get scale & PDF uncertainties). 
+        self.nfks = int(data[flag+10])
+        # 12. 2 integers: the two particles that should be merged to form the 
+        #     born contribution from the real-emission one. Remove these two particles
+        #     from the (ordered) list of PDG codes, and insert a newly created particle
+        #     at the location of the minimum of the two particles removed. 
+        #     I.e., if you merge particles 2 and 4, you have to insert the new particle 
+        #     as the 2nd particle. And particle 5 and above will be shifted down by one.
+        self.to_merge_pdg = [int (f) for f in data[flag+11:flag+13]]
+        # 13. 1 integer: the PDG code of the particle that is created after merging the two particles at point 12.
+        self.merge_new_pdg = int(data[flag+13])
+        # 14. 1 double: the reference number that one should be able to reconstruct 
+        #     form the weights (point 1 above) and the rest of the information of this line. 
+        #     This is really the contribution to this event as computed by the code 
+        #     (and is passed to the integrator). It contains everything. 
+        self.ref_wgt = float(data[flag+14])
+
+        #check the momenta configuration linked to the event
+        if self.type in [1,11]:
+            self.momenta_config = self.real_related
+        else:
+            self.momenta_config = self.born_related
+
+
+class NLO_PARTIALWEIGHT(object):
+
+    class BasicEvent(list):
+        
+        def __init__(self, momenta, wgts, event):
+            list.__init__(self, momenta)
+            
+            assert self
+            self.wgts = wgts
+            self.pdgs = list(wgts[0].pdgs)
+            self.event = event
+            
+            if wgts[0].momenta_config == wgts[0].born_related:
+                # need to remove one momenta.
+                ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
+                if ind1> ind2: 
+                    ind1, ind2 = ind2, ind1
+                if ind1 >= sum(1 for p in event if p.status==-1):
+                    new_p = self[ind1] + self[ind2]
+                else:
+                    new_p = self[ind1] - self[ind2]
+                self.pop(ind1) 
+                self.insert(ind1, new_p)
+                self.pop(ind2)
+                self.pdgs.pop(ind1) 
+                self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
+                self.pdgs.pop(ind2)                 
+                # DO NOT update the pdgs of the partial weight!
+            elif any(w.type in [1,11] for w in wgts):
+                if any(w.type not in [1,11] for w in wgts):
+                    raise Exception
+                # check if this is too soft/colinear if so use the born
+                ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
+                if ind1> ind2: 
+                    ind1, ind2 = ind2, ind1                
+                if ind1 >= sum(1 for p in event if p.status==-1):
+                    new_p = self[ind1] + self[ind2]
+                else:
+                    new_p = self[ind1] - self[ind2]
+
+                if __debug__:
+                    ptot = FourMomentum()
+                    for i in xrange(len(self)):
+                        if i <2:
+                            ptot += self[i]
+                        else:
+                            ptot -= self[i]
+                    if ptot.mass_sqr > 1e-16:
+                        misc.sprint(ptot, ptot.mass_sqr)
+                
+                inv_mass = new_p.mass_sqr
+                shat = (self[0]+self[1]).mass_sqr
+                if (abs(inv_mass)/shat < 1e-6):
+#                    misc.sprint(abs(inv_mass)/shat)
+                    self.pop(ind1) 
+                    self.insert(ind1, new_p)
+                    self.pop(ind2)
+                    self.pdgs.pop(ind1) 
+                    self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
+                    self.pdgs.pop(ind2)                 
+                    # DO NOT update the pdgs of the partial weight!                    
+                
+                if __debug__:
+                    ptot = FourMomentum()
+                    for i in xrange(len(self)):
+                        if i <2:
+                            ptot += self[i]
+                        else:
+                            ptot -= self[i]
+                    if ptot.mass_sqr > 1e-16:
+                        misc.sprint(ptot, ptot.mass_sqr)
+#                            raise Exception
+ 
+        def get_pdg_code(self):
+            return self.pdgs
+        
+        def get_tag_and_order(self):
+            """ return the tag and order for this basic event""" 
+            (initial, _), _ = self.event.get_tag_and_order()
+            order = self.get_pdg_code()
+            
+            
+            initial, out = order[:len(initial)], order[len(initial):]
+            initial.sort()
+            out.sort()
+            return (tuple(initial), tuple(out)), order
+        
+        def get_momenta(self, get_order, allow_reversed=True):
+            """return the momenta vector in the order asked for"""
+        
+            #avoid to modify the input
+            order = [list(get_order[0]), list(get_order[1])] 
+            out = [''] *(len(order[0])+len(order[1]))
+            pdgs = self.get_pdg_code()
+            for pos, part in enumerate(self):
+                if pos < len(get_order[0]): #initial
+                    try:
+                        ind = order[0].index(pdgs[pos])
+                    except ValueError, error:
+                        if not allow_reversed:
+                            raise error
+                        else:
+                            order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                            try:
+                                return self.get_momenta(order, False)
+                            except ValueError:
+                                raise error   
+                            
+                                                 
+                    position =  ind
+                    order[0][ind] = 0             
+                else: #final   
+                    try:
+                        ind = order[1].index(pdgs[pos])
+                    except ValueError, error:
+                        if not allow_reversed:
+                            raise error
+                        else:
+                            order = [[-i for i in get_order[0]],[-i for i in get_order[1]]]
+                            try:
+                                return self.get_momenta(order, False)
+                            except ValueError:
+                                raise error     
+                    position = len(order[0]) + ind
+                    order[1][ind] = 0   
+    
+                out[position] = (part.E, part.px, part.py, part.pz)
+                
+            return out
+            
+            
+        def get_helicity(self, *args):
+            return [9] * len(self)
+        
+        @property
+        def aqcd(self):
+            return self.event.aqcd
+            
+    def __init__(self, input, event):
+        
+        self.event = event
+        if isinstance(input, str):
+            self.parse(input)
+            
+        
+    def parse(self, text):
+        """create the object from the string information (see example below)"""
+#0.2344688900d+00    8    2    0
+#0.4676614699d+02 0.0000000000d+00 0.0000000000d+00 0.4676614699d+02
+#0.4676614699d+02 0.0000000000d+00 0.0000000000d+00 -.4676614699d+02
+#0.4676614699d+02 0.2256794794d+02 0.4332148227d+01 0.4073073437d+02
+#0.4676614699d+02 -.2256794794d+02 -.4332148227d+01 -.4073073437d+02
+#0.0000000000d+00 -.0000000000d+00 -.0000000000d+00 -.0000000000d+00
+#0.4780341163d+02 0.0000000000d+00 0.0000000000d+00 0.4780341163d+02
+#0.4822581633d+02 0.0000000000d+00 0.0000000000d+00 -.4822581633d+02
+#0.4729127470d+02 0.2347155377d+02 0.5153455534d+01 0.4073073437d+02
+#0.4627255267d+02 -.2167412893d+02 -.3519736379d+01 -.4073073437d+02
+#0.2465400591d+01 -.1797424844d+01 -.1633719155d+01 -.4224046944d+00
+#0.473706252575d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 0 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  2  1 0.106660059627d+03
+#-.101626389492d-02 0.000000000000d+00 -.181915673961d-03  5 -3 3 -11 11 21 2 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  3  1 -.433615206719d+01
+#0.219583436285d-02 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1 15  1 0.936909375537d+01
+#0.290043597283d-03 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.12292838d-02 0.43683926d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  1 12  1 0.118841547979d+01
+#-.856330613460d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.11849903d-02 0.43683926d-01 0.52807978d+03 0.52807978d+03 0.52807978d+03  1  4  1 -.365375546483d+03
+#0.854918237609d-01 0.000000000000d+00 0.000000000000d+00  5 -3 3 -11 11 21 2 0.12112732d-02 0.45047393d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  2 11  1 0.337816057347d+03
+#0.359257891118d-05 0.000000000000d+00 0.000000000000d+00  5 21 3 -11 11 3 2 0.12292838d-02 0.43683926d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  1 12  3 0.334254554762d+00
+#0.929944817736d-03 0.000000000000d+00 0.000000000000d+00  5 21 3 -11 11 3 2 0.12112732d-02 0.45047393d-01 0.58606724d+03 0.58606724d+03 0.58606724d+03  2 11  3 0.835109616010d+02
+        
+        text = text.lower().replace('d','e')
+        all_line = text.split('\n')
+        #get global information
+        first_line =''
+        while not first_line.strip():
+            first_line = all_line.pop(0)
+            
+        wgt, nb_wgt, nb_event, _ = first_line.split()
+        nb_wgt, nb_event = int(nb_wgt), int(nb_event)
+        
+        momenta = []
+        wgts = []
+        for line in all_line:
+            data = line.split()
+            if len(data) == 4:
+                p = FourMomentum(data)
+                momenta.append(p)
+            elif len(data)>0:
+                wgt = OneNLOWeight(line)
+                wgts.append(wgt)
+        
+        assert len(wgts) == int(nb_wgt)
+        
+        get_weights_for_momenta = {}
+        size_momenta = 0
+        for wgt in wgts:
+            if wgt.momenta_config in get_weights_for_momenta:
+                get_weights_for_momenta[wgt.momenta_config].append(wgt)
+            else: 
+                if size_momenta == 0: size_momenta = wgt.nexternal
+                assert size_momenta == wgt.nexternal
+                get_weights_for_momenta[wgt.momenta_config] = [wgt]
+    
+        assert sum(len(c) for c in get_weights_for_momenta.values()) == int(nb_wgt), "%s != %s" % (sum(len(c) for c in get_weights_for_momenta.values()), nb_wgt)
+    
+         
+    
+        self.cevents = []   
+        for key in range(1, nb_event+1): 
+            if key in get_weights_for_momenta:
+                wgt = get_weights_for_momenta[key]
+                evt = self.BasicEvent(momenta[:size_momenta], get_weights_for_momenta[key], self.event) 
+                self.cevents.append(evt)
+            momenta = momenta[size_momenta:]
+           
+        nb_wgt_check = 0 
+        for cevt in self.cevents:
+            nb_wgt_check += len(cevt.wgts)
+        assert nb_wgt_check == int(nb_wgt)
+            
+            
 
 if '__main__' == __name__:   
     

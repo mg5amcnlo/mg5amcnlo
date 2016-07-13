@@ -1,5 +1,9 @@
       SUBROUTINE MG5_1_HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
 C     
+C     Modules
+C     
+      USE MG5_1_POLYNOMIAL_CONSTANTS
+C     
       IMPLICIT NONE
 C     
 C     CONSTANTS
@@ -16,8 +20,6 @@ C
       PARAMETER (NLOOPAMPS=76)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=8,NLOOPWAVEFUNCS=50)
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       REAL*8     ZERO
       PARAMETER (ZERO=0D0)
       REAL*16     MP__ZERO
@@ -61,8 +63,8 @@ C
      $ ,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_SO_DONE
      $ ,CTCALL_REQ_SO_DONE,FILTER_SO
       COMMON/MG5_1_SO_REQS/UVCT_REQ_SO_DONE,MP_UVCT_REQ_SO_DONE
-     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE,MP_LOOP_REQ_S
-     $ O_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
+     $ ,CT_REQ_SO_DONE,MP_CT_REQ_SO_DONE,LOOP_REQ_SO_DONE
+     $ ,MP_LOOP_REQ_SO_DONE,CTCALL_REQ_SO_DONE,FILTER_SO
 
       INTEGER I_SO
       COMMON/MG5_1_I_SO/I_SO
@@ -74,8 +76,8 @@ C
       COMPLEX*16 W(20,NWAVEFUNCS)
       COMMON/MG5_1_W/W
 
-      COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE,0:NLOOPWAVEF
-     $ UNCS)
+      COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE
+     $ ,0:NLOOPWAVEFUNCS)
       COMPLEX*16 PL(0:3,0:NLOOPWAVEFUNCS)
       COMMON/MG5_1_WL/WL,PL
 
@@ -168,11 +170,11 @@ C     Counter-term amplitude(s) for loop diagram number 19
 C     Counter-term amplitude(s) for loop diagram number 20
       CALL R2_GG_1_R2_GG_3_0(W(1,6),W(1,8),R2_GGQ,R2_GGT,AMPL(1,52))
 C     Counter-term amplitude(s) for loop diagram number 21
-      CALL R2_GG_1_R2_GG_2_0(W(1,5),W(1,7),R2_GGG_1,R2_GGG_2,AMPL(1
-     $ ,53))
+      CALL R2_GG_1_R2_GG_2_0(W(1,5),W(1,7),R2_GGG_1,R2_GGG_2,AMPL(1,53)
+     $ )
 C     Counter-term amplitude(s) for loop diagram number 22
-      CALL R2_GG_1_R2_GG_2_0(W(1,6),W(1,8),R2_GGG_1,R2_GGG_2,AMPL(1
-     $ ,54))
+      CALL R2_GG_1_R2_GG_2_0(W(1,6),W(1,8),R2_GGG_1,R2_GGG_2,AMPL(1,54)
+     $ )
 C     At this point, all CT amps needed for (QCD=6), i.e. of split
 C      order ID=1, are computed.
       IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 2000
