@@ -3762,9 +3762,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
                                        order not in options['expansion_orders']]
     if len(veto_orders)>0:
         logger.warning('You did not define any parameter scaling rule for the'+\
-          " coupling orders %s. They will be "%','.join(veto_orders))+\
+          " coupling orders %s. They will be "%','.join(veto_orders)+\
           "forced to zero in the tests. Consider adding the scaling rule to"+\
-          "avoid this. (see option '--cms' in 'help check')"
+          "avoid this. (see option '--cms' in 'help check')")
         for order in veto_orders:
             multiprocess_nwa.get('orders')[order]==0
         multiprocess_nwa.set('perturbation_couplings', [order for order in
@@ -5149,14 +5149,16 @@ def CMS_save_path(extension, cms_res, used_model, opts, output_path=None):
         # Use process name if there is only one process            
         if len(cms_res['ordered_processes'])==1:
             proc = cms_res['ordered_processes'][0]
-            replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_','=':'eq'}
+            replacements = [('=>','gt'),('<=','lt'),('/','_no_'),
+                            (' ',''),('+','p'),('-','m'),
+                            ('~','x'), ('>','_'),('=','eq'),('^2','squared')]
             # Remove the perturbation couplings:
             try:
                 proc=proc[:proc.index('[')]
             except ValueError:
                 pass
     
-            for key, value in replacements.items():
+            for key, value in replacements:
                 proc = proc.replace(key,value)
     
             basename =prefix+proc+'_%s_'%used_model.get('name')+\
@@ -5300,11 +5302,19 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         
         process_string = []
         for particle in process.split():
+            if '<=' in particle:
+                particle = particle.replace('<=',r'$\displaystyle <=$')
             if particle=='$$':
                 process_string.append(r'\$\$')
                 continue
             if particle=='>':
                 process_string.append(r'$\displaystyle \rightarrow$')
+                continue
+            if particle=='^':
+                process_string.append(r'$\displaystyle \^$')
+                continue
+            if particle=='/':
+                process_string.append(r'$\displaystyle /$')
                 continue
             process_string.append(format_particle_name(particle))              
 
@@ -5751,9 +5761,9 @@ minimum value of lambda to be considered in the CMS check."""\
                 data2.append([r'Detected asymptot',[differences_target[(process,resID)] 
                                                 for i in range(len(lambdaCMS_list))]])
             else:
-                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' '),CMSData])
-                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' '),NWAData])
-                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' '),DiffData])
+                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' ').replace('#','\#'), CMSData])
+                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' ').replace('#','\#'), NWAData])
+                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' ').replace('#','\#'), DiffData])
                 
         process_data_plot_dict[(process,resID)]=(data1,data2, info)
 
