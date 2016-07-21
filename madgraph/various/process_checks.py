@@ -5304,14 +5304,13 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         for particle in process.split():
             if '<=' in particle:
                 particle = particle.replace('<=',r'$\displaystyle <=$')
+            if '^2' in particle:
+                particle = particle.replace('^2',r'$\displaystyle ^2$')
             if particle=='$$':
                 process_string.append(r'\$\$')
                 continue
             if particle=='>':
                 process_string.append(r'$\displaystyle \rightarrow$')
-                continue
-            if particle=='^':
-                process_string.append(r'$\displaystyle \^$')
                 continue
             if particle=='/':
                 process_string.append(r'$\displaystyle /$')
