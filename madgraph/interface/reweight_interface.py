@@ -873,6 +873,15 @@ class ReweightInterface(extended_cmd.Cmd):
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
             misc.sprint(w_orig, w_new)
             misc.sprint(event)
+            misc.sprint(self.invert_momenta(event.get_momenta(orig_order)))
+            misc.sprint(event.get_momenta(orig_order))
+            misc.sprint(event.aqcd)
+            hel_order = event.get_helicity(orig_order)
+            if self.helicity_reweighting and 9 not in hel_order:
+                nhel = hel_dict[tuple(hel_order)]
+            else:
+                nhel = 0
+            misc.sprint(nhel, Pdir, hel_dict)                        
             raise Exception, "Invalid matrix element for original computation (weight=0)"
 
         return {'orig': event.wgt, '': w_new/w_orig*event.wgt}
@@ -1140,16 +1149,24 @@ class ReweightInterface(extended_cmd.Cmd):
             space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                
         
-        p = self.invert_momenta(event.get_momenta(orig_order))
-        
 
+        
+        p = event.get_momenta(orig_order)
         # add helicity information
         
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
             nhel = hel_dict[tuple(hel_order)]
+            if event[1].status == -1: #check if this is a 2 >N processes
+                # need to pass to the rest-frame
+                pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
+                for i,p1 in enumerate(p):
+                    p[i] = lhe_parser.FourMomentum(p1).zboost(pboost).get_tuple()
+                   
         else:
             nhel = 0
+
+        p = self.invert_momenta(p)
 
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
