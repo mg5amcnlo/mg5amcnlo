@@ -209,6 +209,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             mg_names = True
         model_name = self.banner.get('proc_card', 'model')
         if model_name:
+            model_name = os.path.expanduser(model_name)
             self.load_model(model_name, mg_names, complex_mass)
         else:
             raise self.InvalidCmd('Only UFO model can be loaded in MadSpin.')

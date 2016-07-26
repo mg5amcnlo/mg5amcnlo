@@ -1145,6 +1145,7 @@ class Model(PhysicsObject):
         if name == 'modelpath':
             modeldir = self.get('version_tag').rsplit('##',1)[0]
             if os.path.exists(modeldir):
+                modeldir = os.path.expanduser(modeldir)
                 return modeldir
             else:
                 raise Exception, "path %s not valid anymore." % modeldir
@@ -1160,6 +1161,7 @@ class Model(PhysicsObject):
                 raise Exception, "path %s not valid anymore" % modeldir
             modeldir = os.path.dirname(modeldir)
             modeldir = pjoin(modeldir, modelname)
+            modeldir = os.path.expanduser(modeldir)
             return modeldir
         elif name == 'restrict_name':
             modeldir = self.get('version_tag').rsplit('##',1)[0]
