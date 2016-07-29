@@ -2644,6 +2644,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 options.append('--mg5amc_py8_interface_tarball=') 
             elif args[1]=='MadAnalysis5':
                 options.append('--no_MA5_further_install')
+                options.append('--no_root_in_MA5')
                 options.append('--madanalysis5_tarball=')     
             return self.list_completion(text, options)
         else:
