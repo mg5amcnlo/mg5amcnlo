@@ -793,7 +793,6 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
         
-
         # perform the scanning
         if param_card_iterator:
             for i,card in enumerate(param_card_iterator):
@@ -1160,9 +1159,8 @@ class ReweightInterface(extended_cmd.Cmd):
             if event[1].status == -1: #check if this is a 2 >N processes
                 # need to pass to the rest-frame
                 pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
-                for i,p1 in enumerate(p):
-                    p[i] = lhe_parser.FourMomentum(p1).zboost(pboost).get_tuple()
-                   
+                for i,thisp in enumerate(p):
+                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
         else:
             nhel = 0
 

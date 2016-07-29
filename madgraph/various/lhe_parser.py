@@ -1825,8 +1825,8 @@ class FourMomentum(object):
         gammabeta = pz  / math.sqrt(E**2-pz**2)
         
         out =  FourMomentum([gamma*self.E - gammabeta*self.pz,
-                            0,
-                            0,
+                            self.py,
+                            self.pz,
                             gamma*self.pz - gammabeta*self.E])
         
         if abs(out.pz) < 1e-6 * out.E:
