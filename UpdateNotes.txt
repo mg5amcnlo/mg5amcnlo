@@ -1,5 +1,21 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.4.3 (01/08/16)
+        OM: Reduce the amount of log file/output generated for LO run (output can use up to three times less output).
+        OM: For the LO combination of events (unweighting) pass to the method previously used for loop-induced.
+            This method is faster and requires less I/O operation.
+            This fully remove the need of the file events.lhe.gz which is not created anymore (further reduce the ouput size)
+        OM: Optimise the code in order to be able to run scan with more than 2k steps.
+        OM: Optimise the lhe_parser module (use for the unweighting/re-weighing/...) around 20% faster than before.
+        OM: Fix a bug in MadSpin where the cross-section reported in the <init> block of the LHEF
+            was wrongly assigned when multiple process were present in the LHEF and that different Brancing ratio
+            were associated to each of those processes.
+	RF: For NLO process generation, fix a problem with turning on PDF reweighting with sets that have only a
+	    single member. Also, allow for reweighting with up to 25 PDF sets (and their error members) for a single run.
+        OM: Fixing bug allowing to specify a UFO model by his full path for NLO computation (thanks Zachary Marschal).
+        OM: Fixing bug in LO re-weighting in case of helicity by helicity re-weighting. Now the events is boost back in 
+            the center of mass frame to ensure consistency with the helicity definition.
+
 2.4.2 (10/06/16)
         OM: fix a compilation problem for non standard gfortran system
         OM: reduce the need of lhapdf for standard LO run. (was making some run to test due to missing dependencies)

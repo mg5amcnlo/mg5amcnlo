@@ -170,7 +170,7 @@ class Banner(dict):
             raise Exception, "Not Supported version"
         self.lhe_version = version
     
-    def get_cross(self):
+    def get_cross(self, witherror=False):
         """return the cross-section of the file"""
 
         if "init" not in self:
@@ -179,11 +179,17 @@ class Banner(dict):
         
         text = self["init"].split('\n')
         cross = 0
+        error = 0
         for line in text:
             s = line.split()
             if len(s)==4:
                 cross += float(s[0])
-        return cross
+                if witherror:
+                    error += float(s[1])**2
+        if not witherror:
+            return cross
+        else:
+            return cross, math.sqrt(error)
         
 
     
@@ -1526,7 +1532,7 @@ class RunCard(ConfigFile):
             elif lpp in (3,-3):
                 return math.copysign(11, lpp)
             elif lpp == 0:
-                logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
+                #logger.critical("Fail to write correct idbmup in the lhe file. Please correct those by hand")
                 return 0
             else:
                 return lpp
@@ -2112,8 +2118,8 @@ class RunCardNLO(RunCard):
             raise InvalidRunCard, "'reweight_scale' and 'dynamical_scale_choice' lists should have the same length"
         if len(self['dynamical_scale_choice']) > 10 :
             raise InvalidRunCard, "Length of list for 'dynamical_scale_choice' too long: max is 10."
-        if len(self['lhaid']) > 10 :
-            raise InvalidRunCard, "Length of list for 'lhaid' too long: max is 10."
+        if len(self['lhaid']) > 25 :
+            raise InvalidRunCard, "Length of list for 'lhaid' too long: max is 25."
         if len(self['rw_rscale']) > 9 :
             raise InvalidRunCard, "Length of list for 'rw_rscale' too long: max is 9."
         if len(self['rw_fscale']) > 9 :
