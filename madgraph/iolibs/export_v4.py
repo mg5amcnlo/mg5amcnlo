@@ -6230,7 +6230,7 @@ class UFO_model_to_mg4(object):
         """ create the param_card.dat """
 
         rule_card = pjoin(self.dir_path, 'param_card_rule.dat')
-        if not os.path.exists(rule_card):
+        if not hasattr(self.model, 'rule_card'):
             rule_card=False
         self.create_param_card_static(self.model, 
                                       output_path=pjoin(self.dir_path, 'param_card.dat'), 

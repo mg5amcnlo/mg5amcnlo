@@ -745,6 +745,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             param_card.write_inc_file(outfile, ident_card, default)
 
+    def get_model(self):
+        """return the model related to this process"""
+
+        if self.options['mg5_path']:
+            sys.path.append(self.options['mg5_path'])
+            import models.import_ufo as import_ufo
+            with misc.MuteLogger(['madgraph.model'],[50]):
+                out= import_ufo.import_model(pjoin(self.me_dir,'bin','internal','ufomodel'))
+            return out
+        elif self.mother:
+            return self.mother._curr_model
+        else:
+            return None
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
         """ """
@@ -3302,15 +3315,55 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
     
     def postcmd(self, stop, line):
-        
         ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+
         if ending_question:
             self.check_card_consistency()
+            self.do_update_dependent('', timer=20)
             return ending_question
+    
+    def do_update_dependent(self, line, timer=0):
+        """Change the mass/width of particles which are not free parameter for the 
+        model."""
+        
+        if self.mother_interface:
+            class TimeOutError(Exception): 
+                pass
+            def handle_alarm(signum, frame): 
+                raise TimeOutError
+            signal.signal(signal.SIGALRM, handle_alarm)
+            if timer:
+                signal.alarm(timer)
+                log_level=30
+            else:
+                log_level=20
+            try:
+                model = self.mother_interface.get_model()
+            except TimeOutError:
+                logger.warning('The model takes too long to load so we bypass the updating of dependent parameter.\n'+\
+                               'This might create trouble for external program (like MadSpin/shower/...)\n'+\
+                               'The update can be forced without timer by typing \'update_dependent\' at the time of the card edition')
+            except Exception:
+                logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+            else:
+                restrict_card = pjoin(self.me_dir,'Source','MODEL','param_card_rule.dat')
+                if not os.path.exists(restrict_card):
+                    restrict_card = None
+                #restrict_card = None
+                if model:
+                    self.param_card.update_dependent(model, restrict_card, log_level)
+                    self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                else:
+                    logger.warning('missing MG5aMC code. Fail to update dependent parameter. This might create trouble for program like MadSpin/shower/...')
+        else:
+            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+        if log_level==20:
+            logger.info('param_card up to date.')
     
     def check_answer_consistency(self):
         """function called if the code reads a file"""
-        self.check_card_consistency() 
+        self.check_card_consistency()
+        self.do_update_dependent('', timer=20) 
       
     def help_set(self):
         '''help message for set'''
