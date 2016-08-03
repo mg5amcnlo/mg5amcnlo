@@ -516,7 +516,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madevent = {'automatic_html_opening':True,
                         'notification_center':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
+                         'cluster_queue':None,
                          'cluster_time':None,
                          'cluster_size':100,
                          'cluster_memory':None,
@@ -745,6 +745,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
             param_card.write_inc_file(outfile, ident_card, default)
 
+    def get_model(self):
+        """return the model related to this process"""
+
+        if self.options['mg5_path']:
+            sys.path.append(self.options['mg5_path'])
+            import models.import_ufo as import_ufo
+            with misc.MuteLogger(['madgraph.model'],[50]):
+                out= import_ufo.import_model(pjoin(self.me_dir,'bin','internal','ufomodel'))
+            return out
+        elif self.mother:
+            return self.mother._curr_model
+        else:
+            return None
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
         """ """
@@ -2066,9 +2079,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cross = current['cross']
             error = current['error']
             self.results.add_run( new_run, self.run_card)
-            self.results.add_detail('nb_event', nb_event)
-            self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
-            self.results.add_detail('error', error * madspin_cmd.branching_ratio + cross * madspin_cmd.err_branching_ratio)
+            self.results.add_detail('nb_event', int(nb_event*madspin_cmd.efficiency))
+            self.results.add_detail('cross', madspin_cmd.cross)#cross * madspin_cmd.branching_ratio)
+            self.results.add_detail('error', madspin_cmd.error+ cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
@@ -2244,7 +2257,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         content_variables += '\n%s' % tag
 
         if diff:
-            open(make_opts, 'w').write(content_variables + '\n'.join(content))
+            with open(make_opts, 'w') as fsock: 
+                fsock.write(content_variables + '\n'.join(content))
         return       
 
 
@@ -2405,7 +2419,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             filename = pdf_info[filename]['filename']
         
         if os.path.exists(pjoin(pdfsets_dir, filename)):
-            logger.debug('%s is already present in %s', (filename, pdfsets_dir))
+            logger.debug('%s is already present in %s', filename, pdfsets_dir)
             return
              
         logger.info('Trying to download %s' % filename)
@@ -2915,8 +2929,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         args = self.split_arg(line)
         # fix some formatting problem
-        if '=' in args[-1]:
-            arg1, arg2 = args.pop(-1).split('=')
+        if len(args)==1 and '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=',1)
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')
@@ -2972,7 +2986,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n QCUT= %s' % (p_card, args[1])
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock: 
+                    fsock.write(p_card)
                 return
         # Special case for the showerkt value
         if args[0].lower() == 'showerkt':
@@ -2985,7 +3000,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n SHOWERKT= %s' % (p_card, args[1].upper())
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock:
+                    fsock.write(p_card)
                 return
             
 
@@ -3367,15 +3383,64 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
     
     def postcmd(self, stop, line):
-        
         ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+
         if ending_question:
             self.check_card_consistency()
+            self.do_update_dependent('', timer=20)
             return ending_question
+    
+    def do_update_dependent(self, line, timer=0):
+        """Change the mass/width of particles which are not free parameter for the 
+        model."""
+        if not self.mother_interface:
+            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+        
+        pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
+        param_text= open(self.paths['param']).read()
+        
+        if pattern_width.search(param_text):
+            self.do_compute_widths('')
+            self.param_card = check_param_card.ParamCard(self.paths['param'])
+        
+        class TimeOutError(Exception): 
+            pass
+        def handle_alarm(signum, frame): 
+            raise TimeOutError
+        signal.signal(signal.SIGALRM, handle_alarm)
+        if timer:
+            signal.alarm(timer)
+            log_level=30
+        else:
+            log_level=20
+        try:
+            model = self.mother_interface.get_model()
+            signal.alarm(0)
+        except TimeOutError:
+            logger.warning('The model takes too long to load so we bypass the updating of dependent parameter.\n'+\
+                           'This might create trouble for external program (like MadSpin/shower/...)\n'+\
+                           'The update can be forced without timer by typing \'update_dependent\' at the time of the card edition')
+        except Exception:
+            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+            signal.alarm(0)
+        else:
+            restrict_card = pjoin(self.me_dir,'Source','MODEL','param_card_rule.dat')
+            if not os.path.exists(restrict_card):
+                restrict_card = None
+            #restrict_card = None
+            if model:
+                self.param_card.update_dependent(model, restrict_card, log_level)
+                self.param_card.write(self.paths['param'])
+            else:
+                logger.warning('missing MG5aMC code. Fail to update dependent parameter. This might create trouble for program like MadSpin/shower/...')
+            
+        if log_level==20:
+            logger.info('param_card up to date.')
     
     def check_answer_consistency(self):
         """function called if the code reads a file"""
-        self.check_card_consistency() 
+        self.check_card_consistency()
+        self.do_update_dependent('', timer=20) 
       
     def help_set(self):
         '''help message for set'''
@@ -3452,7 +3517,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
             
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)       
         else:
             # Here we have to remove all the previous definition of the decay
             #first find the particle
@@ -3463,8 +3527,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             text= open(path).read()
             text = decay_pattern.sub('', text)
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)
-        
+
+        with open(path,'w') as fsock:
+            fsock.write(text) 
+
         
 
     def do_compute_widths(self, line):

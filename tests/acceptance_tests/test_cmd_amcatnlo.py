@@ -869,6 +869,8 @@ class MECmdShell(IOTests.IOTestManager):
 
         stdout.close()
         text = open('%s/test.log' % self.tmpdir,'r').read()
+        if logging.getLogger('madgraph').level <= 20:
+            print text
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:

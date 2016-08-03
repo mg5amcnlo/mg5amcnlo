@@ -1,9 +1,11 @@
 try:
     import madgraph.iolibs.file_writers as writers 
     import madgraph.various.q_polynomial as q_polynomial
+    import madgraph.various.misc as misc
 except Exception:
     import aloha.file_writers as writers
     import aloha.q_polynomial as q_polynomial
+    import aloha.misc as misc
 
 import aloha
 import aloha.aloha_lib as aloha_lib
@@ -330,7 +332,11 @@ class WriteALOHA:
         file_str = StringIO()
         
         if prefactor and obj.prefactor != 1:
-            file_str.write(self.change_number_format(obj.prefactor))
+            formatted = self.change_number_format(obj.prefactor)
+            if formatted.startswith(('+','-')):
+                file_str.write('(%s)' % formatted)
+            else:
+                file_str.write(formatted)
             file_str.write('*(')
         else:
             file_str.write('(')
@@ -756,7 +762,11 @@ class ALOHAWriterForFortran(WriteALOHA):
         
         if not self.offshell:
             if coup_name == 'COUP':
-                out.write(' vertex = COUP*%s\n' % self.write_obj(numerator.get_rep([0])))
+                formatted = self.write_obj(numerator.get_rep([0]))
+                if formatted.startswith(('+','-')):
+                    out.write(' vertex = COUP*(%s)\n' % formatted)
+                else:
+                    out.write(' vertex = COUP*%s\n' % formatted)
             else:
                 out.write(' vertex = %s\n' % self.write_obj(numerator.get_rep([0])))
         else:
@@ -790,9 +800,12 @@ class ALOHAWriterForFortran(WriteALOHA):
                     coeff = ''
             to_order = {}  
             for ind in numerator.listindices():
+                formatted = self.write_obj(numerator.get_rep(ind))
+                if formatted.startswith(('+','-')):
+                    formatted = '(%s)*%s' % tuple(formatted.split('*',1))
                 to_order[self.pass_to_HELAS(ind)] = \
                         '    %s(%d)= %s%s\n' % (self.outname, self.pass_to_HELAS(ind)+1, 
-                        coeff, self.write_obj(numerator.get_rep(ind)))
+                        coeff, formatted)
             key = to_order.keys()
             key.sort()
             for i in key:
