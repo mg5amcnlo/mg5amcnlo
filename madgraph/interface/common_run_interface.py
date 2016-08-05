@@ -535,7 +535,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             del opts['force_run']
 
         cmd.Cmd.__init__(self, *args, **opts)
-        misc.sprint(me_dir)
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
             me_dir = root_path
