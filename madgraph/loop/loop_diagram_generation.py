@@ -384,9 +384,13 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # By default the user filter does nothing if filter is not set, 
         # if you want to turn it on and edit it by hand, then set the 
         # variable edit_filter_manually to True
-        edit_filter_manually = False 
+        edit_filter_manually = False
         if not edit_filter_manually and filter in [None,'None']:
             return
+        if isinstance(filter,str) and  filter.lower() == 'true':
+            edit_filter_manually = True
+            filter=None
+            
 
         if filter not in [None,'None']:
             filter_func = LoopAmplitude.get_loop_filter(filter)
@@ -433,9 +437,9 @@ class LoopAmplitude(diagram_generation.Amplitude):
             
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
-#            if any([pdg not in [6,-6] for pdg in diag.get_loop_lines_pdgs()]) or \
-#                                25 not in diag.get_pdgs_attached_to_loop(structs):
-#                 valid_diag=False
+#            connected_id = diag.get_pdgs_attached_to_loop(structs)
+#            if 22 not in connected_id:
+#                valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
             #        loop. It shows how to access the particles properties from
