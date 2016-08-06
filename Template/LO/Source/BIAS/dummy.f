@@ -20,6 +20,15 @@ C
 C
 C Global variables
 C
+C Mandatory common block to be defined in bias modules
+C
+          double precision stored_bias_weight
+          logical write_bias
+          data stored_bias_weight/1.0d0/
+C         Not impacting the xsec since the bias is 1.0. Therefore
+C         bias_wgt will not be written in the lhe event file.
+          data impact_xsec/.True./
+          common/bias/stored_bias_weight,IsDummy
 C --------------------
 C BEGIN IMPLEMENTATION
 C --------------------

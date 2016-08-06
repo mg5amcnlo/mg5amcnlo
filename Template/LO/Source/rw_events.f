@@ -30,7 +30,6 @@ c
       character*(s_bufflen) s_buff(*)
       integer nclus
       character*(clus_bufflen) buffclus(*)
-
 c
 c     Local
 c
@@ -46,6 +45,10 @@ c
 
       data lun_ban/37/
       data banner_open/.false./
+
+      double precision bias_weight
+      logical impact_xsec
+      common/bias/bias_weight,impact_xsec
 c-----
 c  Begin Code
 c-----     
@@ -80,6 +83,21 @@ c     Clustering scales
          buff=''
         endif
       endif
+
+c     Reading the bias weight (if present)
+      read(lun,'(a300)',end=99,err=99) buftmp
+      if(buftmp(1:6).ne.'<rwgt>') then
+         backspace(lun)
+         bias_weight = 1.0d0
+      else
+         do while(buftmp(1:7).ne.'</rwgt>')
+           read(lun,'(a300)',end=99,err=99) buftmp
+           if (buftmp(1:16).eq."<wgt id='bias'> ") then
+              read(buftmp(17:31),'(1e15.7)') bias_weight
+           endif
+         enddo
+      endif
+
 c     Systematics info
       read(lun,'(a)',end=99,err=99) s_buff(1)
       if(s_buff(1).ne.'<mgrwt>') then
@@ -154,6 +172,9 @@ c
 c
 c     Global
 c
+      double precision bias_weight
+      logical impact_xsec
+      common/bias/bias_weight,impact_xsec
 
 c-----
 c  Begin Code
@@ -168,7 +189,13 @@ c      aqcd = g*g/4d0/pi
      $     (p(j,i),j=1,3),p(0,i),p(4,i),0.,real(ic(7,i))
       enddo
       if(buff(1:7).eq.'<scales') write(lun,'(a)') buff(1:len_trim(buff))
-      if(buff(1:1).eq.'#') write(lun,'(a)') buff(1:len_trim(buff))
+      if(buff(1:1).eq.'#') write(lun,'(a)') buff(1:len_trim(buff))      
+      if(.not.impact_xsec) then
+          write(lun,'(a)') '<rwgt>'
+          write(lun,'(a16,1e15.7,a6)') "<wgt id='bias'> ",bias_weight,
+     $                                                          "</wgt>"
+          write(lun,'(a)') '</rwgt>'
+      endif 
       if(u_syst)then
          do i=1,7
             write(lun,'(a)') s_buff(i)(1:len_trim(s_buff(i)))

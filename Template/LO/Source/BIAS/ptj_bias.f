@@ -33,12 +33,25 @@ C
 C
 C Global variables
 C
+C
+C Mandatory common block to be defined in bias modules
+C
+          double precision stored_bias_weight
+          logical is_dummy
+          data stored_bias_weight/1.0d0/
+          data impact_xsec/.False./
+          common/bias/stored_bias_weight,is_dummy
+C
+C Accessingt the details of the event
+C
           logical is_a_j(nexternal),is_a_l(nexternal),
      &            is_a_b(nexternal),is_a_a(nexternal),
      &            is_a_onium(nexternal),is_a_nu(nexternal),
      &            is_heavy(nexternal),do_cuts(nexternal)
           common/to_specisa/is_a_j,is_a_a,is_a_l,is_a_b,is_a_nu,
      &                      is_heavy,is_a_onium,do_cuts
+
+
 C --------------------
 C BEGIN IMPLEMENTATION
 C --------------------
@@ -61,6 +74,7 @@ C --------------------
 
           bias_weight = (max_ptj/ptj_bias_target_ptj)
      &                                      **ptj_bias_enhancement_power
+
           return
 
       end subroutine bias_wgt

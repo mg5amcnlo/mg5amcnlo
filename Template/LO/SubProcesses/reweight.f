@@ -1134,8 +1134,8 @@ c     q2bck holds the central q2fact scales
       integer icolup(2,nexternal,maxflow,maxsproc)
       include 'leshouche.inc'
       double precision bias_weight
-      data bias_weight/0.0d0/
-      common /bias/bias_weight
+      logical is_bias_dummy
+      common/bias/bias_weight,is_bias_dummy
 
 C   local variables
       integer i, j, idi, idj
