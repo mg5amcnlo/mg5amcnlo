@@ -223,6 +223,8 @@ def find_includes_path(start_path, extension):
     one found which contains at least one file ending with the string extension
     given in argument."""
     
+    if not os.path.isdir(start_path):
+        return None
     subdirs=[pjoin(start_path,dir) for dir in os.listdir(start_path)]
     for subdir in subdirs:
         if os.path.isfile(subdir):
@@ -309,7 +311,7 @@ def deactivate_dependence(dependency, cmd=None, log = None):
             log(msg)
     
 
-    if dependency in ['pjfry','golem','samurai','ninja']:
+    if dependency in ['pjfry','golem','samurai','ninja','collier']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
             cmd.options[dependency] = None
@@ -351,6 +353,13 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
             tell("Installing ninja...")
             cmd.do_install('ninja')
  
+    if dependency=='collier':
+        if cmd.options['collier'] in ['None',None,''] or\
+         (cmd.options['collier'] == 'auto' and which_lib('libcollier.a') is None) or\
+         which_lib(pjoin(cmd.options['collier'],'libcollier.a')) is None:
+            tell("Installing COLLIER...")
+            cmd.do_install('collier')
+
 #===============================================================================
 # find a library
 #===============================================================================
@@ -617,14 +626,16 @@ class MuteLogger(object):
         self.levels = old_levels
         
     def __exit__(self, ctype, value, traceback ):
-        for name, level, path, level in zip(self.names, self.levels, self.files, self.levels):
-            if 'keep' in self.opts and not self.opts['keep']:
-                self.restore_logFile_for_logger(name, level, path=path)
+        for name, level, path in zip(self.names, self.levels, self.files):
+
+            if path:
+                if 'keep' in self.opts and not self.opts['keep']:
+                    self.restore_logFile_for_logger(name, level, path=path)
+                else:
+                    self.restore_logFile_for_logger(name, level)
             else:
-                self.restore_logFile_for_logger(name, level)
-            
-            log_module = logging.getLogger(name)
-            log_module.setLevel(level)         
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)         
         
     def setup_logFile_for_logger(self, path, full_logname, **opts):
         """ Setup the logger by redirecting them all to logfiles in tmp """

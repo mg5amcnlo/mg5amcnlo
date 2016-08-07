@@ -34,6 +34,7 @@ import aloha
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
@@ -90,7 +91,8 @@ class LoopExporterFortran(object):
 
     include_names    = {'ninja' : 'mninja.mod',
                         'golem' : 'generic_function_1p.mod',
-                        'samurai':'msamurai.mod'}
+                        'samurai':'msamurai.mod',
+                        'collier': 'collier.mod'}
 
     def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
@@ -204,7 +206,7 @@ class LoopExporterFortran(object):
 #===============================================================================
 class LoopProcessExporterFortranSA(LoopExporterFortran,
                                    export_v4.ProcessExporterFortranSA):
-                                   
+                                
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
        
@@ -216,6 +218,10 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                top_frame_char = '=', bottom_frame_char = '=',
                left_frame_char = '{',right_frame_char = '}',
                print_frame=True, side_margin = 7, up_margin = 1)
+
+    def __init__(self, *args, **opts):
+        super(LoopProcessExporterFortranSA,self).__init__(*args,**opts)
+        self.unique_id=0 # to allow collier to distinguish the various loop subprocesses
 
     def copy_template(self, model):
         """Additional actions needed to setup the Template.
@@ -263,16 +269,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         calls = self.write_loop_makefile_definitions(
                         writers.MakefileWriter(filePath),link_tir_libs,tir_libs)
 
-            
         # We need minimal editing of MadLoopCommons.f
+        # For the optimized output, this file will be overwritten once the 
+        # availability of COLLIER has been determined.
         MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
                                     "SubProcesses","MadLoopCommons.inc")).read()
         writer = writers.FortranWriter(os.path.join(self.dir_path, 
                                              "SubProcesses","MadLoopCommons.f"))
         writer.writelines(MadLoopCommon%{
-                                   'print_banner_commands':self.MadLoop_banner})
+          'print_banner_commands':self.MadLoop_banner}, context={
+                'collier_available':False})
         writer.close()
-        
         
         # Copy the whole MadLoop5_resources directory (empty at this stage)
         if not os.path.exists(pjoin(self.dir_path,'SubProcesses',
@@ -678,7 +685,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     # generate_subprocess_directory
     #===========================================================================
     def generate_loop_subprocess(self, matrix_element, fortran_model,
-                          group_number = None, proc_id = None, config_map=None):
+          group_number = None, proc_id = None, config_map=None, unique_id=None):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
         including the necessary loop_matrix.f, born_matrix.f and include files.
         Notice that this is too different from generate_subprocess_directory
@@ -705,6 +712,14 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         logger.info('Creating files in directory %s' % dirpath)
 
+        if unique_id is None:
+            raise MadGraph5Error, 'A unique id must be provided to the function'+\
+                     'generate_loop_subprocess of LoopProcessExporterFortranSA.'
+        # Create an include with the unique consecutive ID assigned
+        open('unique_id.inc','w').write(
+"""      integer UNIQUE_ID
+      parameter(UNIQUE_ID=%d)"""%unique_id)
+        
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
@@ -778,7 +793,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                      'cts_mprec.h', 'cts_mpc.h', 'mp_coupl.inc', 
                      'mp_coupl_same_name.inc',
                      'MadLoopParamReader.f','MadLoopCommons.f',
-                     'MadLoopParams.inc']
+                     'MadLoopParams.inc','global_specs.inc']
         
         for file in linkfiles:
             ln('../%s' % file)
@@ -1014,11 +1029,14 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         writer.writelines(proc_include)
                                 
+                                
     def generate_subprocess_directory(self, matrix_element, fortran_model):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
         
-        return self.generate_loop_subprocess(matrix_element,fortran_model)
+        self.unique_id +=1
+        return self.generate_loop_subprocess(matrix_element,fortran_model,
+                                                            unique_id=self.unique_id)
 
     def write_check_sa(self, writer, matrix_element):
         """Writes out the steering code check_sa. In the optimized output mode,
@@ -1576,7 +1594,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # make sure that ninja appears first in the list of -L because 
     # it is the tool for which the user is most susceptible of 
     # using a standalone verison independent of gosam_contrib
-    all_tir=['pjfry','iregi','ninja','golem','samurai']
+    all_tir=['pjfry','iregi','ninja','golem','samurai','collier']
     
     def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
@@ -1587,7 +1605,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         # TIR available ones
         self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True,
-                                 'samurai':True,'ninja':True}
+                                 'samurai':True,'ninja':True,'collier':True}
 
         for tir in self.all_tir:
             tir_dir="%s_dir"%tir
@@ -1625,7 +1643,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         for tir in self.all_tir:
             context['%s_available'%tir]=self.tir_available_dict[tir]
             # safety check
-            if tir not in ['golem','pjfry','iregi','samurai','ninja']:
+            if tir not in ['golem','pjfry','iregi','samurai','ninja','collier']:
                 raise MadGraph5Error,"%s was not a TIR currently interfaced."%tir_name
 
         return context
@@ -1646,16 +1664,30 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             tir_name=tir
             libpath = self.link_TIR(os.path.join(self.dir_path, 'lib'),
                                               libpath,libname,tir_name=tir_name)
-            setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir in ['ninja','pjfry','golem','samurai']:
+                if tir in ['ninja','pjfry','golem','samurai','collier']:
                     # It is cleaner to use the original location of the libraries
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
-                    if tir in ['ninja','golem', 'samurai']:
+                    # For Ninja, we must also link against OneLoop.
+                    if tir in ['ninja']:
+                        if not any(os.path.isfile(pjoin(libpath,'libavh_olo.%s'%ext)) 
+                                              for ext in ['a','dylib','so']):
+                            raise MadGraph5Error(
+"The OneLOop library 'libavh_olo.(a|dylib|so)' could no be found in path '%s'. Please place a symlink to it there."%libpath)
+                        link_tir_libs.append('-L%s/ -l%s'%(libpath,'avh_olo'))
+                        tir_libs.append('%s/lib%s.$(libext)'%(libpath,'avh_olo'))
+                    if tir in ['ninja','golem', 'samurai','collier']:
                         trgt_path = pjoin(os.path.dirname(libpath),'include')
-                        to_include = misc.find_includes_path(trgt_path,
+                        if os.path.isdir(trgt_path):
+                            to_include = misc.find_includes_path(trgt_path,
                                                         self.include_names[tir])
+                        else:
+                            to_include = None
+                        # Special possible location for collier
+                        if to_include is None and tir=='collier':
+                            to_include = misc.find_includes_path(
+                               pjoin(libpath,'modules'),self.include_names[tir])
                         if to_include is None:
                             logger.error(
 'Could not find the include directory for %s, looking in %s.\n' % (tir, str(trgt_path))+
@@ -1667,7 +1699,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                         # (such as what is done with the Sherpa interface), we
                         # place here an easy handle on the golem includes
                         name_map = {'golem':'golem95','samurai':'samurai',
-                                    'ninja':'ninja'}
+                                    'ninja':'ninja','collier':'collier'}
                         ln(to_include, starting_dir=pjoin(self.dir_path,'lib'),
                                    name='%s_include'%name_map[tir],abspath=True)
                         ln(libpath, starting_dir=pjoin(self.dir_path,'lib'),
@@ -1684,6 +1716,17 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         calls = self.write_loop_makefile_definitions(
                         writers.MakefileWriter(MadLoop_makefile_definitions),
                                 link_tir_libs,tir_libs, tir_include=tir_include)
+
+        # Finally overwrite MadLoopCommons.f now that we know the availibility of
+        # COLLIER.
+        MadLoopCommon = open(os.path.join(self.loop_dir,'StandAlone', 
+                                    "SubProcesses","MadLoopCommons.inc")).read()
+        writer = writers.FortranWriter(os.path.join(self.dir_path, 
+                                             "SubProcesses","MadLoopCommons.f"))
+        writer.writelines(MadLoopCommon%{
+          'print_banner_commands':self.MadLoop_banner}, context={
+                'collier_available':self.tir_available_dict['collier']})
+        writer.close()
 
     def link_files_from_Subprocesses(self,proc_name):
         """ Does the same as the mother routine except that it also links
@@ -1702,7 +1745,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """Link the TIR source directory inside the target path given
         in argument"""
         
-        if tir_name in ['pjfry','golem','samurai','ninja']:
+        if tir_name in ['pjfry','golem','samurai','ninja','collier']:
             # not self-contained libraries
             if (not isinstance(libpath,str)) or (not os.path.exists(libpath)) \
             or (not os.path.isfile(pjoin(libpath,libname))):
@@ -1740,7 +1783,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 return ""
        
         if self.dependencies=='internal':
-            if tir_name in ['pjfry','golem','samurai','ninja']:
+            if tir_name in ['pjfry','golem','samurai','ninja','collier']:
                 self.tir_available_dict[tir_name]=False
                 logger.info("When using the 'output_dependencies=internal' "+\
 " MG5_aMC option, the (optional) reduction library %s cannot be employed because"%tir_name+\
@@ -1791,7 +1834,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                     self.tir_available_dict[tir_name]=False
                     return ""
             # We link the tools below directly to the lib directory of the output 
-            if not tir_name in ['pjfry','golem','samurai','ninja']:
+            if not tir_name in ['pjfry','golem','samurai','ninja','collier']:
                 ln(os.path.join(libpath,libname),targetPath,abspath=True)
 
         elif self.dependencies=='environment_paths':
@@ -1802,7 +1845,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 logger.info('MG5_aMC is using %s installation found at %s.'%\
                                                           (tir_name,newlibpath)) 
                 # We link the tools below directly to directly where the library is detected
-                if not tir_name in ['pjfry','golem','samurai','ninja']:
+                if not tir_name in ['pjfry','golem','samurai','ninja','collier']:
                     ln(newlibpath,targetPath,abspath=True)
                 self.tir_available_dict[tir_name]=True
                 return os.path.dirname(newlibpath)
@@ -1828,6 +1871,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                           and matrix_element.get('processes')[0].get('has_born')
         
         return self.group_loops
+    
+    def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
+        """create the global information for loops"""
+        
+        super(LoopProcessOptimizedExporterFortranSA,self).finalize(matrix_element,
+                                             cmdhistory, MG5options, outputflag)
+        self.write_global_specs(matrix_element)
+    
     
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         group_number = None, proc_id = None, config_map = None):
@@ -1907,6 +1958,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if 'golem' in self.tir_available_dict and self.tir_available_dict['golem']:
             filename = 'GOLEM_interface.f'
             self.write_GOLEM_interface(writers.FortranWriter(filename),
+                                       matrix_element)
+
+        if 'collier' in self.tir_available_dict and self.tir_available_dict['collier']:
+            filename = 'COLLIER_interface.f'
+            self.write_COLLIER_interface(writers.FortranWriter(filename),
                                        matrix_element)
 
         filename = 'loop_num.f'
@@ -2035,6 +2091,40 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         if self.tir_available_dict['iregi']:
             file += '\n\n'+FPR.write_iregi_mapping()
 
+        if writer:
+            writer.writelines(file,context=self.get_context(matrix_element))
+        else:
+            return file
+
+    def write_COLLIER_interface(self, writer, matrix_element):
+        """ Create the file COLLIER_interface.f"""
+
+        # First write GOLEM_interface which interfaces MG5 with TIR.
+        replace_dict=copy.copy(matrix_element.rep_dict)
+            
+        file = open(os.path.join(self.template_dir,'COLLIER_interface.inc')).read()
+ 
+        FPR = q_polynomial.FortranPolynomialRoutines(replace_dict['maxrank'],\
+                                                    coef_format=replace_dict['complex_dp_format'],\
+                                                    sub_prefix=replace_dict['proc_prefix'])
+        map_definition = []
+        collier_map = FPR.get_COLLIER_mapping()
+        
+        chunk_size = 10
+        for map_name, indices_list in \
+                           [('COEFMAP_ZERO',[c[0] for c in collier_map]),
+                            ('COEFMAP_ONE',[c[1] for c in collier_map]),
+                            ('COEFMAP_TWO',[c[2] for c in collier_map]),
+                            ('COEFMAP_THREE',[c[3] for c in collier_map])]:
+            for k in xrange(0, len(indices_list), chunk_size):
+                map_definition.append("DATA (%s(I),I=%3r,%3r) /%s/" % \
+                (map_name,k, min(k + chunk_size, len(indices_list))-1,
+                 ','.join('%2r'%ind for ind in indices_list[k:k + chunk_size])))
+
+        replace_dict['collier_coefmap'] = '\n'.join(map_definition) 
+ 
+        file = file % replace_dict
+        
         if writer:
             writer.writelines(file,context=self.get_context(matrix_element))
         else:
@@ -2369,6 +2459,31 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         writer.writelines(file,context=self.get_context(matrix_element))
     
+    def write_global_specs(self, matrix_element_list):
+        """ From the list of matrix element, or the single matrix element, derive
+        the global quantities to write in global_coef_specs.inc"""
+        
+        if isinstance(matrix_element_list, (group_subprocs.SubProcessGroupList,
+                                            loop_helas_objects.LoopHelasProcess)):
+            matrix_element_list = matrix_element_list.get_matrix_elements()
+        
+        if isinstance(matrix_element_list, list):
+            me_list = matrix_element_list
+        else:
+            me_list = [matrix_element_list]    
+
+        open(pjoin(self.dir_path,'SubProcesses','global_specs.inc'),'w').write(
+"""      integer MAXNEXTERNAL
+      parameter(MAXNEXTERNAL=%d)
+      integer OVERALLMAXRANK
+      parameter(OVERALLMAXRANK=%d)
+      integer NPROCS
+      parameter(NPROCS=%d)"""%(
+         max(me.get_nexternal_ninitial()[0] for me in me_list),
+         max(me.get_max_loop_rank() for me in me_list),
+         len(me_list)))    
+
+    
     def fix_coef_specs(self, overall_max_lwf_spin, overall_max_loop_vert_rank):
         """ If processes with different maximum loop wavefunction size or
         different maximum loop vertex rank have to be output together, then
@@ -2570,7 +2685,7 @@ PARAMETER (NSQUAREDSO=%d)"""%matrix_element.rep_dict['nSquaredSO'])
         looplibs_av=['.TRUE.']
         # one should be careful about the order in the following as it must match
         # the ordering in MadLoopParamsCard.
-        for tir_lib in ['pjfry','iregi','golem','samurai','ninja']:
+        for tir_lib in ['pjfry','iregi','golem','samurai','ninja','collier']:
             looplibs_av.append('.TRUE.' if tir_lib in self.all_tir and \
                                 self.tir_available_dict[tir_lib] else '.FALSE.')
         replace_dict['data_looplibs_av']=','.join(looplibs_av)
@@ -2774,12 +2889,12 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize(self, *args, **opts):
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Function to finalize v4 directory, for inheritance.
         """
         
         self.proc_characteristic['loop_induced'] = True
-        
+
         # This can be uncommented if one desires to have the MadLoop
         # initialization performed at the end of the output phase.
         # Alternatively, one can simply execute the command 'initMadLoop' in
@@ -2787,7 +2902,9 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         # from madgraph.interface.madevent_interface import MadLoopInitializer
         # MadLoopInitializer.init_MadLoop(self.dir_path,
         #                   subproc_prefix=self.SubProc_prefix, MG_options=None)
-
+        
+        self.write_global_specs(matrix_elements)
+        
     def write_tir_cache_size_include(self, writer):
         """Write the file 'tir_cache_size.inc' which sets the size of the TIR
         cache the the user wishes to employ and the default value for it.
@@ -2944,15 +3061,17 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-            
+        
         # Generate the MadLoop files
         calls = 0
         matrix_elements = subproc_group.get('matrix_elements')
         for ime, matrix_element in enumerate(matrix_elements):
+            self.unique_id +=1
             calls += self.generate_loop_subprocess(matrix_element,fortran_model,
-          group_number = group_number, proc_id = str(ime+1),
+                              group_number = group_number, proc_id = str(ime+1),
 #          group_number = str(subproc_group.get('number')), proc_id = str(ime+1),
-          config_map = subproc_group.get('diagram_maps')[ime])
+                            config_map = subproc_group.get('diagram_maps')[ime],
+                            unique_id=self.unique_id)
         
         # Then generate the MadEvent files
         export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory(
@@ -2975,7 +3094,10 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         # In this case, we need to sum up all amplitudes that have
         # identical topologies, as given by the config_map (which
         # gives the topology/config for each of the diagrams
-        diagrams = matrix_element.get('diagrams')
+        if isinstance(matrix_element, loop_helas_objects.LoopHelasMatrixElement):
+            diagrams = matrix_element.get_loop_diagrams()            
+        else:
+            diagrams = matrix_element.get('diagrams')
                 
         # Note that we need to use AMP2 number corresponding to the first 
         # diagram number used for that AMP2.
@@ -2988,7 +3110,7 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         
         # Combine the diagrams with identical topologies
         config_to_diag_dict = {}
-        for idiag, diag in enumerate(matrix_element.get('diagrams')):
+        for idiag, diag in enumerate(diagrams):
             try:
                 config_to_diag_dict[config_map[idiag]].append(idiag)
             except KeyError:
@@ -3102,14 +3224,17 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         # care of MadLoop virtuals initialization
         LoopInducedExporterME.finalize(self, *args, **opts)
 
+
     def generate_subprocess_directory(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-    
+        
+        self.unique_id += 1
         # Then generate the MadLoop files
         calls = self.generate_loop_subprocess(matrix_element,fortran_model,                           
-                                                       group_number = me_number)
+                                  group_number = me_number, 
+                                  unique_id=self.unique_id)
         
         
         # First generate the MadEvent files

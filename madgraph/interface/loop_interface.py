@@ -540,7 +540,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format in self.supported_ML_format:
-            for me in matrix_elements:
+            for unique_id, me in enumerate(matrix_elements):
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory(\
                             me, self._curr_helas_model)
@@ -621,6 +621,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 flags.append('nojpeg')
             if online:
                 flags.append('online')
+                
             self._curr_exporter.finalize( \
                                            self._curr_matrix_elements,
                                            self.history,

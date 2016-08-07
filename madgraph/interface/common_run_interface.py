@@ -739,7 +739,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     param = param_card['decay'].get((part.pdg_code,))
 
                     if  param.value != 0:
-                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
                                     % part.name,'$MG:color:BLACK')
                         param.value = 0
 
@@ -2597,10 +2597,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Initiation
         if 'pwd' in opt:
             self.me_dir = opt['pwd']
-            del opt['pwd'] 
         elif 'mother_interface' in opt:
-            self.mother_interface = opt['mother_interface']  
-            del opt['mother_interface']     
+            self.mother_interface = opt['mother_interface']     
         if not hasattr(self, 'me_dir') or not self.me_dir:
             self.me_dir = self.mother_interface.me_dir
         
@@ -2625,7 +2623,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         self.load_default()        
         self.define_paths(**opt)
-
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
 
 

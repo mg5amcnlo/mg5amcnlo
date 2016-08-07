@@ -36,6 +36,7 @@ import madgraph.various.misc as misc
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph.various.banner as banner_mod
 import madgraph.various.lhe_parser as lhe_parser
+import madgraph.various.banner as banner
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -178,6 +179,11 @@ class TestMECmdShell(unittest.TestCase):
         cmd = os.getcwd()
         self.generate(['Z > l+ l-','Z > j j'], 'sm')
         self.assertEqual(cmd, os.getcwd())
+        
+        # check that the run_card do not have cut
+        run_card = banner.RunCard(pjoin(self.run_dir,'Cards','run_card.dat'))
+        self.assertEqual(run_card['ptj'], 0)
+        
         self.do('calculate_decay_widths -f')        
         
         # test the param_card is correctly written
@@ -508,7 +514,7 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue(has_zero)
         self.assertTrue(has_non_zero)
         
-        
+    
 
     def test_w_production_with_ms_decay(self):
         """A run to test madspin (inline and offline) on p p > w+ and p p > w-"""

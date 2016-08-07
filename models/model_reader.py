@@ -81,7 +81,8 @@ class ModelReader(loop_base_objects.LoopModel):
                 if not os.path.isfile(param_card):
                     raise MadGraph5Error, "No such file %s" % param_card
                 param_card = card_reader.ParamCard(param_card)
-            assert isinstance(param_card, card_reader.ParamCard)    
+#            misc.sprint(type(param_card), card_reader.ParamCard,  isinstance(param_card, card_reader.ParamCard))
+#            assert isinstance(param_card, card_reader.ParamCard),'%s is not a ParamCard: %s' % (type(param_card),  isinstance(param_card, card_reader.ParamCard))    
             
             if complex_mass_scheme is None:
                 if aloha.complex_mass:

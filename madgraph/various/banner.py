@@ -2201,17 +2201,23 @@ class MadLoopParam(ConfigFile):
     contains a parser to read it, facilities to write a new file,...
     """
     
-
-            
+    _ID_reduction_tool_map = {1:'CutTools',
+                             2:'PJFry++',
+                             3:'IREGI',
+                             4:'Golem95',
+                             5:'Samurai',
+                             6:'Ninja',
+                             7:'COLLIER'}
+    
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "6|1|2")
+        self.add_param("MLReductionLib", "6|7|1")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)
         self.add_param("MLStabThres", 1e-3)
-        self.add_param("NRotations_DP", 1)
+        self.add_param("NRotations_DP", 0)
         self.add_param("NRotations_QP", 0)
         self.add_param("ImprovePSPoint", 2)
         self.add_param("CTLoopLibrary", 2)
@@ -2227,8 +2233,16 @@ class MadLoopParam(ConfigFile):
         self.add_param("HelicityFilterLevel", 2)
         self.add_param("LoopInitStartOver", False)
         self.add_param("HelInitStartOver", False)
-        self.add_param("UseQPIntegrandForNinja", False)        
+        self.add_param("UseQPIntegrandForNinja", True)        
         self.add_param("UseQPIntegrandForCutTools", True)
+        self.add_param("COLLIERMode", 1)
+        self.add_param("COLLIERComputeUVpoles", True)
+        self.add_param("COLLIERComputeIRpoles", True)
+        self.add_param("COLLIERRequiredAccuracy", 1.0e-8)
+        self.add_param("COLLIERCanOutput",False)
+        self.add_param("COLLIERGlobalCache",-1)
+        self.add_param("COLLIERUseCacheForPoles",False)
+        self.add_param("COLLIERUseInternalStabilityTest",True)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

@@ -431,7 +431,6 @@ class ParamCard(dict):
         
         # apply all the basic restriction rule
         if restrict_rule:
-            misc.sprint('Check the rules')
             restrict_rule.check_param_card(self, modify=True, log=loglevel)
         
         import models.model_reader as model_reader

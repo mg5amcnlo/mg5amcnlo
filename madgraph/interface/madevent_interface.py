@@ -2550,7 +2550,7 @@ Beware that this can be dangerous for local multicore runs.""")
 #           helicity filters.
             self.MadLoopparam.set('CheckCycle',4, ifnotdefault=False)
             
-            # For now it is tricky to have eahc channel performing the helicity
+            # For now it is tricky to have each channel performing the helicity
             # double check. What we will end up doing is probably some kind
             # of new initialization round at the beginning of each launch
             # command, to reset the filters.    
@@ -2558,7 +2558,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                                              ifnotdefault=False)
           
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
-            # processes, so that we place OPP last.
+            # processes when not doing MC over helicities, so that we place OPP last.
             if not hasattr(self, 'run_card'):
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
@@ -2571,7 +2571,7 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|6|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','7|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                     not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
@@ -2579,7 +2579,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','6|1|2', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|7|1', ifnotdefault=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop

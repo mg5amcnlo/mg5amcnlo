@@ -8,8 +8,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
 C     Modules
 C     
@@ -250,9 +250,15 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
             NHEL(I)=HELC(I,H)
           ENDDO
 
-          MP_UVCT_REQ_SO_DONE=.FALSE.
-          MP_CT_REQ_SO_DONE=.FALSE.
-          MP_LOOP_REQ_SO_DONE=.FALSE.
+          IF (COMPUTE_INTEGRAND_IN_QP) THEN
+            MP_UVCT_REQ_SO_DONE=.FALSE.
+            MP_CT_REQ_SO_DONE=.FALSE.
+            MP_LOOP_REQ_SO_DONE=.FALSE.
+          ELSE
+            UVCT_REQ_SO_DONE=.FALSE.
+            CT_REQ_SO_DONE=.FALSE.
+            LOOP_REQ_SO_DONE=.FALSE.
+          ENDIF
 
           IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
      $      THEN
@@ -264,8 +270,10 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
 
           IF (COMPUTE_INTEGRAND_IN_QP) THEN
             CALL MP_HELAS_CALLS_AMPB_1(MP_P,NHEL,H,IC)
+            CONTINUE
           ELSE
             CALL HELAS_CALLS_AMPB_1(P,NHEL,H,IC)
+            CONTINUE
           ENDIF
 
  2000     CONTINUE
@@ -273,8 +281,10 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
 
           IF (COMPUTE_INTEGRAND_IN_QP) THEN
 
+            CONTINUE
           ELSE
 
+            CONTINUE
           ENDIF
 
           IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN

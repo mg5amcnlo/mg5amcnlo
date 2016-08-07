@@ -172,7 +172,8 @@ class Switcher(object):
         # option, specified in the line with format [ option = loop_orders ] or
         # [ loop_orders ] which implicitly select the 'all' option.
         loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)?\])(.*)$")
-        res=loopRE.search(line)
+        # Make sure that the content of options following '--' are not considered.
+        res=loopRE.search(line.split('--')[0])
         if res:
             orders=res.group('orders').split() if res.group('orders') else []
             if res.group('option') and len(res.group('option').split())==1:

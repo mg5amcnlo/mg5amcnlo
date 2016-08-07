@@ -98,7 +98,7 @@ class OriginalCmd(object):
     nohelp = "*** No help on %s"
     use_rawinput = 1
 
-    def __init__(self, completekey='tab', stdin=None, stdout=None):
+    def __init__(self, completekey='tab', stdin=None, stdout=None,**opt):
         """Instantiate a line-oriented interpreter framework.
 
         The optional argument 'completekey' is the readline name of a
@@ -120,6 +120,7 @@ class OriginalCmd(object):
             self.stdout = sys.stdout
         self.cmdqueue = []
         self.completekey = completekey
+        self.cmd_options = opt
 
     def cmdloop(self, intro=None):
         """Repeatedly issue a prompt, accept input, parse an initial prefix

@@ -187,7 +187,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         writer = writers.FortranWriter(os.path.join(self.dir_path, 
                                              "SubProcesses","MadLoopCommons.f"))
         writer.writelines(MadLoopCommon%{
-                                   'print_banner_commands':self.MadLoop_banner})
+                                   'print_banner_commands':self.MadLoop_banner},
+                                            context={'collier_available':False})
         writer.close()
                                        
         # Write the cts_mpc.h and cts_mprec.h files imported from CutTools
@@ -1600,12 +1601,19 @@ end
             matrix_element.get('processes')[0].nice_string(print_weighted=False))
         plot.draw()
 
+        # We also need to write the overall maximum quantities for this group
+        # of processes in 'global_specs.inc'. In aMCatNLO, there is always
+        # only one process, so this is trivial
+        self.write_global_specs(matrix_element)
+        open('unique_id.inc','w').write(
+"""      integer UNIQUE_ID
+      parameter(UNIQUE_ID=1)""")
+
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopCommons.f','MadLoopParams.inc']
+                     'MadLoopCommons.f','MadLoopParams.inc','global_specs.inc']
 
         # We should move to MadLoop5_resources directory from the SubProcesses
-
         ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
                                               pjoin('..','MadLoop5_resources'))
 
@@ -3052,6 +3060,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+
+    def finalize(self, *args, **opts):
+        ProcessExporterFortranFKS.finalize(self, *args, **opts)
+        #export_v4.ProcessExporterFortranSA.finalize(self, *args, **opts)
+
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================
@@ -3117,17 +3130,31 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                               libpath,"lib%s.a"%tir,tir_name=tir)
             setattr(self,tir_dir,libpath)
             if libpath != "":
-                if tir in ['pjfry','ninja','golem', 'samurai']:
+                if tir in ['pjfry','ninja','golem', 'samurai','collier']:
                     # We should link dynamically when possible, so we use the original
                     # location of these libraries.
                     link_tir_libs.append('-L%s/ -l%s'%(libpath,tir))
                     tir_libs.append('%s/lib%s.$(libext)'%(libpath,tir))
-                    # We must add the corresponding includes for golem, samurai
-                    # and ninja
-                    if tir in ['golem','samurai','ninja']:
+                    # For Ninja, we must also link against OneLoop.
+                    if tir in ['ninja']:
+                        if not any(os.path.isfile(pjoin(libpath,'libavh_olo.%s'%ext)) 
+                                              for ext in ['a','dylib','so']):
+                            raise MadGraph5Error(
+"The OneLOop library 'libavh_olo.(a|dylib|so)' could no be found in path '%s'. Please place a symlink to it there."%libpath)
+                        link_tir_libs.append('-L%s/ -l%s'%(libpath,'avh_olo'))
+                        tir_libs.append('%s/lib%s.$(libext)'%(libpath,'avh_olo'))
+                    # We must add the corresponding includes for these TIR
+                    if tir in ['golem','samurai','ninja','collier']:
                         trg_path = pjoin(os.path.dirname(libpath),'include')
-                        to_include = misc.find_includes_path(trg_path,
+                        if os.path.isdir(trg_path):
+                            to_include = misc.find_includes_path(trg_path,
                                                         self.include_names[tir])
+                        else:
+                            to_include = None
+                        # Special possible location for collier
+                        if to_include is None and tir=='collier':
+                            to_include = misc.find_includes_path(
+                               pjoin(libpath,'modules'),self.include_names[tir])
                         if to_include is None:
                             logger.error(
 'Could not find the include directory for %s, looking in %s.\n' % (tir ,str(trg_path))+
@@ -3197,7 +3224,8 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         writer = writers.FortranWriter(os.path.join(self.dir_path, 
                                              "SubProcesses","MadLoopCommons.f"))
         writer.writelines(MadLoopCommon%{
-                                   'print_banner_commands':self.MadLoop_banner})
+                                   'print_banner_commands':self.MadLoop_banner},
+               context={'collier_available':self.tir_available_dict['collier']})
         writer.close()
 
         # link the files from the MODEL
@@ -3307,14 +3335,21 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
                                                           print_weighted=False))
         plot.draw()
 
+        # We also need to write the overall maximum quantities for this group
+        # of processes in 'global_specs.inc'. In aMCatNLO, there is always
+        # only one process, so this is trivial
+        self.write_global_specs(matrix_element)
+        open('unique_id.inc','w').write(
+"""      integer UNIQUE_ID
+      parameter(UNIQUE_ID=1)""")
+
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc','MadLoopCommons.f']
+                     'MadLoopParams.inc','MadLoopCommons.f','global_specs.inc']
 
         for file in linkfiles:
             ln('../../%s' % file)
-
-
+                
         os.system("ln -s ../../makefile_loop makefile")
         
 # We should move to MadLoop5_resources directory from the SubProcesses

@@ -2993,7 +2993,7 @@ class Process(PhysicsObject):
         # Add orders
         if self['orders']:
             to_add = []
-            for key in self['orders']:
+            for key in sorted(self['orders'].keys()):
                 if not print_weighted and key == 'WEIGHTED':
                     continue
                 value = int(self['orders'][key])
@@ -3016,9 +3016,9 @@ class Process(PhysicsObject):
                 mystr = mystr + " ".join(to_add) + ' '
 
         if self['constrained_orders']:
-            mystr = mystr + " ".join('%s%s%d' % (key, type, value) for 
-                                     (key,(value,type)) 
-                                         in self['constrained_orders'].items())  + ' '
+            mystr = mystr + " ".join('%s%s%d' % (key, 
+              self['constrained_orders'][key][1], self['constrained_orders'][key][0]) 
+                    for key in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -3035,7 +3035,7 @@ class Process(PhysicsObject):
         # Add squared orders
         if self['squared_orders']:
             to_add = []
-            for key in self['squared_orders'].keys():
+            for key in sorted(self['squared_orders'].keys()):
                 if not print_weighted and key == 'WEIGHTED':
                     continue
                 if key in self['constrained_orders']:
