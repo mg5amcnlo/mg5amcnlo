@@ -113,9 +113,9 @@ class Systematics(object):
                         self.pdfsets[pdfset.lhapdfID] = pdfset 
                         self.pdf += pdfset.mkPDFs()
                     elif name.isdigit():
-                        raise Exception
+                        raise Exception, 'invididual error set need to called with name not with lhapdfID'
                     else:
-                        self.pdf.append(lhapdf.mkPDF(data, int(arg)))
+                        self.pdf.append(lhapdf.mkPDF(name, int(arg)))
                 else:
                     
                     self.pdf.append(lhapdf.mkPDF(data))
