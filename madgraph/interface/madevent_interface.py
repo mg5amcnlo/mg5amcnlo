@@ -18,6 +18,7 @@
 from __future__ import division
 
 import atexit
+import collections
 import cmath
 import glob
 import logging
@@ -2498,7 +2499,59 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
             
-            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+            # Ensure that the bias parameters has all the required input from the
+            # run_card
+            if run_card['bias_module'].lower() not in ['dummy','None']:
+                if os.path.sep in run_card['bias_module']:
+                    raise Exception
+                else:
+                    path = pjoin(self.me_dir,'Source','BIAS','%s.f' % run_card['bias_module'])
+                #check expected parameters for the module.
+                default_bias_parameters = {}
+                start, last = False,False
+                for line in open(path):
+                    if start and last:
+                        break
+                    if not start and not re.search('c\s*parameters\s*=\s*{',line, re.I):
+                        continue
+                    start = True
+                    if not line.startswith('C'):
+                        continue
+                    line = line[1:]
+                    if '{' in line:
+                        line = line.split('{')[-1]
+                    if '#' in line:
+                        line = line.split('#')[0]
+                    if '!' in line:
+                        line = line.split('!')[0]   
+                    if '}' in line:
+                        last =True
+                        line = line.split('}')[0]                   
+                    if ',' in line:
+                        for pair in line.split(','):
+                            if not pair.strip():
+                                continue
+                            x,y =pair.split(':') 
+                            x=x.strip()
+                            if x.startswith(('"',"'")) and x.endswith(x[0]):
+                                x = x[1:-1] 
+                            default_bias_parameters[x] = y
+                    elif ':' in line:
+                        x,y = line.split(':')
+                        x = x.strip()
+                        if x.startswith(('"',"'")) and x.endswith(x[0]):
+                            x = x[1:-1] 
+                        default_bias_parameters[x] = y
+                for key,value in run_card['bias_parameters'].items():
+                    if key not in default_bias_parameters:
+                        logger.warning('%s not supported by the bias module. We discard this entry.', key)
+                    else:
+                        default_bias_parameters[key] = value
+                run_card['bias_parameters'] = default_bias_parameters  
+              
+              
+            # Finally write the include file          
+            run_card.write_include_file(opt['output_dir'])
         
 
         if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
@@ -3014,6 +3067,11 @@ Beware that this can be dangerous for local multicore runs.""")
             
             self.results.add_detail('nb_event', nb_event)
         
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+            self.correct_bias()
+        
+        
+        
         self.to_store.append('event')
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
@@ -3025,6 +3083,60 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.create_root_file(output='%s/unweighted_events.root' % \
                                                                   self.run_name)
     
+    ############################################################################ 
+    def correct_bias(self):
+        """check the first event and correct the weight by the bias 
+           and correct the cross-section.
+           If the event do not have the bias tag it means that the bias is 
+           one modifying the cross-section/shape so we have nothing to do
+        """
+
+        lhe = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz'))
+        init = False
+        cross = collections.defaultdict(float)
+        nb_event = 0
+        for event in lhe:
+            rwgt_info = event.parse_reweight()
+            if not init:
+                if 'bias' in rwgt_info:
+                    output = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.unweighted_events.lhe.tmp.gz'),'w')
+                    #output.write(lhe.banner)
+                    init = True
+                else:
+                    return
+            #change the weight
+            event.wgt /= rwgt_info['bias']
+            #remove the bias info
+            del event.reweight_data['bias']
+            # compute the new cross-section
+            cross[event.ievent] += event.wgt
+            nb_event +=1
+            output.write(str(event))
+        output.write('</LesHouchesEvents>')
+        output.close()
+        lhe.close()
+                
+        # TODO. MODIFY THE BANNER i.e. INIT BLOCK
+        bannerfile = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.banner.tmp.gz'),'w')
+        banner = banner_mod.Banner(lhe.banner)
+        banner.modify_init_cross(cross)
+        banner.write(bannerfile, close_tag=False)
+        bannerfile.close()
+        # replace the lhe file by the new one
+        os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        os.remove(bannerfile.name)
+        os.remove(output.name)
+        
+        total_cross = sum(cross[key] for key in cross)
+        if 'event_norm' in self.run_card: # if not this is "sum"
+            if self.run_card['event_norm'] == 'average':
+                total_cross = total_cross / nb_event
+            elif self.run_card['event_norm'] == 'unity':
+                total_cross = self.results.current['cross'] * total_cross / nb_event
+                
+        self.results.current['cross'] = total_cross
+        self.results.current['error'] = 0
+         
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""
