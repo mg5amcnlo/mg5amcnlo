@@ -16,6 +16,7 @@ if '__main__' == __name__:
 import misc
 import logging
 import gzip
+import banner as banner_mod
 logger = logging.getLogger("madgraph.lhe_parser")
 
 class Particle(object):
@@ -721,14 +722,32 @@ class MultiEventFile(EventFile):
         grouped_error = {}
         for i,ff in enumerate(self.files):
             filename = ff.name
-            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
-            group = Pdir.split("_")[0][1:]
-            if group in grouped_cross:
-                grouped_cross[group] += self.allcross[i]
-                grouped_error[group] += self.error[i]**2 
+            from_init = False
+            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')]
+            if Pdir:
+                Pdir = Pdir[-1]
+                group = Pdir.split("_")[0][1:]
+                if not group.isdigit():
+                    from_init = True  
             else:
-                grouped_cross[group] = self.allcross[i]
-                grouped_error[group] = self.error[i]**2                
+                from_init = True
+
+            if not from_init:
+                if group in grouped_cross:
+                    grouped_cross[group] += self.allcross[i]
+                    grouped_error[group] += self.error[i]**2 
+                else:
+                    grouped_cross[group] = self.allcross[i]
+                    grouped_error[group] = self.error[i]**2
+            else:
+                ban = banner_mod.Banner(ff.banner)
+                for line in  ban['init']:
+                    splitline = line.split()
+                    if len(splitline)==4:
+                        cross, error, wgt, group = splitline
+                        grouped_cross[int(group)] += cross
+                        grouped_error[int(group)] += error**2                        
+                
                 
         nb_group = len(grouped_cross)
         
@@ -881,6 +900,9 @@ class MultiEventFile(EventFile):
             new_wgt = sum(self.across)/opts['event_target']
             self.define_init_banner(new_wgt)
             self.written_weight = new_wgt
+        elif 'write_init' in opts and opts['write_init']:
+            self.define_init_banner(0)
+            del opts['write_init']
 
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
@@ -1133,6 +1155,7 @@ class Event(list):
                     self.loweight['n_qcd'] = int(nqcd)
                     self.loweight['ren_scale'] = float(scale)
                 elif '<pdfrwt beam="1"' in line:
+                    print "1158", line
                     args = line.split()
                     self.loweight['n_pdfrw1'] = int(args[2])
                     npdf = self.loweight['n_pdfrw1']
@@ -1146,6 +1169,12 @@ class Event(list):
                     self.loweight['pdf_pdg_code2'] = [int(i) for i in args[3:3+npdf]]
                     self.loweight['pdf_x2'] = [float(i) for i in args[3+npdf:3+2*npdf]]
                     self.loweight['pdf_q2'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
+                elif '<asrwt>' in line:
+                    args = line.replace('>','> ').split()
+                    print args
+                    nalps = int(args[1])
+                    self.loweight['asrwt'] = [float(a) for a in args[2:2+nalps]] 
+                    
                 elif 'totfact' in line:
                     args = line.split() 
                     self.loweight['tot_fact'] = float(args[1])
@@ -1452,8 +1481,6 @@ class Event(list):
     
     def get_helicity(self, get_order, allow_reversed=True):
         """return a list with the helicities in the order asked for"""
-
-        
         
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
@@ -1819,7 +1846,7 @@ class FourMomentum(object):
             py = obj.py
             pz = obj.pz
             E = obj.E
-        elif isinstance(obj, list):
+        elif isinstance(obj, (list, tuple)):
             assert len(obj) ==4
             E = obj[0]
             px = obj[1]
@@ -1925,6 +1952,9 @@ class FourMomentum(object):
     def __repr__(self):
         return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
     
+    def get_tuple(self):
+        return (self.E, self.px, self.py,self.pz)
+    
     def boost(self, mom):
         """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
         the output is the 4-momenta in the frame of this 4-momenta
@@ -1942,6 +1972,36 @@ class FourMomentum(object):
                            pz=mom.pz + self.pz * lf)
         else:
             return FourMomentum(mom)
+
+    def zboost(self, pboost=None, E=0, pz=0):
+        """Both momenta should be in the same frame. 
+           The boost perform correspond to the boost required to set pboost at 
+           rest (only z boost applied).
+        """
+        if isinstance(pboost, FourMomentum):
+            E = pboost.E
+            pz = pboost.pz
+        
+        #beta = pz/E
+        gamma = E / math.sqrt(E**2-pz**2)
+        gammabeta = pz  / math.sqrt(E**2-pz**2)
+        
+        out =  FourMomentum([gamma*self.E - gammabeta*self.pz,
+                            self.py,
+                            self.pz,
+                            gamma*self.pz - gammabeta*self.E])
+        
+        if abs(out.pz) < 1e-6 * out.E:
+            out.pz = 0
+        return out
+        
+        
+        
+        
+        
+        """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
+        the output is the 4-momenta in the frame of this 4-momenta
+        function copied from HELAS routine."""
                 
 
 class OneNLOWeight(object):

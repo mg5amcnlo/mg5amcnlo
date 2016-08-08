@@ -714,8 +714,9 @@ def make_all_html_results(cmd, folder_names = []):
     for P_comb in Presults:
         P_text += P_comb.get_html(run, unit, cmd.me_dir) 
         P_comb.compute_values()
-        #P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
-        #                                '%s_results.dat' % run))
+        if cmd.proc_characteristics['ninitial'] == 1:
+            P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
+                                           '%s_results.dat' % run))
 
     
     Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))   

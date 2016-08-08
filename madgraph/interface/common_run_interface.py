@@ -518,7 +518,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madevent = {'automatic_html_opening':True,
                         'notification_center':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
+                         'cluster_queue':None,
                          'cluster_time':None,
                          'cluster_size':100,
                          'cluster_memory':None,
@@ -2154,9 +2154,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cross = current['cross']
             error = current['error']
             self.results.add_run( new_run, self.run_card)
-            self.results.add_detail('nb_event', nb_event)
-            self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
-            self.results.add_detail('error', error * madspin_cmd.branching_ratio + cross * madspin_cmd.err_branching_ratio)
+            self.results.add_detail('nb_event', int(nb_event*madspin_cmd.efficiency))
+            self.results.add_detail('cross', madspin_cmd.cross)#cross * madspin_cmd.branching_ratio)
+            self.results.add_detail('error', madspin_cmd.error+ cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
@@ -2963,8 +2963,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         args = self.split_arg(line)
         # fix some formatting problem
-        if '=' in args[-1]:
-            arg1, arg2 = args.pop(-1).split('=')
+        if len(args)==1 and '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=',1)
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')

@@ -355,7 +355,7 @@ class Systematics(object):
     def get_id(self):
         
         if 'initrwgt' in self.banner:
-            pattern = re.compile('<weight id=\'([_\w]+)\'', re.S+re.I+re.M)
+            pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
             return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt'])])+1
         else:
             return 1
@@ -428,7 +428,6 @@ class Systematics(object):
         
         loinfo = event.parse_lo_weight()
 
-
         if dyn == -1:
             mur = loinfo['ren_scale']
             muf1 = loinfo['pdf_q1'][-1]
@@ -448,21 +447,28 @@ class Systematics(object):
             loinfo['pdf_q2'][-1] = mur
             
         
-            
         # MUR part
         wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
         wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1) 
         wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2) 
         
+        for scale in loinfo['asrwt']:
+            wgt *= pdf.alphasQ(Dalps*scale)
+        
+        print loinfo['n_pdfrw1']
         # ALS part
         for i in range(loinfo['n_pdfrw1']-1):
             scale = min(Dalps*loinfo['pdf_q1'][i], Dmuf*muf1)
+            if scale != Dmuf*muf1:
+                print 'use', Dalps
+            else: 
+                print Dalps*loinfo['pdf_q1'][i], Dmuf*muf1
             wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale)
             wgt /= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale)
 
         for i in range(loinfo['n_pdfrw2']-1):
-            scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf1)
+            scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf2)
             wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale)
             wgt /= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale)            
             
