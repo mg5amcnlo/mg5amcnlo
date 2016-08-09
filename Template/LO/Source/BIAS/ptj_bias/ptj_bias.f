@@ -11,8 +11,8 @@ C Schematically, the functional form of the enhancement is
 C    bias_wgt = [ptj(evt)/mean_ptj]^enhancement_power
 C ************************************************************
 C
-C The following lines are read by the python script to set the 
-C parameters if not present in the run_card.
+C The following lines are read by MG5aMC to set what are the 
+C relevant parameters for this bias module.
 C
 C  parameters = {'ptj_bias_target_ptj': 1000.0,
 C               'ptj_bias_enhancement_power': 4.0}
@@ -23,8 +23,8 @@ C
 C
 C Parameters
 C
-          include '../maxparticles.inc'          
-          include '../nexternal.inc'
+          include '../../maxparticles.inc'          
+          include '../../nexternal.inc'
 
 C
 C Arguments
@@ -64,9 +64,10 @@ C
      &                      is_heavy,is_a_onium,do_cuts
 
 C
-C    Setup the value of the parameter from the run_card    
+C    Setup the value of the parameters from the run_card    
 C
-      include 'bias.inc'
+      include '../bias.inc'
+
 C --------------------
 C BEGIN IMPLEMENTATION
 C --------------------

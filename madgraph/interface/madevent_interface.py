@@ -2501,15 +2501,25 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             
             # Ensure that the bias parameters has all the required input from the
             # run_card
-            if run_card['bias_module'].lower() not in ['dummy','None']:
-                if os.path.sep in run_card['bias_module']:
-                    raise Exception
-                else:
-                    path = pjoin(self.me_dir,'Source','BIAS','%s.f' % run_card['bias_module'])
+            if run_card['bias_module'].lower() not in ['dummy','none']:
+                # Using basename here means that the module will not be overwritten if already existing.
+                bias_module_path = pjoin(self.me_dir,'Source','BIAS',
+                                         os.path.basename(run_card['bias_module']))
+                if not os.path.isdir(bias_module_path):
+                    if not os.path.isdir(run_card['bias_module']):
+                        raise InvalidCmd("The bias module at '%s' cannot be found."%run_card['bias_module'])
+                    else:
+                        for mandatory_file in ['makefile','%s.f'%os.path.basename(run_card['bias_module'])]:
+                            if not os.path.isfile(pjoin(run_card['bias_module'],mandatory_file)):
+                                raise InvalidCmd("Could not find the mandatory file '%s' in bias module '%s'."%(
+                                                                         mandatory_file,run_card['bias_module']))
+                        shutil.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
+                                                                     os.path.basename(run_card['bias_module'])))
+                
                 #check expected parameters for the module.
                 default_bias_parameters = {}
                 start, last = False,False
-                for line in open(path):
+                for line in open(pjoin(bias_module_path,'%s.f'%os.path.basename(bias_module_path))):
                     if start and last:
                         break
                     if not start and not re.search('c\s*parameters\s*=\s*{',line, re.I):
@@ -4027,15 +4037,31 @@ Beware that this can be dangerous for local multicore runs.""")
         for name in [ 'all', '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
-        # Finally compile the bias module as well
-        if self.run_card['bias_module']!='None':
-            logger.debug("Compiling the bias module '%s'"%self.run_card['bias_module'])
+        bias_name = os.path.basename(self.run_card['bias_module'])
+        if bias_name.lower()=='none':
+            bias_name = 'dummy'
+
         # Check if it needs recompilation
-        if self.proc_characteristics['bias_module']!=self.run_card['bias_module']:
-            self.compile(arg=['clean'], cwd=os.path.join(self.me_dir, 'Source','BIAS'))
-            self.compile(arg=[self.run_card['bias_module']], 
-                                 cwd=os.path.join(self.me_dir, 'Source','BIAS'))
-            self.proc_characteristics['bias_module']=self.run_card['bias_module']
+        if self.proc_characteristics['bias_module']!=bias_name or \
+           self.proc_characteristics['bias_parameters'] !=str(sorted(self.run_card['bias_parameters'].items())) or \
+           not os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):
+            
+            # Finally compile the bias module as well
+            if self.run_card['bias_module']!='dummy':
+                logger.debug("Compiling the bias module '%s'"%bias_name)
+                # Verify the compatibility of the specified module
+                bias_module_valid = misc.Popen(['make','requirements'],
+                           cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+                if 'VALID' not in bias_module_valid.upper() or \
+                   'INVALID' in bias_module_valid.upper():
+                    raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
+                                                              (bias_name,bias_module_valid))
+            
+            self.compile(arg=['clean'], cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name))
+            self.compile(arg=[], cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name))
+            self.proc_characteristics['bias_module']=bias_name
+            self.proc_characteristics['bias_parameters']=str(sorted(self.run_card['bias_parameters'].items()))
             # Update the proc_characterstics file
             self.proc_characteristics.write(
                        pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 

@@ -2166,8 +2166,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         stored in make_opts_var"""
         make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
         
+        # Set some environment variables common to all interfaces
+        if not hasattr(self,'options') or not 'pythia8_path' in self.options or \
+           not self.options['pythia8_path'] or \
+           not os.path.isfile(pjoin(self.options['pythia8_path'],'bin','pythia8-config')):
+            self.make_opts_var['PYTHIA8_PATH']='NotInstalled'
+        else:
+            self.make_opts_var['PYTHIA8_PATH']=self.options['pythia8_path']
+
+        self.make_opts_var['MG5AMC_VERSION'] = misc.get_pkg_info()['version']
+
         return self.update_make_opts_full(make_opts, self.make_opts_var)
-        
 
     @staticmethod
     def update_make_opts_full(path, def_variables, keep_old=True):

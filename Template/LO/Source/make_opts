@@ -1,12 +1,18 @@
+# Defines the variable pertaining to MG5aMC environment
+PYTHIA8_PATH=NotInstalled
+MG5AMC_VERSION=SpecifiedByMG5aMCAtRunTime
 DEFAULT_F2PY_COMPILER=f2py
 DEFAULT_F_COMPILER=gfortran
-MACFLAG=-mmacosx-version-min=10.7
-DEFAULT_CPP_COMPILER=clang
-STDLIB=-lc++
-STDLIB_FLAG=-stdlib=libc++
+MACFLAG=
+DEFAULT_CPP_COMPILER=g++
+STDLIB=-lstdc++
+STDLIB_FLAG=
 #end_of_make_opts_variables
-# Rest of the makefile
 
+BIASLIBDIR=../../../lib/
+BIASLIBRARY=libbias.$(libext)
+
+# Rest of the makefile
 ifeq ($(origin FFLAGS),undefined)
 FFLAGS= -O -w -fbounds-check -fPIC
 #FFLAGS+= -g -fbounds-check -ffpe-trap=invalid,zero,overflow,underflow,denormal -Wall
@@ -91,3 +97,8 @@ else
 alfas_functions=alfas_functions
 llhapdf=
 endif
+
+# Helper function to check MG5 version
+define CHECK_MG5AMC_VERSION
+if [ $(shell echo $(MG5AMC_VERSION) | cut -f1 -d.) -gt $(1) ] || [[ ( $(shell echo $(MG5AMC_VERSION) | cut -f1 -d.) -eq $(1) && $(shell echo $(MG5AMC_VERSION) | cut -f2 -d.) -ge $(2) ) ]]; then echo 'OK'; else echo 'NOTOK';fi
+endef

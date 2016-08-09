@@ -8,7 +8,7 @@ C ************************************************************
 C
 C Parameters
 C
-          include '../nexternal.inc'
+          include '../../nexternal.inc'
 C
 C Arguments
 C
