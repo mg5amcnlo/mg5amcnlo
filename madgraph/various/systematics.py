@@ -24,6 +24,9 @@ import math
 import re
 import time
 
+class SystematicsError(Exception):
+    pass
+
 class Systematics(object):
     
     def __init__(self, input_file, output_file,
@@ -52,6 +55,20 @@ class Systematics(object):
         self.force_write_banner = bool(write_banner)
         self.orig_dyn = self.banner.get('run_card', 'dynamical_scale_choice')
         self.orig_pdf = self.banner.run_card.get_lhapdf_id()
+    
+        #check for beam
+        beam1, beam2 = self.banner.get_pdg_beam()
+        if abs(beam1) != 2212 and abs(beam2) != 2212:
+            raise SystematicsError, 'can only reweight proton beam'
+        elif abs(beam1) != 2212:
+            self.b1 = 0
+            self.b2 = beam2//2212
+        elif abs(beam2) != 2212:
+            self.b1 = beam1//2212
+            self.b2 = 0
+        else:             
+            self.b1 = beam1//2212
+            self.b2 = beam2//2212
     
         if isinstance(self.banner.run_card, banner_mod.RunCardLO):
             self.is_lo = True
@@ -398,29 +415,39 @@ class Systematics(object):
             
     def get_pdfQ(self, pdf, pdg, x, scale):
         
-        f = pdf.xfxQ(pdg, x, scale)
-        if f == 0 and pdf.memberID ==0:
-            pdfset = pdf.set()
-            allnumber= [p.xfxQ(pdg, x, scale) for p in pdfset.mkPDFs()]
-            f = pdfset.uncertainty(allnumber).central  
+        if pdg in [-21,-22]:
+            pdg = abs(pdg)
+        elif pdg == 0:
+            return 1
+        
+        f = pdf.xfxQ(pdg, x, scale)/x
+#        if f == 0 and pdf.memberID ==0:
+#            pdfset = pdf.set()
+#            allnumber= [p.xfxQ(pdg, x, scale) for p in pdfset.mkPDFs()]
+#            f = pdfset.uncertainty(allnumber).central /x
         return f
 
     def get_pdfQ2(self, pdf, pdg, x, scale):
-        
+
+        if pdg in [-21,-22]:
+            pdg = abs(pdg)
+        elif pdg == 0:
+            return 1
+                
         if (pdf, pdg,x,scale) in self.pdf:
             return self.pdf[(pdf, pdg,x,scale)]
-        f = pdf.xfxQ2(pdg, x, scale)
+        f = pdf.xfxQ2(pdg, x, scale)/x
         self.pdf[(pdf, pdg,x,scale)] = f
         return f        
-        if f == 0 and pdf.memberID ==0:
-            #print 'central pdf returns 0', pdg, x, scale
-            #print self.pdfsets
-            pdfset = pdf.set()
-            allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
-            f = pdfset.uncertainty(allnumber).central
-            f=1  
-        self.pdf[(pdf, pdg,x,scale)] = f
-        return f
+#        if f == 0 and pdf.memberID ==0:
+#            #print 'central pdf returns 0', pdg, x, scale
+#            #print self.pdfsets
+#            pdfset = pdf.set()
+#            allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
+#            f = pdfset.uncertainty(allnumber).central
+#            f=1  
+#        self.pdf[(pdf, pdg,x,scale)] = f
+#        return f
                 
     def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
         """ 
@@ -450,8 +477,8 @@ class Systematics(object):
         # MUR part
         wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
-        wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1) 
-        wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2) 
+        wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1) 
+        wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2) 
         
         for scale in loinfo['asrwt']:
             wgt *= pdf.alphasQ(Dalps*scale)
@@ -459,13 +486,13 @@ class Systematics(object):
         # ALS part
         for i in range(loinfo['n_pdfrw1']-1):
             scale = min(Dalps*loinfo['pdf_q1'][i], Dmuf*muf1)
-            wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale)
-            wgt /= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale)
+            wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale)
+            wgt /= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale)
 
         for i in range(loinfo['n_pdfrw2']-1):
             scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf2)
-            wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale)
-            wgt /= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale)            
+            wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale)
+            wgt /= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale)            
         
         return wgt
 
@@ -496,9 +523,9 @@ class Systematics(object):
                 tmp += onewgt.pwgt[1] * math.log(Dmur**2 * mur2/ Q2)
                 tmp += onewgt.pwgt[2] * math.log(Dmuf**2 * muf2/ Q2)
                 
-                tmp *= self.get_pdfQ2(pdf,onewgt.pdgs[0], onewgt.bjks[0],
+                tmp *= self.get_pdfQ2(pdf, self.b1*onewgt.pdgs[0], onewgt.bjks[0],
                                       Dmuf**2 * muf2)                             
-                tmp *= self.get_pdfQ2(pdf, onewgt.pdgs[1], onewgt.bjks[1],
+                tmp *= self.get_pdfQ2(pdf, self.b2*onewgt.pdgs[1], onewgt.bjks[1],
                                       Dmuf**2 * muf2)
                 tmp *= pdf.alphasQ2(Dmur**2*mur2)**onewgt.qcdpower
                 

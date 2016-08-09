@@ -220,6 +220,7 @@ class Banner(dict):
             new_data.append(line)
         self['init'] = '\n'.join(new_data)
     
+
     def scale_init_cross(self, ratio):
         """modify the init information with the associate scale"""
 
@@ -242,6 +243,15 @@ class Banner(dict):
                 (ratio*float(xsec), ratio* float(xerr), ratio*float(xmax), pid)
             new_data.append(line)
         self['init'] = '\n'.join(new_data)
+    
+    def get_pdg_beam(self):
+        """return the pdg of each beam"""
+        
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        pdg1,pdg2,_ = all_lines[0].split(None, 2)
+        return int(pdg1), int(pdg2)
     
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
