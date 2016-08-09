@@ -1155,7 +1155,6 @@ class Event(list):
                     self.loweight['n_qcd'] = int(nqcd)
                     self.loweight['ren_scale'] = float(scale)
                 elif '<pdfrwt beam="1"' in line:
-                    print "1158", line
                     args = line.split()
                     self.loweight['n_pdfrw1'] = int(args[2])
                     npdf = self.loweight['n_pdfrw1']
@@ -1171,7 +1170,6 @@ class Event(list):
                     self.loweight['pdf_q2'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
                 elif '<asrwt>' in line:
                     args = line.replace('>','> ').split()
-                    print args
                     nalps = int(args[1])
                     self.loweight['asrwt'] = [float(a) for a in args[2:2+nalps]] 
                     

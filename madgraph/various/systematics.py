@@ -414,7 +414,7 @@ class Systematics(object):
         return f        
         if f == 0 and pdf.memberID ==0:
             #print 'central pdf returns 0', pdg, x, scale
-            print self.pdfsets
+            #print self.pdfsets
             pdfset = pdf.set()
             allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
             f = pdfset.uncertainty(allnumber).central
@@ -456,14 +456,9 @@ class Systematics(object):
         for scale in loinfo['asrwt']:
             wgt *= pdf.alphasQ(Dalps*scale)
         
-        print loinfo['n_pdfrw1']
         # ALS part
         for i in range(loinfo['n_pdfrw1']-1):
             scale = min(Dalps*loinfo['pdf_q1'][i], Dmuf*muf1)
-            if scale != Dmuf*muf1:
-                print 'use', Dalps
-            else: 
-                print Dalps*loinfo['pdf_q1'][i], Dmuf*muf1
             wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i], scale)
             wgt /= self.get_pdfQ(pdf, loinfo['pdf_pdg_code1'][i], loinfo['pdf_x1'][i+1], scale)
 
@@ -471,7 +466,7 @@ class Systematics(object):
             scale = min(Dalps*loinfo['pdf_q2'][i], Dmuf*muf2)
             wgt *= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i], scale)
             wgt /= self.get_pdfQ(pdf, loinfo['pdf_pdg_code2'][i], loinfo['pdf_x2'][i+1], scale)            
-            
+        
         return wgt
 
     def get_nlo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
