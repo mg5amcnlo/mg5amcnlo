@@ -23,12 +23,18 @@ C
 C Mandatory common block to be defined in bias modules
 C
           double precision stored_bias_weight
-          logical impact_xsec
-          data stored_bias_weight/1.0d0/
+          data stored_bias_weight/1.0d0/          
+          logical impact_xsec, requires_full_event_info
 C         Not impacting the xsec since the bias is 1.0. Therefore
 C         bias_wgt will not be written in the lhe event file.
+C         Setting it to .True. makes sure that it will not be written.
           data impact_xsec/.True./
-          common/bias/stored_bias_weight,impact_xsec
+C         Of course this module does not require the full event
+C         information (color, resonances, helicities, etc..)
+          data requires_full_event_info/.False./ 
+          common/bias/stored_bias_weight,impact_xsec,
+     &                requires_full_event_info
+
 C --------------------
 C BEGIN IMPLEMENTATION
 C --------------------

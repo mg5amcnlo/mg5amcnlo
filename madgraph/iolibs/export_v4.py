@@ -426,6 +426,8 @@ class ProcessExporterFortran(object):
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxparticles.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/run_config.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/lhe_event_infos.inc', self.dir_path + '/SubProcesses', log=False)
+        
 
     #===========================================================================
     # export the helas routine
@@ -3423,6 +3425,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'maxconfigs.inc',
                      'maxparticles.inc',
                      'run_config.inc',
+                     'lhe_event_infos.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',

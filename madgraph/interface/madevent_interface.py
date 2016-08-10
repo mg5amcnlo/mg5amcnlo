@@ -4041,36 +4041,33 @@ Beware that this can be dangerous for local multicore runs.""")
         if bias_name.lower()=='none':
             bias_name = 'dummy'
 
-        # Check if it needs recompilation
-        if self.proc_characteristics['bias_module']!=bias_name or \
-           self.proc_characteristics['bias_parameters'] !=str(sorted(self.run_card['bias_parameters'].items())) or \
-           not os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):
+        if self.proc_characteristics['bias_module']!=bias_name and \
+             os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):
+                os.remove(pjoin(self.me_dir, 'lib','libbias.a'))
             
-            # Finally compile the bias module as well
-            if self.run_card['bias_module']!='dummy':
-                logger.debug("Compiling the bias module '%s'"%bias_name)
-                # Verify the compatibility of the specified module
-                bias_module_valid = misc.Popen(['make','requirements'],
-                           cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
-                if 'VALID' not in bias_module_valid.upper() or \
-                   'INVALID' in bias_module_valid.upper():
-                    raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
-                                                              (bias_name,bias_module_valid))
-            
-            self.compile(arg=['clean'], cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name))
-            self.compile(arg=[], cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name))
-            self.proc_characteristics['bias_module']=bias_name
-            self.proc_characteristics['bias_parameters']=str(sorted(self.run_card['bias_parameters'].items()))
-            # Update the proc_characterstics file
-            self.proc_characteristics.write(
-                       pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 
-            # Make sure that madevent will be recompiled
-            subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
-                                                                 'subproc.mg'))]
-            for nb_proc,subdir in enumerate(subproc):
-                Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
-                self.compile(['clean'], cwd=Pdir)
+        # Finally compile the bias module as well
+        if self.run_card['bias_module']!='dummy':
+            logger.debug("Compiling the bias module '%s'"%bias_name)
+            # Verify the compatibility of the specified module
+            bias_module_valid = misc.Popen(['make','requirements'],
+                       cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+            if 'VALID' not in bias_module_valid.upper() or \
+               'INVALID' in bias_module_valid.upper():
+                raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
+                                                          (bias_name,bias_module_valid))
+        
+        self.compile(arg=[], cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name))
+        self.proc_characteristics['bias_module']=bias_name
+        # Update the proc_characterstics file
+        self.proc_characteristics.write(
+                   pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 
+        # Make sure that madevent will be recompiled
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                             'subproc.mg'))]
+        for nb_proc,subdir in enumerate(subproc):
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
+            self.compile(['clean'], cwd=Pdir)
 
     ############################################################################
     ##  HELPING ROUTINE

@@ -1184,7 +1184,6 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('grouped_matrix', True)
         self.add_param('has_loops', False)
         self.add_param('bias_module','None')
-        self.add_param('bias_parameters', 'None')
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

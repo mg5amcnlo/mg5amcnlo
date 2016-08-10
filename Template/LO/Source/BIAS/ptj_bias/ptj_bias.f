@@ -49,10 +49,15 @@ C
 C Mandatory common block to be defined in bias modules
 C
           double precision stored_bias_weight
-          logical impact_xsec
-          data stored_bias_weight/1.0d0/
+          data stored_bias_weight/1.0d0/          
+          logical impact_xsec, requires_full_event_info
+C         We only want to bias distributions, but not impact the xsec. 
           data impact_xsec/.False./
-          common/bias/stored_bias_weight,impact_xsec
+C         Of course this module does not require the full event
+C         information (color, resonances, helicities, etc..)
+          data requires_full_event_info/.False./ 
+          common/bias/stored_bias_weight,impact_xsec,
+     &                requires_full_event_info
 C
 C Accessingt the details of the event
 C
