@@ -1147,7 +1147,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # check that we have define the input
         if len(args) == 0:
             if self.run_name:
-                args[0] = run_name
+                args[0] = self.run_name
             else:
                 raise self.InvalidCmd, 'no default run. Please specify the run_name'
         
@@ -1176,7 +1176,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         input = args[0]
         if len(args)>1:
-            outut = pjoin(os.getcwd(),args[1])
+            output = pjoin(os.getcwd(),args[1])
         else:
             output = input
     
@@ -1184,17 +1184,109 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             opts.remove('--from_card')
             opts.append('--from_card=internal')
         
+        if self.options['run_mode'] ==2:
+            nb_submit = min(self.options['nb_core'], nb_event//2500)
+        elif self.options['run_mode'] ==1:
+            nb_submit = min(self.options['cluster_size'], nb_event//25000)
+        else:
+            nb_submit =1 
+
+        if MADEVENT:
+            import internal.various.systematics as systematics
+        else:
+            import madgraph.various.systematics as systematics
+        
         #one core:
-        if True:
-            if MADEVENT:
-                import internal.various.systematics as systematics
-            else:
-                import madgraph.various.systematics as systematics
-            
+        if nb_submit == 1:
             systematics.call_systematics([input, output] + opts, 
                                          log=lambda x: logger.info(str(x)),
                                          result=result_file
                                          )
+            
+        elif self.options['run_mode'] in [1,2]:
+            # cluster and multi-core mode
+            if self.options['run_mode'] ==2:
+                nb_submit = min(self.options['nb_core'], nb_event//2500)
+            elif self.options['run_mode'] ==2:
+                nb_submit = min(self.options['cluster_size'], nb_event//25000)
+            event_per_job = nb_event // nb_submit
+            nb_job_with_plus_one = nb_event % nb_submit
+            start_event, stop_event = 0,0
+            for i in range(nb_submit):
+                #computing start/stop event
+                event_requested = event_per_job
+                if i < nb_job_with_plus_one:
+                    event_requested += 1
+                start_event = stop_event
+                stop_event = start_event + event_requested
+                    
+                prog = sys.executable
+                input_files = [os.path.basename(input)]
+                output_files = ['./tmp_%s_%s' % (i, os.path.basename(output)),
+                                './log_sys_%s.txt' % (i)]
+                argument =  [pjoin(self.me_dir, 'bin', 'internal', 'systematics.py'),
+                             input_files[0], output_files[0]] + opts +\
+                             ['--start_event=%i' % start_event,
+                              '--stop_event=%i' %stop_event,
+                              '--result=./log_sys_%s.txt' %i]
+                required_output = output             
+                self.cluster.cluster_submit(prog, argument, 
+                                            input_files=input_files,
+                                            output_files=output_files,
+                                            cwd=os.path.dirname(output),
+                                            required_output=required_output,
+                                            stdout='/dev/null'
+                                            )
+            starttime = time.time()
+            update_status = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, 'parton'), level=None,
+                                       force=False, starttime=starttime)
+            self.cluster.wait(os.path.dirname(output), update_status, update_status)
+            
+            #collect the data
+            all_cross = []
+            for i in range(nb_submit):
+                pos=0
+                for line in open(pjoin(os.path.dirname(output), 'log_sys_%s.txt'%i)):
+                    if line.startswith('#'):
+                        continue
+                    split = line.split()
+                    if len(split) in [0,1]:
+                        continue
+                    key = tuple(float(x) for x in split[:-1])
+                    cross= float(split[-1])
+                    if 'event_norm' in self.run_card and \
+                        self.run_card['event_norm'] in ['average', 'unity']:
+                        cross *= (event_per_job+1 if i <nb_job_with_plus_one else event_per_job)
+                    if len(all_cross) > pos:
+                        all_cross[pos] += cross
+                    else:
+                        all_cross.append(cross)
+                    pos+=1
+                        
+            if 'event_norm' in self.run_card and \
+               self.run_card['event_norm'] in ['average', 'unity']:
+                all_cross= [cross/nb_event for cross in all_cross]
+                    
+            sys_obj = systematics.call_systematics([input, None] + opts, 
+                                         log=lambda x: logger.info(str(x)),
+                                         result=result_file,
+                                         running=False
+                                         )                    
+            sys_obj.print_cross_sections(all_cross, nb_event, result_file)
+            
+            #concatenate the output file
+            subprocess.call(['cat']+\
+                            ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
+                            stdout=open(output,'w'),
+                            cwd=os.path.dirname(output))
+            for i in range(nb_submit):
+                os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
+                os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
+                                                  
+
+            
+            
 
         self.update_status('End of systematics computation', level='parton', makehtml=False)
         

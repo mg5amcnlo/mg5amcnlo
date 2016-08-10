@@ -15,7 +15,13 @@
 from __future__ import division
 if __name__ == "__main__":
     import sys
-    sys.path.append('../../')
+    import os
+    root = os.path.dirname(__file__)
+    if os.path.basename(root) == 'internal':
+        sys.path.append(os.path.dirname(root))
+    else:
+        sys.path.append(os.path.dirname(os.path.dirname(root)))
+        
 import lhe_parser
 import banner
 import banner as banner_mod
@@ -52,15 +58,17 @@ class Systematics(object):
             self.input = lhe_parser.EventFile(input_file)
         else:
             self.input = input_file
-        if isinstance(output_file, str):
-            if output_file == input_file:
-                directory,name = os.path.split(output_file)
-                new_name = pjoin(directory, '.tmp_'+name)
-                self.output =  lhe_parser.EventFile(new_name, 'w')
+        self.output_path = output_file
+        if output_file != None:
+            if isinstance(output_file, str):
+                if output_file == input_file:
+                    directory,name = os.path.split(output_file)
+                    new_name = pjoin(directory, '.tmp_'+name)
+                    self.output =  lhe_parser.EventFile(new_name, 'w')
+                else:
+                    self.output =  lhe_parser.EventFile(output_file, 'w')
             else:
-                self.output =  lhe_parser.EventFile(output_file, 'w')
-        else:
-            self.output = output_file
+                self.output = output_file
         self.log = log
         
         #get some information from the run_card.
@@ -205,8 +213,13 @@ class Systematics(object):
             self.output.write(str(event))
         else:
             self.output.write('</LesHouchesEvents>\n')
-        
+        self.output.close()
         self.print_cross_sections(all_cross, min(i,self.stop_event)-self.start_event, stdout)
+        
+        if self.output.name != self.output_path:
+            import shutil
+            shutil.move(self.output.name, self.output_path)
+        
         return all_cross
         
     def print_cross_sections(self, all_cross, nb_event, stdout):
@@ -394,7 +407,7 @@ class Systematics(object):
                 info += 'alpsfact=%s ' % alps
             if dyn!=-1.:
                 tag += 'DYN_SCALE="%s" ' % dyn
-                info += 'dyn_scale_choise=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
+                info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
             if pdf != self.orig_pdf:
                 tag += 'LHAPDF="%s" ' % pdf.lhapdfID
@@ -584,7 +597,8 @@ class Systematics(object):
         return wgt
                             
 
-def call_systematics(args, result=sys.stdout, log=lambda x:sys.stdout.write(str(x)+'\n')):
+def call_systematics(args, result=sys.stdout, running=True,
+                     log=lambda x:sys.stdout.write(str(x)+'\n')):
     """calling systematics from a list of arguments"""            
 
     input, output = args[0:2]
@@ -599,6 +613,8 @@ def call_systematics(args, result=sys.stdout, log=lambda x:sys.stdout.write(str(
                     opts[key].append(tuple(values))
                 else:
                     opts[key]=[tuple(values)]
+            elif key == 'result':
+                result = open(values[0],'w')
             elif key in ['start_event', 'stop_event']:
                 opts[key] = int(values[0])
             elif key == 'write_banner':
@@ -650,7 +666,9 @@ def call_systematics(args, result=sys.stdout, log=lambda x:sys.stdout.write(str(
 
     
     obj = Systematics(input, output, log=log,**opts)
-    obj.run(result)  
+    if running:
+        obj.run(result)  
+    return obj
 
 if __name__ == "__main__":
     call_systematics(sys.argv[1:])
