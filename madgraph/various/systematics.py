@@ -17,12 +17,18 @@ if __name__ == "__main__":
     import sys
     sys.path.append('../../')
 import lhe_parser
+import banner
 import banner as banner_mod
 import itertools
 import misc
 import math
+import os 
 import re
+import sys
 import time
+import StringIO
+
+pjoin = os.path.join
 
 class SystematicsError(Exception):
     pass
@@ -37,7 +43,8 @@ class Systematics(object):
                  pdf='errorset', #[(id, subset)]
                  dyn=[-1],
                  together=[('mur', 'muf')],
-                 lhapdf_config=misc.which('lhapdf-config')
+                 lhapdf_config=misc.which('lhapdf-config'),
+                 log=lambda x: sys.stdout.write(str(x)+'\n')
                  ):
         
         # INPUT/OUTPUT FILE
@@ -46,10 +53,16 @@ class Systematics(object):
         else:
             self.input = input_file
         if isinstance(output_file, str):
-            self.output =  lhe_parser.EventFile(output_file, 'w')
+            if output_file == input_file:
+                directory,name = os.path.split(output_file)
+                new_name = pjoin(directory, '.tmp_'+name)
+                self.output =  lhe_parser.EventFile(new_name, 'w')
+            else:
+                self.output =  lhe_parser.EventFile(output_file, 'w')
         else:
             self.output = output_file
-            
+        self.log = log
+        
         #get some information from the run_card.
         self.banner = banner_mod.Banner(self.input.banner)  
         self.force_write_banner = bool(write_banner)
@@ -101,10 +114,9 @@ class Systematics(object):
         self.start_event=int(start_event)
         self.stop_event=int(stop_event)
         if start_event != 0:
-            print "starting from event #%s" % start_event    
+            self.log( "starting from event #%s" % start_event)
         if stop_event != sys.maxint:
-            print "stoping at event #%s" % stop_event          
-            
+            self.log( "stoping at event #%s" % stop_event)
         # LHAPDF set 
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
         lhapdf.setVerbosity(0)
@@ -144,12 +156,11 @@ class Systematics(object):
                 break
         else:
             self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
-        print "# events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID )             
-                    
+        self.log( "# events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
         # create all the function that need to be called
         self.get_all_fct() # define self.fcts and self.args
 
-    def run(self):
+    def run(self, stdout=sys.stdout):
         """ """
         start_time = time.time()
         if self.start_event == 0 or self.force_write_banner:
@@ -169,11 +180,11 @@ class Systematics(object):
                 break
             if self.is_lo:
                 if (i-self.start_event)>=0 and (i-self.start_event) % 2500 ==0:
-                    print '# currently at event', i, 'run in %.2g s' % (time.time()-start_time)
+                    self.log( '# currently at event %s [ellapsed time: %.2g s]' % (i, time.time()-start_time))
             else:
                 if (i-self.start_event)>=0 and (i-self.start_event) % 1000 ==0:
-                    print '# currently at event', i, 'run in %.2g s' % (time.time()-start_time)                
-            
+                    self.log( '# currently at event %i [ellapsed time: %.2g s]' % (i, time.time()-start_time))
+                    
             self.new_event() #re-init the caching of alphas/pdf
             if self.is_lo:
                 wgts = [self.get_lo_wgt(event, *arg) for arg in self.args]
@@ -195,10 +206,10 @@ class Systematics(object):
         else:
             self.output.write('</LesHouchesEvents>\n')
         
-        self.print_cross_sections(all_cross, min(i,self.stop_event)-self.start_event)
+        self.print_cross_sections(all_cross, min(i,self.stop_event)-self.start_event, stdout)
         return all_cross
         
-    def print_cross_sections(self, all_cross, nb_event):
+    def print_cross_sections(self, all_cross, nb_event, stdout):
         """print the cross-section."""
         
         norm = self.banner.get('run_card', 'event_norm', default='sum')
@@ -207,9 +218,10 @@ class Systematics(object):
     
         max_scale, min_scale = 0,sys.maxint
         max_alps, min_alps = 0, sys.maxint
-        max_other, min_other = 0,sys.maxint
+        max_dyn, min_dyn = 0,sys.maxint
         pdfs = {}
-        
+        dyns = {} # dyn : {'max': , 'min':}
+
         if norm == 'sum':
             norm = 1
         elif norm == 'average':
@@ -218,58 +230,96 @@ class Systematics(object):
             norm = 1
             
         all_cross = [c*norm for c in all_cross]
-        print "# mur\t\tmuf\t\talpsfact\tdynamical_scale\tpdf\t\tcross-section"
+        stdout.write("# mur\t\tmuf\t\talpsfact\tdynamical_scale\tpdf\t\tcross-section\n")
         for i,arg in enumerate(self.args):
             
             to_print = list(arg)
             to_print[4] = to_print[4].lhapdfID
-            to_print.append(all_cross[i])    
-            print '%s\t\t%s\t\t%s\t\t%s\t\t%s\t\t%s' % tuple(to_print) 
+            to_print.append(all_cross[i])  
+            to_report = []  
+            stdout.write('%s\t\t%s\t\t%s\t\t%s\t\t%s\t\t%s\n' % tuple(to_print)) 
             
             mur, muf, alps, dyn, pdf = arg[:5]
-            if pdf == self.orig_pdf and alps ==1 and (mur!=1 or muf!=1 or dyn!=-1):
+            if pdf == self.orig_pdf and (dyn==self.orig_dyn or dyn==-1)\
+                                              and (mur!=1 or muf!=1 or alps!=1):
                 max_scale = max(max_scale,all_cross[i])
                 min_scale = min(min_scale,all_cross[i])
-            elif pdf == self.orig_pdf and mur==1 and muf==1 and dyn==-1 and alps!=1:
+            if pdf == self.orig_pdf and mur==1 and muf==1 and \
+                                    (dyn==self.orig_dyn or dyn==-1) and alps!=1:
                 max_alps = max(max_alps,all_cross[i])
-                min_alps = min(min_alps,all_cross[i])                
-            elif alps==1 and mur==1 and muf==1 and dyn==-1:
+                min_alps = min(min_alps,all_cross[i]) 
+            
+            if pdf == self.orig_pdf and mur==1 and muf==1 and alps==1:
+                max_dyn = max(max_dyn,all_cross[i])
+                min_dyn = min(min_dyn,all_cross[i])
+                                            
+            if pdf == self.orig_pdf and (alps!=1 or mur!=1 or muf!=1) and \
+                                                (dyn!=self.orig_dyn or dyn!=-1):
+                if dyn not in dyns:
+                    dyns[dyn] = {'max':0, 'min':sys.maxint,'central':0}
+                curr = dyns[dyn]
+                curr['max'] = max(curr['max'],all_cross[i])
+                curr['min'] = min(curr['min'],all_cross[i])
+            if pdf == self.orig_pdf and (alps==1 and mur==1 and muf==1) and \
+                                                (dyn!=self.orig_dyn or dyn!=-1):
+                if dyn not in dyns:
+                    dyns[dyn] = {'max':0, 'min':sys.maxint,'central':all_cross[i]}
+                else:
+                    dyns[dyn]['central'] = all_cross[i]          
+                
+            if alps==1 and mur==1 and muf==1 and (dyn==self.orig_dyn or dyn==-1):
                 pdfset = pdf.set()
                 if pdfset.lhapdfID in self.pdfsets:
                     if pdfset.lhapdfID not in pdfs :
                         pdfs[pdfset.lhapdfID] = [0] * pdfset.size
                     pdfs[pdfset.lhapdfID][pdf.memberID] = all_cross[i]
                 else:
-                    max_other = max(max_other, all_cross[i])
-                    min_other = min(min_other, all_cross[i])                     
-            else:
-                max_other = max(max_other, all_cross[i])
-                min_other = min(min_other, all_cross[i])                 
-        print 
-        print '#*****************************************************************'
-        print "#"
-        print '# original cross-section:', all_cross[0]
+                    to_report.append('#PDF %s : %s' % (pdf, all_cross[i]))
+  
+        stdout.write('\n') 
+                
+        resume = StringIO.StringIO()
+                
+        resume.write( '#***************************************************************************\n')
+        resume.write( "#\n")
+        resume.write( '# original cross-section: %s\n' % all_cross[0])
         if max_scale:
-            print '# scale variation: +%2.3g%% -%2.3g%%' % ((max_scale-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_scale)/all_cross[0]*100) 
+            resume.write( '#     scale variation: +%2.3g%% -%2.3g%%\n' % ((max_scale-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_scale)/all_cross[0]*100))
         if max_alps:
-            print '# emission scale variation: +%2.3g%% -%2.3g%%' % ((max_alps-all_cross[0])/all_cross[0]*100,(max_alps-min_scale)/all_cross[0]*100) 
-        for lhapdfid,values in pdfs.items():
+            resume.write( '#     emission scale variation: +%2.3g%% -%2.3g%%\n' % ((max_alps-all_cross[0])/all_cross[0]*100,(max_alps-min_scale)/all_cross[0]*100))
+        if max_dyn and (max_dyn!= all_cross[0] or min_dyn != all_cross[0]):
+            resume.write( '#     central scheme variation: +%2.3g%% -%2.3g%%\n' % ((max_dyn-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_dyn)/all_cross[0]*100))
+        if self.orig_pdf.lhapdfID in pdfs:
+            lhapdfid = self.orig_pdf.lhapdfID
+            values = pdfs[lhapdfid]
             pdfset = self.pdfsets[lhapdfid]
             pdferr =  pdfset.uncertainty(values)
+            resume.write( '#     PDF variation: +%2.3g%% -%2.3g%%\n' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))       
+        # report error/central not directly linked to the central
+        resume.write( "#\n")        
+        for lhapdfid,values in pdfs.items():
             if lhapdfid == self.orig_pdf.lhapdfID:
-                print '# PDF variation: +%2.3g%% -%2.3g%%' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0])
+                continue
+            pdfset = self.pdfsets[lhapdfid]
+            pdferr =  pdfset.uncertainty(values)
+            resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
+
+        dyn_name = {1: '\sum ET', 2:'\sum\sqrt{m^2+pt^2}', 3:'0.5 \sum\sqrt{m^2+pt^2}',4:'\sqrt{\hat s}' }
+        for key, curr in dyns.items():
+            central, maxvalue, minvalue = curr['central'], curr['max'], curr['min']
+            if maxvalue == 0:
+                resume.write("# dynamical scheme # %s : %g # %s\n" %(key, central, dyn_name[key]))
             else:
-                print '#PDF %s: %s +%2.3g%% -%2.3g%%' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0])
-        if max_other:
-            print '# Other variation: +%2.3g%% -%2.3g%%' % ((max_other-all_cross[0])/all_cross[0]*100,(all_cross[0]-min_other)/all_cross[0]*100) 
-        print "#"            
-        print '#*****************************************************************'
-                
-        
+                resume.write("# dynamical scheme # %s : %g +%2.3g%% -%2.3g%% # %s\n" %(key, central, (maxvalue-central)/central*100,(central-minvalue)/central*100, dyn_name[key]))
+      
+        resume.write('\n'.join(to_report))
 
-
-
-
+        resume.write( '#***************************************************************************\n')
+    
+        stdout.write(resume.getvalue())
+        self.log(resume.getvalue())
+    
+    
     def write_banner(self, fsock):
         """create the new banner with the information of the weight"""
 
@@ -405,7 +455,7 @@ class Systematics(object):
         
         self.args = [default]+ [arg for arg in all_args if arg!= default]
 
-        print "#Will Compute %s weights per event." % (len(self.args)-1)
+        self.log( "#Will Compute %s weights per event." % (len(self.args)-1))
         return
     
     def new_event(self):
@@ -533,14 +583,13 @@ class Systematics(object):
                 
         return wgt
                             
-            
-        
 
-if __name__ == "__main__":
-    
-    input, output = sys.argv[1:3]
+def call_systematics(args, result=sys.stdout, log=lambda x:sys.stdout.write(str(x)+'\n')):
+    """calling systematics from a list of arguments"""            
+
+    input, output = args[0:2]
     opts = {}
-    for arg in sys.argv[3:]:
+    for arg in args[2:]:
         if '=' in arg:
             key,values= arg.split('=')
             key = key.replace('-','')
@@ -560,11 +609,53 @@ if __name__ == "__main__":
                 else:
                     opts[key] = values
         else:
-            print "unknow argument", arg
-            sys.exit(1)
+            raise SystematicsError, "unknow argument", arg
+
+    #load run_card and extract parameter if needed.
+    if 'from_card' in opts:
+        if opts['from_card'] != ['internal']:
+            card = banner.RunCard(opts['from_card'][0])
+        else:
+            lhe = lhe_parser.EventFile(input)
+            card = banner.RunCard(banner.Banner(lhe.banner)['mgruncard'])
+            lhe.close()
+            
+        if isinstance(card, banner.RunCardLO):
+            # LO case
+            opts['mur'] = [float(x) for x in card['sys_scalefact'].split()]
+            opts['muf'] = opts['mur']
+            if card['sys_alpsfact'] != 'None':
+                opts['alps'] = [float(x) for x in card['sys_alpsfact'].split()]
+            else:
+                opts['alps'] = [1.0]
+            opts['together'] = [('mur','muf','alps','dyn')]
+            pdfs =  card['sys_pdf'].split('&&')
+            opts['dyn'] = [-1,1,2,3,4]
+            opts['pdf'] = []
+            for pdf in pdfs:
+                split = pdf.split()
+                if len(split)==1:
+                    opts['pdf'].append('%s@*' %pdf)
+                else:
+                    pdf,nb = split
+                    for i in range(int(nb)):
+                        opts['pdf'].append('%s@%s' % (pdf, nb))
+            if not opts['pdf']:
+                opts['pdf'] = 'central'
+        else:
+            #NLO case
+            raise Exception
+        del opts['from_card']
     
-    obj = Systematics(input, output, **opts)
-    obj.run()
+
+    
+    obj = Systematics(input, output, log=log,**opts)
+    obj.run(result)  
+
+if __name__ == "__main__":
+    call_systematics(sys.argv[1:])
+   
+   
         
         
         

@@ -68,6 +68,7 @@ except ImportError:
     import internal.files as files
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.lhe_parser as lhe_parser
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True    
 else:
@@ -78,6 +79,7 @@ else:
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
+    import madgraph.various.lhe_parser as lhe_parser
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
@@ -1076,7 +1078,127 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Dummy routine, to be overwritten by daughter classes"""
 
         pass
+
+    ############################################################################
+    def help_systematics(self):
+        """help for systematics command"""
+        logger.info("syntax: systematics RUN_NAME [OUTPUT] [options]",'$MG:color:BLACK')
+        logger.info("-- Run the systematics run on the run_name run.")
+        logger.info("   RUN_NAME can be a path to a lhef file.")
+        logger.info("   OUTPUT can be the path to the output lhe file. we overwritte the input file otherwise") 
+        logger.info("")
+        logger.info("options: (value written are default)", '$MG:color:BLACK')
+        logger.info("")
+        logger.info("   --mur=0.5,1,2 # specify the values for renormalisation scale variation")
+        logger.info("   --muf=0.5,1,2 # specify the values for factorisation scale variation")
+        logger.info("   --alps=1      # specify the values for MLM emission scale variation")
+        logger.info("   --dyn=-1      # specify the dynamical schemes to use.")
+        logger.info("                 #   -1 is the one used by the sample.")
+        logger.info("                 #   > 0 correspond to options of dynamical_scale_choice of the run_card.")
+        logger.info("   --pdf=errorset# specify the pdfs to use for pdf variation.")
+        logger.info("   --together=mur,muf # which parameter should we vary together to have all uncorrelated combination of the variations")
+        logger.info("   --from_card        # use the information from the run_card.")
+        
+     
+    def complete_systematics(self, text, line, begidx, endidx):
+        """auto completion for the systematics command"""
+ 
+        args = self.split_arg(line[0:begidx], error=False)
+        options = ['--mur=', '--muf=', '--pdf=', '--dyn=','--alps=','--together=','--from_card ']
+        
+        if len(args) == 1 and os.path.sep not in text:
+            #return valid run_name
+            data = misc.glob(pjoin('*','*events.lhe*'), pjoin(self.me_dir, 'Events'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data, line)
+        elif len(args)==1:
+            #logger.warning('1args')
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        elif len(args)==2 and os.path.sep in args[1]:
+            #logger.warning('2args %s', args[1])
+            return self.path_completion(text, '.')
+              
+        elif not line.endswith(tuple(options)):
+            return self.list_completion(text, options)
+        
+         
+    ############################################################################
+    def do_systematics(self, line):
+        """ syntax: 'systematics [INPUT [OUTPUT]] OPTIONS'
+            --mur=0.5,1,2
+            --muf=0.5,1,2
+            --alps=1
+            --dyn=-1
+            --todether=mur,muf #can be repeated
+            
+            #special options
+            --from_card=
+        """
     
+        self.update_status('Running Systematic computation', level='parton')
+        args = self.split_arg(line)
+        #split arguments and option
+        opts= []
+        args = [a for a in args if not a.startswith('-') or opts.append(a)] 
+
+        
+        # check that we have define the input
+        if len(args) == 0:
+            if self.run_name:
+                args[0] = run_name
+            else:
+                raise self.InvalidCmd, 'no default run. Please specify the run_name'
+        
+        # always pass to a path + get the event size
+        result_file= sys.stdout
+        if not os.path.sep in args[0]:
+            path = [pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe'),
+                    pjoin(self.me_dir, 'Events', args[0], 'events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', args[0], 'events.lhe')]
+            
+            for p in path:
+                if os.path.exists(p):
+                    nb_event = self.results[args[0]].get_current_info()['nb_event']
+                    self.results.def_current(args[0])
+                    #self.set_run_name(args[0], None,'parton', True)
+                    result_file = open(pjoin(self.me_dir,'Events', self.run_name, 'parton_systematics.log'),'w')
+                    args[0] = p
+                    break
+            else:
+                raise self.InvalidCmd, 'Invalid run name. Please retry'
+        elif self.options['nb_core'] != 1:
+            lhe = lhe_parser.EventFile(args)
+            nb_event = len(lhe)
+            lhe.close()
+
+        input = args[0]
+        if len(args)>1:
+            outut = pjoin(os.getcwd(),args[1])
+        else:
+            output = input
+    
+        if '--from_card' in opts:
+            opts.remove('--from_card')
+            opts.append('--from_card=internal')
+        
+        #one core:
+        if True:
+            if MADEVENT:
+                import internal.various.systematics as systematics
+            else:
+                import madgraph.various.systematics as systematics
+            
+            systematics.call_systematics([input, output] + opts, 
+                                         log=lambda x: logger.info(str(x)),
+                                         result=result_file
+                                         )
+
+        self.update_status('End of systematics computation', level='parton', makehtml=False)
+        
+        
     ############################################################################
     def do_reweight(self, line):
         """ syntax is "reweight RUN_NAME"
