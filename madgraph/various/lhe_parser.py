@@ -2253,9 +2253,7 @@ class NLO_PARTIALWEIGHT(object):
         
             scale = 0 
             for particle in self:
-                if particle.status != 1:
-                    continue 
-                p = FourMomentum(particle)
+                p = particle
                 scale += math.sqrt(p.mass_sqr + p.pt**2)
         
             return prefactor * scale
@@ -2264,9 +2262,7 @@ class NLO_PARTIALWEIGHT(object):
             
             scale = 0 
             for particle in self:
-                if particle.status != 1:
-                    continue 
-                p = FourMomentum(particle)
+                p = particle
                 pt = p.pt
                 if (pt>0):
                     scale += p.E*pt/math.sqrt(pt**2+p.pz**2)
@@ -2274,17 +2270,17 @@ class NLO_PARTIALWEIGHT(object):
             return prefactor * scale    
         
         
-        def get_sqrts_scale(self, prefactor=1):
+        def get_sqrts_scale(self, event,prefactor=1):
             
             scale = 0 
-            init = []
-            for particle in self:
+            nb_init = 0
+            for particle in event:
                 if particle.status == -1:
-                    init.append(FourMomentum(particle))
-            if len(init) == 1:
-                return init[0].mass
-            elif len(init)==2:
-                return math.sqrt((init[0]+init[1])**2)
+                    nb_init+=1
+            if nb_init == 1:
+                return self[0].mass
+            elif nb_init==2:
+                return math.sqrt((self[0]+self[1])**2)
                    
     
         

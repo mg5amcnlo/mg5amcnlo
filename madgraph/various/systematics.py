@@ -122,9 +122,9 @@ class Systematics(object):
         self.start_event=int(start_event)
         self.stop_event=int(stop_event)
         if start_event != 0:
-            self.log( "starting from event #%s" % start_event)
+            self.log( "#starting from event #%s" % start_event)
         if stop_event != sys.maxint:
-            self.log( "stoping at event #%s" % stop_event)
+            self.log( "#stopping at event #%s" % stop_event)
         # LHAPDF set 
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
         lhapdf.setVerbosity(0)
@@ -568,13 +568,13 @@ class Systematics(object):
         nloinfo = event.parse_nlo_weight()
         for cevent in nloinfo.cevents:
             if dyn == 1: 
-                mur2 = cevent.get_pt_scale(1.)**2
+                mur2 = cevent.get_et_scale(1.)**2
             elif dyn == 2:
                 mur2 = cevent.get_ht_scale(1.)**2
             elif dyn == 3:
                 mur2 = cevent.get_ht_scale(0.5)**2
             elif dyn == 4:
-                mur2 = cevent.get_sqrts_scale(1.)**2
+                mur2 = cevent.get_sqrts_scale(event,1)**2
             else:
                 mur2 = 0
             muf2 = mur2

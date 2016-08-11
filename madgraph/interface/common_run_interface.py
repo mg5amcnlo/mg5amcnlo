@@ -1298,6 +1298,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             import madgraph.various.systematics as systematics
 
+        nb_submit=1
         #one core:
         if nb_submit == 1:
             systematics.call_systematics([input, output] + opts, 
