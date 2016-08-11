@@ -623,6 +623,101 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         return args
 
+    ############################################################################
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False,
+                     allow_new_tag=True):
+        """define the run name, the run_tag, the banner and the results."""
+        
+        # when are we force to change the tag new_run:previous run requiring changes
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
+                       'pythia': ['pythia','pgs','delphes'],
+                       'pgs': ['pgs'],
+                       'delphes':['delphes'],
+                       'plot':[],
+                       'syscalc':[]}
+        
+        
+
+        if name == self.run_name:       
+            if reload_card:
+                run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+                self.run_card = banner_mod.RunCard(run_card)
+                
+            #check if we need to change the tag
+            if tag:
+                self.run_card['run_tag'] = tag
+                self.run_tag = tag
+                self.results.add_run(self.run_name, self.run_card)
+            else:                
+                for tag in upgrade_tag[level]:
+                    if getattr(self.results[self.run_name][-1], tag):
+                        tag = self.get_available_tag()
+                        self.run_card['run_tag'] = tag
+                        self.run_tag = tag
+                        self.results.add_run(self.run_name, self.run_card)                        
+                        break
+            return # Nothing to do anymore
+        
+        # save/clean previous run
+        if self.run_name:
+            self.store_result()
+        # store new name
+        self.run_name = name
+        
+        new_tag = False
+        # First call for this run -> set the banner
+        self.banner = banner_mod.recover_banner(self.results, level, name)
+        if 'mgruncard' in self.banner:
+            self.run_card = self.banner.charge_card('run_card')
+        else:
+            # Read run_card
+            run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+            self.run_card = banner_mod.RunCard(run_card)   
+        
+        if tag:
+            self.run_card['run_tag'] = tag
+            new_tag = True
+        elif not self.run_name in self.results and level =='parton':
+            pass # No results yet, so current tag is fine
+        elif not self.run_name in self.results:
+            #This is only for case when you want to trick the interface
+            logger.warning('Trying to run data on unknown run.')
+            self.results.add_run(name, self.run_card)
+            self.results.update('add run %s' % name, 'all', makehtml=False)
+        else:
+            for tag in upgrade_tag[level]:
+                
+                if getattr(self.results[self.run_name][-1], tag):
+                    # LEVEL is already define in the last tag -> need to switch tag
+                    tag = self.get_available_tag()
+                    self.run_card['run_tag'] = tag
+                    new_tag = True
+                    break
+            if not new_tag:
+                # We can add the results to the current run
+                tag = self.results[self.run_name][-1]['tag']
+                self.run_card['run_tag'] = tag # ensure that run_tag is correct                
+                   
+        if allow_new_tag and (name in self.results and not new_tag):
+            self.results.def_current(self.run_name)
+        else:
+            self.results.add_run(self.run_name, self.run_card)
+
+        self.run_tag = self.run_card['run_tag']
+
+        # Return the tag of the previous run having the required data for this
+        # tag/run to working wel.
+        if level == 'parton':
+            return
+        elif level == 'pythia':
+            return self.results[self.run_name][0]['tag']
+        else:
+            for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                tagRun = self.results[self.run_name][i]
+                if tagRun.pythia:
+                    return tagRun['tag']
+            
+
     @misc.multiple_try(nb_try=5, sleep=2)
     def load_results_db(self):
         """load the current results status"""
@@ -1131,7 +1226,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             --muf=0.5,1,2
             --alps=1
             --dyn=-1
-            --todether=mur,muf #can be repeated
+            --together=mur,muf #can be repeated
             
             #special options
             --from_card=
@@ -1143,6 +1238,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         opts= []
         args = [a for a in args if not a.startswith('-') or opts.append(a)] 
 
+        #check sanity of options
+        if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card'))
+                for o in opts):
+            raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         
         # check that we have define the input
         if len(args) == 0:
@@ -1162,8 +1261,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             for p in path:
                 if os.path.exists(p):
                     nb_event = self.results[args[0]].get_current_info()['nb_event']
-                    self.results.def_current(args[0])
-                    #self.set_run_name(args[0], None,'parton', True)
+                    
+                    
+                    if self.run_name != args[0]:
+                        tag = self.results[args[0]].tags[0]
+                        self.set_run_name(args[0], tag,'parton', False)
                     result_file = open(pjoin(self.me_dir,'Events', self.run_name, 'parton_systematics.log'),'w')
                     args[0] = p
                     break
@@ -1195,7 +1297,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             import internal.various.systematics as systematics
         else:
             import madgraph.various.systematics as systematics
-        
+
         #one core:
         if nb_submit == 1:
             systematics.call_systematics([input, output] + opts, 
@@ -1239,7 +1341,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                             )
             starttime = time.time()
             update_status = lambda idle, run, finish: \
-                    self.update_status((idle, run, finish, 'parton'), level=None,
+                    self.update_status((idle, run, finish, 'running systematics'), level=None,
                                        force=False, starttime=starttime)
             self.cluster.wait(os.path.dirname(output), update_status, update_status)
             

@@ -319,6 +319,8 @@ class Systematics(object):
 
         dyn_name = {1: '\sum ET', 2:'\sum\sqrt{m^2+pt^2}', 3:'0.5 \sum\sqrt{m^2+pt^2}',4:'\sqrt{\hat s}' }
         for key, curr in dyns.items():
+            if key ==-1:
+                continue
             central, maxvalue, minvalue = curr['central'], curr['max'], curr['min']
             if maxvalue == 0:
                 resume.write("# dynamical scheme # %s : %g # %s\n" %(key, central, dyn_name[key]))
@@ -502,15 +504,15 @@ class Systematics(object):
         f = pdf.xfxQ2(pdg, x, scale)/x
         self.pdf[(pdf, pdg,x,scale)] = f
         return f        
-#        if f == 0 and pdf.memberID ==0:
-#            #print 'central pdf returns 0', pdg, x, scale
-#            #print self.pdfsets
-#            pdfset = pdf.set()
-#            allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
-#            f = pdfset.uncertainty(allnumber).central
-#            f=1  
-#        self.pdf[(pdf, pdg,x,scale)] = f
-#        return f
+        if f == 0 and pdf.memberID ==0:
+            # to avoid problem with nnpdf2.3 in lhapdf6.1.6
+            #print 'central pdf returns 0', pdg, x, scale
+            #print self.pdfsets
+            pdfset = pdf.set()
+            allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
+            f = pdfset.uncertainty(allnumber).central
+        self.pdf[(pdf, pdg,x,scale)] = f
+        return f
                 
     def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
         """ 
@@ -524,7 +526,7 @@ class Systematics(object):
             muf2 = loinfo['pdf_q2'][-1]
         else:
             if dyn == 1: 
-                mur = event.get_pt_scale(1.)
+                mur = event.get_et_scale(1.)
             elif dyn == 2:
                 mur = event.get_ht_scale(1.)
             elif dyn == 3:

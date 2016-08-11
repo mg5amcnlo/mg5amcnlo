@@ -3268,7 +3268,8 @@ RESTART = %(mint_mode)s
 
 
     ############################################################################
-    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False,
+                     allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes

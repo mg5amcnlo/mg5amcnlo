@@ -1745,17 +1745,19 @@ class Event(list):
     
         return prefactor * scale
     
-    def get_pt_scale(self, prefactor=1):
+
+    def get_et_scale(self, prefactor=1):
         
         scale = 0 
         for particle in self:
             if particle.status != 1:
                 continue 
             p = FourMomentum(particle)
-            scale += p.pt
+            pt = p.pt
+            if (pt>0):
+                scale += p.E*pt/math.sqrt(pt**2+p.pz**2)
     
         return prefactor * scale    
-    
     
     def get_sqrts_scale(self, prefactor=1):
         
@@ -2246,6 +2248,46 @@ class NLO_PARTIALWEIGHT(object):
         @property
         def aqcd(self):
             return self.event.aqcd
+        
+        def get_ht_scale(self, prefactor=1):
+        
+            scale = 0 
+            for particle in self:
+                if particle.status != 1:
+                    continue 
+                p = FourMomentum(particle)
+                scale += math.sqrt(p.mass_sqr + p.pt**2)
+        
+            return prefactor * scale
+        
+        def get_et_scale(self, prefactor=1):
+            
+            scale = 0 
+            for particle in self:
+                if particle.status != 1:
+                    continue 
+                p = FourMomentum(particle)
+                pt = p.pt
+                if (pt>0):
+                    scale += p.E*pt/math.sqrt(pt**2+p.pz**2)
+        
+            return prefactor * scale    
+        
+        
+        def get_sqrts_scale(self, prefactor=1):
+            
+            scale = 0 
+            init = []
+            for particle in self:
+                if particle.status == -1:
+                    init.append(FourMomentum(particle))
+            if len(init) == 1:
+                return init[0].mass
+            elif len(init)==2:
+                return math.sqrt((init[0]+init[1])**2)
+                   
+    
+        
             
     def __init__(self, input, event):
         
