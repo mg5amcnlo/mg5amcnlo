@@ -3,7 +3,7 @@ C Source for the library implementing a dummt bias function
 C always returns one
 C ************************************************************
       
-      subroutine bias_wgt(p, bias_weight)
+      subroutine bias_wgt(p, original_weight, bias_weight)
           implicit none
 C
 C Parameters
@@ -13,7 +13,7 @@ C
 C Arguments
 C
           double precision p(0:3,nexternal)
-          double precision bias_weight
+          double precision original_weight, bias_weight
 C
 C local variables
 C

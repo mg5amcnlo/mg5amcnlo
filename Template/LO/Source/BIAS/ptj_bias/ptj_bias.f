@@ -18,7 +18,7 @@ C  parameters = {'ptj_bias_target_ptj': 1000.0,
 C               'ptj_bias_enhancement_power': 4.0}
 C
 
-      subroutine bias_wgt(p, bias_weight)
+      subroutine bias_wgt(p, original_weight, bias_weight)
           implicit none
 C
 C Parameters
@@ -30,7 +30,7 @@ C
 C Arguments
 C
           double precision p(0:3,nexternal)
-          double precision bias_weight
+          double precision original_weight, bias_weight
 C
 C local variables
 C

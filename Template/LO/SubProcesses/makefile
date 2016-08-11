@@ -1,6 +1,13 @@
 include ../../Source/make_opts
 FFLAGS+= -w
 
+# Load additional dependencies of the bias module, if present
+ifeq (,$(wildcard ../bias_dependencies))
+BIASDEPENDENCIES =
+else
+include ../bias_dependencies
+endif
+
 # Definitions
 
 LIBDIR = ../../lib/
@@ -34,7 +41,7 @@ SYMMETRY = symmetry.o idenparts.o
 # Binaries
 
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
-	$(FC) -o $(PROG) $(PROCESS) $(LINKLIBS) $(LDFLAGS)
+	$(FC) -o $(PROG) $(PROCESS) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
 
 gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
 	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric $(LDFLAGS)

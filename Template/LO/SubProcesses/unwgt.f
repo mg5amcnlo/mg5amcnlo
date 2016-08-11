@@ -478,7 +478,7 @@ c
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
 
-      integer isym(nexternal,99), nsym, jsym
+      integer nsym
 
       integer ievent
       logical flip
@@ -506,9 +506,6 @@ C
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
 
-      integer ngroup
-      common/to_group/ngroup
-
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 c
@@ -525,11 +522,12 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 c      data ncolflow/maxamps*0/
 c      data ncolalt/maxamps*0/
 
-      include 'symswap.inc'
       include 'coupl.inc'
 
       include 'lhe_event_infos.inc'
       data AlreadySetInBiasModule/.False./
+
+      include 'symswap.inc'
 C-----
 C  BEGIN CODE
 C-----

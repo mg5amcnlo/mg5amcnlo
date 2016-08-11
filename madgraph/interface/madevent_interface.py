@@ -63,7 +63,7 @@ except ImportError:
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.banner as banner_mod
-    import internal.misc as misc    
+    import internal.misc as misc
     from internal import InvalidCmd, MadGraph5Error, ReadWrite
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
@@ -4033,6 +4033,7 @@ Beware that this can be dangerous for local multicore runs.""")
         self.do_treatcards('')
         
         logger.info("compile Source Directory")
+        
         # Compile
         for name in [ 'all', '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
@@ -4040,6 +4041,13 @@ Beware that this can be dangerous for local multicore runs.""")
         bias_name = os.path.basename(self.run_card['bias_module'])
         if bias_name.lower()=='none':
             bias_name = 'dummy'
+
+        # Always refresh the bias dependencies file
+        if os.path.exists(pjoin(self.me_dir, 'SubProcesses','bias_dependencies')):
+            os.remove(pjoin(self.me_dir, 'SubProcesses','bias_dependencies'))
+        if os.path.exists(pjoin(self.me_dir, 'Source','BIAS',bias_name,'bias_dependencies')):
+            files.ln(pjoin(self.me_dir, 'Source','BIAS',bias_name,'bias_dependencies'),
+                                                        pjoin(self.me_dir, 'SubProcesses'))
 
         if self.proc_characteristics['bias_module']!=bias_name and \
              os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):

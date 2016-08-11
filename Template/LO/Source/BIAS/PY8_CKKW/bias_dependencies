@@ -1,0 +1,5 @@
+PY8LIBS     = $(shell $(PYTHIA8_PATH)/bin/pythia8-config --libs)
+PY8INCLUDES = $(shell $(PYTHIA8_PATH)/bin/pythia8-config --includedir)
+PY8CXXFLAGS = $(shell $(PYTHIA8_PATH)/bin/pythia8-config --cxxflags)
+
+BIASDEPENDENCIES = $(PY8LIBS) $(PY8CXXFLAGS)

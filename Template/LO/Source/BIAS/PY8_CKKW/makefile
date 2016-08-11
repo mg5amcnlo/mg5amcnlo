@@ -2,6 +2,8 @@ BIASDIR   = ../
 SOURCEDIR = ../..
 include $(SOURCEDIR)/make_opts
 
+include ./bias_dependencies
+
 all: PY8_CKKW 
 
 clean:
@@ -21,7 +23,10 @@ INCLUDES = $(BIASDIR)/bias.inc \
 PY8_CKKW.o: PY8_CKKW.f $(INCLUDES) 
 	$(FC) $(FFLAGS) $(LDFLAGS) -c -o PY8_CKKW.o PY8_CKKW.f
 
-PY8_CKKW: PY8_CKKW.o
+py8_mg5amc_bias_interface.o: py8_mg5amc_bias_interface.cc
+	$(DEFAULT_CPP_COMPILER) $(CXXFLAGS) $(PY8CXXFLAGS) $(LDFLAGS) $(PY8LIBS) -c -o py8_mg5amc_bias_interface.o py8_mg5amc_bias_interface.cc
+
+PY8_CKKW: PY8_CKKW.o py8_mg5amc_bias_interface.o
 	$(call CREATELIB, $(BIASLIBDIR)$(BIASLIBRARY), $^)
 
 #
@@ -32,7 +37,6 @@ requirements:
 ifeq ($(shell $(call CHECK_MG5AMC_VERSION, 2, 4, 2)),OK)
 ifeq ($(PYTHIA8_PATH),NotInstalled)
 	@echo "Error: This module requires Pythia8. Consider installing it with the command 'install pythia8'."
-	@echo "VALID"
 else
 	@echo "VALID"
 endif

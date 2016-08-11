@@ -1088,7 +1088,7 @@ c
       return
       end
 
-      double precision function custom_bias(p, numproc)
+      double precision function custom_bias(p, original_weight, numproc)
 c***********************************************************
 c     Returns a bias weight as instructed by the bias module
 c***********************************************************
@@ -1101,6 +1101,8 @@ c***********************************************************
 
       DOUBLE PRECISION P(0:3,NEXTERNAL)
       integer numproc
+
+      double precision original_weight
 
       double precision bias_weight
       logical is_bias_dummy, requires_full_event_info
@@ -1120,7 +1122,7 @@ C     use do_write_events set to .False.
       endif
 C     Apply the bias weight. The default run_card entry 'None' for the 
 c     'bias_weight' option will implement a constant bias_weight of 1.0 below.
-      call bias_wgt(p,bias_weight)
+      call bias_wgt(p, original_weight, bias_weight)
       custom_bias = bias_weight
 
       end
