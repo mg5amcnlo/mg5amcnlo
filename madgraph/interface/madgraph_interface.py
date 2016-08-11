@@ -2699,7 +2699,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
 
     # The three options categories are treated on a different footage when a
     # set/save configuration occur. current value are kept in self.options
-    options_configuration = {'pythia8_path': './pythia8',
+    options_configuration = {'pythia8_path': './HEPTools/pythia8',
                        'hwpp_path': './herwigPP',
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
@@ -5324,7 +5324,6 @@ This implies that with decay chains:
             if self.options['pythia8_path']:
                 additional_options.append(
                                '--with_pythia8=%s'%self.options['pythia8_path'])
-
 ##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
 #            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
 #                    pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
@@ -5406,6 +5405,7 @@ This implies that with decay chains:
              # And that the option '--force' is placed last.
             additional_options = [opt for opt in additional_options if opt!='--force']+\
                         (['--force'] if '--force' in additional_options else [])
+
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               pjoin(MG5DIR,'HEPTools')] + compiler_options + additional_options)
@@ -5445,7 +5445,7 @@ This implies that with decay chains:
                                                                 'lhapdf-config')
             self.exec_cmd('save options')            
         elif tool == 'madanalysis5':
-            self.options['madanalysis5_path'] = pjoin(os.curdir,'HEPTools',
+            self.options['madanalysis5_path'] = pjoin(MG5DIR,'HEPTools',
                                                   'madanalysis5','madanalysis5')
             self.exec_cmd('save options')
         elif tool == 'mg5amc_py8_interface':
@@ -5466,7 +5466,7 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
   MG5aMC>install ninja
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
-            self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
+            self.options['ninja'] = pjoin(MG5DIR,'HEPTools','lib')
             self.exec_cmd('save options', log=False, printcmd=False)
             
         # Now warn the user if he didn't add HEPTools first in his environment
@@ -5568,8 +5568,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             r = random.randint(0,1)
             r = [r, (1-r)]
 ################################################################################
-#           Force her to choose one particular server
-            r = [1]
+#           Force MG5aMC to choose one particular server
+#            r = [0]
 ################################################################################
             for index in r:
                 cluster_path = data_path[index]
@@ -6304,7 +6304,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 #this is for mg5amc_py8_interface_path
                 if key == 'mg5amc_py8_interface_path' and not os.path.isfile(pjoin(MG5DIR, path, 'MG5aMC_PY8_interface')):
                     if not os.path.isfile(pjoin(path, 'MG5aMC_PY8_interface')):
-                        self.options['pythia8_path'] = None
+                        self.options['mg5amc_py8_interface_path'] = None
                     else:
                         continue
                 #this is for madanalysis5
