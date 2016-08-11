@@ -179,19 +179,19 @@ class Systematics(object):
         ids = [lowest_id+i for i in range(len(self.args)-1)]
         all_cross = [0 for i in range(len(self.args))]
         
-        for i,event in enumerate(self.input):
-            if i < self.start_event:
+        for nb_event,event in enumerate(self.input):
+            if nb_event < self.start_event:
                 continue
-            elif i >= self.stop_event:
+            elif nb_event >= self.stop_event:
                 if self.force_write_banner:
                     self.output.write('</LesHouchesEvents>\n')
                 break
             if self.is_lo:
-                if (i-self.start_event)>=0 and (i-self.start_event) % 2500 ==0:
-                    self.log( '# currently at event %s [ellapsed time: %.2g s]' % (i, time.time()-start_time))
+                if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 2500 ==0:
+                    self.log( '# currently at event %s [ellapsed time: %.2g s]' % (nb_event, time.time()-start_time))
             else:
-                if (i-self.start_event)>=0 and (i-self.start_event) % 1000 ==0:
-                    self.log( '# currently at event %i [ellapsed time: %.2g s]' % (i, time.time()-start_time))
+                if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 1000 ==0:
+                    self.log( '# currently at event %i [ellapsed time: %.2g s]' % (nb_event, time.time()-start_time))
                     
             self.new_event() #re-init the caching of alphas/pdf
             if self.is_lo:
@@ -205,8 +205,7 @@ class Systematics(object):
                 raise Exception
             
             wgt = [event.wgt*wgts[i]/wgts[0] for i in range(1,len(wgts))]
-            all_cross = [(all_cross[i] + event.wgt*wgts[i]/wgts[0]) for i in range(len(wgts))]
-            
+            all_cross = [(all_cross[j] + event.wgt*wgts[j]/wgts[0]) for j in range(len(wgts))]
             
             rwgt_data = event.parse_reweight()
             rwgt_data.update(zip(ids, wgt))
@@ -214,7 +213,8 @@ class Systematics(object):
         else:
             self.output.write('</LesHouchesEvents>\n')
         self.output.close()
-        self.print_cross_sections(all_cross, min(i,self.stop_event)-self.start_event, stdout)
+
+        self.print_cross_sections(all_cross, min(nb_event,self.stop_event)-self.start_event+1, stdout)
         
         if self.output.name != self.output_path:
             import shutil

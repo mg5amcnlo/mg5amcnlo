@@ -1239,7 +1239,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         args = [a for a in args if not a.startswith('-') or opts.append(a)] 
 
         #check sanity of options
-        if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card'))
+        if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf='))
                 for o in opts):
             raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
         
@@ -1298,7 +1298,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             import madgraph.various.systematics as systematics
 
-        nb_submit=1
         #one core:
         if nb_submit == 1:
             systematics.call_systematics([input, output] + opts, 
