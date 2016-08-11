@@ -3382,8 +3382,10 @@ already exists and is not a fifo file."""%fifo_path)
                          factor in [0.5,0.75,1.0,1.5,2.0] if \
                         factor*PY8_Card['JetMatching:qCut']>1.5*self.run_card['xqcut']))
                     else:
-                        PY8_Card.MadGraphSet('SysCalc:qCutList',
-                                 ','.join(self.run_card['sys_matchscale'].split()))
+                        qCutList = [float(qc) for qc in self.run_card['sys_matchscale'].split()]
+                        if PY8_Card['JetMatching:qCut'] not in qCutList:
+                            qCutList.append(PY8_Card['JetMatching:qCut'])
+                        PY8_Card.MadGraphSet('SysCalc:qCutList',','.join('%f'%qc for qc in qCutList))
 
             for scale in PY8_Card['SysCalc:qCutList'].split(','):
                 if re.match('^\s*$',scale): continue
@@ -3487,8 +3489,10 @@ already exists and is not a fifo file."""%fifo_path)
                        for factor in [0.5,0.75,1.0,1.5,2.0] if 
                    factor*PY8_Card["Merging:TMS"] >= self.run_card[CKKW_cut]))
                     else:
-                        PY8_Card.MadGraphSet('SysCalc:tmsList',
-                              ','.join(self.run_card['sys_matchscale'].split()))
+                        tmsList = [float(tms) for tms in self.run_card['sys_matchscale'].split()]
+                        if PY8_Card['Merging:TMS'] not in tmsList:
+                            tmsList.append(PY8_Card['Merging:TMS'])
+                        PY8_Card.MadGraphSet('SysCalc:tmsList',','.join('%f'%tms for tms in tmsList))
             
             for scale in PY8_Card['SysCalc:tmsList'].split(','):
                 if re.match('^\s*$',scale): continue
