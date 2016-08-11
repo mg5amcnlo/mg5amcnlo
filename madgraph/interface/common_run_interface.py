@@ -1221,7 +1221,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
          
     ############################################################################
     def do_systematics(self, line):
-        """ syntax: 'systematics [INPUT [OUTPUT]] OPTIONS'
+        """ syntax is 'systematics [INPUT [OUTPUT]] OPTIONS'
             --mur=0.5,1,2
             --muf=0.5,1,2
             --alps=1
@@ -1358,7 +1358,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     key = tuple(float(x) for x in split[:-1])
                     cross= float(split[-1])
                     if 'event_norm' in self.run_card and \
-                        self.run_card['event_norm'] in ['average', 'unity']:
+                            self.run_card['event_norm'] in ['average', 'unity']:
                         cross *= (event_per_job+1 if i <nb_job_with_plus_one else event_per_job)
                     if len(all_cross) > pos:
                         all_cross[pos] += cross
@@ -1367,9 +1367,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     pos+=1
                         
             if 'event_norm' in self.run_card and \
-               self.run_card['event_norm'] in ['average', 'unity']:
+                                       self.run_card['event_norm'] in ['unity']:
                 all_cross= [cross/nb_event for cross in all_cross]
-                    
+                
             sys_obj = systematics.call_systematics([input, None] + opts, 
                                          log=lambda x: logger.info(str(x)),
                                          result=result_file,
@@ -1384,7 +1384,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             cwd=os.path.dirname(output))
             for i in range(nb_submit):
                 os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
-                os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
+            #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
                                                   
 
             

@@ -209,6 +209,7 @@ class Systematics(object):
             
             rwgt_data = event.parse_reweight()
             rwgt_data.update(zip(ids, wgt))
+            event.reweight_order += ids
             # order the 
             self.output.write(str(event))
         else:

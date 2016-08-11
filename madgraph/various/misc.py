@@ -1322,7 +1322,7 @@ def sprint(*args, **opt):
     if not __debug__:
         return
     
-    
+    use_print = False
     import inspect
     if opt.has_key('log'):
         log = opt['log']
