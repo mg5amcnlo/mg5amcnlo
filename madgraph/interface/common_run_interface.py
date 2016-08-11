@@ -1299,7 +1299,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             import madgraph.various.systematics as systematics
 
         #one core:
-        if nb_submit == 1:
+        if nb_submit in [0,1]:
             systematics.call_systematics([input, output] + opts, 
                                          log=lambda x: logger.info(str(x)),
                                          result=result_file

@@ -324,6 +324,8 @@ class Systematics(object):
             if key ==-1:
                 continue
             central, maxvalue, minvalue = curr['central'], curr['max'], curr['min']
+            if central == 0:
+                continue
             if maxvalue == 0:
                 resume.write("# dynamical scheme # %s : %g # %s\n" %(key, central, dyn_name[key]))
             else:
