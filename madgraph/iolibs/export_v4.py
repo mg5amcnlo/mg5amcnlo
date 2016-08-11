@@ -259,9 +259,11 @@ class ProcessExporterFortran(object):
         if 'parton' in levels:
             open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
                 MA5_main.madgraph.generate_card(history, proc_defs, processes,'parton'))
-        if 'hadron' in levels:
-            open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
-                MA5_main.madgraph.generate_card(history, proc_defs, processes,'hadron'))
+
+# VH TEMPORARY COMMENT #
+#        if 'hadron' in levels:
+#            open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
+#                MA5_main.madgraph.generate_card(history, proc_defs, processes,'hadron'))
 
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)

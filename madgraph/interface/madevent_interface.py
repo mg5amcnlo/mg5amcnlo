@@ -3379,7 +3379,7 @@ already exists and is not a fifo file."""%fifo_path)
                     if self.run_card['sys_matchscale']=='auto':
                         PY8_Card.MadGraphSet('SysCalc:qCutList',\
                          ','.join('%.4f'%(factor*PY8_Card['JetMatching:qCut']) for \
-                         factor in [0.5,0.75,1.5,2.0] if \
+                         factor in [0.5,0.75,1.0,1.5,2.0] if \
                         factor*PY8_Card['JetMatching:qCut']>1.5*self.run_card['xqcut']))
                     else:
                         PY8_Card.MadGraphSet('SysCalc:qCutList',
@@ -3484,7 +3484,7 @@ already exists and is not a fifo file."""%fifo_path)
                     if self.run_card['sys_matchscale']=='auto':
                         PY8_Card.MadGraphSet('SysCalc:tmsList',\
                      ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
-                       for factor in [0.5,0.75,1.5,2.0] if 
+                       for factor in [0.5,0.75,1.0,1.5,2.0] if 
                    factor*PY8_Card["Merging:TMS"] >= self.run_card[CKKW_cut]))
                     else:
                         PY8_Card.MadGraphSet('SysCalc:tmsList',
