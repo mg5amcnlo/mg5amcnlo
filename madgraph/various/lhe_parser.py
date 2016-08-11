@@ -1110,7 +1110,7 @@ class Event(list):
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
-            pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
+            pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''',re.I)
             data = pattern.findall(self.tag)
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
@@ -2011,6 +2011,20 @@ class OneNLOWeight(object):
 
         if isinstance(input, str):
             self.parse(input)
+        
+    def __str__(self):
+        
+        out = """        pwgt: %(pwgt)s
+        born, real : %(born)s %(real)s
+        pdgs : %(pdgs)s
+        bjks : %(bjks)s
+        scales**2, gs: %(scales2)s %(gs)s
+        born/real related : %(born_related)s %(real_related)s
+        type / nfks : %(type)s  %(nfks)s
+        to merge : %(to_merge_pdg)s in %(merge_new_pdg)s
+        ref_wgt :  %(ref_wgt)s""" % self.__dict__
+        return out
+        
         
     def parse(self, text):
         """parse the line and create the related object"""

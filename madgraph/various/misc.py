@@ -1322,6 +1322,7 @@ def sprint(*args, **opt):
     if not __debug__:
         return
     
+    
     import inspect
     if opt.has_key('log'):
         log = opt['log']
@@ -1331,6 +1332,8 @@ def sprint(*args, **opt):
         level = opt['level']
     else:
         level = logging.getLogger('madgraph').level
+        if level == 0:
+            use_print = True
         #print  "madgraph level",level
         #if level == 20:
         #    level = 10 #avoid info level
@@ -1358,9 +1361,12 @@ def sprint(*args, **opt):
     else:
         intro = ''
     
-
-    log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
+    if not use_print:
+        log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
                    ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
+    else:
+        print ' '.join([intro]+[str(a) for a in args]) + \
+                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno)
     return 
 
 ################################################################################

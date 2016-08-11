@@ -209,6 +209,7 @@ class Systematics(object):
             
             rwgt_data = event.parse_reweight()
             rwgt_data.update(zip(ids, wgt))
+            # order the 
             self.output.write(str(event))
         else:
             self.output.write('</LesHouchesEvents>\n')
@@ -592,9 +593,17 @@ class Systematics(object):
                                       Dmuf**2 * muf2)                             
                 tmp *= self.get_pdfQ2(pdf, self.b2*onewgt.pdgs[1], onewgt.bjks[1],
                                       Dmuf**2 * muf2)
-                tmp *= pdf.alphasQ2(Dmur**2*mur2)**onewgt.qcdpower
+                tmp *= math.sqrt(4*math.pi*pdf.alphasQ2(Dmur**2*mur2))**onewgt.qcdpower
                 
                 wgt += tmp
+                
+                if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
+                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=4):
+                        misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
+                        misc.sprint(onewgt)
+                        misc.sprint(cevent)
+                        raise Exception, 'not enough agreement between stored value and computed one'
+                
                 
         return wgt
                             
