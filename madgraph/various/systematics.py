@@ -126,7 +126,11 @@ class Systematics(object):
         if stop_event != sys.maxint:
             self.log( "#stopping at event #%s" % stop_event)
         # LHAPDF set 
+        if isinstance(lhapdf_config, list):
+            lhapdf_config = lhapdf_config[0]
         lhapdf = misc.import_python_lhapdf(lhapdf_config)
+        if not lhapdf:
+            return
         lhapdf.setVerbosity(0)
         self.pdfsets = {}  
         if isinstance(pdf, str):

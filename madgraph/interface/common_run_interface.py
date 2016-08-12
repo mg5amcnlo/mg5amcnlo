@@ -1232,6 +1232,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             --from_card=
         """
     
+        lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
+        if not lhapdf:
+            logger.info('can not run systematics since can not link python to lhapdf')
+            return
+    
         self.update_status('Running Systematic computation', level='parton')
         args = self.split_arg(line)
         #split arguments and option
@@ -1306,11 +1311,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                          )
             
         elif self.options['run_mode'] in [1,2]:
-            # cluster and multi-core mode
-            if self.options['run_mode'] ==2:
-                nb_submit = min(self.options['nb_core'], nb_event//2500)
-            elif self.options['run_mode'] ==2:
-                nb_submit = min(self.options['cluster_size'], nb_event//25000)
             event_per_job = nb_event // nb_submit
             nb_job_with_plus_one = nb_event % nb_submit
             start_event, stop_event = 0,0
@@ -1330,8 +1330,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                              input_files[0], output_files[0]] + opts +\
                              ['--start_event=%i' % start_event,
                               '--stop_event=%i' %stop_event,
-                              '--result=./log_sys_%s.txt' %i]
-                required_output = output             
+                              '--result=./log_sys_%s.txt' %i,
+                              '--lhapdf_config=%s' % self.options['lhapdf']]
+                required_output = output_files            
                 self.cluster.cluster_submit(prog, argument, 
                                             input_files=input_files,
                                             output_files=output_files,
@@ -1343,7 +1344,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             update_status = lambda idle, run, finish: \
                     self.update_status((idle, run, finish, 'running systematics'), level=None,
                                        force=False, starttime=starttime)
-            self.cluster.wait(os.path.dirname(output), update_status, update_status)
+
+            self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
             
             #collect the data
             all_cross = []
