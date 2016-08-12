@@ -13,7 +13,9 @@ Pythia8::Pythia pythia;
 
 extern "C" {
 //Fortran interface
-  void py8_bias_weight_(const double &   eCM, 
+  void py8_bias_weight_(const double &   eCM,
+						const int &      Pythia8BeamA,
+						const int &      Pythia8BeamB,		  
 		                const double *   p, 
 						const int &      nParticles,
 						const double &   MurScale,
@@ -29,12 +31,21 @@ extern "C" {
 						double &         OutputBiasWeight    ) 
   {
 	if (!initialization_done) {
+/*
+		pythia.settings.mode("Beams:idA",Pythia8BeamA);
+		pythia.settings.mode("Beams:idB",Pythia8BeamB);
+		pythia.settings.parm("Beams:eCM",eCM);
+		pythia.settings.flag("WeakSingleBoson:ffbar2gmZ",true);
+*/
+		pythia.settings.word("Beams:LHEF","/Users/valentin/Documents/Work/MG5/bias/PROC_sm_19/SubProcesses/P1_lvl_qq/G1/dummy.lhe");
+		pythia.settings.mode("Beams:frameType",4);
 		pythia.init();
 		initialization_done = true;
 	}
 
 //	Pythia8::History history(0,0.,Pythia8::Event(),Pythia8::Clustering(), NULL, Pythia8::BeamParticle(),Pythia8::BeamParticle(),NULL,NULL,NULL,NULL,false,false,false,false,0.,NULL);
-			
+	pythia.next();
+	pythia.event.list();
 
     for (int i=0; i<nParticles*5; i=i+5) {
       // Store information in a State.
