@@ -18,7 +18,7 @@ dummy: dummy.o
 # 'VALID' is the keyword that *must* be returned if everything is in order.
 #
 requirements:	
-ifeq ($(shell $(call CHECK_MG5AMC_VERSION, 2, 4, 2)),OK)
+ifeq ($(shell $(call CHECK_MG5AMC_VERSION,2.4.2)),True)
 	@echo "VALID"
 else
 	@echo "Error:: MG5aMC is not recent enough (found "$(MG5AMC_VERSION)")"

@@ -100,5 +100,5 @@ endif
 
 # Helper function to check MG5 version
 define CHECK_MG5AMC_VERSION
-if [ $(shell echo $(MG5AMC_VERSION) | cut -f1 -d.) -gt $(1) ] || [[ ( $(shell echo $(MG5AMC_VERSION) | cut -f1 -d.) -eq $(1) && $(shell echo $(MG5AMC_VERSION) | cut -f2 -d.) -gt $(2) ) ]] || [[ ( $(shell echo $(MG5AMC_VERSION) | cut -f1 -d.) -eq $(1) && $(shell echo $(MG5AMC_VERSION) | cut -f2 -d.) -eq $(2) && $(shell echo $(MG5AMC_VERSION) | cut -f3 -d.) -ge $(3) ) ]]; then echo 'OK'; else echo 'NOTOK';fi
+python -c 'from distutils.version import StrictVersion; print StrictVersion("$(MG5AMC_VERSION)") >= StrictVersion("$(1)");'
 endef

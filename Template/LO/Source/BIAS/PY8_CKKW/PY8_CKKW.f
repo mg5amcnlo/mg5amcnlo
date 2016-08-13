@@ -45,7 +45,8 @@ c         truly local variables
           integer Pythia8nParticles
           double precision Pythia8p(5,npart)
           integer Pythia8BeamA
-          integer Pythia8BeamB
+          integer Pythia8BeamB 
+          character*(maxEventLength) Pythia8EvtRecord
           integer Pythia8Helicities(npart)
           integer Pythia8ColorOne(npart)
           integer Pythia8ColorTwo(npart)          
@@ -90,6 +91,7 @@ C --------------------
 
 C        Let's initialize the PY8 variables describing the event
          Pythia8eCM             = sqrt(4d0*ebeam(1)*ebeam(2))
+         Pythia8EvtRecord       = event_record
          Pythia8SubprocessGroup = ngroup
          Pythia8MurScale        = sscale
          Pythia8AlphaQCD        = aaqcd
@@ -139,6 +141,7 @@ C        Call PY8 to derive the bias weight.
          call py8_bias_weight( Pythia8eCM,
      &                         Pythia8BeamA,
      &                         Pythia8BeamB,
+     &                         Pythia8EvtRecord,
      &                         Pythia8p,
      &                         Pythia8nParticles,
      &                         Pythia8MurScale,
@@ -154,7 +157,7 @@ C        Call PY8 to derive the bias weight.
      &                         OutputBiasWeight    )
  
           bias_weight = OutputBiasWeight
-
+            
           return
 
       end subroutine bias_wgt

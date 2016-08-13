@@ -1098,6 +1098,7 @@ c***********************************************************
       include 'maxparticles.inc'
       include 'run_config.inc'
       include 'lhe_event_infos.inc'
+      include 'run.inc'
 
       DOUBLE PRECISION P(0:3,NEXTERNAL)
       integer numproc
@@ -1116,6 +1117,12 @@ C     use do_write_events set to .False.
       AlreadySetInBiasModule = .False.      
       if (requires_full_event_info) then
         call write_leshouche(p,-1.0d0,numproc,.False.)
+C     Write the event in the string evt_record, part of the
+C     lhe_event_info common block
+        event_record(:) = ''
+        call write_event_to_stream(event_record,pb(0,1),1.0d0,npart,
+     &      jpart(1,1),ngroup,sscale,aaqcd,aaqed,buff,use_syst,
+     &      s_buff, nclus, buffclus)
         AlreadySetInBiasModule = .True. 
       else
         AlreadySetInBiasModule = .False.

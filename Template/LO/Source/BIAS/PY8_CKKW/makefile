@@ -34,7 +34,7 @@ PY8_CKKW: PY8_CKKW.o py8_mg5amc_bias_interface.o
 # 'VALID' is the keyword that *must* be returned if everything is in order.
 #
 requirements:	
-ifeq ($(shell $(call CHECK_MG5AMC_VERSION, 2, 4, 2)),OK)
+ifeq ($(shell $(call CHECK_MG5AMC_VERSION,2.4.2)),True)
 ifeq ($(PYTHIA8_PATH),NotInstalled)
 	@echo "Error: This module requires Pythia8. Consider installing it with the command 'install pythia8'."
 else

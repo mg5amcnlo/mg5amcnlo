@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <math.h>
 #include <vector>
+#include <sstream>
+#include <algorithm> 
+#include <functional> 
+#include <cctype>
+#include <locale>
 
 // Small values used to cut off momenta
 const double TINY      = 1e-15;
@@ -11,11 +16,43 @@ bool initialization_done = false;
 
 Pythia8::Pythia pythia;
 
+// trim from start (in place)
+static inline void ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+            std::not1(std::ptr_fun<int, int>(std::isspace))));
+}
+// trim from end (in place)
+static inline void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+            std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+}
+// trim from both ends (in place)
+static inline void trim(std::string &s) {
+    ltrim(s);
+    rtrim(s);
+}
+// trim from start (copying)
+static inline std::string ltrimmed(std::string s) {
+    ltrim(s);
+    return s;
+}
+// trim from end (copying)
+static inline std::string rtrimmed(std::string s) {
+    rtrim(s);
+    return s;
+}
+// trim from both ends (copying)
+static inline std::string trimmed(std::string s) {
+    trim(s);
+    return s;
+}
+
 extern "C" {
 //Fortran interface
   void py8_bias_weight_(const double &   eCM,
 						const int &      Pythia8BeamA,
-						const int &      Pythia8BeamB,		  
+						const int &      Pythia8BeamB,
+		                const char *     Pythia8EvtRecord, 						
 		                const double *   p, 
 						const int &      nParticles,
 						const double &   MurScale,
@@ -31,22 +68,26 @@ extern "C" {
 						double &         OutputBiasWeight    ) 
   {
 	if (!initialization_done) {
-/*
-		pythia.settings.mode("Beams:idA",Pythia8BeamA);
-		pythia.settings.mode("Beams:idB",Pythia8BeamB);
-		pythia.settings.parm("Beams:eCM",eCM);
-		pythia.settings.flag("WeakSingleBoson:ffbar2gmZ",true);
-*/
 		pythia.settings.word("Beams:LHEF","/Users/valentin/Documents/Work/MG5/bias/PROC_sm_19/SubProcesses/P1_lvl_qq/G1/dummy.lhe");
 		pythia.settings.mode("Beams:frameType",4);
 		pythia.init();
 		initialization_done = true;
 	}
 
-//	Pythia8::History history(0,0.,Pythia8::Event(),Pythia8::Clustering(), NULL, Pythia8::BeamParticle(),Pythia8::BeamParticle(),NULL,NULL,NULL,NULL,false,false,false,false,0.,NULL);
+// Example of some Pythia calls
+/*
+	Pythia8::History history(0,0.,Pythia8::Event(),Pythia8::Clustering(), NULL, Pythia8::BeamParticle(),Pythia8::BeamParticle(),NULL,NULL,NULL,NULL,false,false,false,false,0.,NULL);
 	pythia.next();
 	pythia.event.list();
+*/
 
+	std::string EvtStr(Pythia8EvtRecord);
+	EvtStr = EvtStr.substr(0,EvtStr.find("</event>")+8);
+ 	std::stringstream EvtSS(EvtStr);
+	std::cout<<"---> Event transmitted to Pythiaa8 <---\n"<<EvtSS.str()<<std::endl;
+
+// Example of usage of the already-parsed information
+/*
     for (int i=0; i<nParticles*5; i=i+5) {
       // Store information in a State.
       double pup0 = (abs(p[i+0]) < TINY) ? 0.: p[i+0];
@@ -61,8 +102,10 @@ extern "C" {
 //    Do something to currEvent 
 
 	}
-	OutputBiasWeight = 2.0;
 
 //    delete currEvent;
+*/
+
+	OutputBiasWeight = 1.0;
   }
 }

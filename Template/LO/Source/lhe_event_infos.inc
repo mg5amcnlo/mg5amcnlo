@@ -6,9 +6,10 @@
       character*(s_bufflen) s_buff(7)
       integer nclus
       character*(clus_bufflen) buffclus(nexternal)
+	  character*(maxEventLength) event_record
       logical AlreadySetInBiasModule
 
-	  common/to_lhe_event_info/jpart,pb,s_buff,buff,nclus,buffclus,
+	  common/to_lhe_event_info/jpart,pb,s_buff,buff,nclus,buffclus,event_record,
      &  sscale,aaqcd,aaqed,isym,jsym,npart,AlreadySetInBiasModule
 
       integer ngroup
