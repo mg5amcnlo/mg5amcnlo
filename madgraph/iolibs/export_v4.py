@@ -203,8 +203,7 @@ class ProcessExporterFortran(object):
             shutil.copy(pjoin(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
         except IOError:
             MG5_version = misc.get_pkg_info()
-            open(pjoin(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
-                "5." + MG5_version['version'])
+            open(pjoin(self.dir_path, 'MGMEVersion.txt'), 'w').write(MG5_version['version'])
 
         #Ensure that the Template is clean
         if self.opt['clean']:

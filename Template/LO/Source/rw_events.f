@@ -224,6 +224,11 @@ c      aqcd = g*g/4d0/pi
       subroutine write_event(lun,P,wgt,nexternal,ic,ievent,scale,aqcd,
      $     aqed,buff,u_syst,s_buff,nclus,buffclus)
 c********************************************************************
+c
+c /!\ When making changes to this subroutine, make sure to accordingly
+c     update write_event_to_stream
+c
+c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
 c     ic(1,*) = Particle ID
 c     ic(2.*) = Mothup(1)
