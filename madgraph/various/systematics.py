@@ -47,8 +47,8 @@ class Systematics(object):
                  muf=[0.5,1,2],
                  alps=[1],
                  pdf='errorset', #[(id, subset)]
-                 dyn=[-1],
-                 together=[('mur', 'muf')],
+                 dyn=[-1,1,2,3,4],
+                 together=[('mur', 'muf', 'dyn')],
                  lhapdf_config=misc.which('lhapdf-config'),
                  log=lambda x: sys.stdout.write(str(x)+'\n')
                  ):
@@ -125,6 +125,7 @@ class Systematics(object):
             self.log( "#starting from event #%s" % start_event)
         if stop_event != sys.maxint:
             self.log( "#stopping at event #%s" % stop_event)
+        
         # LHAPDF set 
         if isinstance(lhapdf_config, list):
             lhapdf_config = lhapdf_config[0]
@@ -135,33 +136,39 @@ class Systematics(object):
         self.pdfsets = {}  
         if isinstance(pdf, str):
             pdf = pdf.split(',')
+            
         if isinstance(pdf,list) and isinstance(pdf[0],(str,int)):
             self.pdf = []
             for data in pdf:
                 if data == 'errorset':
-                    data = '%s@*' % self.orig_pdf
-                if data == 'central':
                     data = '%s' % self.orig_pdf
-                if data.isdigit():
-                    self.pdf.append(lhapdf.mkPDF(int(data)))
-                elif '@' in data:
+                if data == 'central':
+                    data = '%s@0' % self.orig_pdf
+                if '@' in data:
+                    #one particular dataset
                     name, arg = data.rsplit('@',1)
-                    if not(arg) or arg =='*':
+                    if int(arg) == 0:
                         if name.isdigit():
-                            pdfset = lhapdf.mkPDF(int(name)).set()
+                            self.pdf.append(lhapdf.mkPDF(int(name)))
                         else:
-                            pdfset = lhapdf.getPDFSet(name)
-                        self.pdfsets[pdfset.lhapdfID] = pdfset 
-                        self.pdf += pdfset.mkPDFs()
+                            self.pdf.append(lhapdf.mkPDF(name))
                     elif name.isdigit():
-                        raise Exception, 'invididual error set need to called with name not with lhapdfID'
+                        try:
+                            self.pdf.append(lhapdf.mkPDF(int(name)+int(arg)))
+                        except:
+                            raise Exception, 'invididual error set need to called with name not with lhapdfID'
                     else:
                         self.pdf.append(lhapdf.mkPDF(name, int(arg)))
                 else:
-                    
-                    self.pdf.append(lhapdf.mkPDF(data))
+                    if data.isdigit():
+                        pdfset = lhapdf.mkPDF(int(data)).set()
+                    else:
+                        pdfset = lhapdf.getPDFSet(data)
+                    self.pdfsets[pdfset.lhapdfID] = pdfset 
+                    self.pdf += pdfset.mkPDFs()
         else:
             self.pdf = pdf
+            
         for p in self.pdf:
             if p.lhapdfID == self.orig_pdf:
                 self.orig_pdf = p
@@ -293,7 +300,7 @@ class Systematics(object):
                         pdfs[pdfset.lhapdfID] = [0] * pdfset.size
                     pdfs[pdfset.lhapdfID][pdf.memberID] = all_cross[i]
                 else:
-                    to_report.append('#PDF %s : %s' % (pdf, all_cross[i]))
+                    to_report.append('# PDF %s : %s\n' % (pdf.lhapdfID, all_cross[i]))
   
         stdout.write('\n') 
                 
@@ -313,7 +320,7 @@ class Systematics(object):
             values = pdfs[lhapdfid]
             pdfset = self.pdfsets[lhapdfid]
             pdferr =  pdfset.uncertainty(values)
-            resume.write( '#     PDF variation: +%2.3g%% -%2.3g%%\n' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))       
+            resume.write( '# PDF variation: +%2.3g%% -%2.3g%%\n' % (pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))       
         # report error/central not directly linked to the central
         resume.write( "#\n")        
         for lhapdfid,values in pdfs.items():
@@ -669,11 +676,11 @@ def call_systematics(args, result=sys.stdout, running=True,
             for pdf in pdfs:
                 split = pdf.split()
                 if len(split)==1:
-                    opts['pdf'].append('%s@*' %pdf)
+                    opts['pdf'].append('%s' %pdf)
                 else:
                     pdf,nb = split
                     for i in range(int(nb)):
-                        opts['pdf'].append('%s@%s' % (pdf, nb))
+                        opts['pdf'].append('%s@%s' % (pdf, i))
             if not opts['pdf']:
                 opts['pdf'] = 'central'
         else:
@@ -682,7 +689,6 @@ def call_systematics(args, result=sys.stdout, running=True,
         del opts['from_card']
     
 
-    
     obj = Systematics(input, output, log=log,**opts)
     if running:
         obj.run(result)  
