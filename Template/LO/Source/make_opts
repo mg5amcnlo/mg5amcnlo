@@ -1,9 +1,9 @@
 DEFAULT_F2PY_COMPILER=f2py
 DEFAULT_F_COMPILER=gfortran
-MACFLAG=
-DEFAULT_CPP_COMPILER=g++
-STDLIB=-lstdc++
-STDLIB_FLAG=
+MACFLAG=-mmacosx-version-min=10.7
+DEFAULT_CPP_COMPILER=clang
+STDLIB=-lc++
+STDLIB_FLAG=-stdlib=libc++
 #end_of_make_opts_variables
 # Rest of the makefile
 

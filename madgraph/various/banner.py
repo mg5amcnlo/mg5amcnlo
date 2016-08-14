@@ -170,7 +170,7 @@ class Banner(dict):
             raise Exception, "Not Supported version"
         self.lhe_version = version
     
-    def get_cross(self):
+    def get_cross(self, witherror=False):
         """return the cross-section of the file"""
 
         if "init" not in self:
@@ -179,11 +179,17 @@ class Banner(dict):
         
         text = self["init"].split('\n')
         cross = 0
+        error = 0
         for line in text:
             s = line.split()
             if len(s)==4:
                 cross += float(s[0])
-        return cross
+                if witherror:
+                    error += float(s[1])**2
+        if not witherror:
+            return cross
+        else:
+            return cross, math.sqrt(error)
         
 
     

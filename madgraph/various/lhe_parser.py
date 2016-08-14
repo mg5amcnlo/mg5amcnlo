@@ -1347,8 +1347,6 @@ class Event(list):
     
     def get_helicity(self, get_order, allow_reversed=True):
         """return a list with the helicities in the order asked for"""
-
-        
         
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
@@ -1686,7 +1684,7 @@ class FourMomentum(object):
             py = obj.py
             pz = obj.pz
             E = obj.E
-        elif isinstance(obj, list):
+        elif isinstance(obj, (list, tuple)):
             assert len(obj) ==4
             E = obj[0]
             px = obj[1]
@@ -1792,6 +1790,9 @@ class FourMomentum(object):
     def __repr__(self):
         return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
     
+    def get_tuple(self):
+        return (self.E, self.px, self.py,self.pz)
+    
     def boost(self, mom):
         """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
         the output is the 4-momenta in the frame of this 4-momenta
@@ -1809,6 +1810,36 @@ class FourMomentum(object):
                            pz=mom.pz + self.pz * lf)
         else:
             return FourMomentum(mom)
+
+    def zboost(self, pboost=None, E=0, pz=0):
+        """Both momenta should be in the same frame. 
+           The boost perform correspond to the boost required to set pboost at 
+           rest (only z boost applied).
+        """
+        if isinstance(pboost, FourMomentum):
+            E = pboost.E
+            pz = pboost.pz
+        
+        #beta = pz/E
+        gamma = E / math.sqrt(E**2-pz**2)
+        gammabeta = pz  / math.sqrt(E**2-pz**2)
+        
+        out =  FourMomentum([gamma*self.E - gammabeta*self.pz,
+                            self.py,
+                            self.pz,
+                            gamma*self.pz - gammabeta*self.E])
+        
+        if abs(out.pz) < 1e-6 * out.E:
+            out.pz = 0
+        return out
+        
+        
+        
+        
+        
+        """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
+        the output is the 4-momenta in the frame of this 4-momenta
+        function copied from HELAS routine."""
                 
 
 class OneNLOWeight(object):

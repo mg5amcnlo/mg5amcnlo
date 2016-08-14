@@ -1637,7 +1637,7 @@ class width_estimate(object):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        cmd.exec_cmd('import model %s' % model.get('name'))
+        cmd.exec_cmd('import model %s' % model.get('modelpath+restriction'))
 #        cmd._curr_model = model
 #        cmd._curr_fortran_model = helas_call_writers.FortranUFOHelasCallWriter(model)
         cmd.exec_cmd(line)

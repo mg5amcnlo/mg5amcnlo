@@ -1,6 +1,6 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.4.3 (xx/xx/xx)
+2.4.3 (01/08/16)
         OM: Reduce the amount of log file/output generated for LO run (output can use up to three times less output).
         OM: For the LO combination of events (unweighting) pass to the method previously used for loop-induced.
             This method is faster and requires less I/O operation.
@@ -12,7 +12,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
             were associated to each of those processes.
 	RF: For NLO process generation, fix a problem with turning on PDF reweighting with sets that have only a
 	    single member. Also, allow for reweighting with up to 25 PDF sets (and their error members) for a single run.
-        
+        OM: Fixing bug allowing to specify a UFO model by his full path for NLO computation (thanks Zachary Marschal).
+        OM: Fixing bug in LO re-weighting in case of helicity by helicity re-weighting. Now the events is boost back in 
+            the center of mass frame to ensure consistency with the helicity definition.
 
 2.4.2 (10/06/16)
         OM: fix a compilation problem for non standard gfortran system
