@@ -25,6 +25,7 @@ import re
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.core.base_objects as base_objects
@@ -490,6 +491,25 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Put aloha back in its original mode.
         aloha.mp_precision = aloha_original_quad_mode
 
+
+    def install_reduction_library(self):
+        """Code to install the reduction library if needed"""
+        
+        opt = self.options
+        
+        
+        # Check if first time:
+        if (opt['ninja'] is None) or (os.path.isfile(pjoin(opt['ninja'],'libninja.a'))): 
+            raise Exception, 'stop since opt %s' % opt['ninja']
+            return
+        
+        logger.info("First output with Loop matrix-element detected", '$MG:color:BLACK')
+        to_install = self.ask('install', 0,  ask_class=AskLoopInstaller, timeout=60, 
+                              path_msg=' ')
+        
+    
+        misc.sprint('pass here', to_install)
+        raise Exception
     # Export a matrix element
     
     def ML5export(self, nojpeg = False, main_file_name = ""):
@@ -791,3 +811,160 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
 
+
+class AskLoopInstaller(cmd.OneLinePathCompletion):
+    
+    local_installer = ['ninja', 'collier']
+    required = ['cuttools', 'iregi']
+    order = ['cuttools', 'iregi', 'ninja', 'collier', 'golem', 'pjfry']
+    
+    @property
+    def answer(self):
+        return self.run_options
+    
+    def __init__(self, question, *args, **opts):
+
+        misc.sprint(args, opts)
+
+        import urllib2
+        try:
+            response=urllib2.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
+            self.online=True
+        except urllib2.URLError as err: 
+            self.online=False        
+        
+        self.code = {'ninja': 'install',
+                     'collier': 'install',
+                     'golem': 'off',
+                     'pjfry':'off',
+                     'cuttools': 'required',
+                     'iregi': 'required'}
+        if not self.online:
+            self.code['ninja'] = 'local'
+            self.code['collier'] = 'local'
+            self.code['pjfry'] = 'fail'
+            self.code['golem'] = 'fail'
+            
+            
+
+        
+        # 1. create the question
+        question, allowed_answer = self.create_question()
+        opts['allow_arg'] = allowed_answer
+        
+        cmd.OneLinePathCompletion.__init__(self, question, *args, **opts)
+        
+
+    def create_question(self):
+        """ """
+        
+        
+        question = "For loop computation. MadLoop requires dedicated tools to"+\
+        " perform the reduction of the loop either via OPP or TIR method.\n"+\
+        "Which one do you want to install?\n"
+        
+        allowed_answer = set()
+        
+        descript =  {'cuttools': 'Cuttools (OPP) [0711.3596]',
+                     'iregi': 'Iregi (TIR) [1405.0301]',
+                     'ninja': 'Ninja (OPP) [1403.1229]',
+                     'pjfry': 'PJFry (TIR) [1112.0500]',
+                     'golem': 'Golem95 (TIR) [0807.0605]',
+                     'collier': 'Collier (TIR) [1604.06792]'} 
+
+        
+        status = {'off': 'Not to install',
+                  'install': 'will be installed',
+                  'local': 'will be installed (local mode)',
+                  'fail': 'not available without internet connection',
+                  'required': 'will be installed (minimal installation)'}
+        
+        for i,key in enumerate(self.order,1):
+            if os.path.sep not in self.code[key]:
+                question += '%s. %s : %s\n' % (i, descript[key], status[self.code[key]])
+            else:
+                question += '%s. %s : %s\n' % (i, descript[key], self.code[key])
+            if key in self.required:
+                continue
+            allowed_answer.update([str(i), key])
+            if key in self.local_installer:
+                allowed_answer.update(['key=local','key=off'])
+            if self.online:
+                allowed_answer.update(['key=on','key=install', 'key=off'])
+                
+        question += 'press enter to go trough or \n type NAME [INSTALL|OFF|PATH_TO_INSTALLATION]' 
+
+        return question, allowed_answer
+        
+    def default(self, line):
+        """Default action if line is not recognized"""
+        
+        line = line.strip()
+        args = line.split()
+        self.value = 'repeat'
+        if args:
+            misc.sprint(args)
+            if len(args) ==1 and '=' in args[0]:
+                args = args[0].split('=')
+            args[0] = args[0].lower()
+            if len(args) == 1:
+                # loop over the possibility
+                if args[0].isdigit():
+                    args[0] = self.order[int(args[0])-1]
+                key = args[0]
+                if key in self.code:
+                    if self.code[key] == 'off':
+                        if self.online:
+                            self.code[key] = 'install'
+                        elif key in self.local_installer:
+                            self.code[key] = 'local'
+                    elif self.code[key] == 'install':
+                        if key in self.local_installer:
+                            self.code[key] = 'local'
+                        else:
+                            self.code[key] = 'off'
+                    elif self.code[key] == 'local':
+                        self.code[key] = 'off'
+                else: 
+                    logger.warning('unknown')
+                    return 
+            elif len(args) == 2:
+                key = args[0]
+                if key not in self.code:
+                    logger.warning('unknown %s type of entry. Bypass command.')
+                    return                     
+                if os.path.sep in args[1]:
+                    self.code[key] = args[1]
+                    return
+                value = args[1].lower()
+                if value in ['off', 'not']:
+                    self.code[key] = 'off'
+                elif value in ['on', 'install']:
+                    if self.online:
+                        self.code[key] = 'install'
+                    elif key in local_installer:
+                        self.code[key] = 'local'
+                    else:
+                        logger.warning('offline installer not available for %s', key)
+                        self.code[key] = 'off'
+                elif value in ['local']:
+                    if key in local_installer:
+                        self.code[key] = 'local'
+                    else:
+                        logger.warning('offline installer not available for %s', key)
+                        self.code[key] = 'off'
+            else:
+                self.value = 0
+                self.question,_ = self.create_question()
+                
+    do_ninja = default
+    do_pjfry = default
+    do_cuttools = default
+    do_iregi = default
+    do_golem = default             
+        
+ 
+        
+        
+               
+   

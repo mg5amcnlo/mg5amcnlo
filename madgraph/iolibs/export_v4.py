@@ -6280,54 +6280,13 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
                 (not curr_proc is None) and \
                 (curr_proc.get('perturbation_couplings') != [] and \
                 not curr_proc.get('NLO_mode') in [None,'real','tree','LO','LOonly'])
+
     # An installation is required then, but only if the specified path is the
     # default local one and that the Ninja library appears missing.
     if requires_reduction_tool:
-        if (not opt['ninja'] is None) and\
-            os.path.abspath(opt['ninja'])==pjoin(MG5DIR,'HEPTools','lib') and\
-            not os.path.isfile(pjoin(MG5DIR,'HEPTools','lib','libninja.a')):
-            # Then install Ninja here from the tarballs in the vendor
-            # directory so that it would work offline too.
-            logger.info(
-"""MG5aMC will now install the loop reduction tool 'Ninja' from the local offline installer.
-Use the command 'install ninja' if you want to update to the latest online version.
-This installation can take some time but only needs to be performed once.""",'$MG:color:GREEN')
-            try:
-                cmd.do_install('ninja',paths={'HEPToolsInstaller':
-                        pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
-                additional_options=[
-                  '--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','ninja.tar.gz'),
-                  '--oneloop_tarball=%s'%pjoin(MG5DIR,'vendor','oneloop.tar.gz')])
-            except InvalidCmd:
-                    logger.warning(
-"""The offline installation of Ninja was unsuccessful, and MG5aMC disabled it.
-In the future, if you want to reactivate Ninja, you can do so by re-attempting
-its online installation with the command 'install ninja' or install it on your
-own and set the path to its library in the MG5aMC option 'ninja'.""")
-                    cmd.exec_cmd("set ninja ''")
-                    cmd.exec_cmd('save options')
-        if (not opt['collier'] is None) and\
-            os.path.abspath(opt['collier'])==pjoin(MG5DIR,'HEPTools','lib') and\
-            not os.path.isfile(pjoin(MG5DIR,'HEPTools','lib','libcollier.a')):
-            # Then install Collier here from the tarballs in the vendor
-            # directory so that it would work offline too.
-            logger.info(
-"""MG5aMC will now install the loop reduction tool 'COLLIER' from the local offline installer.
-Use the command 'install collier' if you want to update to the latest online version.
-This installation can take some time but only needs to be performed once.""",'$MG:color:GREEN')
-            try:
-                cmd.do_install('collier',paths={'HEPToolsInstaller':
-                        pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
-                additional_options=[
-                  '--collier_tarball=%s'%pjoin(MG5DIR,'vendor','collier.tar.gz')])
-            except InvalidCmd:
-                    logger.warning(
-"""The offline installation of COLLIER was unsuccessful, and MG5aMC disabled it.
-In the future, if you want to reactivate COLLIER, you can do so by re-attempting
-its online installation with the command 'install collier' or install it on your
-own and set the path to its library in the MG5aMC option 'collier'.""")
-                    cmd.exec_cmd("set collier ''")
-                    cmd.exec_cmd('save options')
+        cmd.install_reduction_library()
+        
+
 
 
     # ==========================================================================
