@@ -500,7 +500,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         
         # Check if first time:
         if (opt['ninja'] is None) or (os.path.isfile(pjoin(opt['ninja'],'libninja.a'))): 
-            raise Exception, 'stop since opt %s' % opt['ninja']
             return
         
         logger.info("First output with Loop matrix-element detected. Asking for loop reduction:", '$MG:color:BLACK')
@@ -918,7 +917,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         
         status = {'off': '%(start_red)sNot to install%(stop)s',
                   'install': '%(start_green)swill be installed%(stop)s',
-                  'local': '%(start_green)swill be installed (local mode)%(stop)s',
+                  'local': '%(start_green)swill be installed %(stop)s (local mode)',
                   'fail': 'not available without internet connection',
                   'required': 'will be installed (minimal installation)'}
         
