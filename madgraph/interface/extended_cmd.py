@@ -1020,7 +1020,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             path_msg = []
             
-        if timeout:
+        if timeout is True:
             try:
                 timeout = self.options['timeout']
             except Exception:
@@ -1089,6 +1089,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 value = alias[value]
         except TypeError:
             pass
+
         if value == default and ask_class:
             value = question_instance.default(default)
         return value

@@ -503,7 +503,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             return
         
         logger.info("First output with Loop matrix-element detected. Asking for loop reduction:", '$MG:color:BLACK')
-        to_install = self.ask('install', 0,  ask_class=AskLoopInstaller, timeout=300, 
+        to_install = self.ask('install', '0',  ask_class=AskLoopInstaller, timeout=300, 
                               path_msg=' ')
         
 
@@ -986,9 +986,9 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         line = line.strip()
         args = line.split()
 
-        if line in ['0', 'done','']:
+        if line in ['0', 'done','','EOF']:
             self.value = 'done'
-            return
+            return self.answer
         self.value = 'repeat'        
         if args:
             if len(args) ==1 and '=' in args[0]:
@@ -1046,7 +1046,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             else:
                 self.value = 0
         self.question,self.allow_arg = self.create_question()
-   
+        return self.answer
 
     def apply_name(self, name, line):
 
