@@ -865,8 +865,6 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     
     def __init__(self, question, *args, **opts):
 
-        misc.sprint(args, opts)
-
         import urllib2
         try:
             response=urllib2.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
@@ -885,6 +883,8 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             self.code['collier'] = 'local'
             self.code['pjfry'] = 'fail'
             self.code['golem'] = 'fail'
+        if not misc.which('cmake'):
+            self.code['collier'] = 'off'
             
             
 
