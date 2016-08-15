@@ -18,7 +18,7 @@
 !!
 
 
-module avh_olo_forIREGI_prec
+module avh_olo_prec
   use mpmodule
 
   implicit none
@@ -48,8 +48,8 @@ contains
   subroutine set_precision( ndec ,newprc )
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_arrays
+  use avh_olo_units
+  use avh_olo_arrays
   logical ,intent(out) :: newprc
   integer ,intent(in) :: ndec                     
   integer :: i0,i1,ii                             

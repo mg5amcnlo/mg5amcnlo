@@ -18,9 +18,9 @@
 !!
 
 
-module avh_olo_forIREGI_auxfun
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
+module avh_olo_auxfun
+  use avh_olo_units
+  use avh_olo_prec
 
   implicit none
   private

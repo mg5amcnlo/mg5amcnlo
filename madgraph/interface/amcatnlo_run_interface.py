@@ -87,7 +87,7 @@ else:
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
     import madgraph.various.histograms as histograms
-    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
+    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
 
 class aMCatNLOError(Exception):
     pass
@@ -774,7 +774,7 @@ class CompleteForCmd(CheckValidForCmd):
                 opts += opt._long_opts + opt._short_opts
             return self.list_completion(text, opts, line)
            
-    def complete_banner_run(self, text, line, begidx, endidx):
+    def complete_banner_run(self, text, line, begidx, endidx, formatting=True):
        "Complete the banner run command"
        try:
   
@@ -812,7 +812,7 @@ class CompleteForCmd(CheckValidForCmd):
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
-        return self.deal_multiple_categories(possibilites)
+        return self.deal_multiple_categories(possibilites, formatting)
     
         
        except Exception, error:
@@ -2127,7 +2127,36 @@ RESTART = %(mint_mode)s
         """setup the number of cores for multicore, and the cluster-type for cluster runs"""
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](**self.options)
+            try:
+                self.cluster = cluster.from_name[cluster_name](**self.options)
+            except KeyError:
+                if aMCatNLO and ('mg5_path' not in self.options or not self.options['mg5_path']):
+                    raise self.InvalidCmd('%s not native cluster type and not MG5aMC found to check for plugin' % cluster_name)
+                elif aMCatNLO:
+                    mg5dir = self.options['mg5_path']
+                    if mg5dir not in sys.path:
+                        sys.path.append(mg5dir)
+                else:
+                    mg5dir = MG5DIR
+                # Check if a plugin define this type of cluster
+                # check for PLUGIN format
+                for plug in os.listdir(pjoin(mg5dir, 'PLUGIN')):
+                    if os.path.exists(pjoin(mg5dir, 'PLUGIN', plug, '__init__.py')):
+                        try:
+                            __import__('PLUGIN.%s' % plug)
+                        except Exception, error:
+                            logger.critical('plugin directory %s fail to be loaded. Please check it', plug)
+                            continue
+                        plugin = sys.modules['PLUGIN.%s' % plug]  
+                        if not hasattr(plugin, 'new_cluster'):
+                            continue
+                        if not misc.is_plugin_supported(plugin):
+                            continue              
+                        if cluster_name in plugin.new_cluster:
+                            logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
+                            self.cluster = plugin.new_cluster[cluster_name](**self.options)
+                            break
+        
         if self.cluster_mode == 2:
             try:
                 import multiprocessing

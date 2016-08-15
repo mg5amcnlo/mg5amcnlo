@@ -18,7 +18,7 @@
 !
 
 
-module avh_olo_forIREGI_version
+module avh_olo_version
   implicit none
   private
   public :: olo_version

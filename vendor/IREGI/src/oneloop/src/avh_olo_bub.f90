@@ -18,12 +18,12 @@
 !!
 
 
-module avh_olo_forIREGI_bub
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_auxfun
-  use avh_olo_forIREGI_bnlog
-  use avh_olo_forIREGI_qmplx
+module avh_olo_bub
+  use avh_olo_units
+  use avh_olo_prec
+  use avh_olo_auxfun
+  use avh_olo_bnlog
+  use avh_olo_qmplx
   implicit none
   private
   public :: tadp ,tadpn ,bub0 ,bub1 ,bub11 ,bub111 ,bub1111

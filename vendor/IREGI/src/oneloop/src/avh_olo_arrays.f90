@@ -18,9 +18,9 @@
 !!
 
 
-module avh_olo_forIREGI_arrays
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_kinds !|RCPROG=intrinsic
+module avh_olo_arrays
+  use avh_olo_units
+  use avh_olo_kinds !|RCPROG=intrinsic
 !#  use ddmodule     !|RCPROG=ddfun90
 !#  use qdmodule     !|RCPROG=qdcpp
 !#  use mpmodule     !|RCPROG=mpfun90

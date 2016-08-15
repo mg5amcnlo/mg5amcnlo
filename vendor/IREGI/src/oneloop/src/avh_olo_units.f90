@@ -18,7 +18,7 @@
 !!
 
 
-module avh_olo_forIREGI_units
+module avh_olo_units
   implicit none
 ! By default these values are set to 6. However, they can potentially clog
 ! the logs so we want to force them off, unless explicitely turned on

@@ -12,7 +12,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u u~ > d d~ QED<=2 [ QCD QED ] WEIGHTED^2<=10 QED^2>2
+C     Process: u u~ > d d~ QED<=2 [ QCD QED ] QED^2>2 WEIGHTED^2<=10
 C     
 C     Modules
 C     

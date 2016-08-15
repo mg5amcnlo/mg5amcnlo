@@ -18,12 +18,12 @@
 !!
 
 
-module avh_olo_forIREGI_qmplx
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_auxfun
-  use avh_olo_forIREGI_olog
-  use avh_olo_forIREGI_dilog
+module avh_olo_qmplx
+  use avh_olo_units
+  use avh_olo_prec
+  use avh_olo_auxfun
+  use avh_olo_olog
+  use avh_olo_dilog
 
   implicit none
   private

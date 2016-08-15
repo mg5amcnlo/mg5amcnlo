@@ -18,10 +18,10 @@
 !!
 
 
-module avh_olo_forIREGI
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_print
-  use avh_olo_forIREGI_prec
+module avh_olo
+  use avh_olo_units
+  use avh_olo_print
+  use avh_olo_prec
 !
   implicit none
   private
@@ -97,7 +97,7 @@ contains
   subroutine init( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forIREGI_version
+  use avh_olo_version
   integer,optional,intent(in) :: ndec
 !
   call olo_version
@@ -120,9 +120,9 @@ contains
   recursive subroutine olo_precision( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forIREGI_olog  ,only: update_olog
-  use avh_olo_forIREGI_dilog ,only: update_dilog
-  use avh_olo_forIREGI_bnlog ,only: update_bnlog
+  use avh_olo_olog  ,only: update_olog
+  use avh_olo_dilog ,only: update_dilog
+  use avh_olo_bnlog ,only: update_bnlog
   integer ,intent(in) :: ndec
   logical :: newprc
   if (initz) then
@@ -176,7 +176,7 @@ contains
   function olo_get_precision() result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forIREGI_prec ,only: ndecim,prcpar
+  use avh_olo_prec ,only: ndecim,prcpar
   integer :: rslt
   if (initz) call init
   rslt = ndecim(prcpar)

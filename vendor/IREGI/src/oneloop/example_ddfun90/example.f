@@ -6,7 +6,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use ddmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       integer :: nn
       character(4) :: next
@@ -41,7 +41,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use ddmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,p2,p3,p4,p12,p23,m1,m2,m3,m4
       complex(kind(1d0)) :: zLT,D0C,zdp(0:2)
@@ -107,7 +107,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use ddmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,p2,p3,m1,m2,m3 ,zLT,C0C,zdp(0:2)
       type(dd_complex) :: p1_dd,p2_dd,p3_dd
@@ -159,7 +159,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use ddmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,m1,m2
       complex(kind(1d0)) :: b0LT,b1LT,b00LT,b11LT,b0C,b1C,b00C,b11C

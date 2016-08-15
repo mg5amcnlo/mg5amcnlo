@@ -466,11 +466,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                      noclean, output_type=output_type, group_subprocesses=False)
 
         if self._export_format in ['standalone', 'matchbox']:
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+            self._curr_exporter.copy_template(self._curr_model)
 
         if self._export_format == "standalone_rw":
             self._export_format = "standalone"
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+            self._curr_exporter.copy_template(self._curr_model)
             self._export_format = "standalone_rw"
 
         # Reset _done_export, since we have new directory
@@ -515,6 +515,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
     def ML5export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
+        if not self._curr_helas_model:
+            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before exporting"""
 
@@ -560,9 +562,8 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if self._export_format in self.supported_ML_format:
             for unique_id, me in enumerate(matrix_elements):
                 calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
-                            me, self._curr_fortran_model, (unique_id+1))
-            self._curr_exporter.write_global_specs(matrix_elements)
+                        self._curr_exporter.generate_subprocess_directory(\
+                            me, self._curr_helas_model)
             # If all ME's do not share the same maximum loop vertex rank and the
             # same loop maximum wavefunction size, we need to set the maximum
             # in coef_specs.inc of the HELAS Source. The SubProcesses/P* directory
@@ -575,7 +576,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
                     self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
                                                        max(max_loop_vert_ranks))
-                self._curr_exporter.write_global_specs(matrix_elements)
 
         # Just the matrix.f files
         if self._export_format == 'matrix':
@@ -588,7 +588,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     logger.info("Creating new file %s" % filename)
                 calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
-                    me, self._curr_fortran_model)
+                    me, self._curr_helas_model)
                 
         cpu_time2 = time.time() - cpu_time1
 
@@ -631,21 +631,22 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 del self.previous_lorentz
                 del self.previous_couplings
             
-            self._curr_exporter.convert_model_to_mg4(self._curr_model,
+            self._curr_exporter.convert_model(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
-            
-        compiler = {'fortran': self.options['fortran_compiler'],
-                    'f2py': self.options['f2py_compiler'],
-                    'cpp': self.options['cpp_compiler']}
         
         if self._export_format in self.supported_ML_format:
-            self._curr_exporter.finalize_v4_directory( \
+            flags = []
+            if nojpeg:
+                flags.append('nojpeg')
+            if online:
+                flags.append('online')
+                
+            self._curr_exporter.finalize( \
                                            self._curr_matrix_elements,
                                            self.history,
-                                           not nojpeg,
-                                           online,
-                                           compiler)
+                                           self.options,
+                                           flags)
 
         if self._export_format in self.supported_ML_format:
             logger.info('Output to directory ' + self._export_dir + ' done.')

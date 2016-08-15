@@ -2,7 +2,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use qdmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       integer :: nn
       character(4) :: next
@@ -31,7 +31,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use qdmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,p2,p3,p4,p12,p23,m1,m2,m3,m4,zdp(0:2)
       type(qd_complex) :: p1_qd,p2_qd,p3_qd,p4_qd,p12_qd,p23_qd
@@ -93,7 +93,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use qdmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,p2,p3,m1,m2,m3,zdp(0:2)
       type(qd_complex) :: p1_qd,p2_qd,p3_qd
@@ -142,7 +142,7 @@
 !  ********************************************************************
 !  ********************************************************************
       use qdmodule
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,m1,m2,zdp(0:2)
       type(qd_complex) :: m1_qd,m2_qd,p1_qd,zqd(0:2)

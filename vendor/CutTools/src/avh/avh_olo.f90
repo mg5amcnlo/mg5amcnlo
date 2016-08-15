@@ -18,7 +18,7 @@
 !
 
 
-module avh_olo_forCutTools_version
+module avh_olo_version
   implicit none
   private
   public :: olo_version
@@ -47,7 +47,7 @@ contains
 end module
 
 
-module avh_olo_forCutTools_units
+module avh_olo_units
   implicit none
 ! By default these values are set to 6. However, they can potentially clog
 ! the logs so we want to force them off, unless explicitely turned on 
@@ -78,14 +78,14 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_kinds
+module avh_olo_dp_kinds
   integer ,parameter :: kindr2=kind(1d0) 
 end module
 
 
-module avh_olo_forCutTools_dp_arrays
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_kinds 
+module avh_olo_dp_arrays
+  use avh_olo_units
+  use avh_olo_dp_kinds 
   implicit none
   private
   public :: shift1,shift2,shift3,resize,enlarge
@@ -351,8 +351,8 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_kinds
+module avh_olo_dp_prec
+  use avh_olo_dp_kinds
 
   implicit none
   public
@@ -378,7 +378,7 @@ contains
   subroutine set_precision( newprc )
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forCutTools_units
+  use avh_olo_units
   logical ,intent(out) :: newprc
   integer :: ndec                                  
   if (prcpar.eq.1) then                    
@@ -507,8 +507,8 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_print
-  use avh_olo_forCutTools_dp_prec
+module avh_olo_dp_print
+  use avh_olo_dp_prec
   implicit none
   private
   public :: myprint
@@ -577,9 +577,9 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_auxfun
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
+module avh_olo_dp_auxfun
+  use avh_olo_units
+  use avh_olo_dp_prec
 
   implicit none
   private
@@ -1141,7 +1141,7 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_olog
+module avh_olo_dp_olog
 !***********************************************************************
 ! Provides the functions
 !   olog(x,n) = log(x) + n*pi*imag  
@@ -1151,10 +1151,10 @@ module avh_olo_forCutTools_dp_olog
 ! In the vicinity of x=1,n=0, the logarithm of complex argument is
 ! evaluated with a series expansion.
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_print
-  use avh_olo_forCutTools_dp_auxfun
+  use avh_olo_units
+  use avh_olo_dp_prec
+  use avh_olo_dp_print
+  use avh_olo_dp_auxfun
   implicit none
   private
   public :: update_olog,olog,olog1,olog2,olog3
@@ -1182,7 +1182,7 @@ contains
   subroutine update_olog
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forCutTools_dp_arrays
+  use avh_olo_dp_arrays
   real(kindr2) &  
     :: tt
   integer :: nn,mm,ii,jj
@@ -1567,7 +1567,7 @@ end module
 
 
 
-module avh_olo_forCutTools_dp_dilog
+module avh_olo_dp_dilog
 !***********************************************************************
 !                     /1    ln(1-zz*t)
 !   dilog(xx,iph) = - |  dt ---------- 
@@ -1579,11 +1579,11 @@ module avh_olo_forCutTools_dp_dilog
 ! Arguments xx,x1,x2, may be all real or all complex,
 ! arguments iph,i1,i2 must be all integer.
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_print
-  use avh_olo_forCutTools_dp_auxfun
-  use avh_olo_forCutTools_dp_arrays
+  use avh_olo_units
+  use avh_olo_dp_prec
+  use avh_olo_dp_print
+  use avh_olo_dp_auxfun
+  use avh_olo_dp_arrays
   implicit none
   private
   public :: update_dilog,dilog
@@ -1878,7 +1878,7 @@ contains
   function dilog2_c( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_dp_olog
+  use avh_olo_dp_olog
   complex(kindr2) &   
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
@@ -2032,7 +2032,7 @@ contains
   function dilog2_r( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_dp_olog
+  use avh_olo_dp_olog
   real(kindr2) &  
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
@@ -2244,18 +2244,18 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_bnlog
+module avh_olo_dp_bnlog
 !***********************************************************************
 !                      /1    
 !   bnlog(n,x) = (n+1) |  dt t^n ln(1-t/x) 
 !                      /0 
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_auxfun
-  use avh_olo_forCutTools_dp_arrays
-  use avh_olo_forCutTools_dp_olog
-  use avh_olo_forCutTools_dp_print
+  use avh_olo_units
+  use avh_olo_dp_prec
+  use avh_olo_dp_auxfun
+  use avh_olo_dp_arrays
+  use avh_olo_dp_olog
+  use avh_olo_dp_print
   implicit none
   private
   public :: update_bnlog,bnlog
@@ -2561,12 +2561,12 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_qmplx
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_auxfun
-  use avh_olo_forCutTools_dp_olog
-  use avh_olo_forCutTools_dp_dilog
+module avh_olo_dp_qmplx
+  use avh_olo_units
+  use avh_olo_dp_prec
+  use avh_olo_dp_auxfun
+  use avh_olo_dp_olog
+  use avh_olo_dp_dilog
 
   implicit none
   private
@@ -2863,13 +2863,13 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_bub
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_auxfun
-  use avh_olo_forCutTools_dp_bnlog
-  use avh_olo_forCutTools_dp_qmplx
-  use avh_olo_forCutTools_dp_olog
+module avh_olo_dp_bub
+  use avh_olo_units
+  use avh_olo_dp_prec
+  use avh_olo_dp_auxfun
+  use avh_olo_dp_bnlog
+  use avh_olo_dp_qmplx
+  use avh_olo_dp_olog
   implicit none
   private
   public :: tadp ,tadpn ,bub0 ,dbub0 ,bub1 ,bub11 ,bub111 ,bub1111
@@ -3552,11 +3552,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_tri
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_auxfun
-  use avh_olo_forCutTools_dp_qmplx
+module avh_olo_dp_tri
+  use avh_olo_units
+  use avh_olo_dp_prec
+  use avh_olo_dp_auxfun
+  use avh_olo_dp_qmplx
   implicit none
   private
   public :: tria0,tria1,tria2,tria3,tria4,trif0,trif1,trif2,trif3 &
@@ -3736,7 +3736,7 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forCutTools_dp_olog
+   use avh_olo_dp_olog
   complex(kindr2) &   
      ,intent(out) :: rslt(0:2)
   complex(kindr2) &   
@@ -4314,11 +4314,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_box
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_prec
-  use avh_olo_forCutTools_dp_auxfun
-  use avh_olo_forCutTools_dp_qmplx
+module avh_olo_dp_box
+  use avh_olo_units
+  use avh_olo_dp_prec
+  use avh_olo_dp_auxfun
+  use avh_olo_dp_qmplx
   implicit none
   private
   public :: box00,box03,box05,box06,box07,box08,box09,box10,box11,box12 &
@@ -5195,8 +5195,8 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forCutTools_dp_olog
-   use avh_olo_forCutTools_dp_dilog
+   use avh_olo_dp_olog
+   use avh_olo_dp_dilog
   complex(kindr2) &   
      ,intent(out) :: rslt(0:2)
   complex(kindr2) &   
@@ -5823,11 +5823,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp_boxc
-   use avh_olo_forCutTools_units
-   use avh_olo_forCutTools_dp_prec
-   use avh_olo_forCutTools_dp_auxfun
-   use avh_olo_forCutTools_dp_qmplx
+module avh_olo_dp_boxc
+   use avh_olo_units
+   use avh_olo_dp_prec
+   use avh_olo_dp_auxfun
+   use avh_olo_dp_qmplx
    implicit none
    private
    public :: boxc
@@ -5841,7 +5841,7 @@ contains
 !   Dao Thi Nhung and Le Duc Ninh, arXiv:0902.0325 [hep-ph]
 !   G. 't Hooft and M.J.G. Veltman, Nucl.Phys.B153:365-401,1979 
 !*******************************************************************
-   use avh_olo_forCutTools_dp_box ,only: base,casetable,ll=>permtable
+   use avh_olo_dp_box ,only: base,casetable,ll=>permtable
   complex(kindr2) &   
      ,intent(out) :: rslt(0:2)
   complex(kindr2) &   
@@ -6415,10 +6415,10 @@ contains
 end module
 
 
-module avh_olo_forCutTools_dp
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_dp_print
-  use avh_olo_forCutTools_dp_prec
+module avh_olo_dp
+  use avh_olo_units
+  use avh_olo_dp_print
+  use avh_olo_dp_prec
 !
   implicit none
   private
@@ -6485,7 +6485,7 @@ contains
   subroutine init( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_version
+  use avh_olo_version
   integer,optional,intent(in) :: ndec
 !
   call olo_version
@@ -6508,9 +6508,9 @@ contains
   recursive subroutine olo_precision( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_dp_olog  ,only: update_olog
-  use avh_olo_forCutTools_dp_dilog ,only: update_dilog
-  use avh_olo_forCutTools_dp_bnlog ,only: update_bnlog
+  use avh_olo_dp_olog  ,only: update_olog
+  use avh_olo_dp_dilog ,only: update_dilog
+  use avh_olo_dp_bnlog ,only: update_bnlog
   integer ,intent(in) :: ndec
   logical :: newprc
   if (initz) then
@@ -6561,7 +6561,7 @@ contains
   function olo_get_precision() result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_dp_prec ,only: ndecim,prcpar
+  use avh_olo_dp_prec ,only: ndecim,prcpar
   integer :: rslt
   if (initz) call init
   rslt = ndecim(prcpar)
@@ -6628,7 +6628,7 @@ contains
 
   subroutine a0_c( rslt ,mm )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadp
+  use avh_olo_dp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -6672,7 +6672,7 @@ contains
 
   subroutine a0cr( rslt ,mm ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadp
+  use avh_olo_dp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -6718,7 +6718,7 @@ contains
 
   subroutine a0_r( rslt ,mm  )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadp
+  use avh_olo_dp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -6762,7 +6762,7 @@ contains
 
   subroutine a0rr( rslt ,mm ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadp
+  use avh_olo_dp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -6809,7 +6809,7 @@ contains
 
   subroutine an_c( rslt ,rank ,mm )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadpn
+  use avh_olo_dp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -6857,7 +6857,7 @@ contains
 
   subroutine ancr( rslt ,rank ,mm ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadpn
+  use avh_olo_dp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -6907,7 +6907,7 @@ contains
 
   subroutine an_r( rslt ,rank ,mm  )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadpn
+  use avh_olo_dp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -6955,7 +6955,7 @@ contains
 
   subroutine anrr( rslt ,rank ,mm ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: tadpn
+  use avh_olo_dp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -7024,7 +7024,7 @@ contains
 
   subroutine b0cc( rslt ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0
+  use avh_olo_dp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7102,7 +7102,7 @@ contains
 
   subroutine b0ccr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0
+  use avh_olo_dp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7182,7 +7182,7 @@ contains
 
   subroutine b0rc( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0
+  use avh_olo_dp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7254,7 +7254,7 @@ contains
 
   subroutine b0rcr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0
+  use avh_olo_dp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7328,7 +7328,7 @@ contains
 
   subroutine b0rr( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0
+  use avh_olo_dp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7385,7 +7385,7 @@ contains
 
   subroutine b0rrr( rslt ,pp ,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0
+  use avh_olo_dp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7447,8 +7447,8 @@ contains
 !*******************************************************************
   subroutine db0cc( rslt ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: dbub0
-  use avh_olo_forCutTools_dp_olog ,only: olog
+  use avh_olo_dp_bub ,only: dbub0
+  use avh_olo_dp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7540,8 +7540,8 @@ contains
 
   subroutine db0ccr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: dbub0
-  use avh_olo_forCutTools_dp_olog ,only: olog
+  use avh_olo_dp_bub ,only: dbub0
+  use avh_olo_dp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7635,8 +7635,8 @@ contains
 
   subroutine db0rc( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: dbub0
-  use avh_olo_forCutTools_dp_olog ,only: olog
+  use avh_olo_dp_bub ,only: dbub0
+  use avh_olo_dp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7722,8 +7722,8 @@ contains
 
   subroutine db0rcr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: dbub0
-  use avh_olo_forCutTools_dp_olog ,only: olog
+  use avh_olo_dp_bub ,only: dbub0
+  use avh_olo_dp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7811,8 +7811,8 @@ contains
 
   subroutine db0rr( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: dbub0
-  use avh_olo_forCutTools_dp_olog ,only: olog
+  use avh_olo_dp_bub ,only: dbub0
+  use avh_olo_dp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7883,8 +7883,8 @@ contains
 
   subroutine db0rrr( rslt ,pp ,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: dbub0
-  use avh_olo_forCutTools_dp_olog ,only: olog
+  use avh_olo_dp_bub ,only: dbub0
+  use avh_olo_dp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -7978,7 +7978,7 @@ contains
 
   subroutine b11cc( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub11
+  use avh_olo_dp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -8065,7 +8065,7 @@ contains
 
   subroutine b11ccr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub11
+  use avh_olo_dp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -8154,7 +8154,7 @@ contains
 
   subroutine b11rc( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub11
+  use avh_olo_dp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -8235,7 +8235,7 @@ contains
 
   subroutine b11rcr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub11
+  use avh_olo_dp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -8318,7 +8318,7 @@ contains
 
   subroutine b11rr( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub11
+  use avh_olo_dp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -8384,7 +8384,7 @@ contains
 
   subroutine b11rrr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub11
+  use avh_olo_dp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -8453,7 +8453,7 @@ contains
 
   subroutine bncc( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -8583,7 +8583,7 @@ contains
 
   subroutine bnccr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -8715,7 +8715,7 @@ contains
 
   subroutine bnrc( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -8839,7 +8839,7 @@ contains
 
   subroutine bnrcr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -8965,7 +8965,7 @@ contains
 
   subroutine bnrr( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -9074,7 +9074,7 @@ contains
 
   subroutine bnrrr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_dp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -9204,8 +9204,8 @@ contains
 !*******************************************************************
 
   subroutine c0cc( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_dp_tri
-  use avh_olo_forCutTools_dp_auxfun ,only: kallen
+  use avh_olo_dp_tri
+  use avh_olo_dp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -9366,8 +9366,8 @@ contains
   end subroutine
 
   subroutine c0ccr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_dp_tri
-  use avh_olo_forCutTools_dp_auxfun ,only: kallen
+  use avh_olo_dp_tri
+  use avh_olo_dp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -9530,8 +9530,8 @@ contains
   end subroutine
 
   subroutine c0rc( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_dp_tri
-  use avh_olo_forCutTools_dp_auxfun ,only: kallen
+  use avh_olo_dp_tri
+  use avh_olo_dp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -9686,8 +9686,8 @@ contains
   end subroutine
 
   subroutine c0rcr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_dp_tri
-  use avh_olo_forCutTools_dp_auxfun ,only: kallen
+  use avh_olo_dp_tri
+  use avh_olo_dp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -9844,8 +9844,8 @@ contains
   end subroutine
 
   subroutine c0rr( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_dp_tri
-  use avh_olo_forCutTools_dp_auxfun ,only: kallen
+  use avh_olo_dp_tri
+  use avh_olo_dp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -9993,8 +9993,8 @@ contains
   end subroutine
 
   subroutine c0rrr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_dp_tri
-  use avh_olo_forCutTools_dp_auxfun ,only: kallen
+  use avh_olo_dp_tri
+  use avh_olo_dp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -10167,8 +10167,8 @@ contains
 !*******************************************************************
 
   subroutine d0cc( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_dp_box
-  use avh_olo_forCutTools_dp_boxc
+  use avh_olo_dp_box
+  use avh_olo_dp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -10440,8 +10440,8 @@ contains
   end subroutine
 
   subroutine d0ccr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_dp_box
-  use avh_olo_forCutTools_dp_boxc
+  use avh_olo_dp_box
+  use avh_olo_dp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -10715,8 +10715,8 @@ contains
   end subroutine
 
   subroutine d0rc( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_dp_box
-  use avh_olo_forCutTools_dp_boxc
+  use avh_olo_dp_box
+  use avh_olo_dp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -10982,8 +10982,8 @@ contains
   end subroutine
 
   subroutine d0rcr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_dp_box
-  use avh_olo_forCutTools_dp_boxc
+  use avh_olo_dp_box
+  use avh_olo_dp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -11251,8 +11251,8 @@ contains
   end subroutine
 
   subroutine d0rr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_dp_box
-  use avh_olo_forCutTools_dp_boxc
+  use avh_olo_dp_box
+  use avh_olo_dp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -11511,8 +11511,8 @@ contains
   end subroutine
 
   subroutine d0rrr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_dp_box
-  use avh_olo_forCutTools_dp_boxc
+  use avh_olo_dp_box
+  use avh_olo_dp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -11775,14 +11775,14 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_kinds
+module avh_olo_qp_kinds
   integer ,parameter :: kindr2=16 
 end module
 
 
-module avh_olo_forCutTools_qp_arrays
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_kinds 
+module avh_olo_qp_arrays
+  use avh_olo_units
+  use avh_olo_qp_kinds 
   implicit none
   private
   public :: shift1,shift2,shift3,resize,enlarge
@@ -12048,8 +12048,8 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_kinds
+module avh_olo_qp_prec
+  use avh_olo_qp_kinds
 
   implicit none
   public
@@ -12075,7 +12075,7 @@ contains
   subroutine set_precision( newprc )
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forCutTools_units
+  use avh_olo_units
   logical ,intent(out) :: newprc
   integer :: ndec                                  
   if (prcpar.eq.1) then                    
@@ -12204,8 +12204,8 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_print
-  use avh_olo_forCutTools_qp_prec
+module avh_olo_qp_print
+  use avh_olo_qp_prec
   implicit none
   private
   public :: myprint
@@ -12274,9 +12274,9 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_auxfun
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
+module avh_olo_qp_auxfun
+  use avh_olo_units
+  use avh_olo_qp_prec
 
   implicit none
   private
@@ -12838,7 +12838,7 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_olog
+module avh_olo_qp_olog
 !***********************************************************************
 ! Provides the functions
 !   olog(x,n) = log(x) + n*pi*imag  
@@ -12848,10 +12848,10 @@ module avh_olo_forCutTools_qp_olog
 ! In the vicinity of x=1,n=0, the logarithm of complex argument is
 ! evaluated with a series expansion.
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_print
-  use avh_olo_forCutTools_qp_auxfun
+  use avh_olo_units
+  use avh_olo_qp_prec
+  use avh_olo_qp_print
+  use avh_olo_qp_auxfun
   implicit none
   private
   public :: update_olog,olog,olog1,olog2,olog3
@@ -12879,7 +12879,7 @@ contains
   subroutine update_olog
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forCutTools_qp_arrays
+  use avh_olo_qp_arrays
   real(kindr2) &  
     :: tt
   integer :: nn,mm,ii,jj
@@ -13264,7 +13264,7 @@ end module
 
 
 
-module avh_olo_forCutTools_qp_dilog
+module avh_olo_qp_dilog
 !***********************************************************************
 !                     /1    ln(1-zz*t)
 !   dilog(xx,iph) = - |  dt ---------- 
@@ -13276,11 +13276,11 @@ module avh_olo_forCutTools_qp_dilog
 ! Arguments xx,x1,x2, may be all real or all complex,
 ! arguments iph,i1,i2 must be all integer.
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_print
-  use avh_olo_forCutTools_qp_auxfun
-  use avh_olo_forCutTools_qp_arrays
+  use avh_olo_units
+  use avh_olo_qp_prec
+  use avh_olo_qp_print
+  use avh_olo_qp_auxfun
+  use avh_olo_qp_arrays
   implicit none
   private
   public :: update_dilog,dilog
@@ -13575,7 +13575,7 @@ contains
   function dilog2_c( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_qp_olog
+  use avh_olo_qp_olog
   complex(kindr2) &   
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
@@ -13729,7 +13729,7 @@ contains
   function dilog2_r( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_qp_olog
+  use avh_olo_qp_olog
   real(kindr2) &  
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
@@ -13941,18 +13941,18 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_bnlog
+module avh_olo_qp_bnlog
 !***********************************************************************
 !                      /1    
 !   bnlog(n,x) = (n+1) |  dt t^n ln(1-t/x) 
 !                      /0 
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_auxfun
-  use avh_olo_forCutTools_qp_arrays
-  use avh_olo_forCutTools_qp_olog
-  use avh_olo_forCutTools_qp_print
+  use avh_olo_units
+  use avh_olo_qp_prec
+  use avh_olo_qp_auxfun
+  use avh_olo_qp_arrays
+  use avh_olo_qp_olog
+  use avh_olo_qp_print
   implicit none
   private
   public :: update_bnlog,bnlog
@@ -14258,12 +14258,12 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_qmplx
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_auxfun
-  use avh_olo_forCutTools_qp_olog
-  use avh_olo_forCutTools_qp_dilog
+module avh_olo_qp_qmplx
+  use avh_olo_units
+  use avh_olo_qp_prec
+  use avh_olo_qp_auxfun
+  use avh_olo_qp_olog
+  use avh_olo_qp_dilog
 
   implicit none
   private
@@ -14560,13 +14560,13 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_bub
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_auxfun
-  use avh_olo_forCutTools_qp_bnlog
-  use avh_olo_forCutTools_qp_qmplx
-  use avh_olo_forCutTools_qp_olog
+module avh_olo_qp_bub
+  use avh_olo_units
+  use avh_olo_qp_prec
+  use avh_olo_qp_auxfun
+  use avh_olo_qp_bnlog
+  use avh_olo_qp_qmplx
+  use avh_olo_qp_olog
   implicit none
   private
   public :: tadp ,tadpn ,bub0 ,dbub0 ,bub1 ,bub11 ,bub111 ,bub1111
@@ -15249,11 +15249,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_tri
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_auxfun
-  use avh_olo_forCutTools_qp_qmplx
+module avh_olo_qp_tri
+  use avh_olo_units
+  use avh_olo_qp_prec
+  use avh_olo_qp_auxfun
+  use avh_olo_qp_qmplx
   implicit none
   private
   public :: tria0,tria1,tria2,tria3,tria4,trif0,trif1,trif2,trif3 &
@@ -15433,7 +15433,7 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forCutTools_qp_olog
+   use avh_olo_qp_olog
   complex(kindr2) &   
      ,intent(out) :: rslt(0:2)
   complex(kindr2) &   
@@ -16011,11 +16011,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_box
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_prec
-  use avh_olo_forCutTools_qp_auxfun
-  use avh_olo_forCutTools_qp_qmplx
+module avh_olo_qp_box
+  use avh_olo_units
+  use avh_olo_qp_prec
+  use avh_olo_qp_auxfun
+  use avh_olo_qp_qmplx
   implicit none
   private
   public :: box00,box03,box05,box06,box07,box08,box09,box10,box11,box12 &
@@ -16892,8 +16892,8 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forCutTools_qp_olog
-   use avh_olo_forCutTools_qp_dilog
+   use avh_olo_qp_olog
+   use avh_olo_qp_dilog
   complex(kindr2) &   
      ,intent(out) :: rslt(0:2)
   complex(kindr2) &   
@@ -17520,11 +17520,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp_boxc
-   use avh_olo_forCutTools_units
-   use avh_olo_forCutTools_qp_prec
-   use avh_olo_forCutTools_qp_auxfun
-   use avh_olo_forCutTools_qp_qmplx
+module avh_olo_qp_boxc
+   use avh_olo_units
+   use avh_olo_qp_prec
+   use avh_olo_qp_auxfun
+   use avh_olo_qp_qmplx
    implicit none
    private
    public :: boxc
@@ -17538,7 +17538,7 @@ contains
 !   Dao Thi Nhung and Le Duc Ninh, arXiv:0902.0325 [hep-ph]
 !   G. 't Hooft and M.J.G. Veltman, Nucl.Phys.B153:365-401,1979 
 !*******************************************************************
-   use avh_olo_forCutTools_qp_box ,only: base,casetable,ll=>permtable
+   use avh_olo_qp_box ,only: base,casetable,ll=>permtable
   complex(kindr2) &   
      ,intent(out) :: rslt(0:2)
   complex(kindr2) &   
@@ -18112,10 +18112,10 @@ contains
 end module
 
 
-module avh_olo_forCutTools_qp
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_qp_print
-  use avh_olo_forCutTools_qp_prec
+module avh_olo_qp
+  use avh_olo_units
+  use avh_olo_qp_print
+  use avh_olo_qp_prec
 !
   implicit none
   private
@@ -18182,7 +18182,7 @@ contains
   subroutine init( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_version
+  use avh_olo_version
   integer,optional,intent(in) :: ndec
 !
   call olo_version
@@ -18205,9 +18205,9 @@ contains
   recursive subroutine olo_precision( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_qp_olog  ,only: update_olog
-  use avh_olo_forCutTools_qp_dilog ,only: update_dilog
-  use avh_olo_forCutTools_qp_bnlog ,only: update_bnlog
+  use avh_olo_qp_olog  ,only: update_olog
+  use avh_olo_qp_dilog ,only: update_dilog
+  use avh_olo_qp_bnlog ,only: update_bnlog
   integer ,intent(in) :: ndec
   logical :: newprc
   if (initz) then
@@ -18258,7 +18258,7 @@ contains
   function olo_get_precision() result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_qp_prec ,only: ndecim,prcpar
+  use avh_olo_qp_prec ,only: ndecim,prcpar
   integer :: rslt
   if (initz) call init
   rslt = ndecim(prcpar)
@@ -18325,7 +18325,7 @@ contains
 
   subroutine a0_c( rslt ,mm )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadp
+  use avh_olo_qp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -18369,7 +18369,7 @@ contains
 
   subroutine a0cr( rslt ,mm ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadp
+  use avh_olo_qp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -18415,7 +18415,7 @@ contains
 
   subroutine a0_r( rslt ,mm  )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadp
+  use avh_olo_qp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -18459,7 +18459,7 @@ contains
 
   subroutine a0rr( rslt ,mm ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadp
+  use avh_olo_qp_bub ,only: tadp
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -18506,7 +18506,7 @@ contains
 
   subroutine an_c( rslt ,rank ,mm )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadpn
+  use avh_olo_qp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -18554,7 +18554,7 @@ contains
 
   subroutine ancr( rslt ,rank ,mm ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadpn
+  use avh_olo_qp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -18604,7 +18604,7 @@ contains
 
   subroutine an_r( rslt ,rank ,mm  )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadpn
+  use avh_olo_qp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -18652,7 +18652,7 @@ contains
 
   subroutine anrr( rslt ,rank ,mm ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: tadpn
+  use avh_olo_qp_bub ,only: tadpn
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -18721,7 +18721,7 @@ contains
 
   subroutine b0cc( rslt ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0
+  use avh_olo_qp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -18799,7 +18799,7 @@ contains
 
   subroutine b0ccr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0
+  use avh_olo_qp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -18879,7 +18879,7 @@ contains
 
   subroutine b0rc( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0
+  use avh_olo_qp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -18951,7 +18951,7 @@ contains
 
   subroutine b0rcr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0
+  use avh_olo_qp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19025,7 +19025,7 @@ contains
 
   subroutine b0rr( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0
+  use avh_olo_qp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19082,7 +19082,7 @@ contains
 
   subroutine b0rrr( rslt ,pp ,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0
+  use avh_olo_qp_bub ,only: bub0
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19144,8 +19144,8 @@ contains
 !*******************************************************************
   subroutine db0cc( rslt ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: dbub0
-  use avh_olo_forCutTools_qp_olog ,only: olog
+  use avh_olo_qp_bub ,only: dbub0
+  use avh_olo_qp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19237,8 +19237,8 @@ contains
 
   subroutine db0ccr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: dbub0
-  use avh_olo_forCutTools_qp_olog ,only: olog
+  use avh_olo_qp_bub ,only: dbub0
+  use avh_olo_qp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19332,8 +19332,8 @@ contains
 
   subroutine db0rc( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: dbub0
-  use avh_olo_forCutTools_qp_olog ,only: olog
+  use avh_olo_qp_bub ,only: dbub0
+  use avh_olo_qp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19419,8 +19419,8 @@ contains
 
   subroutine db0rcr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: dbub0
-  use avh_olo_forCutTools_qp_olog ,only: olog
+  use avh_olo_qp_bub ,only: dbub0
+  use avh_olo_qp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19508,8 +19508,8 @@ contains
 
   subroutine db0rr( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: dbub0
-  use avh_olo_forCutTools_qp_olog ,only: olog
+  use avh_olo_qp_bub ,only: dbub0
+  use avh_olo_qp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19580,8 +19580,8 @@ contains
 
   subroutine db0rrr( rslt ,pp ,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: dbub0
-  use avh_olo_forCutTools_qp_olog ,only: olog
+  use avh_olo_qp_bub ,only: dbub0
+  use avh_olo_qp_olog ,only: olog
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -19675,7 +19675,7 @@ contains
 
   subroutine b11cc( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub11
+  use avh_olo_qp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -19762,7 +19762,7 @@ contains
 
   subroutine b11ccr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub11
+  use avh_olo_qp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -19851,7 +19851,7 @@ contains
 
   subroutine b11rc( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub11
+  use avh_olo_qp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -19932,7 +19932,7 @@ contains
 
   subroutine b11rcr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub11
+  use avh_olo_qp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -20015,7 +20015,7 @@ contains
 
   subroutine b11rr( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub11
+  use avh_olo_qp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -20081,7 +20081,7 @@ contains
 
   subroutine b11rrr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub11
+  use avh_olo_qp_bub ,only: bub11
 !
   complex(kindr2) &   
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -20150,7 +20150,7 @@ contains
 
   subroutine bncc( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -20280,7 +20280,7 @@ contains
 
   subroutine bnccr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -20412,7 +20412,7 @@ contains
 
   subroutine bnrc( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -20536,7 +20536,7 @@ contains
 
   subroutine bnrcr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -20662,7 +20662,7 @@ contains
 
   subroutine bnrr( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -20771,7 +20771,7 @@ contains
 
   subroutine bnrrr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_qp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:,0:)   
@@ -20901,8 +20901,8 @@ contains
 !*******************************************************************
 
   subroutine c0cc( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_qp_tri
-  use avh_olo_forCutTools_qp_auxfun ,only: kallen
+  use avh_olo_qp_tri
+  use avh_olo_qp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -21063,8 +21063,8 @@ contains
   end subroutine
 
   subroutine c0ccr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_qp_tri
-  use avh_olo_forCutTools_qp_auxfun ,only: kallen
+  use avh_olo_qp_tri
+  use avh_olo_qp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -21227,8 +21227,8 @@ contains
   end subroutine
 
   subroutine c0rc( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_qp_tri
-  use avh_olo_forCutTools_qp_auxfun ,only: kallen
+  use avh_olo_qp_tri
+  use avh_olo_qp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -21383,8 +21383,8 @@ contains
   end subroutine
 
   subroutine c0rcr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_qp_tri
-  use avh_olo_forCutTools_qp_auxfun ,only: kallen
+  use avh_olo_qp_tri
+  use avh_olo_qp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -21541,8 +21541,8 @@ contains
   end subroutine
 
   subroutine c0rr( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_qp_tri
-  use avh_olo_forCutTools_qp_auxfun ,only: kallen
+  use avh_olo_qp_tri
+  use avh_olo_qp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -21690,8 +21690,8 @@ contains
   end subroutine
 
   subroutine c0rrr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_qp_tri
-  use avh_olo_forCutTools_qp_auxfun ,only: kallen
+  use avh_olo_qp_tri
+  use avh_olo_qp_auxfun ,only: kallen
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -21864,8 +21864,8 @@ contains
 !*******************************************************************
 
   subroutine d0cc( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_qp_box
-  use avh_olo_forCutTools_qp_boxc
+  use avh_olo_qp_box
+  use avh_olo_qp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -22137,8 +22137,8 @@ contains
   end subroutine
 
   subroutine d0ccr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_qp_box
-  use avh_olo_forCutTools_qp_boxc
+  use avh_olo_qp_box
+  use avh_olo_qp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -22412,8 +22412,8 @@ contains
   end subroutine
 
   subroutine d0rc( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_qp_box
-  use avh_olo_forCutTools_qp_boxc
+  use avh_olo_qp_box
+  use avh_olo_qp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -22679,8 +22679,8 @@ contains
   end subroutine
 
   subroutine d0rcr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_qp_box
-  use avh_olo_forCutTools_qp_boxc
+  use avh_olo_qp_box
+  use avh_olo_qp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -22948,8 +22948,8 @@ contains
   end subroutine
 
   subroutine d0rr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_qp_box
-  use avh_olo_forCutTools_qp_boxc
+  use avh_olo_qp_box
+  use avh_olo_qp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -23208,8 +23208,8 @@ contains
   end subroutine
 
   subroutine d0rrr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_qp_box
-  use avh_olo_forCutTools_qp_boxc
+  use avh_olo_qp_box
+  use avh_olo_qp_boxc
 !
   complex(kindr2) &   
     ,intent(out) :: rslt(0:2)
@@ -23472,8 +23472,8 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_arrays
-  use avh_olo_forCutTools_units
+module avh_olo_mp_arrays
+  use avh_olo_units
   use mpmodule     
   implicit none
   private
@@ -23740,7 +23740,7 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_prec
+module avh_olo_mp_prec
   use mpmodule
 
   implicit none
@@ -23767,8 +23767,8 @@ contains
   subroutine set_precision( ndec ,newprc )
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_arrays
+  use avh_olo_units
+  use avh_olo_mp_arrays
   logical ,intent(out) :: newprc
   integer ,intent(in) :: ndec                     
   integer :: i0,i1,ii                             
@@ -23924,8 +23924,8 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_print
-  use avh_olo_forCutTools_mp_prec
+module avh_olo_mp_print
+  use avh_olo_mp_prec
   implicit none
   private
   public :: myprint
@@ -23994,9 +23994,9 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_auxfun
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
+module avh_olo_mp_auxfun
+  use avh_olo_units
+  use avh_olo_mp_prec
 
   implicit none
   private
@@ -24558,7 +24558,7 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_olog
+module avh_olo_mp_olog
 !***********************************************************************
 ! Provides the functions
 !   olog(x,n) = log(x) + n*pi*imag  
@@ -24568,10 +24568,10 @@ module avh_olo_forCutTools_mp_olog
 ! In the vicinity of x=1,n=0, the logarithm of complex argument is
 ! evaluated with a series expansion.
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
-  use avh_olo_forCutTools_mp_print
-  use avh_olo_forCutTools_mp_auxfun
+  use avh_olo_units
+  use avh_olo_mp_prec
+  use avh_olo_mp_print
+  use avh_olo_mp_auxfun
   implicit none
   private
   public :: update_olog,olog,olog1,olog2,olog3
@@ -24599,7 +24599,7 @@ contains
   subroutine update_olog
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forCutTools_mp_arrays
+  use avh_olo_mp_arrays
   type(mp_real) & 
     :: tt
   integer :: nn,mm,ii,jj
@@ -24984,7 +24984,7 @@ end module
 
 
 
-module avh_olo_forCutTools_mp_dilog
+module avh_olo_mp_dilog
 !***********************************************************************
 !                     /1    ln(1-zz*t)
 !   dilog(xx,iph) = - |  dt ---------- 
@@ -24996,11 +24996,11 @@ module avh_olo_forCutTools_mp_dilog
 ! Arguments xx,x1,x2, may be all real or all complex,
 ! arguments iph,i1,i2 must be all integer.
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
-  use avh_olo_forCutTools_mp_print
-  use avh_olo_forCutTools_mp_auxfun
-  use avh_olo_forCutTools_mp_arrays
+  use avh_olo_units
+  use avh_olo_mp_prec
+  use avh_olo_mp_print
+  use avh_olo_mp_auxfun
+  use avh_olo_mp_arrays
   implicit none
   private
   public :: update_dilog,dilog
@@ -25295,7 +25295,7 @@ contains
   function dilog2_c( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_mp_olog
+  use avh_olo_mp_olog
   type(mp_complex) &  
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
@@ -25449,7 +25449,7 @@ contains
   function dilog2_r( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_mp_olog
+  use avh_olo_mp_olog
   type(mp_real) & 
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
@@ -25661,18 +25661,18 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_bnlog
+module avh_olo_mp_bnlog
 !***********************************************************************
 !                      /1    
 !   bnlog(n,x) = (n+1) |  dt t^n ln(1-t/x) 
 !                      /0 
 !***********************************************************************
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
-  use avh_olo_forCutTools_mp_auxfun
-  use avh_olo_forCutTools_mp_arrays
-  use avh_olo_forCutTools_mp_olog
-  use avh_olo_forCutTools_mp_print
+  use avh_olo_units
+  use avh_olo_mp_prec
+  use avh_olo_mp_auxfun
+  use avh_olo_mp_arrays
+  use avh_olo_mp_olog
+  use avh_olo_mp_print
   implicit none
   private
   public :: update_bnlog,bnlog
@@ -25978,12 +25978,12 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_qmplx
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
-  use avh_olo_forCutTools_mp_auxfun
-  use avh_olo_forCutTools_mp_olog
-  use avh_olo_forCutTools_mp_dilog
+module avh_olo_mp_qmplx
+  use avh_olo_units
+  use avh_olo_mp_prec
+  use avh_olo_mp_auxfun
+  use avh_olo_mp_olog
+  use avh_olo_mp_dilog
 
   implicit none
   private
@@ -26280,13 +26280,13 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_bub
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
-  use avh_olo_forCutTools_mp_auxfun
-  use avh_olo_forCutTools_mp_bnlog
-  use avh_olo_forCutTools_mp_qmplx
-  use avh_olo_forCutTools_mp_olog
+module avh_olo_mp_bub
+  use avh_olo_units
+  use avh_olo_mp_prec
+  use avh_olo_mp_auxfun
+  use avh_olo_mp_bnlog
+  use avh_olo_mp_qmplx
+  use avh_olo_mp_olog
   implicit none
   private
   public :: tadp ,tadpn ,bub0 ,dbub0 ,bub1 ,bub11 ,bub111 ,bub1111
@@ -26969,11 +26969,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_tri
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
-  use avh_olo_forCutTools_mp_auxfun
-  use avh_olo_forCutTools_mp_qmplx
+module avh_olo_mp_tri
+  use avh_olo_units
+  use avh_olo_mp_prec
+  use avh_olo_mp_auxfun
+  use avh_olo_mp_qmplx
   implicit none
   private
   public :: tria0,tria1,tria2,tria3,tria4,trif0,trif1,trif2,trif3 &
@@ -27153,7 +27153,7 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forCutTools_mp_olog
+   use avh_olo_mp_olog
   type(mp_complex) &  
      ,intent(out) :: rslt(0:2)
   type(mp_complex) &  
@@ -27731,11 +27731,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_box
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_prec
-  use avh_olo_forCutTools_mp_auxfun
-  use avh_olo_forCutTools_mp_qmplx
+module avh_olo_mp_box
+  use avh_olo_units
+  use avh_olo_mp_prec
+  use avh_olo_mp_auxfun
+  use avh_olo_mp_qmplx
   implicit none
   private
   public :: box00,box03,box05,box06,box07,box08,box09,box10,box11,box12 &
@@ -28612,8 +28612,8 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forCutTools_mp_olog
-   use avh_olo_forCutTools_mp_dilog
+   use avh_olo_mp_olog
+   use avh_olo_mp_dilog
   type(mp_complex) &  
      ,intent(out) :: rslt(0:2)
   type(mp_complex) &  
@@ -29240,11 +29240,11 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp_boxc
-   use avh_olo_forCutTools_units
-   use avh_olo_forCutTools_mp_prec
-   use avh_olo_forCutTools_mp_auxfun
-   use avh_olo_forCutTools_mp_qmplx
+module avh_olo_mp_boxc
+   use avh_olo_units
+   use avh_olo_mp_prec
+   use avh_olo_mp_auxfun
+   use avh_olo_mp_qmplx
    implicit none
    private
    public :: boxc
@@ -29258,7 +29258,7 @@ contains
 !   Dao Thi Nhung and Le Duc Ninh, arXiv:0902.0325 [hep-ph]
 !   G. 't Hooft and M.J.G. Veltman, Nucl.Phys.B153:365-401,1979 
 !*******************************************************************
-   use avh_olo_forCutTools_mp_box ,only: base,casetable,ll=>permtable
+   use avh_olo_mp_box ,only: base,casetable,ll=>permtable
   type(mp_complex) &  
      ,intent(out) :: rslt(0:2)
   type(mp_complex) &  
@@ -29832,10 +29832,10 @@ contains
 end module
 
 
-module avh_olo_forCutTools_mp
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_mp_print
-  use avh_olo_forCutTools_mp_prec
+module avh_olo_mp
+  use avh_olo_units
+  use avh_olo_mp_print
+  use avh_olo_mp_prec
 !
   implicit none
   private
@@ -29902,7 +29902,7 @@ contains
   subroutine init( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_version
+  use avh_olo_version
   integer,optional,intent(in) :: ndec
 !
   call olo_version
@@ -29925,9 +29925,9 @@ contains
   recursive subroutine olo_precision( ndec )
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_mp_olog  ,only: update_olog
-  use avh_olo_forCutTools_mp_dilog ,only: update_dilog
-  use avh_olo_forCutTools_mp_bnlog ,only: update_bnlog
+  use avh_olo_mp_olog  ,only: update_olog
+  use avh_olo_mp_dilog ,only: update_dilog
+  use avh_olo_mp_bnlog ,only: update_bnlog
   integer ,intent(in) :: ndec
   logical :: newprc
   if (initz) then
@@ -29978,7 +29978,7 @@ contains
   function olo_get_precision() result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forCutTools_mp_prec ,only: ndecim,prcpar
+  use avh_olo_mp_prec ,only: ndecim,prcpar
   integer :: rslt
   if (initz) call init
   rslt = ndecim(prcpar)
@@ -30045,7 +30045,7 @@ contains
 
   subroutine a0_c( rslt ,mm )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadp
+  use avh_olo_mp_bub ,only: tadp
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30089,7 +30089,7 @@ contains
 
   subroutine a0cr( rslt ,mm ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadp
+  use avh_olo_mp_bub ,only: tadp
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30135,7 +30135,7 @@ contains
 
   subroutine a0_r( rslt ,mm  )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadp
+  use avh_olo_mp_bub ,only: tadp
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30179,7 +30179,7 @@ contains
 
   subroutine a0rr( rslt ,mm ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadp
+  use avh_olo_mp_bub ,only: tadp
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30226,7 +30226,7 @@ contains
 
   subroutine an_c( rslt ,rank ,mm )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadpn
+  use avh_olo_mp_bub ,only: tadpn
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -30274,7 +30274,7 @@ contains
 
   subroutine ancr( rslt ,rank ,mm ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadpn
+  use avh_olo_mp_bub ,only: tadpn
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -30324,7 +30324,7 @@ contains
 
   subroutine an_r( rslt ,rank ,mm  )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadpn
+  use avh_olo_mp_bub ,only: tadpn
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -30372,7 +30372,7 @@ contains
 
   subroutine anrr( rslt ,rank ,mm ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: tadpn
+  use avh_olo_mp_bub ,only: tadpn
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -30441,7 +30441,7 @@ contains
 
   subroutine b0cc( rslt ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0
+  use avh_olo_mp_bub ,only: bub0
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30519,7 +30519,7 @@ contains
 
   subroutine b0ccr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0
+  use avh_olo_mp_bub ,only: bub0
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30599,7 +30599,7 @@ contains
 
   subroutine b0rc( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0
+  use avh_olo_mp_bub ,only: bub0
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30671,7 +30671,7 @@ contains
 
   subroutine b0rcr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0
+  use avh_olo_mp_bub ,only: bub0
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30745,7 +30745,7 @@ contains
 
   subroutine b0rr( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0
+  use avh_olo_mp_bub ,only: bub0
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30802,7 +30802,7 @@ contains
 
   subroutine b0rrr( rslt ,pp ,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0
+  use avh_olo_mp_bub ,only: bub0
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30864,8 +30864,8 @@ contains
 !*******************************************************************
   subroutine db0cc( rslt ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: dbub0
-  use avh_olo_forCutTools_mp_olog ,only: olog
+  use avh_olo_mp_bub ,only: dbub0
+  use avh_olo_mp_olog ,only: olog
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -30957,8 +30957,8 @@ contains
 
   subroutine db0ccr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: dbub0
-  use avh_olo_forCutTools_mp_olog ,only: olog
+  use avh_olo_mp_bub ,only: dbub0
+  use avh_olo_mp_olog ,only: olog
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -31052,8 +31052,8 @@ contains
 
   subroutine db0rc( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: dbub0
-  use avh_olo_forCutTools_mp_olog ,only: olog
+  use avh_olo_mp_bub ,only: dbub0
+  use avh_olo_mp_olog ,only: olog
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -31139,8 +31139,8 @@ contains
 
   subroutine db0rcr( rslt ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: dbub0
-  use avh_olo_forCutTools_mp_olog ,only: olog
+  use avh_olo_mp_bub ,only: dbub0
+  use avh_olo_mp_olog ,only: olog
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -31228,8 +31228,8 @@ contains
 
   subroutine db0rr( rslt ,pp ,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: dbub0
-  use avh_olo_forCutTools_mp_olog ,only: olog
+  use avh_olo_mp_bub ,only: dbub0
+  use avh_olo_mp_olog ,only: olog
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -31300,8 +31300,8 @@ contains
 
   subroutine db0rrr( rslt ,pp ,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: dbub0
-  use avh_olo_forCutTools_mp_olog ,only: olog
+  use avh_olo_mp_bub ,only: dbub0
+  use avh_olo_mp_olog ,only: olog
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -31395,7 +31395,7 @@ contains
 
   subroutine b11cc( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub11
+  use avh_olo_mp_bub ,only: bub11
 !
   type(mp_complex) &  
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -31482,7 +31482,7 @@ contains
 
   subroutine b11ccr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub11
+  use avh_olo_mp_bub ,only: bub11
 !
   type(mp_complex) &  
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -31571,7 +31571,7 @@ contains
 
   subroutine b11rc( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub11
+  use avh_olo_mp_bub ,only: bub11
 !
   type(mp_complex) &  
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -31652,7 +31652,7 @@ contains
 
   subroutine b11rcr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub11
+  use avh_olo_mp_bub ,only: bub11
 !
   type(mp_complex) &  
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -31735,7 +31735,7 @@ contains
 
   subroutine b11rr( b11,b00,b1,b0 ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub11
+  use avh_olo_mp_bub ,only: bub11
 !
   type(mp_complex) &  
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -31801,7 +31801,7 @@ contains
 
   subroutine b11rrr( b11,b00,b1,b0 ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub11
+  use avh_olo_mp_bub ,only: bub11
 !
   type(mp_complex) &  
     ,intent(out) :: b11(0:2),b00(0:2),b1(0:2),b0(0:2)
@@ -31870,7 +31870,7 @@ contains
 
   subroutine bncc( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -32000,7 +32000,7 @@ contains
 
   subroutine bnccr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -32132,7 +32132,7 @@ contains
 
   subroutine bnrc( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -32256,7 +32256,7 @@ contains
 
   subroutine bnrcr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -32382,7 +32382,7 @@ contains
 
   subroutine bnrr( rslt ,rank ,pp,m1,m2 )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -32491,7 +32491,7 @@ contains
 
   subroutine bnrrr( rslt ,rank ,pp,m1,m2 ,rmu )
 !
-  use avh_olo_forCutTools_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
+  use avh_olo_mp_bub ,only: bub0,bub1,bub11,bub111,bub1111
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:,0:)   
@@ -32621,8 +32621,8 @@ contains
 !*******************************************************************
 
   subroutine c0cc( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_mp_tri
-  use avh_olo_forCutTools_mp_auxfun ,only: kallen
+  use avh_olo_mp_tri
+  use avh_olo_mp_auxfun ,only: kallen
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -32783,8 +32783,8 @@ contains
   end subroutine
 
   subroutine c0ccr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_mp_tri
-  use avh_olo_forCutTools_mp_auxfun ,only: kallen
+  use avh_olo_mp_tri
+  use avh_olo_mp_auxfun ,only: kallen
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -32947,8 +32947,8 @@ contains
   end subroutine
 
   subroutine c0rc( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_mp_tri
-  use avh_olo_forCutTools_mp_auxfun ,only: kallen
+  use avh_olo_mp_tri
+  use avh_olo_mp_auxfun ,only: kallen
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -33103,8 +33103,8 @@ contains
   end subroutine
 
   subroutine c0rcr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_mp_tri
-  use avh_olo_forCutTools_mp_auxfun ,only: kallen
+  use avh_olo_mp_tri
+  use avh_olo_mp_auxfun ,only: kallen
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -33261,8 +33261,8 @@ contains
   end subroutine
 
   subroutine c0rr( rslt ,p1,p2,p3 ,m1,m2,m3 )
-  use avh_olo_forCutTools_mp_tri
-  use avh_olo_forCutTools_mp_auxfun ,only: kallen
+  use avh_olo_mp_tri
+  use avh_olo_mp_auxfun ,only: kallen
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -33410,8 +33410,8 @@ contains
   end subroutine
 
   subroutine c0rrr( rslt ,p1,p2,p3 ,m1,m2,m3 ,rmu )
-  use avh_olo_forCutTools_mp_tri
-  use avh_olo_forCutTools_mp_auxfun ,only: kallen
+  use avh_olo_mp_tri
+  use avh_olo_mp_auxfun ,only: kallen
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -33584,8 +33584,8 @@ contains
 !*******************************************************************
 
   subroutine d0cc( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_mp_box
-  use avh_olo_forCutTools_mp_boxc
+  use avh_olo_mp_box
+  use avh_olo_mp_boxc
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -33857,8 +33857,8 @@ contains
   end subroutine
 
   subroutine d0ccr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_mp_box
-  use avh_olo_forCutTools_mp_boxc
+  use avh_olo_mp_box
+  use avh_olo_mp_boxc
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -34132,8 +34132,8 @@ contains
   end subroutine
 
   subroutine d0rc( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_mp_box
-  use avh_olo_forCutTools_mp_boxc
+  use avh_olo_mp_box
+  use avh_olo_mp_boxc
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -34399,8 +34399,8 @@ contains
   end subroutine
 
   subroutine d0rcr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_mp_box
-  use avh_olo_forCutTools_mp_boxc
+  use avh_olo_mp_box
+  use avh_olo_mp_boxc
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -34668,8 +34668,8 @@ contains
   end subroutine
 
   subroutine d0rr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 )
-  use avh_olo_forCutTools_mp_box
-  use avh_olo_forCutTools_mp_boxc
+  use avh_olo_mp_box
+  use avh_olo_mp_boxc
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -34928,8 +34928,8 @@ contains
   end subroutine
 
   subroutine d0rrr( rslt ,p1,p2,p3,p4,p12,p23 ,m1,m2,m3,m4 ,rmu )
-  use avh_olo_forCutTools_mp_box
-  use avh_olo_forCutTools_mp_boxc
+  use avh_olo_mp_box
+  use avh_olo_mp_boxc
 !
   type(mp_complex) &  
     ,intent(out) :: rslt(0:2)
@@ -35192,21 +35192,21 @@ contains
 end module
 
 
-module avh_olo_forCutTools
+module avh_olo
 
-  use avh_olo_forCutTools_dp ,only: &
+  use avh_olo_dp ,only: &
      olo_dp_kind=>olo_kind &
     ,olo_dp_scale=>olo_get_scale &
     ,olo_dp_onshell=>olo_get_onshell &
     ,olo_dp_precision=>olo_get_precision &
     ,olo,olo_a0,olo_an,olo_b0,olo_db0,olo_b11,olo_bn,olo_c0,olo_d0
-  use avh_olo_forCutTools_qp ,only: &
+  use avh_olo_qp ,only: &
      olo_qp_kind=>olo_kind &
     ,olo_qp_scale=>olo_get_scale &
     ,olo_qp_onshell=>olo_get_onshell &
     ,olo_qp_precision=>olo_get_precision &
     ,olo,olo_a0,olo_an,olo_b0,olo_db0,olo_b11,olo_bn,olo_c0,olo_d0
-  use avh_olo_forCutTools_mp ,only: &
+  use avh_olo_mp ,only: &
      olo_mp_kind=>olo_kind &
     ,olo_mp_scale=>olo_get_scale &
     ,olo_mp_onshell=>olo_get_onshell &
@@ -35218,8 +35218,8 @@ module avh_olo_forCutTools
 contains
 
   subroutine olo_unit( val ,message )
-  use avh_olo_forCutTools_version
-  use avh_olo_forCutTools_units ,only: set_unit
+  use avh_olo_version
+  use avh_olo_units ,only: set_unit
   integer     ,intent(in) :: val
   character(*),intent(in),optional :: message
   call olo_version
@@ -35229,9 +35229,9 @@ contains
   end subroutine
 
   subroutine olo_precision( ndec )
-  use avh_olo_forCutTools_dp ,only: dp_sub=>olo_precision 
-  use avh_olo_forCutTools_qp ,only: qp_sub=>olo_precision 
-  use avh_olo_forCutTools_mp ,only: mp_sub=>olo_precision 
+  use avh_olo_dp ,only: dp_sub=>olo_precision 
+  use avh_olo_qp ,only: qp_sub=>olo_precision 
+  use avh_olo_mp ,only: mp_sub=>olo_precision 
   integer ,intent(in) :: ndec
   call dp_sub( ndec ) 
   call qp_sub( ndec ) 
@@ -35239,9 +35239,9 @@ contains
   end subroutine
 
   subroutine olo_scale( val )
-  use avh_olo_forCutTools_dp ,only: dp_sub=>olo_scale 
-  use avh_olo_forCutTools_qp ,only: qp_sub=>olo_scale 
-  use avh_olo_forCutTools_mp ,only: mp_sub=>olo_scale 
+  use avh_olo_dp ,only: dp_sub=>olo_scale 
+  use avh_olo_qp ,only: qp_sub=>olo_scale 
+  use avh_olo_mp ,only: mp_sub=>olo_scale 
   real(kind(1d0)) ,intent(in) :: val
   call dp_sub( val ) 
   call qp_sub( val ) 
@@ -35249,9 +35249,9 @@ contains
   end subroutine
 
   subroutine olo_onshell( val )
-  use avh_olo_forCutTools_dp ,only: dp_sub=>olo_onshell 
-  use avh_olo_forCutTools_qp ,only: qp_sub=>olo_onshell 
-  use avh_olo_forCutTools_mp ,only: mp_sub=>olo_onshell 
+  use avh_olo_dp ,only: dp_sub=>olo_onshell 
+  use avh_olo_qp ,only: qp_sub=>olo_onshell 
+  use avh_olo_mp ,only: mp_sub=>olo_onshell 
   real(kind(1d0)) ,intent(in) :: val
   call dp_sub( val ) 
   call qp_sub( val ) 
@@ -35259,8 +35259,8 @@ contains
   end subroutine
 
   subroutine olo_setting( iunit )
-  use avh_olo_forCutTools_units
-  use avh_olo_forCutTools_version
+  use avh_olo_units
+  use avh_olo_version
   integer,optional,intent(in) :: iunit
   integer :: nunit
   call olo_version

@@ -93,7 +93,7 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
             
             self.loop_exporters = {
                 'default' : loop_exporters.LoopProcessExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
+                                   _proc_file_path,
                                   {'clean':False, 'complex_mass':False, 
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,
@@ -104,7 +104,7 @@ class IOExportMadLoopAcceptanceTest(test_loop_exporters.IOExportMadLoopUnitTest)
                                    'compute_color_flows': False}),
                 'optimized' : loop_exporters.\
                                   LoopProcessOptimizedExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
+                                  _proc_file_path,
                                   {'clean':False, 'complex_mass':False, 
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,

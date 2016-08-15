@@ -18,10 +18,10 @@
 !!
 
 
-module avh_olo_forIREGI
+module avh_olo
 
 !{dp=yes
-  use avh_olo_forIREGI_dp ,only: &
+  use avh_olo_dp ,only: &
      olo_dp_kind=>olo_kind &
     ,olo_dp_scale=>olo_get_scale &
     ,olo_dp_onshell=>olo_get_onshell &
@@ -29,7 +29,7 @@ module avh_olo_forIREGI
     ,olo,olo_a0,olo_an,olo_b0,olo_b11,olo_bn,olo_c0,olo_d0
 !}dp=yes
 !{qp=yes
-!#  use avh_olo_forIREGI_qp ,only: &
+!#  use avh_olo_qp ,only: &
 !#     olo_qp_kind=>olo_kind &
 !#    ,olo_qp_scale=>olo_get_scale &
 !#    ,olo_qp_onshell=>olo_get_onshell &
@@ -37,7 +37,7 @@ module avh_olo_forIREGI
 !#    ,olo,olo_a0,olo_an,olo_b0,olo_b11,olo_bn,olo_c0,olo_d0
 !}qp=yes
 !{dd=yes
-!#  use avh_olo_forIREGI_dd ,only: &
+!#  use avh_olo_dd ,only: &
 !#     olo_dd_kind=>olo_kind &
 !#    ,olo_dd_scale=>olo_get_scale &
 !#    ,olo_dd_onshell=>olo_get_onshell &
@@ -45,7 +45,7 @@ module avh_olo_forIREGI
 !#    ,olo,olo_a0,olo_an,olo_b0,olo_b11,olo_bn,olo_c0,olo_d0
 !}dd=yes
 !{qd=yes
-!#  use avh_olo_forIREGI_qd ,only: &
+!#  use avh_olo_qd ,only: &
 !#     olo_qd_kind=>olo_kind &
 !#    ,olo_qd_scale=>olo_get_scale &
 !#    ,olo_qd_onshell=>olo_get_onshell &
@@ -53,7 +53,7 @@ module avh_olo_forIREGI
 !#    ,olo,olo_a0,olo_an,olo_b0,olo_b11,olo_bn,olo_c0,olo_d0
 !}qd=yes
 !{mp=yes
-!#  use avh_olo_forIREGI_mp ,only: &
+!#  use avh_olo_mp ,only: &
 !#     olo_mp_kind=>olo_kind &
 !#    ,olo_mp_scale=>olo_get_scale &
 !#    ,olo_mp_onshell=>olo_get_onshell &
@@ -66,8 +66,8 @@ module avh_olo_forIREGI
 contains
 
   subroutine olo_unit( val ,message )
-  use avh_olo_forIREGI_version
-  use avh_olo_forIREGI_units ,only: set_unit
+  use avh_olo_version
+  use avh_olo_units ,only: set_unit
   integer     ,intent(in) :: val
   character(*),intent(in),optional :: message
   call olo_version
@@ -77,11 +77,11 @@ contains
   end subroutine
 
   subroutine olo_precision( ndec )
-  use avh_olo_forIREGI_dp ,only: dp_sub=>olo_precision !|dp=yes
-!#  use avh_olo_forIREGI_qp ,only: qp_sub=>olo_precision !|qp=yes
-!#  use avh_olo_forIREGI_dd ,only: dd_sub=>olo_precision !|dd=yes
-!#  use avh_olo_forIREGI_qd ,only: qd_sub=>olo_precision !|qd=yes
-!#  use avh_olo_forIREGI_mp ,only: mp_sub=>olo_precision !|mp=yes
+  use avh_olo_dp ,only: dp_sub=>olo_precision !|dp=yes
+!#  use avh_olo_qp ,only: qp_sub=>olo_precision !|qp=yes
+!#  use avh_olo_dd ,only: dd_sub=>olo_precision !|dd=yes
+!#  use avh_olo_qd ,only: qd_sub=>olo_precision !|qd=yes
+!#  use avh_olo_mp ,only: mp_sub=>olo_precision !|mp=yes
   integer ,intent(in) :: ndec
   call dp_sub( ndec ) !|dp=yes
 !#  call qp_sub( ndec ) !|qp=yes
@@ -91,11 +91,11 @@ contains
   end subroutine
 
   subroutine olo_scale( val )
-  use avh_olo_forIREGI_dp ,only: dp_sub=>olo_scale !|dp=yes
-!#  use avh_olo_forIREGI_qp ,only: qp_sub=>olo_scale !|qp=yes
-!#  use avh_olo_forIREGI_dd ,only: dd_sub=>olo_scale !|dd=yes
-!#  use avh_olo_forIREGI_qd ,only: qd_sub=>olo_scale !|qd=yes
-!#  use avh_olo_forIREGI_mp ,only: mp_sub=>olo_scale !|mp=yes
+  use avh_olo_dp ,only: dp_sub=>olo_scale !|dp=yes
+!#  use avh_olo_qp ,only: qp_sub=>olo_scale !|qp=yes
+!#  use avh_olo_dd ,only: dd_sub=>olo_scale !|dd=yes
+!#  use avh_olo_qd ,only: qd_sub=>olo_scale !|qd=yes
+!#  use avh_olo_mp ,only: mp_sub=>olo_scale !|mp=yes
   real(kind(1d0)) ,intent(in) :: val
   call dp_sub( val ) !|dp=yes
 !#  call qp_sub( val ) !|qp=yes
@@ -105,11 +105,11 @@ contains
   end subroutine
 
   subroutine olo_onshell( val )
-  use avh_olo_forIREGI_dp ,only: dp_sub=>olo_onshell !|dp=yes
-!#  use avh_olo_forIREGI_qp ,only: qp_sub=>olo_onshell !|qp=yes
-!#  use avh_olo_forIREGI_dd ,only: dd_sub=>olo_onshell !|dd=yes
-!#  use avh_olo_forIREGI_qd ,only: qd_sub=>olo_onshell !|qd=yes
-!#  use avh_olo_forIREGI_mp ,only: mp_sub=>olo_onshell !|mp=yes
+  use avh_olo_dp ,only: dp_sub=>olo_onshell !|dp=yes
+!#  use avh_olo_qp ,only: qp_sub=>olo_onshell !|qp=yes
+!#  use avh_olo_dd ,only: dd_sub=>olo_onshell !|dd=yes
+!#  use avh_olo_qd ,only: qd_sub=>olo_onshell !|qd=yes
+!#  use avh_olo_mp ,only: mp_sub=>olo_onshell !|mp=yes
   real(kind(1d0)) ,intent(in) :: val
   call dp_sub( val ) !|dp=yes
 !#  call qp_sub( val ) !|qp=yes
@@ -119,8 +119,8 @@ contains
   end subroutine
 
   subroutine olo_setting( iunit )
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_version
+  use avh_olo_units
+  use avh_olo_version
   integer,optional,intent(in) :: iunit
   integer :: nunit
   call olo_version

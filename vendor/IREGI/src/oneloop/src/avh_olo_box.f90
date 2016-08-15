@@ -18,11 +18,11 @@
 !!
 
 
-module avh_olo_forIREGI_box
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_auxfun
-  use avh_olo_forIREGI_qmplx
+module avh_olo_box
+  use avh_olo_units
+  use avh_olo_prec
+  use avh_olo_auxfun
+  use avh_olo_qmplx
   implicit none
   private
   public :: box00,box03,box05,box06,box07,box08,box09,box10,box11,box12 &
@@ -912,8 +912,8 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forIREGI_olog
-   use avh_olo_forIREGI_dilog
+   use avh_olo_olog
+   use avh_olo_dilog
    include 'avh_olo_complex.h90'
      ,intent(out) :: rslt(0:2)
    include 'avh_olo_complex.h90'

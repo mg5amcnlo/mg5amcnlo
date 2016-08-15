@@ -18,11 +18,11 @@
 !!
 
 
-module avh_olo_forIREGI_tri
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_auxfun
-  use avh_olo_forIREGI_qmplx
+module avh_olo_tri
+  use avh_olo_units
+  use avh_olo_prec
+  use avh_olo_auxfun
+  use avh_olo_qmplx
   implicit none
   private
   public :: tria0,tria1,tria2,tria3,tria4,trif0,trif1,trif2,trif3 &
@@ -206,7 +206,7 @@ contains
 ! If any of these numbers is IDENTICALLY 0d0, the corresponding
 ! IR-singular case is returned.
 !*******************************************************************
-   use avh_olo_forIREGI_olog
+   use avh_olo_olog
    include 'avh_olo_complex.h90'
      ,intent(out) :: rslt(0:2)
    include 'avh_olo_complex.h90'

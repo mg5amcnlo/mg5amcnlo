@@ -17,7 +17,7 @@
 !! along with OneLOop-3.4.  If not, see <http://www.gnu.org/licenses/>.
 !!
 !
-  use avh_olo_forIREGI_bub ,only: bub0
+  use avh_olo_bub ,only: bub0
 !
   include 'avh_olo_complex.h90'
     ,intent(out) :: rslt(0:2)

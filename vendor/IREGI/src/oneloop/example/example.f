@@ -5,7 +5,7 @@
       subroutine test
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       integer :: nn
       character(4) :: next
@@ -36,7 +36,7 @@
       subroutine test_4
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,p2,p3,p4,p12,p23,m1,m2,m3,m4
       complex(kind(1d0)) :: zolo(0:2),zLT,D0C
@@ -84,7 +84,7 @@
       subroutine test_3
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,p2,p3,m1,m2,m3 ,zolo(0:2),zLT,C0C
 !
@@ -122,7 +122,7 @@
       subroutine test_2
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       complex(kind(1d0)) :: p1,m1,m2 ,b0(0:2),b1(0:2),b00(0:2),b11(0:2)
       complex(kind(1d0)) :: rslt(0:2)

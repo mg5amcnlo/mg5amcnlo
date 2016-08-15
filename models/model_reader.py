@@ -81,7 +81,8 @@ class ModelReader(loop_base_objects.LoopModel):
                 if not os.path.isfile(param_card):
                     raise MadGraph5Error, "No such file %s" % param_card
                 param_card = card_reader.ParamCard(param_card)
-            assert isinstance(param_card, card_reader.ParamCard)    
+#            misc.sprint(type(param_card), card_reader.ParamCard,  isinstance(param_card, card_reader.ParamCard))
+#            assert isinstance(param_card, card_reader.ParamCard),'%s is not a ParamCard: %s' % (type(param_card),  isinstance(param_card, card_reader.ParamCard))    
             
             if complex_mass_scheme is None:
                 if aloha.complex_mass:
@@ -210,7 +211,23 @@ class ModelReader(loop_base_objects.LoopModel):
                                         for coup in couplings]))
         
         return locals()
-
+    
+    def get_mass(self, pdg_code):
+        """easy way to have access to a mass value"""
+        
+        if isinstance(pdg_code, (int,str)):
+            return self.get('parameter_dict')[self.get_particle(pdg_code).get('mass')].real
+        else:
+            return self.get('parameter_dict')[pdg_code.get('mass')].real
+            
+    def get_width(self, pdg_code):
+        """easy way to have access to a width value"""
+        if isinstance(pdg_code, (int,str)):
+            return self.get('parameter_dict')[self.get_particle(pdg_code).get('width')].real
+        else:
+            return self.get('parameter_dict')[pdg_code.get('mass')].real
+    
+    
 class Alphas_Runner(object):
     """Evaluation of strong coupling constant alpha_S"""
     #     Author: Olivier Mattelaer translated from a fortran routine 

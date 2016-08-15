@@ -9,8 +9,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and CutTools.
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -340,8 +340,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and Ninja.
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
 C     
 C     CONSTANTS 

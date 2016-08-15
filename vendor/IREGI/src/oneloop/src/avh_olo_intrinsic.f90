@@ -18,8 +18,8 @@
 !!
 
 
-module avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_kinds
+module avh_olo_prec
+  use avh_olo_kinds
 
   implicit none
   public
@@ -49,7 +49,7 @@ contains
   subroutine set_precision( newprc )
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forIREGI_units
+  use avh_olo_units
   logical ,intent(out) :: newprc
   integer :: ndec                                  
   if (prcpar.eq.1) then                    

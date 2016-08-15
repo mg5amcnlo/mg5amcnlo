@@ -18,7 +18,7 @@
 !!
 
 
-module avh_olo_forIREGI_olog
+module avh_olo_olog
 !***********************************************************************
 ! Provides the functions
 !   olog(x,n) = log(x) + n*pi*imag  
@@ -26,10 +26,10 @@ module avh_olo_forIREGI_olog
 ! In the vicinity of x=1,n=0, the logarithm of complex argument is
 ! evaluated with a series expansion.
 !***********************************************************************
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_print
-  use avh_olo_forIREGI_auxfun
+  use avh_olo_units
+  use avh_olo_prec
+  use avh_olo_print
+  use avh_olo_auxfun
   implicit none
   private
   public :: update_olog,olog,olog2
@@ -51,7 +51,7 @@ contains
   subroutine update_olog
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_forIREGI_arrays
+  use avh_olo_arrays
   include 'avh_olo_real.h90'
     :: tt
   integer :: nn,mm,ii,jj

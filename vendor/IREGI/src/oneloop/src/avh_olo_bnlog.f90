@@ -18,18 +18,18 @@
 !!
 
 
-module avh_olo_forIREGI_bnlog
+module avh_olo_bnlog
 !***********************************************************************
 !                      /1    
 !   bnlog(n,x) = (n+1) |  dt t^n ln(1-t/x) 
 !                      /0 
 !***********************************************************************
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_auxfun
-  use avh_olo_forIREGI_arrays
-  use avh_olo_forIREGI_olog
-  use avh_olo_forIREGI_print
+  use avh_olo_units
+  use avh_olo_prec
+  use avh_olo_auxfun
+  use avh_olo_arrays
+  use avh_olo_olog
+  use avh_olo_print
   implicit none
   private
   public :: update_bnlog,bnlog

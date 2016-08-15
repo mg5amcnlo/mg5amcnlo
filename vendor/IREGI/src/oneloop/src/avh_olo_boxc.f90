@@ -18,11 +18,11 @@
 !!
 
 
-module avh_olo_forIREGI_boxc
-   use avh_olo_forIREGI_units
-   use avh_olo_forIREGI_prec
-   use avh_olo_forIREGI_auxfun
-   use avh_olo_forIREGI_qmplx
+module avh_olo_boxc
+   use avh_olo_units
+   use avh_olo_prec
+   use avh_olo_auxfun
+   use avh_olo_qmplx
    implicit none
    private
    public :: boxc
@@ -36,7 +36,7 @@ contains
 !   Dao Thi Nhung and Le Duc Ninh, arXiv:0902.0325 [hep-ph]
 !   G. 't Hooft and M.J.G. Veltman, Nucl.Phys.B153:365-401,1979 
 !*******************************************************************
-   use avh_olo_forIREGI_box ,only: base,casetable,ll=>permtable
+   use avh_olo_box ,only: base,casetable,ll=>permtable
    include 'avh_olo_complex.h90'
      ,intent(out) :: rslt(0:2)
    include 'avh_olo_complex.h90'

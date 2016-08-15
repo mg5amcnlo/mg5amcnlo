@@ -73,7 +73,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > h h QED<=2 QCD<=2 [ sqrvirt = QCD ]
+C     Process: g g > h h QCD<=2 QED<=2 [ sqrvirt = QCD ]
 C     
       IMPLICIT NONE
 C     

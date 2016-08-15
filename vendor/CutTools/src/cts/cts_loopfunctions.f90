@@ -7,7 +7,7 @@
   use denominators
   use scale
   use dimensions
-  use avh_olo_forCutTools
+  use avh_olo
   implicit none
   private
   public :: allocate_loopfun,getloop
@@ -295,7 +295,7 @@
   use denominators
   use scale
   use dimensions
-  use avh_olo_forCutTools
+  use avh_olo
   implicit none
   private
   public :: allocate_mp_loopfun,get_mp_loop

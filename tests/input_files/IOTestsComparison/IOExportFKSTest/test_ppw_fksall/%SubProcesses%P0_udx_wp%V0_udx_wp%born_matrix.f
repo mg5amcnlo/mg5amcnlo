@@ -67,8 +67,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -215,8 +215,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     

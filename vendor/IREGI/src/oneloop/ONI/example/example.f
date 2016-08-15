@@ -5,7 +5,7 @@
       subroutine test
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       double complex rslt(0:2)
       integer nn
@@ -39,7 +39,7 @@
       subroutine test_4
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       double complex p1,p2,p3,p4,p12,p23,m1,m2,m3,m4
      &,zolo(0:2),zoni(0:2),zLT,ie,D0C
@@ -94,7 +94,7 @@
       subroutine test_3
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       double complex p1,p2,p3,m1,m2,m3 ,zolo(0:2),zoni(0:2),zLT,C0C,ie
       parameter( ie=(0d0,0d-16) )
@@ -140,7 +140,7 @@
       subroutine test_2
 !  ********************************************************************
 !  ********************************************************************
-      use avh_olo_forIREGI
+      use avh_olo
       implicit none
       double complex p1,m1,m2 ,zolo(0:2),zoni(0:2),ie
       parameter( ie=(0d0,0d-16) )

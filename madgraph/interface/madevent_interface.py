@@ -1293,7 +1293,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, ['--threshold='], line)
     
-    def complete_banner_run(self, text, line, begidx, endidx):
+    def complete_banner_run(self, text, line, begidx, endidx, formatting=True):
        "Complete the banner run command"
        try:
   
@@ -1331,7 +1331,7 @@ class CompleteForCmd(CheckValidForCmd):
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
-        return self.deal_multiple_categories(possibilites)
+        return self.deal_multiple_categories(possibilites, formatting)
     
         
        except Exception, error:
@@ -1511,7 +1511,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, self._plot_mode + self.results.keys())
         
-    def complete_syscalc(self, text, line, begidx, endidx):
+    def complete_syscalc(self, text, line, begidx, endidx, formatting=True):
         """ Complete the syscalc command """
         
         output = {}
@@ -1527,7 +1527,7 @@ class CompleteForCmd(CheckValidForCmd):
                 tags = ['--tag=%s' % tag['tag'] for tag in self.results[run]]
                 output['options'] += tags
         
-        return self.deal_multiple_categories(output)
+        return self.deal_multiple_categories(output, formatting)
         
     def complete_remove(self, text, line, begidx, endidx):
         """Complete the remove command """

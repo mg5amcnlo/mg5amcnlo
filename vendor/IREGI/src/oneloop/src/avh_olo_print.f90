@@ -18,8 +18,8 @@
 !!
 
 
-module avh_olo_forIREGI_print
-  use avh_olo_forIREGI_prec
+module avh_olo_print
+  use avh_olo_prec
   implicit none
   private
   public :: myprint

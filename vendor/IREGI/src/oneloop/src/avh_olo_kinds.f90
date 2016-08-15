@@ -18,7 +18,7 @@
 !!
 
 
-module avh_olo_forIREGI_kinds
+module avh_olo_kinds
 !# use XKINDMOD ,only: kindr2=>KINDPAR  !|XKIND=yes
   integer ,parameter :: kindr2=KINDPAR !|XKIND=no
 end module

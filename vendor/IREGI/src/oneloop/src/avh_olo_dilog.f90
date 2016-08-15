@@ -18,7 +18,7 @@
 !!
 
 
-module avh_olo_forIREGI_dilog
+module avh_olo_dilog
 !***********************************************************************
 !                     /1    ln(1-zz*t)
 !   dilog(xx,iph) = - |  dt ---------- 
@@ -30,11 +30,11 @@ module avh_olo_forIREGI_dilog
 ! Arguments xx,x1,x2, may be all real or all complex,
 ! arguments iph,i1,i2 must be all integer.
 !***********************************************************************
-  use avh_olo_forIREGI_units
-  use avh_olo_forIREGI_prec
-  use avh_olo_forIREGI_print
-  use avh_olo_forIREGI_auxfun
-  use avh_olo_forIREGI_arrays
+  use avh_olo_units
+  use avh_olo_prec
+  use avh_olo_print
+  use avh_olo_auxfun
+  use avh_olo_arrays
   implicit none
   private
   public :: update_dilog,dilog
@@ -329,7 +329,7 @@ contains
   function dilog2_c( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forIREGI_olog
+  use avh_olo_olog
   include 'avh_olo_complex.h90'
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
@@ -483,7 +483,7 @@ contains
   function dilog2_r( x1,i1 ,x2,i2 ) result(rslt)
 !*******************************************************************
 !*******************************************************************
-  use avh_olo_forIREGI_olog
+  use avh_olo_olog
   include 'avh_olo_real.h90'
           ,intent(in) :: x1,x2
   integer ,intent(in) :: i1,i2
