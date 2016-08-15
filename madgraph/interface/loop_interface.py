@@ -509,7 +509,38 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         for key, value in to_install.items():
             if key in ['cuttools', 'iregi']:
-                continue
+                if os.path.sep not in value:
+                    continue
+                import madgraph.iolibs.files as files
+                if key == 'cuttools':
+                    if os.path.exists(pjoin(value, 'includects')):
+                        path = pjoin(value, 'includects')
+                    elif os.path.exists(pjoin(value, 'CutTools','includects')):
+                        path = pjoin(value, 'CutTools', 'includects')
+                    elif os.path.exists(pjoin(value, 'vendor','CutTools','includects')):
+                        path = pjoin(value, 'vendor','CutTools', 'includects')
+                    else:
+                        logger.warning('invalid path for cuttools import')
+                        continue
+                    
+                    target = pjoin(MG5DIR,'vendor','CutTools','includects')
+                    if not os.path.exists(target):
+                        os.mkdir(target)
+                    files.cp(pjoin(path,'libcts.a'), target)
+                    files.cp(pjoin(path,'mpmodule.mod'), target, log=True)
+                if key == 'iregi':
+                    if os.path.exists(pjoin(value, 'src','IREGI4ML5_interface.f90')):
+                        path = pjoin(value, 'src')
+                    elif os.path.exists(pjoin(value, 'IREGI','src','IREGI4ML5_interface.f90')):
+                        path = pjoin(value, 'IREGI', 'src')
+                    elif os.path.exists(pjoin(value, 'vendor','IREGI','src','IREGI4ML5_interface.f90')):
+                        path = pjoin(value, 'vendor', 'IREGI', 'src')
+                    else:
+                        logger.warning('invalid path for IREGI import')
+                        continue    
+                                         
+                    target = pjoin(MG5DIR,'vendor','IREGI','src')
+                    files.cp(pjoin(path,'libiregi.a'), target, log=True)
             elif value == 'local':
                 ## LOCAL INSTALLATION OF NINJA/COLLIER
                     logger.info(
@@ -1021,6 +1052,8 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     do_pjfry = lambda self,line : self.apply_name('pjfry', line)
     do_collier = lambda self,line : self.apply_name('collier', line)
     do_golem = lambda self,line : self.apply_name('golem', line)
+    do_cuttools = lambda self,line : self.apply_name('cuttools', line)
+    do_iregi =  lambda self,line : self.apply_name('iregi', line)
     
  
     def complete_prog(self, text, line, begidx, endidx, formatting=True):
@@ -1040,6 +1073,8 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     complete_pjfry = complete_prog
     complete_collier = complete_prog
     complete_golem = complete_prog
+    complete_cuttools = complete_prog
+    complete_iregi = complete_prog
     
     
                
