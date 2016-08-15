@@ -502,7 +502,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         if (opt['ninja'] is None) or (os.path.isfile(pjoin(opt['ninja'],'libninja.a'))): 
             return
         
-        logger.info("First output with Loop matrix-element detected. Asking for loop reduction:", '$MG:color:BLACK')
+        logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:color:BLACK')
         to_install = self.ask('install', '0',  ask_class=AskLoopInstaller, timeout=300, 
                               path_msg=' ')
         
@@ -528,6 +528,9 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                         os.mkdir(target)
                     files.cp(pjoin(path,'libcts.a'), target)
                     files.cp(pjoin(path,'mpmodule.mod'), target, log=True)
+                    if os.path.exists(pjoin(path,'compiler_version.log')):
+                        files.cp(pjoin(path,'compiler_version.log'), target)
+
                 if key == 'iregi':
                     if os.path.exists(pjoin(value, 'src','IREGI4ML5_interface.f90')):
                         path = pjoin(value, 'src')
@@ -931,21 +934,21 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     def create_question(self, first = False):
         """ """
 
-        question = "For loop computation. MadLoop requires dedicated tools to"+\
+        question = "For loop computations, MadLoop requires dedicated tools to"+\
         " perform the reduction of loop Feynman diagrams using OPP-based and/or TIR approaches.\n"+\
-        "\nWhich one do you want to install? (This needs to be done once only)\n"
+        "\nWhich one do you want to install? (this needs to be done only once)\n"
         
         allowed_answer = set(['0','done'])
         
-        descript =  {'cuttools': ['Cuttools','(OPP)','[0711.3596]'],
-                     'iregi': ['Iregi','(TIR)','[1405.0301]'],
-                     'ninja': ['Ninja','(OPP)','[1403.1229]'],
-                     'pjfry': ['PJFry','(TIR)','[1112.0500]'],
-                     'golem': ['Golem','(TIR)','[0807.0605]'],
-                     'collier': ['Collier','(TIR)','[1604.06792]']} 
+        descript =  {'cuttools': ['cuttools','(OPP)','[0711.3596]'],
+                     'iregi': ['iregi','(TIR)','[1405.0301]'],
+                     'ninja': ['ninja','(OPP)','[1403.1229]'],
+                     'pjfry': ['pjfry','(TIR)','[1112.0500]'],
+                     'golem': ['golem','(TIR)','[0807.0605]'],
+                     'collier': ['collier','(TIR)','[1604.06792]']} 
 
         
-        status = {'off': '%(start_red)sNot to install%(stop)s',
+        status = {'off': '%(start_red)sdo not install%(stop)s',
                   'install': '%(start_green)swill be installed %(stop)s',
                   'local': '%(start_green)swill be installed %(stop)s(offline installation from local repository)',
                   'fail': 'not available without internet connection',
@@ -966,8 +969,8 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             if self.online:
                 allowed_answer.update(['key=on','key=install', 'key=off'])
                 
-        question += 'press enter to go trough or type a number or (the tab key stops the timer):\n>'+\
-          '%(start_blue)s{tool_name}%(stop)s [%(start_blue)sinstall%(stop)s|%(start_blue)soff%(stop)s|'+\
+        question += "You can:\n -> hit 'enter' to proceed\n -> type a number to cycle its options\n -> enter the following command:\n"+\
+          '    %(start_blue)s{tool_name}%(stop)s [%(start_blue)sinstall%(stop)s|%(start_blue)snoinstall%(stop)s|'+\
           '%(start_blue)s{prefixed_installation_path}%(stop)s]\n'
         if first:
             question += '\n%(start_bold)s%(start_red)sIf you are unsure about what this question means, just type enter to proceed. %(stop)s'
@@ -1025,7 +1028,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                     return                     
                 if os.path.sep not in args[1]:
                     value = args[1].lower()
-                    if value in ['off', 'not','notinstall']:
+                    if value in ['off', 'not','noinstall']:
                         self.code[key] = 'off'
                     elif value in ['on', 'install']:
                         if self.online:
@@ -1074,7 +1077,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             else:
                 return self.path_completion(text, '.', only_dirs = True)
         else:
-            return self.list_completion(text, ['install', 'notinstall', 'local'], line)
+            return self.list_completion(text, ['install', 'noinstall', 'local'], line)
     
     complete_ninja = complete_prog 
     complete_pjfry = complete_prog
