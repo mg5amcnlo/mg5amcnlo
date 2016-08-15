@@ -820,7 +820,8 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     
     @property
     def answer(self):
-        return self.run_options
+        return self.code
+    
     
     def __init__(self, question, *args, **opts):
 
@@ -863,19 +864,19 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         " perform the reduction of the loop either via OPP or TIR method.\n"+\
         "Which one do you want to install?\n"
         
-        allowed_answer = set()
+        allowed_answer = set(['0','done'])
         
         descript =  {'cuttools': 'Cuttools (OPP) [0711.3596]',
                      'iregi': 'Iregi (TIR) [1405.0301]',
                      'ninja': 'Ninja (OPP) [1403.1229]',
                      'pjfry': 'PJFry (TIR) [1112.0500]',
-                     'golem': 'Golem95 (TIR) [0807.0605]',
+                     'golem': 'Golem (TIR) [0807.0605]',
                      'collier': 'Collier (TIR) [1604.06792]'} 
 
         
-        status = {'off': 'Not to install',
-                  'install': 'will be installed',
-                  'local': 'will be installed (local mode)',
+        status = {'off': '%(start_red)sNot to install%(stop)s',
+                  'install': '%(start_green)swill be installed%(stop)s',
+                  'local': '%(start_green)swill be installed (local mode)%(stop)s',
                   'fail': 'not available without internet connection',
                   'required': 'will be installed (minimal installation)'}
         
@@ -894,6 +895,11 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                 
         question += 'press enter to go trough or \n type NAME [INSTALL|OFF|PATH_TO_INSTALLATION]' 
 
+        question = question % {'start_green' : '\033[92m',
+                               'start_red' : '\033[91m',
+     'stop':  '\033[0m',
+     
+     }
         return question, allowed_answer
         
     def default(self, line):
@@ -901,7 +907,11 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
         
         line = line.strip()
         args = line.split()
-        self.value = 'repeat'
+
+        if line in ['0', 'done','']:
+            self.value = 'done'
+            return
+        self.value = 'repeat'        
         if args:
             misc.sprint(args)
             if len(args) ==1 and '=' in args[0]:
@@ -942,27 +952,34 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                 elif value in ['on', 'install']:
                     if self.online:
                         self.code[key] = 'install'
-                    elif key in local_installer:
+                    elif key in self.local_installer:
                         self.code[key] = 'local'
                     else:
                         logger.warning('offline installer not available for %s', key)
                         self.code[key] = 'off'
                 elif value in ['local']:
-                    if key in local_installer:
+                    if key in self.local_installer:
                         self.code[key] = 'local'
                     else:
                         logger.warning('offline installer not available for %s', key)
                         self.code[key] = 'off'
             else:
                 self.value = 0
-                self.question,_ = self.create_question()
-                
-    do_ninja = default
-    do_pjfry = default
-    do_cuttools = default
-    do_iregi = default
-    do_golem = default             
-        
+        self.question,self.allow_arg = self.create_question()
+   
+
+    def apply_name(self, name, line):
+
+        if line.startswith('='):
+            line = line[1:]
+        return self.default('%s %s' % (name,line))
+
+
+    do_ninja = lambda self,line : self.apply_name('ninja', line)
+    do_pjfry = lambda self,line : self.apply_name('pjfry', line)
+    do_collier = lambda self,line : self.apply_name('collier', line)
+    do_golem = lambda self,line : self.apply_name('golem', line)
+    
  
         
         
