@@ -503,15 +503,55 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             raise Exception, 'stop since opt %s' % opt['ninja']
             return
         
-        logger.info("First output with Loop matrix-element detected", '$MG:color:BLACK')
+        logger.info("First output with Loop matrix-element detected. Asking for loop reduction:", '$MG:color:BLACK')
         to_install = self.ask('install', 0,  ask_class=AskLoopInstaller, timeout=60, 
                               path_msg=' ')
         
+
+        for key, value in to_install.items():
+            if key in ['cuttools', 'iregi']:
+                continue
+            elif value == 'local':
+                ## LOCAL INSTALLATION OF NINJA/COLLIER
+                    logger.info(
+"""MG5aMC will now install the loop reduction tool '%(p)s' from the local offline installer.
+Use the command 'install $(p)s' if you want to update to the latest online version.
+This installation can take some time but only needs to be performed once.""" %{'p': key},'$MG:color:GREEN')
+                    additional_options = ['--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','%s.tar.gz' % key)]
+                    if key == 'ninja':
+                        additional_options.append('--oneloop_tarball=%s'%pjoin(MG5DIR,'vendor','oneloop.tar.gz'))
+                    
+                    try:
+                        self.do_install(key,paths={'HEPToolsInstaller':
+                                pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
+                        additional_options=additional_options)
+                    except self.InvalidCmd:
+                            logger.warning(
+"""The offline installation of %(p)s was unsuccessful, and MG5aMC disabled it.
+In the future, if you want to reactivate Ninja, you can do so by re-attempting
+its online installation with the command 'install %(p)s' or install it on your
+own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key})
+                            self.exec_cmd("set %s ''" % key)
+                            self.exec_cmd('save options')
+            
+            # ONLINE INSTALLATION
+            elif value == 'install':
+                prog = {'pjfry': 'PJFry', 'golem': 'Golem95'}
+                if key in prog:
+                    self.exec_cmd('install %s' % prog[key])
+                else:
+                    self.exec_cmd('install %s' % key)
+            # Not install
+            elif value == 'off':
+                self.exec_cmd("set %s ''" % key)
+                self.exec_cmd('save options %s' % key)
+            else:
+                self.exec_cmd("set %s %s" % (key,value))
+                self.exec_cmd('save options %s' % key)                
+        
+        
     
-        misc.sprint('pass here', to_install)
-        raise Exception
     # Export a matrix element
-    
     def ML5export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
@@ -851,13 +891,14 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
 
         
         # 1. create the question
-        question, allowed_answer = self.create_question()
+        question, allowed_answer = self.create_question(first=True)
+        
         opts['allow_arg'] = allowed_answer
         
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opts)
         
 
-    def create_question(self):
+    def create_question(self, first = False):
         """ """
         
         
@@ -895,11 +936,13 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                 allowed_answer.update(['key=on','key=install', 'key=off'])
                 
         question += 'press enter to go trough or \n type NAME [INSTALL|OFF|PATH_TO_INSTALLATION]' 
+        if first:
+            question += '\n%(start_bold)s%(start_red)s If you are not sure of what this question means. Just press enter. %(stop)s'
 
         question = question % {'start_green' : '\033[92m',
                                'start_red' : '\033[91m',
      'stop':  '\033[0m',
-     
+     'start_bold':'\033[1m', 
      }
         return question, allowed_answer
         
@@ -914,7 +957,6 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             return
         self.value = 'repeat'        
         if args:
-            misc.sprint(args)
             if len(args) ==1 and '=' in args[0]:
                 args = args[0].split('=')
             args[0] = args[0].lower()
@@ -924,7 +966,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                     args[0] = self.order[int(args[0])-1]
                 key = args[0]
                 if key in self.code:
-                    if self.code[key] == 'off':
+                    if self.code[key] in ['off']:
                         if self.online:
                             self.code[key] = 'install'
                         elif key in self.local_installer:
@@ -944,26 +986,26 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                 if key not in self.code:
                     logger.warning('unknown %s type of entry. Bypass command.')
                     return                     
-                if os.path.sep in args[1]:
+                if os.path.sep not in args[1]:
+                    value = args[1].lower()
+                    if value in ['off', 'not','notinstall']:
+                        self.code[key] = 'off'
+                    elif value in ['on', 'install']:
+                        if self.online:
+                            self.code[key] = 'install'
+                        elif key in self.local_installer:
+                            self.code[key] = 'local'
+                        else:
+                            logger.warning('offline installer not available for %s', key)
+                            self.code[key] = 'off'
+                    elif value in ['local']:
+                        if key in self.local_installer:
+                            self.code[key] = 'local'
+                        else:
+                            logger.warning('offline installer not available for %s', key)
+                            self.code[key] = 'off'
+                else:
                     self.code[key] = args[1]
-                    return
-                value = args[1].lower()
-                if value in ['off', 'not']:
-                    self.code[key] = 'off'
-                elif value in ['on', 'install']:
-                    if self.online:
-                        self.code[key] = 'install'
-                    elif key in self.local_installer:
-                        self.code[key] = 'local'
-                    else:
-                        logger.warning('offline installer not available for %s', key)
-                        self.code[key] = 'off'
-                elif value in ['local']:
-                    if key in self.local_installer:
-                        self.code[key] = 'local'
-                    else:
-                        logger.warning('offline installer not available for %s', key)
-                        self.code[key] = 'off'
             else:
                 self.value = 0
         self.question,self.allow_arg = self.create_question()
@@ -982,7 +1024,24 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
     do_golem = lambda self,line : self.apply_name('golem', line)
     
  
+    def complete_prog(self, text, line, begidx, endidx, formatting=True):
         
-        
+        if os.path.sep in line:
+            args = line[0:begidx].split()
+            if args[-1].endswith(os.path.sep):
+                return self.path_completion(text,
+                                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+            else:
+                return self.path_completion(text, '.', only_dirs = True)
+        else:
+            return self.list_completion(text, ['install', 'notinstall', 'local'], line)
+    
+    complete_ninja = complete_prog 
+    complete_pjfry = complete_prog
+    complete_collier = complete_prog
+    complete_golem = complete_prog
+    
+    
                
    

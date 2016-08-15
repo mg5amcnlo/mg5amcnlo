@@ -1312,7 +1312,7 @@ This will take effect only in a NEW terminal
         if args[0] == 'options':
             has_path = None
             for arg in args[1:]:
-                if arg in ['--auto', '--all']:
+                if arg in ['--auto', '--all'] or arg in self.options:
                     continue
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
@@ -6669,37 +6669,53 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 raise self.InvalidCmd('No processes to save!')
 
         elif args[0] == 'options':
-            # First look at options which should be put in MG5DIR/input
+            partial_save = False
             to_define = {}
-            for key, default in self.options_configuration.items():
-                if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
-                    to_define[key] = self.options[key]
-
-            if not '--auto' in args:
-                for key, default in self.options_madevent.items():
-                    if self.options_madevent[key] != self.options[key] != None:
-                        if '_path' in key and os.path.basename(self.options[key]) == 'None':
-                            continue
+            if any(not arg.startswith('--') and arg in self.options 
+                                                               for arg in args):
+                # store in file only those ones
+                partial_save = True
+                all_arg = [arg for arg in args[1:] if not arg.startswith('--') and
+                           arg in self.options]
+                for key in all_arg:
+                    to_define[key] = self.options[key] 
+            else:
+                # First look at options which should be put in MG5DIR/input
+                for key, default in self.options_configuration.items():
+                    if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
                         to_define[key] = self.options[key]
-                    elif key == 'cluster_queue' and self.options[key] is None:
-                        to_define[key] = self.options[key]
-
-            if '--all' in args:
-                for key, default in self.options_madgraph.items():
-                    if self.options_madgraph[key] != self.options[key] != None and \
-                      key != 'stdout_level':
-                        to_define[key] = self.options[key]
-            elif not '--auto' in args:
-                for key, default in self.options_madgraph.items():
-                    if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
-                        logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
-                                    % (key,self.options_madgraph[key]) )
-                        logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
-            if len(args) >1 and not args[1].startswith('--'):
+    
+                if not '--auto' in args:
+                    for key, default in self.options_madevent.items():
+                        if self.options_madevent[key] != self.options[key] != None:
+                            if '_path' in key and os.path.basename(self.options[key]) == 'None':
+                                continue
+                            to_define[key] = self.options[key]
+                        elif key == 'cluster_queue' and self.options[key] is None:
+                            to_define[key] = self.options[key]
+    
+                if '--all' in args:
+                    for key, default in self.options_madgraph.items():
+                        if self.options_madgraph[key] != self.options[key] != None and \
+                          key != 'stdout_level':
+                            to_define[key] = self.options[key]
+                elif not '--auto' in args:
+                    for key, default in self.options_madgraph.items():
+                        if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
+                            logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
+                                        % (key,self.options_madgraph[key]) )
+                            logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
+                
+            if len(args) >1 and not args[1].startswith('--') and args[1] not in self.options:
                 filepath = args[1]
             else:
                 filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-            basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
+            
+            if partial_save:
+                basefile = filepath
+            else:
+                basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
+                
             basedir = MG5DIR
 
             if to_keep:

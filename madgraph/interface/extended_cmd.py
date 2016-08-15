@@ -679,7 +679,7 @@ class BasicCmd(OriginalCmd):
             prefix += os.path.sep
 
         if only_dirs:
-            completion = [prefix + f
+            completion = [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
