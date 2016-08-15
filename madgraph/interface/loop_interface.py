@@ -930,33 +930,32 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
 
     def create_question(self, first = False):
         """ """
-        
-        
+
         question = "For loop computation. MadLoop requires dedicated tools to"+\
-        " perform the reduction of the loop either via OPP or TIR method.\n"+\
-        "Which one do you want to install?\n"
+        " perform the reduction of loop Feynman diagrams using OPP-based and/or TIR approaches.\n"+\
+        "\nWhich one do you want to install? (This needs to be done once only)\n"
         
         allowed_answer = set(['0','done'])
         
-        descript =  {'cuttools': 'Cuttools (OPP) [0711.3596]',
-                     'iregi': 'Iregi (TIR) [1405.0301]',
-                     'ninja': 'Ninja (OPP) [1403.1229]',
-                     'pjfry': 'PJFry (TIR) [1112.0500]',
-                     'golem': 'Golem (TIR) [0807.0605]',
-                     'collier': 'Collier (TIR) [1604.06792]'} 
+        descript =  {'cuttools': ['Cuttools','(OPP)','[0711.3596]'],
+                     'iregi': ['Iregi','(TIR)','[1405.0301]'],
+                     'ninja': ['Ninja','(OPP)','[1403.1229]'],
+                     'pjfry': ['PJFry','(TIR)','[1112.0500]'],
+                     'golem': ['Golem','(TIR)','[0807.0605]'],
+                     'collier': ['Collier','(TIR)','[1604.06792]']} 
 
         
         status = {'off': '%(start_red)sNot to install%(stop)s',
-                  'install': '%(start_green)swill be installed%(stop)s',
-                  'local': '%(start_green)swill be installed %(stop)s (local mode)',
+                  'install': '%(start_green)swill be installed (recommended) %(stop)s',
+                  'local': '%(start_green)swill be installed (recommended) %(stop)s (offline installation from local repository)',
                   'fail': 'not available without internet connection',
-                  'required': 'will be installed (minimal installation)'}
+                  'required': 'will be installed (required)'}
         
         for i,key in enumerate(self.order,1):
             if os.path.sep not in self.code[key]:
-                question += '%s. %s : %s\n' % (i, descript[key], status[self.code[key]])
+                question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s\n' % tuple([i,]+descript[key]+[status[self.code[key]],])
             else:
-                question += '%s. %s : %s\n' % (i, descript[key], self.code[key])
+                question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s\n' % tuple([i,]+descript[key]+[self.code[key],])
             if key in self.required:
                 continue
             allowed_answer.update([str(i), key])
@@ -965,12 +964,15 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             if self.online:
                 allowed_answer.update(['key=on','key=install', 'key=off'])
                 
-        question += 'press enter to go trough or \n type NAME [INSTALL|OFF|PATH_TO_INSTALLATION]' 
+        question += 'press enter to go trough or type a number or (the tab key stops the timer):\n>'+\
+          '%(start_blue)s{tool_name}%(stop)s [%(start_blue)sinstall%(stop)s|%(start_blue)soff%(stop)s|'+\
+          '%(start_blue)s{prefixed_installation_path}%(stop)s]\n'
         if first:
-            question += '\n%(start_bold)s%(start_red)s If you are not sure of what this question means. Just press enter. %(stop)s'
+            question += '\n%(start_bold)s%(start_red)sIf you are unsure about what this question means, just type enter to proceed. %(stop)s'
 
         question = question % {'start_green' : '\033[92m',
                                'start_red' : '\033[91m',
+                               'start_blue' : '\033[34m',
      'stop':  '\033[0m',
      'start_bold':'\033[1m', 
      }
