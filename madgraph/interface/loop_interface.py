@@ -946,14 +946,16 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
 
         
         status = {'off': '%(start_red)sNot to install%(stop)s',
-                  'install': '%(start_green)swill be installed (recommended) %(stop)s',
-                  'local': '%(start_green)swill be installed (recommended) %(stop)s (offline installation from local repository)',
+                  'install': '%(start_green)swill be installed %(stop)s',
+                  'local': '%(start_green)swill be installed %(stop)s(offline installation from local repository)',
                   'fail': 'not available without internet connection',
                   'required': 'will be installed (required)'}
         
         for i,key in enumerate(self.order,1):
             if os.path.sep not in self.code[key]:
-                question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s\n' % tuple([i,]+descript[key]+[status[self.code[key]],])
+                question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s%s\n' % \
+                   tuple([i,]+descript[key]+[status[self.code[key]],]+\
+                     ['(recommended)' if key in ['ninja','collier'] and self.code[key] in ['install'] else ''])
             else:
                 question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s\n' % tuple([i,]+descript[key]+[self.code[key],])
             if key in self.required:
