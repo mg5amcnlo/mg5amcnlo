@@ -503,7 +503,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             return
         
         logger.info("First output with Loop matrix-element detected. Asking for loop reduction:", '$MG:color:BLACK')
-        to_install = self.ask('install', 0,  ask_class=AskLoopInstaller, timeout=60, 
+        to_install = self.ask('install', 0,  ask_class=AskLoopInstaller, timeout=300, 
                               path_msg=' ')
         
 
@@ -993,6 +993,9 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             if len(args) == 1:
                 # loop over the possibility
                 if args[0].isdigit():
+                    if len(self.order) < int(args[0]):
+                        logger.warning('Invalid integer %s. Please Retry' % args[0])
+                        return 
                     args[0] = self.order[int(args[0])-1]
                 key = args[0]
                 if key in self.code:
@@ -1009,7 +1012,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
                     elif self.code[key] == 'local':
                         self.code[key] = 'off'
                 else: 
-                    logger.warning('unknown')
+                    logger.warning('Unknown entry \'%s\'. Please retry' % key)
                     return 
             elif len(args) == 2:
                 key = args[0]
