@@ -5463,24 +5463,22 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if len(path_to_be_set)>0:
             shell_type = misc.get_shell_type()
             if shell_type in ['bash',None]:
-                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.bashrc"%\
+                modification_line = r"printf '\n# MG5aMC paths:\n%s\n' >> ~/.bashrc"%\
                 (r'\n'.join('export %s=%s%s'%
-                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '') 
-                                                for var,path in path_to_be_set))
+                (var,path,'%s$%s'%(os.pathsep,var)) for var,path in path_to_be_set))
             elif shell_type=='tcsh':
-                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.cshrc"%\
+                modification_line = r"printf '\n# MG5aMC paths:\n%s\n' >> ~/.cshrc"%\
                 (r'\n'.join('setenv %s %s%s'%
-                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '')
-                                                for var,path in path_to_be_set))
+                (var,path,'%s$%s'%(os.pathsep,var)) for var,path in path_to_be_set))
 
-            logger.warning("==========")
-            logger.warning("We recommend that you add to the following paths"+\
+            logger.debug("==========")
+            logger.debug("We recommend that you add to the following paths"+\
              " to your environment variables, so that you are guaranteed that"+\
              " at runtime, MG5_aMC will use the tools you have just installed"+\
              " and not some other versions installed elsewhere on your system.\n"+\
              "You can do so by running the following command in your terminal:"
              "\n   %s"%modification_line) 
-            logger.warning("==========")
+            logger.debug("==========")
     
         # Return true for successful installation
         return True

@@ -34,6 +34,7 @@ import aloha
 import madgraph.core.base_objects as base_objects
 import madgraph.core.color_algebra as color
 import madgraph.core.helas_objects as helas_objects
+import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.files as files
 import madgraph.iolibs.group_subprocs as group_subprocs
