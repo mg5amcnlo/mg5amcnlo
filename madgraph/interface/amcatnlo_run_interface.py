@@ -1247,6 +1247,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             with misc.TMP_variable(self, 'allow_notification_center', False):
                 for i,card in enumerate(param_card_iterator):
                     card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                    self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'), dependent=True)
                     if not options['force']:
                         options['force'] = True
                     if options['run_name']:

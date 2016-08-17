@@ -424,8 +424,9 @@ class ParamCard(dict):
                             info
                             warning
                             crash # raise an error
+           return if the param_card was modified or not
         """
-
+        modify = False
         if isinstance(restrict_rule, str):
             restrict_rule = ParamCardRule(restrict_rule)
         
@@ -458,6 +459,7 @@ class ParamCard(dict):
                     model_value = model_value.real
                     
                 if not misc.equal(model_value, param_value, 4):
+                    modify = True
                     if loglevel == 20:
                         logger.info('For consistency, the mass of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
                     else:
@@ -474,8 +476,8 @@ class ParamCard(dict):
                     if model_value.imag > 1e-5 * model_value.real:
                         raise Exception, "Width should be real number: particle %s (%s) has mass: %s" 
                     model_value = model_value.real
-                    
                 if not misc.equal(model_value, param_value, 4):
+                    modify = True
                     if loglevel == 20:
                         logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
                     else:
@@ -483,7 +485,7 @@ class ParamCard(dict):
                     #logger.debug('was %s', param_value)
                 if model_value != param_value:   
                     self.get('decay').get(abs(particle.get_pdg_code())).value = model_value
-
+        return modify
 
 
     def write(self, outpath=None, precision=''):
@@ -852,6 +854,8 @@ class ParamCardIterator(ParamCard):
                     if self.logging:
                         logger.info("change parameter %s with code %s to %s", \
                                    param.lhablock, param.lhacode, values[pos])
+            
+            
             # retrun the current param_card up to next iteration
             yield param_card
         

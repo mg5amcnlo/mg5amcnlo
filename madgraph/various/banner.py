@@ -69,6 +69,7 @@ class Banner(dict):
     
     def __init__(self, banner_path=None):
         """ """
+
         if isinstance(banner_path, Banner):
             dict.__init__(self, banner_path)
             self.lhe_version = banner_path.lhe_version

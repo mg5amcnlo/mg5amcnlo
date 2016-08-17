@@ -2035,7 +2035,9 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     #check if the param_card defines a scan.
                     orig_name = self.run_name
                     for card in param_card_iterator:
+                        path = pjoin(self.me_dir,'Cards','param_card.dat')
                         card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        self.check_param_card(path, dependent=True)
                         next_name = param_card_iterator.get_next_name(self.run_name)
                         try:
                             self.exec_cmd("generate_events -f %s" % next_name,
