@@ -679,7 +679,7 @@ class BasicCmd(OriginalCmd):
             prefix += os.path.sep
 
         if only_dirs:
-            completion = [prefix + f
+            completion = [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
@@ -1020,7 +1020,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             path_msg = []
             
-        if timeout:
+        if timeout is True:
             try:
                 timeout = self.options['timeout']
             except Exception:
@@ -1089,6 +1089,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 value = alias[value]
         except TypeError:
             pass
+
         if value == default and ask_class:
             value = question_instance.default(default)
         return value
