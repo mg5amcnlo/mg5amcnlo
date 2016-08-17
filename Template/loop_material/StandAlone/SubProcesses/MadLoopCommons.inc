@@ -30,6 +30,86 @@
 
       end
 
+
+## if(collier_available){
+	  SUBROUTINE INITCOLLIER()
+C 
+C INITIALISATION OF COLLIER
+C
+C  
+C MODULE
+C
+	  USE COLLIER 
+C
+C CONSTANTS
+C
+	  character(len=*) no_folder 
+      parameter (no_folder='')
+	  character(len=*) folderOutput
+      parameter (folderOutput='COLLIER_output')
+
+C     Force COLLIER to completely reset from scratch
+      logical noreset
+      parameter (noreset=.FALSE.)
+C
+C LOCAL VARIABLES 
+C    
+      INTEGER N_CACHES
+C  
+C GLOBAL VARIABLES 
+C
+      include 'MadLoopParams.inc'
+C     Now obtain the overall maximum rank, maximum external lines
+C     and maximal number of processes.
+      include 'global_specs.inc'
+
+C ----------
+C BEGIN CODE
+C ----------
+
+C     Initialize Collier
+      IF (.NOT.COLLIERCanOutput) THEN
+        CALL Init_cll(MAXNEXTERNAL,OVERALLMAXRANK,no_folder,noreset)
+      ELSE
+        CALL Init_cll(MAXNEXTERNAL,OVERALLMAXRANK,folderOutput,noreset)
+	  ENDIF
+
+C     Set target accuracy, be conservative w.r.t user request
+C     Keep in mind that COLLIER has been optimized for 1d-8.
+      IF (COLLIERRequiredAccuracy.eq.-1.0d0) THEN
+        CALL SetReqAcc_cll(MLStabThres*1.0d-3)
+      ELSE
+        CALL SetReqAcc_cll(COLLIERRequiredAccuracy)
+	  ENDIF
+
+C     Set COLLIER mode
+      CALL SetMode_cll(COLLIERMode)
+
+C     Set the global cache strategy
+C     If we use the caches for the poles as well, then it is a total of
+C     4 caches per process.
+      IF (COLLIERUseCacheForPoles) THEN
+	    N_CACHES =4*NPROCS
+	  ELSE
+	    N_CACHES =NPROCS
+	  ENDIF
+      IF (COLLIERGlobalCache.eq.-1) THEN
+	    CALL InitCacheSystem_cll(N_CACHES,MAXNEXTERNAL)
+	  ELSEIF(COLLIERGlobalCache.gt.0) THEN
+	    CALL InitCacheSystem_cll(N_CACHES,COLLIERGlobalCache)
+	  ENDIF
+
+C     Make sure to start by first switching off all cache
+      IF (COLLIERGlobalCache.ne.0) THEN
+        call SwitchOffCacheSystem_cll()
+      ENDIF
+
+C     Specify below your other custom COLLIER parameter settings 
+C     [user_specific_COLLIER_settings]
+	  
+	  END
+## }
+
       SUBROUTINE SET_FORBID_HEL_DOUBLECHECK(ONOFF)
 C
 C Give the possibility to overwrite the value of MadLoopParams.dat
@@ -67,9 +147,10 @@ C ----------
       DATA ML_INIT/.TRUE./
       common/ML_INIT/ML_INIT
 
-      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
-      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT/.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
-      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
+      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT/.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT, COLLIERINIT
+
 
       character(512) MLPath
       data MLPath/'[[NA]]'/      
@@ -163,6 +244,8 @@ C     U == 5
 C         Stable with Samurai.
 C     U == 6
 C         Stable with Ninja in double precision.
+C     U == 7
+C         Stable with COLLIER.
 C     U == 8
 C         Stable with Ninja in quadruple precision.
 C     U == 9
@@ -201,10 +284,10 @@ C
             STOP 'Only CutTools and Ninja can use quardruple precision'
          ENDIF
       ENDIF
-      IF(MLRed.GE.1.AND.MLRed.LE.6)THEN
+      IF(MLRed.GE.1.AND.MLRed.LE.7)THEN
          SET_RET_CODE_U=MLRed
       ELSE
-         STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai and Ninja are available'
+         STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai, Ninja and COLLIER are available'
       ENDIF
       END
 
@@ -249,8 +332,11 @@ C Samurai
       ELSEIF(LIBNUM.EQ.6)THEN
 C Ninja 
          CALL DETECT_NINJA(NLOOPLINE,RANK,complex_mass,LPASS)
+      ELSEIF(LIBNUM.EQ.7)THEN
+C Collier 
+         CALL DETECT_COLLIER(NLOOPLINE,RANK,complex_mass,LPASS)
       ELSE
-         STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai are available'
+         STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai, Ninja and COLLIER are available'
       ENDIF
       RETURN
       END
@@ -357,6 +443,65 @@ C     It can easily be increased if necessary.
       endif
       RETURN
       END
+
+## if(collier_available){
+      SUBROUTINE DETECT_COLLIER(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C Detect whether Collier can be used or not
+C
+      USE COLLIER
+      IMPLICIT NONE
+C
+C CONSTANTS
+C
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C
+C LOCAL VARIABLES
+C
+      INTEGER CURRENT_COLLIERMODE
+C
+C GLOBAL VARIABLES
+C
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT, COLLIERINIT
+      include 'MadLoopParams.inc'
+C ----------
+C BEGIN CODE
+C ----------
+      if (.NOT.COLLIERINIT) THEN
+        CALL GETMODE_CLL(CURRENT_COLLIERMODE)
+      ELSE
+        CURRENT_COLLIERMODE = COLLIERMODE
+      ENDIF
+      LPASS=.TRUE.
+	  IF (CURRENT_COLLIERMODE.NE.1) THEN
+C       The DD branch is used and it has limitations
+        IF((NLOOPLINE.GT.6).OR.(RANK.GT.NLOOPLINE)) then
+	      LPASS=.FALSE.
+        endif
+      ELSE
+C       Limitations of the COLI branch are academic.
+        LPASS=.TRUE. 
+	  ENDIF
+      RETURN
+      END
+## }else{
+      SUBROUTINE DETECT_COLLIER(NLOOPLINE,RANK,complex_mass,LPASS)
+C
+C ARGUMENTS
+C
+      INTEGER NLOOPLINE,RANK
+      LOGICAL complex_mass,LPASS
+C
+C     COLLIER is not available in this output. This subroutine is dummy.
+C
+      LPASS=.True.
+      END
+## }
 
       SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,complex_mass,LPASS)
 C

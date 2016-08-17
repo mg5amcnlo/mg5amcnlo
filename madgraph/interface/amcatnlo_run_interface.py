@@ -1964,7 +1964,6 @@ RESTART = %(mint_mode)s
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-        devnull.close()
 
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
@@ -2402,6 +2401,7 @@ RESTART = %(mint_mode)s
                               4 : 'Golem95',
                               5 : 'Samurai',
                               6 : 'Ninja (double precision)',
+                              7 : 'COLLIER',
                               8 : 'Ninja (quadruple precision)',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(

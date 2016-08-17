@@ -24,6 +24,7 @@ PROCESS= $(patsubst %(dotf)s,%(doto)s,$(wildcard polynomial.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard mp_coef_construction_*.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard TIR_interface.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard GOLEM_interface.f)) \
+		 $(patsubst %(dotf)s,%(doto)s,$(wildcard COLLIER_interface.f)) \
 		 $(patsubst %(dotf)s,%(doto)s,$(wildcard compute_color_flows.f))
 
 # This is the core of madloop computationally wise, so make sure to turn optimizations on and bound checks off.

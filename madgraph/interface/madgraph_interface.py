@@ -910,8 +910,11 @@ class CheckValidForCmd(cmd.CheckCmd):
         
         user_options = {'--energy':'1000','--split_orders':'-1',
                    '--reduction':'1|2|3|4|5|6','--CTModeRun':'-1',
-                   '--helicity':'-1','--seed':'-1'}
-        
+                   '--helicity':'-1','--seed':'-1','--collier_cache':'-1',
+                   '--collier_req_acc':'auto',
+                   '--collier_internal_stability_test':'False',
+                   '--collier_mode':'1'}  
+
         if args[0] in ['cms'] or args[0].lower()=='cmsoptions':
             # increase the default energy to 5000
             user_options['--energy']='5000'
@@ -2638,7 +2641,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
                                                                       'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
-    _advanced_install_opts = ['ninja']
+    _advanced_install_opts = ['ninja','collier']
     
     # The options below are commented for now but already available
 #    _advanced_install_opts += ['pythia8','zlib','boost','lhapdf6','lhapdf5','hepmc','mg5amc_py8_interface','oneloop']
@@ -2693,6 +2696,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'golem':'auto',
                        'samurai':None,
                        'ninja':'./HEPTools/lib',
+                       'collier':'./HEPTools/lib',
                        'lhapdf':'lhapdf-config',
                        'applgrid':'applgrid-config',
                        'amcfast':'amcfast-config',
@@ -3535,6 +3539,15 @@ This implies that with decay chains:
                                        " must be an integer, not %s."%option[1])
             elif option[0]=='--reduction':
                 MLoptions['MLReductionLib']=[int(ir) for ir in option[1].split('|')]
+            elif option[0]=='--collier_mode':
+                MLoptions['COLLIERMode']=int(option[1])
+            elif option[0]=='--collier_cache':
+                MLoptions['COLLIERGlobalCache']=int(option[1])
+            elif option[0]=='--collier_req_acc':
+                if option[1]!='auto':
+                    MLoptions['COLLIERRequiredAccuracy']=float(option[1])
+            elif option[0]=='--collier_internal_stability_test':
+                MLoptions['COLLIERUseInternalStabilityTest']=eval(option[1])                
             elif option[0]=='--CTModeRun':
                 try:
                     MLoptions['CTModeRun']=int(option[1])  
@@ -3898,6 +3911,14 @@ This implies that with decay chains:
                 if 5 in MLoptions["MLReductionLib"]:
                     logger_check.warning('Samurai not available on your system; it will be skipped.')
                     MLoptions["MLReductionLib"].remove(5)
+        
+        if 'collier' in self.options and isinstance(self.options['collier'],str):
+            TIR_dir['collier_dir']=self.options['collier']
+        else:
+            if "MLReductionLib" in MLoptions:
+                if 7 in MLoptions["MLReductionLib"]:
+                    logger_check.warning('Collier not available on your system; it will be skipped.')
+                    MLoptions["MLReductionLib"].remove(7)
         
         if 'ninja' in self.options and isinstance(self.options['ninja'],str):
             TIR_dir['ninja_dir']=self.options['ninja']
@@ -5398,7 +5419,9 @@ This implies that with decay chains:
             self.options['mg5amc_py8_interface_path'] = \
                                  pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
             self.exec_cmd('save options')      
-
+        elif tool == 'collier':
+            self.options['collier'] = pjoin(os.curdir,'HEPTools','lib')
+            self.exec_cmd('save options')
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
                                               MG5DIR,'HEPTools','ninja','lib')):
@@ -5440,24 +5463,22 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         if len(path_to_be_set)>0:
             shell_type = misc.get_shell_type()
             if shell_type in ['bash',None]:
-                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.bashrc"%\
+                modification_line = r"printf '\n# MG5aMC paths:\n%s\n' >> ~/.bashrc"%\
                 (r'\n'.join('export %s=%s%s'%
-                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '') 
-                                                for var,path in path_to_be_set))
+                (var,path,'%s$%s'%(os.pathsep,var)) for var,path in path_to_be_set))
             elif shell_type=='tcsh':
-                modification_line = r"printf '# MG5aMC paths:\n%s' >> ~/.cshrc"%\
+                modification_line = r"printf '\n# MG5aMC paths:\n%s\n' >> ~/.cshrc"%\
                 (r'\n'.join('setenv %s %s%s'%
-                (var,path,'%s$%s'%(os.pathsep,var) if var in os.environ else '')
-                                                for var,path in path_to_be_set))
+                (var,path,'%s$%s'%(os.pathsep,var)) for var,path in path_to_be_set))
 
-            logger.warning("==========")
-            logger.warning("We recommend that you add to the following paths"+\
+            logger.debug("==========")
+            logger.debug("We recommend that you add to the following paths"+\
              " to your environment variables, so that you are guaranteed that"+\
              " at runtime, MG5_aMC will use the tools you have just installed"+\
              " and not some other versions installed elsewhere on your system.\n"+\
              "You can do so by running the following command in your terminal:"
              "\n   %s"%modification_line) 
-            logger.warning("==========")
+            logger.debug("==========")
     
         # Return true for successful installation
         return True
@@ -5497,6 +5518,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'hepmc':['CPC 134 (2001) 41-46'],
                           'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
                           'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
+                          'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716']}
 
         if args[0] in advertisements:
@@ -6867,8 +6889,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 logger.info('set fastjet to %s' % args[1])
                 self.options[args[0]] = args[1]
 
-        elif args[0] in ['pjfry','golem','samurai','ninja'] and \
-                           not (args[0]=='ninja' and args[1]=='./HEPTools/lib'):
+        elif args[0] in ['pjfry','golem','samurai','ninja','collier'] and \
+             not (args[0] in ['ninja','collier'] and args[1]=='./HEPTools/lib'):
             if args[1] in ['None',"''",'""']:
                 self.options[args[0]] = None
             else:
@@ -7268,6 +7290,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if self._export_format == 'madevent':
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
                                                  self._curr_fortran_model)
+            self._curr_exporter.write_global_specs(
+                               self._curr_matrix_elements.get_matrix_elements())
             
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \

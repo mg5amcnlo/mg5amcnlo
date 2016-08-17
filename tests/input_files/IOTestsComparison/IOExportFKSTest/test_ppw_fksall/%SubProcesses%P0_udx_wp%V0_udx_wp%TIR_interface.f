@@ -45,15 +45,17 @@ C
       INTEGER I, J, K
       INTEGER NLOOPCOEFS
       LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+     $ ,COLLIERINIT
       COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
-     $ ,NINJAINIT
+     $ ,NINJAINIT,COLLIERINIT
 
 C     This variable will be used to detect changes in the TIR library
 C      used so as to force the reset of the TIR filter.
       INTEGER LAST_LIB_USED
       DATA LAST_LIB_USED/-1/
 
-      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3)
+      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3),TIRCOEFSERRORS(0:LOOPMAXC
+     $OEFS-1,3)
       COMPLEX*16 PJCOEFS(0:LOOPMAXCOEFS-1,3)
 C     
 C     EXTERNAL FUNCTIONS
@@ -67,7 +69,6 @@ C
       REAL*8 LSCALE
       COMMON/CT/LSCALE,CTMODE
 
-C     The variables below are just for monitoring purposes. 
       INTEGER ID,SQSOINDEX,R
       COMMON/LOOP/ID,SQSOINDEX,R
 
@@ -184,6 +185,21 @@ C     IREGI
      $ ,M2L,MU_R,PJCOEFS,STABLE)
 C     CONVERT TO MADLOOP CONVENTION
       CALL CONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+      CASE(7)
+C     COLLIER
+      CALL COLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS
+     $ ,TIRCOEFSERRORS)
+C     Shift the TIR coefficients by the corresponding COLLIER error if
+C      in CTMODE 2.
+      IF (COLLIERUSEINTERNALSTABILITYTEST.AND.CTMODE.EQ.2) THEN
+C       We add here the numerical inaccuracies linearly to be
+C        conservative 
+        DO I=1,3
+          DO J=0,NLOOPCOEFS-1
+            TIRCOEFS(J,I)=TIRCOEFS(J,I)+TIRCOEFSERRORS(J,I)
+          ENDDO
+        ENDDO
+      ENDIF
       END SELECT
       DO I=1,3
         RES(I)=(0.0D0,0.0D0)
@@ -198,6 +214,8 @@ C     IF(MLReductionLib(I_LIB).EQ.2) THEN
 C     WRITE(*,*) 'PJFry: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ELSEIF(MLReductionLib(I_LIB).EQ.3) THEN
 C     WRITE(*,*) 'Iregi: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ELSEIF(MLReductionLib(I_LIB).EQ.7) THEN
+C     WRITE(*,*) 'COLLIER: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ENDIF
       END
 
@@ -322,8 +340,9 @@ C     GLOBAL VARIABLES
 C     
       INCLUDE 'MadLoopParams.inc'
       LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+     $ ,COLLIERINIT
       COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
-     $ ,NINJAINIT
+     $ ,NINJAINIT,COLLIERINIT
 
 C     ----------
 C     BEGIN CODE
@@ -366,9 +385,9 @@ C
 C     CONSTANTS
 C     
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=4)
+      PARAMETER (NLOOPLIB=7)
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=2)
+      PARAMETER (QP_NLOOPLIB=1)
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=1)
 C     
