@@ -3,21 +3,57 @@
 #include <math.h>
 #include <vector>
 #include <sstream>
-
-// Small values used to cut off momenta
-const double TINY      = 1e-15;
-const double TINYMASS  = 1e-8;
+#include "param_card.h"
+#include "run_card.h"
+#include "proc_card.h"
 
 bool initialization_done = false;
 
 Pythia8::Pythia pythia;
+// Stringstream of the events in which MG5aMC will write and PY8 read.
+std::stringstream EvtSS;
+
+void generate_header_SS(std::stringstream & headerSS,
+						const int &      Pythia8BeamA,
+						const int &      Pythia8BeamB,
+						const double &   PythiaBeamEnergyA,
+						const double &   PythiaBeamEnergyB) {
+	headerSS<<"<LesHouchesEvents version=\"3.0\">\n";
+	headerSS<<"<header>\n";
+	// Writing proc_card.dat in the banner
+	headerSS<<"<MG5ProcCard>\n";
+	headerSS<<ProcCard<<"\n";	
+	headerSS<<"</MG5ProcCard>\n";
+	// Writing run_card.dat in the banner	
+	headerSS<<"<MGRunCard>\n";
+	headerSS<<RunCard<<"\n";	
+	headerSS<<"</MGRunCard>\n";
+	// Writing param_card.dat in the banner	
+	headerSS<<"<slha>\n";
+	headerSS<<ParamCard<<"\n";	
+	headerSS<<"</slha>\n";
+	headerSS<<"</header>\n";
+	// Writing the init block (only beam related information is relevant here)	
+	headerSS<<"<init>\n";
+	headerSS<<Pythia8BeamA<<" "<<Pythia8BeamB<<" ";
+	headerSS<<std::scientific<<PythiaBeamEnergyA<<" "<<std::scientific<<PythiaBeamEnergyB<<" ";
+	// We fill in the rest of the init information with blanks
+	headerSS<<"0 0 -1 -1 -3 1\n";
+	headerSS<<"-1.0 0.0 1.0 1\n";
+	headerSS<<"<generator name='MadGraph5_aMC@NLO'>please cite 1405.0301</generator>\n";
+	headerSS<<"</init>\n";
+//	headerSS<<"</LesHouchesEvents>\n";
+	return; 
+}
 
 extern "C" {
 //Fortran interface
   void py8_bias_weight_(const double &   eCM,
 						const int &      Pythia8BeamA,
+						const double &   PythiaBeamEnergyA,
 						const int &      Pythia8BeamB,
-		                const char *     Pythia8EvtRecord, 						
+						const double &   PythiaBeamEnergyB,
+		                const char *     Pythia8EvtRecord,
 		                const double *   p, 
 						const int &      nParticles,
 						const double &   MurScale,
@@ -33,44 +69,53 @@ extern "C" {
 						double &         OutputBiasWeight    ) 
   {
 	if (!initialization_done) {
-		pythia.settings.word("Beams:LHEF","/Users/valentin/Documents/Work/MG5/bias/PROC_sm_19/SubProcesses/P1_lvl_qq/G1/dummy.lhe");
-		pythia.settings.mode("Beams:frameType",4);
-		pythia.init();
+//     /!\ WARNING this example is tailored for p p > z > e+ e- j for now.
+
+		pythia.readString("Merging:doKtMerging=on");
+		pythia.readString("Merging:Process=pp>e+e-");
+		pythia.readString("Merging:TMS=30.0");
+		pythia.readString("Merging:nJetMax=2");
+		pythia.readString("Merging:applyVeto=off");
+		pythia.readString("Beams:readLHEFheaders=on");
+		pythia.readString("Merging:includeWeightInXsection=off");
+
+		pythia.readString("hadronlevel:all=off");
+		pythia.readString("partonlevel:all=off");
+		pythia.readString("SpaceShower:QEDshowerByL=off");
+		pythia.readString("SpaceShower:QEDshowerByQ=off");
+		pythia.readString("ProcessLevel:resonanceDecays=off");
+		pythia.readString("BeamRemnants:primordialKT=off");
+		pythia.readString("TimeShower:QEDshowerByQ=off");
+		pythia.readString("TimeShower:QEDshowerByL=off");
+		pythia.readString("partonlevel:mpi=off");
+		pythia.readString("PartonLevel:FSRinResonances=off");
+		pythia.readString("PartonLevel:Remnants=off");
+		pythia.readString("Check:event=off");
+		
+		pythia.settings.mode("Beams:frameType",4);		
+		std::stringstream headerSS;
+		generate_header_SS(headerSS, Pythia8BeamA,Pythia8BeamB,PythiaBeamEnergyA,PythiaBeamEnergyB);
+		EvtSS.str(headerSS.str());
+		pythia.init(&EvtSS, &headerSS);
 		initialization_done = true;
 	}
 
-// Example of some Pythia calls
-/*
-	Pythia8::History history(0,0.,Pythia8::Event(),Pythia8::Clustering(), NULL, Pythia8::BeamParticle(),Pythia8::BeamParticle(),NULL,NULL,NULL,NULL,false,false,false,false,0.,NULL);
-	pythia.next();
-	pythia.event.list();
-*/
-
 	std::string EvtStr(Pythia8EvtRecord);
 	EvtStr = EvtStr.substr(0,EvtStr.find("</event>")+8);
- 	std::stringstream EvtSS(EvtStr);
-	std::cout<<"---> Event transmitted to Pythiaa8 <---\n"<<EvtSS.str()<<std::endl;
+	// Restart the buffer, clearing EOF state
+	EvtSS.clear();
+	// Set the stringstream buffer to contain the event only
+	EvtSS.str(EvtStr);
 
-// Example of usage of the already-parsed information
-/*
-    for (int i=0; i<nParticles*5; i=i+5) {
-      // Store information in a State.
-      double pup0 = (abs(p[i+0]) < TINY) ? 0.: p[i+0];
-      double pup1 = (abs(p[i+1]) < TINY) ? 0.: p[i+1];
-      double pup2 = (abs(p[i+2]) < TINY) ? 0.: p[i+2];
-      double pup3 = (abs(p[i+3]) < TINY) ? 0.: p[i+3];
-      double pup4 = (abs(p[i+4]) < TINYMASS) ? 0.: p[i+4];
-      // color information not known
-      int col1 = Pythia8ColorOne[i/5];
-      int col2 = Pythia8ColorTwo[i/5];
+//	std::cout<<"---> Event transmitted to Pythiaa8 <---\n"<<EvtSS.str()<<std::endl;
 
-//    Do something to currEvent 
+	// Compute the merging weight. All other shower processsing has been disabled in the initialisation above.
+	pythia.next();	
+//	pythia.event.list();
+    // This is the CKKW Sudakov merging weight from the trial shower.
+	std::cout<<pythia.info.mergingWeight()<<std::endl;
+//	exit(0);
 
-	}
-
-//    delete currEvent;
-*/
-
-	OutputBiasWeight = 1.0;
+	OutputBiasWeight = pythia.info.mergingWeight();
   }
 }

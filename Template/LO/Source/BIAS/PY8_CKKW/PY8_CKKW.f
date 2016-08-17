@@ -30,8 +30,8 @@ C
 C
 C local variables
 C
-          integer lpp_to_beam(-1:3)
-          data lpp_to_beam/-2212,0,2212,2212,11/
+          integer lpp_to_beam(-3:3)
+          data lpp_to_beam/-11,-2212,-2212,0,2212,2212,11/
 c
 c local variables defined in the run_card
 c
@@ -45,7 +45,9 @@ c         truly local variables
           integer Pythia8nParticles
           double precision Pythia8p(5,npart)
           integer Pythia8BeamA
-          integer Pythia8BeamB 
+          double precision PythiaBeamEnergyA
+          integer Pythia8BeamB
+          double precision PythiaBeamEnergyB
           character*(maxEventLength) Pythia8EvtRecord
           integer Pythia8Helicities(npart)
           integer Pythia8ColorOne(npart)
@@ -97,6 +99,8 @@ C        Let's initialize the PY8 variables describing the event
          Pythia8AlphaQCD        = aaqcd
          Pythia8AlphaQED        = aaqed
          Pythia8nParticles      = npart
+         PythiaBeamEnergyA      = ebeam(1) 
+         PythiaBeamEnergyB      = ebeam(2)
          do i=1,npart
            Pythia8ID(i)         = jpart(1,i)
            Pythia8MotherOne(i)  = jpart(2,i)
@@ -129,6 +133,17 @@ C        Let's initialize the PY8 variables describing the event
              endif
            endif
          enddo
+C        If this is a 1 > N decay event, then enforce beamIDs to match
+C        those specified in the event record.
+         if (n_initial.eq.1) then
+           Pythia8BeamB = 0
+           do i=1,npart         
+             if (Pythia8Status(i).eq.-1) then
+               Pythia8BeamA = Pythia8ID(i) 
+               exit
+             endif
+           enddo
+         endif
 C        Make sure to enforce the user-choice of beam if specified.
          if (idnint(BeamA).ne.0) then
            Pythia8BeamA = idnint(BeamA)
@@ -140,7 +155,9 @@ C        Make sure to enforce the user-choice of beam if specified.
 C        Call PY8 to derive the bias weight.
          call py8_bias_weight( Pythia8eCM,
      &                         Pythia8BeamA,
+     &                         PythiaBeamEnergyA,
      &                         Pythia8BeamB,
+     &                         PythiaBeamEnergyB,
      &                         Pythia8EvtRecord,
      &                         Pythia8p,
      &                         Pythia8nParticles,

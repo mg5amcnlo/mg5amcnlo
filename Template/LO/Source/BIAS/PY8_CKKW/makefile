@@ -23,7 +23,20 @@ INCLUDES = $(BIASDIR)/bias.inc \
 PY8_CKKW.o: PY8_CKKW.f $(INCLUDES) 
 	$(FC) $(FFLAGS) $(LDFLAGS) -c -o PY8_CKKW.o PY8_CKKW.f
 
-py8_mg5amc_bias_interface.o: py8_mg5amc_bias_interface.cc
+#
+# Generate the copy of the relevant cards in the module C++ headers so that they are compiled
+# directly in the executable and do not have to be read at run time.
+#
+param_card.h: ../../../Cards/param_card.dat
+	python -c "out=open('param_card.h','w'); out.write('const std::string ParamCard = \"%s\";'%'\\\n\"\n\"'.join([line for line in open('../../../Cards/param_card.dat').read().replace('\"',r'\"').split('\n')])); out.close();"
+
+run_card.h: ../../../Cards/run_card.dat
+	python -c "out=open('run_card.h','w'); out.write('const std::string RunCard = \"%s\";'%'\\\n\"\n\"'.join([line for line in open('../../../Cards/run_card.dat').read().replace('\"',r'\"').split('\n')])); out.close();"
+
+proc_card.h: ../../../Cards/proc_card_mg5.dat
+	python -c "out=open('proc_card.h','w'); out.write('const std::string ProcCard = \"%s\";'%'\\\n\"\n\"'.join([line for line in open('../../../Cards/proc_card_mg5.dat').read().replace('\"',r'\"').split('\n')])); out.close();"
+
+py8_mg5amc_bias_interface.o: py8_mg5amc_bias_interface.cc param_card.h run_card.h proc_card.h
 	$(DEFAULT_CPP_COMPILER) $(CXXFLAGS) $(PY8CXXFLAGS) $(LDFLAGS) $(PY8LIBS) -c -o py8_mg5amc_bias_interface.o py8_mg5amc_bias_interface.cc
 
 PY8_CKKW: PY8_CKKW.o py8_mg5amc_bias_interface.o
