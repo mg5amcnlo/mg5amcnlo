@@ -607,7 +607,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         if not cwd:
             cwd = os.getcwd()
         all_file = [f.lower() for f in os.listdir(cwd)]
-        if 'makefile' not in all_file:
+        if 'makefile' not in all_file and '-f' not in arg:
             raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
 
         if mode == 'fortran' and  not (which('g77') or which('gfortran')):

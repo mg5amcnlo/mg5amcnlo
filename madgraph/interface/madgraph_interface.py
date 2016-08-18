@@ -7259,7 +7259,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if version:
             version = version[-1]
         else:
-            version = ''
+            version = '8.2'
 
         def generate_matrix_elements(self, group_processes=True):
             """Helper function to generate the matrix elements before

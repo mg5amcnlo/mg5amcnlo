@@ -3808,11 +3808,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')
-        # do not set lowercase the case-sensitive parameters from the shower_card
-        if not ( args[0].lower() in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or \
-                 args[0].lower().startswith('dm_') ):
-            args[:-1] = [ a.lower() for a in args[:-1]]
-        misc.sprint(args)
+
         # special shortcut:
         if args[0] in self.special_shortcut:
             if len(args) == 1:
@@ -4192,9 +4188,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                               commentdefault=True)
 
         # Pythia8 Parameter  ---------------------------------------------------
-        elif self.has_PY8 and args[start] in self.PY8Card \
-                                               and card in ['', 'pythia8_card']:
-        
+        elif self.has_PY8 and (card == 'pythia8_card' or (card == '' and \
+             args[start] in self.PY8Card)):
+
             if args[start] in self.conflict and card == '':
                 text = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 logger.warning(text)
@@ -4212,7 +4208,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           print_only_visible=True)
                 
         #INVALID --------------------------------------------------------------
-        else:            
+        else:      
+            misc.sprint(card)      
             logger.warning('invalid set command %s ' % line)
             return
 
@@ -4266,7 +4263,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except Exception, error:
             logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
             return
-        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value))
+        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value), '$MG:color:BLACK')
         if default and name.lower() in self.PY8Card.user_set:
             self.PY8Card.user_set.remove(name.lower())
 
@@ -4505,7 +4502,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                           print_only_visible=True)
-            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value))
+            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:color:BLACK')
         elif len(args) > 0: 
             if args[0] in self.cards:
                 card = args[0]
