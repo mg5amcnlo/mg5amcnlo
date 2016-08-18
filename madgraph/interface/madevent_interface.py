@@ -4948,6 +4948,7 @@ You can follow PY8 run with the following command (in a separate terminal):
 
         valid_options = dict((k, ['OFF']) for k in switch_order) # track of all possible input for an entry
         options =  ['auto', 'done']
+        options_legacy = []
                 
         # Init the switch value according to the current status
         if self.options['pythia-pgs_path']:
@@ -4955,7 +4956,7 @@ You can follow PY8 run with the following command (in a separate terminal):
             available_mode.append('2')
             valid_options['shower'].append('PYTHIA6')
             valid_options['detector'].append('PGS')
-            options += ['pythia', 'pgs', 'pythia=ON', 'pythia=OFF', 'pgs=ON', 'pgs=OFF']
+            options_legacy += ['pythia', 'pgs', 'pythia=ON', 'pythia=OFF', 'pgs=ON', 'pgs=OFF']
             if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
                 switch['shower'] = 'PYTHIA6'
             else:
@@ -5047,7 +5048,8 @@ You can follow PY8 run with the following command (in a separate terminal):
                 options += ['%s=%s' % (key, s) for s in valid_options[key]]
                 options.append(key)
                 
-        options += ['parton'] + sorted(list(set(available_mode)))    
+        options += ['parton'] + sorted(list(set(available_mode)))
+        options += options_legacy    
         #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
         

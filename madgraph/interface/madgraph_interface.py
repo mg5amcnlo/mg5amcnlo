@@ -5674,7 +5674,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         #check outdated install
         if args[0] in ['Delphes2', 'pythia-pgs']:
             logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
-               "  You should consider using installing and unsing Pythia8 + Delphes, with:\n"+
+               "  You should consider using installing and using Pythia8 + Delphes, with:\n"+
                "   > install pythia8\n"
                "   > install Delphes")
 
