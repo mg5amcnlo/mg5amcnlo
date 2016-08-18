@@ -198,7 +198,7 @@ then
 	if [ "$ISLHA6" -eq 1 ]; then PDFSETN="${pdfinfo[1]}"; fi
     fi
   done < $LHAINDEX
-elif [ "$PDFCODE" -eq 0 ]
+elif [[ "$PDFCODE" -eq 0 && "$HWNEW" -eq 0 ]]
 then
   HERPDF='DEFAULT'
   PDFLIBRARY='THISLIB'
@@ -430,44 +430,25 @@ EOF
 fi
 
 whichherpdf $HERPDF
-if [ $pdftype = 1 ]
+if [[ "$pdftype" -eq 1 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -eq 1 ]
 then
-
 cat <<EOF >> ./$ifile
-
 # Define PDF from MCatNLO.inputs PDFSET number
 mkdir /LHAPDF
 create ThePEG::LHAPDF /LHAPDF/MCNLOPDF ThePEGLHAPDF.so
-EOF
-
-if [ "$ISLHA5" -eq 1 ]
-then
-cat <<EOF >> ./$ifile
-#set /LHAPDF/MCNLOPDF:PDFNumber $PDFSET
 set /LHAPDF/MCNLOPDF:PDFName $PDFSETN
-EOF
-fi
-if [ "$ISLHA6" -eq 1 ]
-then
-cat <<EOF >> ./$ifile
-set /LHAPDF/MCNLOPDF:PDFName $PDFSETN
-EOF
-fi
 set /LHAPDF/MCNLOPDF:RemnantHandler /Herwig/Partons/HadronRemnants
-
 set /Herwig/EventHandlers/LHEReader:PDFA /LHAPDF/MCNLOPDF
 set /Herwig/EventHandlers/LHEReader:PDFB /LHAPDF/MCNLOPDF
 set /Herwig/Particles/p+:PDF /LHAPDF/MCNLOPDF
 set /Herwig/Particles/pbar-:PDF /LHAPDF/MCNLOPDF
 set /Herwig/Shower/ShowerHandler:PDFA /LHAPDF/MCNLOPDF
 set /Herwig/Shower/ShowerHandler:PDFB /LHAPDF/MCNLOPDF
-
 EOF
 
-else
-
+elif  [[ "$pdftype" -eq 0 && "$HWNEW" -eq 0 ]]
+then
 cat <<EOF >> ./$ifile
-
 # Use internal HW++ defualt PDF sets
 set /Herwig/EventHandlers/LHEReader:PDFA /Herwig/Partons/MRST-NLO
 set /Herwig/EventHandlers/LHEReader:PDFB /Herwig/Partons/MRST-NLO
@@ -475,7 +456,6 @@ set /Herwig/Particles/p+:PDF /Herwig/Partons/MRST-NLO
 set /Herwig/Particles/pbar-:PDF /Herwig/Partons/MRST-NLO
 set /Herwig/Shower/ShowerHandler:PDFA /Herwig/Partons/MRST-NLO
 set /Herwig/Shower/ShowerHandler:PDFB /Herwig/Partons/MRST-NLO
-
 EOF
 fi
 

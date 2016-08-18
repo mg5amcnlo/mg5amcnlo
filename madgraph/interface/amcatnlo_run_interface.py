@@ -2999,8 +2999,10 @@ RESTART = %(mint_mode)s
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
-                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
-                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig'), rundir)
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
+			files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
+			files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
@@ -3935,8 +3937,10 @@ RESTART = %(mint_mode)s
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
             if shower == 'HERWIGPP':
-                input_files.append(pjoin(cwd, 'Herwig++'))
-                input_files.append(pjoin(cwd, 'Herwig'))
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
+			input_files.append(pjoin(cwd, 'Herwig++'))
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
+			input_files.append(pjoin(cwd, 'Herwig'))
                 input_files.append(pjoin(cwd, 'HepMCFortran.so'))
             if len(args) == 3:
                 if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')):
