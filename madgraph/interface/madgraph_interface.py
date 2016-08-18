@@ -5590,12 +5590,12 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
 
         if args[0] in advertisements:
-            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
-            logger.info('{:^80}'.format("You are installing '%s', please cite ref(s):"%args[0]), '$MG:color:BLACK')
-            logger.info('{:^80}'.format(', '.join(advertisements[args[0]])), '$MG:color:GREEN')
-            logger.info('{:^80}'.format("when using results produced with this tool."), '$MG:color:BLACK')
-            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
-#            logger.info("   You are installing '%s', please cite ref: %s. " % (args[0], advertisements[args[0]][0]), '$MG:color:BLACK')
+#            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
+#            logger.info('{:^80}'.format("You are installing '%s', please cite ref(s):"%args[0]), '$MG:color:BLACK')
+#            logger.info('{:^80}'.format(', '.join(advertisements[args[0]])), '$MG:color:GREEN')
+#            logger.info('{:^80}'.format("when using results produced with this tool."), '$MG:color:BLACK')
+#            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
+            logger.info("   You are installing '%s', please cite ref(s): %s. " % (args[0], ', '.join(advertisements[args[0]])), '$MG:color:BLACK')
 
         # Load file with path of the different program:
         import urllib
