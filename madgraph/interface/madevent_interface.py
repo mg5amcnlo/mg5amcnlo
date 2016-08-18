@@ -2057,6 +2057,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
                           postcmd=False)
             nb_event = self.run_card['nevents']
+            bypass_run=False
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             if not float(self.results.current['cross']):
                 # Zero cross-section. Try to guess why
@@ -2068,28 +2069,32 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
    3) The cuts are too strong.
    Please check/correct your param_card and/or your run_card.'''
                 logger_stderr.critical(text)
-                raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
+                if not self.param_card_iterator:
+                    raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
+                else:
+                    bypass_run = True
+            
+            #we can bypass the following if scan and first result is zero
+            if not bypass_run:
+                self.exec_cmd('refine %s' % nb_event, postcmd=False)
+            
+                self.exec_cmd('combine_events', postcmd=False)
+                self.print_results_in_shell(self.results.current)
 
-            self.exec_cmd('refine %s' % nb_event, postcmd=False)
             
-            self.exec_cmd('combine_events', postcmd=False)
-            self.print_results_in_shell(self.results.current)
+                self.run_syscalc('parton')
+                self.create_plot('parton')            
+                self.exec_cmd('store_events', postcmd=False)            
+                self.exec_cmd('reweight -from_cards', postcmd=False)            
+                self.exec_cmd('decay_events -from_cards', postcmd=False)
+                if self.run_card['time_of_flight']>=0:
+                    self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
 
-            
-            self.run_syscalc('parton')
-            self.create_plot('parton')            
-            self.exec_cmd('store_events', postcmd=False)            
-            self.exec_cmd('reweight -from_cards', postcmd=False)            
-            self.exec_cmd('decay_events -from_cards', postcmd=False)
-            if self.run_card['time_of_flight']>=0:
-                self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
-            
-            self.exec_cmd('madanalysis5_parton --no_default', postcmd=False, printcmd=False)
-            self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
-            self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
-            
-            # shower launches pgs/delphes if needed    
-            self.store_result()
+                self.exec_cmd('madanalysis5_parton --no_default', postcmd=False, printcmd=False)
+                # shower launches pgs/delphes if needed    
+                self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
+                self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
+                self.store_result()
             
             if self.param_card_iterator:
                 param_card_iterator = self.param_card_iterator
@@ -2101,9 +2106,13 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     for card in param_card_iterator:
                         card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                         next_name = param_card_iterator.get_next_name(self.run_name)
-                        self.exec_cmd("generate_events -f %s" % next_name,
+                        try:
+                            self.exec_cmd("generate_events -f %s" % next_name,
                                       precmd=True, postcmd=True,errorhandling=False)
-                        param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                        except ZeroResult:
+                            param_card_iterator.store_entry(self.run_name, 0)
+                        else:
+                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
                     param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                     name = misc.get_scan_name(orig_name, self.run_name)
                     path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
@@ -2617,7 +2626,7 @@ Beware that this can be dangerous for local multicore runs.""")
 #           helicity filters.
             self.MadLoopparam.set('CheckCycle',4, changeifuserset=False)
             
-            # For now it is tricky to have eahc channel performing the helicity
+            # For now it is tricky to have each channel performing the helicity
             # double check. What we will end up doing is probably some kind
             # of new initialization round at the beginning of each launch
             # command, to reset the filters.    
@@ -2625,7 +2634,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                                              changeifuserset=False)
           
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
-            # processes, so that we place OPP last.
+            # processes when not doing MC over helicities, so that we place OPP last.
             if not hasattr(self, 'run_card'):
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
@@ -2638,7 +2647,7 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|6|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','7|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                     not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
@@ -2646,7 +2655,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','6|1|2', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|7|1', ifnotdefault=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
@@ -2977,14 +2986,14 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Combining Events', level='parton')
 
         
+
         if self.run_card['gridpack']: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
                 pass
 
-            tmpcluster = cluster.MultiCore(nb_core=1)
-            tmpcluster.launch_and_wait('../bin/internal/run_combine', 
+            cluster.onecore.launch_and_wait('../bin/internal/run_combine', 
                                        args=[self.run_name],
                                        cwd=pjoin(self.me_dir,'SubProcesses'),
                                        stdout=pjoin(self.me_dir,'SubProcesses', 'combine.log'),
@@ -3034,7 +3043,6 @@ Beware that this can be dangerous for local multicore runs.""")
             self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
                                     out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
-                    
         else:
             # Define The Banner
             tag = self.run_card['run_tag']
@@ -3052,9 +3060,12 @@ Beware that this can be dangerous for local multicore runs.""")
                                     '%s_%s_banner.txt' % (self.run_name, tag)))
             
             
+            get_wgt = lambda event: event.wgt            
             AllEvent = lhe_parser.MultiEventFile()
             AllEvent.banner = self.banner
             
+            partials = 0 # if too many file make some partial unweighting
+            sum_xsec, sum_xerru, sum_axsec = 0,[],0
             for Gdir,mfactor in self.get_Gdir():
                 if os.path.exists(pjoin(Gdir, 'events.lhe')):
                     result = sum_html.OneResult('')
@@ -3064,13 +3075,30 @@ Beware that this can be dangerous for local multicore runs.""")
                                  result.get('xerru'),
                                  result.get('axsec')
                                  )
+                    sum_xsec += result.get('xsec')
+                    sum_xerru.append(result.get('xerru'))
+                    sum_axsec += result.get('axsec')
                     
-            get_wgt = lambda event: event.wgt
-            
-            
+                    if len(AllEvent) >= 80: #perform a partial unweighting
+                        AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                              get_wgt, log_level=logging.DEBUG, write_init=True)
+                        AllEvent = lhe_parser.MultiEventFile()
+                        AllEvent.banner = self.banner
+                        AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
+                                     sum_xsec,
+                                     math.sqrt(sum(x**2 for x in sum_xerru)),
+                                     sum_axsec) 
+                        partials +=1
+                       
+
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
                               log_level=logging.DEBUG, normalization=self.run_card['event_norm'])
+            
+            if partials:
+                misc.sprint("used partials")
+                for i in range(partials):
+                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
             
             self.results.add_detail('nb_event', nb_event)
         
@@ -3104,9 +3132,9 @@ Beware that this can be dangerous for local multicore runs.""")
             os.mkdir(pjoin(self.me_dir, 'HTML', run))    
         
         # 1) Store overall process information
-        input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
-        output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
-        files.cp(input, output) 
+        #input = pjoin(self.me_dir, 'SubProcesses', 'results.dat')
+        #output = pjoin(self.me_dir, 'SubProcesses', '%s_results.dat' % run)
+        #files.cp(input, output) 
 
 
         # 2) Treat the files present in the P directory
@@ -3127,14 +3155,14 @@ Beware that this can be dangerous for local multicore runs.""")
                             os.remove(pjoin(G_path, 'events.lhe'))
                     except Exception:
                         continue
-                    try:
-                        # Store results.dat
-                        if os.path.exists(pjoin(G_path, 'results.dat')):
-                            input = pjoin(G_path, 'results.dat')
-                            output = pjoin(G_path, '%s_results.dat' % run)
-                            files.cp(input, output) 
-                    except Exception:
-                        continue                    
+                    #try:
+                    #    # Store results.dat
+                    #    if os.path.exists(pjoin(G_path, 'results.dat')):
+                    #        input = pjoin(G_path, 'results.dat')
+                    #        output = pjoin(G_path, '%s_results.dat' % run)
+                    #        files.cp(input, output) 
+                    #except Exception:
+                    #    continue                    
                     # Store log
                     try:
                         if os.path.exists(pjoin(G_path, 'log.txt')):
@@ -3143,18 +3171,18 @@ Beware that this can be dangerous for local multicore runs.""")
                             files.mv(input, output) 
                     except Exception:
                         continue
-                    try:   
-                        # Grid
-                        for name in ['ftn26']:
-                            if os.path.exists(pjoin(G_path, name)):
-                                if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
-                                    os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
-                                input = pjoin(G_path, name)
-                                output = pjoin(G_path, '%s_%s' % (run,name))
-                                files.mv(input, output)
-                                misc.gzip(pjoin(G_path, output), error=None) 
-                    except Exception:
-                        continue
+                    #try:   
+                    #    # Grid
+                    #    for name in ['ftn26']:
+                    #        if os.path.exists(pjoin(G_path, name)):
+                    #            if os.path.exists(pjoin(G_path, '%s_%s.gz'%(run,name))):
+                    #                os.remove(pjoin(G_path, '%s_%s.gz'%(run,name)))
+                    #            input = pjoin(G_path, name)
+                    #            output = pjoin(G_path, '%s_%s' % (run,name))
+                    #            files.mv(input, output)
+                    #            misc.gzip(pjoin(G_path, output), error=None) 
+                    #except Exception:
+                    #    continue
                     # Delete ftn25 to ensure reproducible runs
                     if os.path.exists(pjoin(G_path, 'ftn25')):
                         os.remove(pjoin(G_path, 'ftn25'))
@@ -5803,7 +5831,7 @@ class MadLoopInitializer(object):
         if MG_options:
             mcore = cluster.MultiCore(**MG_options)
         else:
-            mcore = cluster.MultiCore(nb_core=1)
+            mcore = cluster.onecore
         def run_initialization_wrapper(run_dir, infos, attempts):
                 if attempts is None:
                     n_PS = MadLoopInitializer.run_initialization(

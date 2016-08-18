@@ -1021,6 +1021,8 @@ class InteractionList(PhysicsObjectList):
 class Model(PhysicsObject):
     """A class to store all the model information."""
     
+    mg5_name = False #store if particle name follow mg5 convention
+    
     def default_setup(self):
 
         self['name'] = ""
@@ -1044,6 +1046,7 @@ class Model(PhysicsObject):
         self['case_sensitive'] = True
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
+        
         
 
     def filter(self, name, value):
@@ -1142,6 +1145,7 @@ class Model(PhysicsObject):
         if name == 'modelpath':
             modeldir = self.get('version_tag').rsplit('##',1)[0]
             if os.path.exists(modeldir):
+                modeldir = os.path.expanduser(modeldir)
                 return modeldir
             else:
                 raise Exception, "path %s not valid anymore." % modeldir
@@ -1157,6 +1161,7 @@ class Model(PhysicsObject):
                 raise Exception, "path %s not valid anymore" % modeldir
             modeldir = os.path.dirname(modeldir)
             modeldir = pjoin(modeldir, modelname)
+            modeldir = os.path.expanduser(modeldir)
             return modeldir
         elif name == 'restrict_name':
             modeldir = self.get('version_tag').rsplit('##',1)[0]
@@ -1427,7 +1432,9 @@ class Model(PhysicsObject):
     def pass_particles_name_in_mg_default(self):
         """Change the name of the particles such that all SM and MSSM particles
         follows the MG convention"""
-
+        
+        self.mg5_name = True
+        
         # Check that default name/antiname is not already use 
         def check_name_free(self, name):
             """ check if name is not use for a particle in the model if it is 
@@ -2980,7 +2987,7 @@ class Process(PhysicsObject):
         # Add orders
         if self['orders']:
             to_add = []
-            for key in self['orders']:
+            for key in sorted(self['orders'].keys()):
                 if not print_weighted and key == 'WEIGHTED':
                     continue
                 value = int(self['orders'][key])
@@ -3003,9 +3010,9 @@ class Process(PhysicsObject):
                 mystr = mystr + " ".join(to_add) + ' '
 
         if self['constrained_orders']:
-            mystr = mystr + " ".join('%s%s%d' % (key, type, value) for 
-                                     (key,(value,type)) 
-                                         in self['constrained_orders'].items())  + ' '
+            mystr = mystr + " ".join('%s%s%d' % (key, 
+              self['constrained_orders'][key][1], self['constrained_orders'][key][0]) 
+                    for (key,(value,type)) in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -3022,7 +3029,7 @@ class Process(PhysicsObject):
         # Add squared orders
         if self['squared_orders']:
             to_add = []
-            for key in self['squared_orders'].keys():
+            for key in sorted(self['squared_orders'].keys()):
                 if not print_weighted and key == 'WEIGHTED':
                     continue
                 if key in self['constrained_orders']:

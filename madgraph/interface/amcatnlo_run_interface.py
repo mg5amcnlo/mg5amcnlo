@@ -120,7 +120,8 @@ def compile_dir(*arguments):
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
             misc.call(['./%s' % (test)], cwd=this_dir, 
-                    stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+                    stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'),
+                    close_fds=True)
             if test == 'check_poles' and os.path.exists(pjoin(this_dir,'MadLoop5_resources')) :
                 tf=tarfile.open(pjoin(this_dir,'MadLoop5_resources.tar.gz'),'w:gz',
                                                                  dereference=True)
@@ -132,7 +133,8 @@ def compile_dir(*arguments):
             open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
             misc.call(['./gensym'],cwd= this_dir,
                      stdin=open(pjoin(this_dir, 'gensym_input.txt')),
-                     stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
+                     stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
+                     close_fds=True) 
             #compile madevent_mintMC/mintFO
             misc.compile([exe], cwd=this_dir, job_specs = False)
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
@@ -516,7 +518,8 @@ class CheckValidForCmd(object):
                 input_file = filenames[0]
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
+                                                    argument=['-c', input_file],
+                                                    close_fds=True)
         else:
             if tag: 
                 self.run_card['run_tag'] = tag
@@ -576,7 +579,8 @@ class CheckValidForCmd(object):
                 input_file = filenames[0]
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
+                                                    argument=['-c', input_file],
+                                                    close_fds=True)
         else:
             if tag:
                 self.run_card['run_tag'] = tag
@@ -1333,8 +1337,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             nevents=self.run_card['nevents']
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
 
-        devnull = os.open(os.devnull, os.O_RDWR) 
-
         if mode in ['LO', 'NLO']:
             # this is for fixed order runs
             mode_dict = {'NLO': 'all', 'LO': 'born'}
@@ -1932,7 +1934,8 @@ RESTART = %(mint_mode)s
 
     def combine_plots_FO(self,folder_name,jobs):
         """combines the plots and puts then in the Events/run* directory"""
-        devnull = os.open(os.devnull, os.O_RDWR) 
+        devnull = open(os.devnull, 'w') 
+        
         if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
             misc.call(['./combine_plots_FO.sh'] + folder_name, \
                       stdout=devnull, 
@@ -1963,7 +1966,6 @@ RESTART = %(mint_mode)s
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-
 
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
@@ -2401,6 +2403,7 @@ RESTART = %(mint_mode)s
                               4 : 'Golem95',
                               5 : 'Samurai',
                               6 : 'Ninja (double precision)',
+                              7 : 'COLLIER',
                               8 : 'Ninja (quadruple precision)',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(
@@ -2889,8 +2892,8 @@ RESTART = %(mint_mode)s
                     fjwrapper_lines[fjwrapper_lines.index(line)] = include_line
                 if '//NAMESPACE_FJ' in line:
                     fjwrapper_lines[fjwrapper_lines.index(line)] = namespace_line
-            open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w').write(\
-                    '\n'.join(fjwrapper_lines) + '\n')
+            with open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w') as fsock:
+                fsock.write('\n'.join(fjwrapper_lines) + '\n')
 
         extrapaths = self.shower_card['extrapaths'].split()
 
@@ -2931,18 +2934,19 @@ RESTART = %(mint_mode)s
 
         
         # libdl may be needded for pythia 82xx
-        if shower == 'PYTHIA8' and not \
-           os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')) and \
-           'dl' not in self.shower_card['extralibs'].split():
-            # 'dl' has to be linked with the extralibs
-            self.shower_card['extralibs'] += ' dl'
-            logger.warning("'dl' was added to extralibs from the shower_card.dat.\n" + \
-                          "It is needed for the correct running of PY8.2xx.\n" + \
-                          "If this library cannot be found on your system, a crash will occur.")
+        #if shower == 'PYTHIA8' and not \
+        #   os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')) and \
+        #   'dl' not in self.shower_card['extralibs'].split():
+        #    # 'dl' has to be linked with the extralibs
+        #    self.shower_card['extralibs'] += ' dl'
+        #    logger.warning("'dl' was added to extralibs from the shower_card.dat.\n" + \
+        #                  "It is needed for the correct running of PY8.2xx.\n" + \
+        #                  "If this library cannot be found on your system, a crash will occur.")
 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
-                    cwd=pjoin(self.me_dir, 'MCatNLO'))
+                    cwd=pjoin(self.me_dir, 'MCatNLO'),
+                    close_fds=True)
 
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
@@ -3019,8 +3023,8 @@ RESTART = %(mint_mode)s
                 out_id = 'TOP'
 
         # write the executable
-        open(pjoin(rundir, 'shower.sh'), 'w').write(\
-                open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
+        with open(pjoin(rundir, 'shower.sh'), 'w') as fsock:
+            fsock.write(open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
                 % {'extralibs': ':'.join(extrapaths)})
         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
 
@@ -3624,20 +3628,20 @@ RESTART = %(mint_mode)s
             with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
                 data_line=f.readline()
                 if "scale variations:" in data_line:
-                    for i,scale in enumerate(self.run_card['dynamical_scale_choice']):
+                    for j,scale in enumerate(self.run_card['dynamical_scale_choice']):
                         data_line = f.readline().split()
                         scales_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
-                            scales[i] = [a + b for a, b in zip(scales[i], scales_this)]
+                            scales[j] = [a + b for a, b in zip(scales[j], scales_this)]
                         except IndexError:
                             scales+=[scales_this]
                     data_line=f.readline()
                 if "pdf variations:" in data_line:
-                    for i,pdf in enumerate(self.run_card['lhaid']):
+                    for j,pdf in enumerate(self.run_card['lhaid']):
                         data_line = f.readline().split()
                         pdfs_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
-                            pdfs[i] = [a + b for a, b in zip(pdfs[i], pdfs_this)]
+                            pdfs[j] = [a + b for a, b in zip(pdfs[j], pdfs_this)]
                         except IndexError:
                             pdfs+=[pdfs_this]
 
@@ -4098,7 +4102,8 @@ RESTART = %(mint_mode)s
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
             # write an analyse_opts with a dummy analysis so that compilation goes through
-            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
+            with open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w') as fsock:
+                fsock.write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
 
         #directory where to compile exe
         p_dirs = [d for d in \
@@ -4162,7 +4167,8 @@ RESTART = %(mint_mode)s
                 if line.strip().startswith('APPLLIBS=$'):
                     line=appllibs
                 text_out.append(line)
-            open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
+            with open(pjoin(self.me_dir,'Source','make_opts'),'w') as fsock:
+                fsock.writelines(text_out)
         else:
             self.make_opts_var['applgrid'] = ""
 

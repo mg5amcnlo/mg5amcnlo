@@ -374,7 +374,7 @@ def deactivate_dependence(dependency, cmd=None, log = None):
             log(msg)
     
 
-    if dependency in ['pjfry','golem','samurai','ninja']:
+    if dependency in ['pjfry','golem','samurai','ninja','collier']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
             cmd.options[dependency] = None
@@ -416,6 +416,13 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
             tell("Installing ninja...")
             cmd.do_install('ninja')
  
+    if dependency=='collier':
+        if cmd.options['collier'] in ['None',None,''] or\
+         (cmd.options['collier'] == 'auto' and which_lib('libcollier.a') is None) or\
+         which_lib(pjoin(cmd.options['collier'],'libcollier.a')) is None:
+            tell("Installing COLLIER...")
+            cmd.do_install('collier')
+
 #===============================================================================
 # find a library
 #===============================================================================

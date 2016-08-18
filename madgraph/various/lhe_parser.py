@@ -16,26 +16,28 @@ if '__main__' == __name__:
 import misc
 import logging
 import gzip
+import banner as banner_mod
 logger = logging.getLogger("madgraph.lhe_parser")
 
 class Particle(object):
     """ """
-    pattern=re.compile(r'''^\s*
-        (?P<pid>-?\d+)\s+           #PID
-        (?P<status>-?\d+)\s+            #status (1 for output particle)
-        (?P<mother1>-?\d+)\s+       #mother
-        (?P<mother2>-?\d+)\s+       #mother
-        (?P<color1>[+-e.\d]*)\s+    #color1
-        (?P<color2>[+-e.\d]*)\s+    #color2
-        (?P<px>[+-e.\d]*)\s+        #px
-        (?P<py>[+-e.\d]*)\s+        #py
-        (?P<pz>[+-e.\d]*)\s+        #pz
-        (?P<E>[+-e.\d]*)\s+         #E
-        (?P<mass>[+-e.\d]*)\s+      #mass
-        (?P<vtim>[+-e.\d]*)\s+      #displace vertex
-        (?P<helicity>[+-e.\d]*)\s*      #helicity
-        ($|(?P<comment>\#[\d|D]*))  #comment/end of string
-        ''',66) #verbose+ignore case
+    # regular expression not use anymore to speed up the computation
+    #pattern=re.compile(r'''^\s*
+    #    (?P<pid>-?\d+)\s+           #PID
+    #    (?P<status>-?\d+)\s+            #status (1 for output particle)
+    #    (?P<mother1>-?\d+)\s+       #mother
+    #    (?P<mother2>-?\d+)\s+       #mother
+    #    (?P<color1>[+-e.\d]*)\s+    #color1
+    #    (?P<color2>[+-e.\d]*)\s+    #color2
+    #    (?P<px>[+-e.\d]*)\s+        #px
+    #    (?P<py>[+-e.\d]*)\s+        #py
+    #    (?P<pz>[+-e.\d]*)\s+        #pz
+    #    (?P<E>[+-e.\d]*)\s+         #E
+    #    (?P<mass>[+-e.\d]*)\s+      #mass
+    #    (?P<vtim>[+-e.\d]*)\s+      #displace vertex
+    #    (?P<helicity>[+-e.\d]*)\s*      #helicity
+    #    ($|(?P<comment>\#[\d|D]*))  #comment/end of string
+    #    ''',66) #verbose+ignore case
     
     
     
@@ -78,17 +80,19 @@ class Particle(object):
             
     def parse(self, line):
         """parse the line"""
-    
-        obj = self.pattern.search(line)
-        if not obj:
-            raise Exception, 'the line\n%s\n is not a valid format for LHE particle' % line
-        for key, value in obj.groupdict().items():
-            if key not in  ['comment','pid']:
-                setattr(self, key, float(value))
-            elif key in ['pid', 'mother1', 'mother2']:
-                setattr(self, key, int(value))
-            else:
-                self.comment = value
+        
+        args = line.split()
+        keys = ['pid', 'status','mother1','mother2','color1', 'color2', 'px','py','pz','E',
+                'mass','vtim','helicity']
+        
+        for key,value in zip(keys,args):
+            setattr(self, key, float(value))
+        self.pid = int(self.pid)
+            
+        self.comment = ' '.join(args[len(keys):])
+        if self.comment.startswith(('|','#')):
+            self.comment = self.comment[1:]
+
         # Note that mother1/mother2 will be modified by the Event parse function to replace the
         # integer by a pointer to the actual particle object.
     
@@ -235,7 +239,7 @@ class EventFile(object):
         line = ''
         mode = 0
         while '</event>' not in line:
-            line = super(EventFile, self).next().lower()
+            line = super(EventFile, self).next()
             if '<event' in line:
                 mode = 1
                 text = ''
@@ -713,14 +717,32 @@ class MultiEventFile(EventFile):
         grouped_error = {}
         for i,ff in enumerate(self.files):
             filename = ff.name
-            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')][-1]
-            group = Pdir.split("_")[0][1:]
-            if group in grouped_cross:
-                grouped_cross[group] += self.allcross[i]
-                grouped_error[group] += self.error[i]**2 
+            from_init = False
+            Pdir = [P for P in filename.split(os.path.sep) if P.startswith('P')]
+            if Pdir:
+                Pdir = Pdir[-1]
+                group = Pdir.split("_")[0][1:]
+                if not group.isdigit():
+                    from_init = True  
             else:
-                grouped_cross[group] = self.allcross[i]
-                grouped_error[group] = self.error[i]**2                
+                from_init = True
+
+            if not from_init:
+                if group in grouped_cross:
+                    grouped_cross[group] += self.allcross[i]
+                    grouped_error[group] += self.error[i]**2 
+                else:
+                    grouped_cross[group] = self.allcross[i]
+                    grouped_error[group] = self.error[i]**2
+            else:
+                ban = banner_mod.Banner(ff.banner)
+                for line in  ban['init']:
+                    splitline = line.split()
+                    if len(splitline)==4:
+                        cross, error, wgt, group = splitline
+                        grouped_cross[int(group)] += cross
+                        grouped_error[int(group)] += error**2                        
+                
                 
         nb_group = len(grouped_cross)
         
@@ -731,6 +753,17 @@ class MultiEventFile(EventFile):
             run_card = self.banner.charge_card("run_card")
         
         init_information = run_card.get_banner_init_information()
+        if init_information["idbmup1"] == 0:
+            event = self.next()
+            init_information["idbmup1"]= event[0].pdg
+            if init_information["idbmup2"] == 0:
+                init_information["idbmup2"]= event[1].pdg
+            self.seek(0)
+        if init_information["idbmup2"] == 0:
+            event = self.next()
+            init_information["idbmup2"] = event[1].pdg
+            self.seek(0)
+        
         init_information["nprup"] = nb_group
         
         if run_card["lhe_version"] < 3:
@@ -874,6 +907,10 @@ class MultiEventFile(EventFile):
                 new_wgt = sum(self.across)
             self.define_init_banner(new_wgt, strategy)
             self.written_weight = new_wgt
+        elif 'write_init' in opts and opts['write_init']:
+            self.define_init_banner(0)
+            del opts['write_init']
+
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
            
@@ -908,16 +945,16 @@ class Event(list):
             
     def parse(self, text):
         """Take the input file and create the structured information"""
-        text = re.sub(r'</?event>', '', text) # remove pointless tag
+        #text = re.sub(r'</?event>', '', text) # remove pointless tag
         status = 'first' 
         for line in text.split('\n'):
             line = line.strip()
             if not line: 
                 continue
-            if line.startswith('#'):
+            elif line[0] == '#':
                 self.comment += '%s\n' % line
                 continue
-            if "<event" in line:
+            elif line.startswith('<event'):
                 if '=' in line:
                     found = re.findall(r"""(\w*)=(?:(?:['"])([^'"]*)(?=['"])|(\S*))""",line)
                     #for '<event line=4 value=\'3\' error="5" test=" 1 and 2">\n'
@@ -926,23 +963,23 @@ class Event(list):
                     # return {'test': ' 1 and 2', 'line': '4', 'value': '3', 'error': '5'}
                 continue
             
-            if 'first' == status:
+            elif 'first' == status:
                 if '<rwgt>' in line:
                     status = 'tag'
-                    
-            if 'first' == status:
-                self.assign_scale_line(line)
-                status = 'part' 
-                continue
-            
+                else:
+                    self.assign_scale_line(line)
+                    status = 'part' 
+                    continue
             if '<' in line:
                 status = 'tag'
                 
             if 'part' == status:
                 self.append(Particle(line, event=self))
             else:
+                if '</event>' in line:
+                    line = line.replace('</event>','',1)
                 self.tag += '%s\n' % line
-
+                
         self.assign_mother()
         
     def assign_mother(self):
@@ -1342,8 +1379,6 @@ class Event(list):
     
     def get_helicity(self, get_order, allow_reversed=True):
         """return a list with the helicities in the order asked for"""
-
-        
         
         #avoid to modify the input
         order = [list(get_order[0]), list(get_order[1])] 
@@ -1682,7 +1717,7 @@ class FourMomentum(object):
             py = obj.py
             pz = obj.pz
             E = obj.E
-        elif isinstance(obj, list):
+        elif isinstance(obj, (list, tuple)):
             assert len(obj) ==4
             E = obj[0]
             px = obj[1]
@@ -1788,6 +1823,9 @@ class FourMomentum(object):
     def __repr__(self):
         return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
     
+    def get_tuple(self):
+        return (self.E, self.px, self.py,self.pz)
+    
     def boost(self, mom):
         """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
         the output is the 4-momenta in the frame of this 4-momenta
@@ -1805,7 +1843,31 @@ class FourMomentum(object):
                            pz=mom.pz + self.pz * lf)
         else:
             return FourMomentum(mom)
-    
+
+    def zboost(self, pboost=None, E=0, pz=0):
+        """Both momenta should be in the same frame. 
+           The boost perform correspond to the boost required to set pboost at 
+           rest (only z boost applied).
+        """
+        if isinstance(pboost, FourMomentum):
+            E = pboost.E
+            pz = pboost.pz
+        
+        #beta = pz/E
+        gamma = E / math.sqrt(E**2-pz**2)
+        gammabeta = pz  / math.sqrt(E**2-pz**2)
+        
+        out =  FourMomentum([gamma*self.E - gammabeta*self.pz,
+                            self.px,
+                            self.py,
+                            gamma*self.pz - gammabeta*self.E])
+        
+        if abs(out.pz) < 1e-6 * out.E:
+            out.pz = 0
+        return out
+        
+        
+        
 
 class OneNLOWeight(object):
         
