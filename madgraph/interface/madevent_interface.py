@@ -327,6 +327,20 @@ class CmdExtended(common_run.CommonRunCmd):
 class HelpToCmd(object):
     """ The Series of help routine for the MadEventCmd"""
     
+    def help_pythia(self):
+        logger.info("syntax: pythia [RUN] [--run_options]")
+        logger.info("-- run pythia on RUN (current one by default)")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--tag=', 'define the tag for the pythia run'),
+                               ('--no_default', 'not run if pythia_card not present')])
+
+    def help_pythia8(self):
+        logger.info("syntax: pythia8 [RUN] [--run_options]")
+        logger.info("-- run pythia8 on RUN (current one by default)")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--tag=', 'define the tag for the pythia8 run'),
+                               ('--no_default', 'not run if pythia8_card not present')])
+    
     def help_banner_run(self):
         logger.info("syntax: banner_run Path|RUN [--run_options]")
         logger.info("-- Reproduce a run following a given banner")
@@ -3248,7 +3262,12 @@ Beware that this can be dangerous for local multicore runs.""")
             chosen_showers = [args.pop(0)]
         else:
             chosen_showers = list(self._interfaced_showers)
-
+            # It is preferable to run only one shower, even if several are available and no
+            # specific one has been selected
+            shower_priority = ['pythia8','pythia']
+            chosen_showers = [sorted(chosen_showers,key=lambda sh:
+                shower_priority.index(sh) if sh in shower_priority else len(shower_priority)+1)[0]]
+            
         # If '--no_default' was specified in the arguments, then only one 
         # shower will be run, depending on which card is present.
         for shower in chosen_showers:
@@ -3667,12 +3686,12 @@ You can follow PY8 run with the following command (in a separate terminal):
 
                 except ValueError:
                     # xsec is not float - this should not happen
-                    self.results.add_detail('cross_pythia', 0)
-                    self.results.add_detail('nb_event_pythia', 0)
-                    self.results.add_detail('error_pythia', 0)
+                    self.results.add_detail('cross_pythia8', 0)
+                    self.results.add_detail('nb_event_pythia8', 0)
+                    self.results.add_detail('error_pythia8', 0)
                 else:
-                    self.results.add_detail('cross_pythia', sigma_m)
-                    self.results.add_detail('nb_event_pythia', Nacc)
+                    self.results.add_detail('cross_pythia8', sigma_m)
+                    self.results.add_detail('nb_event_pythia8', Nacc)
                     #compute pythia error
                     error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
                     try:                   
@@ -3681,7 +3700,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                         # Cannot compute error
                         error_m = -1.0
                     # works both for fixed number of generated events and fixed accepted events
-                    self.results.add_detail('error_pythia', error_m)
+                    self.results.add_detail('error_pythia8', error_m)
                 break
             pythia_log.close()
             
@@ -3719,8 +3738,8 @@ You can follow PY8 run with the following command (in a separate terminal):
                 central_scale = PY8_Card['JetMatching:qCut'] if \
                         int(self.run_card['ickkw'])==1 else PY8_Card['Merging:TMS']
                 if central_scale in cross_sections:
-                    self.results.add_detail('cross_pythia', cross_sections[central_scale][0])
-                    self.results.add_detail('error_pythia', cross_sections[central_scale][1])
+                    self.results.add_detail('cross_pythia8', cross_sections[central_scale][0])
+                    self.results.add_detail('error_pythia8', cross_sections[central_scale][1])
                 
                 if len(cross_sections)>0:
                     logger.info('Pythia8 merged cross-sections are:')

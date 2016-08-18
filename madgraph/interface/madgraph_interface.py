@@ -2684,7 +2684,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                      'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
                      'QCDLoop']
     # The targets below are installed using the HEPToolsInstaller.py script
-    _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5',
+    _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
 
     _install_opts.extend(_advanced_install_opts)
@@ -5318,6 +5318,7 @@ This implies that with decay chains:
 #            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
 #           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
 ################################################################################
+
         # Potential change in naming convention
         name_map = {}
         try:
@@ -5587,8 +5588,14 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716']}
 
+
         if args[0] in advertisements:
-            logger.info("   You are installing '%s', please cite ref: %s. " % (args[0], advertisements[args[0]][0]), '$MG:color:BLACK')
+            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
+            logger.info('{:^80}'.format("You are installing '%s', please cite ref(s):"%args[0]), '$MG:color:BLACK')
+            logger.info('{:^80}'.format(', '.join(advertisements[args[0]])), '$MG:color:GREEN')
+            logger.info('{:^80}'.format("when using results produced with this tool."), '$MG:color:BLACK')
+            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
+#            logger.info("   You are installing '%s', please cite ref: %s. " % (args[0], advertisements[args[0]][0]), '$MG:color:BLACK')
 
         # Load file with path of the different program:
         import urllib
@@ -5603,7 +5610,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             r = [r, (1-r)]
 ################################################################################
 #           Force MG5aMC to choose one particular server
-#            r = [0]
+#            r = [1]
 ################################################################################
             for index in r:
                 cluster_path = data_path[index]
@@ -5672,11 +5679,11 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             pass
 
         #check outdated install
-        if args[0] in ['Delphes2', 'pythia-pgs']:
+        substitution={'Delphes2':'Delphes','pythia-pgs':'pythia8'}
+        if args[0] in substitution:
             logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
-               "  You should consider using installing and using Pythia8 + Delphes, with:\n"+
-               "   > install pythia8\n"
-               "   > install Delphes")
+               "  You should consider installing and using %s, with:\n"%substitutio[args[0]]+
+               "   > install %s"%substitutio[args[0]])
 
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))

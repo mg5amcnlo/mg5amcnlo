@@ -1089,12 +1089,6 @@ class OneTagResults(dict):
                 level = 'pythia'
                 name = 'STDHEP'
                 out += self.special_link(link, level, name)  
-            if 'hepmc' in self.pythia:
-                link = './Events/%(run_name)s/%(tag)s_pythia8_events.hepmc'
-                level = 'pythia'
-                name = 'HEPMC'
-                out += self.special_link(link, level, name)                  
-                
                                
             if 'lhe' in self.pythia:
                 link = './Events/%(run_name)s/%(tag)s_pythia_events.lhe'

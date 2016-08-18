@@ -143,22 +143,7 @@ class HelpToCmd(object):
         logger.info("        default: take value from the model")
         logger.info("  --output=X: path where to write the resulting card. ")
         logger.info("        default: overwrite input file. If no input file, write it in the model directory")
-        logger.info("  --nlo: Compute NLO width [if the model support it]")      
-
-
-    def help_pythia(self):
-        logger.info("syntax: pythia [RUN] [--run_options]")
-        logger.info("-- run pythia on RUN (current one by default)")
-        self.run_options_help([('-f','answer all question by default'),
-                               ('--tag=', 'define the tag for the pythia run'),
-                               ('--no_default', 'not run if pythia_card not present')])
-
-    def help_pythia8(self):
-        logger.info("syntax: pythia8 [RUN] [--run_options]")
-        logger.info("-- run pythia8 on RUN (current one by default)")
-        self.run_options_help([('-f','answer all question by default'),
-                               ('--tag=', 'define the tag for the pythia8 run'),
-                               ('--no_default', 'not run if pythia8_card not present')])
+        logger.info("  --nlo: Compute NLO width [if the model support it]")
 
     def help_shower(self):
         logger.info("syntax: shower [shower_name] [shower_options]")
@@ -4319,7 +4304,65 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
-    
+                    
+        # Check the extralibs flag.
+        if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
+            modify_extralibs, modify_extrapaths = False,False
+            extralibs = self.shower_card['extralibs'].split()
+            extrapaths = self.shower_card['extrapaths'].split()
+            # remove default stdhep/Fmcfio for recent shower
+            if self.run_card['parton_shower'] in ['PYTHIA8', 'HERWIGPP', 'HW7']:
+                if 'stdhep' in self.shower_card['extralibs']:
+                    extralibs.remove('stdhep')
+                    modify_extralibs = True
+                if 'Fmcfio' in self.shower_card['extralibs']:
+                    extralibs.remove('Fmcfio')     
+                    modify_extralibs = True               
+            if self.run_card['parton_shower'] == 'PYTHIA8':
+                # First check sanity of PY8
+                if not self.mother_interface.options['pythia8_path']:
+                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified  to MadGraph5_aMC@NLO'
+                executable = pjoin(self.mother_interface.options['pythia8_path'], 'bin', 'pythia8-config')
+                if not os.path.exists(executable):
+                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified to MadGraph5_aMC@NLO'                
+                
+                # 2. take the compilation flag of PY8 from pythia8-config
+                libs , paths = [], []
+                p = misc.subprocess.Popen([executable, '--libs'], stdout=subprocess.PIPE)
+                stdout, _ = p. communicate()
+                libs = [x[2:] for x in stdout.split() if x.startswith('-l') or paths.append(x[2:])]
+                
+                # Add additional user-defined compilation flags
+                p = misc.subprocess.Popen([executable, '--config'], stdout=subprocess.PIPE)
+                stdout, _ = p. communicate()
+                if '-ldl' in stdout:
+                    libs.append('dl')
+
+                # This precompiler flag is in principle useful for the analysis if it writes HEPMC
+                # events, but there is unfortunately no way for now to specify it in the shower_card.
+                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout
+                
+                #3. ensure that those flag are in the shower card
+                for l in libs:
+                    if l not in extralibs:
+                        modify_extralibs = True
+                        extralibs.append(l)
+                for L in paths:
+                    if L not in extrapaths:
+                        modify_extrapaths = True
+                        extrapaths.append(L)
+                        
+            # Apply the required modification
+            if modify_extralibs:
+                if extralibs:
+                    self.do_set('shower_card extralibs %s ' % ' '.join(extralibs))
+                else:
+                    self.do_set('shower_card extralibs \'\' ')
+            if modify_extrapaths:
+                if extrapaths:
+                    self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
+                else:
+                    self.do_set('shower_card extrapaths \'\' ')    
     
     def reask(self, *args, **opt):
         

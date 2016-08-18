@@ -6375,7 +6375,7 @@ This installation can take some time but only needs to be performed once.""",'$M
                         pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
                 additional_options=[
                   '--collier_tarball=%s'%pjoin(MG5DIR,'vendor','collier.tar.gz')])
-            except InvalidCmd:
+            except KeyError:
                     logger.warning(
 """The offline installation of COLLIER was unsuccessful, and MG5aMC disabled it.
 In the future, if you want to reactivate COLLIER, you can do so by re-attempting
@@ -6383,7 +6383,6 @@ its online installation with the command 'install collier' or install it on your
 own and set the path to its library in the MG5aMC option 'collier'.""")
                     cmd.exec_cmd("set collier ''")
                     cmd.exec_cmd('save options')
-
 
     # ==========================================================================
     # First treat the MadLoop5 standalone case       
