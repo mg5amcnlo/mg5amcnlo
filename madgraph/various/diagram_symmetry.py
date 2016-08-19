@@ -112,7 +112,7 @@ def find_symmetry(matrix_element):
                                         diag.get_vertex_leg_numbers()!=[]]
     min_vert = min(vert_list) if vert_list!=[] else 0
     
-    for diag in matrix_element.get('diagrams'):
+    for diag in diagrams:
         diagram_numbers.append(diag.get('number'))
         permutations.append(range(nexternal))
         if diag.get_vertex_leg_numbers()!=[] and \

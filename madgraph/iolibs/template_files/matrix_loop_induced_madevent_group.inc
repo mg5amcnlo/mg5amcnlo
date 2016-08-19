@@ -133,6 +133,9 @@ C  Notice that when forcing helicity sum directly in MadLoop then one doesn't ha
 
 	IF(.NOT.INIT_MADLOOP) THEN
 	  INIT_MADLOOP = .TRUE.
+C We don't use the poles, so let's not compute them with COLLIER
+      CALL %(ml_prefix)sCOLLIER_COMPUTE_UV_POLES(.False.)
+      CALL %(ml_prefix)sCOLLIER_COMPUTE_IR_POLES(.False.)
 C Unless this is the first iteration, make sure to never double check the helicity filter again
       IF (read_grid_file) THEN 
         CALL SET_FORBID_HEL_DOUBLECHECK(.True.)
@@ -405,7 +408,7 @@ c   ----
 	  return
 	endif
 
-	IF (((OneEps+TwoEps)/finite).gt.(1000d0*PREC).AND.(((OneEps+TwoEps)/finite).gt.1.0d-5)) THEN
+	IF (U.NE.7.and.((OneEps+TwoEps)/finite).gt.(1000d0*PREC).AND.(((OneEps+TwoEps)/finite).gt.1.0d-5)) THEN
 	  WARNING_COUNTERS(2) = WARNING_COUNTERS(2) + 1
 	  IF (WARNING_COUNTERS(2).le.10) THEN
 	    WRITE(*,*) "WARNING : The residue of the single and double pole of the loop matrix element being integrated does not seem to vanish."

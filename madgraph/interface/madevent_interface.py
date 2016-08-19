@@ -1992,6 +1992,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             self.exec_cmd('survey  %s %s' % (self.run_name,' '.join(args)),
                           postcmd=False)
             nb_event = self.run_card['nevents']
+            bypass_run=False
             self.exec_cmd('refine %s' % nb_event, postcmd=False)
             if not float(self.results.current['cross']):
                 # Zero cross-section. Try to guess why
@@ -2003,24 +2004,29 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
    3) The cuts are too strong.
    Please check/correct your param_card and/or your run_card.'''
                 logger_stderr.critical(text)
-                raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
-
-            self.exec_cmd('refine %s' % nb_event, postcmd=False)
+                if not self.param_card_iterator:
+                    raise ZeroResult('See https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/FAQ-General-14')
+                else:
+                    bypass_run = True
             
-            self.exec_cmd('combine_events', postcmd=False)
-            self.print_results_in_shell(self.results.current)
+            #we can bypass the following if scan and first result is zero
+            if not bypass_run:
+                self.exec_cmd('refine %s' % nb_event, postcmd=False)
+            
+                self.exec_cmd('combine_events', postcmd=False)
+                self.print_results_in_shell(self.results.current)
 
             
-            self.run_syscalc('parton')
-            self.create_plot('parton')            
-            self.exec_cmd('store_events', postcmd=False)            
-            self.exec_cmd('reweight -from_cards', postcmd=False)            
-            self.exec_cmd('decay_events -from_cards', postcmd=False)
-            if self.run_card['time_of_flight']>=0:
-                self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
-            self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
-            # pythia launches pgs/delphes if needed    
-            self.store_result()
+                self.run_syscalc('parton')
+                self.create_plot('parton')            
+                self.exec_cmd('store_events', postcmd=False)            
+                self.exec_cmd('reweight -from_cards', postcmd=False)            
+                self.exec_cmd('decay_events -from_cards', postcmd=False)
+                if self.run_card['time_of_flight']>=0:
+                    self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+                self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
+                # pythia launches pgs/delphes if needed    
+                self.store_result()
             
             if self.param_card_iterator:
                 param_card_iterator = self.param_card_iterator
@@ -2032,9 +2038,13 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     for card in param_card_iterator:
                         card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                         next_name = param_card_iterator.get_next_name(self.run_name)
-                        self.exec_cmd("generate_events -f %s" % next_name,
+                        try:
+                            self.exec_cmd("generate_events -f %s" % next_name,
                                       precmd=True, postcmd=True,errorhandling=False)
-                        param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                        except ZeroResult:
+                            param_card_iterator.store_entry(self.run_name, 0)
+                        else:
+                            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
                     param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
                     name = misc.get_scan_name(orig_name, self.run_name)
                     path = pjoin(self.me_dir, 'Events','scan_%s.txt' % name)
@@ -2603,7 +2613,7 @@ Beware that this can be dangerous for local multicore runs.""")
 #           helicity filters.
             self.MadLoopparam.set('CheckCycle',4, ifnotdefault=False)
             
-            # For now it is tricky to have eahc channel performing the helicity
+            # For now it is tricky to have each channel performing the helicity
             # double check. What we will end up doing is probably some kind
             # of new initialization round at the beginning of each launch
             # command, to reset the filters.    
@@ -2611,7 +2621,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                                              ifnotdefault=False)
           
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
-            # processes, so that we place OPP last.
+            # processes when not doing MC over helicities, so that we place OPP last.
             if not hasattr(self, 'run_card'):
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
@@ -2624,7 +2634,7 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|6|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','7|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                     not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
@@ -2632,7 +2642,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','6|1|2', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|7|1', ifnotdefault=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop

@@ -241,6 +241,7 @@ C
           write(*,*) 'Estimated accuracy could not be computed for an unknown reason.'
         endif
       endif
+	  Write (*,'(1x,a23,3x,i3)') 'MadLoop return code   =',RETURNCODE
       write (*,*) "---------------------------------"
       IF (NLOOPCHOSEN.ne.NSQUAREDSO) THEN
         write (*,*) "Selected squared coupling orders combination for the loop summed result below:"

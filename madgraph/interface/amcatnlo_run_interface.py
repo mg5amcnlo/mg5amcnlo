@@ -1932,7 +1932,8 @@ RESTART = %(mint_mode)s
 
     def combine_plots_FO(self,folder_name,jobs):
         """combines the plots and puts then in the Events/run* directory"""
-        devnull = os.open(os.devnull, os.O_RDWR) 
+        devnull = open(os.devnull, 'w') 
+        
         if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
             misc.call(['./combine_plots_FO.sh'] + folder_name, \
                       stdout=devnull, 
@@ -1963,7 +1964,6 @@ RESTART = %(mint_mode)s
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-        devnull.close()
 
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
@@ -2401,6 +2401,7 @@ RESTART = %(mint_mode)s
                               4 : 'Golem95',
                               5 : 'Samurai',
                               6 : 'Ninja (double precision)',
+                              7 : 'COLLIER',
                               8 : 'Ninja (quadruple precision)',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(

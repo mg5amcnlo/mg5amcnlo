@@ -30,6 +30,84 @@
 
       END
 
+
+      SUBROUTINE INITCOLLIER()
+C     
+C     INITIALISATION OF COLLIER
+C     
+C     
+C     MODULE
+C     
+      USE COLLIER
+C     
+C     CONSTANTS
+C     
+      CHARACTER(LEN=*) NO_FOLDER
+      PARAMETER (NO_FOLDER='')
+      CHARACTER(LEN=*) FOLDEROUTPUT
+      PARAMETER (FOLDEROUTPUT='COLLIER_output')
+
+C     Force COLLIER to completely reset from scratch
+      LOGICAL NORESET
+      PARAMETER (NORESET=.FALSE.)
+C     
+C     LOCAL VARIABLES 
+C     
+      INTEGER N_CACHES
+C     
+C     GLOBAL VARIABLES 
+C     
+      INCLUDE 'MadLoopParams.inc'
+C     Now obtain the overall maximum rank, maximum external lines
+C     and maximal number of processes.
+      INCLUDE 'global_specs.inc'
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+C     Initialize Collier
+      IF (.NOT.COLLIERCANOUTPUT) THEN
+        CALL INIT_CLL(MAXNEXTERNAL,OVERALLMAXRANK,NO_FOLDER,NORESET)
+      ELSE
+        CALL INIT_CLL(MAXNEXTERNAL,OVERALLMAXRANK,FOLDEROUTPUT,NORESET)
+      ENDIF
+
+C     Set target accuracy, be conservative w.r.t user request
+C     Keep in mind that COLLIER has been optimized for 1d-8.
+      IF (COLLIERREQUIREDACCURACY.EQ.-1.0D0) THEN
+        CALL SETREQACC_CLL(MLSTABTHRES*1.0D-3)
+      ELSE
+        CALL SETREQACC_CLL(COLLIERREQUIREDACCURACY)
+      ENDIF
+
+C     Set COLLIER mode
+      CALL SETMODE_CLL(COLLIERMODE)
+
+C     Set the global cache strategy
+C     If we use the caches for the poles as well, then it is a total of
+C     4 caches per process.
+      IF (COLLIERUSECACHEFORPOLES) THEN
+        N_CACHES =4*NPROCS
+      ELSE
+        N_CACHES =NPROCS
+      ENDIF
+      IF (COLLIERGLOBALCACHE.EQ.-1) THEN
+        CALL INITCACHESYSTEM_CLL(N_CACHES,MAXNEXTERNAL)
+      ELSEIF(COLLIERGLOBALCACHE.GT.0) THEN
+        CALL INITCACHESYSTEM_CLL(N_CACHES,COLLIERGLOBALCACHE)
+      ENDIF
+
+C     Make sure to start by first switching off all cache
+      IF (COLLIERGLOBALCACHE.NE.0) THEN
+        CALL SWITCHOFFCACHESYSTEM_CLL()
+      ENDIF
+
+C     Specify below your other custom COLLIER parameter settings 
+C     [user_specific_COLLIER_settings]
+
+      END
+
       SUBROUTINE SET_FORBID_HEL_DOUBLECHECK(ONOFF)
 C     
 C     Give the possibility to overwrite the value of MadLoopParams.dat
@@ -68,10 +146,12 @@ C     ----------
       COMMON/ML_INIT/ML_INIT
 
       LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
-      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT/.TRUE.
-     $ ,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+     $ ,COLLIERINIT
+      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
+     $ /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
       COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
-     $ , NINJAINIT
+     $ , NINJAINIT, COLLIERINIT
+
 
       CHARACTER(512) MLPATH
       DATA MLPATH/'[[NA]]'/
@@ -171,6 +251,8 @@ C     U == 5
 C     Stable with Samurai.
 C     U == 6
 C     Stable with Ninja in double precision.
+C     U == 7
+C     Stable with COLLIER.
 C     U == 8
 C     Stable with Ninja in quadruple precision.
 C     U == 9
@@ -209,11 +291,11 @@ C
           STOP 'Only CutTools and Ninja can use quardruple precision'
         ENDIF
       ENDIF
-      IF(MLRED.GE.1.AND.MLRED.LE.6)THEN
+      IF(MLRED.GE.1.AND.MLRED.LE.7)THEN
         SET_RET_CODE_U=MLRED
       ELSE
-        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai and'
-     $   //' Ninja are available'
+        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai, Ninja'
+     $   //' and COLLIER are available'
       ENDIF
       END
 
@@ -261,9 +343,12 @@ C       Samurai
       ELSEIF(LIBNUM.EQ.6)THEN
 C       Ninja 
         CALL DETECT_NINJA(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+      ELSEIF(LIBNUM.EQ.7)THEN
+C       Collier 
+        CALL DETECT_COLLIER(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSE
-        STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai are'
-     $   //' available'
+        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai, Ninja'
+     $   //' and COLLIER are available'
       ENDIF
       RETURN
       END
@@ -373,6 +458,53 @@ C      sources.
 C     It can easily be increased if necessary.
       IF((NLOOPLINE+1.LT.RANK).OR.(RANK.GE.20)) THEN
         LPASS=.FALSE.
+      ENDIF
+      RETURN
+      END
+
+      SUBROUTINE DETECT_COLLIER(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+C     
+C     Detect whether Collier can be used or not
+C     
+      USE COLLIER
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER NLOOPLINE,RANK
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER CURRENT_COLLIERMODE
+C     
+C     GLOBAL VARIABLES
+C     
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+     $ ,COLLIERINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
+     $ , NINJAINIT, COLLIERINIT
+      INCLUDE 'MadLoopParams.inc'
+C     ----------
+C     BEGIN CODE
+C     ----------
+      IF (.NOT.COLLIERINIT) THEN
+        CALL GETMODE_CLL(CURRENT_COLLIERMODE)
+      ELSE
+        CURRENT_COLLIERMODE = COLLIERMODE
+      ENDIF
+      LPASS=.TRUE.
+      IF (CURRENT_COLLIERMODE.NE.1) THEN
+C       The DD branch is used and it has limitations
+        IF((NLOOPLINE.GT.6).OR.(RANK.GT.NLOOPLINE)) THEN
+          LPASS=.FALSE.
+        ENDIF
+      ELSE
+C       Limitations of the COLI branch are academic.
+        LPASS=.TRUE.
       ENDIF
       RETURN
       END
@@ -608,9 +740,9 @@ C     arrays since these are not the most optimized sorting algorithms.
      $           //'                                                  '
      $           //'   .JMML.     '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)/
-     $           /'[0m'//'v%(version)s (%(date)s), Ref:'
-     $           //' arXiv:1103.0621v2, arXiv:1405.0301'//CHAR(27)/
-     $           /'[32m'//'           '//CHAR(27)//'[0m'//'       }'
+     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.0621v2,'
+     $           //' arXiv:1405.0301'//CHAR(27)//'[32m'//'            '
+     $           //'    '//CHAR(27)//'[0m'//'       }'
                 WRITE(*,*) '{       '//CHAR(27)//'[32m'//'            '
      $           //'                                                  '
      $           //'              '//CHAR(27)//'[0m'//'       }'

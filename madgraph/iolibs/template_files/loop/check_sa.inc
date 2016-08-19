@@ -262,6 +262,7 @@ C
           write(*,*) 'Estimated accuracy could not be computed for an unknown reason.'
         endif
       endif
+	  Write (*,'(1x,a23,3x,i3)') 'MadLoop return code   =',RETURNCODE
       write (*,*) "---------------------------------"
 	  IF (NBORNCHOSEN.EQ.0) THEN
         write (*,*) "No Born contribution satisfied the squared order constraints."

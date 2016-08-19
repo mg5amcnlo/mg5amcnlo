@@ -516,7 +516,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madevent = {'automatic_html_opening':True,
                         'notification_center':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
+                         'cluster_queue':None,
                          'cluster_time':None,
                          'cluster_size':100,
                          'cluster_memory':None,
@@ -2854,8 +2854,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         args = self.split_arg(line)
         # fix some formatting problem
-        if '=' in args[-1]:
-            arg1, arg2 = args.pop(-1).split('=')
+        if len(args)==1 and '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=',1)
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')

@@ -155,7 +155,7 @@ class IOTest(object):
                                         myloopamp,optimized_output=isOptimized)
 
         self.exporter.copy_v4template(model.get('name'))
-        self.exporter.generate_loop_subprocess(hel_amp, self.helasModel)
+        self.exporter.generate_loop_subprocess(hel_amp, self.helasModel,unique_id=1)
         wanted_lorentz = hel_amp.get_used_lorentz()
         wanted_couplings = list(set(sum(hel_amp.get_used_couplings(),[])))
         self.exporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
