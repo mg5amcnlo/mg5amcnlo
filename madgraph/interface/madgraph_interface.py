@@ -5682,8 +5682,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         substitution={'Delphes2':'Delphes','pythia-pgs':'pythia8'}
         if args[0] in substitution:
             logger.warning("Please Note that this package is NOT maintained anymore by their author(s).\n"+\
-               "  You should consider installing and using %s, with:\n"%substitutio[args[0]]+
-               "   > install %s"%substitutio[args[0]])
+               "  You should consider installing and using %s, with:\n"%substitution[args[0]]+
+               "   > install %s"%substitution[args[0]])
 
         try:
             os.system('rm -rf %s' % pjoin(MG5DIR, name))
