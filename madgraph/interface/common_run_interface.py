@@ -4335,8 +4335,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # Add additional user-defined compilation flags
                 p = misc.subprocess.Popen([executable, '--config'], stdout=subprocess.PIPE)
                 stdout, _ = p. communicate()
-                if '-ldl' in stdout:
-                    libs.append('dl')
+                for lib in ['-ldl','-lstdc++','-lc++']:
+                    if lib in stdout:
+                        libs.append(lib[2:])                    
 
                 # This precompiler flag is in principle useful for the analysis if it writes HEPMC
                 # events, but there is unfortunately no way for now to specify it in the shower_card.

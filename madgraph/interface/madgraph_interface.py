@@ -5335,7 +5335,7 @@ This implies that with decay chains:
                misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
         else:
             compiler_options.append('--cpp_standard_lib=%s'%
-               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+               misc.detect_cpp_std_lib_dependence('g++'))
 
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
