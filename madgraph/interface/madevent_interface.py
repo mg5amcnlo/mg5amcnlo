@@ -3278,88 +3278,16 @@ Beware that this can be dangerous for local multicore runs.""")
         """launch MadAnalysis5 at the parton level."""
         return self.run_madanalysis5(line,mode='parton')
 
-    def do_pythia8(self, line):
-        """launch pythia8"""
-
-        # Check argument's validity
-        args = self.split_arg(line)
-        if '--no_default' in args:
-            if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat')):
-                return
-            no_default = True
-            args.remove('--no_default')
-        else:
-            no_default = False
-            
-        if not self.run_name:
-            self.check_pythia8(args)
-            self.configure_directory(html_opening =False)
-        else:
-            # initialize / remove lhapdf mode        
-            self.configure_directory(html_opening =False)
-            self.check_pythia8(args)        
-
-        # the args are modify and the last arg is always the mode 
-        if not no_default:
-            self.ask_pythia_run_configuration(args[-1], pythia_version=8)
-
-        if self.options['automatic_html_opening']:
-            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
-            self.options['automatic_html_opening'] = False
-
-        if self.run_card['event_norm'] not in ['unit','average']:
-            logger.critical("Pythia8 do not support normalisation to the sum.\n"+\
-                             "     The normalisation of the hpmc output file will be wrong.\n"+\
-                             "     Please use 'event_norm = average' in the run_card to avoid this problem.")
-
-        # Update the banner with the pythia card
-        if not self.banner or len(self.banner) <=1:
-            # Here the level keyword 'pythia' must not be changed to 'pythia8'.
-            self.banner = banner_mod.recover_banner(self.results, 'pythia')
-        
-        if not self.options['mg5amc_py8_interface_path'] or not \
-             os.path.exists(pjoin(self.options['mg5amc_py8_interface_path'],
-                                                       'MG5aMC_PY8_interface')):
-            raise self.InvalidCmd(
-"""The MG5aMC_PY8_interface tool cannot be found, so that MadEvent cannot steer Pythia8 shower.
-Please install this tool with the following MG5_aMC command:
-  MG5_aMC> install mg5amc_py8_interface_path""")
-        else:
-            pythia_main = pjoin(self.options['mg5amc_py8_interface_path'],
-                                                         'MG5aMC_PY8_interface')
-            warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
-            if warnings:
-                logger.warning(warnings)
-
-        self.results.add_detail('run_mode', 'madevent')
-
-        # Again here 'pythia' is just a keyword for the simulation level.
-        self.update_status('Running Pythia8 [arXiv:1410.3012]', 'pythia8')
-        
-        tag = self.run_tag        
-        # Now write Pythia8 card
-        # Start by reading, starting from the default one so that the 'user_set'
-        # tag are correctly set.
-        PY8_Card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 
-                                                    'pythia8_card_default.dat'))
-        PY8_Card.read(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'),
-                                                                  setter='user')
-        ########################################################################
-        ### Special setup of the Hidden parameters in the card for each MG type 
-        #   of run
-        # Here we force the Beams:LHEF to have the correct value
-        
-        run_type = 'default'
-        merged_run_types = ['MLM','CKKW']
-        if int(self.run_card['ickkw'])==1:
-            run_type = 'MLM'
-        elif int(self.run_card['ickkw'])==2 or \
-                   self.run_card['ktdurham']>0.0 or self.run_card['ptlund']>0.0:
-            run_type = 'CKKW'
-
-        PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
+    def setup_Pythia8RunAndCard(self, PY8_Card, run_type):
+        """ Setup the Pythia8 Run environment and card. In particular all the process and run specific parameters
+        of the card are automatically set here. This function returns the path where HEPMC events will be output,
+        if any."""
 
         HepMC_event_output = None
+        tag = self.run_tag
+        
+        PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
+
         if PY8_Card['HEPMCoutput:file']=='auto':
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
@@ -3400,7 +3328,7 @@ already exists and is not a fifo file."""%fifo_path)
 
         # We specify by hand all necessary parameters, so that there is no
         # need to read parameters from the Banner.
-        PY8_Card.MadGraphSet('JetMatching:setMad',False)
+        PY8_Card.MadGraphSet('JetMatching:setMad', False)
         if run_type=='MLM':
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
@@ -3553,7 +3481,87 @@ already exists and is not a fifo file."""%fifo_path)
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
         'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
 
+        return HepMC_event_output
 
+    def do_pythia8(self, line):
+        """launch pythia8"""
+
+        # Check argument's validity
+        args = self.split_arg(line)
+        if '--no_default' in args:
+            if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat')):
+                return
+            no_default = True
+            args.remove('--no_default')
+        else:
+            no_default = False
+            
+        if not self.run_name:
+            self.check_pythia8(args)
+            self.configure_directory(html_opening =False)
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory(html_opening =False)
+            self.check_pythia8(args)        
+
+        # the args are modify and the last arg is always the mode 
+        if not no_default:
+            self.ask_pythia_run_configuration(args[-1], pythia_version=8)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
+        if self.run_card['event_norm'] not in ['unit','average']:
+            logger.critical("Pythia8 do not support normalisation to the sum.\n"+\
+                             "     The normalisation of the hpmc output file will be wrong.\n"+\
+                             "     Please use 'event_norm = average' in the run_card to avoid this problem.")
+
+        # Update the banner with the pythia card
+        if not self.banner or len(self.banner) <=1:
+            # Here the level keyword 'pythia' must not be changed to 'pythia8'.
+            self.banner = banner_mod.recover_banner(self.results, 'pythia')
+        
+        if not self.options['mg5amc_py8_interface_path'] or not \
+             os.path.exists(pjoin(self.options['mg5amc_py8_interface_path'],
+                                                       'MG5aMC_PY8_interface')):
+            raise self.InvalidCmd(
+"""The MG5aMC_PY8_interface tool cannot be found, so that MadEvent cannot steer Pythia8 shower.
+Please install this tool with the following MG5_aMC command:
+  MG5_aMC> install mg5amc_py8_interface_path""")
+        else:
+            pythia_main = pjoin(self.options['mg5amc_py8_interface_path'],
+                                                         'MG5aMC_PY8_interface')
+            warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+            if warnings:
+                logger.warning(warnings)
+
+        self.results.add_detail('run_mode', 'madevent')
+
+        # Again here 'pythia' is just a keyword for the simulation level.
+        self.update_status('Running Pythia8 [arXiv:1410.3012]', 'pythia8')
+        
+        tag = self.run_tag        
+        # Now write Pythia8 card
+        # Start by reading, starting from the default one so that the 'user_set'
+        # tag are correctly set.
+        PY8_Card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 
+                                                    'pythia8_card_default.dat'))
+        PY8_Card.read(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'),
+                                                                  setter='user')
+        
+        run_type = 'default'
+        merged_run_types = ['MLM','CKKW']
+        if int(self.run_card['ickkw'])==1:
+            run_type = 'MLM'
+        elif int(self.run_card['ickkw'])==2 or \
+                   self.run_card['ktdurham']>0.0 or self.run_card['ptlund']>0.0:
+            run_type = 'CKKW'
+
+        # Edit the card and run environment according to the run specification
+        HepMC_event_output = self.setup_Pythia8RunAndCard(PY8_Card, run_type)
+
+        # Now write the card.
         pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
                                                          '%s_pythia8.cmd' % tag)
         cmd_card = StringIO.StringIO()
@@ -3609,7 +3617,8 @@ already exists and is not a fifo file."""%fifo_path)
         # it proceed.
         is_HepMC_output_fifo = False if not HepMC_event_output else \
                               ( os.path.exists(HepMC_event_output) and \
-                              stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode))    
+                              stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode))
+        startPY8timer = time.time()
         if is_HepMC_output_fifo:
             logger.info(
 """Pythia8 is set to output HEPMC events to to a fifo file.
@@ -3636,7 +3645,6 @@ You can follow PY8 run with the following command (in a separate terminal):
                 raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
                     ' code %d.\n'%ret_code+\
                     'You can find more information in this log file:\n%s'%pythia_log
-
         
         # Properly rename the djr and pts output if present.
         djr_output = pjoin(self.me_dir,'Events', self.run_name, 'djrs.dat')
@@ -3774,7 +3782,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
 
-        self.update_status('finish', level='pythia8', makehtml=False)
+        self.update_status('Pythia8 shower finished after %s.'%misc.format_time(time.time() - startPY8timer), level='pythia8', makehtml=False)
         if self.options['delphes_path']:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         self.print_results_in_shell(self.results.current)
