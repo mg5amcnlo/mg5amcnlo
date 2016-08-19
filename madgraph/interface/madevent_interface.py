@@ -2220,19 +2220,27 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         logger.info("     Nb of events :  %s" % data['nb_event'] )
 
         if data['run_mode']=='madevent':
-            if data['cross_pythia'] and data['nb_event_pythia']:
+            shower = None
+            for sh in ['pythia8','pythia']:
+                try:
+                    if data['cross_%s'%sh] and data['nb_event_%s'%sh]:
+                        shower = sh
+                        break
+                except KeyError:
+                    pass
+            if shower:
                 if self.ninitial == 1:
-                    logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+                    logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_%s'%shower], data['error_%s'%shower]))
                 else:
-                    logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
-                    logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_pythia']))
+                    logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_%s'%shower], data['error_%s'%shower]))            
+                    logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_%s'%shower]))
                 if self.run_card['use_syst'] in self.true and \
                    (int(self.run_card['ickkw'])==1 or self.run_card['ktdurham']>0.0
                                                     or self.run_card['ptlund']>0.0):
                     logger.info("     Notice that because SysCalc is turned on, the merging did not veto events but modified their weights instead.\n"+\
                                 "     The resulting hepmc/stdhep file should therefore be use with those weights.")
                 else:
-                    logger.info("     Nb of events after merging :  %s" % data['nb_event_pythia'])
+                    logger.info("     Nb of events after merging :  %s" % data['nb_event_%s'%shower])
 
         logger.info(" " )
 
@@ -3782,14 +3790,14 @@ You can follow PY8 run with the following command (in a separate terminal):
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
 
-        self.update_status('Pythia8 shower finished after %s.'%misc.format_time(time.time() - startPY8timer), level='pythia8', makehtml=False)
+        self.update_status('Pythia8 shower finished after %s.'%misc.format_time(time.time() - startPY8timer), level='pythia8')
         if self.options['delphes_path']:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         self.print_results_in_shell(self.results.current)
     
     def do_pythia(self, line):
         """launch pythia"""
-        
+                
         # Check argument's validity
         args = self.split_arg(line)
         if '--no_default' in args:
@@ -3806,9 +3814,8 @@ You can follow PY8 run with the following command (in a separate terminal):
         else:
             # initialize / remove lhapdf mode        
             self.configure_directory(html_opening =False)
-            self.check_pythia(args)        
-        
-        
+            self.check_pythia(args)
+
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
@@ -3906,12 +3913,15 @@ You can follow PY8 run with the following command (in a separate terminal):
                 self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
-        
+
         # Creating LHE file
         self.run_hep2lhe(banner_path)
+        
         if int(self.run_card['ickkw']):
             misc.gzip(pjoin(self.me_dir,'Events','beforeveto.tree'),
-                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))           
+                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))  
+
+                     
         if self.run_card['use_syst'] in self.true:
             # Calculate syscalc info based on syst.dat
             try:
@@ -3937,7 +3947,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.lhe')):
             misc.gzip(pjoin(self.me_dir,'Events','pythia_events.lhe'),
                       stdout=pjoin(self.me_dir,'Events', self.run_name,'%s_pythia_events.lhe.gz' % tag))
-                
+
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         if self.options['delphes_path']:
@@ -4246,6 +4256,7 @@ You can follow PY8 run with the following command (in a separate terminal):
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
+            self.to_store.remove('pythia')
             misc.gzip(pjoin(p,'pythia_events.hep'), 
                       stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
             self.to_store.remove('pythia')
@@ -4255,6 +4266,7 @@ You can follow PY8 run with the following command (in a separate terminal):
             n = self.run_name
             t = tag
             file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
+            self.to_store.remove('pythia8')
             if os.path.isfile(file_path):
                 self.update_status('Storing Pythia8 files of previous run', 
                                                      level='pythia', error=True)
