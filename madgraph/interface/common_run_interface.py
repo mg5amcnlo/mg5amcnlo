@@ -1191,7 +1191,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         logger.info("                    #   -1 is the one used by the sample.")
         logger.info("                    #   > 0 correspond to options of dynamical_scale_choice of the run_card.")
         logger.info("   --pdf=errorset   # specify the pdfs to use for pdf variation. (see below)")
-        logger.info("   --together=mur,muf,dyn # which parameter should we vary together to have all uncorrelated combination of the variations")
+        logger.info("   --together=mur,muf,dyn # lists the parameter that must be varied simultaneously so as to ")
+        logger.info("                          # compute the weights for all combinations of their variations.")
         logger.info("   --from_card      # use the information from the run_card (LO only).")
         logger.info("")
         logger.info("   Allowed value for the pdf options:", '$MG:color:BLACK')
@@ -1264,7 +1265,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 args[0] = self.run_name
             else:
                 raise self.InvalidCmd, 'no default run. Please specify the run_name'
-        
+                
         # always pass to a path + get the event size
         result_file= sys.stdout
         if not os.path.sep in args[0]:
@@ -1297,9 +1298,32 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             output = input
     
+        lhaid = [self.run_card.get_lhapdf_id()]
+        try:
+            pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('Systematic computation requires lhapdf to run. Bypass Systematics')
+            return
+
         if '--from_card' in opts:
             opts.remove('--from_card')
             opts.append('--from_card=internal')
+            
+            # Check that all pdfset are correctly installed
+            if 'sys_pdf' in self.run_card:
+                sys_pdf = self.run_card['sys_pdf'].split('&&')
+                lhaid += [l.split()[0] for l in sys_pdf]
+
+        else:
+            #check that all p
+            pdf = [a[6:] for a in opts if a.startswith('--pdf=')]
+            lhaid += [t.split('@')[0] for p in pdf for t in p.split(',') 
+                                            if t not in ['errorset', 'central']]
+        
+        # Copy all the relevant PDF sets
+        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+            
         
         if self.options['run_mode'] ==2:
             nb_submit = min(self.options['nb_core'], nb_event//2500)
@@ -1449,7 +1473,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
             return
-        'print line:', line
         # option for multicore to avoid that all of them create the same directory
         if '--multicore=create' in line:
             multicore='create'
@@ -1545,6 +1568,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 
                 new_args=list(args)
                 self.check_decay_events(new_args) 
+                try:
+                    os.remove(pjoin(self.me_dir,'rw_me','rwgt.pkl'))
+                except Exception, error:
+                    pass
                 # prepare multi-core  job:
                 import madgraph.various.lhe_parser as lhe_parser
                 # args now alway content the path to the valid files
@@ -1552,7 +1579,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     nevt_job = self.run_card['nevt_job']
                 else:
                     nevt_job = max(5000, self.run_card['nevents']/50)
-                logger.info("split the event file in bunch of %s event" % nevt_job)
+                logger.info("split the event file in bunch of %s events" % nevt_job)
                 nb_file = lhe_parser.EventFile(new_args[0]).split(nevt_job)
                 starttime = time.time()
                 update_status = lambda idle, run, finish: \
@@ -2716,6 +2743,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         pdfsetname=set()
         for lhaid in lhaid_list:
+            if  isinstance(lhaid, str) and lhaid.isdigit():
+                lhaid = int(lhaid)
             if isinstance(lhaid, (int,float)):
                 try:
                     if lhaid in self.lhapdf_pdfsets:

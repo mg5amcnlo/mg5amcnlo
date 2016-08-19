@@ -201,7 +201,7 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info("options: %s" % option)
 
 
-    def get_LO_definition_from_NLO(self, proc):
+    def get_LO_definition_from_NLO(self, proc, real_only=False):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
@@ -212,7 +212,10 @@ class ReweightInterface(extended_cmd.Cmd):
             #NO NLO tag => nothing to do actually return input
             return proc
         elif not order.startswith(('virt','loonly','noborn')):
-            # OK this a standard NLO process
+            # OK this a standard NLO process            
+            if real_only:
+                commandline= '' 
+            
             if '=' in order:
                 # get the type NLO QCD/QED/...
                 order = order.split('=',1)[1]
@@ -427,7 +430,7 @@ class ReweightInterface(extended_cmd.Cmd):
             elif self.multicore == 'wait':
                 while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
                     time.sleep(60)
-                    print 'wait for pickle'
+                    print 'wait for pickle'                  
                 print "loading from pickle"
                 if not self.rwgt_dir:
                     self.rwgt_dir = self.me_dir
@@ -1245,7 +1248,7 @@ class ReweightInterface(extended_cmd.Cmd):
                     self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
         self.terminate_fortran_executables()
     
-        if self.rwgt_dir:
+        if self.rwgt_dir and self.multicore == False:
             self.save_to_pickle()
         
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
@@ -1370,12 +1373,18 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info('generating the square matrix element for reweighting (second model and/or processes)')
         start = time.time()
         commandline=''
-        for proc in data['processes']:
+        for i,proc in enumerate(data['processes']):
             if '[' not in proc:
                 commandline += "add process %s ;" % proc
             else:
                 has_nlo = True
-                commandline += self.get_LO_definition_from_NLO(proc)
+                if self.banner.get('run_card','ickkw') == 3:
+                    if len(proc) == min([len(p.strip()) for p in data['processes']]):
+                        commandline += self.get_LO_definition_from_NLO(proc)
+                    else:
+                        commandline += self.get_LO_definition_from_NLO(proc, real_only=True)
+                else:
+                    commandline += self.get_LO_definition_from_NLO(proc)
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
@@ -1671,6 +1680,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
+
 
     def load_from_pickle(self, keep_name=False):
         import madgraph.iolibs.save_load_object as save_load_object

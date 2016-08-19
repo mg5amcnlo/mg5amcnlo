@@ -165,9 +165,9 @@ class CmdExtended(cmd.Cmd):
                             info['date'])
 
         if os.path.exists(pjoin(MG5DIR, '.bzr')):
-            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE)
+            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
             bzrname,_ = proc.communicate()
-            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
+            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
             bzrversion,_ = proc.communicate() 
             bzrname, bzrversion = bzrname.strip(), bzrversion.strip() 
             len_name = len(bzrname)

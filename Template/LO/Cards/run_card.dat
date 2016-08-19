@@ -279,5 +279,5 @@
 %(sys_alpsfact)s = sys_alpsfact  # \alpha_s emission scale factors
 %(sys_matchscale)s = sys_matchscale # variation of merging scale
 # PDF sets and number of members (0 or none for all members).
-%(sys_pdf)s = sys_pdf # matching scales
+%(sys_pdf)s = sys_pdf # separate by && if more than one set.
 # MSTW2008nlo68cl.LHgrid 1  = sys_pdf

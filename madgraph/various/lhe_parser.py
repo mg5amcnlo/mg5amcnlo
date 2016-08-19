@@ -2268,7 +2268,7 @@ class NLO_PARTIALWEIGHT(object):
             scale = 0 
             for particle in self:
                 p = particle
-                scale += math.sqrt(p.mass_sqr + p.pt**2)
+                scale += math.sqrt(max(0, p.mass_sqr + p.pt**2))
         
             return prefactor * scale
         

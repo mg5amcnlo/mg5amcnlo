@@ -163,7 +163,7 @@ class Systematics(object):
                     if data.isdigit():
                         pdfset = lhapdf.mkPDF(int(data)).set()
                     else:
-                        pdfset = lhapdf.getPDFSet(data)
+                        pdfset = lhapdf.mkPDF(data).set()
                     self.pdfsets[pdfset.lhapdfID] = pdfset 
                     self.pdf += pdfset.mkPDFs()
         else:
