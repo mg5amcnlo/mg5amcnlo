@@ -17,6 +17,7 @@
 """
 from __future__ import division
 
+import ast
 import atexit
 import cmath
 import cmd
@@ -35,8 +36,8 @@ import subprocess
 import sys
 import time
 import traceback
+import glob
 import sets
-
 
 try:
     import readline
@@ -66,6 +67,7 @@ except ImportError:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
+    import internal.histograms as histograms
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
     from internal import InvalidCmd, MadGraph5Error
@@ -81,6 +83,7 @@ else:
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
+    import madgraph.various.histograms as histograms
     
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
@@ -140,15 +143,11 @@ class HelpToCmd(object):
         logger.info("        default: take value from the model")
         logger.info("  --output=X: path where to write the resulting card. ")
         logger.info("        default: overwrite input file. If no input file, write it in the model directory")
-        logger.info("  --nlo: Compute NLO width [if the model support it]")      
+        logger.info("  --nlo: Compute NLO width [if the model support it]")
 
-
-    def help_pythia(self):
-        logger.info("syntax: pythia [RUN] [--run_options]")
-        logger.info("-- run pythia on RUN (current one by default)")
-        self.run_options_help([('-f','answer all question by default'),
-                               ('--tag=', 'define the tag for the pythia run'),
-                               ('--no_default', 'not run if pythia_card not present')])
+    def help_shower(self):
+        logger.info("syntax: shower [shower_name] [shower_options]")
+        logger.info("-- This is equivalent to running '[shower_name] [shower_options]'")
 
     def help_pgs(self):
         logger.info("syntax: pgs [RUN] [--run_options]")
@@ -293,7 +292,7 @@ class CheckValidForCmd(object):
                 # should be a particles
                 output['particles'].add(particles_name[arg])
             elif arg.isdigit() and int(arg) in particles_name.values():
-                output['particles'].add(eval(arg))
+                output['particles'].add(ast.literal_eval(arg))
             elif arg == 'all':
                 output['particles'] = set(['all'])
             else:
@@ -310,6 +309,90 @@ class CheckValidForCmd(object):
             output['output'] = output['path']
 
         return output
+
+    def check_delphes(self, arg, nodefault=False):
+        """Check the argument for pythia command
+        syntax: delphes [NAME] 
+        Note that other option are already remove at this point
+        """
+        
+        # If not pythia-pgs path
+        if not self.options['delphes_path']:
+            logger.info('Retry to read configuration file to find delphes path')
+            self.set_configuration()
+      
+        if not self.options['delphes_path']:
+            error_msg = 'No valid Delphes path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            raise self.InvalidCmd(error_msg)  
+
+        tag = [a for a in arg if a.startswith('--tag=')]
+        if tag: 
+            arg.remove(tag[0])
+            tag = tag[0][6:]
+            
+                  
+        if len(arg) == 0 and not self.run_name:
+            if self.results.lastrun:
+                arg.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. Please add this information.')             
+        
+        if len(arg) == 1 and self.run_name == arg[0]:
+            arg.pop(0)
+
+        filepath = None        
+        if not len(arg):
+            prev_tag = self.set_run_name(self.run_name, tag, 'delphes')
+            paths = [pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia_events.hep.gz'),
+                     pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia8_events.hepmc.gz'),
+                     pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia_events.hep'),
+                     pjoin(self.me_dir,'Events',self.run_name, '%(tag)s_pythia8_events.hepmc'),
+                     pjoin(self.me_dir,'Events','pythia_events.hep'),
+                     pjoin(self.me_dir,'Events','pythia_events.hepmc'),
+                     pjoin(self.me_dir,'Events','pythia8_events.hep.gz'),
+                     pjoin(self.me_dir,'Events','pythia8_events.hepmc.gz')
+                     ]
+            for p in paths:
+                if os.path.exists(p % {'tag': prev_tag}):
+                    filepath = p % {'tag': prev_tag}
+                    break
+            else:
+                a = raw_input("NO INPUT")          
+                if nodefault:
+                    return False
+                else:
+                    self.help_pgs()
+                    raise self.InvalidCmd('''No file file pythia_events.* currently available
+            Please specify a valid run_name''')
+        
+        if len(arg) == 1:
+            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
+            if os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):            
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)):
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep' % prev_tag)):            
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
+            elif os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc' % prev_tag)):
+                filepath = pjoin(self.me_dir,'Events',self.run_name, '%s_pythia8_events.hepmc.gz' % prev_tag)
+            else:                
+                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
+                    % (self.run_name, prev_tag, 
+                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'delphes')
+            
+        return filepath               
+
+
+    
+    
+
+
 
     def check_open(self, args):
         """ check the validity of the line """
@@ -491,6 +574,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
+                       'madanalysis5_path': './HEPTools/madanalysis5',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
@@ -633,19 +717,30 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 process = self.process # define in find_model_name
                 self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
                 self.results.resetall(self.me_dir)
-            else:                                
-                self.results.resetall(self.me_dir)
+            else:
+                try:                                
+                    self.results.resetall(self.me_dir)
+                except Exception, error:
+                    logger.debug(error)
+                    # Maybe the format was updated -> try fresh
+                    model = self.find_model_name()
+                    process = self.process # define in find_model_name
+                    self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+                    self.results.resetall(self.me_dir)
+                    self.last_mode = ''
             try:
                 self.last_mode = self.results[self.results.lastrun][-1]['run_mode']
             except:
                 self.results.resetall(self.me_dir)
                 self.last_mode = ''
+
         else:
             model = self.find_model_name()
             process = self.process # define in find_model_name
             self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
             self.results.resetall(self.me_dir)
             self.last_mode=''
+
         return self.results
 
     ############################################################################
@@ -810,8 +905,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             out = ask(question, '0', possible_answer, timeout=int(1.5*timeout),
                               path_msg='enter path', ask_class = AskforEditCard,
                               cards=cards, mode=mode, **opt)
-            
-
 
     @staticmethod
     def detect_card_type(path):
@@ -820,6 +913,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            param_card.dat
            run_card.dat
            pythia_card.dat
+           pythia8_card.dat
            plot_card.dat
            pgs_card.dat
            delphes_card.dat
@@ -829,13 +923,45 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madspin_card.dat [MS]
            transfer_card.dat [MW]
            madweight_card.dat [MW]
+           
+           Please update the unit-test: test_card_type_recognition when adding
+           cards.
         """
 
         fulltext = open(path).read(50000)
         if fulltext == '':
             logger.warning('File %s is empty' % path)
             return 'unknown'
-        text = re.findall('(<MGVersion>|ParticlePropagator|ExecutionPath|Treewriter|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|req_acc_FO|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
+        
+        to_search = ['<MGVersion>',           # banner
+                     '<mg5proccard>' 
+                     'ParticlePropagator',    # Delphes
+                     'ExecutionPath', 
+                     'Treewriter', 
+                     'CEN_max_tracker',
+                     '#TRIGGER CARD',         # delphes_trigger.dat
+                     'parameter set name',    # pgs_card
+                     'muon eta coverage',
+                    'req_acc_FO',
+                    'MSTP',
+                    'b_stable',
+                    'FO_ANALYSIS_FORMAT',
+                    'MSTU',
+                    'Begin Minpts',
+                    'gridpack',
+                    'ebeam1',
+                    'block\s+mw_run',
+                    'BLOCK',
+                    'DECAY',
+                    'launch',
+                    'madspin',
+                    'transfer_card\.dat',
+                    'set',
+                    'main:numberofevents'   # pythia8  
+                    ]
+        
+        
+        text = re.findall('(%s)' % '|'.join(to_search), fulltext, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -866,6 +992,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'shower_card.dat'
         elif 'fo_analysis_format' in text:
             return 'FO_analyse_card.dat'
+        elif 'main:numberofevents' in text:
+            return 'pythia8_card.dat'            
         elif 'launch' in text:
             # need to separate madspin/reweight.
             # decay/set can be in both...
@@ -896,41 +1024,229 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
     ############################################################################
+    @misc.mute_logger(names=['madgraph.various.histograms',
+                                          'internal.histograms'],levels=[20,20])
+    def generate_Pythia8_HwU_plots(self, plot_root_path,
+                                   merging_scale_name, observable_name, 
+                                   data_path):
+        """Generated the HwU plots from Pythia8 driver output for a specific
+        observable."""
+        
+        # Make sure that the file is present
+        if not os.path.isfile(data_path):
+            return False
+
+        # Load the HwU file.
+        histos = histograms.HwUList(data_path, consider_reweights='ALL',run_id=0)
+        if len(histos)==0:
+            return False
+
+        # Now also plot the max vs min merging scale
+        merging_scales_available = [label[1] for label in \
+                  histos[0].bins.weight_labels if 
+                  histograms.HwU.get_HwU_wgt_label_type(label)=='merging_scale']
+        if len(merging_scales_available)>=2:
+            min_merging_scale = min(merging_scales_available)
+            max_merging_scale = max(merging_scales_available)
+        else:
+            min_merging_scale = None
+            max_merging_scale = None
+
+        # jet_samples_to_keep = None means that all jet_samples are kept
+        histo_output_options = {
+          'format':'gnuplot', 
+          'uncertainties':['scale','pdf','statistical',
+                           'merging_scale','alpsfact'], 
+          'ratio_correlations':True,
+          'arg_string':'Automatic plotting from MG5aMC', 
+          'jet_samples_to_keep':None,
+          'use_band':['merging_scale','alpsfact'],
+          'auto_open':False
+        }
+        # alpsfact variation only applies to MLM
+        if not (int(self.run_card['ickkw'])==1):
+            histo_output_options['uncertainties'].pop(
+                histo_output_options['uncertainties'].index('alpsfact'))
+            histo_output_options['use_band'].pop(
+                     histo_output_options['use_band'].index('alpsfact'))
+
+        histos.output(pjoin(plot_root_path,
+            'central_%s_%s_plots'%(merging_scale_name,observable_name)),
+            **histo_output_options)
+        
+        for scale in merging_scales_available:
+            that_scale_histos = histograms.HwUList(
+                               data_path,  run_id=0, merging_scale=scale)
+            that_scale_histos.output(pjoin(plot_root_path,
+                '%s_%.3g_%s_plots'%(merging_scale_name,scale,observable_name)),
+                **histo_output_options)
+
+        # If several merging scales were specified, then it is interesting
+        # to compare the summed jet samples for the maximum and minimum
+        # merging scale available.
+        if not min_merging_scale is None:
+            min_scale_histos = histograms.HwUList(data_path, 
+                               consider_reweights=[], run_id=0, 
+                                        merging_scale=min_merging_scale)
+            max_scale_histos = histograms.HwUList(data_path, 
+                               consider_reweights=[], run_id=0, 
+                                        merging_scale=max_merging_scale)
+
+            # Give the histos types so that the plot labels look good
+            for histo in min_scale_histos:
+                if histo.type is None:
+                    histo.type = '%s=%.4g'%(merging_scale_name, min_merging_scale)
+                else:
+                    histo.type += '|%s=%.4g'%(merging_scale_name, min_merging_scale)
+            for histo in max_scale_histos:
+                if histo.type is None:
+                    histo.type = '%s=%.4g'%(merging_scale_name, max_merging_scale)
+                else:
+                    histo.type += '|%s=%.4g'%(merging_scale_name, max_merging_scale)
+            
+            # Now plot and compare against oneanother the shape for the the two scales
+            histograms.HwUList(min_scale_histos+max_scale_histos).output(
+                pjoin(plot_root_path,'min_max_%s_%s_comparison'
+                                         %(merging_scale_name,observable_name)),
+                format='gnuplot', 
+                uncertainties=[], 
+                ratio_correlations=True,
+                arg_string='Automatic plotting from MG5aMC', 
+                jet_samples_to_keep=[],
+                use_band=[],
+                auto_open=False)
+        return True
+    
     def create_plot(self, mode='parton', event_path=None, output=None, tag=None):
         """create the plot"""
 
-        madir = self.options['madanalysis_path']
         if not tag:
             tag = self.run_card['run_tag']
-        td = self.options['td_path']
 
-        if not madir or not td or \
-            not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
-            return False
+        if mode != 'Pythia8':
+            madir = self.options['madanalysis_path']
+            td = self.options['td_path']
+    
+            if not madir or not td or \
+                not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
+                return False
+        else:
+            PY8_plots_root_path = pjoin(self.me_dir,'HTML',
+                                               self.run_name,'%s_PY8_plots'%tag)
+            
+        if 'ickkw' in self.run_card:
+            if int(self.run_card['ickkw']) and mode == 'Pythia':
+                self.update_status('Create matching plots for Pythia', level='pythia')
+                # recover old data if none newly created
+                if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
+                    misc.gunzip(pjoin(self.me_dir,'Events',
+                          self.run_name, '%s_pythia_events.tree.gz' % tag), keep=True,
+                               stdout=pjoin(self.me_dir,'Events','events.tree'))
+                    files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
+                         pjoin(self.me_dir,'Events','xsecs.tree'))
+    
+                # Generate the matching plots
+                misc.call([self.dirbin+'/create_matching_plots.sh',
+                           self.run_name, tag, madir],
+                                stdout = os.open(os.devnull, os.O_RDWR),
+                                cwd=pjoin(self.me_dir,'Events'))
+    
+                #Clean output
+                misc.gzip(pjoin(self.me_dir,"Events","events.tree"),
+                          stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
+                files.mv(pjoin(self.me_dir,'Events','xsecs.tree'),
+                         pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
+            
+            elif mode == 'Pythia8' and (int(self.run_card['ickkw'])==1  or \
+                  self.run_card['ktdurham']>0.0 or self.run_card['ptlund']>0.0):
+                
+                self.update_status('Create matching plots for Pythia8',
+                                                                level='pythia8')
 
-        if 'ickkw' in self.run_card and int(self.run_card['ickkw']) and \
-                mode == 'Pythia':
-            self.update_status('Create matching plots for Pythia', level='pythia')
-            # recover old data if none newly created
-            if not os.path.exists(pjoin(self.me_dir,'Events','events.tree')):
-                misc.gunzip(pjoin(self.me_dir,'Events',
-                      self.run_name, '%s_pythia_events.tree.gz' % tag), keep=True,
-                           stdout=pjoin(self.me_dir,'Events','events.tree'))
-                files.mv(pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'),
-                     pjoin(self.me_dir,'Events','xsecs.tree'))
+                # Create the directory if not existing at this stage
+                if not os.path.isdir(PY8_plots_root_path):
+                    os.makedirs(PY8_plots_root_path)
 
-            # Generate the matching plots
-            misc.call([self.dirbin+'/create_matching_plots.sh',
-                       self.run_name, tag, madir],
-                            stdout = os.open(os.devnull, os.O_RDWR),
-                            cwd=pjoin(self.me_dir,'Events'))
+                merging_scale_name = 'qCut' if int(self.run_card['ickkw'])==1 \
+                                                                      else 'TMS'
 
-            #Clean output
-            misc.gzip(pjoin(self.me_dir,"Events","events.tree"),
-                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag + '_pythia_events.tree.gz'))
-            files.mv(pjoin(self.me_dir,'Events','xsecs.tree'),
-                     pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_xsecs.tree'))
+                djr_path = pjoin(self.me_dir,'Events',
+                                             self.run_name, '%s_djrs.dat' % tag)
+                pt_path = pjoin(self.me_dir,'Events',
+                                             self.run_name, '%s_pts.dat' % tag)
+                for observable_name, data_path in [('djr',djr_path),
+                                                   ('pt',pt_path)]:
+                    if not self.generate_Pythia8_HwU_plots(
+                                    PY8_plots_root_path, merging_scale_name,
+                                                     observable_name,data_path):
+                        return False
 
+        if mode == 'Pythia8':
+            plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.gnuplot'))
+            if not misc.which('gnuplot'):
+                logger.warning("Install gnuplot to be able to view the plots"+\
+                               " generated at :\n   "+\
+                               '\n   '.join('%s.gnuplot'%p for p in plot_files))
+                return True
+            for plot in plot_files:
+                command = ['gnuplot',plot]
+                try:
+                    subprocess.call(command,cwd=PY8_plots_root_path,stderr=subprocess.PIPE)
+                except Exception as e:
+                    logger.warning("Automatic processing of the Pythia8 "+\
+                            "merging plots with gnuplot failed. Try the"+\
+                            " following command by hand:\n   %s"%(' '.join(command))+\
+                            "\nException was: %s"%str(e))
+                    return False
+
+            plot_files = glob.glob(pjoin(PY8_plots_root_path,'*.pdf'))
+            if len(plot_files)>0:
+                # Add an html page
+                html = "<html>\n<head>\n<TITLE>PLOT FOR PYTHIA8</TITLE>"
+                html+= '<link rel=stylesheet href="../../mgstyle.css" type="text/css">\n</head>\n<body>\n'
+                html += "<h2> Plot for Pythia8 </h2>\n"
+                html += '<a href=../../../crossx.html>return to summary</a><br>'
+                html += "<table>\n<tr> <td> <b>Obs.</b> </td> <td> <b>Type of plot</b> </td> <td><b> PDF</b> </td> <td><b> input file</b> </td> </tr>\n"
+                def sorted_plots(elem):
+                    name = os.path.basename(elem[1])
+                    if 'central' in name:
+                        return -100
+                    if 'min_max' in name:
+                        return -10
+                    merging_re = re.match(r'^.*_(\d+)_.*$',name)
+                    if not merging_re is None:
+                        return int(merging_re.group(1))
+                    else:
+                        return 1e10
+                djr_plot_files = sorted(
+                            (('DJR',p) for p in plot_files if '_djr_' in p),
+                            key = sorted_plots)
+                pt_plot_files = sorted(
+                            (('Pt',p) for p in plot_files if '_pt_' in p),
+                            key = sorted_plots)
+                last_obs = None            
+                for obs, one_plot in djr_plot_files+pt_plot_files:
+                    if obs!=last_obs:
+                        # Add a line between observables
+                        html += "<tr><td></td></tr>"
+                        last_obs = obs
+                    name = os.path.basename(one_plot).replace('.pdf','')
+                    short_name = name
+                    for dummy in ['_plots','_djr','_pt']:
+                        short_name = short_name.replace(dummy,'')
+                    short_name = short_name.replace('_',' ')                        
+                    if 'min max' in short_name:
+                        short_name = "%s comparison with min/max merging scale"%obs
+                    if 'central' in short_name:
+                        short_name = "Merging uncertainty band around central scale"
+                    html += "<tr><td>%(obs)s</td><td>%(sn)s</td><td> <a href=./%(n)s.pdf>PDF</a> </td><td> <a href=./%(n)s.HwU>HwU</a> <a href=./%(n)s.gnuplot>GNUPLOT</a> </td></tr>\n" %\
+                                        {'obs':obs, 'sn': short_name, 'n': name}
+                html += '</table>\n'
+                html += '<a href=../../../bin/internal/plot_djrs.py> Example of code to plot the above with matplotlib </a><br><br>'
+                html+='</body>\n</html>'
+                ff=open(pjoin(PY8_plots_root_path, 'index.html'),'w')
+                ff.write(html)
+            return True
 
         if not event_path:
             if mode == 'parton':
@@ -1377,8 +1693,445 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             self.print_results_in_shell(data)
 
+    def configure_directory(self, *args, **opts):
+        """ All action require before any type of run. Typically overloaded by
+        daughters if need be."""
+        pass
 
     ############################################################################
+    # Start of MadAnalysis5 related function
+    ############################################################################
+    
+    def check_madanalysis5(self, args, mode='parton'):
+        """Check the argument for the madanalysis5 command
+        syntax: madanalysis5_parton [NAME]
+        """
+
+        MA5_options = {'MA5_stdout_lvl':'default'}
+        
+        stdout_level_tags = [a for a in args if a.startswith('--MA5_stdout_lvl=')]
+        for slt in stdout_level_tags:
+            lvl = slt.split('=')[1].strip()
+            try:
+                # It is likely an int
+                MA5_options['MA5_stdout_lvl']=int(lvl)
+            except ValueError:
+                try:
+                    # Maybe the user used something like 'logging.INFO'
+                    MA5_options['MA5_stdout_lvl']=eval(lvl)
+                except:
+                    try:
+                        MA5_options['MA5_stdout_lvl']=eval('logging.%s'%lvl)
+                    except:
+                        raise InvalidCmd("MA5 output level specification"+\
+                                                 " '%s' is incorrect."%str(lvl))
+            args.remove(slt)
+
+        if mode=='parton':
+            # We will attempt to run MA5 on the parton level output
+            # found in the last run if not specified.
+            MA5_options['inputs'] = '*.lhe'
+        elif mode=='hadron':
+            # We will run MA5 on all sources of post-partonic output we
+            # can find if not specified. PY8 is a keyword indicating shower
+            # piped to MA5.
+            MA5_options['inputs'] = ['fromCard']
+        else:
+            raise MadGraph5Error('Mode %s not reckognized'%mode+
+                                             ' in function check_madanalysis5.')
+        # If not madanalysis5 path
+        if not self.options['madanalysis5_path']:
+            logger.info('Now trying to read the configuration file again'+
+                                                   ' to find MadAnalysis5 path')
+            self.set_configuration()
+            
+        if not self.options['madanalysis5_path'] or not \
+            os.path.exists(pjoin(self.options['madanalysis5_path'],'bin','ma5')):
+            error_msg = 'No valid MadAnalysis5 path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            error_msg += 'Finally, it can be installed automatically using the'
+            error_msg += ' install command.\n'
+            raise self.InvalidCmd(error_msg)
+
+        # Now make sure that the corresponding default card exists
+        if not os.path.isfile(pjoin(self.me_dir,
+                               'Cards','madanalysis5_%s_card.dat'%mode)):
+            raise self.InvalidCmd('Your installed version of MadAnalysis5 and/or'+\
+                    ' MadGraph5_aMCatNLO does not seem to support analysis at'+
+                                                            '%s level.'%mode)
+        
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+
+        if len(args) == 0 and not self.run_name:
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently defined. '+
+                                                 'Please add this information.')
+        
+        if len(args) >= 1:
+            if mode=='parton' and args[0] != self.run_name and \
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 
+             'unweighted_events.lhe.gz')) and not os.path.exists(
+                                           pjoin(self.me_dir,'Events',args[0])):
+                raise self.InvalidCmd('No events file in the %s run.'%args[0])
+            self.set_run_name(args[0], tag, level='madanalysis5_%s'%mode)            
+        else:
+            if tag:
+                self.run_card['run_tag'] = args[0]
+            self.set_run_name(self.run_name, tag, level='madanalysis5_%s'%mode)  
+        
+        if mode=='parton':
+            if any(t for t in args if t.startswith('--input=')):
+                raise InvalidCmd('The option --input=<input_file> is not'+
+                  ' available when running partonic MadAnalysis5 analysis. The'+
+                      ' .lhe output of the selected run is used automatically.')
+            input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
+            MA5_options['inputs'] = '%s.gz'%input_file
+            if not os.path.exists('%s.gz'%input_file):
+                if os.path.exists(input_file):
+                    misc.gzip(input_file, keep=True, stdout=output_file)
+                else:
+                    logger.warning("LHE event file not found in \n%s\ns"%input_file+
+                                       "AboringParton level MA5 analysis is disabled.")                    
+    
+        if mode=='hadron':
+            # Make sure to store current results (like Pythia8 hep files)
+            # so that can be found here
+            self.store_result()
+            
+            hadron_tag = [t for t in args if t.startswith('--input=')]
+            if hadron_tag and hadron_tag[0][8:]:
+                hadron_inputs = hadron_tag[0][8:].split(',')
+            
+            # If not set above, then we must read it from the card
+            elif MA5_options['inputs'] == ['fromCard']:
+                hadron_inputs = banner_mod.MadAnalysis5Card(pjoin(self.me_dir,
+                'Cards','madanalysis5_hadron_card.dat'),mode='hadron')['inputs']
+
+            # Make sure the corresponding input files are present and unfold
+            # potential wildcard while making their path absolute as well.
+            MA5_options['inputs'] = []
+            special_source_tags = []
+            for htag in hadron_inputs:
+                # Possible pecial tag for MA5 run inputs
+                if htag in special_source_tags:
+                    # Special check/actions
+                    continue
+                # Check if the specified file exists and is not a wildcard
+                if os.path.isfile(htag) or (os.path.exists(htag) and 
+                                          stat.S_ISFIFO(os.stat(htag).st_mode)):
+                    MA5_options['inputs'].append(htag)
+                    continue
+
+                # Now select one source per tag, giving priority to unzipped 
+                # files with 'events' in their name (case-insensitive).
+                file_candidates = glob.glob(pjoin(self.me_dir,'Events',self.run_name,htag))+\
+                            glob.glob(pjoin(self.me_dir,'Events',self.run_name,'%s.gz'%htag))
+                priority_files = [f for f in file_candidates if 
+                                self.run_card['run_tag'] in os.path.basename(f)]
+                priority_files = [f for f in priority_files if
+                                        'EVENTS' in os.path.basename(f).upper()]
+                # Make sure to always prefer the original partonic event file
+                for f in file_candidates:
+                    if os.path.basename(f).startswith('unweighted_events.lhe'):
+                        priority_files.append(f)
+                if priority_files:
+                    MA5_options['inputs'].append(priority_files[-1])
+                    continue
+                if file_candidates:
+                    MA5_options['inputs'].append(file_candidates[-1])
+                    continue
+
+        return MA5_options
+    
+    def ask_madanalysis5_run_configuration(self, runtype='parton',mode=None):
+        """Ask the question when launching madanalysis5.
+        In the future we can ask here further question about the MA5 run, but
+        for now we just edit the cards"""
+
+        cards = ['madanalysis5_%s_card.dat'%runtype]
+        self.keep_cards(cards)
+        
+        if self.force:
+            return runtype
+        
+        # This heavy-looking structure of auto is just to mimick what is done
+        # for ask_pythia_configuration
+        auto=False
+        if mode=='auto':
+            auto=True
+        if auto:
+            self.ask_edit_cards(cards, mode='auto', plot=False)
+        else:
+            self.ask_edit_cards(cards, plot=False)
+
+        # For now, we don't pass any further information and simply return the
+        # input mode asked for
+        mode = runtype 
+        return mode
+
+    def complete_madanalysis5_hadron(self,text, line, begidx, endidx):
+        "Complete the madanalysis5 command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            #return valid run_name
+            data = []
+            for name in banner_mod.MadAnalysis5Card._default_hadron_inputs:
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
+                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, ['-f',
+                '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
+                return tmp1 + tmp2
+            
+        elif '--MA5_stdout_lvl=' in line and not any(arg.startswith(
+                                          '--MA5_stdout_lvl=') for arg in args):
+            return self.list_completion(text, 
+                ['--MA5_stdout_lvl=%s'%opt for opt in 
+                ['logging.INFO','logging.DEBUG','logging.WARNING',
+                                                'logging.CRITICAL','90']], line)
+        elif '--input=' in line and not any(arg.startswith(
+                                                  '--input=') for arg in args):
+            return self.list_completion(text, ['--input=%s'%opt for opt in
+         (banner_mod.MadAnalysis5Card._default_hadron_inputs +['path'])], line)
+        else:
+            return self.list_completion(text, ['-f', 
+                '--MA5_stdout_lvl=','--input=','--no_default', '--tag='], line)
+
+    def do_madanalysis5_hadron(self, line):
+        """launch MadAnalysis5 at the hadron level."""
+        return self.run_madanalysis5(line,mode='hadron')
+
+    def run_madanalysis5(self, line, mode='parton'):
+        """launch MadAnalysis5 at the parton level or at the hadron level with
+        a specific command line."""
+        
+        # Check argument's validity
+        args = self.split_arg(line)
+        
+        if '--no_default' in args:
+            no_default = True
+            args.remove('--no_default')
+        else:
+            no_default = False
+
+        if no_default:
+            # Called issued by MG5aMC itself during a generate_event action
+            if mode=='parton' and not os.path.exists(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_parton_card.dat')):
+                return
+            if mode=='hadron' and not os.path.exists(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_hadron_card.dat')):
+                return
+        else:
+            # Called issued by the user itself and only MA5 will be run.
+            # we must therefore ask wheter the user wants to edit the card
+            self.ask_madanalysis5_run_configuration(runtype=mode)        
+        
+        if not self.options['madanalysis5_path'] or \
+            all(not os.path.exists(pjoin(self.me_dir, 'Cards',card)) for card in
+               ['madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat']):
+            if no_default:
+                return
+            else:
+                raise InvalidCmd('You must have MadAnalysis5 available to run'+
+           " this command. Consider installing it with the 'install' function.")
+
+        if not self.run_name:
+            MA5_opts = self.check_madanalysis5(args, mode=mode)
+            self.configure_directory(html_opening =False)
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory(html_opening =False)
+            MA5_opts = self.check_madanalysis5(args, mode=mode)
+
+        # Now check that there is at least one input to run
+        if MA5_opts['inputs']==[]:
+            if no_default:
+                logger.warning('No hadron level input found to run MadAnalysis5 on.'+
+                                         ' Skipping its hadron-level analysis.')
+                return
+            else:
+                raise self.InvalidCmd('\nNo input files specified or availabled for'+
+        ' this MadAnalysis5 hadron-level run.\nPlease double-check the options of this'+
+        ' MA5 command (or card) and which output files\nare currently in the chosen'+
+        " run directory '%s'."%self.run_name)
+
+        MA5_card = banner_mod.MadAnalysis5Card(pjoin(self.me_dir, 'Cards',
+                                    'madanalysis5_%s_card.dat'%mode), mode=mode)
+        
+        MA5_cmds_list = MA5_card.get_MA5_cmds(MA5_opts['inputs'],
+                pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper()),
+                run_dir_path = pjoin(self.me_dir,'Events', self.run_name),
+                UFO_model_path=pjoin(self.me_dir,'bin','internal','ufomodel'),
+                run_tag = self.run_tag)
+
+############################# TEMPORARY ########################################
+#       Here's how to print the MA5 commands generated by MG5aMC
+#        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+#            misc.sprint('****************************************')
+#            misc.sprint('* Commands for MA5 runtag %s:'%MA5_runtag)
+#            misc.sprint('\n'+('\n'.join('* %s'%cmd for cmd in MA5_cmds)))
+#            misc.sprint('****************************************')
+############################# TEMPORARY ########################################
+        
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+        logger.info('Now starting MadAnalysis5 [arXiv:1206.1599]','$MG:color:GREEN')
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+        if mode=='hadron':
+            logger.info('Hadron input files considered:')
+            for input in MA5_opts['inputs']:
+                logger.info('  --> %s'%input)
+        elif mode=='parton':
+            logger.info('Parton input file considered:')
+            logger.info('  --> %s'%MA5_opts['inputs'])
+        logger.info('-------------------------------------------','$MG:color:GREEN')
+
+        # Obtain a main MA5 interpreter
+        # Ideally we would like to do it all with a single interpreter
+        # but we'd need a way to reset it for this.
+        if MA5_opts['MA5_stdout_lvl']=='default':
+            if MA5_card['stdout_lvl'] is None:
+                MA5_lvl = self.options['stdout_level']
+            else:
+                MA5_lvl = MA5_card['stdout_lvl']                
+        else:
+            MA5_lvl = MA5_opts['MA5_stdout_lvl']
+
+        MA5_interpreter = misc.get_MadAnalysis5_interpreter(
+                self.options['mg5_path'], 
+                self.options['madanalysis5_path'],
+                logstream=sys.stdout,
+                loglevel=MA5_lvl,
+                forced=True)
+
+        # Now loop over the different MA5_runs
+        for MA5_runtag, MA5_cmds in MA5_cmds_list:
+            
+            # Make sure to properly initialize MA5 interpreter
+            if mode=='hadron':
+                MA5_interpreter.init_reco()
+            else:
+                MA5_interpreter.init_parton()
+            
+            if MA5_runtag!='default':
+                if MA5_runtag.startswith('_reco_'):
+                    logger.info("MadAnalysis5 now running the reconstruction '%s'..."%
+                                              MA5_runtag[6:],'$MG:color:GREEN')
+                elif MA5_runtag=='Recasting':
+                    logger.info("MadAnalysis5 now running the recasting...",
+                                                              '$MG:color:GREEN') 
+                else:
+                    logger.info("MadAnalysis5 now running the '%s' analysis..."%
+                                                   MA5_runtag,'$MG:color:GREEN')                    
+            # Now the magic, finally call MA5.
+            MA5_interpreter.load(MA5_cmds)
+                     
+            if MA5_runtag.startswith('_reco_'):
+                # When doing a reconstruction we must first copy the event file
+                # created and then directly proceed to the next batch of instructions
+                # There can be several output directory if there were several
+                # input files.
+                links_created=[]
+                for i, input in enumerate(MA5_opts['inputs']):
+                    # Make sure it is not an lhco or root input, which would not
+                    # undergo any reconstruction of course.
+                    if not banner_mod.MadAnalysis5Card.events_can_be_reconstructed(input):
+                        continue
+                    reco_output = pjoin(self.me_dir,
+                           'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
+                    # Look for either a root or .lhe.gz output
+                    reco_event_file = glob.glob(pjoin(reco_output,'Output',
+                      '_reco_events','*.lhe.gz')) + glob.glob(pjoin(
+                                  reco_output,'Output','_reco_events','*.root'))
+                    if len(reco_event_file)==0:
+                        raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
+                  "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
+                    reco_event_file = reco_event_file[0]
+                    # move the reconstruction output to the HTML directory
+                    shutil.move(reco_output,pjoin(self.me_dir,'HTML',
+                                 self.run_name,'%s_MA5_%s_ANALYSIS%s_%d'%
+                                    (self.run_tag,mode.upper(),MA5_runtag,i+1)))
+                    # link the reconstructed event file to the run directory
+                    links_created.append(os.path.basename(reco_event_file))
+                    files.ln(pjoin(self.me_dir,'HTML',self.run_name,
+                      '%s_MA5_%s_ANALYSIS%s_%d'%(self.run_tag,mode.upper(),
+                      MA5_runtag,i+1),'Output','_reco_events',links_created[-1]),
+                                      pjoin(self.me_dir,'Events',self.run_name))
+                    
+                logger.info("MadAnalysis5 successfully completed the reconstruction "+
+                  "'%s'. Links to the reconstructed event files are:"%MA5_runtag[6:])
+                for link in links_created:
+                    logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,link))
+                continue
+
+            if MA5_runtag.upper()=='RECASTING':
+                target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+              %(mode.upper(),MA5_runtag),'Output','CLs_output_summary.dat')
+            else:
+                target = pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+                                  %(mode.upper(),MA5_runtag),'PDF','main.pdf')
+            if not os.path.isfile(target):
+                raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
+          "an output for the parton analysis '%s' in\n   %s"%(MA5_runtag,target)
+
+            # Copy the PDF report or CLs in the Events/run directory.
+            if MA5_runtag.upper()=='RECASTING':
+                carboncopy_name = '%s_MA5_CLs.dat'%(self.run_tag)
+            else:
+                carboncopy_name = '%s_MA5_%s_analysis_%s.pdf'%(
+                                                   self.run_tag,mode,MA5_runtag)
+            shutil.copy(target, pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
+            if MA5_runtag!='default':
+                logger.info("MadAnalysis5 successfully completed the "+
+                  "%s. Reported results are placed in:"%("analysis '%s'"%MA5_runtag 
+                           if MA5_runtag.upper()!='RECASTING' else "recasting"))
+            else:
+                logger.info("MadAnalysis5 successfully completed the analysis."+
+                                            " Reported results are placed in:")
+            logger.info('  --> %s'%pjoin(self.me_dir,'Events',self.run_name,carboncopy_name))
+
+            # Copy the entire analysis in the HTML directory
+            shutil.move(pjoin(self.me_dir,'MA5_%s_ANALYSIS_%s'\
+              %(mode.upper(),MA5_runtag)), pjoin(self.me_dir,'HTML',self.run_name,
+                '%s_MA5_%s_ANALYSIS_%s'%(self.run_tag,mode.upper(),MA5_runtag)))
+
+        # Set the number of events and cross-section to the last one 
+        # (maybe do something smarter later)
+        new_details={}
+        for detail in ['nb_event','cross','error']:
+            new_details[detail] = \
+                      self.results[self.run_name].get_current_info()[detail]
+        for detail in new_details:
+            self.results.add_detail(detail,new_details[detail])
+
+        self.update_status('finish', level='madanalysis5_%s'%mode,
+                                                                 makehtml=False)
+ 
+        #Update the banner
+        self.banner.add(pjoin(self.me_dir, 'Cards',
+                                               'madanalysis5_%s_card.dat'%mode))
+        banner_path = pjoin(self.me_dir,'Events', self.run_name,
+                               '%s_%s_banner.txt'%(self.run_name, self.run_tag))
+        self.banner.write(banner_path)
+ 
+        if not no_default:
+            logger.info('Find more information about this run on the HTML local page')
+            logger.info('  --> %s'%pjoin(self.me_dir,'index.html'))
+    
+    ############################################################################
+    # End of MadAnalysis5 related function
+    ############################################################################
+    
     def do_delphes(self, line):
         """ run delphes and make associate root file/plot """
 
@@ -1395,17 +2148,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return
             
         # Check all arguments
-        # This might launch a gunzip in another thread. After the question
-        # This thread need to be wait for completion. (This allow to have the
-        # question right away and have the computer working in the same time)
-        # if lock is define this a locker for the completion of the thread
-        lock = self.check_delphes(args)
+        filepath = self.check_delphes(args, nodefault=no_default)
+        if no_default and not filepath:
+            return # no output file but nothing to do either.
+        
         self.update_status('prepare delphes run', level=None)
-
 
         if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
             delphes3 = False
             prog = '../bin/internal/run_delphes'
+            if filepath and '.hepmc' in filepath[:-10]:
+                raise self.InvalidCmd, 'delphes2 do not support hepmc'
         else:
             delphes3 = True
             prog =  '../bin/internal/run_delphes3'
@@ -1414,9 +2167,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # ask for edition of the card.
         if not os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
             if no_default:
-                logger.info('No delphes_card detected, so not run Delphes')
+                logger.info('No delphes_card detected, so not running Delphes')
                 return
-
             files.cp(pjoin(self.me_dir, 'Cards', 'delphes_card_default.dat'),
                      pjoin(self.me_dir, 'Cards', 'delphes_card.dat'))
             logger.info('No delphes card found. Take the default one.')
@@ -1430,11 +2182,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.ask_edit_cards(['delphes_card.dat', 'delphes_trigger.dat'], args)
 
         self.update_status('Running Delphes', level=None)
-        # Wait that the gunzip of the files is finished (if any)
-        if lock:
-            lock.wait()
-
-
 
         delphes_dir = self.options['delphes_path']
         tag = self.run_tag
@@ -1448,31 +2195,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
         self.cluster.launch_and_wait(prog,
-                        argument= [delphes_dir, self.run_name, tag, str(cross)],
+                        argument= [delphes_dir, self.run_name, tag, str(cross), filepath],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir, 'Events',
                                 self.run_name, '%s_delphes_events.lhco' % tag)):
-            logger.error('Fail to create LHCO events from DELPHES')
-            return
+            logger.warning('We do not create lhco by default anymore')
 
-        if os.path.exists(pjoin(self.me_dir,'Events','delphes.root')):
-            source = pjoin(self.me_dir,'Events','delphes.root')
-            target = pjoin(self.me_dir,'Events', self.run_name, "%s_delphes_events.root" % tag)
-            files.mv(source, target)
 
         #eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
 
-        # Creating plots
-        self.create_plot('Delphes')
+        if os.path.exists(pjoin(self.me_dir, 'Events',
+                                self.run_name, '%s_delphes_events.lhco' % tag)):
+            # Creating plots
+            self.create_plot('Delphes')
 
         if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name,  '%s_delphes_events.lhco' % tag)):
             misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag))
-
-
 
         self.update_status('delphes done', level='delphes', makehtml=False)
 
@@ -1629,7 +2371,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd('Not a valid value for notification_center')
         elif args[0] in self.options:
             if args[1] in ['None','True','False']:
-                self.options[args[0]] = eval(args[1])
+                self.options[args[0]] = ast.literal_eval(args[1])
             elif args[0].endswith('path'):
                 if os.path.exists(args[1]):
                     self.options[args[0]] = args[1]
@@ -1808,6 +2550,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
 
+        if 'arXiv' in status:
+            if '[' in status:
+                status = status.split('[',1)[0]
+            else:
+                status = status.split('arXiv',1)[0]
+
         if update_results:
             self.results.update(status, level, makehtml=makehtml, error=error)
 
@@ -1817,7 +2565,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
                       'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
-                      'reweight_card.dat']
+                      'reweight_card.dat','pythia8_card.dat',
+                      'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',]
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
@@ -1931,11 +2680,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 pass
             elif key == 'automatic_html_opening':
                 if self.options[key] in ['False', 'True']:
-                    self.options[key] =eval(self.options[key])
+                    self.options[key] =ast.literal_eval(self.options[key])
             elif key == "notification_center":
                 if self.options[key] in ['False', 'True']:
-                    self.allow_notification_center =eval(self.options[key])
-                    self.options[key] =eval(self.options[key])
+                    self.allow_notification_center =ast.literal_eval(self.options[key])
+                    self.options[key] =ast.literal_eval(self.options[key])
             elif key not in ['text_editor','eps_viewer','web_browser','stdout_level',
                               'complex_mass_scheme', 'gauge', 'group_subprocesses']:
                 # Default: try to set parameter
@@ -2539,6 +3288,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
                         }
     
+    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
+                     'madweight_card', 'MadLoopParams', 'shower_card']
+    
+    
+    special_shortcut_help = {              
+    'ebeam' : 'syntax: set ebeam VALUE:\n      This parameter sets the energy to both beam to the value in GeV',
+    'lpp'   : 'syntax: set ebeam  VALUE:\n'+\
+              '   Set the type of beam to a given value for both beam\n'+\
+              '   0 : means no PDF\n'+\
+              '   1 : means proton PDF\n'+\
+              '  -1 : means proton PDF\n'+\
+              '   2 : means PDF for elastic photon emited from a proton\n'+\
+              '   3 : means PDF for elastic photon emited from an electron',
+    'lhc'   : 'syntax: set lhc VALUE:\n      Set for a proton-proton collision with that given center of mass energy (in TeV)',
+    'lep'   : 'syntax: set lep VALUE:\n      Set for a electron-positron collision with that given center of mass energy (in GeV)',
+    'fixed_scale' : 'syntax: set fixed_scale VALUE:\n      Set all scales to the give value (in GeV)',              
+    }
+    
+    
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
         # Initiation
@@ -2563,7 +3331,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                      pjoin(self.me_dir,'Cards','param_card.dat'))
             self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
         default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
-        
+        self.param_card_default = default_param
         
         try:
             self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
@@ -2597,7 +3365,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if var in self.run_set:
                 self.conflict.append(var)        
                 
-        
+
+        self.has_delphes = False        
+        if 'delphes_card.dat' in cards:
+            self.has_delphes = True
+
         #check if Madweight_card is present:
         self.has_mw = False
         if 'madweight_card.dat' in cards:
@@ -2641,7 +3413,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             self.ml_vars = [k.lower() for k in self.MLcard.keys()]
             # check for conflict
-            for var in self.MLcard:
+            for var in self.ml_vars:
                 if var in self.run_card:
                     self.conflict.append(var)
                 if var in self.pname2block:
@@ -2668,8 +3440,151 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if var in self.run_card:
                     self.conflict.append(var)
 
+        #check if pythia8_card.dat is present:
+        self.has_PY8 = False
+        if 'pythia8_card.dat' in cards:
+            self.has_PY8 = True
+            self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,
+                                                    'Cards','pythia8_card.dat'))
+            self.PY8CardDefault = banner_mod.PY8Card()
+            
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
+                                     k.lower() not in self.PY8Card.hidden_param]
+            # check for conflict
+            for var in self.py8_vars:
+                if var in self.run_card:
+                    self.conflict.append(var)
+                if var in self.pname2block:
+                    self.conflict.append(var)
+                if self.has_mw and var in self.mw_vars:
+                    self.conflict.append(var)
+                if self.has_ml and var in self.ml_vars:
+                    self.conflict.append(var)
+    
+    def do_help(self, line, conflict_raise=False, banner=True):    
+     try:       
+         
+        if banner:                      
+            logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
+         
+        args = self.split_arg(line)
+        # handle comand related help
+        if len(args) == 1 and hasattr(self, 'do_%s' % args[0]):
+            out = cmd.BasicCmd.do_help(self, line)
+            if banner:
+                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+            return out      
+        # check for special shortcut.
+        # special shortcut:
+        if args[0] in self.special_shortcut:    
+            if args[0] in self.special_shortcut_help:
+                print self.special_shortcut_help[args[0]]
+            if banner:
+                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+            return       
+        
+        start = 0
+        card = ''
+        if args[0] in self.all_card_name:
+            start += 1
+            card = args[0]
+            if len(args) == 1:
+                if args[0] == 'param_card':
+                    logger.info("Param_card information: ", '$MG:color:BLUE')
+                    print "File to define the various model parameter"
+                    logger.info("List of the Block defined:",'$MG:color:BLUE')
+                    print "\t".join(self.param_card.keys())
+                elif hasattr(self, args[0]):
+                    logger.info("%s information: " % args[0], '$MG:color:BLUE')
+                    print(eval('self.%s' % args[0]).__doc__)
+                    logger.info("List of parameter associated", '$MG:color:BLUE')
+                    print "\t".join(eval('self.%s' % args[0]).keys())
+            if banner:
+                logger.info('*** END HELP ***', '$MG:color:BLACK')  
+            return 
+                    
+                
+        #### RUN CARD
+        if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
+            if args[start] not in self.run_set:
+                args[start] = [l for l in self.run_set if l.lower() == args[start]][0]
 
-    def complete_set(self, text, line, begidx, endidx):
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
+
+            self.run_card.do_help(args[start])
+        ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
+        elif (args[start] in self.param_card or args[start] == 'width') \
+                                                  and card in ['','param_card']:
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                 
+            if args[start] == 'width':
+                args[start] = 'decay'
+                
+            if len(args) == start+1:
+                self.param_card.do_help(args[start], tuple())
+                key = None
+            elif args[start+1] in self.pname2block:
+                all_var = self.pname2block[args[start+1]]
+                key = None
+                for bname, lhaid in all_var:
+                    if bname == args[start]:
+                        key = lhaid
+                        break
+                else:
+                    logger.warning('%s is not part of block "%s" but "%s". please correct.' %
+                                    (args[start+1], args[start], bname))
+            else:
+                try:
+                    key = tuple([int(i) for i in args[start+1:]])
+                except ValueError:
+                    logger.warning('Failed to identify LHA information')
+                    return            
+            
+            if key in self.param_card[args[start]].param_dict:
+                self.param_card.do_help(args[start], key, default=self.param_card_default)
+            elif key:
+                logger.warning('invalid information: %s not defined in the param_card' % (key,))
+        # PARAM_CARD NO BLOCK NAME ---------------------------------------------
+        elif args[start] in self.pname2block and card in ['','param_card']:                
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                 
+            all_var = self.pname2block[args[start]]
+            for bname, lhaid in all_var:
+                new_line = 'param_card %s %s %s' % (bname,
+                   ' '.join([ str(i) for i in lhaid]), ' '.join(args[start+1:]))
+                self.do_help(new_line, conflict_raise=True, banner=False) 
+        else:
+            print "no help available" 
+          
+        if banner:                      
+            logger.info('*** END HELP ***', '$MG:color:BLACK')    
+        #raw_input('press enter to quit the help')
+        return        
+     except Exception, error:
+         import traceback
+         traceback.print_exc()
+         print error    
+    def complete_help(self, text, line, begidx, endidx):
+     try:
+        possibilities = self.complete_set(text, line, begidx, endidx,return_cat=True)
+        if line == '':
+            possibilities['Defined command'] = cmd.BasicCmd.completenames(self, text, line)#, begidx, endidx)
+        return self.deal_multiple_categories(possibilities)
+     except Exception, error:
+         import traceback
+         traceback.print_exc()
+         print error
+         
+    def complete_set(self, text, line, begidx, endidx, return_cat=False):
         """ Complete the set command"""
 
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -2693,6 +3608,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed['shower_card'] = ''
             if self.has_ml:
                 allowed['madloop_card'] = ''
+            if self.has_PY8:
+                allowed['pythia8_card'] = ''
+            if self.has_delphes:
+                allowed['delphes_card'] = ''
+                
         elif len(args) == 2:
             if args[1] == 'run_card':
                 allowed = {'run_card':'default'}
@@ -2706,15 +3626,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 allowed = {'madweight_card':'default', 'mw_block': 'all'}
             elif args[1] == 'MadLoop_card':
                 allowed = {'madloop_card':'default'}
+            elif args[1] == 'pythia8_card':
+                allowed = {'pythia8_card':'default'}                
             elif self.has_mw and args[1] in self.mw_card.keys():
                 allowed = {'mw_block':args[1]}
             elif args[1] == 'shower_card':
                 allowed = {'shower_card':'default'}
+            elif args[1] == 'delphes_card':
+                allowed = {'delphes_card':'default'}
             else:
                 allowed = {'value':''}
         else:
             start = 1
-            if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 'MadLoop_card']:
+            if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
+                            'MadLoop_card','pythia8_card','delphes_card']:
                 start = 2
             if args[-1] in self.pname2block.keys():
                 allowed['value'] = 'default'
@@ -2743,7 +3668,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.has_shower:
                 categories.append('shower_card')
             if self.has_ml:
-                categories.append('MadLoop_card')            
+                categories.append('MadLoop_card')
+            if self.has_PY8:
+                categories.append('pythia8_card')
+            if self.has_delphes:
+                categories.append('delphes_card')
             
             possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, categories)
@@ -2774,14 +3703,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             opts = self.ml_vars
             if allowed['madloop_card'] == 'default':
                 opts.append('default')
-
             possibilities['MadLoop Parameter'] = self.list_completion(text, opts)
+                                
+        if 'pythia8_card' in allowed.keys():
+            opts = self.py8_vars
+            if allowed['pythia8_card'] == 'default':
+                opts.append('default')
+            possibilities['Pythia8 Parameter'] = self.list_completion(text, opts)
                                 
         if 'shower_card' in allowed.keys():
             opts = self.shower_vars + [k for k in self.shower_card.keys() if k !='comment']
             if allowed['shower_card'] == 'default':
                 opts.append('default')
             possibilities['Shower Card'] = self.list_completion(text, opts)            
+
+        if 'delphes_card' in allowed:
+            if allowed['delphes_card'] == 'default':
+                opts = ['default', 'atlas', 'cms']
+            possibilities['Delphes Card'] = self.list_completion(text, opts)              
 
         if 'value' in allowed.keys():
             opts = ['default']
@@ -2847,8 +3786,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
 
-        return self.deal_multiple_categories(possibilities)
-
+        if return_cat:
+            return possibilities
+        else:
+            return self.deal_multiple_categories(possibilities)
+        
+        
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
@@ -2859,10 +3802,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')
-        # do not set lowercase the case-sensitive parameters from the shower_card
-        if not ( args[0].lower() in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or \
-                 args[0].lower().startswith('dm_') ):
-            args[:-1] = [ a.lower() for a in args[:-1]]
+
         # special shortcut:
         if args[0] in self.special_shortcut:
             if len(args) == 1:
@@ -2949,7 +3889,30 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
             args[0] = 'MadLoop_card'
 
-        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card']:
+        if args[0] == "pythia8_card":
+            if not self.has_PY8:
+                logger.warning('Invalid Command: No Pythia8 card defined.')
+                return
+            args[0] = 'pythia8_card'
+            
+        if args[0] == 'delphes_card':
+            if not self.has_delphes:
+                logger.warning('Invalid Command: No Delphes card defined.')
+                return
+            if args[1] == 'atlas':
+                logger.info("set default ATLAS configuratin for Delphes")
+                files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_ATLAS.dat'),
+                         pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
+                return
+            elif args[1] == 'cms':
+                logger.info("set default CMS configuratin for Delphes")
+                files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_CMS.dat'),
+                         pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
+                return
+            
+            
+        if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
+                       'delphes_card']:
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
                 files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
@@ -2974,6 +3937,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.MLcard = banner_mod.MadLoopParam(self.MLcardDefault)
                 self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
                                   commentdefault=True)
+                return
+            else:
+                card = args[0]
+            start=1
+            if len(args) < 3:
+                logger.warning('Invalid set command: %s (not enough arguments)' % line)
+                return
+        elif args[0] in ['pythia8_card']:
+            if args[1] == 'default':
+                logging.info('replace pythia8_card.dat by the default card')
+                self.PY8Card = banner_mod.PY8Card(self.PY8CardDefault)
+                self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
+                          pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                          print_only_visible=True)
                 return
             else:
                 card = args[0]
@@ -3017,9 +3994,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:
-#                    try:
-#                        val = eval(args[start+1])
-#                    except NameError:
                     val = args[start+1]
                 self.setR(args[start], val)
             self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
@@ -3092,7 +4066,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
         
         # PARAM_CARD NO BLOCK NAME ---------------------------------------------
-        elif args[start] in self.pname2block and card != 'run_card':
+        elif args[start] in self.pname2block and card in ['','param_card']:
             if args[start] in self.conflict and card == '':
                 text  = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 text += ' in the format < set card parameter value>'
@@ -3180,6 +4154,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.shower_card.set_param(args[start],'.true.',pjoin(self.me_dir,'Cards','shower_card.dat'))
             elif args[start+1].lower() in ['f','.false.','false']:
                 self.shower_card.set_param(args[start],'.false.',pjoin(self.me_dir,'Cards','shower_card.dat'))
+            elif args[start] in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or\
+                                                  args[start].startswith('dm_'):
+                #case sensitive parameters
+                args = line.split()
+                args_str = ' '.join(str(a) for a in args[start+1:len(args)])
+                self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
             else:
                 args_str = ' '.join(str(a) for a in args[start+1:len(args)])
                 self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
@@ -3202,11 +4182,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.setML(args[start], value, default=default)
             self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
                               commentdefault=True)
+
+        # Pythia8 Parameter  ---------------------------------------------------
+        elif self.has_PY8 and (card == 'pythia8_card' or (card == '' and \
+             args[start] in self.PY8Card)):
+
+            if args[start] in self.conflict and card == '':
+                text = 'ambiguous name (present in more than one card). Please specify which card to edit'
+                logger.warning(text)
+                return
+
+            if args[start+1] == 'default':
+                value = self.PY8CardDefault[args[start]]
+                default = True
+            else:
+                value = ' '.join(args[start+1:])
+                default = False
+            self.setPY8(args[start], value, default=default)
+            self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
+                          pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                          print_only_visible=True)
                 
         #INVALID --------------------------------------------------------------
-        else:            
+        else:      
             logger.warning('invalid set command %s ' % line)
-            return            
+            return
 
     def setM(self, block, name, value):
         
@@ -3251,6 +4251,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value))
         if default and name.lower() in self.MLcard.user_set:
             self.MLcard.user_set.remove(name.lower())
+
+    def setPY8(self, name, value, default=False):
+        try:
+            self.PY8Card.userSet(name, value)
+        except Exception, error:
+            logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
+            return
+        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value), '$MG:color:BLACK')
+        if default and name.lower() in self.PY8Card.user_set:
+            self.PY8Card.user_set.remove(name.lower())
 
     def setP(self, block, lhaid, value):
         if isinstance(value, str):
@@ -3304,7 +4314,65 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
-    
+                    
+        # Check the extralibs flag.
+        if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
+            modify_extralibs, modify_extrapaths = False,False
+            extralibs = self.shower_card['extralibs'].split()
+            extrapaths = self.shower_card['extrapaths'].split()
+            # remove default stdhep/Fmcfio for recent shower
+            if self.run_card['parton_shower'] in ['PYTHIA8', 'HERWIGPP', 'HW7']:
+                if 'stdhep' in self.shower_card['extralibs']:
+                    extralibs.remove('stdhep')
+                    modify_extralibs = True
+                if 'Fmcfio' in self.shower_card['extralibs']:
+                    extralibs.remove('Fmcfio')     
+                    modify_extralibs = True               
+            if self.run_card['parton_shower'] == 'PYTHIA8':
+                # First check sanity of PY8
+                if not self.mother_interface.options['pythia8_path']:
+                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified  to MadGraph5_aMC@NLO'
+                executable = pjoin(self.mother_interface.options['pythia8_path'], 'bin', 'pythia8-config')
+                if not os.path.exists(executable):
+                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified to MadGraph5_aMC@NLO'                
+                
+                # 2. take the compilation flag of PY8 from pythia8-config
+                libs , paths = [], []
+                p = misc.subprocess.Popen([executable, '--libs'], stdout=subprocess.PIPE)
+                stdout, _ = p. communicate()
+                libs = [x[2:] for x in stdout.split() if x.startswith('-l') or paths.append(x[2:])]
+                
+                # Add additional user-defined compilation flags
+                p = misc.subprocess.Popen([executable, '--config'], stdout=subprocess.PIPE)
+                stdout, _ = p. communicate()
+                if '-ldl' in stdout:
+                    libs.append('dl')
+
+                # This precompiler flag is in principle useful for the analysis if it writes HEPMC
+                # events, but there is unfortunately no way for now to specify it in the shower_card.
+                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout
+                
+                #3. ensure that those flag are in the shower card
+                for l in libs:
+                    if l not in extralibs:
+                        modify_extralibs = True
+                        extralibs.append(l)
+                for L in paths:
+                    if L not in extrapaths:
+                        modify_extrapaths = True
+                        extrapaths.append(L)
+                        
+            # Apply the required modification
+            if modify_extralibs:
+                if extralibs:
+                    self.do_set('shower_card extralibs %s ' % ' '.join(extralibs))
+                else:
+                    self.do_set('shower_card extralibs \'\' ')
+            if modify_extrapaths:
+                if extrapaths:
+                    self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
+                else:
+                    self.do_set('shower_card extrapaths \'\' ')    
     
     def reask(self, *args, **opt):
         
@@ -3327,10 +4395,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         '''help message for set'''
 
         logger.info('********************* HELP SET ***************************')
-        logger.info("syntax: set [run_card|param_card] NAME [VALUE|default]")
+        logger.info("syntax: set [run_card|param_card|...] NAME [VALUE|default]")
         logger.info("syntax: set [param_card] BLOCK ID(s) [VALUE|default]")
         logger.info('')
-        logger.info('-- Edit the param_card/run_card and replace the value of the')
+        logger.info('-- Edit the param_card/run_card/... and replace the value of the')
         logger.info('    parameter by the value VALUE.')
         logger.info('   ')
         logger.info('-- Example:')
@@ -3454,6 +4522,59 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         return self.mother_interface.complete_compute_widths(*args,**opts)
 
 
+    def help_add(self):
+        """help for add command"""
+
+        logger.info('********************* HELP ADD ***************************')
+        logger.info( '-- syntax: add pythia8_card NAME VALUE')
+        logger.info( "   add a definition of name in the pythia8_card with the given value")
+        logger.info( "   Do not work for the param_card"        )
+        logger.info( '-- syntax: add filename line')
+        logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
+        logger.info('********************* HELP ADD ***************************') 
+    def complete_add(self, text, line, begidx, endidx):
+        """ auto-completion for add command"""
+        signal.alarm(0) # avoid timer if any
+                 
+        possibilities = {} 
+        cards = [c.rsplit('.',1)[0] for c in self.cards]   
+        possibilities['category of parameter (optional)'] = \
+                          self.list_completion(text, cards)
+                          
+        return self.deal_multiple_categories(possibilities)
+    
+    def do_add(self, line):
+        """ syntax: add filename NAME VALUE
+            syntax: add filename LINE"""
+
+        args = self.split_arg(line)
+        if len(args) == 3 and args[0] in ['pythia8_card', 'pythia8_card.dat'] and self.has_PY8:
+            name= args[1]
+            value = args[2]
+            self.PY8Card.userSet(name, value)
+            self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
+                          pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                          print_only_visible=True)
+            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:color:BLACK')
+        elif len(args) > 0: 
+            if args[0] in self.cards:
+                card = args[0]
+            elif "%s.dat" % args[0] in self.cards:
+                card = "%s.dat" % args[0]
+            elif "%s_card.dat" % args[0] in self.cards: 
+                card = "%s_card.dat" % args[0]
+            elif self.has_ml and args[0].lower() == "madloop":
+                card = "MadLoopParams.dat"
+            else:
+                logger.error("unknow card %s. Please retry." % args[0])
+                return
+            
+            ff = open(pjoin(self.me_dir,'Cards',card),'a')
+            ff.write("%s \n" % line.split(None,1)[1])
+            ff.close()
+            self.reload_card(pjoin(self.me_dir,'Cards',card))
+            logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ))
+
 
     def help_asperge(self):
         """Help associated to the asperge command"""
@@ -3533,11 +4654,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
             files.cp(path, pjoin(self.me_dir, 'Cards', card_name))
+            self.reload_card(pjoin(self.me_dir, 'Cards', card_name))
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')
             if not self.mode == 'auto':
                 self.mother_interface.keep_cards(self.cards)
+            for card_name in self.cards:
+                self.reload_card(pjoin(self.me_dir, 'Cards', card_name))
 
     def open_file(self, answer):
         """open the file"""
@@ -3549,9 +4673,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = self.cards[int(answer)-1]
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
-        
         if 'MadLoopParams' in answer:
             answer = pjoin(me_dir,'Cards','MadLoopParams.dat')
+        if 'pythia8_card' in answer:
+            answer = pjoin(me_dir,'Cards','pythia8_card.dat')
+            
         if not '.dat' in answer and not '.lhco' in answer:
             if answer != 'trigger':
                 path = pjoin(me_dir,'Cards','%s_card.dat' % answer)
@@ -3583,8 +4709,11 @@ You can also copy/paste, your event file here.''')
                 self.open_file(path)
             else:
                 raise
-            
-        # reload object to have it in sync
+        self.reload_card(path)
+        
+    def reload_card(self, path): 
+        """reload object to have it in sync"""
+        
         if path == pjoin(self.me_dir,'Cards','param_card.dat'):
             try:
                 self.param_card = check_param_card.ParamCard(path) 
@@ -3597,6 +4726,16 @@ You can also copy/paste, your event file here.''')
             self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
         elif path == pjoin(self.me_dir,'Cards','MadLoopParams.dat'):
             self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
+        elif path == pjoin(self.me_dir,'Cards','pythia8_card.dat'):
+            # Use the read function so that modified/new parameters are correctly
+            # set as 'user_set'
+            if not self.PY8Card:
+                self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,'Cards',
+                                                    'pythia8_card_default.dat'))
+            self.PY8Card.read(
+                   pjoin(self.me_dir,'Cards','pythia8_card.dat'), setter='user')
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
+                                     k.lower() not in self.PY8Card.hidden_param]
         elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
             try:
                 import madgraph.madweight.Cards as mwcards

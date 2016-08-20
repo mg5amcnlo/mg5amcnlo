@@ -120,6 +120,72 @@ Please consider refreshing the installation of this interface with the command:
 
 
 #===============================================================================
+# Return a warning (if applicable) on the consistency of the current Pythia8
+# and MG5_aMC version specified. It is placed here because it should be accessible
+# from both madgraph5_interface and madevent_interface
+#===============================================================================
+def mg5amc_py8_interface_consistency_warning(options):
+    """ Check the consistency of the mg5amc_py8_interface installed with
+    the current MG5 and Pythia8 versions. """
+
+    # All this is only relevant is Pythia8 is interfaced to MG5
+    if not options['pythia8_path']:
+        return None
+    
+    if not options['mg5amc_py8_interface_path']:
+        return \
+"""
+A Pythia8 path is specified via the option 'pythia8_path' but no path for option
+'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
+leading order simulations with MadEvent.
+Consider installing the MG5_aMC-PY8 interface with the following command:
+ MG5_aMC>install mg5amc_py8_interface
+"""
+    
+    # Retrieve all the on-install and current versions  
+    MG5_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                       'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+    if MG5_version_on_install == 'UNSPECIFIED':
+        MG5_version_on_install = None
+    PY8_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                          'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+    MG5_curr_version = get_pkg_info()['version']
+    try:
+        p = subprocess.Popen(['./get_pythia8_version.py',options['pythia8_path']],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                   cwd=options['mg5amc_py8_interface_path'])
+        (out, err) = p.communicate()
+        out = out.replace('\n','')
+        PY8_curr_version = out
+        # In order to test that the version is correctly formed, we try to cast
+        # it to a float
+        float(out)
+    except:
+        PY8_curr_version = None
+
+    if not MG5_version_on_install is None and not MG5_curr_version is None:
+        if MG5_version_on_install != MG5_curr_version:
+            return \
+"""
+The current version of MG5_aMC (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(MG5_curr_version, MG5_version_on_install)
+
+    if not PY8_version_on_install is None and not PY8_curr_version is None:
+        if PY8_version_on_install != PY8_curr_version:
+            return \
+"""
+The current version of Pythia8 (v%s) is different than the one active when
+installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
+Please consider refreshing the installation of this interface with the command:
+ MG5_aMC>install mg5amc_py8_interface
+"""%(PY8_curr_version,PY8_version_on_install)
+
+    return None
+   
+#===============================================================================
 # parse_info_str
 #===============================================================================
 def parse_info_str(fsock):
@@ -382,6 +448,41 @@ def which_lib(lib):
     return None
 
 #===============================================================================
+# Return a Main instance of MadAnlysis5, provided its path
+#===============================================================================
+def get_MadAnalysis5_interpreter(mg5_path, ma5_path, mg5_interface=None, 
+                logstream = sys.stdout, loglevel = logging.INFO, forced = True):
+    """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
+    
+    MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
+    
+    if MA5path is None or not os.path.isfile(pjoin(MA5path,'bin','ma5')):
+        return None
+    if MA5path not in sys.path:
+        sys.path.insert(0, MA5path) 
+    try:
+        # We must backup the readline module attributes because they get modified
+        # when MA5 imports root and that supersedes MG5 autocompletion
+        import readline
+        old_completer = readline.get_completer()
+        old_delims    = readline.get_completer_delims()
+        from madanalysis.interpreter.ma5_interpreter import MA5Interpreter
+        MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
+                             LoggerStream=logstream,forced=forced)
+        # Now restore the readline MG5 state
+        readline.set_completer(old_completer)
+        readline.set_completer_delims(old_delims)
+        # Also restore the completion_display_matches_hook if an mg5 interface
+        # is specified as it could also have been potentially modified
+        if not mg5_interface is None:
+            mg5_interface.set_readline_completion_display_matches_hook()
+    except KeyError as e:
+        raise MadGraph5Error, 'Could not start MadAnalysis5 because of:\n%s'%str(e)
+        return None
+
+    return MA5_interpreter
+
+#===============================================================================
 # Return Nice display for a random variable
 #===============================================================================
 def nice_representation(var, nb_space=0):
@@ -506,7 +607,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         if not cwd:
             cwd = os.getcwd()
         all_file = [f.lower() for f in os.listdir(cwd)]
-        if 'makefile' not in all_file:
+        if 'makefile' not in all_file and '-f' not in arg:
             raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
 
         if mode == 'fortran' and  not (which('g77') or which('gfortran')):
@@ -892,7 +993,6 @@ def mult_try_open(filepath, *args, **opt):
     """try to open a file with multiple try to ensure that filesystem is sync"""  
     return open(filepath, *args, ** opt)
 
-
 ################################################################################
 # TAIL FUNCTION
 ################################################################################
@@ -917,6 +1017,17 @@ def tail(f, n, offset=None):
         avg_line_length *= 1.3
         avg_line_length = int(avg_line_length)
 
+def mkfifo(fifo_path):
+    """ makes a piping fifo (First-in First-out) file and nicely intercepts 
+    error in case the file format of the target drive doesn't suppor tit."""
+
+    try:
+        os.mkfifo(fifo_path)
+    except:
+        raise OSError('MadGraph5_aMCatNLO could not create a fifo file at:\n'+
+          '   %s\n'%fifo_path+'Make sure that this file does not exist already'+
+          ' and that the file format of the target drive supports fifo file (i.e not NFS).')
+
 ################################################################################
 # LAST LINE FUNCTION
 ################################################################################
@@ -924,7 +1035,7 @@ def get_last_line(fsock):
     """return the last line of a file"""
     
     return tail(fsock, 1)[0]
-    
+
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()
 This actually just reads blocks (4096 bytes by default) of data from the end of

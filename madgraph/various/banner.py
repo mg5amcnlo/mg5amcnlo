@@ -23,6 +23,7 @@ import os
 import sys
 import re
 import math
+import StringIO
 
 pjoin = os.path.join
 
@@ -48,19 +49,26 @@ else:
 
 logger = logging.getLogger('madevent.cards')
 
+# A placeholder class to store unknown parameters with undecided format
+class UnknownType(str):
+    pass
+
 #dict
 class Banner(dict):
     """ """
 
     ordered_items = ['mgversion', 'mg5proccard', 'mgproccard', 'mgruncard',
                      'slha', 'mggenerationinfo', 'mgpythiacard', 'mgpgscard',
-                     'mgdelphescard', 'mgdelphestrigger','mgshowercard','run_settings']
+                     'mgdelphescard', 'mgdelphestrigger','mgshowercard',
+                     'ma5card_parton','ma5card_hadron','run_settings']
 
     capitalized_items = {
             'mgversion': 'MGVersion',
             'mg5proccard': 'MG5ProcCard',
             'mgproccard': 'MGProcCard',
             'mgruncard': 'MGRunCard',
+            'ma5card_parton' : 'MA5Card_parton',
+            'ma5card_hadron' : 'MA5Card_hadron',            
             'mggenerationinfo': 'MGGenerationInfo',
             'mgpythiacard': 'MGPythiaCard',
             'mgpgscard': 'MGPGSCard',
@@ -111,6 +119,9 @@ class Banner(dict):
       'initrwgt':'',
       'madspin':'madspin_card.dat',
       'mgshowercard':'shower_card.dat',
+      'pythia8':'pythia8_card.dat',
+      'ma5card_parton':'madanalysis5_parton_card.dat',
+      'ma5card_hadron':'madanalysis5_hadron_card.dat',      
       'run_settings':''
       }
     
@@ -403,6 +414,8 @@ class Banner(dict):
                 tag = 'MGRunCard'
             elif 'pythia_card' in card_name:
                 tag = 'MGPythiaCard'
+            elif 'pythia8_card' in card_name or 'pythia8.cmd' in card_name:
+                tag = 'MGPythiaCard'
             elif 'pgs_card' in card_name:
                 tag = 'MGPGSCard'
             elif 'delphes_card' in card_name:
@@ -423,6 +436,10 @@ class Banner(dict):
                 tag = 'foanalyse'
             elif 'reweight_card' in card_name:
                 tag='reweight_card'
+            elif 'madanalysis5_parton_card' in card_name:
+                tag='MA5Card_parton'
+            elif 'madanalysis5_hadron_card' in card_name:
+                tag='MA5Card_hadron'
             else:
                 raise Exception, 'Impossible to know the type of the card'
 
@@ -898,12 +915,9 @@ class ConfigFile(dict):
         self.dict_parameter = set()
         self.default_setup()
 
-        
-        
         # if input is define read that input
-        if isinstance(finput, (file, str)):
+        if isinstance(finput, (file, str, StringIO.StringIO)):
             self.read(finput)
-    
 
     def default_setup(self):
         pass
@@ -1031,9 +1045,12 @@ class ConfigFile(dict):
             targettype = type(self[name])
         else:
             logger.debug('Trying to add argument %s in %s. ' % (name, self.__class__.__name__) +\
-                        'This argument is not defined by default. Please consider to add it.')
-            logger.debug("Did you mean %s", [k for k in self.keys() if k.startswith(name[0].lower())])
-            self.add_param(lower_name, self.format_variable(str(value), str, name))
+              'This argument is not defined by default. Please consider adding it.')
+            suggestions = [k for k in self.keys() if k.startswith(name[0].lower())]
+            if len(suggestions)>0:
+                logger.debug("Did you mean one of the following: %s"%suggestions)
+            self.add_param(lower_name, self.format_variable(UnknownType(value), 
+                                                             UnknownType, name))
             self.lower_to_case[lower_name] = name
             if change_userdefine:
                 self.user_set.add(lower_name)
@@ -1068,6 +1085,20 @@ class ConfigFile(dict):
         if system:
             self.system_only.add(lower_name)
 
+    def do_help(self, name):
+        """return a minimal help for the parameter"""
+        
+        out = "## Information on parameter %s from class %s\n" % (name, self.__class__.__name__)
+        if name.lower() in self:
+            out += "## current value: %s (parameter should be of type %s)\n" % (self[name], type(self[name]))
+        else:
+            out += "## Unknown for this class\n"
+        if name.lower() in self.user_set:
+            out += "## This value is considered as been set by the user\n" 
+        else:
+            out += "## This value is considered as been set by the system\n"
+        logger.info(out)
+
     @staticmethod
     def format_variable(value, targettype, name="unknown"):
         """assign the value to the attribute for the given format"""
@@ -1094,11 +1125,14 @@ class ConfigFile(dict):
                         (name, type(value), targettype, value)                
         else:
             # We have a string we have to format the attribute from the string
-            if targettype == bool:
+            if targettype == UnknownType:
+                # No formatting
+                pass
+            elif targettype == bool:
                 value = value.strip()
-                if value.lower() in ['0', '.false.', 'f', 'false']:
+                if value.lower() in ['0', '.false.', 'f', 'false', 'off']:
                     value = False
-                elif value.lower() in ['1', '.true.', 't', 'true']:
+                elif value.lower() in ['1', '.true.', 't', 'true', 'on']:
                     value = True
                 else:
                     raise Exception, "%s can not be mapped to True/False for %s" % (repr(value),name)
@@ -1134,7 +1168,7 @@ class ConfigFile(dict):
                 except ValueError:
                     raise Exception, "%s can not be mapped to a float" % value
             else:
-                raise Exception, "type %s is not handle by MadLoopParam" % targettype
+                raise Exception, "type %s is not handle by the card" % targettype
             
         return value
             
@@ -1157,15 +1191,15 @@ class ConfigFile(dict):
         return dict.__getitem__(self, name.lower())
 
     
-    def set(self, name, value, ifnotdefault=True, user=False):
+    def set(self, name, value, changeifuserset=True, user=False):
         """convenient way to change attribute.
-        ifnotdefault=False means that the value is NOT change is the value is not on default.
+        changeifuserset=False means that the value is NOT change is the value is not on default.
         user=True, means that the value will be marked as modified by the user 
         (potentially preventing future change to the value) 
         """
 
-        # ifnotdefault=False -> we need to check if the user force a value.
-        if not ifnotdefault:
+        # changeifuserset=False -> we need to check if the user force a value.
+        if not changeifuserset:
             if name.lower() in self.user_set:
                 #value modified by the user -> do nothing
                 return
@@ -1190,6 +1224,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('grouped_matrix', True)
         self.add_param('has_loops', False)
         self.add_param('bias_module','None')
+        self.add_param('max_n_matched_jets', 0)
+        self.add_param('colored_pdgs', '[1,2,3,4,5]')        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1290,7 +1326,608 @@ class GridpackCard(ConfigFile):
         fsock = open(output_file,'w')
         fsock.write(text)
         fsock.close()
+        
+class PY8Card(ConfigFile):
+    """ Implements the Pythia8 card."""
+
+    def add_default_subruns(self, type):
+        """ Placeholder function to allow overwriting in the PY8SubRun daughter.
+        The initialization of the self.subruns attribute should of course not
+        be performed in PY8SubRun."""
+        if type == 'parameters':
+            if "LHEFInputs:nSubruns" not in self:
+                self.add_param("LHEFInputs:nSubruns", 1,
+                hidden='ALWAYS_WRITTEN',
+                comment="""
+    ====================
+    Subrun definitions
+    ====================
+    """)
+        if type == 'attributes':
+            if not(hasattr(self,'subruns')):
+                first_subrun = PY8SubRun(subrun_id=0)
+                self.subruns = dict([(first_subrun['Main:subrun'],first_subrun)])
+
+    def default_setup(self):
+        """ Sets up the list of available PY8 parameters."""
+        
+        # Visible parameters
+        # ==================
+        self.add_param("Main:numberOfEvents", -1)
+        # for MLM merging
+        # -1.0 means that it will be set automatically by MadGraph5_aMC@NLO
+        self.add_param("JetMatching:qCut", -1.0, always_write_to_card=False)
+        self.add_param("JetMatching:doShowerKt",False,always_write_to_card=False)
+        # -1 means that it is automatically set.
+        self.add_param("JetMatching:nJetMax", -1, always_write_to_card=False) 
+        # for CKKWL merging
+        self.add_param("Merging:TMS", -1.0, always_write_to_card=False)
+        self.add_param("Merging:Process", '<set_by_user>', always_write_to_card=False)
+        # -1 means that it is automatically set.   
+        self.add_param("Merging:nJetMax", -1, always_write_to_card=False)
+        # for both merging, chose whether to also consider different merging
+        # scale values for the extra weights related to scale and PDF variations.
+        self.add_param("SysCalc:fullCutVariation", False)
+        # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
+        # to indicate that he wants to pipe the output. Or \dev\null to turn the
+        # output off.
+        self.add_param("HEPMCoutput:file", 'auto')
+
+        # Hidden parameters always written out
+        # ====================================
+        self.add_param("Beams:frameType", 4,
+            hidden=True,
+            comment='Tell Pythia8 that an LHEF input is used.')
+        self.add_param("Check:epTolErr", 1e-2,
+            hidden=True,
+            comment='Be more forgiving with momentum mismatches.')
+        # By default it is important to disable any cut on the rapidity of the showered jets
+        # during MLML merging and by default it is set to 2.5
+        self.add_param("JetMatching:etaJetMax", 1000.0, hidden=True, always_write_to_card=True)
+
+        # Hidden parameters written out only if user_set or system_set
+        # ============================================================
+        self.add_param("PDF:pSet", 'LHAPDF5:CT10.LHgrid', hidden=True, always_write_to_card=False,
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("SpaceShower:alphaSvalue", 0.118, hidden=True, always_write_to_card=False,
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("TimeShower:alphaSvalue", 0.118, hidden=True, always_write_to_card=False,
+            comment='Reminder: Parameter below is shower tune dependent.')
+        self.add_param("hadronlevel:all", True, hidden=True, always_write_to_card=False,
+            comment='This allows to turn on/off hadronization alltogether.')
+        self.add_param("partonlevel:mpi", True, hidden=True, always_write_to_card=False,
+            comment='This allows to turn on/off MPI alltogether.')
+        self.add_param("Beams:setProductionScalesFromLHEF", False, hidden=True, 
+            always_write_to_card=False,
+            comment='This parameter is automatically set to True by MG5aMC when doing MLM merging with PY8.')
+        
+        # for MLM merging
+        self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
+          comment='Specifiy if we are merging sample of different multiplicity.')
+        self.add_param("SysCalc:qCutList", 'auto', hidden=True, always_write_to_card=False)
+        self.add_param("SysCalc:qWeed",-1.0,hidden=True, always_write_to_card=False,
+          comment='Value of the merging scale below which one does not even write the HepMC event.')
+        self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
+          comment='Do veto externally (e.g. in SysCalc).')
+        self.add_param("JetMatching:scheme", 1, hidden=True, always_write_to_card=False) 
+        self.add_param("JetMatching:setMad", False, hidden=True, always_write_to_card=False,
+              comment='Specify one must read inputs from the MadGraph banner.') 
+        self.add_param("JetMatching:coneRadius", 1.0, hidden=True, always_write_to_card=False)
+        self.add_param("JetMatching:nQmatch",4,hidden=True, always_write_to_card=False)
+        # for CKKWL merging (common with UMEPS, UNLOPS)
+        self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
+        self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
+        self.add_param("SysCalc:tmsList", 'auto', hidden=True, always_write_to_card=False)
+        self.add_param("Merging:muFac", 91.188, hidden=True, always_write_to_card=False,
+                        comment='Set factorisation scales of the 2->2 process.')
+        self.add_param("Merging:applyVeto", False, hidden=True, always_write_to_card=False,
+          comment='Do veto externally (e.g. in SysCalc).')
+        self.add_param("Merging:includeWeightInXsection", True, hidden=True, always_write_to_card=False,
+          comment='If turned off, then the option belows forces PY8 to keep the original weight.')                       
+        self.add_param("Merging:muRen", 91.188, hidden=True, always_write_to_card=False,
+                      comment='Set renormalization scales of the 2->2 process.')
+        self.add_param("Merging:muFacInME", 91.188, hidden=True, always_write_to_card=False,
+                 comment='Set factorisation scales of the 2->2 Matrix Element.')
+        self.add_param("Merging:muRenInME", 91.188, hidden=True, always_write_to_card=False,
+               comment='Set renormalization scales of the 2->2 Matrix Element.')
+        self.add_param("SpaceShower:rapidityOrder", False, hidden=True, always_write_to_card=False)
+        self.add_param("Merging:nQuarksMerge",4,hidden=True, always_write_to_card=False)
+        # To be added in subruns for CKKWL
+        self.add_param("Merging:mayRemoveDecayProducts", False, hidden=True, always_write_to_card=False)
+        self.add_param("Merging:doKTMerging", False, hidden=True, always_write_to_card=False)
+        self.add_param("Merging:Dparameter", 0.4, hidden=True, always_write_to_card=False)        
+        self.add_param("Merging:doPTLundMerging", False, hidden=True, always_write_to_card=False)
+
+        # Add parameters controlling the subruns execution flow.
+        # These parameters should not be part of PY8SubRun daughter.
+        self.add_default_subruns('parameters')
+             
+    def __init__(self, *args, **opts):
+        # Parameters which are not printed in the card unless they are 
+        # 'user_set' or 'system_set' or part of the 
+        #  self.hidden_params_to_always_print set.
+        self.hidden_param = []
+        self.hidden_params_to_always_write = set()
+        self.visible_params_to_always_write = set()
+        
+        # Parameters which have been set by the system (i.e. MG5 itself during
+        # the regular course of the shower interface)
+        self.system_set = set()
+        
+        # Add attributes controlling the subruns execution flow.
+        # These attributes should not be part of PY8SubRun daughter.
+        self.add_default_subruns('attributes')
+        
+        # Comments to be printed out with hidden parameters
+        self.hidden_param_comments = {}
+
+        # Parameters which have been set by the 
+        super(PY8Card, self).__init__(*args, **opts)
+
+    def add_param(self, name, value, hidden=False, always_write_to_card=True, 
+                                                                  comment=None):
+        """ add a parameter to the card. value is the default value and 
+        defines the type (int/float/bool/str) of the input.
+        The option 'hidden' decides whether the parameter should be visible to the user.
+        The option 'always_write_to_card' decides whether it should
+        always be printed or only when it is system_set or user_set.
+        The option 'comment' can be used to specify a comment to write above
+        hidden parameters.
+        """
+        super(PY8Card, self).add_param(name, value)
+        name = name.lower()
+        if hidden:
+            self.hidden_param.append(name)
+            if always_write_to_card:
+                self.hidden_params_to_always_write.add(name)
+        else:
+            if always_write_to_card:
+                self.visible_params_to_always_write.add(name)                
+        if not comment is None:
+            if not isinstance(comment, str):
+                raise MadGraph5Error("Option 'comment' must be a string, not"+\
+                                                          " '%s'."%str(comment))
+            if hidden:
+                self.hidden_param_comments[name] = comment
+            else:
+                raise MadGraph5Error("Option 'comment' can only be specified"+\
+                    " for hidden parameters. Edit the pythia8_card_default"+\
+                    " template to format how visible parameters are written.")
+
+    def add_subrun(self, py8_subrun):
+        """Add a subrun to this PY8 Card."""
+        assert(isinstance(py8_subrun,PY8SubRun))
+        if py8_subrun['Main:subrun']==-1:
+            raise MadGraph5Error, "Make sure to correctly set the subrun ID"+\
+                            " 'Main:subrun' *before* adding it to the PY8 Card."
+        if py8_subrun['Main:subrun'] in self.subruns:
+            raise MadGraph5Error, "A subrun with ID '%s'"%py8_subrun['Main:subrun']+\
+                " is already present in this PY8 card. Remove it first, or "+\
+                                                          " access it directly."
+        self.subruns[py8_subrun['Main:subrun']] = py8_subrun
+        if not 'LHEFInputs:nSubruns' in self.user_set:
+            self['LHEFInputs:nSubruns'] = max(self.subruns.keys())
+        
+    def userSet(self, name, value, **opts):
+        """Set an attribute of this card, following a user_request"""
+        self.__setitem__(name, value, change_userdefine=True, **opts)
+
+    def systemSet(self, name, value, **opts):
+        """Set an attribute of this card, independently of a specific user
+        request and only if not already user_set."""
+        if name.lower() not in self.user_set:
+            self.__setitem__(name, value, change_userdefine=False, **opts)
+            self.system_set.add(name.lower())
     
+    def MadGraphSet(self, name, value, **opts):
+        """ Sets a card attribute, but only if it is absent or not already
+        user_set."""
+        if name.lower() not in self or name.lower() not in self.user_set:
+            self.__setitem__(name, value, change_userdefine=False, **opts)
+            self.system_set.add(name.lower())            
+    
+    def defaultSet(self, name, value, **opts):
+            self.__setitem__(name, value, change_userdefine=False, **opts)
+        
+    @staticmethod
+    def pythia8_formatting(value, formatv=None):
+        """format the variable into pythia8 card convention.
+        The type is detected by default"""
+        if not formatv:
+            if isinstance(value,UnknownType):
+                formatv = 'unknown'                
+            elif isinstance(value, bool):
+                formatv = 'bool'
+            elif isinstance(value, int):
+                formatv = 'int'
+            elif isinstance(value, float):
+                formatv = 'float'
+            elif isinstance(value, str):
+                formatv = 'str'
+            else:
+                logger.debug("unknow format for pythia8_formatting: %s" , value)
+                formatv = 'str'
+        else:
+            assert formatv
+        if formatv == 'unknown':
+            # No formatting then
+            return str(value)
+        if formatv == 'bool':
+            if str(value) in ['1','T','.true.','True','on']:
+                return 'on'
+            else:
+                return 'off'
+        elif formatv == 'int':
+            try:
+                return str(int(value))
+            except ValueError:
+                fl = float(value)
+                if int(fl) == fl:
+                    return str(int(fl))
+                else:
+                    raise
+        elif formatv == 'float':
+            return '%.10e' % float(value)
+        elif formatv == 'str':
+            return "%s" % value
+
+    def write(self, output_file, template, read_subrun=False, 
+                           print_only_visible=False, direct_pythia_input=False):
+        """ Write the card to output_file using a specific template.
+        > 'print_only_visible' specifies whether or not the hidden parameters
+            should be written out if they are in the hidden_params_to_always_write
+            list and system_set.
+        > If 'direct_pythia_input' is true, then visible parameters which are not
+          in the self.visible_params_to_always_write list and are not user_set
+          or system_set are commented."""
+
+        # First list the visible parameters
+        visible_param = [p for p in self if p.lower() not in self.hidden_param
+                                                  or p.lower() in self.user_set]        
+        # Now the hidden param which must be written out
+        if print_only_visible:
+            hidden_output_param = []
+        else:
+            hidden_output_param = [p for p in self if p.lower() in self.hidden_param and
+              not p.lower() in self.user_set and
+              (p.lower() in self.hidden_params_to_always_write or 
+                                                  p.lower() in self.system_set)]
+        
+        if print_only_visible:
+            subruns = []
+        else:
+            if not read_subrun:
+                subruns = sorted(self.subruns.keys())
+        
+        # Store the subruns to write in a dictionary, with its ID in key
+        # and the corresponding stringstream in value
+        subruns_to_write = {}
+        
+        # Sort these parameters nicely so as to put together parameters
+        # belonging to the same group (i.e. prefix before the ':' in their name).
+        def group_params(params):
+            if len(params)==0:
+                return []
+            groups = {}
+            for p in params:
+                try:
+                    groups[':'.join(p.split(':')[:-1])].append(p)
+                except KeyError:
+                    groups[':'.join(p.split(':')[:-1])] = [p,]
+            res =  sum(groups.values(),[])
+            # Make sure 'Main:subrun' appears first
+            if 'Main:subrun' in res:
+                res.insert(0,res.pop(res.index('Main:subrun')))
+            # Make sure 'LHEFInputs:nSubruns' appears last
+            if 'LHEFInputs:nSubruns' in res:
+                res.append(res.pop(res.index('LHEFInputs:nSubruns')))
+            return res
+
+        visible_param       = group_params(visible_param)
+        hidden_output_param = group_params(hidden_output_param)
+
+        # First dump in a temporary_output (might need to have a second pass
+        # at the very end to update 'LHEFInputs:nSubruns')
+        output = StringIO.StringIO()
+            
+        # Setup template from which to read
+        if isinstance(template, str):
+            if os.path.isfile(template):
+                tmpl = open(template, 'r')
+            elif '\n' in template:
+                tmpl = StringIO.StringIO(template)
+            else:
+                raise Exception, "File input '%s' not found." % file_input     
+        elif template is None:
+            # Then use a dummy empty StringIO, hence skipping the reading
+            tmpl = StringIO.StringIO()
+        elif isinstance(template, (StringIO.StringIO, file)):
+            tmpl = template
+        else:
+            raise MadGraph5Error("Incorrect type for argument 'template': %s"%
+                                                    template.__class__.__name__)
+
+        # Read the template
+        last_pos = tmpl.tell()
+        line     = tmpl.readline()
+        started_subrun_reading = False
+        while line!='':
+            # Skip comments
+            if line.strip().startswith('!') or line.strip().startswith('\n'):
+                output.write(line)
+                # Proceed to next line
+                last_pos = tmpl.tell()
+                line     = tmpl.readline()
+                continue
+            # Read parameter
+            try:
+                param_entry, value_entry = line.split('=')
+                param = param_entry.strip()
+                value = value_entry.strip()
+            except ValueError:
+                line = line.replace('\n','')
+                raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
+                                                                            line
+            # Read a subrun if detected:
+            if param=='Main:subrun':
+                if read_subrun:
+                    if not started_subrun_reading:
+                        # Record that the subrun reading has started and proceed
+                        started_subrun_reading = True
+                    else:
+                        # We encountered the next subrun. rewind last line and exit
+                        tmpl.seek(last_pos)
+                        break
+                else:
+                    # Start the reading of this subrun
+                    tmpl.seek(last_pos)
+                    subruns_to_write[int(value)] = StringIO.StringIO()
+                    if int(value) in subruns:
+                        self.subruns[int(value)].write(subruns_to_write[int(value)],
+                                                      tmpl,read_subrun=True)
+                        # Remove this subrun ID from the list
+                        subruns.pop(subruns.index(int(value)))
+                    else:
+                        # Unknow subrun, create a dummy one
+                        DummySubrun=PY8SubRun()
+                        # Remove all of its variables (so that nothing is overwritten)
+                        DummySubrun.clear()
+                        DummySubrun.write(subruns_to_write[int(value)],
+                                tmpl, read_subrun=True, 
+                                print_only_visible=print_only_visible, 
+                                direct_pythia_input=direct_pythia_input)
+
+                        logger.info('Adding new unknown subrun with ID %d.'%
+                                                                     int(value))
+                    # Proceed to next line
+                    last_pos = tmpl.tell()
+                    line     = tmpl.readline()
+                    continue
+            
+            # Change parameters which must be output
+            if param in visible_param:
+                new_value = PY8Card.pythia8_formatting(self[param])
+                visible_param.pop(visible_param.index(param))
+            elif param in hidden_output_param:
+                new_value = PY8Card.pythia8_formatting(self[param])
+                hidden_output_param.pop(hidden_output_param.index(param))
+            else:
+                # Just copy parameters which don't need to be specified
+                output.write(line)
+                # Proceed to next line
+                last_pos = tmpl.tell()
+                line     = tmpl.readline()
+                continue
+            
+            # Substitute the value. 
+            # If it is directly the pytia input, then don't write the param if it
+            # is not in the list of visible_params_to_always_write and was 
+            # not user_set or system_set
+            if ((not direct_pythia_input) or
+                  (param.lower() in self.visible_params_to_always_write) or
+                  (param.lower() in self.user_set) or
+                  (param.lower() in self.system_set)):
+                template = '%s=%s'
+            else:
+                # These are parameters that the user can edit in AskEditCards
+                # but if neither the user nor the system edited them,
+                # then they shouldn't be passed to Pythia
+                template = '!%s=%s'
+
+            output.write(template%(param_entry,
+                                  value_entry.replace(value,new_value)))
+        
+            # Proceed to next line
+            last_pos = tmpl.tell()
+            line     = tmpl.readline()
+        
+        # Now output the missing parameters. Warn about visible ones.
+        if len(visible_param)>0 and not template is None:
+            output.write(
+"""!
+! Additional general parameters%s.
+!
+"""%(' for subrun %d'%self['Main:subrun'] if 'Main:subrun' in self else ''))
+        for param in visible_param:
+            value = PY8Card.pythia8_formatting(self[param])
+            output.write('%s=%s\n'%(param,value))
+            if template is None:
+                if param=='Main:subrun':
+                    output.write(
+"""!
+!  Definition of subrun %d
+!
+"""%self['Main:subrun'])
+            elif param.lower() not in self.hidden_param:
+                logger.debug('Adding parameter %s (missing in the template) to current '+\
+                                    'pythia8 card (with value %s)',param, value)
+
+        if len(hidden_output_param)>0 and not template is None:
+            output.write(
+"""!
+! Additional technical parameters%s set by MG5_aMC.
+!
+"""%(' for subrun %d'%self['Main:subrun'] if 'Main:subrun' in self else ''))
+        for param in hidden_output_param:
+            if param.lower() in self.hidden_param_comments:
+                comment = '\n'.join('! %s'%c for c in 
+                          self.hidden_param_comments[param.lower()].split('\n'))
+                output.write(comment+'\n')
+            output.write('%s=%s\n'%(param,PY8Card.pythia8_formatting(self[param])))
+        
+        # Don't close the file if we were reading a subrun, but simply write 
+        # output and return now
+        if read_subrun:
+            output_file.write(output.getvalue())
+            return
+
+        # Now add subruns not present in the template
+        for subrunID in subruns:
+            new_subrun = StringIO.StringIO()
+            self.subruns[subrunID].write(new_subrun,None,read_subrun=True)
+            subruns_to_write[subrunID] = new_subrun
+
+        # Add all subruns to the output, in the right order
+        for subrunID in sorted(subruns_to_write):
+            output.write(subruns_to_write[subrunID].getvalue())
+
+        # If 'LHEFInputs:nSubruns' is not user_set, then make sure it is
+        # updated at least larger or equal to the maximum SubRunID
+        if 'LHEFInputs:nSubruns'.lower() not in self.user_set and \
+             len(subruns_to_write)>0 and self['LHEFInputs:nSubruns']<\
+                                                   max(subruns_to_write.keys()):
+            logger.info("Updating PY8 parameter 'LHEFInputs:nSubruns' to "+
+          "%d so as to cover all defined subruns."%max(subruns_to_write.keys()))
+            self['LHEFInputs:nSubruns'] = max(subruns_to_write.keys())
+            output = StringIO.StringIO()
+            self.write(output,template,print_only_visible=print_only_visible)
+
+        # Write output
+        if isinstance(output_file, str):
+            out = open(output_file,'w')
+            out.write(output.getvalue())
+            out.close()
+        else:
+            output_file.write(output.getvalue())
+        
+    def read(self, file_input, read_subrun=False, setter='default'):
+        """Read the input file, this can be a path to a file, 
+           a file object, a str with the content of the file.
+           The setter option choses the authority that sets potential 
+           modified/new parameters. It can be either: 
+             'default' or 'user' or 'system'"""
+        if isinstance(file_input, str):
+            if "\n" in file_input:
+                finput = StringIO.StringIO(file_input)
+            elif os.path.isfile(file_input):
+                finput = open(file_input)
+            else:
+                raise Exception, "File input '%s' not found." % file_input
+        elif isinstance(file_input, (StringIO.StringIO, file)):
+            finput = file_input
+        else:
+            raise MadGraph5Error("Incorrect type for argument 'file_input': %s"%
+                                                    file_inp .__class__.__name__)
+
+        # Read the template
+        last_pos = finput.tell()
+        line     = finput.readline()
+        started_subrun_reading = False
+        while line!='':
+            # Skip comments
+            if line.strip().startswith('!') or line.strip()=='':
+                # proceed to next line
+                last_pos = finput.tell()
+                line     = finput.readline()
+                continue
+            # Read parameter
+            try:
+                param, value = line.split('=',1)
+                param = param.strip()
+                value = value.strip()
+            except ValueError:
+                line = line.replace('\n','')
+                raise MadGraph5Error, "Could not read line '%s' of Pythia8 card."%\
+                                                                          line
+            # Read a subrun if detected:
+            if param=='Main:subrun':
+                if read_subrun:
+                    if not started_subrun_reading:
+                        # Record that the subrun reading has started and proceed
+                        started_subrun_reading = True
+                    else:
+                        # We encountered the next subrun. rewind last line and exit
+                        finput.seek(last_pos)
+                        return
+                else:
+                    # Start the reading of this subrun
+                    finput.seek(last_pos)
+                    if int(value) in self.subruns:
+                        self.subruns[int(value)].read(finput,read_subrun=True,
+                                                                  setter=setter)
+                    else:
+                        # Unknow subrun, create a dummy one
+                        NewSubrun=PY8SubRun()
+                        NewSubrun.read(finput,read_subrun=True, setter=setter)
+                        self.add_subrun(NewSubrun)
+
+                    # proceed to next line
+                    last_pos = finput.tell()
+                    line     = finput.readline()
+                    continue
+            
+            # Read parameter. The case of a parameter not defined in the card is
+            # handled directly in ConfigFile.
+            lname = param.lower()
+            if lname not in self or \
+                         self.format_variable(value, type(self[lname]),
+                                                       name=param)!=self[lname]:
+                # Use the appropriate authority to set the new/changed variable
+                if setter == 'user':
+                    self.userSet(param,value)
+                elif setter == 'system':
+                    self.systemSet(param,value)
+                else:
+                    self.defaultSet(param,value)
+
+            # proceed to next line
+            last_pos = finput.tell()
+            line     = finput.readline()
+
+class PY8SubRun(PY8Card):
+    """ Class to characterize a specific PY8 card subrun section. """
+
+    def add_default_subruns(self, type):
+        """ Overloading of the homonym function called in the __init__ of PY8Card.
+        The initialization of the self.subruns attribute should of course not
+        be performed in PY8SubRun."""
+        pass
+
+    def __init__(self, *args, **opts):
+        """ Initialize a subrun """
+        
+        # Force user to set it manually.
+        subrunID = -1
+        if 'subrun_id' in opts:
+            subrunID = opts.pop('subrun_id')
+
+        super(PY8SubRun, self).__init__(*args, **opts)
+        self['Main:subrun']=subrunID
+
+    def default_setup(self):
+        """Sets up the list of available PY8SubRun parameters."""
+        
+        # Add all default PY8Card parameters
+        super(PY8SubRun, self).default_setup()
+        # Make sure they are all hidden
+        self.hidden_param = [k.lower() for k in self.keys()]
+        self.hidden_params_to_always_write = set()
+        self.visible_params_to_always_write = set()
+
+        # Now add Main:subrun and Beams:LHEF. They are not hidden.
+        self.add_param("Main:subrun", -1)
+        self.add_param("Beams:LHEF", "events.lhe.gz")
+
 class RunCard(ConfigFile):
 
     def __new__(cls, finput=None):
@@ -1326,12 +1963,14 @@ class RunCard(ConfigFile):
         self.legacy_parameter = {}
         #a list with all the cuts variable
         self.cuts_parameter = []
+        # parameter added where legacy requires an older value.
+        self.system_default = {}
         
         
         super(RunCard, self).__init__(*args, **opts)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
-                  hidden=False, legacy=False, cut=False, system=False, **opts):
+                  hidden=False, legacy=False, cut=False, system=False, sys_default=None, **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
         fortran_name defines what is the associate name in the f77 code
@@ -1339,6 +1978,7 @@ class RunCard(ConfigFile):
         hidden defines if the parameter is expected to be define by the user.
         legacy:Parameter which is not used anymore (raise a warning if not default)
         cut: defines the list of cut parameter to allow to set them all to off.
+        sys_default: default used if the parameter is not in the card
         """
 
         super(RunCard, self).add_param(name, value, system=system,**opts)
@@ -1358,6 +1998,8 @@ class RunCard(ConfigFile):
             self.hidden_param.append(name)
         if cut:
             self.cuts_parameter.append(name)
+        if sys_default is not None:
+            self.system_default[name] = sys_default
 
 
 
@@ -1516,9 +2158,22 @@ class RunCard(ConfigFile):
             return ('%.10e' % float(value)).replace('e','d')
         
         elif formatv == 'str':
-            return "'%s'" % value
-
+            # Check if it is a list
+            if value.strip().startswith('[') and value.strip().endswith(']'):
+                elements = (value.strip()[1:-1]).split()
+                return ['_length = %d'%len(elements)]+\
+                       ['(%d) = %s'%(i+1, elem.strip()) for i, elem in \
+                                                            enumerate(elements)]
+            else:
+                return "'%s'" % value
         
+
+    def check_validity(self):
+        """check that parameter missing in the card are set to the expected value"""
+
+        for name, value in self.system_default.items():
+                self.set(name, value, changeifuserset=False)
+
 
     def write_include_file(self, output_dir):
         """Write the various include file in output_dir.
@@ -1671,16 +2326,17 @@ class RunCardLO(RunCard):
         #matching
         self.add_param("scalefact", 1.0)
         self.add_param("ickkw", 0)
-        self.add_param("highestmult", 1, fortran_name="nhmult")
-        self.add_param("ktscheme", 1)
+        self.add_param("highestmult", 1, fortran_name="nhmult", hidden=True)
+        self.add_param("ktscheme", 1, hidden=True)
         self.add_param("alpsfact", 1.0)
-        self.add_param("chcluster", False)
-        self.add_param("pdfwgt", True)
+        self.add_param("chcluster", False, hidden=True)
+        self.add_param("pdfwgt", True, hidden=True)
         self.add_param("asrwgtflavor", 5)
         self.add_param("clusinfo", True)
         self.add_param("lhe_version", 3.0)
+        self.add_param("event_norm", "average", include=False, sys_default='sum')
         #cut
-        self.add_param("auto_ptj_mjj", True)
+        self.add_param("auto_ptj_mjj", False)
         self.add_param("bwcutoff", 15.0)
         self.add_param("cut_decays", False)
         self.add_param("nhel", 0, include=False)
@@ -1795,6 +2451,8 @@ class RunCardLO(RunCard):
         self.add_param("deltaeta", 0.0, cut=True)
         self.add_param("ktdurham", -1.0, fortran_name="kt_durham", cut=True)
         self.add_param("dparameter", 0.4, fortran_name="d_parameter", cut=True)
+        self.add_param("ptlund", -1.0, fortran_name="pt_lund", cut=True)
+        self.add_param("pdgs_for_merging_cut", [21, 1, 2, 3, 4, 5, 6])
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
@@ -1803,7 +2461,7 @@ class RunCardLO(RunCard):
         self.add_param("sys_matchscale", "30 50", include=False)
         self.add_param("sys_pdf", "NNPDF23_lo_as_0130_qed", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
-        
+
         #parameter not in the run_card by default
         self.add_param('gridrun', False, hidden=True)
         self.add_param('fixed_couplings', True, hidden=True)
@@ -1816,12 +2474,13 @@ class RunCardLO(RunCard):
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
-
- 
-
+        # Specify what particle IDs to use for the CKKWL merging cut ktdurham
         
     def check_validity(self):
         """ """
+        
+        super(RunCardLO, self).check_validity()
+        
         #Make sure that nhel is only either 0 (i.e. no MC over hel) or
         #1 (MC over hel with importance sampling). In particular, it can
         #no longer be > 1.
@@ -1832,6 +2491,10 @@ class RunCardLO(RunCard):
                                                           "not %s." % self['nhel']
         if int(self['maxjetflavor']) > 6:
             raise InvalidRunCard, 'maxjetflavor should be lower than 5! (6 is partly supported)'
+  
+        if len(self['pdgs_for_merging_cut']) > 1000:
+            raise InvalidRunCard, "The number of elements in "+\
+                               "'pdgs_for_merging_cut' should not exceed 1000."
   
         # some cut need to be deactivated in presence of isolation
         if self['ptgmin'] > 0:
@@ -1854,6 +2517,12 @@ class RunCardLO(RunCard):
      
         # CKKW Treatment
         if self['ickkw'] > 0:
+            if self['ickkw'] != 1:
+                logger.critical('ickkw >1 is pure alpha and only partly implemented.')
+                import madgraph.interface.extended_cmd as basic_cmd
+                answer = basic_cmd.smart_input('Do you really want to continue', allow_arg=['y','n'], default='n')
+                if answer !='y':
+                    raise InvalidRunCard, 'ickkw>1 is still in alpha'
             if self['use_syst']:
                 # some additional parameter need to be fixed for Syscalc + matching
                 if self['alpsfact'] != 1.0:
@@ -1866,6 +2535,10 @@ class RunCardLO(RunCard):
                 self.get_default('highestmult', log_level=20)                   
                 self.get_default('issgridfile', 'issudgrid.dat', log_level=20)
         if self['xqcut'] > 0:
+            if self['ickkw'] == 0:
+                logger.error('xqcut>0 but ickkw=0. Potentially not fully consistent setup. Be carefull')
+                import time
+                time.sleep(5)
             if self['drjj'] != 0:
                 logger.warning('Since icckw>0, We change the value of \'drjj\' to 0')
                 self['drjj'] = 0
@@ -1876,6 +2549,7 @@ class RunCardLO(RunCard):
                 if self['mmjj'] > self['xqcut']:
                     logger.warning('mmjj > xqcut (and auto_ptj_mjj = F). MMJJ set to 0')
                     self['mmjj'] = 0.0 
+
 
 
         # check validity of the pdf set
@@ -1904,7 +2578,8 @@ class RunCardLO(RunCard):
 
         if proc_characteristic['loop_induced']:
             self['nhel'] = 1
-            
+        self['pdgs_for_merging_cut'] = proc_characteristic['colored_pdgs']
+
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
@@ -1966,7 +2641,7 @@ class RunCardLO(RunCard):
             if matching:
                 self['ickkw'] = 1
                 self['xqcut'] = 30
-                self['use_syst'] = False 
+                #self['use_syst'] = False 
                 self['drjj'] = 0
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
@@ -1989,10 +2664,409 @@ class RunCardLO(RunCard):
                                     python_template=python_template)            
 
 
+class InvalidMadAnalysis5Card(InvalidCmd):
+    pass
+
+class MadAnalysis5Card(dict):
+    """ A class to store a MadAnalysis5 card. Very basic since it is basically
+    free format."""
+    
+    _MG5aMC_escape_tag = '@MG5aMC'
+    
+    _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco','*.root']
+    _default_parton_inputs = ['*.lhe']
+    
+    @classmethod
+    def events_can_be_reconstructed(cls, file_path):
+        """ Checks from the type of an event file whether it can be reconstructed or not."""
+        return not (file_path.endswith('.lhco') or file_path.endswith('.lhco.gz') or \
+                          file_path.endswith('.root') or file_path.endswith('.root.gz'))
+    
+    @classmethod
+    def empty_analysis(cls):
+        """ A method returning the structure of an empty analysis """
+        return {'commands':[],
+                'reconstructions':[]}
+
+    @classmethod
+    def empty_reconstruction(cls):
+        """ A method returning the structure of an empty reconstruction """
+        return {'commands':[],
+                'reco_output':'lhe'}
+
+    def default_setup(self):
+        """define the default value""" 
+        self['mode']      = 'parton'
+        self['inputs']    = []
+        # None is the default stdout level, it will be set automatically by MG5aMC
+        self['stdout_lvl'] = None
+        # These two dictionaries are formated as follows:
+        #     {'analysis_name':
+        #          {'reconstructions' : ['associated_reconstructions_name']}
+        #          {'commands':['analysis command lines here']}    }
+        # with values being of the form of the empty_analysis() attribute
+        # of this class and some other property could be added to this dictionary
+        # in the future.
+        self['analyses']       = {}
+        # The recasting structure contains on set of commands and one set of 
+        # card lines. 
+        self['recasting']      = {'commands':[],'card':[]}
+        # Add the default trivial reconstruction to use an lhco input
+        # This is just for the structure
+        self['reconstruction'] = {'lhco_input':
+                                        MadAnalysis5Card.empty_reconstruction(),
+                                  'root_input':
+                                        MadAnalysis5Card.empty_reconstruction()}
+        self['reconstruction']['lhco_input']['reco_output']='lhco'
+        self['reconstruction']['root_input']['reco_output']='root'        
+
+        # Specify in which order the analysis/recasting were specified
+        self['order'] = []
+
+    def __init__(self, finput=None,mode=None):
+        if isinstance(finput, self.__class__):
+            dict.__init__(self, finput)
+            assert finput.__dict__.keys()
+            for key in finput.__dict__:
+                setattr(self, key, copy.copy(getattr(finput, key)) )
+            return
+        else:
+            dict.__init__(self)
+        
+        # Initialize it with all the default value
+        self.default_setup()
+        if not mode is None:
+            self['mode']=mode
+
+        # if input is define read that input
+        if isinstance(finput, (file, str, StringIO.StringIO)):
+            self.read(finput, mode=mode)
+    
+    def read(self, input, mode=None):
+        """ Read an MA5 card"""
+        
+        if mode not in [None,'parton','hadron']:
+            raise MadGraph5Error('A MadAnalysis5Card can be read online the modes'+
+                                                         "'parton' or 'hadron'")
+        card_mode = mode
+        
+        if isinstance(input, (file, StringIO.StringIO)):
+            input_stream = input
+        elif isinstance(input, str):
+            if not os.path.isfile(input):
+                raise InvalidMadAnalysis5Card("Cannot read the MadAnalysis5 card."+\
+                                                    "File '%s' not found."%input)
+            if mode is None and 'hadron' in input:
+                card_mode = 'hadron'
+            input_stream = open(input,'r')
+        else:
+            raise MadGraph5Error('Incorrect input for the read function of'+\
+              ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(input)))
+
+        # Reinstate default values
+        self.__init__()
+        current_name = 'default'
+        current_type = 'analyses'
+        for line in input_stream:
+            # Skip comments for now
+            if line.startswith('#'):
+                continue
+            if line.endswith('\n'):
+                line = line[:-1]
+            if line.strip()=='':
+                continue
+            if line.startswith(self._MG5aMC_escape_tag):
+                try:
+                    option,value = line[len(self._MG5aMC_escape_tag):].split('=')
+                    value = value.strip()
+                except ValueError:
+                    option = line[len(self._MG5aMC_escape_tag):]
+                option = option.strip()
+                
+                if option=='inputs':
+                    self['inputs'].extend([v.strip() for v in value.split(',')])
+                
+                elif option=='stdout_lvl':
+                    try: # It is likely an int
+                        self['stdout_lvl']=int(value)
+                    except ValueError:
+                        try: # Maybe the user used something like 'logging.INFO'
+                            self['stdout_lvl']=eval(value)
+                        except:
+                            try:
+                               self['stdout_lvl']=eval('logging.%s'%value)
+                            except:
+                                raise InvalidMadAnalysis5Card(
+                 "MA5 output level specification '%s' is incorrect."%str(value))
+                
+                elif option=='analysis_name':
+                    current_type = 'analyses'
+                    current_name = value
+                    if current_name in self[current_type]:
+                        raise InvalidMadAnalysis5Card(
+               "Analysis '%s' already defined in MadAnalysis5 card"%current_name)
+                    else:
+                        self[current_type][current_name] = MadAnalysis5Card.empty_analysis()
+                
+                elif option=='set_reconstructions':
+                    try:
+                        reconstructions = eval(value)
+                        if not isinstance(reconstructions, list):
+                            raise
+                    except:
+                        raise InvalidMadAnalysis5Card("List of reconstructions"+\
+                         " '%s' could not be parsed in MadAnalysis5 card."%value)
+                    if current_type!='analyses' and current_name not in self[current_type]:
+                        raise InvalidMadAnalysis5Card("A list of reconstructions"+\
+                                   "can only be defined in the context of an "+\
+                                             "analysis in a MadAnalysis5 card.")
+                    self[current_type][current_name]['reconstructions']=reconstructions
+                    continue
+                
+                elif option=='reconstruction_name':
+                    current_type = 'reconstruction'
+                    current_name = value
+                    if current_name in self[current_type]:
+                        raise InvalidMadAnalysis5Card(
+               "Reconstruction '%s' already defined in MadAnalysis5 hadron card"%current_name)
+                    else:
+                        self[current_type][current_name] = MadAnalysis5Card.empty_reconstruction()
+
+                elif option=='reco_output':
+                    if current_type!='reconstruction' or current_name not in \
+                                                         self['reconstruction']:
+                        raise InvalidMadAnalysis5Card(
+               "Option '%s' is only available within the definition of a reconstruction"%option)
+                    if not value.lower() in ['lhe','root']:
+                        raise InvalidMadAnalysis5Card(
+                                  "Option '%s' can only take the values 'lhe' or 'root'"%option)
+                    self['reconstruction'][current_name]['reco_output'] = value.lower()
+                
+                elif option.startswith('recasting'):
+                    current_type = 'recasting'
+                    try:
+                        current_name = option.split('_')[1]
+                    except:
+                        raise InvalidMadAnalysis5Card('Malformed MA5 recasting option %s.'%option)
+                    if len(self['recasting'][current_name])>0:
+                        raise InvalidMadAnalysis5Card(
+               "Only one recasting can be defined in MadAnalysis5 hadron card")
+                
+                else:
+                    raise InvalidMadAnalysis5Card(
+               "Unreckognized MG5aMC instruction in MadAnalysis5 card: '%s'"%option)
+                
+                if option in ['analysis_name','reconstruction_name'] or \
+                                                 option.startswith('recasting'):
+                    self['order'].append((current_type,current_name))
+                continue
+
+            # Add the default analysis if needed since the user does not need
+            # to specify it.
+            if current_name == 'default' and current_type == 'analyses' and\
+                                          'default' not in self['analyses']:
+                    self['analyses']['default'] = MadAnalysis5Card.empty_analysis()
+                    self['order'].append(('analyses','default'))
+
+            if current_type in ['recasting']:
+                self[current_type][current_name].append(line)
+            elif current_type in ['reconstruction']:
+                self[current_type][current_name]['commands'].append(line)
+            elif current_type in ['analyses']:
+                self[current_type][current_name]['commands'].append(line)
+
+        if 'reconstruction' in self['analyses'] or len(self['recasting']['card'])>0:
+            if mode=='parton':
+                raise InvalidMadAnalysis5Card(
+      "A parton MadAnalysis5 card cannot specify a recombination or recasting.")
+            card_mode = 'hadron'
+        elif mode is None:
+            card_mode = 'parton'
+
+        self['mode'] = card_mode
+        if self['inputs'] == []:
+            if self['mode']=='hadron':
+                self['inputs']  = self._default_hadron_inputs
+            else:
+                self['inputs']  = self._default_parton_inputs
+        
+        # Make sure at least one reconstruction is specified for each hadron
+        # level analysis and that it exists.
+        if self['mode']=='hadron':
+            for analysis_name, analysis in self['analyses'].items():
+                if len(analysis['reconstructions'])==0:
+                    raise InvalidMadAnalysis5Card('Hadron-level analysis '+\
+                      "'%s' is not specified any reconstruction(s)."%analysis_name)
+                if any(reco not in self['reconstruction'] for reco in \
+                                                   analysis['reconstructions']):
+                    raise InvalidMadAnalysis5Card('A reconstructions specified in'+\
+                                 " analysis '%s' is not defined."%analysis_name)
+    
+    def write(self, output):
+        """ Write an MA5 card."""
+
+        if isinstance(output, (file, StringIO.StringIO)):
+            output_stream = output
+        elif isinstance(output, str):
+            output_stream = open(output,'w')
+        else:
+            raise MadGraph5Error('Incorrect input for the write function of'+\
+              ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(output)))
+        
+        output_lines = ['%s inputs = %s'%(self._MG5aMC_escape_tag,','.join(self['inputs']))]
+        if not self['stdout_lvl'] is None:
+            output_lines.append('%s stdout_lvl=%s'%(self._MG5aMC_escape_tag,self['stdout_lvl']))
+        for definition_type, name in self['order']:
+            
+            if definition_type=='analyses':
+                output_lines.append('%s analysis_name = %s'%(self._MG5aMC_escape_tag,name))
+                output_lines.append('%s set_reconstructions = %s'%(self._MG5aMC_escape_tag,
+                                str(self['analyses'][name]['reconstructions'])))                
+            elif definition_type=='reconstruction':
+                output_lines.append('%s reconstruction_name = %s'%(self._MG5aMC_escape_tag,name))
+            elif definition_type=='recasting':
+                output_lines.append('%s recasting_%s'%(self._MG5aMC_escape_tag,name))
+
+            if definition_type in ['recasting']:
+                output_lines.extend(self[definition_type][name])
+            elif definition_type in ['reconstruction']:
+                output_lines.append('%s reco_output = %s'%(self._MG5aMC_escape_tag,
+                                    self[definition_type][name]['reco_output']))                
+                output_lines.extend(self[definition_type][name]['commands'])
+            elif definition_type in ['analyses']:
+                output_lines.extend(self[definition_type][name]['commands'])                
+        
+        output_stream.write('\n'.join(output_lines))
+        
+        return
+    
+    def get_MA5_cmds(self, inputs_arg, submit_folder, run_dir_path=None, 
+                                               UFO_model_path=None, run_tag=''):
+        """ Returns a list of tuples ('AnalysisTag',['commands']) specifying 
+        the commands of the MadAnalysis runs required from this card. 
+        At parton-level, the number of such commands is the number of analysis 
+        asked for. In the future, the idea is that the entire card can be
+        processed in one go from MA5 directly."""
+        
+        if isinstance(inputs_arg, list):
+            inputs = inputs_arg
+        elif isinstance(inputs_arg, str):
+            inputs = [inputs_arg]
+        else:
+            raise MadGraph5Error("The function 'get_MA5_cmds' can only take "+\
+                            " a string or a list for the argument 'inputs_arg'")
+        
+        if len(inputs)==0:
+            raise MadGraph5Error("The function 'get_MA5_cmds' must have "+\
+                                              " at least one input specified'")
+        
+        if run_dir_path is None:
+            run_dir_path = os.path.dirname(inputs_arg)
+        
+        cmds_list = []
+        
+        UFO_load = []
+        # first import the UFO if provided
+        if UFO_model_path:
+            UFO_load.append('import %s'%UFO_model_path)
+        
+        def get_import(input, type=None):
+            """ Generates the MA5 import commands for that event file. """
+            dataset_name = os.path.basename(input).split('.')[0]
+            res = ['import %s as %s'%(input, dataset_name)]
+            if not type is None:
+                res.append('set %s.type = %s'%(dataset_name, type))
+            return res
+        
+        # Then the event file(s) input(s)
+        inputs_load = []
+        for input in inputs:
+            inputs_load.extend(get_import(input))
+            
+        submit_command = 'submit %s'%submit_folder+'_%s'
+        
+        # Keep track of the reconstruction outpus in the MA5 workflow
+        # Keys are reconstruction names and values are .lhe.gz reco file paths.
+        # We put by default already the lhco/root ones present
+        reconstruction_outputs = {
+                'lhco_input':[f for f in inputs if 
+                                 f.endswith('.lhco') or f.endswith('.lhco.gz')],
+                'root_input':[f for f in inputs if 
+                                 f.endswith('.root') or f.endswith('.root.gz')]}
+
+        # If a recasting card has to be written out, chose here its path
+        recasting_card_path = pjoin(run_dir_path,
+       '_'.join([run_tag,os.path.basename(submit_folder),'recasting_card.dat']))
+
+        for definition_type, name in self['order']:
+            if definition_type == 'reconstruction':   
+                analysis_cmds = list(self['reconstruction'][name]['commands'])
+                reco_outputs = []
+                for i_input, input in enumerate(inputs):
+                    # Skip lhco/root as they must not be reconstructed
+                    if not MadAnalysis5Card.events_can_be_reconstructed(input):
+                        continue
+                    analysis_cmds.append('import %s as reco_events'%input)
+                    if self['reconstruction'][name]['reco_output']=='lhe':
+                        reco_outputs.append('%s_%s.lhe.gz'%(os.path.basename(
+                               input).replace('_events','').split('.')[0],name))
+                        analysis_cmds.append('set main.outputfile=%s'%reco_outputs[-1])
+                    elif self['reconstruction'][name]['reco_output']=='root':
+                        reco_outputs.append('%s_%s.root'%(os.path.basename(
+                               input).replace('_events','').split('.')[0],name))
+                        analysis_cmds.append('set main.fastsim.rootfile=%s'%reco_outputs[-1])
+                    analysis_cmds.append(
+                                 submit_command%('reco_%s_%d'%(name,i_input+1)))
+                    analysis_cmds.append('remove reco_events')
+                    
+                reconstruction_outputs[name]= [pjoin(run_dir_path,rec_out) 
+                                                    for rec_out in reco_outputs]
+                cmds_list.append(('_reco_%s'%name,analysis_cmds))
+
+            elif definition_type == 'analyses':
+                if self['mode']=='parton':
+                    cmds_list.append( (name, UFO_load+inputs_load+
+                      self['analyses'][name]['commands']+[submit_command%name]) )
+                elif self['mode']=='hadron':
+                    # Also run on the already reconstructed root/lhco files if found.
+                    for reco in self['analyses'][name]['reconstructions']+\
+                                                    ['lhco_input','root_input']:
+                        if len(reconstruction_outputs[reco])==0:
+                            continue
+                        if self['reconstruction'][reco]['reco_output']=='lhe':
+                            # For the reconstructed lhe output we must be in parton mode
+                            analysis_cmds = ['set main.mode = parton']
+                        else:
+                            analysis_cmds = []
+                        analysis_cmds.extend(sum([get_import(rec_out) for 
+                                   rec_out in reconstruction_outputs[reco]],[]))
+                        analysis_cmds.extend(self['analyses'][name]['commands'])
+                        analysis_cmds.append(submit_command%('%s_%s'%(name,reco)))
+                        cmds_list.append( ('%s_%s'%(name,reco),analysis_cmds)  )
+
+            elif definition_type == 'recasting':
+                if len(self['recasting']['card'])==0:
+                    continue
+                if name == 'card':
+                    # Create the card here
+                    open(recasting_card_path,'w').write('\n'.join(self['recasting']['card']))
+                if name == 'commands':
+                    recasting_cmds = list(self['recasting']['commands'])
+                    # Exclude LHCO files here of course
+                    for input in inputs:
+                        if not MadAnalysis5Card.events_can_be_reconstructed(input):
+                            continue
+                        recasting_cmds.extend(get_import(input,'signal'))
+
+                    recasting_cmds.append('set main.recast.card_path=%s'%recasting_card_path)
+                    recasting_cmds.append(submit_command%'Recasting')
+                    cmds_list.append( ('Recasting',recasting_cmds))
+
+        return cmds_list
+
 class RunCardNLO(RunCard):
     """A class object for the run_card for a (aMC@)NLO pocess"""
 
-        
     def default_setup(self):
         """define the default value"""
         
@@ -2070,6 +3144,8 @@ class RunCardNLO(RunCard):
     
     def check_validity(self):
         """check the validity of the various input"""
+        
+        super(RunCardNLO, self).check_validity()
         
         # For FxFx merging, make sure that the following parameters are set correctly:
         if self['ickkw'] == 3: 

@@ -236,7 +236,6 @@ class ProcessExporterFortran(object):
             open(pjoin(self.dir_path, 'SubProcesses', 'MGVersion.txt'), 'w').write(
                                                               MG_version['version'])
 
-            
         # add the makefile in Source directory 
         filename = pjoin(self.dir_path,'Source','makefile')
         self.write_source_makefile(writers.FileWriter(filename))
@@ -251,8 +250,31 @@ class ProcessExporterFortran(object):
         self.write_pdf_opendata()
         
         
+    #===========================================================================
+    # Call MadAnalysis5 to generate the default cards for this process
+    #=========================================================================== 
+    def create_default_madanalysis5_cards(self, history, proc_defs, processes,
+                            ma5_path, output_dir, levels = ['parton','hadron']):
+        """ Call MA5 so that it writes default cards for both parton and
+        post-shower levels, tailored for this particular process."""
         
-            
+        if len(levels)==0:
+            return
+        
+        logger.info('Generating MadAnalysis5 default cards tailored to this process')
+        MA5_interpreter = misc.get_MadAnalysis5_interpreter(MG5DIR,ma5_path,
+                                                                   loglevel=100)
+        MA5_main = MA5_interpreter.main
+        
+        if 'parton' in levels:
+            open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
+                MA5_main.madgraph.generate_card(history, proc_defs, processes,'parton'))
+
+# VH TEMPORARY COMMENT #
+#        if 'hadron' in levels:
+#            open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
+#                MA5_main.madgraph.generate_card(history, proc_defs, processes,'hadron'))
+
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
     #===========================================================================
@@ -296,19 +318,31 @@ class ProcessExporterFortran(object):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
-                              online = False, compiler=default_compiler):
+    def finalize_v4_directory(self, all_proc, history = "", makejpg = False, 
+                     online = False, compiler=default_compiler, proc_defs=None):
         """Function to finalize v4 directory, for inheritance.
         """
-        
-        self.create_run_card(matrix_elements, history)
-        
-        pass
+
+        self.create_run_card(all_proc, history)
+        # Create the default MadAnalysis5 cards
+        if 'madanalysis5_path' in self.opt and not \
+                self.opt['madanalysis5_path'] is None and not proc_defs is None:
+            processes = None
+            if isinstance(all_proc, group_subprocs.SubProcessGroupList):            
+                processes = [me.get('processes')  for megroup in all_proc 
+                                        for me in megroup['matrix_elements']]
+            elif all_proc:
+                processes = [me.get('processes') 
+                                 for me in all_proc['matrix_elements']]
+            self.create_default_madanalysis5_cards(
+                history, proc_defs, processes,
+                self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'),
+                levels = ['hadron','parton'])
 
     #===========================================================================
     # Create the proc_characteristic file passing information to the run_interface
     #===========================================================================
-    def create_proc_charac(self, matrix_elements=None, history= "", **opts):
+    def create_proc_charac(self, matrix_elements=None, history="", **opts):
         
         self.proc_characteristic.write(pjoin(self.dir_path, 'SubProcesses', 'proc_characteristics'))
 
@@ -1856,7 +1890,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler=default_compiler):
+                              online = False, compiler=default_compiler,
+                              proc_defs = None):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         self.compiler_choice(compiler)
@@ -1868,7 +1903,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             history.write(output_file)
         
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
-                                             history, makejpg, online, compiler)
+                                  history, makejpg, online, compiler, proc_defs)
         open(pjoin(self.dir_path,'__init__.py'),'w')
         open(pjoin(self.dir_path,'SubProcesses','__init__.py'),'w')
 
@@ -2536,7 +2571,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
     # Create proc_card_mg5.dat for MadWeight directory
     #===========================================================================
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler=default_compiler):
+                              online = False, compiler=default_compiler,
+                              proc_defs = None):
         """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
 
         #proc_charac
@@ -2559,8 +2595,8 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
             output_file = os.path.join(self.dir_path, 'Cards', 'proc_card_mg5.dat')
             history.write(output_file)
 
-        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements,
-                                             history, makejpg, online, compiler)
+        ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
+                                 history, makejpg, online, compiler, proc_defs)
 
 
     #===========================================================================
@@ -3161,6 +3197,10 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                 self.dir_path+'/bin/internal/lhe_parser.py')                        
         cp(_file_path+'/various/banner.py', 
                                    self.dir_path+'/bin/internal/banner.py')
+        cp(_file_path+'/various/histograms.py', 
+                                   self.dir_path+'/bin/internal/histograms.py')
+        cp(_file_path+'/various/plot_djrs.py', 
+                                   self.dir_path+'/bin/internal/plot_djrs.py')
         cp(_file_path+'/various/cluster.py', 
                                        self.dir_path+'/bin/internal/cluster.py') 
         cp(_file_path+'/madevent/combine_runs.py', 
@@ -3448,7 +3488,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             ln('../' + file , cwd=Ppath)    
 
     def finalize_v4_directory(self, matrix_elements, history, makejpg = False,
-                              online = False, compiler=default_compiler):
+                   online = False, compiler=default_compiler, proc_defs = None):
         """Finalize ME v4 directory by creating jpeg diagrams, html
         pages,proc_card_mg5.dat and madevent.tar.gz."""
 
@@ -3536,7 +3576,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # create the run_card
         ProcessExporterFortran.finalize_v4_directory(self, matrix_elements, 
-                                             history, makejpg, online, compiler)
+                                  history, makejpg, online, compiler, proc_defs)
 
         # Run "make" to generate madevent.tar.gz file
         if os.path.exists(pjoin(self.dir_path,'SubProcesses', 'subproc.mg')):
@@ -3724,6 +3764,28 @@ class ProcessExporterFortranME(ProcessExporterFortran):
         nexternal, ninitial = matrix_element.get_nexternal_ninitial()
         self.proc_characteristic['ninitial'] = ninitial
         self.proc_characteristic['nexternal'] = max(self.proc_characteristic['nexternal'], nexternal)
+
+        # Add information relevant for MLM matching:
+        # Maximum QCD power in all the contributions
+        max_qcd_order = 0
+        for diag in matrix_element.get('diagrams'):
+            orders = diag.calculate_orders()
+            if 'QCD' in orders:
+                max_qcd_order = max(max_qcd_order,orders['QCD'])
+        max_n_light_final_partons = max(len([1 for id in proc.get_initial_ids() 
+            if proc.get('model').get_particle(id).get('mass')=='ZERO' and
+               proc.get('model').get_particle(id).get('color')>1])
+                                    for proc in matrix_element.get('processes'))
+        # Maximum number of final state light jets to be matched
+        self.proc_characteristic['max_n_matched_jets'] = max(
+                               self.proc_characteristic['max_n_matched_jets'],
+                                   min(max_qcd_order,max_n_light_final_partons))
+
+        # List of default pdgs to be considered for the CKKWl merging cut
+        self.proc_characteristic['colored_pdgs'] = \
+          str(sorted(list(set([abs(p.get('pdg_code')) for p in
+            matrix_element.get('processes')[0].get('model').get('particles') if
+                                                           p.get('color')>1]))))
 
         if ninitial < 1 or ninitial > 2:
             raise writers.FortranWriter.FortranWriterError, \
@@ -4971,18 +5033,11 @@ class ProcessExporterFortranMEGroup(ProcessExporterFortranME):
             enumerate(subproc_group.get('matrix_elements')):
             all_lines.extend(self.get_leshouche_lines(matrix_element,
                                                  iproc))
-
         # Write the file
         writer.writelines(all_lines)
-
         return True
 
-
-
     def finalize_v4_directory(self,*args, **opts):
-
-
-        
         super(ProcessExporterFortranMEGroup, self).finalize_v4_directory(*args,
                                                                          **opts)
         #ensure that the grouping information is on the correct value
@@ -6322,7 +6377,7 @@ This installation can take some time but only needs to be performed once.""",'$M
                         pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
                 additional_options=[
                   '--collier_tarball=%s'%pjoin(MG5DIR,'vendor','collier.tar.gz')])
-            except InvalidCmd:
+            except KeyError:
                     logger.warning(
 """The offline installation of COLLIER was unsuccessful, and MG5aMC disabled it.
 In the future, if you want to reactivate COLLIER, you can do so by re-attempting
@@ -6330,7 +6385,6 @@ its online installation with the command 'install collier' or install it on your
 own and set the path to its library in the MG5aMC option 'collier'.""")
                     cmd.exec_cmd("set collier ''")
                     cmd.exec_cmd('save options')
-
 
     # ==========================================================================
     # First treat the MadLoop5 standalone case       
@@ -6421,6 +6475,10 @@ own and set the path to its library in the MG5aMC option 'collier'.""")
             if key not in loop_induced_opt:
                 loop_induced_opt[key] = opt[key]
     
+        # Madevent output supports MadAnalysis5
+        if format in ['madevent']:
+            opt['madanalysis5'] = cmd.options['madanalysis5_path']
+            
         if format == 'matrix' or format.startswith('standalone'):
             return ProcessExporterFortranSA(cmd._mgme_dir, cmd._export_dir, opt,
                                             format=format)

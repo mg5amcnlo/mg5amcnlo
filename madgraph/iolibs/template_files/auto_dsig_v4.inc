@@ -116,10 +116,13 @@ C     Select a flavor combination (need to do here for right sign)
             IPSEL=IPSEL+1
             R=R-DABS(PD(IPSEL))/PD(0)
          ENDDO
-         DSIGUU=DSIGUU*REWGT(PP)*NFACT
+
+         DSIGUU=DSIGUU*REWGT(PP)
 
 C        Apply the bias weight specified in the run card (default is 1.0)
          DSIGUU=DSIGUU*CUSTOM_BIAS(PP,DSIGUU,%(numproc)d)
+
+         DSIGUU=DSIGUU*NFACT
 
          IF (DSIGUU.LT.1D199) THEN
 c           Set sign of dsig based on sign of PDF and matrix element
