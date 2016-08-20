@@ -93,8 +93,12 @@ class Systematics(object):
     
         if isinstance(self.banner.run_card, banner_mod.RunCardLO):
             self.is_lo = True
+            if not self.banner.run_card['use_syst']:
+                raise SystematicsError, 'The events was not generated with use_syst=True. Can not evaluate systematics error on this event.'
         else:
             self.is_lo = False
+            if not self.banner.run_card['store_rwgt_info']:
+                raise SystematicsError, 'The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event.'
 
         # MUR/MUF/ALPS PARSING
         if isinstance(mur, str):

@@ -1616,6 +1616,7 @@ def import_python_lhapdf(lhapdfconfig):
                                            stdout=subprocess.PIPE).stdout.read().strip()
     except:
         use_lhapdf=False
+        return False
     else:
         try:
             candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
