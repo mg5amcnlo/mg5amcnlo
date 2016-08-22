@@ -69,6 +69,7 @@ class Banner(dict):
     
     def __init__(self, banner_path=None):
         """ """
+
         if isinstance(banner_path, Banner):
             dict.__init__(self, banner_path)
             self.lhe_version = banner_path.lhe_version
@@ -1252,6 +1253,8 @@ class GridpackCard(ConfigFile):
     
 class RunCard(ConfigFile):
 
+    filename = 'run_card'
+
     def __new__(cls, finput=None):
         if cls is RunCard:
             if not finput:
@@ -1330,6 +1333,7 @@ class RunCard(ConfigFile):
                 raise Exception, "No such file %s" % finput
         
         for line in finput:
+            
             line = line.split('#')[0]
             line = line.split('!')[0]
             line = line.split('=',1)
@@ -1385,7 +1389,8 @@ class RunCard(ConfigFile):
                     if name.lower() in to_write:
                         to_write.remove(nline[1].strip().lower())
                 else:
-                    logger.info('Adding missing parameter %s to current run_card (with default value)' % name)
+                    logger.info('Adding missing parameter %s to current %s (with default value)',
+                                 (name, self.filename))
                     text += line 
 
         if to_write:
@@ -1409,16 +1414,18 @@ class RunCard(ConfigFile):
         """return self[name] if exist otherwise default. log control if we 
         put a warning or not if we use the default value"""
 
-        if name not in self.user_set:
+        if name.lower() not in self.user_set:
             if log_level is None:
-                if name.lower() in self.hidden_param:
+                if name.lower() in self.system_only:
+                    log_level = 5
+                elif name.lower() in self.hidden_param:
                     log_level = 10
                 else:
                     log_level = 20
             if not default:
                 default = self[name]
-            logger.log(log_level, 'run_card missed argument %s. Takes default: %s'
-                                   % (name, default))
+            logger.log(log_level, '%s missed argument %s. Takes default: %s'
+                                   % (self.filename, name, default))
             self[name] = default
             return default
         else:

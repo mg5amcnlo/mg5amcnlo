@@ -6635,8 +6635,6 @@ CALL IOVXXX(W(1,12),W(1,13),W(1,2),GAL,AMP(8))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        #exporter.generate_subprocess_directory_v4_standalone(me,
-        #                                                      myfortranmodel)
 
         goal = """16 82 [0, 0, 0]
 16 83 [0, 1, 0]

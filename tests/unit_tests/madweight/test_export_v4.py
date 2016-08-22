@@ -288,7 +288,7 @@ class TestMadWeight(IOTests.IOTestManager):
     def testIO_modification_to_cuts(self):
         """ target: cuts.f"""
         
-        exporter = export_v4.ProcessExporterFortranMW(MG5DIR, self.IOpath)
+        exporter = export_v4.ProcessExporterFortranMW(self.IOpath)
         strfile = StringIO()
         exporter.get_mw_cuts_version(strfile)
         

@@ -11,12 +11,12 @@ void txxxxx(double p[4], double tmass, int nhel, int nst, complex<double> tc[18]
 	double pt, pt2, pp, pzpt, emp, sqh, sqs;
 	int i, j;
 	
-	sqh = pow( 0.5, 0.5 );
-	sqs = pow( 0.5/3, 0.5 );
+	sqh = sqrt( 0.5);
+	sqs = sqrt( 0.5/3);
 	
 	pt2 = p[1]*p[1] + p[2]*p[2];
-	pp = min( p[0], pow( pt2+p[3]*p[3], 0.5 ) );
-	pt = min( pp, pow( pt2, 0.5 ) );
+	pp = min( p[0], sqrt( pt2+p[3]*p[3]) );
+	pt = min( pp, sqrt( pt2) );
 	
 	ft[4][0] = complex<double>( p[0]*nst, p[3]*nst );
 	ft[5][0] = complex<double>( p[1]*nst, p[2]*nst );
@@ -81,7 +81,7 @@ void txxxxx(double p[4], double tmass, int nhel, int nst, complex<double> tc[18]
 	}
 	
 	// construct eps0
-	if( fabs(nhel) <= 1 )
+	if( std::labs(nhel) <= 1 )
 	{
 		if( pp == 0 )
 		{

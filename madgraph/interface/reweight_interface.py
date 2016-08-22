@@ -853,6 +853,9 @@ class ReweightInterface(extended_cmd.Cmd):
         
         return 0
     
+    def do_compute_widths(self, line):
+        return self.mother.do_compute_widths(line)
+    
     def calculate_weight(self, event, space=None):
         """space defines where to find the calculator (in multicore)"""
         

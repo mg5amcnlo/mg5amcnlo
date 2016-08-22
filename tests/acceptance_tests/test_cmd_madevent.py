@@ -36,6 +36,7 @@ import madgraph.various.misc as misc
 import madgraph.various.lhe_parser as lhe_parser
 import madgraph.various.banner as banner_mod
 import madgraph.various.lhe_parser as lhe_parser
+import madgraph.various.banner as banner
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
 _pickle_path =os.path.join(_file_path, 'input_files')
@@ -56,8 +57,8 @@ class TestMECmdShell(unittest.TestCase):
     
     def setUp(self):
         
-        debugging = True
-        if debugging:
+        self.debugging = False
+        if self.debugging:
             self.path = pjoin(MG5DIR, "tmp_test")
             if os.path.exists(self.path):
                 shutil.rmtree(self.path)
@@ -178,6 +179,11 @@ class TestMECmdShell(unittest.TestCase):
         cmd = os.getcwd()
         self.generate(['Z > l+ l-','Z > j j'], 'sm')
         self.assertEqual(cmd, os.getcwd())
+        
+        # check that the run_card do not have cut
+        run_card = banner.RunCard(pjoin(self.run_dir,'Cards','run_card.dat'))
+        self.assertEqual(run_card['ptj'], 0)
+        
         self.do('calculate_decay_widths -f')        
         
         # test the param_card is correctly written
@@ -357,6 +363,77 @@ class TestMECmdShell(unittest.TestCase):
         self.assertTrue(abs(val1 - target) / err1 < 1., 'large diference between %s and %s +- %s'%
                         (target, val1, err1))
         
+    def test_width_scan(self):
+        """check that the width settings works on a scan based.
+           and check that MW is updated."""
+           
+        cmdline = """
+        set notification_center None --no-save 
+        generate e+ e- > Z > mu+ mu-
+        output %s -f
+        launch
+        set use_syst F
+        set MZ scan:[80, 85]
+        set WZ Auto
+        set nevents 1
+        done
+        launch 
+        set WZ 2.0
+        """ %(self.run_dir)
+        
+        cmdfile = open(pjoin(self.path,'cmd'),'w').write(cmdline)
+        
+        
+        if logging.getLogger('madgraph').level <= 20:
+            stdout=None
+            stderr=None
+        else:
+            devnull =open(os.devnull,'w')
+            stdout=devnull
+            stderr=devnull
+
+        subprocess.call([pjoin(_file_path, os.path.pardir,'bin','mg5_aMC'), 
+                         pjoin(self.path, 'cmd')],
+                         #cwd=pjoin(self.path),
+                        stdout=stdout,stderr=stdout)
+        
+        # check that the scan was done
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'run_04')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'scan_run_0[1-2].txt')))
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Events', 'scan_run_0[3-4].txt')))
+        
+        banner1 = banner.Banner(pjoin(self.run_dir, 'Events','run_01', 'run_01_tag_1_banner.txt'))
+        banner2 = banner.Banner(pjoin(self.run_dir, 'Events','run_02', 'run_02_tag_1_banner.txt'))                                
+        
+        # check that MZ is updated
+        self.assertEqual(banner1.get('param', 'mass', 23).value, 80)
+        self.assertEqual(banner2.get('param', 'mass', 23).value, 85)
+
+        #check that WZ is updated 
+        self.assertEqual(banner1.get('param', 'decay', 23).value, 1.515619)
+        self.assertEqual(banner2.get('param', 'decay', 23).value, 1.882985)   
+        
+        # check that MW is updated
+        self.assertEqual(banner1.get('param', 'mass', 24).value, 6.496446e+01)
+        self.assertEqual(banner2.get('param', 'mass', 24).value, 7.242341e+01)        
+               
+        banner3 = banner.Banner(pjoin(self.run_dir, 'Events','run_03', 'run_03_tag_1_banner.txt'))
+        banner4 = banner.Banner(pjoin(self.run_dir, 'Events','run_04', 'run_04_tag_1_banner.txt'))                                
+        
+        # check that MZ is updated
+        self.assertEqual(banner3.get('param', 'mass', 23).value, 80)
+        self.assertEqual(banner4.get('param', 'mass', 23).value, 85)
+
+        #check that WZ is NOT updated 
+        self.assertEqual(banner3.get('param', 'decay', 23).value, 2.0)
+        self.assertEqual(banner4.get('param', 'decay', 23).value, 2.0)   
+        
+        # check that MW is updated
+        self.assertEqual(banner3.get('param', 'mass', 24).value, 6.496446e+01)
+        self.assertEqual(banner4.get('param', 'mass', 24).value, 7.242341e+01)         
+        
+        self.assertFalse(self.debugging)
+        
     def test_e_e_collision(self):
         """check that e+ e- > t t~ gives the correct result"""
         
@@ -508,7 +585,7 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue(has_zero)
         self.assertTrue(has_non_zero)
         
-        
+    
 
     def test_w_production_with_ms_decay(self):
         """A run to test madspin (inline and offline) on p p > w+ and p p > w-"""
