@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.4.4 (xx/xx/xx)
+        OM: Fix a bug in the helicity by helicity reweighting method. (introduced in 2.4.3)
+
+
 2.4.3 (01/08/16)
         OM: Reduce the amount of log file/output generated for LO run (output can use up to three times less output).
         OM: For the LO combination of events (unweighting) pass to the method previously used for loop-induced.

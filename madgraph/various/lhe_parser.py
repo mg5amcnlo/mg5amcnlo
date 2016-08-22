@@ -424,8 +424,9 @@ class EventFile(object):
                     #no outputpath define -> wants only the nb of unweighted events
                     continue
                 elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
+                    outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
-#                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
+                    #logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
                     continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")
@@ -437,6 +438,7 @@ class EventFile(object):
                     outfile.close()
                 break                    
             elif outputpath:
+                outfile.write("</LesHouchesEvents>\n")
                 outfile.close()
 #                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
             
@@ -471,7 +473,9 @@ class EventFile(object):
             outfile.close()
             shutil.move(tmpname, outputpath)
             
-     
+        
+        
+            
         self.max_wgt = max_wgt
         return nb_keep
     
@@ -1825,8 +1829,8 @@ class FourMomentum(object):
         gammabeta = pz  / math.sqrt(E**2-pz**2)
         
         out =  FourMomentum([gamma*self.E - gammabeta*self.pz,
+                            self.px,
                             self.py,
-                            self.pz,
                             gamma*self.pz - gammabeta*self.E])
         
         if abs(out.pz) < 1e-6 * out.E:

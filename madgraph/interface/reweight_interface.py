@@ -1161,6 +1161,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
                 for i,thisp in enumerate(p):
                     p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
+                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+
+                
         else:
             nhel = 0
 
