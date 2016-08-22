@@ -5319,6 +5319,13 @@ This implies that with decay chains:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
 
+        if 'heptools_install_dir' in self.options:
+            prefix = self.options['heptools_install_dir']
+            config_file = '~/.mg5/mg5_configuration.txt'
+        else:
+            prefix = pjoin(MG5DIR, 'HEPTools')
+            config_file = ''
+
         # Add the path of pythia8 if known and the MG5 path
         if tool=='mg5amc_py8_interface':
             additional_options.append('--mg5_path=%s'%MG5DIR)
@@ -5396,7 +5403,7 @@ This implies that with decay chains:
                         (['--force'] if '--force' in additional_options else [])
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
              'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
-             '--prefix=%s'%pjoin(MG5DIR,'HEPTools')]
+             '--prefix=%s' % prefix]
                         + lhapdf_option + compiler_options + additional_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
@@ -5407,14 +5414,14 @@ This implies that with decay chains:
                         (['--force'] if '--force' in additional_options else [])
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
-              pjoin(MG5DIR,'HEPTools')] + compiler_options + additional_options)
+              prefix] + compiler_options + additional_options)
 
         if return_code == 0:
             logger.info("%s successfully installed in %s."%(
-                   tool_to_install, pjoin(MG5DIR,'HEPTools')),'$MG:color:GREEN')
+                   tool_to_install, prefix),'$MG:color:GREEN')
         elif return_code == 66:
             answer = self.ask(question=
-"""\033[33;34mTool %s already installed in %s."""%(tool_to_install, pjoin(MG5DIR,'HEPTools'))+
+"""\033[33;34mTool %s already installed in %s."""%(tool_to_install, prefix)+
 """ Do you want to overwrite its installation?\033[0m \033[33;32my\033[0m/\033[33;31mn\033[0m >"""
     ,default='y',text_format='33;32')
             if not answer.lower() in ['y','']:
@@ -5429,31 +5436,31 @@ This implies that with decay chains:
 
         # Post-installation treatment
         if tool == 'pythia8':
-            self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
-            self.exec_cmd('save options')
+            self.options['pythia8_path'] = pjoin(prefix,'pythia8')
+            self.exec_cmd('save options %s pythia8_path' % config_file)
             # Automatically re-install the mg5amc_py8_interface after a fresh
             # Pythia8 installation
             self.advanced_install('mg5amc_py8_interface',
                               additional_options=additional_options+['--force'])          
         elif tool == 'lhapdf6':
-            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf6','bin',
+            self.options['lhapdf'] = pjoin(prefix,'lhapdf6','bin',
                                                                 'lhapdf-config')
-            self.exec_cmd('save options')
+            self.exec_cmd('save options %s lhapdf' % config_file)
         elif tool == 'lhapdf5':
-            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf5','bin',
+            self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin',
                                                                 'lhapdf-config')
-            self.exec_cmd('save options')            
+            self.exec_cmd('save options %s lhapdf' % config_file)            
 
         elif tool == 'mg5amc_py8_interface':
             self.options['mg5amc_py8_interface_path'] = \
-                                 pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
-            self.exec_cmd('save options')      
+                                 pjoin(prefix,'MG5aMC_PY8_interface')
+            self.exec_cmd('save options %s mg5amc_py8_interface_path' % config_file)      
         elif tool == 'collier':
-            self.options['collier'] = pjoin(os.curdir,'HEPTools','lib')
-            self.exec_cmd('save options')
+            self.options['collier'] = pjoin(prefix,'HEPTools','lib')
+            self.exec_cmd('save options %s collier' % config_file)
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
-                                              MG5DIR,'HEPTools','ninja','lib')):
+                                              prefix,'ninja','lib')):
                 logger.warning(
 """Successful installation of Ninja, but without support for quadruple precision
 arithmetics. If you want to enable this (hence improving the treatment of numerically
@@ -5461,8 +5468,8 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
   MG5aMC>install ninja
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
-            self.options['ninja'] = pjoin(os.curdir,'HEPTools','lib')
-            self.exec_cmd('save options')
+            self.options['ninja'] = pjoin(prefix,'lib')
+            self.exec_cmd('save options %s ninja' % config_file)
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
