@@ -1333,7 +1333,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             nb_submit =1 
 
         if MADEVENT:
-            import internal.various.systematics as systematics
+            import internal.systematics as systematics
         else:
             import madgraph.various.systematics as systematics
 
