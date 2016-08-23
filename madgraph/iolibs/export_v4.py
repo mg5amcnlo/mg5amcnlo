@@ -27,7 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
-
+import traceback
 
 import aloha
 
@@ -322,15 +322,22 @@ class ProcessExporterFortran(VirtualExporter):
         MA5_interpreter = misc.get_MadAnalysis5_interpreter(MG5DIR,ma5_path,
                                                                    loglevel=100)
         MA5_main = MA5_interpreter.main
-        
-        if 'parton' in levels:
-            open(pjoin(output_dir,'madanalysis5_parton_card_default.dat'),'w').write(
-                MA5_main.madgraph.generate_card(history, proc_defs, processes,'parton'))
-
-# VH TEMPORARY COMMENT #
-#        if 'hadron' in levels:
-#            open(pjoin(output_dir,'madanalysis5_hadron_card_default.dat'),'w').write(
-#                MA5_main.madgraph.generate_card(history, proc_defs, processes,'hadron'))
+       
+        for lvl in ['parton','hadron']:
+            if lvl in levels:
+                try:
+                    open(pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl),'w').write(
+                        MA5_main.madgraph.generate_card(history, proc_defs, processes,lvl))
+                except Exception as e:
+                    logger.warning('MadAnalysis5 failed to write a %s-level'%lvl+
+                                                  ' default analysis card for this process.')
+                    logger.warning('Therefore, %s-level analysis with MadAnalysis5 will not be possible.'%lvl)
+                    error=StringIO()
+                    traceback.print_exc(file=error)
+                    logger.debug('MadAnalysis5 error was:')
+                    logger.debug('-'*60)
+                    logger.debug(error.getvalue()[:-1])
+                    logger.debug('-'*60)
 
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
