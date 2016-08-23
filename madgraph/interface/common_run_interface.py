@@ -1360,7 +1360,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 input_files = [os.path.basename(input)]
                 output_files = ['./tmp_%s_%s' % (i, os.path.basename(output)),
                                 './log_sys_%s.txt' % (i)]
-                argument =  [pjoin(self.me_dir, 'bin', 'internal', 'systematics.py'),
+                argument = []
+                if not __debug__:
+                    argument.append('-O')
+                argument +=  [pjoin(self.me_dir, 'bin', 'internal', 'systematics.py'),
                              input_files[0], output_files[0]] + opts +\
                              ['--start_event=%i' % start_event,
                               '--stop_event=%i' %stop_event,

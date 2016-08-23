@@ -52,7 +52,7 @@ class Systematics(object):
                  lhapdf_config=misc.which('lhapdf-config'),
                  log=lambda x: sys.stdout.write(str(x)+'\n')
                  ):
-        
+
         # INPUT/OUTPUT FILE
         if isinstance(input_file, str):
             self.input = lhe_parser.EventFile(input_file)
@@ -230,7 +230,6 @@ class Systematics(object):
         else:
             self.output.write('</LesHouchesEvents>\n')
         self.output.close()
-
         self.print_cross_sections(all_cross, min(nb_event,self.stop_event)-self.start_event+1, stdout)
         
         if self.output.name != self.output_path:
@@ -494,7 +493,7 @@ class Systematics(object):
     
     def new_event(self):
         self.alphas = {}
-        self.pdf = {}
+        self.pdfQ2 = {}
         
             
     def get_pdfQ(self, pdf, pdg, x, scale):
@@ -518,11 +517,13 @@ class Systematics(object):
         elif pdg == 0:
             return 1
                 
-        if (pdf, pdg,x,scale) in self.pdf:
-            return self.pdf[(pdf, pdg,x,scale)]
+        if (pdf, pdg,x,scale) in self.pdfQ2:
+            return self.pdfQ2[(pdf, pdg,x,scale)]
         f = pdf.xfxQ2(pdg, x, scale)/x
-        self.pdf[(pdf, pdg,x,scale)] = f
+        self.pdfQ2[(pdf, pdg,x,scale)] = f
         return f        
+        
+        #one method to handle the nnpd2.3 problem -> now just move to central
         if f == 0 and pdf.memberID ==0:
             # to avoid problem with nnpdf2.3 in lhapdf6.1.6
             #print 'central pdf returns 0', pdg, x, scale
@@ -530,7 +531,7 @@ class Systematics(object):
             pdfset = pdf.set()
             allnumber= [0] + [self.get_pdfQ2(p, pdg, x, scale) for p in pdfset.mkPDFs()[1:]]
             f = pdfset.uncertainty(allnumber).central
-        self.pdf[(pdf, pdg,x,scale)] = f
+        self.pdfQ2[(pdf, pdg,x,scale)] = f
         return f
                 
     def get_lo_wgt(self,event, Dmur, Dmuf, Dalps, dyn, pdf):
@@ -603,16 +604,29 @@ class Systematics(object):
                     mur2 = onewgt.scales2[1]
                     muf2 = onewgt.scales2[2]
                 Q2 = onewgt.scales2[0] # Ellis-Sexton scale
+                
+                wgtpdf = self.get_pdfQ2(pdf, self.b1*onewgt.pdgs[0], onewgt.bjks[0],
+                                      Dmuf**2 * muf2)
+                wgtpdf *= self.get_pdfQ2(pdf, self.b2*onewgt.pdgs[1], onewgt.bjks[1],
+                                      Dmuf**2 * muf2)
+                
                 tmp = onewgt.pwgt[0]
                 tmp += onewgt.pwgt[1] * math.log(Dmur**2 * mur2/ Q2)
                 tmp += onewgt.pwgt[2] * math.log(Dmuf**2 * muf2/ Q2)
-                
-                tmp *= self.get_pdfQ2(pdf, self.b1*onewgt.pdgs[0], onewgt.bjks[0],
-                                      Dmuf**2 * muf2)                             
-                tmp *= self.get_pdfQ2(pdf, self.b2*onewgt.pdgs[1], onewgt.bjks[1],
-                                      Dmuf**2 * muf2)
                 tmp *= math.sqrt(4*math.pi*pdf.alphasQ2(Dmur**2*mur2))**onewgt.qcdpower
                 
+                if wgtpdf == 0: #happens for nn23pdf due to wrong set in lhapdf
+                    key = (self.b1*onewgt.pdgs[0], self.b2*onewgt.pdgs[1], onewgt.bjks[0],onewgt.bjks[1], muf2)
+                    if dyn== -1 and Dmuf==1 and Dmur==1 and pdf==self.orig_pdf:
+                        wgtpdf = onewgt.ref_wgt / tmp
+                        self.pdfQ2[key] = wgtpdf
+                    elif key in self.pdfQ2:
+                        wgtpdf = self.pdfQ2[key]
+                    else:
+                        # real zero!
+                        wgtpdf = 0
+
+                tmp *= wgtpdf                
                 wgt += tmp
                 
                 if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
