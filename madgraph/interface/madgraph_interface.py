@@ -5290,12 +5290,15 @@ This implies that with decay chains:
             
             # Remove the tarball
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
+
             
-############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-################################################################################
+            # FOR DEBUGGING ONLY, Take HEPToolsInstaller locally
+            if '--local' in additional_options:
+                additional_options.remove('--local')
+                logger.warning('you are using a local installer. This is intended for debugging only!')
+                shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+                shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
             
         # Potential change in naming convention
         name_map = {}
@@ -5530,7 +5533,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         args = self.split_arg(line)
         #check the validity of the arguments
         self.check_install(args)
-
         if sys.platform == "darwin":
             program = "curl"
         else:
@@ -5575,12 +5577,21 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
     
             data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.hep.uiuc.edu/package_info.dat']
-            r = random.randint(0,1)
-            r = [r, (1-r)]
-################################################################################
+
 #           Force her to choose one particular server
-#            r = [0]
-################################################################################
+            if any(a.startswith('--source=') for a in args):
+                source = [a[9:] for a in args if a.startswith('--source=')][-1]
+                if source == 'uiuc':
+                    r = [1]
+                elif source == 'ucl':
+                    r = [0]
+                else:
+                    data_path.append(source)
+                    r = [2]
+            else: 
+                r = random.randint(0,1)
+                r = [r, (1-r)]
+
 
             for index in r:
                 cluster_path = data_path[index]
@@ -5613,7 +5624,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
                                                       MG5aMC_PY8_interface_path)
             return self.advanced_install(args[0], path['HEPToolsInstaller'],
-                                        additional_options = additional_options)
+                                        additional_options = additional_options + args[1:])
 
         if args[0] == 'PJFry' and not os.path.exists(
                                  pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
