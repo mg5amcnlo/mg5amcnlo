@@ -127,7 +127,8 @@ C     MERGING SCALE CUT
 C
 C     Retrieve which external particles undergo the ktdurham and ptlund cuts.
       LOGICAL  is_pdg_for_merging_cut(NEXTERNAL)
-      COMMON /TO_MERGE_CUTS/is_pdg_for_merging_cut
+      logical from_decay(-(nexternal+3):nexternal)
+      COMMON /TO_MERGE_CUTS/is_pdg_for_merging_cut, from_decay
 
 C
 C     ADDITIONAL VARIABLES FOR PTLUND CUT
@@ -549,7 +550,7 @@ C       RESET JET MOMENTA
         ENDDO
 
         do i=nincoming+1,nexternal
-           if(is_pdg_for_merging_cut(i) .and.do_cuts(i)) then
+           if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) ) then
              njets=njets+1
              DO J=0,3
                PJET(NJETS,J) = P(J,I)
@@ -557,8 +558,18 @@ C       RESET JET MOMENTA
            endif
         enddo
 
+C       COUNT NUMBER OF MASSLESS OUTGOING PARTICLES, SINCE WE DO NOT WANT
+C       TO APPLY A CUT FOR JUST A SINGLE MASSIVE PARTICLE IN THE FINAL STATE.
+        NMASSLESS = 0
+        DO I=NINCOMING+1,NEXTERNAL
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and. 
+     &                          DSQRT(DOT( P(0,I), P(0,I))) .LT. 5D0) THEN
+            NMASSLESS = NMASSLESS + 1
+          ENDIF
+        ENDDO
+
 C       DURHAM KT SEPARATION CUT
-        IF(NJETS.GT.0) THEN
+        IF(NJETS.GT.0 .AND. NMASSLESS .GT. 0) THEN
 
         PTMIN = EBEAM(1) + EBEAM(2)
 
@@ -638,7 +649,7 @@ C       Fill incoming particle momenta
 
 C       Fill final jet momenta
         DO I=NINCOMING+1,NEXTERNAL
-          IF(is_pdg_for_merging_cut(I) .and. DO_CUTS(I) ) THEN
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) ) then
             NJETS=NJETS+1
             JETFLAVOUR(NJETS) = IDUP(I,1,1)
             DO J=0,3
@@ -653,7 +664,7 @@ C       IN THIS CASE, ONLY APPLY MINIMAL pT W.R.T BEAM CUT.
 C       THIS CUT WILL ONLY APPLY TO THE TWO-MASSLESS PARTICLE STATE.
         NMASSLESS = 0
         DO I=NINCOMING+1,NEXTERNAL
-          IF(is_pdg_for_merging_cut(I) .and. DO_CUTS(I) .AND.
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and. 
      &                          DSQRT(DOT( P(0,I), P(0,I))) .LT. 5D0) THEN
             NMASSLESS = NMASSLESS + 1
           ENDIF
@@ -662,7 +673,7 @@ C       THIS CUT WILL ONLY APPLY TO THE TWO-MASSLESS PARTICLE STATE.
      &                                     NEXTERNAL-NINCOMING .EQ. 2) THEN
           PTMINSAVE = EBEAM(1) + EBEAM(2)
           DO I=NINCOMING+1,NEXTERNAL
-            IF(DO_CUTS(I) ) THEN
+            if( .not. from_decay(I) ) then  
               PTMINSAVE = MIN(PTMINSAVE, PT(p(0,i)))
             ENDIF
           ENDDO
@@ -676,9 +687,8 @@ C         RESET NJETS TO AVOID FURTHER MERGING SCALE CUT.
           NJETS=0
         ENDIF
 
-
 C       PYTHIA PT SEPARATION CUT
-        IF(NJETS.GT.0) THEN
+        IF(NJETS.GT.0 .AND. NMASSLESS .GT. 0) THEN
 
         PTMINSAVE = EBEAM(1) + EBEAM(2)
 
