@@ -869,6 +869,8 @@ class MECmdShell(IOTests.IOTestManager):
 
         stdout.close()
         text = open('%s/test.log' % self.tmpdir,'r').read()
+        if logging.getLogger('madgraph').level <= 20:
+            print text
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
@@ -889,8 +891,10 @@ class MECmdShell(IOTests.IOTestManager):
 
 
     def test_jet_veto_xsec(self):
-        """tests the jet-veto cross section at NNLL+NLO"""
+        """tests the jet-veto cross section at NNLL+NLO"""    
+
         self.generate_production()
+
         cmd = """generate_events NLO
                  set ickkw -1
                  set ptj 10
@@ -913,6 +917,7 @@ class MECmdShell(IOTests.IOTestManager):
             self.assertAlmostEqual(5933.0, cross_section,delta=120)
         except TypeError:
             self.assertTrue(cross_section < 4151. and cross_section > 4151.)
+
 
     def load_result(self, run_name):
         

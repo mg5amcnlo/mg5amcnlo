@@ -289,6 +289,8 @@ def find_includes_path(start_path, extension):
     one found which contains at least one file ending with the string extension
     given in argument."""
     
+    if not os.path.isdir(start_path):
+        return None
     subdirs=[pjoin(start_path,dir) for dir in os.listdir(start_path)]
     for subdir in subdirs:
         if os.path.isfile(subdir):
@@ -725,14 +727,16 @@ class MuteLogger(object):
         self.levels = old_levels
         
     def __exit__(self, ctype, value, traceback ):
-        for name, level, path, level in zip(self.names, self.levels, self.files, self.levels):
-            if 'keep' in self.opts and not self.opts['keep']:
-                self.restore_logFile_for_logger(name, level, path=path)
+        for name, level, path in zip(self.names, self.levels, self.files):
+
+            if path:
+                if 'keep' in self.opts and not self.opts['keep']:
+                    self.restore_logFile_for_logger(name, level, path=path)
+                else:
+                    self.restore_logFile_for_logger(name, level)
             else:
-                self.restore_logFile_for_logger(name, level)
-            
-            log_module = logging.getLogger(name)
-            log_module.setLevel(level)         
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)         
         
     def setup_logFile_for_logger(self, path, full_logname, **opts):
         """ Setup the logger by redirecting them all to logfiles in tmp """

@@ -617,7 +617,7 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                     for c in l]))
             FortranExporter.convert_model(model,wanted_lorentz,wanted_couplings)
-            FortranExporter.finalize(None,"",self.cmd.options, ['nojpeg'])
+            FortranExporter.finalize(matrix_element,"",self.cmd.options, ['nojpeg'])
 
         MadLoopInitializer.fix_PSPoint_in_check(pjoin(export_dir,'SubProcesses'),
                                                       split_orders=split_orders)
@@ -1157,7 +1157,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             FortranExporter.convert_model(self.full_model,wanted_lorentz,wanted_couplings)
             infos['Process_output'] = time.time()-start
             start=time.time()
-            FortranExporter.finalize(None,"",self.cmd.options, ['nojpeg'])
+            FortranExporter.finalize(matrix_element,"",self.cmd.options, ['nojpeg'])
             infos['HELAS_MODEL_compilation'] = time.time()-start
         
         # Copy the parameter card if provided

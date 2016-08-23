@@ -98,7 +98,7 @@ class OriginalCmd(object):
     nohelp = "*** No help on %s"
     use_rawinput = 1
 
-    def __init__(self, completekey='tab', stdin=None, stdout=None):
+    def __init__(self, completekey='tab', stdin=None, stdout=None,**opt):
         """Instantiate a line-oriented interpreter framework.
 
         The optional argument 'completekey' is the readline name of a
@@ -120,6 +120,7 @@ class OriginalCmd(object):
             self.stdout = sys.stdout
         self.cmdqueue = []
         self.completekey = completekey
+        self.cmd_options = opt
 
     def cmdloop(self, intro=None):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
@@ -686,7 +687,7 @@ class BasicCmd(OriginalCmd):
             prefix += os.path.sep
 
         if only_dirs:
-            completion = [prefix + f
+            completion = [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
@@ -1027,7 +1028,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             path_msg = []
             
-        if timeout:
+        if timeout is True:
             try:
                 timeout = self.options['timeout']
             except Exception:
@@ -1096,6 +1097,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 value = alias[value]
         except TypeError:
             pass
+
         if value == default and ask_class:
             value = question_instance.default(default)
         return value

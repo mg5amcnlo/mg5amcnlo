@@ -3016,7 +3016,7 @@ class Process(PhysicsObject):
         if self['constrained_orders']:
             mystr = mystr + " ".join('%s%s%d' % (key, 
               self['constrained_orders'][key][1], self['constrained_orders'][key][0]) 
-                    for (key,(value,type)) in sorted(self['constrained_orders'].keys()))  + ' '
+                    for key in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:

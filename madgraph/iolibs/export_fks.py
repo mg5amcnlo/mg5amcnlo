@@ -3067,6 +3067,11 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
     """Class to take care of exporting a set of matrix elements to
     Fortran (v4) format."""
 
+
+    def finalize(self, *args, **opts):
+        ProcessExporterFortranFKS.finalize(self, *args, **opts)
+        #export_v4.ProcessExporterFortranSA.finalize(self, *args, **opts)
+
 #===============================================================================
 # copy the Template in a new directory.
 #===============================================================================

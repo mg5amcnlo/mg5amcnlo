@@ -490,6 +490,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
         misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
         misc.activate_dependence('golem', cmd = self.interface, log='stdout')
         misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
+        misc.activate_dependence('collier', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):

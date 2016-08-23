@@ -1128,6 +1128,8 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         install_options = {'options_for_HEPToolsInstaller':[],
                    'update_options':[]}
+        hidden_prog = ['Delphes2', 'pythia-pgs']
+
         if len(args) < 1:
             self.help_install()
             raise self.InvalidCmd('install command require at least one argument')
@@ -1153,7 +1155,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # to install as argument.   
             args = args[:1]
 
-        if args[0] not in self._install_opts:
+        if args[0] not in self._install_opts + hidden_prog:
             if not args[0].startswith('td'):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
@@ -1341,7 +1343,7 @@ This will take effect only in a NEW terminal
         if args[0] == 'options':
             has_path = None
             for arg in args[1:]:
-                if arg in ['--auto', '--all']:
+                if arg in ['--auto', '--all'] or arg in self.options:
                     continue
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
@@ -2068,7 +2070,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         elif args[1] == 'model':
             completion_categories = self.complete_import(text, line, begidx, endidx, 
-                                                         allow_restrict=False, treat_completion=False)
+                                                         allow_restrict=False, formatting=False)
             completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate'])
             return self.deal_multiple_categories(completion_categories, formatting) 
             
@@ -2635,7 +2637,6 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
-
         return self.deal_multiple_categories(completion_categories,formatting) 
     
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
@@ -2713,9 +2714,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
-                     'QCDLoop']
+    _install_opts = ['Delphes', 'MadAnalysis', 'ExRootAnalysis',
+                     'update', 'SysCalc', 'Golem95', 'PJFry', 'QCDLoop']
+    
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
@@ -2913,6 +2914,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             warning_duplicate = False
             args.remove('--no_warning=duplicate')
 
+        diagram_filter = False
+        if '--diagram_filter' in args:
+            diagram_filter = True
+            args.remove('--diagram_filter')
+
         # Check the validity of the arguments
         self.check_add(args)
 
@@ -3005,7 +3011,7 @@ This implies that with decay chains:
             myproc = diagram_generation.MultiProcess(myprocdef,
                                      collect_mirror_procs = collect_mirror_procs,
                                      ignore_six_quark_processes = ignore_six_quark_processes,
-                                     optimize=optimize)
+                                     optimize=optimize, diagram_filter=diagram_filter)
 
 
             for amp in myproc.get('amplitudes'):
@@ -5613,21 +5619,12 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 
 
         if args[0] in advertisements:
-<<<<<<< TREE
-#            logger.info("------------------------------------------------------", '$MG:color:GREEN')
-            logger.info("   You are installing '%s', please cite ref(s): %s "%(args[0],','.join(advertisements[args[0]]))
-                        , '$MG:color:BLACK')
-#            logger.info("   on top of the recommended MG5_aMC citations", '$MG:color:BLACK')
-#            logger.info("   when using results produced with this tool.", '$MG:color:BLACK')
-#            logger.info("------------------------------------------------------", '$MG:color:GREEN')
-=======
 #            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
 #            logger.info('{:^80}'.format("You are installing '%s', please cite ref(s):"%args[0]), '$MG:color:BLACK')
 #            logger.info('{:^80}'.format(', '.join(advertisements[args[0]])), '$MG:color:GREEN')
 #            logger.info('{:^80}'.format("when using results produced with this tool."), '$MG:color:BLACK')
 #            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
-            logger.info("   You are installing '%s', please cite ref(s): %s. " % (args[0], ', '.join(advertisements[args[0]])), '$MG:color:BLACK')
->>>>>>> MERGE-SOURCE
+            logger.info("   You are installing '%s', please cite ref(s): \033[92m%s\033[0m. " % (args[0], ', '.join(advertisements[args[0]])), '$MG:color:BLACK')
 
         # Load file with path of the different program:
         import urllib
@@ -6756,37 +6753,53 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 raise self.InvalidCmd('No processes to save!')
 
         elif args[0] == 'options':
-            # First look at options which should be put in MG5DIR/input
+            partial_save = False
             to_define = {}
-            for key, default in self.options_configuration.items():
-                if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
-                    to_define[key] = self.options[key]
-
-            if not '--auto' in args:
-                for key, default in self.options_madevent.items():
-                    if self.options_madevent[key] != self.options[key] != None:
-                        if '_path' in key and os.path.basename(self.options[key]) == 'None':
-                            continue
+            if any(not arg.startswith('--') and arg in self.options 
+                                                               for arg in args):
+                # store in file only those ones
+                partial_save = True
+                all_arg = [arg for arg in args[1:] if not arg.startswith('--') and
+                           arg in self.options]
+                for key in all_arg:
+                    to_define[key] = self.options[key] 
+            else:
+                # First look at options which should be put in MG5DIR/input
+                for key, default in self.options_configuration.items():
+                    if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
                         to_define[key] = self.options[key]
-                    elif key == 'cluster_queue' and self.options[key] is None:
-                        to_define[key] = self.options[key]
-
-            if '--all' in args:
-                for key, default in self.options_madgraph.items():
-                    if self.options_madgraph[key] != self.options[key] != None and \
-                      key != 'stdout_level':
-                        to_define[key] = self.options[key]
-            elif not '--auto' in args:
-                for key, default in self.options_madgraph.items():
-                    if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
-                        logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
-                                    % (key,self.options_madgraph[key]) )
-                        logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
-            if len(args) >1 and not args[1].startswith('--'):
+    
+                if not '--auto' in args:
+                    for key, default in self.options_madevent.items():
+                        if self.options_madevent[key] != self.options[key] != None:
+                            if '_path' in key and os.path.basename(self.options[key]) == 'None':
+                                continue
+                            to_define[key] = self.options[key]
+                        elif key == 'cluster_queue' and self.options[key] is None:
+                            to_define[key] = self.options[key]
+    
+                if '--all' in args:
+                    for key, default in self.options_madgraph.items():
+                        if self.options_madgraph[key] != self.options[key] != None and \
+                          key != 'stdout_level':
+                            to_define[key] = self.options[key]
+                elif not '--auto' in args:
+                    for key, default in self.options_madgraph.items():
+                        if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
+                            logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
+                                        % (key,self.options_madgraph[key]) )
+                            logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
+                
+            if len(args) >1 and not args[1].startswith('--') and args[1] not in self.options:
                 filepath = args[1]
             else:
                 filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-            basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
+            
+            if partial_save:
+                basefile = filepath
+            else:
+                basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
+                
             basedir = MG5DIR
 
             if to_keep:
@@ -7414,13 +7427,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if self._export_format == 'madevent':
             path = pjoin(path, 'SubProcesses')
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
-<<<<<<< TREE
                                                          self._curr_helas_model)
-=======
-                                                 self._curr_fortran_model)
-            self._curr_exporter.write_global_specs(
-                               self._curr_matrix_elements.get_matrix_elements())
->>>>>>> MERGE-SOURCE
             
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
@@ -7737,7 +7744,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     elif value < 0:
                         raise Exception, 'Partial width for %s > %s negative: %s' % \
                                        (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
-                    elif value < 0.1 and particle['color'] !=1:
+                    elif 0 < value < 0.1 and particle['color'] !=1:
                         logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
                                    % (particle.get('name'), value, decay_to))
                         value = 0
@@ -7820,7 +7827,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             for BR in param['decay'].decay_table[pid]:
                 if len(BR.lhacode) == 3 and skip_2body:
                     continue
-                if BR.value * width <0.1 and particle['color'] !=1:
+                if 0 < BR.value * width <0.1 and particle['color'] !=1:
                     logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
                                    % (particle.get('name'), BR.value * width, BR.lhacode[1:]))
                                      

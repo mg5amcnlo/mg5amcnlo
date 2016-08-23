@@ -834,12 +834,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     param = param_card['decay'].get((part.pdg_code,))
 
                     if  param.value != 0:
-                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
                                     % part.name,'$MG:color:BLACK')
                         param.value = 0
 
             param_card.write_inc_file(outfile, ident_card, default)
 
+    def get_model(self):
+        """return the model related to this process"""
+
+        if self.options['mg5_path']:
+            sys.path.append(self.options['mg5_path'])
+            import models.import_ufo as import_ufo
+            with misc.MuteLogger(['madgraph.model'],[50]):
+                out= import_ufo.import_model(pjoin(self.me_dir,'bin','internal','ufomodel'))
+            return out
+        elif self.mother:
+            return self.mother._curr_model
+        else:
+            return None
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
         """ """
@@ -2460,13 +2473,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
                 
                 
-    def check_param_card(self, path, run=True):
+    def check_param_card(self, path, run=True, dependent=False):
         """
         1) Check that no scan parameter are present
         2) Check that all the width are define in the param_card.
         - If a scan parameter is define. create the iterator and recall this fonction 
           on the first element.
-        - If some width are set on 'Auto', call the computation tools."""
+        - If some width are set on 'Auto', call the computation tools.
+        3) if dependent is on True check for dependent parameter (automatic for scan)"""
         
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
         pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
@@ -2481,7 +2495,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.param_card_iterator = main_card
             first_card = main_card.next(autostart=True)
             first_card.write(path)
-            return self.check_param_card(path, run)
+            return self.check_param_card(path, run, dependent=True)
         
         pdg_info = pattern_width.findall(text)
         if pdg_info:
@@ -2492,13 +2506,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if not has_nlo:
                     self.do_compute_widths('%s %s' % (' '.join(pdg), path))
                 else:
-                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path))
+                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path)) 
             else:
                 logger.info('''Some width are on Auto in the card. 
     Those will be computed as soon as you have finish the edition of the cards.
     If you want to force the computation right now and being able to re-edit
     the cards afterwards, you can type \"compute_wdiths\".''')
-
+        
+        if dependent:   
+            card = check_param_card.ParamCard(path)
+            AskforEditCard.update_dependent(self, self.me_dir, card, path, timer=20)
+        
+        return
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -3155,7 +3174,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             filename = pdf_info[filename]['filename']
         
         if os.path.exists(pjoin(pdfsets_dir, filename)):
-            logger.debug('%s is already present in %s', (filename, pdfsets_dir))
+            logger.debug('%s is already present in %s', filename, pdfsets_dir)
             return
              
         logger.info('Trying to download %s' % filename)
@@ -3351,10 +3370,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         # Initiation
         if 'pwd' in opt:
             self.me_dir = opt['pwd']
-            del opt['pwd'] 
         elif 'mother_interface' in opt:
-            self.mother_interface = opt['mother_interface']  
-            del opt['mother_interface']     
+            self.mother_interface = opt['mother_interface']     
         if not hasattr(self, 'me_dir') or not self.me_dir:
             self.me_dir = self.mother_interface.me_dir
         
@@ -3382,7 +3399,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         self.load_default()        
         self.define_paths(**opt)
-
         cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
 
 
@@ -4295,7 +4311,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.mw_card[block][name] = value
     
     def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value),'$MG:color:BLACK')
         self.run_card.set(name, value, user=True)
 
     def setML(self, name, value, default=False):
@@ -4305,7 +4321,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except Exception, error:
             logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
             return
-        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value))
+        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value),'$MG:color:BLACK')
         if default and name.lower() in self.MLcard.user_set:
             self.MLcard.user_set.remove(name.lower())
 
@@ -4439,15 +4455,89 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
     
     def postcmd(self, stop, line):
-        
         ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+
         if ending_question:
             self.check_card_consistency()
+            self.do_update_dependent('', timer=20)
             return ending_question
+    
+    def do_update_dependent(self, line, timer=0):
+        """Change the mass/width of particles which are not free parameter for the 
+        model."""
+        if not self.mother_interface:
+            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+        
+        pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)
+        param_text= open(self.paths['param']).read()
+        
+        if pattern_scan.search(param_text):
+            #for block, key in self.restricted_value:
+            #    self.param_card[block].get(key).value = -9.999e-99
+            #    self.param_card.write(self.paths['param'])
+            return
+        elif pattern_width.search(param_text):
+            self.do_compute_widths('')
+            self.param_card = check_param_card.ParamCard(self.paths['param'])
+    
+        # calling the routine doing the work    
+        self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
+                               self.paths['param'], timer)
+    
+    @staticmethod
+    def update_dependent(mecmd, me_dir, param_card, path ,timer=0):
+        """static method which can also be called from outside the class
+           usefull in presence of scan.
+           return if the param_card was updated or not
+        """
+        modify = True
+        class TimeOutError(Exception): 
+            pass
+        def handle_alarm(signum, frame): 
+            raise TimeOutError
+        signal.signal(signal.SIGALRM, handle_alarm)
+        if timer:
+            signal.alarm(timer)
+            log_level=30
+        else:
+            log_level=20
+        # Try to load the model in the limited amount of time allowed
+        try:
+            model = mecmd.get_model()
+            signal.alarm(0)
+        except TimeOutError:
+            logger.warning('The model takes too long to load so we bypass the updating of dependent parameter.\n'+\
+                           'This might create trouble for external program (like MadSpin/shower/...)\n'+\
+                           'The update can be forced without timer by typing \'update_dependent\' at the time of the card edition')
+            modify =False
+        except Exception:
+            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+            signal.alarm(0)
+        else:
+            restrict_card = pjoin(me_dir,'Source','MODEL','param_card_rule.dat')
+            if not os.path.exists(restrict_card):
+                restrict_card = None
+            #restrict_card = None
+            if model:
+                modify = param_card.update_dependent(model, restrict_card, log_level)
+                if modify and path:
+                    param_card.write(path)
+            else:
+                logger.warning('missing MG5aMC code. Fail to update dependent parameter. This might create trouble for program like MadSpin/shower/...')
+            
+        if log_level==20:
+            logger.info('param_card up to date.')
+            
+        return modify
+    
+    
+    
     
     def check_answer_consistency(self):
         """function called if the code reads a file"""
-        self.check_card_consistency() 
+        self.check_card_consistency()
+        self.do_update_dependent('', timer=20) 
       
     def help_set(self):
         '''help message for set'''
