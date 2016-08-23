@@ -292,11 +292,11 @@ class IOExportPythia8Test(IOTests.IOTestManager, test_file_writers.CheckFileCrea
 
         self.mycppwriter = helas_call_writer.CPPUFOHelasCallWriter(self.mymodel)
     
-        self.pythia8_exporter = export_cpp.ProcessExporterPythia8(\
+        self.pythia8_exporter = export_cpp.OneProcessExporterPythia8(\
             self.mymatrixelement, self.mycppwriter,
             process_string = "q q~ > q q~")
         
-        self.cpp_exporter = export_cpp.ProcessExporterCPP(\
+        self.cpp_exporter = export_cpp.OneProcessExporterCPP(\
             self.mymatrixelement, self.mycppwriter,
             process_string = "q q~ > q q~")
 
@@ -728,7 +728,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 }  // end namespace Pythia8
 """ % misc.get_pkg_info()
 
-        exporter = export_cpp.ProcessExporterPythia8(self.mymatrixelement,
+        exporter = export_cpp.OneProcessExporterPythia8(self.mymatrixelement,
         self.mycppwriter, process_string = "q q~ > q q~")
 
         exporter.write_process_cc_file(\
@@ -758,7 +758,7 @@ double Sigma_sm_qqx_qqx::matrix_uux_uux()
 
         mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
-        exporter = export_cpp.ProcessExporterPythia8(\
+        exporter = export_cpp.OneProcessExporterPythia8(\
             mymatrixelement, self.mycppwriter,
             process_string = "q q > six")
 
@@ -1281,7 +1281,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
         subprocess_group = subproc_groups[0]
         matrix_elements = subprocess_group.get('matrix_elements')
 
-        exporter = export_cpp.ProcessExporterPythia8(matrix_elements,
+        exporter = export_cpp.OneProcessExporterPythia8(matrix_elements,
                                                  self.mycppwriter)
 
         # Test .h file output
@@ -1320,7 +1320,7 @@ double Sigma_sm_qq_six::matrix_uu_six()
         matrix_element.get('matrix_elements')[0].set('has_mirror_process',
                                                      True)
 
-        exporter = export_cpp.ProcessExporterCPP(matrix_element,
+        exporter = export_cpp.OneProcessExporterCPP(matrix_element,
                                                  self.mycppwriter)
 
         exporter.write_process_cc_file(\
@@ -1488,14 +1488,14 @@ mdl_AWS = 8.080000e-01;}
 if(!slhaPtr->getEntry<double>("wolfenstein", 1, mdl_lamWS)){
 cout << "Warning, setting mdl_lamWS to 2.253000e-01" << endl;
 mdl_lamWS = 2.253000e-01;}
-mdl_Gf = M_PI*csm->alphaEM(pow(pd->m0(23),2))*pow(pd->m0(23),2)/(sqrt(2.)*pow(pd->m0(24),2)*(pow(pd->m0(23),2)-pow(pd->m0(24),2)));
-aEWM1 = 1./csm->alphaEM(pow(pd->m0(23),2));
+mdl_Gf = M_PI*csm->alphaEM(((pd->m0(23))*(pd->m0(23))))*((pd->m0(23))*(pd->m0(23)))/(sqrt(2.)*((pd->m0(24))*(pd->m0(24)))*(((pd->m0(23))*(pd->m0(23)))-((pd->m0(24))*(pd->m0(24)))));
+aEWM1 = 1./csm->alphaEM(((pd->m0(23))*(pd->m0(23))));
 ZERO = 0.;
-mdl_lamWS__exp__2 = pow(mdl_lamWS,2.);
+mdl_lamWS__exp__2 = ((mdl_lamWS)*(mdl_lamWS));
 mdl_CKM1x1 = 1.-mdl_lamWS__exp__2/2.;
 mdl_CKM1x2 = mdl_lamWS;
 mdl_complexi = std::complex<double>(0.,1.);
-mdl_lamWS__exp__3 = pow(mdl_lamWS,3.);
+mdl_lamWS__exp__3 = ((mdl_lamWS)*(mdl_lamWS)*(mdl_lamWS));
 mdl_CKM1x3 = mdl_AWS*mdl_lamWS__exp__3*(-(mdl_etaWS*mdl_complexi)+mdl_rhoWS);
 mdl_CKM2x1 = -mdl_lamWS;
 mdl_CKM2x2 = 1.-mdl_lamWS__exp__2/2.;
@@ -1503,10 +1503,10 @@ mdl_CKM2x3 = mdl_AWS*mdl_lamWS__exp__2;
 mdl_CKM3x1 = mdl_AWS*mdl_lamWS__exp__3*(1.-mdl_etaWS*mdl_complexi-mdl_rhoWS);
 mdl_CKM3x2 = -(mdl_AWS*mdl_lamWS__exp__2);
 mdl_CKM3x3 = 1.;
-mdl_MZ__exp__2 = pow(mdl_MZ,2.);
-mdl_MZ__exp__4 = pow(mdl_MZ,4.);
+mdl_MZ__exp__2 = ((mdl_MZ)*(mdl_MZ));
+mdl_MZ__exp__4 = ((mdl_MZ)*(mdl_MZ)*(mdl_MZ)*(mdl_MZ));
 mdl_sqrt__2 = sqrt(2.);
-mdl_MH__exp__2 = pow(mdl_MH,2.);
+mdl_MH__exp__2 = ((mdl_MH)*(mdl_MH));
 mdl_conjg__CKM1x3 = conj(mdl_CKM1x3);
 mdl_conjg__CKM2x3 = conj(mdl_CKM2x3);
 mdl_conjg__CKM3x3 = conj(mdl_CKM3x3);
@@ -1520,7 +1520,7 @@ mdl_aEW = 1./aEWM1;
 mdl_MW = sqrt(mdl_MZ__exp__2/2.+sqrt(mdl_MZ__exp__4/4.-(mdl_aEW*M_PI*mdl_MZ__exp__2)/(mdl_Gf*mdl_sqrt__2)));
 mdl_sqrt__aEW = sqrt(mdl_aEW);
 mdl_ee = 2.*mdl_sqrt__aEW*sqrt(M_PI);
-mdl_MW__exp__2 = pow(mdl_MW,2.);
+mdl_MW__exp__2 = ((mdl_MW)*(mdl_MW));
 mdl_sw2 = 1.-mdl_MW__exp__2/mdl_MZ__exp__2;
 mdl_cw = sqrt(1.-mdl_sw2);
 mdl_sqrt__sw2 = sqrt(mdl_sw2);
@@ -1528,7 +1528,7 @@ mdl_sw = mdl_sqrt__sw2;
 mdl_g1 = mdl_ee/mdl_cw;
 mdl_gw = mdl_ee/mdl_sw;
 mdl_vev = (2.*mdl_MW*mdl_sw)/mdl_ee;
-mdl_vev__exp__2 = pow(mdl_vev,2.);
+mdl_vev__exp__2 = ((mdl_vev)*(mdl_vev));
 mdl_lam = mdl_MH__exp__2/(2.*mdl_vev__exp__2);
 mdl_yb = (mdl_ymb*mdl_sqrt__2)/mdl_vev;
 mdl_yc = (mdl_ymc*mdl_sqrt__2)/mdl_vev;
@@ -1555,9 +1555,9 @@ mdl_I3x33 = mdl_CKM3x3*mdl_yt;
 mdl_I4x13 = mdl_CKM1x3*mdl_yb;
 mdl_I4x23 = mdl_CKM2x3*mdl_yb;
 mdl_I4x33 = mdl_CKM3x3*mdl_yb;
-mdl_ee__exp__2 = pow(mdl_ee,2.);
-mdl_sw__exp__2 = pow(mdl_sw,2.);
-mdl_cw__exp__2 = pow(mdl_cw,2.);
+mdl_ee__exp__2 = ((mdl_ee)*(mdl_ee));
+mdl_sw__exp__2 = ((mdl_sw)*(mdl_sw));
+mdl_cw__exp__2 = ((mdl_cw)*(mdl_cw));
     }
     void Parameters_sm::setIndependentCouplings(){
     GC_1 = -(mdl_ee*mdl_complexi)/3.;
@@ -1670,7 +1670,7 @@ GC_108 = (mdl_ee*mdl_complexi*mdl_conjg__CKM3x3)/(mdl_sw*mdl_sqrt__2);
     aS = alpS;
 mdl_sqrt__aS = sqrt(aS);
 G = 2.*mdl_sqrt__aS*sqrt(M_PI);
-mdl_G__exp__2 = pow(G,2.);
+mdl_G__exp__2 = ((G)*(G));
     }
     void Parameters_sm::setDependentCouplings(){
     GC_12 = mdl_complexi*mdl_G__exp__2;
@@ -2174,9 +2174,9 @@ class IOExportMatchBox(unittest.TestCase,
 
         mymatrixelement = helas_objects.HelasMultiProcess(myamplitude)
 
-        exporter = export_cpp.ProcessExporterMatchbox( mymatrixelement, self.mycppwriter, process_string="q q > six")
+        exporter = export_cpp.OneProcessExporterMatchbox( mymatrixelement, self.mycppwriter, process_string="q q > six")
         
-        self.assertRaises(export_cpp.ProcessExporterCPP.ProcessExporterCPPError,
+        self.assertRaises(export_cpp.OneProcessExporterCPP.ProcessExporterCPPError,
                           exporter.write_process_cc_file,
                           writers.CPPWriter(self.give_pos('test.cc')))
 
@@ -2204,7 +2204,7 @@ class IOExportMatchBox(unittest.TestCase,
         matrix_element.get('matrix_elements')[0].set('has_mirror_process',
                                                      True)
 
-        exporter = export_cpp.ProcessExporterMatchbox(matrix_element,
+        exporter = export_cpp.OneProcessExporterMatchbox(matrix_element,
                                                  self.mycppwriter)
 
         exporter.write_process_cc_file(\

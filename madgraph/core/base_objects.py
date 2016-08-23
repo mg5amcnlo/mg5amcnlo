@@ -1585,15 +1585,19 @@ class Model(PhysicsObject):
         return [c for c in range(1, len(self.get('particles')) + 1) if \
                 c not in self.get('particle_dict').keys()][0]
                 
-    def write_param_card(self):
+    def write_param_card(self, filepath=None):
         """Write out the param_card, and return as string."""
         
         import models.write_param_card as writer
-        out = StringIO.StringIO() # it's suppose to be written in a file
-        param = writer.ParamCardWriter(self)
-        param.define_output_file(out)
-        param.write_card()
-        return out.getvalue()
+        if not filepath:
+            out = StringIO.StringIO() # it's suppose to be written in a file
+        else:
+            out = filepath
+        param = writer.ParamCardWriter(self, filepath=out)
+        if not filepath:
+            return out.getvalue()
+        else:
+            return param
         
     @ staticmethod
     def load_default_name():
@@ -3012,7 +3016,7 @@ class Process(PhysicsObject):
         if self['constrained_orders']:
             mystr = mystr + " ".join('%s%s%d' % (key, 
               self['constrained_orders'][key][1], self['constrained_orders'][key][0]) 
-                    for (key,(value,type)) in sorted(self['constrained_orders'].keys()))  + ' '
+                    for key in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:

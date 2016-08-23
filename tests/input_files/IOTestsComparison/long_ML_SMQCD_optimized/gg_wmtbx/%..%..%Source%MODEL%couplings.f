@@ -24,7 +24,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       CALL COUP1()
 C     
-C     couplings needed to be evaluated points by points
+couplings needed to be evaluated points by points
 C     
       CALL COUP2()
       CALL COUP3()
@@ -50,7 +50,7 @@ C
 
 
 C     
-C     couplings needed to be evaluated points by points
+couplings needed to be evaluated points by points
 C     
       CALL COUP2()
       CALL COUP3()
@@ -97,7 +97,7 @@ C
 
 
 C     
-C     couplings needed to be evaluated points by points
+couplings needed to be evaluated points by points
 C     
       CALL MP_COUP2()
       CALL MP_COUP3()

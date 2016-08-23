@@ -834,12 +834,25 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     param = param_card['decay'].get((part.pdg_code,))
 
                     if  param.value != 0:
-                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''
+                        logger.info('''For gauge cancellation, the width of \'%s\' has been set to zero.'''\
                                     % part.name,'$MG:color:BLACK')
                         param.value = 0
 
             param_card.write_inc_file(outfile, ident_card, default)
 
+    def get_model(self):
+        """return the model related to this process"""
+
+        if self.options['mg5_path']:
+            sys.path.append(self.options['mg5_path'])
+            import models.import_ufo as import_ufo
+            with misc.MuteLogger(['madgraph.model'],[50]):
+                out= import_ufo.import_model(pjoin(self.me_dir,'bin','internal','ufomodel'))
+            return out
+        elif self.mother:
+            return self.mother._curr_model
+        else:
+            return None
 
     def ask_edit_cards(self, cards, mode='fixed', plot=True, first_cmd=None):
         """ """
@@ -2427,16 +2440,47 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if self.cluster_mode == 1:
             opt = self.options
             cluster_name = opt['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](**opt)
-
-
-    def check_param_card(self, path, run=True):
+            if cluster_name in cluster.from_name:
+                self.cluster = cluster.from_name[cluster_name](**opt)
+            else:
+                if MADEVENT and ('mg5_path' not in self.options or not self.options['mg5_path']):
+                    raise self.InvalidCmd('%s not native cluster type and not MG5aMC found to check for plugin')
+                elif MADEVENT:
+                    mg5dir = self.options['mg5_path']
+                    if mg5dir not in sys.path:
+                        sys.path.append(mg5dir)
+                else:
+                    mg5dir = MG5DIR
+                # Check if a plugin define this type of cluster
+                # check for PLUGIN format
+                for plug in os.listdir(pjoin(mg5dir, 'PLUGIN')):
+                    if os.path.exists(pjoin(mg5dir, 'PLUGIN', plug, '__init__.py')):
+                        try:
+                            __import__('PLUGIN.%s' % plug)
+                        except Exception, error:
+                            logger.critical('plugin directory %s fail to be loaded. Please check it', plug)
+                            continue
+                        plugin = sys.modules['PLUGIN.%s' % plug]  
+                        if not hasattr(plugin, 'new_cluster'):
+                            continue
+                        if not misc.is_plugin_supported(plugin):
+                            continue              
+                        if cluster_name in plugin.new_cluster:
+                            logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
+                            self.cluster = plugin.new_cluster[cluster_name](**opt)
+                            break
+                else:
+                    raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
+                
+                
+    def check_param_card(self, path, run=True, dependent=False):
         """
         1) Check that no scan parameter are present
         2) Check that all the width are define in the param_card.
         - If a scan parameter is define. create the iterator and recall this fonction 
           on the first element.
-        - If some width are set on 'Auto', call the computation tools."""
+        - If some width are set on 'Auto', call the computation tools.
+        3) if dependent is on True check for dependent parameter (automatic for scan)"""
         
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
         pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
@@ -2451,7 +2495,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.param_card_iterator = main_card
             first_card = main_card.next(autostart=True)
             first_card.write(path)
-            return self.check_param_card(path, run)
+            return self.check_param_card(path, run, dependent=True)
         
         pdg_info = pattern_width.findall(text)
         if pdg_info:
@@ -2462,13 +2506,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if not has_nlo:
                     self.do_compute_widths('%s %s' % (' '.join(pdg), path))
                 else:
-                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path))
+                    self.do_compute_widths('%s %s --nlo' % (' '.join(pdg), path)) 
             else:
                 logger.info('''Some width are on Auto in the card. 
     Those will be computed as soon as you have finish the edition of the cards.
     If you want to force the computation right now and being able to re-edit
     the cards afterwards, you can type \"compute_wdiths\".''')
-
+        
+        if dependent:   
+            card = check_param_card.ParamCard(path)
+            AskforEditCard.update_dependent(self, self.me_dir, card, path, timer=20)
+        
+        return
 
     def add_error_log_in_html(self, errortype=None):
         """If a ME run is currently running add a link in the html output"""
@@ -2887,7 +2936,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
 
 
-    def complete_compute_widths(self, text, line, begidx, endidx):
+    def complete_compute_widths(self, text, line, begidx, endidx, formatting=True):
         "Complete the compute_widths command"
 
         args = self.split_arg(line[0:begidx])
@@ -2907,7 +2956,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             ['--path=', '--output=', '--min_br=0.\$', '--nlo',
                              '--precision_channel=0.\$', '--body_decay='])            
         
-        return self.deal_multiple_categories(completion)
+        return self.deal_multiple_categories(completion, formatting)
         
 
     def update_make_opts(self):
@@ -3134,7 +3183,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             filename = pdf_info[filename]['filename']
         
         if os.path.exists(pjoin(pdfsets_dir, filename)):
-            logger.debug('%s is already present in %s', (filename, pdfsets_dir))
+            logger.debug('%s is already present in %s', filename, pdfsets_dir)
             return
              
         logger.info('Trying to download %s' % filename)
@@ -3279,6 +3328,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     """A class for asking a question where in addition you can have the
     set command define and modifying the param_card/run_card correctly"""
 
+    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
+                     'madweight_card', 'MadLoopParams', 'shower_card']
+
     special_shortcut = {'ebeam':['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s'],
                         'lpp': ['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ],
                         'lhc': ['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
@@ -3287,11 +3339,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         'lcc':['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
                         'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
                         }
-    
-    all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
-                     'madweight_card', 'MadLoopParams', 'shower_card']
-    
-    
+
     special_shortcut_help = {              
     'ebeam' : 'syntax: set ebeam VALUE:\n      This parameter sets the energy to both beam to the value in GeV',
     'lpp'   : 'syntax: set ebeam  VALUE:\n'+\
@@ -3306,24 +3354,65 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     'fixed_scale' : 'syntax: set fixed_scale VALUE:\n      Set all scales to the give value (in GeV)',              
     }
     
+    def load_default(self):
+        """ define all default variable. No load of card here.
+            This allow to subclass this class and just change init and still have
+            all variables defined."""
     
-    def __init__(self, question, cards=[], mode='auto', *args, **opt):
+        self.me_dir = None
+        self.param_card = None
+        self.run_card = {}
+        self.pname2block = {}
+        self.conflict = []
+        self.restricted_value = {}
+        self.mode = ''
+        self.cards = [] 
+        self.run_set = []
+        self.has_mw = False
+        self.has_ml = False   
+        self.has_shower = False
+        self.has_PY8 = False
+        self.paths = {}
 
+    
+    def define_paths(self, **opt):
         # Initiation
         if 'pwd' in opt:
             self.me_dir = opt['pwd']
-            del opt['pwd']
-
-        cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
-
+        elif 'mother_interface' in opt:
+            self.mother_interface = opt['mother_interface']     
         if not hasattr(self, 'me_dir') or not self.me_dir:
             self.me_dir = self.mother_interface.me_dir
+        
+        #define paths
+        self.paths['param'] = pjoin(self.me_dir,'Cards','param_card.dat')
+        self.paths['param_default'] = pjoin(self.me_dir,'Cards','param_card_default.dat')
+        self.paths['run'] = pjoin(self.me_dir,'Cards','run_card.dat')
+        self.paths['run_default'] = pjoin(self.me_dir,'Cards','run_card_default.dat')
+        self.paths['transfer'] =pjoin(self.me_dir,'Cards','transfer_card.dat')
+        self.paths['MadWeight'] =pjoin(self.me_dir,'Cards','MadWeight_card.dat')
+        self.paths['MadWeight_default'] =pjoin(self.me_dir,'Cards','MadWeight_card_default.dat')
+        self.paths['ML'] =pjoin(self.me_dir,'Cards','MadLoopParams.dat')
+        self.paths['shower'] = pjoin(self.me_dir,'Cards','shower_card.dat')
+        self.paths['shower_default'] = pjoin(self.me_dir,'Cards','shower_card_default.dat')
+        self.paths['pythia'] =pjoin(self.me_dir, 'Cards','pythia_card.dat')
+        self.paths['PY8'] = pjoin(self.me_dir, 'Cards','pythia8_card.dat')
+        self.paths['PY8_default'] = pjoin(self.me_dir, 'Cards','pythia8_card_default.dat')
+        self.paths['madspin_default'] = pjoin(self.me_dir,'Cards/madspin_card_default.dat')
+        self.paths['madspin'] = pjoin(self.me_dir,'Cards/madspin_card.dat')
+        self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
+        self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
+        
 
-        # read the card
+    def __init__(self, question, cards=[], mode='auto', *args, **opt):
+
+        self.load_default()        
+        self.define_paths(**opt)
+        cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
 
 
         try:
-            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+            self.param_card = check_param_card.ParamCard(self.paths['param'])
         except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
             logger.error('problem detected: %s' % e)
@@ -3334,11 +3423,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.param_card_default = default_param
         
         try:
-            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+            self.run_card = banner_mod.RunCard(self.paths['run'])
         except IOError:
             self.run_card = {}
         try:
-            run_card_def = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
+            run_card_def = banner_mod.RunCard(self.paths['run_default'])
         except IOError:
             run_card_def = {}
 
@@ -3377,7 +3466,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.do_change_tf = self.mother_interface.do_define_transfer_fct
             self.complete_change_tf = self.mother_interface.complete_define_transfer_fct
             self.help_change_tf = self.mother_interface.help_define_transfer_fct
-            if not os.path.exists(pjoin(self.me_dir,'Cards','transfer_card.dat')):
+            if not os.path.exists(self.paths['transfer']):
                 logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
             
             
@@ -3386,7 +3475,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 import madgraph.madweight.Cards as mwcards
             except:
                 import internal.madweight.Cards as mwcards
-            self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
+            self.mw_card = mwcards.Card(self.paths['MadWeight'])
             self.mw_card = self.mw_card.info
             self.mw_vars = []
             for key in self.mw_card:
@@ -3406,9 +3495,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     
         #check if MadLoopParams.dat is present:
         self.has_ml = False
-        if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
+        if os.path.isfile(self.paths['ML']):
             self.has_ml = True
-            self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
+            self.MLcard = banner_mod.MadLoopParam(self.paths['ML'])
             self.MLcardDefault = banner_mod.MadLoopParam()
             
             self.ml_vars = [k.lower() for k in self.MLcard.keys()]
@@ -3429,7 +3518,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 import madgraph.various.shower_card as showercards
             except:
                 import internal.shower_card as showercards
-            self.shower_card = showercards.ShowerCard(pjoin(self.me_dir,'Cards','shower_card.dat'))
+            self.shower_card = showercards.ShowerCard(self.paths['shower'])
             self.shower_vars = self.shower_card.keys()
             
             # check for conflict with run_card/param_card
@@ -3444,8 +3533,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.has_PY8 = False
         if 'pythia8_card.dat' in cards:
             self.has_PY8 = True
-            self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,
-                                                    'Cards','pythia8_card.dat'))
+            self.PY8Card = banner_mod.PY8Card(self.paths['PY8'])
             self.PY8CardDefault = banner_mod.PY8Card()
             
             self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
@@ -3460,7 +3548,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
                 if self.has_ml and var in self.ml_vars:
                     self.conflict.append(var)
-    
+
     def do_help(self, line, conflict_raise=False, banner=True):    
      try:       
          
@@ -3573,9 +3661,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
          import traceback
          traceback.print_exc()
          print error    
+
     def complete_help(self, text, line, begidx, endidx):
      try:
-        possibilities = self.complete_set(text, line, begidx, endidx,return_cat=True)
+        possibilities = self.complete_set(text, line, begidx, endidx,formatting=False)
         if line == '':
             possibilities['Defined command'] = cmd.BasicCmd.completenames(self, text, line)#, begidx, endidx)
         return self.deal_multiple_categories(possibilities)
@@ -3583,8 +3672,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
          import traceback
          traceback.print_exc()
          print error
-         
-    def complete_set(self, text, line, begidx, endidx, return_cat=False):
+
+
+    def complete_set(self, text, line, begidx, endidx, formatting=True):
         """ Complete the set command"""
 
         prev_timer = signal.alarm(0) # avoid timer if any
@@ -3786,12 +3876,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         possibilities['Special value'] = self.list_completion(text, opts)
                 possibilities['MadWeight Card id' ] = self.list_completion(text, ids) 
 
-        if return_cat:
-            return possibilities
-        else:
-            return self.deal_multiple_categories(possibilities)
-        
-        
+        return self.deal_multiple_categories(possibilities, formatting)
+
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
@@ -3842,7 +3928,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
         # Special case for the qcut value
         if args[0].lower() == 'qcut':
-            pythia_path = pjoin(self.me_dir, 'Cards','pythia_card.dat')
+            pythia_path = self.paths['pythia']
             if os.path.exists(pythia_path):
                 logger.info('add line QCUT = %s in pythia_card.dat' % args[1])
                 p_card = open(pythia_path,'r').read()
@@ -3856,7 +3942,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
         # Special case for the showerkt value
         if args[0].lower() == 'showerkt':
-            pythia_path = pjoin(self.me_dir, 'Cards','pythia_card.dat')
+            pythia_path = self.paths['pythia']
             if os.path.exists(pythia_path):
                 logger.info('add line SHOWERKT = %s in pythia_card.dat' % args[1].upper())
                 p_card = open(pythia_path,'r').read()
@@ -3915,14 +4001,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                        'delphes_card']:
             if args[1] == 'default':
                 logging.info('replace %s by the default card' % args[0])
-                files.cp(pjoin(self.me_dir,'Cards','%s_default.dat' % args[0]),
-                        pjoin(self.me_dir,'Cards','%s.dat'% args[0]))
+                files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
                 if args[0] == 'param_card':
-                    self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
+                    self.param_card = check_param_card.ParamCard(self.paths['param'])
                 elif args[0] == 'run_card':
-                    self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
+                    self.run_card = banner_mod.RunCard(self.paths['run'])
                 elif args[0] == 'shower_card':
-                    self.shower_card = shower_card_mod.ShowerCard(pjoin(self.me_dir,'Cards','shower_card.dat'))
+                    self.shower_card = shower_card_mod.ShowerCard(self.paths['shower'])
                 return
             else:
                 card = args[0]
@@ -3935,7 +4020,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[1] == 'default':
                 logging.info('replace MadLoopParams.dat by the default card')
                 self.MLcard = banner_mod.MadLoopParam(self.MLcardDefault)
-                self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
+                self.MLcard.write(self.paths['ML'],
                                   commentdefault=True)
                 return
             else:
@@ -3961,8 +4046,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif args[0] in ['madspin_card']:
             if args[1] == 'default':
                 logging.info('replace madspin_card.dat by the default card')
-                files.cp(pjoin(self.me_dir,'Cards/madspin_card_default.dat'),
-                         pjoin(self.me_dir,'Cards/madspin_card.dat'))
+                files.cp(self.paths['MS_default'], self.paths['madspin'])
                 return
             else:
                 logger.warning("""Command set not allowed for modifying the madspin_card. 
@@ -3981,7 +4065,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning(text)
 
             if args[start+1] == 'default':
-                default = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card_default.dat'))
+                default = banner_mod.RunCard(self.paths['run_default'])
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]])
                 else:
@@ -3996,8 +4080,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 else:
                     val = args[start+1]
                 self.setR(args[start], val)
-            self.run_card.write(pjoin(self.me_dir,'Cards','run_card.dat'),
-                                pjoin(self.me_dir,'Cards','run_card_default.dat'))
+            self.run_card.write(self.paths['run'], self.paths['run_default'])
             
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
         elif (args[start] in self.param_card or args[start] == 'width') \
@@ -4037,7 +4120,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                 continue
                             else:
                                 self.setP(args[start], key, args[-1])
-                        self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        self.param_card.write(self.paths['param'])
                         return
                     logger.warning('invalid set command %s (failed to identify LHA information)' % line)
                     return
@@ -4063,7 +4146,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.warning('invalid set command %s' % line)
                 return
-            self.param_card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+            self.param_card.write(self.paths['param'])
         
         # PARAM_CARD NO BLOCK NAME ---------------------------------------------
         elif args[start] in self.pname2block and card in ['','param_card']:
@@ -4098,7 +4181,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             name = args[start+1]
             value = args[start+2:]
             self.setM(block, name, value)
-            self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))        
+            self.mw_card.write(self.paths['MadWeight'])        
         
         # MadWeight_card NO Block name -----------------------------------------
         elif self.has_mw and args[start] in self.mw_vars \
@@ -4120,7 +4203,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             name = args[start]
             value = args[start+1:]
             self.setM(block, name, value)
-            self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
+            self.mw_card.write(self.paths['MadWeight'])
              
         # MadWeight_card New Block ---------------------------------------------
         elif self.has_mw and args[start].startswith('mw_') and len(args[start:]) == 3\
@@ -4129,7 +4212,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             name = args[start+1]
             value = args[start+2]
             self.setM(block, name, value)
-            self.mw_card.write(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))    
+            self.mw_card.write(self.paths['MadWeight'])    
 
         #### SHOWER CARD
         elif self.has_shower and args[start].lower() in [l.lower() for l in \
@@ -4144,16 +4227,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
             if args[start+1].lower() == 'default':
-                default = shower_card_mod.ShowerCard(pjoin(self.me_dir,'Cards','shower_card_default.dat'))
+                default = shower_card_mod.ShowerCard(self.paths['shower_default'])
                 if args[start] in default.keys():
-                    self.shower_card.set_param(args[start],default[args[start]],pjoin(self.me_dir,'Cards','shower_card.dat'))
+                    self.shower_card.set_param(args[start],default[args[start]], self.paths['shower'])
                 else:
                     logger.info('remove information %s from the shower_card' % args[start])
                     del self.shower_card[args[start]]
             elif args[start+1].lower() in ['t','.true.','true']:
-                self.shower_card.set_param(args[start],'.true.',pjoin(self.me_dir,'Cards','shower_card.dat'))
+                self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
             elif args[start+1].lower() in ['f','.false.','false']:
-                self.shower_card.set_param(args[start],'.false.',pjoin(self.me_dir,'Cards','shower_card.dat'))
+                self.shower_card.set_param(args[start],'.false.',self.paths['shower'])
             elif args[start] in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or\
                                                   args[start].startswith('dm_'):
                 #case sensitive parameters
@@ -4162,7 +4245,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
             else:
                 args_str = ' '.join(str(a) for a in args[start+1:len(args)])
-                self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
+                self.shower_card.set_param(args[start],args_str,self.paths['shower'])
      
         # MadLoop Parameter  ---------------------------------------------------
         elif self.has_ml and args[start] in self.ml_vars \
@@ -4180,7 +4263,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 value = args[start+1]
                 default = False
             self.setML(args[start], value, default=default)
-            self.MLcard.write(pjoin(self.me_dir,'Cards','MadLoopParams.dat'),
+            self.MLcard.write(self.paths['ML'],
                               commentdefault=True)
 
         # Pythia8 Parameter  ---------------------------------------------------
@@ -4220,7 +4303,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info('name %s was not present in the block %s for the current MadWeight card. We are adding it' % (name,block),'$MG:color:BLACK')
         if value == 'default':
             import madgraph.madweight.Cards as mwcards
-            mw_default = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card_default.dat'))
+            mw_default = mwcards.Card(self.paths['MadWeight_default'])
             try:
                 value = mw_default[block][name]
             except KeyError:
@@ -4238,7 +4321,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.mw_card[block][name] = value
     
     def setR(self, name, value):
-        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value))
+        logger.info('modify parameter %s of the run_card.dat to %s' % (name, value),'$MG:color:BLACK')
         self.run_card.set(name, value, user=True)
 
     def setML(self, name, value, default=False):
@@ -4248,7 +4331,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except Exception, error:
             logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
             return
-        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value))
+        logger.info('modify parameter %s of the MadLoopParam.dat to %s' % (name, value),'$MG:color:BLACK')
         if default and name.lower() in self.MLcard.user_set:
             self.MLcard.user_set.remove(name.lower())
 
@@ -4266,7 +4349,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if isinstance(value, str):
             value = value.lower()
             if value == 'default':
-                default = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
+                default = check_param_card.ParamCard(self.paths['param_default'])
                 value = default[block].param_dict[lhaid].value
 
             elif value in ['auto', 'auto@nlo']:
@@ -4309,7 +4392,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             not self.run_card['store_rwgt_info']:
             #check if a NLO reweighting is required
                 re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO)\s*(?:#|$)''', re.M+re.I)
-                text = open(pjoin(self.me_dir,'Cards','reweight_card.dat')).read()
+                text = open(self.paths['reweight']).read()
                 options = re_pattern.findall(text)
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
@@ -4345,8 +4428,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 # Add additional user-defined compilation flags
                 p = misc.subprocess.Popen([executable, '--config'], stdout=subprocess.PIPE)
                 stdout, _ = p. communicate()
-                if '-ldl' in stdout:
-                    libs.append('dl')
+                for lib in ['-ldl','-lstdc++','-lc++']:
+                    if lib in stdout:
+                        libs.append(lib[2:])                    
 
                 # This precompiler flag is in principle useful for the analysis if it writes HEPMC
                 # events, but there is unfortunately no way for now to specify it in the shower_card.
@@ -4381,15 +4465,89 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
     
     def postcmd(self, stop, line):
-        
         ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
+
         if ending_question:
             self.check_card_consistency()
+            self.do_update_dependent('', timer=20)
             return ending_question
+    
+    def do_update_dependent(self, line, timer=0):
+        """Change the mass/width of particles which are not free parameter for the 
+        model."""
+        if not self.mother_interface:
+            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+        
+        pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
+        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)
+        param_text= open(self.paths['param']).read()
+        
+        if pattern_scan.search(param_text):
+            #for block, key in self.restricted_value:
+            #    self.param_card[block].get(key).value = -9.999e-99
+            #    self.param_card.write(self.paths['param'])
+            return
+        elif pattern_width.search(param_text):
+            self.do_compute_widths('')
+            self.param_card = check_param_card.ParamCard(self.paths['param'])
+    
+        # calling the routine doing the work    
+        self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
+                               self.paths['param'], timer)
+    
+    @staticmethod
+    def update_dependent(mecmd, me_dir, param_card, path ,timer=0):
+        """static method which can also be called from outside the class
+           usefull in presence of scan.
+           return if the param_card was updated or not
+        """
+        modify = True
+        class TimeOutError(Exception): 
+            pass
+        def handle_alarm(signum, frame): 
+            raise TimeOutError
+        signal.signal(signal.SIGALRM, handle_alarm)
+        if timer:
+            signal.alarm(timer)
+            log_level=30
+        else:
+            log_level=20
+        # Try to load the model in the limited amount of time allowed
+        try:
+            model = mecmd.get_model()
+            signal.alarm(0)
+        except TimeOutError:
+            logger.warning('The model takes too long to load so we bypass the updating of dependent parameter.\n'+\
+                           'This might create trouble for external program (like MadSpin/shower/...)\n'+\
+                           'The update can be forced without timer by typing \'update_dependent\' at the time of the card edition')
+            modify =False
+        except Exception:
+            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+            signal.alarm(0)
+        else:
+            restrict_card = pjoin(me_dir,'Source','MODEL','param_card_rule.dat')
+            if not os.path.exists(restrict_card):
+                restrict_card = None
+            #restrict_card = None
+            if model:
+                modify = param_card.update_dependent(model, restrict_card, log_level)
+                if modify and path:
+                    param_card.write(path)
+            else:
+                logger.warning('missing MG5aMC code. Fail to update dependent parameter. This might create trouble for program like MadSpin/shower/...')
+            
+        if log_level==20:
+            logger.info('param_card up to date.')
+            
+        return modify
+    
+    
+    
     
     def check_answer_consistency(self):
         """function called if the code reads a file"""
-        self.check_card_consistency() 
+        self.check_card_consistency()
+        self.do_update_dependent('', timer=20) 
       
     def help_set(self):
         '''help message for set'''
@@ -4433,11 +4591,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         elif os.path.isfile(line):
             self.copy_file(line)
             self.value = 'repeat'
-        elif os.path.exists(pjoin(self.me_dir, line)):
+        elif self.me_dir and os.path.exists(pjoin(self.me_dir, line)):
             self.copy_file(pjoin(self.me_dir,line))
             self.value = 'repeat'            
         elif line.strip() != '0' and line.strip() != 'done' and \
-            str(line) != 'EOF' and line.strip() in self.allow_arg:
+            str(line) != 'EOF' and line.strip() in self.allow_arg:            
             self.open_file(line)
             self.value = 'repeat'
         else:
@@ -4448,7 +4606,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_decay(self, line):
         """edit the madspin_card to define the decay of the associate particle"""
         signal.alarm(0) # avoid timer if any
-        path = pjoin(self.me_dir,'Cards','madspin_card.dat')
+        path = self.paths['madspin']
         
         if 'madspin_card.dat' not in self.cards or not os.path.exists(path):
             logger.warning("Command decay not valid. Since MadSpin is not available.")
@@ -4484,7 +4642,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
     def do_compute_widths(self, line):
         signal.alarm(0) # avoid timer if any
-        path = pjoin(self.me_dir,'Cards','param_card.dat')
+        path = self.paths['param']
         pattern = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
         text = open(path).read()
         pdg_info = pattern.findall(text)
@@ -4586,7 +4744,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         print '   If you specify some names after the command (i.e. asperge m1 m2) then ASperGe will only'
         print '   diagonalize the associate mass matrices (here m1 and m2).'
 
-    def complete_asperge(self, text, line, begidx, endidx):
+    def complete_asperge(self, text, line, begidx, endidx, formatting=True):
         signal.alarm(0) # avoid timer if any
 
         blockname = self.pname2block.keys()
@@ -4597,7 +4755,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         output = {'Mixing matrices': self.list_completion(text, valid, line),
                   'Other potential valid input': self.list_completion(text, potential, line)}
 
-        return self.deal_multiple_categories(output)
+        return self.deal_multiple_categories(output, formatting)
 
 
     def do_asperge(self, line):
@@ -4621,7 +4779,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
 
         opts = line.split()
-        card = pjoin(self.me_dir,'Cards', 'param_card.dat')
+        card = self.paths['param']
         logger.info('running ASperGE')
         returncode = misc.call([pjoin(path,'ASperGe'), card, '%s.new' % card] + opts)
         if returncode:
@@ -4653,8 +4811,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.warning('Fail to determine the type of the file. Not copied')
         if card_name != 'banner':
             logger.info('copy %s as %s' % (path, card_name))
-            files.cp(path, pjoin(self.me_dir, 'Cards', card_name))
-            self.reload_card(pjoin(self.me_dir, 'Cards', card_name))
+            files.cp(path, self.paths[card_name.split('_',1)[0]])
+            self.reload_card(self.paths[card_name.split('_',1)[0]])
         elif card_name == 'banner':
             banner_mod.split_banner(path, self.mother_interface.me_dir, proc_card=False)
             logger.info('Splitting the banner in it\'s component')
@@ -4665,7 +4823,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
     def open_file(self, answer):
         """open the file"""
-        me_dir = self.mother_interface.me_dir
+        try:
+            me_dir = self.mother_interface.me_dir
+        except:
+            me_dir = None
+            
         if answer.isdigit():
             if answer == '9':
                 answer = 'plot'
@@ -4674,17 +4836,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
         if 'MadLoopParams' in answer:
-            answer = pjoin(me_dir,'Cards','MadLoopParams.dat')
+            answer = self.paths['ML']
         if 'pythia8_card' in answer:
-            answer = pjoin(me_dir,'Cards','pythia8_card.dat')
-            
+            answer = self.paths['PY8']
         if not '.dat' in answer and not '.lhco' in answer:
             if answer != 'trigger':
-                path = pjoin(me_dir,'Cards','%s_card.dat' % answer)
+                path = self.paths[answer]
             else:
-                path = pjoin(me_dir,'Cards','delphes_trigger.dat')
+                path = self.paths['delphes']
         elif not '.lhco' in answer:
-            path = pjoin(me_dir, 'Cards', answer)
+            if '_' in answer:
+                path = self.paths[answer.split('_')[0]]
+            else:
+                path = pjoin(me_dir, 'Cards', answer)
         else:
             path = pjoin(me_dir, self.mw_card['mw_run']['inputfile'])
             if not os.path.exists(path):
@@ -4713,8 +4877,8 @@ You can also copy/paste, your event file here.''')
         
     def reload_card(self, path): 
         """reload object to have it in sync"""
-        
-        if path == pjoin(self.me_dir,'Cards','param_card.dat'):
+
+        if path == self.paths['param']:        
             try:
                 self.param_card = check_param_card.ParamCard(path) 
             except (check_param_card.InvalidParamCard, ValueError) as e:
@@ -4722,24 +4886,50 @@ You can also copy/paste, your event file here.''')
                 logger.error('problem detected: %s' % e)
                 logger.error('Please re-open the file and fix the problem.')
                 logger.warning('using the \'set\' command without opening the file will discard all your manual change')
-        elif path == pjoin(self.me_dir,'Cards','run_card.dat'):
-            self.run_card = banner_mod.RunCard(pjoin(self.me_dir,'Cards','run_card.dat'))
-        elif path == pjoin(self.me_dir,'Cards','MadLoopParams.dat'):
-            self.MLcard = banner_mod.MadLoopParam(pjoin(self.me_dir,'Cards','MadLoopParams.dat'))
-        elif path == pjoin(self.me_dir,'Cards','pythia8_card.dat'):
+        elif path == self.paths['run']:
+            self.run_card = banner_mod.RunCard(path)
+        elif path == self.paths['ML']:
+            self.MLcard = banner_mod.MadLoopParam(path)
+        elif path == self.paths['PY8']
             # Use the read function so that modified/new parameters are correctly
             # set as 'user_set'
             if not self.PY8Card:
-                self.PY8Card = banner_mod.PY8Card(pjoin(self.me_dir,'Cards',
-                                                    'pythia8_card_default.dat'))
-            self.PY8Card.read(
-                   pjoin(self.me_dir,'Cards','pythia8_card.dat'), setter='user')
+                self.PY8Card = banner_mod.PY8Card(self.paths['PY8_default'])
+
+            self.PY8Card.read(self.paths['PY8'], setter='user')
             self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
                                      k.lower() not in self.PY8Card.hidden_param]
-        elif path == pjoin(self.me_dir,'Cards','MadWeight_card.dat'):
+        elif path == self.paths['MadWeight']:
             try:
                 import madgraph.madweight.Cards as mwcards
             except:
                 import internal.madweight.Cards as mwcards
-            self.mw_card = mwcards.Card(pjoin(self.me_dir,'Cards','MadWeight_card.dat'))
- 
+            self.mw_card = mwcards.Card(path)
+        return path
+
+class EditParamCard(AskforEditCard):
+    """a dedicated module for the param"""
+    
+    special_shortcut ={}
+    
+    def __init__(self, question, card=[], mode='auto', *args, **opt):
+                 
+        self.load_default()
+        cmd.OneLinePathCompletion.__init__(self, question, *args, **opt)
+        if os.path.isfile(card[0]):
+            self.param_card = check_param_card.ParamCard(card[0])
+            self.paths['param'] = card[0]
+            if os.path.isfile(card[0].replace('.dat', '_default.dat')):
+                self.paths['param_default'] = card[0].replace('.dat', '_default.dat')
+            else:
+                self.paths['param_default'] = card[0]
+        else:
+            raise Exception, 'path %s do not exists' % card[0]
+        
+        self.pname2block, self.restricted_value = self.param_card.analyze_param_card()
+        self.cards=['param']
+        
+    def do_asperge(self, *args, **opts):
+        "Not available"
+        logger.warning("asperge not available in this mode")
+

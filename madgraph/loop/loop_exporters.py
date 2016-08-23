@@ -94,7 +94,7 @@ class LoopExporterFortran(object):
                         'samurai':'msamurai.mod',
                         'collier': 'collier.mod'}
 
-    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+    def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
@@ -110,7 +110,7 @@ class LoopExporterFortran(object):
         self.dependencies = self.opt['output_dependencies']
         self.compute_color_flows = self.opt['compute_color_flows']
 
-        super(LoopExporterFortran,self).__init__(mgme_dir, dir_path, self.opt)        
+        super(LoopExporterFortran,self).__init__(dir_path, self.opt)        
 
 
     def link_CutTools(self, targetPath):
@@ -206,7 +206,7 @@ class LoopExporterFortran(object):
 #===============================================================================
 class LoopProcessExporterFortranSA(LoopExporterFortran,
                                    export_v4.ProcessExporterFortranSA):
-                                   
+                                
     """Class to take care of exporting a set of loop matrix elements in the
        Fortran format."""
        
@@ -219,16 +219,20 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                left_frame_char = '{',right_frame_char = '}',
                print_frame=True, side_margin = 7, up_margin = 1)
 
-    def copy_v4template(self, modelname = ''):
+    def __init__(self, *args, **opts):
+        super(LoopProcessExporterFortranSA,self).__init__(*args,**opts)
+        self.unique_id=0 # to allow collier to distinguish the various loop subprocesses
+
+    def copy_template(self, model):
         """Additional actions needed to setup the Template.
         """
-        super(LoopProcessExporterFortranSA, self).copy_v4template(modelname)
+        super(LoopProcessExporterFortranSA, self).copy_template(model)
 
         self.loop_additional_template_setup()
     
     def loop_additional_template_setup(self, copy_Source_makefile = True):
         """ Perform additional actions specific for this class when setting
-        up the template with the copy_v4template function."""
+        up the template with the copy_template function."""
 
         # We must change some files to their version for NLO computations
         cpfiles= ["Cards/MadLoopParams.dat",
@@ -335,13 +339,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         else:
             return file
         
-    def convert_model_to_mg4(self, model, wanted_lorentz = [], 
+    def convert_model(self, model, wanted_lorentz = [], 
                                                          wanted_couplings = []):
         """ Caches the aloha model created here when writing out the aloha 
         fortran subroutine.
         """
         self.get_aloha_model(model)
-        super(LoopProcessExporterFortranSA, self).convert_model_to_mg4(model,
+        super(LoopProcessExporterFortranSA, self).convert_model(model,
            wanted_lorentz = wanted_lorentz, wanted_couplings = wanted_couplings)
 
     def get_ME_identifier(self, matrix_element, 
@@ -678,13 +682,13 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
                 'MadEventOutput': MadEventOutput}
 
     #===========================================================================
-    # generate_subprocess_directory_v4
+    # generate_subprocess_directory
     #===========================================================================
     def generate_loop_subprocess(self, matrix_element, fortran_model,
           group_number = None, proc_id = None, config_map=None, unique_id=None):
         """Generate the Pxxxxx directory for a loop subprocess in MG4 standalone,
         including the necessary loop_matrix.f, born_matrix.f and include files.
-        Notice that this is too different from generate_subprocess_directory_v4
+        Notice that this is too different from generate_subprocess_directory
         so that there is no point reusing this mother function.
         The 'group_number' and 'proc_id' options are only used for the LoopInduced
         MadEvent output and only to specify the ME_identifier and the P* 
@@ -1025,13 +1029,13 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         writer.writelines(proc_include)
                                 
-    def generate_subprocess_directory_v4(self, matrix_element, fortran_model,
-                                                                     unique_id):
+    def generate_subprocess_directory(self, matrix_element, fortran_model):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
         
+        self.unique_id +=1
         return self.generate_loop_subprocess(matrix_element,fortran_model,
-                                                            unique_id=unique_id)
+                                                            unique_id=self.unique_id)
 
     def write_check_sa(self, writer, matrix_element):
         """Writes out the steering code check_sa. In the optimized output mode,
@@ -1591,13 +1595,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # using a standalone verison independent of gosam_contrib
     all_tir=['pjfry','iregi','ninja','golem','samurai','collier']
     
-    def __init__(self, mgme_dir="", dir_path = "", opt=None):
+    def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
         information on where to find all the loop-related source files, 
         like CutTools and TIR"""
 
-        super(LoopProcessOptimizedExporterFortranSA,self).__init__(mgme_dir, 
-                                                                   dir_path, opt)
+        super(LoopProcessOptimizedExporterFortranSA,self).__init__(dir_path, opt)
 
         # TIR available ones
         self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True,
@@ -1614,12 +1617,11 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
             else:
                 setattr(self,tir_dir,'')
 
-    def copy_v4template(self, modelname = ''):
+    def copy_template(self, model):
         """Additional actions needed to setup the Template. 
         """
         
-        super(LoopProcessOptimizedExporterFortranSA, self).copy_v4template(
-                                                                      modelname)
+        super(LoopProcessOptimizedExporterFortranSA, self).copy_template(model)
         
         self.loop_optimized_additional_template_setup()
 
@@ -1647,7 +1649,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
     def loop_optimized_additional_template_setup(self):
         """ Perform additional actions specific for this class when setting
-        up the template with the copy_v4template function."""
+        up the template with the copy_template function."""
         
         # We must link the TIR to the Library folder of the active Template
         link_tir_libs=[]
@@ -1868,6 +1870,14 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                           and matrix_element.get('processes')[0].get('has_born')
         
         return self.group_loops
+    
+    def finalize(self, matrix_element, cmdhistory, MG5options, outputflag):
+        """create the global information for loops"""
+        
+        super(LoopProcessOptimizedExporterFortranSA,self).finalize(matrix_element,
+                                             cmdhistory, MG5options, outputflag)
+        self.write_global_specs(matrix_element)
+    
     
     def write_loop_matrix_element_v4(self, writer, matrix_element, fortran_model,
                         group_number = None, proc_id = None, config_map = None):
@@ -2452,6 +2462,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         """ From the list of matrix element, or the single matrix element, derive
         the global quantities to write in global_coef_specs.inc"""
         
+        if isinstance(matrix_element_list, (group_subprocs.SubProcessGroupList,
+                                            loop_helas_objects.LoopHelasProcess)):
+            matrix_element_list = matrix_element_list.get_matrix_elements()
+        
         if isinstance(matrix_element_list, list):
             me_list = matrix_element_list
         else:
@@ -2859,7 +2873,7 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         
         ln(pjoin('../MadLoop5_resources') , cwd=Ppath)
 
-    def copy_v4template(self, *args, **opts):
+    def copy_template(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically the necessary building functions for the mixed
@@ -2874,13 +2888,12 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================
-    def finalize_v4_directory(self, matrix_elements, history = "", makejpg = False, 
-                              online = False, compiler='g77'):
+    def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Function to finalize v4 directory, for inheritance.
         """
         
         self.proc_characteristic['loop_induced'] = True
-        
+
         # This can be uncommented if one desires to have the MadLoop
         # initialization performed at the end of the output phase.
         # Alternatively, one can simply execute the command 'initMadLoop' in
@@ -2888,7 +2901,9 @@ class LoopInducedExporterME(LoopProcessOptimizedExporterFortranSA):
         # from madgraph.interface.madevent_interface import MadLoopInitializer
         # MadLoopInitializer.init_MadLoop(self.dir_path,
         #                   subproc_prefix=self.SubProc_prefix, MG_options=None)
-
+        
+        self.write_global_specs(matrix_elements)
+        
     def write_tir_cache_size_include(self, writer):
         """Write the file 'tir_cache_size.inc' which sets the size of the TIR
         cache the the user wishes to employ and the default value for it.
@@ -3014,19 +3029,19 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
         export_v4.ProcessExporterFortranMEGroup.write_source_makefile(self,
                                                                   *args, **opts)
 
-    def copy_v4template(self, *args, **opts):
+    def copy_template(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically the necessary building functions for the mixed
         # template setup for both MadEvent and MadLoop standalone
         
         # Start witht the MadEvent one
-        export_v4.ProcessExporterFortranMEGroup.copy_v4template(self,*args,**opts)
+        export_v4.ProcessExporterFortranMEGroup.copy_template(self,*args,**opts)
 
         # Then the MadLoop-standalone related one
-        LoopInducedExporterME.copy_v4template(self, *args, **opts)
+        LoopInducedExporterME.copy_template(self, *args, **opts)
 
-    def finalize_v4_directory(self, *args, **opts):
+    def finalize(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically what finalize_v4_directory must be used, so that the
@@ -3034,35 +3049,31 @@ class LoopInducedExporterMEGroup(LoopInducedExporterME,
 
         self.proc_characteristic['loop_induced'] = True
         
-        export_v4.ProcessExporterFortranMEGroup.finalize_v4_directory(
-                                                              self,*args,**opts)
+        export_v4.ProcessExporterFortranMEGroup.finalize(self,*args,**opts)
         
-        # And the finilize_v4 from LoopInducedExporterME which essentially takes
+        # And the finilize from LoopInducedExporterME which essentially takes
         # care of MadLoop virtuals initialization
-        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
+        LoopInducedExporterME.finalize(self,*args,**opts)
         
-    def generate_subprocess_directory_v4(self, subproc_group,
-                            fortran_model,group_number, unique_id=None):
+    def generate_subprocess_directory(self, subproc_group,
+                                                    fortran_model,group_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
         
-        if unique_id is None:
-            raise MadGraph5Error, 'A unique_id must be provided to '+\
-                'generate_subprocess_directory_v4 in LoopInducedExporterMEGroup.'
-
         # Generate the MadLoop files
         calls = 0
         matrix_elements = subproc_group.get('matrix_elements')
         for ime, matrix_element in enumerate(matrix_elements):
+            self.unique_id +=1
             calls += self.generate_loop_subprocess(matrix_element,fortran_model,
-          group_number = group_number, proc_id = str(ime+1),
+                              group_number = group_number, proc_id = str(ime+1),
 #          group_number = str(subproc_group.get('number')), proc_id = str(ime+1),
-          config_map = subproc_group.get('diagram_maps')[ime],
-          unique_id=unique_id+ime)
+                            config_map = subproc_group.get('diagram_maps')[ime],
+                            unique_id=self.unique_id)
         
         # Then generate the MadEvent files
-        export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory_v4(
+        export_v4.ProcessExporterFortranMEGroup.generate_subprocess_directory(
                                  self, subproc_group,fortran_model,group_number)
         
         return calls
@@ -3187,45 +3198,45 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         super(export_v4.ProcessExporterFortranME,self).\
                                             write_source_makefile(*args, **opts)
 
-    def copy_v4template(self, *args, **opts):
+    def copy_template(self, *args, **opts):
         """Pick the right mother functions
         """
         # Call specifically the necessary building functions for the mixed
         # template setup for both MadEvent and MadLoop standalone
         
         # Start witht the MadEvent one
-        export_v4.ProcessExporterFortranME.copy_v4template(self,*args,**opts)
+        export_v4.ProcessExporterFortranME.copy_template(self,*args,**opts)
 
         # Then the MadLoop-standalone related one
-        LoopInducedExporterME.copy_v4template(self, *args, **opts)
+        LoopInducedExporterME.copy_template(self, *args, **opts)
 
-    def finalize_v4_directory(self, *args, **opts):
+    def finalize(self, *args, **opts):
         """Pick the right mother functions
         """
         
         self.proc_characteristic['loop_induced'] = True
-        # Call specifically what finalize_v4_directory must be used, so that the
+        # Call specifically what finalize must be used, so that the
         # MRO doesn't interfere.
-        export_v4.ProcessExporterFortranME.finalize_v4_directory(
-                                                              self,*args,**opts)
+        export_v4.ProcessExporterFortranME.finalize(self, *args, **opts)
 
         # And the finilize_v4 from LoopInducedExporterME which essentially takes
         # care of MadLoop virtuals initialization
-        LoopInducedExporterME.finalize_v4_directory(self,*args,**opts)
+        LoopInducedExporterME.finalize(self, *args, **opts)
 
-    def generate_subprocess_directory_v4(self, matrix_element, fortran_model,
-                                                                     me_number):
+    def generate_subprocess_directory(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
         including the necessary matrix_N.f files, configs.inc and various
         other helper files"""
-    
+        
+        self.unique_id += 1
         # Then generate the MadLoop files
         calls = self.generate_loop_subprocess(matrix_element,fortran_model,                           
-                                  group_number = me_number, unique_id=me_number)
+                                  group_number = me_number, 
+                                  unique_id=self.unique_id)
         
         
         # First generate the MadEvent files
-        calls += export_v4.ProcessExporterFortranME.generate_subprocess_directory_v4(
+        calls += export_v4.ProcessExporterFortranME.generate_subprocess_directory(
                                  self, matrix_element, fortran_model, me_number)
         return calls
 

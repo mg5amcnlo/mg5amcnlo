@@ -384,7 +384,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # By default the user filter does nothing if filter is not set, 
         # if you want to turn it on and edit it by hand, then set the 
         # variable edit_filter_manually to True
-        edit_filter_manually = False 
+        edit_filter_manually = False
         if not edit_filter_manually and filter in [None,'None']:
             return
 
@@ -421,7 +421,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
 
             # Ex. 0: Keeps only the top quark loops.
 #            if any([pdg not in [6,-6] for pdg in diag.get_loop_lines_pdgs()]):
-#                valid_diag = False
+#                 valid_diag = False
 
             # Ex. 1: Chose the topology, i.e. number of loop line.
             #        Notice that here particles and antiparticles are not 
@@ -434,7 +434,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
             # Ex. 2: Use the pdgs of the particles directly attached to the loop.
             #        In this example, we forbid the Z to branch off the loop.
 #            if any([pdg not in [6,-6] for pdg in diag.get_loop_lines_pdgs()]) or \
-#                                25 not in diag.get_pdgs_attached_to_loop(structs):
+#                                22 not in diag.get_pdgs_attached_to_loop(structs):
 #                 valid_diag=False
             
             # Ex. 3: Filter based on the mass of the particles running in the
@@ -582,7 +582,7 @@ class LoopAmplitude(diagram_generation.Amplitude):
                 res.append('%s=*'%order)
         return ','.join(res)
 
-    def generate_diagrams(self, loop_filter=None):
+    def generate_diagrams(self, loop_filter=None, diagram_filter=None):
         """ Generates all diagrams relevant to this Loop Process """
 
         # Description of the algorithm to guess the leading contribution.

@@ -146,6 +146,33 @@ class CmdExtended(cmd.Cmd):
     # Define the Error Class # Define how error are handle
     InvalidCmd = madgraph.InvalidCmd
     ConfigurationError = MadGraph5Error
+    
+    intro_banner = "************************************************************\n" + \
+        "*                                                          *\n" + \
+        "*                     W E L C O M E to                     *\n" + \
+        "*              M A D G R A P H 5 _ a M C @ N L O           *\n" + \
+        "*                                                          *\n" + \
+        "*                                                          *\n" + \
+        "*                 *                       *                *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                     * * * * 5 * * * *                    *\n" + \
+        "*                   *        * *        *                  *\n" + \
+        "*                 *                       *                *\n" + \
+        "*                                                          *\n" + \
+        "%s" + \
+        "*                                                          *\n" + \
+        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
+        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
+        "*                            and                           *\n" + \
+        "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
+        "*                                                          *\n" + \
+        "*               Type 'help' for in-line help.              *\n" + \
+        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
+        "*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *\n" + \
+        "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
+        "*                                                          *\n" + \
+        "************************************************************"
+    
 
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
@@ -187,32 +214,7 @@ class CmdExtended(cmd.Cmd):
             
 
 
-        logger.info(\
-        "************************************************************\n" + \
-        "*                                                          *\n" + \
-        "*                     W E L C O M E to                     *\n" + \
-        "*              M A D G R A P H 5 _ a M C @ N L O           *\n" + \
-        "*                                                          *\n" + \
-        "*                                                          *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                     * * * * 5 * * * *                    *\n" + \
-        "*                   *        * *        *                  *\n" + \
-        "*                 *                       *                *\n" + \
-        "*                                                          *\n" + \
-        info_line + \
-        "*                                                          *\n" + \
-        "*    The MadGraph5_aMC@NLO Development Team - Find us at   *\n" + \
-        "*    https://server06.fynu.ucl.ac.be/projects/madgraph     *\n" + \
-        "*                            and                           *\n" + \
-        "*            http://amcatnlo.web.cern.ch/amcatnlo/         *\n" + \
-        "*                                                          *\n" + \
-        "*               Type 'help' for in-line help.              *\n" + \
-        "*           Type 'tutorial' to learn how MG5 works         *\n" + \
-        "*    Type 'tutorial aMCatNLO' to learn how aMC@NLO works   *\n" + \
-        "*    Type 'tutorial MadLoop' to learn how MadLoop works    *\n" + \
-        "*                                                          *\n" + \
-        "************************************************************")
+        logger.info(self.intro_banner % info_line)
 
         cmd.Cmd.__init__(self, *arg, **opt)
 
@@ -1126,6 +1128,8 @@ class CheckValidForCmd(cmd.CheckCmd):
 
         install_options = {'options_for_HEPToolsInstaller':[],
                    'update_options':[]}
+        hidden_prog = ['Delphes2', 'pythia-pgs']
+
         if len(args) < 1:
             self.help_install()
             raise self.InvalidCmd('install command require at least one argument')
@@ -1151,7 +1155,7 @@ class CheckValidForCmd(cmd.CheckCmd):
             # to install as argument.   
             args = args[:1]
 
-        if args[0] not in self._install_opts:
+        if args[0] not in self._install_opts + hidden_prog:
             if not args[0].startswith('td'):
                 self.help_install()
                 raise self.InvalidCmd('Not recognize program %s ' % args[0])
@@ -1185,13 +1189,15 @@ This will take effect only in a NEW terminal
         if not args:
             if self._done_export:
                 mode = self.find_output_type(self._done_export[0])
-                
-                if not self._done_export[1].startswith(mode):
-                    print mode, self._done_export[1]
+                if (self._done_export[1] == 'plugin' and mode not in self._export_formats):
+                    args.append(mode)
+                    args.append(self._done_export[0])
+                elif self._done_export[1].startswith(mode):
+                    args.append(self._done_export[1])
+                    args.append(self._done_export[0])
+                else:
                     raise self.InvalidCmd, \
                           '%s not valid directory for launch' % self._done_export[0]
-                args.append(self._done_export[1])
-                args.append(self._done_export[0])
                 return
             else:
                 logger.warning('output command missing, run it automatically (with default argument)')
@@ -1337,7 +1343,7 @@ This will take effect only in a NEW terminal
         if args[0] == 'options':
             has_path = None
             for arg in args[1:]:
-                if arg in ['--auto', '--all']:
+                if arg in ['--auto', '--all'] or arg in self.options:
                     continue
                 elif arg.startswith('--'):
                     raise self.InvalidCmd('unknow command for \'save options\'')
@@ -1491,6 +1497,28 @@ This will take effect only in a NEW terminal
 
         if args and args[0] in self._export_formats:
             self._export_format = args.pop(0)
+        elif args:
+            # check for PLUGIN format
+            for plug in os.listdir(pjoin(MG5DIR, 'PLUGIN')):
+                if os.path.exists(pjoin(MG5DIR, 'PLUGIN', plug, '__init__.py')):
+                    try:
+                        __import__('PLUGIN.%s' % plug)
+                    except Exception, error:
+                        logger.warning("error detected in plugin: %s.", plug)
+                        logger.warning("%s", error)
+                        continue
+                    plugin = sys.modules['PLUGIN.%s' % plug]                
+                    if hasattr(plugin, 'new_output'):
+                        if not misc.is_plugin_supported(plugin):
+                            continue
+                        if args[0] in plugin.new_output:
+                            self._export_format = 'plugin'
+                            self._export_plugin = plugin.new_output[args[0]]
+                            logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
+                            args.pop(0)
+                            break
+            else:
+                self._export_format = default
         else:
             self._export_format = default
 
@@ -1525,7 +1553,7 @@ This will take effect only in a NEW terminal
             # Check for special directory treatment
             if path == 'auto' and self._export_format in \
                      ['madevent', 'standalone', 'standalone_cpp', 'matchbox_cpp', 'madweight',
-                      'matchbox']:
+                      'matchbox', 'plugin']:
                 self.get_default_path()
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
@@ -1693,6 +1721,11 @@ This will take effect only in a NEW terminal
                                                name_dir(i))
         elif self._export_format in ['matchbox_cpp', 'matchbox']:
             name_dir = lambda i: 'PROC_MATCHBOX_%s_%s' % \
+                                    (self._curr_model['name'], i)
+            auto_path = lambda i: pjoin(self.writing_dir,
+                                               name_dir(i))
+        elif self._export_format in ['plugin']:
+            name_dir = lambda i: 'PROC_PLUGIN_%s_%s' % \
                                     (self._curr_model['name'], i)
             auto_path = lambda i: pjoin(self.writing_dir,
                                                name_dir(i))
@@ -1880,7 +1913,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         return self.list_completion(text, possibilities)
 
     def model_completion(self, text, process, line, categories = True, \
-                                                      allowed_loop_mode = None):
+                                                      allowed_loop_mode = None,
+                                                      formatting=True):
         """ complete the line with model information. If categories is True,
         it will use completion with categories. If allowed_loop_mode is
         specified, it will only complete with these loop modes."""
@@ -1957,9 +1991,9 @@ class CompleteForCmd(cmd.CompleteCmd):
             if len(possibilities.keys())==1:
                 return self.list_completion(text, possibilities.values()[0])
             else:
-                return self.deal_multiple_categories(possibilities)
+                return self.deal_multiple_categories(possibilities, formatting)
 
-    def complete_generate(self, text, line, begidx, endidx):
+    def complete_generate(self, text, line, begidx, endidx, formatting=True):
         "Complete the generate command"
 
         # Return list of particle names and multiparticle names, as well as
@@ -1967,25 +2001,25 @@ class CompleteForCmd(cmd.CompleteCmd):
         args = self.split_arg(line[0:begidx])
 
         valid_sqso_operators=['==','<=','>']
+
         if any(line.endswith('^2 %s '%op) for op in valid_sqso_operators):
             return
         if args[-1].endswith('^2'):
             return self.list_completion(text,valid_sqso_operators)
         match_op = [o for o in valid_sqso_operators if o.startswith(args[-1])]            
-        if args[-2].endswith('^2') and len(match_op)>0:
+        if len(args)>2 and args[-2].endswith('^2') and len(match_op)>0:
             if args[-1] in valid_sqso_operators:
                 return self.list_completion(text,' ')
             if len(match_op)==1:
                 return self.list_completion(text,[match_op[0][len(args[-1]):]])
             else:
                 return self.list_completion(text,match_op)
-
         if len(args) > 2 and args[-1] == '@' or ( args[-1].endswith('=') and \
                             (not '[' in line or ('[' in line and ']' in line))):
             return
 
         try:
-            return self.model_completion(text, ' '.join(args[1:]),line)
+            return self.model_completion(text, ' '.join(args[1:]),line, formatting)
         except Exception as error:
             print error
 
@@ -1997,7 +2031,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         #                            self._multiparticles.keys() + couplings)
 
 
-    def complete_compute_widths(self, text, line, begidx, endidx):
+    def complete_compute_widths(self, text, line, begidx, endidx,formatting=True):
         "Complete the compute_widths command"
 
         args = self.split_arg(line[0:begidx])
@@ -2018,11 +2052,11 @@ class CompleteForCmd(cmd.CompleteCmd):
                              '--precision_channel=0.\$', '--body_decay=', '--nlo'])
             completion['particles'] = self.model_completion(text, '', line)
 
-        return self.deal_multiple_categories(completion)
+        return self.deal_multiple_categories(completion,formatting)
 
     complete_decay_diagram = complete_compute_widths
 
-    def complete_add(self, text, line, begidx, endidx):
+    def complete_add(self, text, line, begidx, endidx, formatting):
         "Complete the add command"
 
         args = self.split_arg(line[0:begidx])
@@ -2036,9 +2070,9 @@ class CompleteForCmd(cmd.CompleteCmd):
         
         elif args[1] == 'model':
             completion_categories = self.complete_import(text, line, begidx, endidx, 
-                                                         allow_restrict=False, treat_completion=False)
+                                                         allow_restrict=False, formatting=False)
             completion_categories['options'] = self.list_completion(text,['--modelname=','--recreate'])
-            return self.deal_multiple_categories(completion_categories) 
+            return self.deal_multiple_categories(completion_categories, formatting) 
             
     def complete_customize_model(self, text, line, begidx, endidx):
         "Complete the customize_model command"
@@ -2050,7 +2084,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, ['--save='])
 
 
-    def complete_check(self, text, line, begidx, endidx):
+    def complete_check(self, text, line, begidx, endidx, formatting=True):
         "Complete the check command"
 
         out = {}
@@ -2084,7 +2118,7 @@ class CompleteForCmd(cmd.CompleteCmd):
           {'Process completion': self.model_completion(text, ' '.join(args[2:]),
           line, categories = False, allowed_loop_mode=['virt']),
           'Param_card.dat path completion:':self.path_completion(text),
-          'options': self.list_completion(text,options)})
+          'options': self.list_completion(text,options)}, formatting)
 
         #Special rules for check cms completion
         if cms_check_mode:
@@ -2116,7 +2150,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         return self.deal_multiple_categories(
           {"Examples of completion for option '%s'"%args[-1].split('=')[0]:
 #                    ['%d: %s'%(i+1,ex) for i, ex in enumerate(example)]},
-                    ['%s'%ex for i, ex in enumerate(example)]},
+                    ['%s'%ex for i, ex in enumerate(example)]},formatting,
                                                              forceCategory=True)
                 if args[-1]=='--recompute_width=':
                     return self.list_completion(text,
@@ -2135,17 +2169,20 @@ class CompleteForCmd(cmd.CompleteCmd):
                         line, categories = False, allowed_loop_mode=['virt']),
                    'Param_card.dat path completion:': self.path_completion(text),
                'reanalyze result on disk / save output:':self.list_completion(
-                                                  text,['-reuse','--analyze='])})
+                                                  text,['-reuse','--analyze='])},
+                                                     formatting)
             elif not any(arg.startswith('--') for arg in args):
                 if '>' in args:
                     return self.deal_multiple_categories({'Process completion': 
                         self.model_completion(text, ' '.join(args[2:]),
                         line, categories = False, allowed_loop_mode=['virt']),
-                        'options': self.list_completion(text,options)})
+                        'options': self.list_completion(text,options)},
+                                                         formatting)
                 else:
                     return self.deal_multiple_categories({'Process completion': 
                         self.model_completion(text, ' '.join(args[2:]),
-                        line, categories = False, allowed_loop_mode=['virt'])})
+                        line, categories = False, allowed_loop_mode=['virt'])},
+                                                         formatting)
             else:
                 return self.list_completion(text,options)
             
@@ -2208,7 +2245,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                                 'non_propagating', '--']
             return self.list_completion(text, opt)
 
-    def complete_launch(self, text, line, begidx, endidx):
+    def complete_launch(self, text, line, begidx, endidx,formatting=True):
         """ complete the launch command"""
         args = self.split_arg(line[0:begidx])
 
@@ -2242,7 +2279,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             out['Options'] = self.list_completion(text, opt, line)
 
 
-        return self.deal_multiple_categories(out)
+        return self.deal_multiple_categories(out,formatting)
 
     def complete_load(self, text, line, begidx, endidx):
         "Complete the load command"
@@ -2364,7 +2401,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             content += possible_options_full
             return self.list_completion(text, content)
 
-    def aloha_complete_output(self, text, line, begidx, endidx):
+    def aloha_complete_output(self, text, line, begidx, endidx,formatting=True):
         "Complete the output aloha command"
         args = self.split_arg(line[0:begidx])
         completion_categories = {}
@@ -2403,7 +2440,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             completion_categories['Wavefunctions routines'] = self.list_completion(text, wf_opt)
             completion_categories['conjugate_routines'] = self.list_completion(text, opt_conjg)
 
-        return self.deal_multiple_categories(completion_categories)
+        return self.deal_multiple_categories(completion_categories,formatting)
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
@@ -2457,7 +2494,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                         only_dirs = True)
         
     def complete_import(self, text, line, begidx, endidx, allow_restrict=True,
-                        treat_completion=True):
+                        formatting=True):
         "Complete the import command"
 
         args=self.split_arg(line[0:begidx])
@@ -2600,11 +2637,8 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) >= 3 and mode.startswith('banner') and not '--no_launch' in line:
             completion_categories['options'] = self.list_completion(text, ['--no_launch'])
         
-        if treat_completion:
-            return self.deal_multiple_categories(completion_categories) 
-        else:
-            #this means this function is called as a subgroup of another completion
-            return completion_categories
+        return self.deal_multiple_categories(completion_categories,formatting) 
+    
     def find_restrict_card(self, model_name, base_dir='./', no_restrict=True):
         """find the restriction file associate to a given model"""
 
@@ -2680,9 +2714,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['pythia-pgs', 'Delphes', 'MadAnalysis', 'ExRootAnalysis',
-                     'update', 'Delphes2', 'SysCalc', 'Golem95', 'PJFry',
-                     'QCDLoop']
+    _install_opts = ['Delphes', 'MadAnalysis', 'ExRootAnalysis',
+                     'update', 'SysCalc', 'Golem95', 'PJFry', 'QCDLoop']
+    
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
                               'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
@@ -2775,8 +2809,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _curr_amps = diagram_generation.AmplitudeList()
     _curr_proc_defs = base_objects.ProcessDefinitionList()
     _curr_matrix_elements = helas_objects.HelasMultiProcess()
-    _curr_fortran_model = None
-    _curr_cpp_model = None
+    _curr_helas_model = None
     _curr_exporter = None
     _done_export = False
     _curr_decaymodel = None
@@ -2881,6 +2914,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             warning_duplicate = False
             args.remove('--no_warning=duplicate')
 
+        diagram_filter = False
+        if '--diagram_filter' in args:
+            diagram_filter = True
+            args.remove('--diagram_filter')
+
         # Check the validity of the arguments
         self.check_add(args)
 
@@ -2973,7 +3011,7 @@ This implies that with decay chains:
             myproc = diagram_generation.MultiProcess(myprocdef,
                                      collect_mirror_procs = collect_mirror_procs,
                                      ignore_six_quark_processes = ignore_six_quark_processes,
-                                     optimize=optimize)
+                                     optimize=optimize, diagram_filter=diagram_filter)
 
 
             for amp in myproc.get('amplitudes'):
@@ -3004,6 +3042,7 @@ This implies that with decay chains:
         
         model_path = args[0]
         recreate = ('--recreate' in args)
+        keep_decay = ('--keep_decay' in args)
         output_dir = [a.split('=',1)[1] for a in args if a.startswith('--output')]
         if output_dir:
             output_dir = output_dir[0]
@@ -3043,6 +3082,10 @@ This implies that with decay chains:
         identify = dict(tuple(a.split('=')) for a in args if '=' in a)
         base_model.add_model(path=model_path, identify_particles=identify)
         base_model.write(output_dir)
+        
+        if keep_decay and os.path.exists(pjoin(self._curr_model.get('modelpath'), 'decays.py')):
+            base_model.mod_file(pjoin(pjoin(self._curr_model.get('modelpath'), 'decays.py')),
+                                pjoin(pjoin(output_dir, 'decays.py')))
         
         new_model_name = output_dir
         if restrict_name:
@@ -4954,9 +4997,6 @@ This implies that with decay chains:
             if args[0].endswith('_v4'):
                 self._curr_model, self._model_v4_path = \
                                  import_v4.import_model(args[1], self._mgme_dir)
-                self._curr_fortran_model = \
-                      helas_call_writers.FortranHelasCallWriter(\
-                                                               self._curr_model)
             else:
                 # avoid loading the qcd/qed model twice
                 if (args[1].startswith('loop_qcd_qed_sm') or\
@@ -5010,13 +5050,6 @@ This implies that with decay chains:
                         self._curr_model = None
                         self.do_set('gauge unitary', log= False)
                         return
-                
-                self._curr_fortran_model = \
-                      helas_call_writers.FortranUFOHelasCallWriter(\
-                                                               self._curr_model)
-                self._curr_cpp_model = \
-                      helas_call_writers.CPPUFOHelasCallWriter(\
-                                                               self._curr_model)
 
             if '-modelname' not in args:
                 self._curr_model.pass_particles_name_in_mg_default()
@@ -5129,10 +5162,6 @@ This implies that with decay chains:
         """ import the UFO model """
 
         self._curr_model = import_ufo.import_model(model_name)
-        self._curr_fortran_model = \
-                helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
-        self._curr_cpp_model = \
-                helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
 
     def process_model(self):
         """Set variables _particle_names and _couplings for tab
@@ -5335,7 +5364,7 @@ This implies that with decay chains:
                misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
         else:
             compiler_options.append('--cpp_standard_lib=%s'%
-               misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
+               misc.detect_cpp_std_lib_dependence('g++'))
 
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
@@ -5595,7 +5624,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
 #            logger.info('{:^80}'.format(', '.join(advertisements[args[0]])), '$MG:color:GREEN')
 #            logger.info('{:^80}'.format("when using results produced with this tool."), '$MG:color:BLACK')
 #            logger.info('{:^80}'.format("-"*70), '$MG:color:BLACK')
-            logger.info("   You are installing '%s', please cite ref(s): %s. " % (args[0], ', '.join(advertisements[args[0]])), '$MG:color:BLACK')
+            logger.info("   You are installing '%s', please cite ref(s): \033[92m%s\033[0m. " % (args[0], ', '.join(advertisements[args[0]])), '$MG:color:BLACK')
 
         # Load file with path of the different program:
         import urllib
@@ -6572,15 +6601,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             if self._curr_model.get('parameters'):
                 # This is a UFO model
                 self._model_v4_path = None
-                self._curr_fortran_model = \
-                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
             else:
                 # This is a v4 model
                 self._model_v4_path = import_v4.find_model_path(\
                     self._curr_model.get('name').replace("_v4", ""),
                     self._mgme_dir)
-                self._curr_fortran_model = \
-                  helas_call_writers.FortranHelasCallWriter(self._curr_model)
 
             # Do post-processing of model
             self.process_model()
@@ -6606,14 +6631,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                         self._model_v4_path = import_v4.find_model_path(\
                                    model.get('name').replace("_v4", ""),
                                    self._mgme_dir)
-                        self._curr_fortran_model = \
-                                helas_call_writers.FortranHelasCallWriter(\
-                                                              model)
                     else:
                         self._model_v4_path = None
-                        self._curr_fortran_model = \
-                                helas_call_writers.FortranUFOHelasCallWriter(\
-                                                              model)
                     # If not exceptions from previous steps, set
                     # _curr_amps and _curr_model
                     self._curr_amps = amps
@@ -6734,37 +6753,53 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 raise self.InvalidCmd('No processes to save!')
 
         elif args[0] == 'options':
-            # First look at options which should be put in MG5DIR/input
+            partial_save = False
             to_define = {}
-            for key, default in self.options_configuration.items():
-                if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
-                    to_define[key] = self.options[key]
-
-            if not '--auto' in args:
-                for key, default in self.options_madevent.items():
-                    if self.options_madevent[key] != self.options[key] != None:
-                        if '_path' in key and os.path.basename(self.options[key]) == 'None':
-                            continue
+            if any(not arg.startswith('--') and arg in self.options 
+                                                               for arg in args):
+                # store in file only those ones
+                partial_save = True
+                all_arg = [arg for arg in args[1:] if not arg.startswith('--') and
+                           arg in self.options]
+                for key in all_arg:
+                    to_define[key] = self.options[key] 
+            else:
+                # First look at options which should be put in MG5DIR/input
+                for key, default in self.options_configuration.items():
+                    if self.options_configuration[key] != self.options[key] and not self.options_configuration[key] is None:
                         to_define[key] = self.options[key]
-                    elif key == 'cluster_queue' and self.options[key] is None:
-                        to_define[key] = self.options[key]
-
-            if '--all' in args:
-                for key, default in self.options_madgraph.items():
-                    if self.options_madgraph[key] != self.options[key] != None and \
-                      key != 'stdout_level':
-                        to_define[key] = self.options[key]
-            elif not '--auto' in args:
-                for key, default in self.options_madgraph.items():
-                    if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
-                        logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
-                                    % (key,self.options_madgraph[key]) )
-                        logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
-            if len(args) >1 and not args[1].startswith('--'):
+    
+                if not '--auto' in args:
+                    for key, default in self.options_madevent.items():
+                        if self.options_madevent[key] != self.options[key] != None:
+                            if '_path' in key and os.path.basename(self.options[key]) == 'None':
+                                continue
+                            to_define[key] = self.options[key]
+                        elif key == 'cluster_queue' and self.options[key] is None:
+                            to_define[key] = self.options[key]
+    
+                if '--all' in args:
+                    for key, default in self.options_madgraph.items():
+                        if self.options_madgraph[key] != self.options[key] != None and \
+                          key != 'stdout_level':
+                            to_define[key] = self.options[key]
+                elif not '--auto' in args:
+                    for key, default in self.options_madgraph.items():
+                        if self.options_madgraph[key] != self.options[key] != None and  key != 'stdout_level':
+                            logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
+                                        % (key,self.options_madgraph[key]) )
+                            logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
+                
+            if len(args) >1 and not args[1].startswith('--') and args[1] not in self.options:
                 filepath = args[1]
             else:
                 filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
-            basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
+            
+            if partial_save:
+                basefile = filepath
+            else:
+                basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
+                
             basedir = MG5DIR
 
             if to_keep:
@@ -6901,8 +6936,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self._curr_amps = diagram_generation.AmplitudeList()
             self._curr_proc_defs = base_objects.ProcessDefinitionList()
             self._curr_matrix_elements = helas_objects.HelasMultiProcess()
-            self._curr_fortran_model = None
-            self._curr_cpp_model = None
+            self._curr_helas_model = None
             self._curr_exporter = None
             self._done_export = False
             import_ufo._import_once = []
@@ -7163,7 +7197,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         config['matchbox'] =       {'check': True, 'exporter': 'v4',  'output': 'Template'}
         config['madweight'] =      {'check': True, 'exporter': 'v4',  'output':'Template'}
 
-        options = config[self._export_format]
+        if self._export_format == 'plugin':
+            options = {'check': self._export_plugin.check, 'exporter':self._export_plugin.exporter, 'output':self._export_plugin.output}
+        else:
+            options = config[self._export_format]
+            
         # check
         if os.path.realpath(self._export_dir) == os.getcwd():
             if len(args) == 0:
@@ -7226,12 +7264,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         if options['exporter'] == 'v4':
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                                              group_subprocesses=group_processes)
-            if options['output'] == 'Template':
-                self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
-        if  options['exporter'] == 'cpp' and options['output'] == 'Template':
-            export_cpp.setup_cpp_standalone_dir(self._export_dir, self._curr_model)
-
-        if options['output'] == 'dir' and not os.path.isdir(self._export_dir):
+        elif options['exporter'] == 'cpp':
+            self._curr_exporter = export_cpp.ExportCPPFactory(self, group_subprocesses=group_processes)
+        
+        self._curr_exporter.pass_information_from_cmd(self)
+        
+        if options['output'] == 'Template':
+            self._curr_exporter.copy_template(self._curr_model)
+        elif options['output'] == 'dir' and not os.path.isdir(self._export_dir):
             os.makedirs(self._export_dir)
 
         # Reset _done_export, since we have new directory
@@ -7261,6 +7301,16 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
     def export(self, nojpeg = False, main_file_name = "", group_processes=True, 
                                                                        args=[]):
         """Export a generated amplitude to file."""
+
+        # Define the helas call  writer
+        if self._curr_exporter.exporter == 'cpp':       
+            self._curr_helas_model = helas_call_writers.CPPUFOHelasCallWriter(self._curr_model)
+        elif self._model_v4_path:
+            assert self._curr_exporter.exporter == 'v4'
+            self._curr_helas_model = helas_call_writers.FortranHelasCallWriter(self._curr_model)
+        else:
+            assert self._curr_exporter.exporter == 'v4'
+            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
 
         version = [arg[10:] for arg in args if arg.startswith('--version=')]
         if version:
@@ -7301,16 +7351,18 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     subproc_groups = group_subprocs.SubProcessGroupList()
                     matrix_elements_opts = {'optimized_output':
                                        self.options['loop_optimized_output']}
+                    
+                    grouping_criteria = self._curr_exporter.grouped_mode
                     if non_dc_amps:
                         subproc_groups.extend(\
                           group_subprocs.SubProcessGroup.group_amplitudes(\
-                          non_dc_amps, self._export_format, 
+                          non_dc_amps,grouping_criteria, 
                                      matrix_elements_opts=matrix_elements_opts))
 
                     if dc_amps:
                         dc_subproc_group = \
                                   group_subprocs.DecayChainSubProcessGroup.\
-                                  group_amplitudes(dc_amps, self._export_format,
+                                  group_amplitudes(dc_amps, grouping_criteria,
                                       matrix_elements_opts=matrix_elements_opts)
                         subproc_groups.extend(dc_subproc_group.\
                                     generate_helas_decay_chain_subproc_groups())
@@ -7365,11 +7417,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         calls = 0
 
         path = self._export_dir
-        if self._export_format in ['standalone_cpp', 'madevent', 'standalone',
-                                   'standalone_msP', 'standalone_msF', 'standalone_rw',
-                                   'matchbox_cpp', 'madweight', 'matchbox']:
-            path = pjoin(path, 'SubProcesses')
-
+            
         cpu_time1 = time.time()
 
         # First treat madevent and pythia8 exports, where we need to
@@ -7377,10 +7425,9 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         # MadEvent
         if self._export_format == 'madevent':
+            path = pjoin(path, 'SubProcesses')
             calls += self._curr_exporter.export_processes(self._curr_matrix_elements,
-                                                 self._curr_fortran_model)
-            self._curr_exporter.write_global_specs(
-                               self._curr_matrix_elements.get_matrix_elements())
+                                                         self._curr_helas_model)
             
             # Write the procdef_mg5.dat file with process info
             card_path = pjoin(path, os.path.pardir, 'SubProcesses', \
@@ -7396,21 +7443,21 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     pass
 
         # Pythia 8
-        if self._export_format == 'pythia8':
+        elif self._export_format == 'pythia8':
             # Output the process files
             process_names = []
             if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
                 for (group_number, me_group) in enumerate(self._curr_matrix_elements):
-                    exporter = export_cpp.generate_process_files_pythia8(\
-                            me_group.get('matrix_elements'), self._curr_cpp_model,
+                    exporter = self._curr_exporter.generate_process_directory(\
+                            me_group.get('matrix_elements'), self._curr_helas_model,
                             process_string = me_group.get('name'),
-                            process_number = group_number, path = path,
+                            process_number = group_number,
                             version = version)
                     process_names.append(exporter.process_name)
             else:
-                exporter = export_cpp.generate_process_files_pythia8(\
-                            self._curr_matrix_elements, self._curr_cpp_model,
-                            process_string = self._generate_info, path = path)
+                exporter =  self._curr_exporter.generate_process_directory(\
+                            self._curr_matrix_elements, self._curr_helas_model,
+                            process_string = self._generate_info, version = version)
                 process_names.append(exporter.process_file_name)
 
             # Output the model parameter and ALOHA files
@@ -7419,44 +7466,14 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
             # Generate the main program file
             filename, make_filename = \
-                      export_cpp.generate_example_file_pythia8(path,
+                      self._curr_exporter.generate_example_file_pythia8(path,
                                                                model_path,
                                                                process_names,
                                                                exporter,
                                                                main_file_name)
-
-        # Pick out the matrix elements in a list
+                      
+                      
         matrix_elements = self._curr_matrix_elements.get_matrix_elements()
-
-        # Fortran MadGraph MadWeight
-        if self._export_format == 'madweight':
-                        
-            if isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList):
-                #remove the merging between electron and muon
-                self._curr_matrix_elements = self._curr_matrix_elements.split_lepton_grouping() 
-                
-                for (group_number, me_group) in enumerate(self._curr_matrix_elements):
-                    calls = calls + \
-                         self._curr_exporter.generate_subprocess_directory_v4(\
-                                me_group, self._curr_fortran_model,
-                                group_number)
-            else:
-                for me_number, me in \
-                   enumerate(self._curr_matrix_elements.get_matrix_elements()):
-                    calls = calls + \
-                            self._curr_exporter.generate_subprocess_directory_v4(\
-                                me, self._curr_fortran_model, me_number)
-
-        # Fortran MadGraph5_aMC@NLO Standalone
-        if self._export_format in ['standalone', 'standalone_msP', 
-                                   'standalone_msF', 'standalone_rw', 'matchbox']:
-            for me in matrix_elements[:]:
-                new_calls = self._curr_exporter.generate_subprocess_directory_v4(\
-                            me, self._curr_fortran_model)
-                if not new_calls:
-                    matrix_elements.remove(me)
-                calls = calls + new_calls
-
         # Just the matrix.f files
         if self._export_format == 'matrix':
             for me in matrix_elements:
@@ -7468,15 +7485,31 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     logger.info("Creating new file %s" % filename)
                 calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
-                    me, self._curr_fortran_model)
+                    me, self._curr_helas_model)
+        elif self._export_format in ['madevent', 'pythia8']:
+            pass
+        # grouping mode
+        elif isinstance(self._curr_matrix_elements, group_subprocs.SubProcessGroupList) and\
+            self._curr_exporter.grouped_mode:
+            modify, self._curr_matrix_elements = self._curr_exporter.modify_grouping(self._curr_matrix_elements)
+            if modify:
+                matrix_elements = self._curr_matrix_elements.get_matrix_elements()
 
-        # C++ standalone
-        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
-            for me in matrix_elements:
-                export_cpp.generate_subprocess_directory_standalone_cpp(\
-                              me, self._curr_cpp_model,
-                              path = path,
-                              format=self._export_format)
+            for me_number, me in enumerate(self._curr_matrix_elements):
+                calls = calls + \
+                    self._curr_exporter.generate_subprocess_directory(\
+                        me, self._curr_helas_model, me_number)               
+        
+        # ungroup mode
+        else:
+            for nb,me in enumerate(matrix_elements[:]):
+                new_calls = self._curr_exporter.generate_subprocess_directory(\
+                            me, self._curr_helas_model, nb)
+                if  isinstance(new_calls, int):
+                    if new_calls ==0:
+                        matrix_elements.remove(me)
+                    else:
+                        calls = calls + new_calls
 
         cpu_time2 = time.time() - cpu_time1
 
@@ -7505,6 +7538,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         # Replace the amplitudes with the actual amplitudes from the
         # matrix elements, which allows proper diagram drawing also of
         # decay chain processes
+        matrix_elements = self._curr_matrix_elements.get_matrix_elements()
         self._curr_amps = diagram_generation.AmplitudeList(\
                [me.get('base_amplitude') for me in \
                 matrix_elements])
@@ -7517,80 +7551,43 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                              'cpp': self.options['cpp_compiler'],
                              'f2py': self.options['f2py_compiler']}
 
-        
-        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 
-                                   'standalone_msF', 'standalone_rw', 'NLO', 'madweight',
-                                   'matchbox']:
-
-            # For v4 models, copy the model/HELAS information.
-            if self._model_v4_path:
-                logger.info('Copy %s model files to directory %s' % \
+        # Handling of the model.
+        if self._model_v4_path:
+            logger.info('Copy %s model files to directory %s' % \
                             (os.path.basename(self._model_v4_path), self._export_dir))
-                self._curr_exporter.export_model_files(self._model_v4_path)
-                self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))
-            else:
-                logger.info('Export UFO model to MG4 format')
-                # wanted_lorentz are the lorentz structures which are
-                # actually used in the wavefunctions and amplitudes in
-                # these processes
-                wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
-                wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-                # For a unique output of multiple type of exporter need to store this
-                # information.             
-                if hasattr(self, 'previous_lorentz'):
-                    wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
-                    wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
-                    del self.previous_lorentz
-                    del self.previous_couplings
-                if 'store_model' in flaglist:
-                    self.previous_lorentz = wanted_lorentz
-                    self.previous_couplings = wanted_couplings
-                else:
-                    self._curr_exporter.convert_model_to_mg4(self._curr_model,
-                                               wanted_lorentz,
-                                               wanted_couplings)
-        if self._export_format in ['standalone_cpp', 'matchbox_cpp']:
-            logger.info('Export UFO model to C++ format')
+            self._curr_exporter.export_model_files(self._model_v4_path)
+            self._curr_exporter.export_helas(pjoin(self._mgme_dir,'HELAS'))        
+        else:
             # wanted_lorentz are the lorentz structures which are
             # actually used in the wavefunctions and amplitudes in
             # these processes
             wanted_lorentz = self._curr_matrix_elements.get_used_lorentz()
             wanted_couplings = self._curr_matrix_elements.get_used_couplings()
-            export_cpp.convert_model_to_cpp(self._curr_model,
-                                            pjoin(self._export_dir),
-                                            wanted_lorentz,
-                                            wanted_couplings)
-            export_cpp.make_model_cpp(self._export_dir)
+            # For a unique output of multiple type of exporter need to store this
+            # information.             
+            if hasattr(self, 'previous_lorentz'):
+                wanted_lorentz = list(set(self.previous_lorentz + wanted_lorentz))
+                wanted_couplings = list(set(self.previous_couplings + wanted_couplings))
+                del self.previous_lorentz
+                del self.previous_couplings        
+            if 'store_model' in flaglist:
+                self.previous_lorentz = wanted_lorentz
+                self.previous_couplings = wanted_couplings
+            else:
+                self._curr_exporter.convert_model(self._curr_model, 
+                                               wanted_lorentz,
+                                               wanted_couplings)
+        
+        # move the old options to the flaglist system.
+        if nojpeg:
+            flaglist.append('nojpeg')
+        if online:
+            flaglist.append('online')
 
-
-        elif self._export_format in ['NLO']:
-            ## write fj_lhapdf_opts file
-            devnull = os.open(os.devnull, os.O_RDWR)
-            try:
-                res = misc.call([self.options['lhapdf'], '--version'], \
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            except Exception:
-                res = 1
-            if res != 0:
-                logger.info('The value for lhapdf in the current configuration does not ' + \
-                        'correspond to a valid executable.\nPlease set it correctly either in ' + \
-                        'input/mg5_configuration or with "set lhapdf /path/to/lhapdf-config" ' + \
-                        'and regenrate the process. \nTo avoid regeneration, edit the ' + \
-                        ('%s/Cards/amcatnlo_configuration.txt file.\n' % self._export_dir ) + \
-                        'Note that you can still compile and run aMC@NLO with the built-in PDFs\n')
-
-
-
-            self._curr_exporter.finalize_fks_directory( \
-                                           self._curr_matrix_elements,
-                                           self.history,
-                                           not nojpeg,
-                                           online,
-                                           compiler_dict,
-                                           output_dependencies = self.options['output_dependencies'],
-                                           MG5DIR = MG5DIR,
-                                           proc_defs = self._curr_proc_defs)
             
+
+        if self._export_format in ['NLO']:
+            ## write fj_lhapdf_opts file            
             # Create configuration file [path to executable] for amcatnlo
             filename = os.path.join(self._export_dir, 'Cards', 'amcatnlo_configuration.txt')
             opts_to_keep = ['lhapdf', 'fastjet', 'pythia8_path', 'hwpp_path', 'thepeg_path', 
@@ -7608,16 +7605,11 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             self.do_save('options %s' % filename.replace(' ', '\ '), check=False,
                          to_keep={'mg5_path':MG5DIR})
 
-        if self._export_format in ['madevent', 'standalone', 'standalone_msP', 'standalone_msF',
-                                   'standalone_rw', 'madweight', 'matchbox']:
-
-            self._curr_exporter.finalize_v4_directory( \
-                                           self._curr_matrix_elements,
-                                           self.history,
-                                           not nojpeg,
-                                           online,
-                                           compiler_dict,
-                                           proc_defs = self._curr_proc_defs)
+        # Dedicated finalize function.
+        self._curr_exporter.finalize(self._curr_matrix_elements,
+                                    self.history,
+                                    self.options,
+                                    flaglist)
 
         if self._export_format in ['madevent', 'standalone', 'standalone_cpp','madweight', 'matchbox']:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -7684,8 +7676,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 model = import_ufo.import_model(modelname, decay=True)
         else:
             self._curr_model = model
-            self._curr_fortran_model = \
-                  helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         if not isinstance(model, model_reader.ModelReader):
             model = model_reader.ModelReader(model)
 
@@ -7754,7 +7744,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     elif value < 0:
                         raise Exception, 'Partial width for %s > %s negative: %s' % \
                                        (particle.get('name'), ' '.join([p.get('name') for p in mode]), value)
-                    elif value < 0.1 and particle['color'] !=1:
+                    elif 0 < value < 0.1 and particle['color'] !=1:
                         logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
                                    % (particle.get('name'), value, decay_to))
                         value = 0
@@ -7792,7 +7782,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             decay_dir = pjoin(path,'temp_decay')
             logger_mg.info('More info in temporary files:\n    %s/index.html' % (decay_dir))
             with misc.MuteLogger(['madgraph','ALOHA','cmdprint','madevent'], [40,40,40,40]):
-                self.exec_cmd('output %s -f' % decay_dir)
+                self.exec_cmd('output %s -f' % decay_dir,child=False)
                 # Need to write the correct param_card in the correct place !!!
                 if os.path.exists(opts['output']):
                     files.cp(opts['output'], pjoin(decay_dir, 'Cards', 'param_card.dat'))
@@ -7837,7 +7827,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             for BR in param['decay'].decay_table[pid]:
                 if len(BR.lhacode) == 3 and skip_2body:
                     continue
-                if BR.value * width <0.1 and particle['color'] !=1:
+                if 0 < BR.value * width <0.1 and particle['color'] !=1:
                     logger.warning("partial width of particle %s lower than QCD scale:%s. Set it to zero. (%s)" \
                                    % (particle.get('name'), BR.value * width, BR.lhacode[1:]))
                                      

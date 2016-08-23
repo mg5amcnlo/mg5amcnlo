@@ -16,6 +16,7 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 import contextlib
+import itertools
 import logging
 import os
 import re
@@ -288,6 +289,8 @@ def find_includes_path(start_path, extension):
     one found which contains at least one file ending with the string extension
     given in argument."""
     
+    if not os.path.isdir(start_path):
+        return None
     subdirs=[pjoin(start_path,dir) for dir in os.listdir(start_path)]
     for subdir in subdirs:
         if os.path.isfile(subdir):
@@ -724,14 +727,16 @@ class MuteLogger(object):
         self.levels = old_levels
         
     def __exit__(self, ctype, value, traceback ):
-        for name, level, path, level in zip(self.names, self.levels, self.files, self.levels):
-            if 'keep' in self.opts and not self.opts['keep']:
-                self.restore_logFile_for_logger(name, level, path=path)
+        for name, level, path in zip(self.names, self.levels, self.files):
+
+            if path:
+                if 'keep' in self.opts and not self.opts['keep']:
+                    self.restore_logFile_for_logger(name, level, path=path)
+                else:
+                    self.restore_logFile_for_logger(name, level)
             else:
-                self.restore_logFile_for_logger(name, level)
-            
-            log_module = logging.getLogger(name)
-            log_module.setLevel(level)         
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)         
         
     def setup_logFile_for_logger(self, path, full_logname, **opts):
         """ Setup the logger by redirecting them all to logfiles in tmp """
@@ -1441,6 +1446,9 @@ def sprint(*args, **opt):
         return
     
     import inspect
+    if opt.has_key('cond') and not opt['cond']:
+        return
+    
     if opt.has_key('log'):
         log = opt['log']
     else:
@@ -1453,6 +1461,11 @@ def sprint(*args, **opt):
         #if level == 20:
         #    level = 10 #avoid info level
         #print "use", level
+    if opt.has_key('wait'):
+        wait = bool(opt['wait'])
+    else:
+        wait = False
+        
     lineno  =  inspect.currentframe().f_back.f_lineno
     fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
     filename, lineno = fargs[:2]
@@ -1479,6 +1492,9 @@ def sprint(*args, **opt):
 
     log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
                    ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
+
+    if wait:
+        raw_input('press_enter to continue')
     return 
 
 ################################################################################
@@ -1681,7 +1697,7 @@ class ProcessTimer:
 #    except psutil.error.NoSuchProcess:
 #      pass
 
-
+## Define apple_notify (in a way which is system independent
 try:
     import Foundation
     import objc
@@ -1701,3 +1717,69 @@ try:
 except:
     def apple_notify(subtitle, info_text, userInfo={}):
         return
+## End apple notify
+
+
+def get_older_version(v1, v2):
+    """ return v2  if v1>v2
+        return v1 if v1<v2
+        return v1 if v1=v2 
+        return v1 if v2 is not in 1.2.3.4.5 format
+        return v2 if v1 is not in 1.2.3.4.5 format
+    """
+    from itertools import izip_longest
+    for a1, a2 in izip_longest(v1, v2, fillvalue=0):
+        try:
+            a1= int(a1)
+        except:
+            return v2
+        try:
+            a2= int(a2)
+        except:
+            return v1        
+        if a1 > a2:
+            return v2
+        elif a1 < a2:
+            return v1
+    return v1
+    
+
+plugin_support = {}
+def is_plugin_supported(obj):
+    global plugin_support
+    
+    name = obj.__name__
+    if name in plugin_support:
+        return plugin_support[name]
+    
+    # get MG5 version
+    if '__mg5amcnlo__' in plugin_support:
+        mg5_ver = plugin_support['__mg5amcnlo__']
+    else:
+        info = get_pkg_info()
+        mg5_ver = info['version'].split('.')
+    try:
+        min_ver = obj.minimal_mg5amcnlo_version
+        max_ver = obj.maximal_mg5amcnlo_version
+        val_ver = obj.latest_validated_version
+    except:
+        logger.error("Plugin %s misses some required info to be valid. It is therefore discarded" % name)
+        plugin_support[name] = False
+        return
+    
+    if get_older_version(min_ver, mg5_ver) == min_ver and \
+       get_older_version(mg5_ver, max_ver) == mg5_ver:
+        plugin_support[name] = True
+        if get_older_version(mg5_ver, val_ver) == val_ver:
+            logger.warning("""Plugin %s has marked as NOT being validated with this version. 
+It has been validated for the last time with version: %s""",
+                                        name, '.'.join(str(i) for i in val_ver))
+    else:
+        logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
+        plugin_support[name] = False
+    return plugin_support[name]
+    
+    
+    
+    
+

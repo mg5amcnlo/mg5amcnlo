@@ -35,6 +35,7 @@ import tests.IOTests as IOTests
 import madgraph.interface.master_interface as MGCmd
 
 import madgraph.fks.fks_common as fks_common
+from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 _file_path = os.path.dirname(os.path.realpath(__file__))
 _input_file_path = os.path.join(_file_path, os.path.pardir,
@@ -46,6 +47,22 @@ _input_file_path = os.path.join(_file_path, os.path.pardir,
 class IOExportFKSTest(IOTests.IOTestManager):
     """Test class for the export fks module"""
 
+#     def setUp(self):
+#         """ Initialize the test """
+# 
+#         self.interface = MGCmd.MasterCmd()
+#         self.interface.no_notification()
+#         # Below the key is the name of the logger and the value is a tuple with
+#         # first the handlers and second the level.
+#         self.logger_saved_info = {}
+# 
+#         # Select the Tensor Integral to include in the test
+#         misc.deactivate_dependence('pjfry', cmd = self.interface, log='stdout')
+#         misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
+#         misc.activate_dependence('golem', cmd = self.interface, log='stdout')
+#         misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
+
+
     def generate(self, process, model, multiparticles=[]):
         """Create a process"""
 
@@ -54,6 +71,12 @@ class IOExportFKSTest(IOTests.IOTestManager):
                                precmd=True, postcmd=True)
 
         interface = MGCmd.MasterCmd()
+        interface.no_notification()
+        # Select the Tensor Integral to include in the test
+        misc.deactivate_dependence('pjfry', cmd = interface, log='stdout')
+        misc.deactivate_dependence('samurai', cmd = interface, log='stdout')        
+        misc.activate_dependence('golem', cmd = interface, log='stdout')
+        misc.activate_dependence('ninja', cmd = interface, log='stdout',MG5dir=MG5DIR)        
         
         run_cmd('import model %s' % model)
         for multi in multiparticles:

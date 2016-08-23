@@ -80,6 +80,9 @@ class Switcher(object):
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
         
+        if hasattr(self, 'plugin') and self.plugin:
+            return True
+        
         correct = True
         # function which should be self.cmd dependent but which doesn't start
         # by do_xxxx, help_xxx, check_xxxx or complete_xxx 
@@ -114,7 +117,7 @@ class Switcher(object):
         # in the Switcher or in one of the MasterClass
         define = {}
         for mother in MasterCmd.__mro__:
-            if mother.__name__ in ['Cmd', 'BasicCmd', 'ExtendedCmd']:
+            if mother.__name__ in ['OriginalCmd', 'BasicCmd', 'CmdExtended', 'Cmd']:
                 continue
             
             
@@ -134,9 +137,8 @@ class Switcher(object):
         # Do the same for the WEb MasterClass
         define = {}
         for mother in MasterCmdWeb.__mro__:
-            if mother.__name__ in ['Cmd', 'BasicCmd', 'ExtendedCmd']:
+            if mother.__name__ in ['OriginalCmd', 'BasicCmd', 'CmdExtended', 'Cmd']:
                 continue
-            
             for data in mother.__dict__:
                 #check if  define in Switcher
                 if data in Switcher.__dict__ or data.startswith('__'):
