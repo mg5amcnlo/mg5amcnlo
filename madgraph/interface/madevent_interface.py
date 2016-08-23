@@ -2640,13 +2640,10 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     line = line[1:]
                     if '{' in line:
                         line = line.split('{')[-1]
-                    if '#' in line:
-                        line = line.split('#')[0]
-                    if '!' in line:
-                        line = line.split('!')[0]   
-                    if '}' in line:
-                        last =True
-                        line = line.split('}')[0]                   
+                    # split for } ! #
+                    line, sep = re.split('(\}|!|\#)', line,1, re.M)
+                    if sep == '}':
+                        last = True
                     if ',' in line:
                         for pair in line.split(','):
                             if not pair.strip():

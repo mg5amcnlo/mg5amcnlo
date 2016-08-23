@@ -1991,11 +1991,9 @@ class RunCard(ConfigFile):
         if legacy:
             self.legacy_parameter[name] = value
             include = False
-        if not include:
-            self.includepath[False].append(name)
-        elif include is True:
+        if include is True:
             self.includepath[True].append(name)
-        else:
+        elif include:
             self.includepath[include].append(name)
         if hidden or system:
             self.hidden_param.append(name)
@@ -2189,12 +2187,9 @@ class RunCard(ConfigFile):
         
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
-        self.includepath
         
         for incname in self.includepath:
-            if incname is False:
-                continue
-            elif incname is True:
+            if incname is True:
                 pathinc = 'run_card.inc'
             else:
                 pathinc = incname
