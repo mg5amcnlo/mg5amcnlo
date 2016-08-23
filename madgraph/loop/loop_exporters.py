@@ -119,7 +119,7 @@ class LoopExporterFortran(object):
         
         # special mode
         if 'heptools_install_dir' in self.opt and self.dependencies =='external':
-            if os.path.exists(pjoin(self.opt['heptools_install_dir'])) and\
+            if os.path.exists(pjoin(self.opt['heptools_install_dir'], 'CutTools','lib')) and\
             not os.path.exists(pjoin(self.cuttools_dir,'includects', 'libcts.a')):
                 misc.sprint('Going to use pre-compiled version of CutTools') 
                 # Create the links to the lib folder

@@ -5459,7 +5459,7 @@ This implies that with decay chains:
                                  pjoin(prefix,'MG5aMC_PY8_interface')
             self.exec_cmd('save options %s mg5amc_py8_interface_path' % config_file)      
         elif tool == 'collier':
-            self.options['collier'] = pjoin(prefix,'HEPTools','lib')
+            self.options['collier'] = pjoin(prefix,'lib')
             self.exec_cmd('save options %s collier' % config_file)
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
@@ -6687,6 +6687,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         elif args[0] == 'options':
             partial_save = False
             to_define = {}
+            
             if any(not arg.startswith('--') and arg in self.options 
                                                                for arg in args):
                 # store in file only those ones
@@ -6721,18 +6722,19 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
                                         % (key,self.options_madgraph[key]) )
                             logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
-                
+            misc.sprint(to_define)
             if len(args) >1 and not args[1].startswith('--') and args[1] not in self.options:
                 filepath = args[1]
             else:
                 filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
             
+            basedir = MG5DIR
             if partial_save:
                 basefile = filepath
             else:
                 basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
                 
-            basedir = MG5DIR
+            
 
             if to_keep:
                 to_define = to_keep
