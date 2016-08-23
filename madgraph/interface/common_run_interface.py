@@ -4890,7 +4890,7 @@ You can also copy/paste, your event file here.''')
             self.run_card = banner_mod.RunCard(path)
         elif path == self.paths['ML']:
             self.MLcard = banner_mod.MadLoopParam(path)
-        elif path == self.paths['PY8']
+        elif path == self.paths['PY8']:
             # Use the read function so that modified/new parameters are correctly
             # set as 'user_set'
             if not self.PY8Card:
