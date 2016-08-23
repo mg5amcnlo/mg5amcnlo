@@ -1299,6 +1299,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             output = input
     
         lhaid = [self.run_card.get_lhapdf_id()]
+        if 'store_rwgt_info' in self.run_card and not self.run_card['store_rwgt_info']:
+            raise self.InvalidCmd,  "The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event file."
+        elif 'use_syst'  in self.run_card and not self.run_card['use_syst']:
+            raise self.InvalidCmd,  "The events was not generated with use_syst=True. Can not evaluate systematics error on this event file."
+        
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
         except Exception, error:
