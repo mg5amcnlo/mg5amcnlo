@@ -25,7 +25,7 @@ PROCDIR=%(process_dir)s
 all: $(targets) 
 
 CPPFLAGS= -I../$(INCDIR1) -I../$(INCDIR2)
-LIBS=-L../$(LIBDIRARCH) -L../lib -lpythia8 -l$(PROCDIR)
+LIBS=-L../$(LIBDIRARCH) -L../lib -lpythia8 -l$(PROCDIR) -lz
 
 all: %(main_file)s
 

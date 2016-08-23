@@ -26,8 +26,8 @@
    use combinatorics
    use scale
    use countdigits
-   use avh_olo
-   use avh_olo_units
+   use avh_olo_forCutTools
+   use avh_olo_forCutTools_units
    include 'cts_mprec.h'
    implicit none 
    integer, intent(in) :: scaloopin

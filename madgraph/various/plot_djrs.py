@@ -28,8 +28,8 @@ import matplotlib.pylab as pylab
 # You can put the path to MG5_aMC main directory here to link from any directory
 #sys.path.append('PATH/TO/MADGRAPH')
 #try to find relatively to this file
-sys.path.append(os.path.basename(os.path.basename(self.__file__))) #../
-sys.path.append(os.path.basename(os.path.basename(os.path.basename(self.__file__)))) #../../
+sys.path.append(os.path.basename(os.path.basename(__file__))) #../
+sys.path.append(os.path.basename(os.path.basename(os.path.basename(__file__)))) #../../
 # lets try the import.
 try:
     import madgraph
@@ -40,7 +40,7 @@ except ImportError:
         print "You need to specify the path to the MG5_aMC directory"    
         sys.exit(1)
     else:
-        from internal.histograms.import *
+        from internal.histograms import *
 else:
     from madgraph.various.histograms import *
 
@@ -98,7 +98,7 @@ ratio_frame.set_ylabel(r'$ME/PS$')
 # Adding the curves. Here I want to plot two curves:
 # the curve with the maximum value of QCUT from the 0 jet sample
 # the curve with the minimal value of QCUT from the highest multiplicity sample
-qcut= [l for l in weights_name if l.startswith('MUF=1_MUR=1_PDF=11041_MERGING=')]
+qcut= [l for l in weights_name if l.startswith('MUF=1_MUR=1_PDF=247000_MERGING=')]
 min_qcut,max_qcut = qcut[0],qcut[-1]
 
 #get the histo
@@ -124,7 +124,7 @@ fill_between_steps(h_0j.get('bins'), pdfmin, pdfmax, ax=main_frame, facecolor=l_
                         edgecolor=l_0j.get_color()
 )
 # use a second method for h_1j
-pdfmin, pdfmax = h_1j.get_uncertainty_band(['MUF=1_MUR=1_PDF=%i_MERGING=10' % i for i in range(21100,21140)], mode='hessian')
+pdfmin, pdfmax = h_1j.get_uncertainty_band(['MUF=1_MUR=1_PDF=%i_MERGING=30' % i for i in range(247000,247100)], mode='hessian')
 fill_between_steps(h_1j.get('bins'), pdfmin, pdfmax, ax=main_frame, facecolor=l_1j.get_color(), alpha=0.5,
                         edgecolor=l_1j.get_color()
 )

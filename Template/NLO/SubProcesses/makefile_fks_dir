@@ -9,11 +9,11 @@ ANADIR = ../../FixedOrderAnalysis/
 ifdef fastjet_config
     FASTJET_CONFIG = $(fastjet_config)
     CXXFLAGS += $(shell $(FASTJET_CONFIG) --cxxflags)
-    FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) -lstdc++
+    FJLIBS += $(shell $(FASTJET_CONFIG) --libs --plugins ) $(STDLIB)
     fastjetfortran_madfks=fastjetfortran_madfks_full.o fastjet_wrapper.o
 else
     fastjetfortran_madfks=fastjetfortran_madfks_core.o fjcore.o fastjet_wrapper.o
-    FJLIBS += -lstdc++
+    FJLIBS += $(STDLIB)
 endif
 
 NLOLIBS=-L$(LIBDIR) $(libmadloop) $(libcuttools) $(libOLP)

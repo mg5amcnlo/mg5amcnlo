@@ -51,9 +51,9 @@ $(LIBDIR)libcernlib.$(libext): CERNLIB
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(LDFLAGS) -o $@ $^
 $(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc
-			 $(FC) $(LDFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf)
+			 $(FC) $(LDFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf) $(LDFLAGS)
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
-	$(FC) $(LDFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(llhapdf)
+	$(FC) $(LDFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(llhapdf) $(LDFLAGS)
 
 # Dependencies
 

@@ -204,6 +204,10 @@ C       Fill common block for Les Houches init info
 c fill the nmemPDF(i) array with the number of PDF error set. This we
 c get from LHAPDF.
          call numberPDFm(1,nmemPDF(1))
+         if (nmemPDF(1).eq.1) then
+            nmemPDF(1)=0
+            lpdfvar(1)=0
+         endif
       else
          nmemPDF(1)=0
       endif

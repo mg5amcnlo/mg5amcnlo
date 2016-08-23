@@ -143,22 +143,7 @@ class HelpToCmd(object):
         logger.info("        default: take value from the model")
         logger.info("  --output=X: path where to write the resulting card. ")
         logger.info("        default: overwrite input file. If no input file, write it in the model directory")
-        logger.info("  --nlo: Compute NLO width [if the model support it]")      
-
-
-    def help_pythia(self):
-        logger.info("syntax: pythia [RUN] [--run_options]")
-        logger.info("-- run pythia on RUN (current one by default)")
-        self.run_options_help([('-f','answer all question by default'),
-                               ('--tag=', 'define the tag for the pythia run'),
-                               ('--no_default', 'not run if pythia_card not present')])
-
-    def help_pythia8(self):
-        logger.info("syntax: pythia8 [RUN] [--run_options]")
-        logger.info("-- run pythia8 on RUN (current one by default)")
-        self.run_options_help([('-f','answer all question by default'),
-                               ('--tag=', 'define the tag for the pythia8 run'),
-                               ('--no_default', 'not run if pythia8_card not present')])
+        logger.info("  --nlo: Compute NLO width [if the model support it]")
 
     def help_shower(self):
         logger.info("syntax: shower [shower_name] [shower_options]")
@@ -615,7 +600,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     options_madevent = {'automatic_html_opening':True,
                         'notification_center':True,
                          'run_mode':2,
-                         'cluster_queue':'madgraph',
+                         'cluster_queue':None,
                          'cluster_time':None,
                          'cluster_size':100,
                          'cluster_memory':None,
@@ -928,6 +913,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            param_card.dat
            run_card.dat
            pythia_card.dat
+           pythia8_card.dat
            plot_card.dat
            pgs_card.dat
            delphes_card.dat
@@ -947,7 +933,35 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.warning('File %s is empty' % path)
             return 'unknown'
         
-        text = re.findall('(<MGVersion>|ParticlePropagator|ExecutionPath|Treewriter|<mg5proccard>|CEN_max_tracker|#TRIGGER CARD|parameter set name|muon eta coverage|req_acc_FO|MSTP|b_stable|FO_ANALYSIS_FORMAT|MSTU|Begin Minpts|gridpack|ebeam1|block\s+mw_run|BLOCK|DECAY|launch|madspin|transfer_card\.dat|set)', fulltext, re.I)
+        to_search = ['<MGVersion>',           # banner
+                     '<mg5proccard>' 
+                     'ParticlePropagator',    # Delphes
+                     'ExecutionPath', 
+                     'Treewriter', 
+                     'CEN_max_tracker',
+                     '#TRIGGER CARD',         # delphes_trigger.dat
+                     'parameter set name',    # pgs_card
+                     'muon eta coverage',
+                    'req_acc_FO',
+                    'MSTP',
+                    'b_stable',
+                    'FO_ANALYSIS_FORMAT',
+                    'MSTU',
+                    'Begin Minpts',
+                    'gridpack',
+                    'ebeam1',
+                    'block\s+mw_run',
+                    'BLOCK',
+                    'DECAY',
+                    'launch',
+                    'madspin',
+                    'transfer_card\.dat',
+                    'set',
+                    'main:numberofevents'   # pythia8  
+                    ]
+        
+        
+        text = re.findall('(%s)' % '|'.join(to_search), fulltext, re.I)
         text = [t.lower() for t in text]
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
@@ -2801,9 +2815,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cross = current['cross']
             error = current['error']
             self.results.add_run( new_run, self.run_card)
-            self.results.add_detail('nb_event', nb_event)
-            self.results.add_detail('cross', cross * madspin_cmd.branching_ratio)
-            self.results.add_detail('error', error * madspin_cmd.branching_ratio + cross * madspin_cmd.err_branching_ratio)
+            self.results.add_detail('nb_event', int(nb_event*madspin_cmd.efficiency))
+            self.results.add_detail('cross', madspin_cmd.cross)#cross * madspin_cmd.branching_ratio)
+            self.results.add_detail('error', madspin_cmd.error+ cross * madspin_cmd.err_branching_ratio)
             self.results.add_detail('run_mode', current['run_mode'])
 
         self.run_name = new_run
@@ -2979,7 +2993,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         content_variables += '\n%s' % tag
 
         if diff:
-            open(make_opts, 'w').write(content_variables + '\n'.join(content))
+            with open(make_opts, 'w') as fsock: 
+                fsock.write(content_variables + '\n'.join(content))
         return       
 
 
@@ -3843,15 +3858,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         args = self.split_arg(line)
         # fix some formatting problem
-        if '=' in args[-1]:
-            arg1, arg2 = args.pop(-1).split('=')
+        if len(args)==1 and '=' in args[-1]:
+            arg1, arg2 = args.pop(-1).split('=',1)
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')
-        # do not set lowercase the case-sensitive parameters from the shower_card
-        if not ( args[0].lower() in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or \
-                 args[0].lower().startswith('dm_') ):
-            args[:-1] = [ a.lower() for a in args[:-1]]
+
         # special shortcut:
         if args[0] in self.special_shortcut:
             if len(args) == 1:
@@ -3900,7 +3912,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n QCUT= %s' % (p_card, args[1])
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock: 
+                    fsock.write(p_card)
                 return
         # Special case for the showerkt value
         if args[0].lower() == 'showerkt':
@@ -3913,7 +3926,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                     p_card, flags=(re.M+re.I))
                 if n==0:
                     p_card = '%s \n SHOWERKT= %s' % (p_card, args[1].upper())
-                open(pythia_path, 'w').write(p_card)
+                with open(pythia_path, 'w') as fsock:
+                    fsock.write(p_card)
                 return
             
 
@@ -4196,6 +4210,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
             elif args[start+1].lower() in ['f','.false.','false']:
                 self.shower_card.set_param(args[start],'.false.',self.paths['shower'])
+            elif args[start] in ['analyse', 'extralibs', 'extrapaths', 'includepaths'] or\
+                                                  args[start].startswith('dm_'):
+                #case sensitive parameters
+                args = line.split()
+                args_str = ' '.join(str(a) for a in args[start+1:len(args)])
+                self.shower_card.set_param(args[start],args_str,pjoin(self.me_dir,'Cards','shower_card.dat'))
             else:
                 args_str = ' '.join(str(a) for a in args[start+1:len(args)])
                 self.shower_card.set_param(args[start],args_str,self.paths['shower'])
@@ -4220,9 +4240,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                               commentdefault=True)
 
         # Pythia8 Parameter  ---------------------------------------------------
-        elif self.has_PY8 and args[start] in self.PY8Card \
-                                               and card in ['', 'pythia8_card']:
-        
+        elif self.has_PY8 and (card == 'pythia8_card' or (card == '' and \
+             args[start] in self.PY8Card)):
+
             if args[start] in self.conflict and card == '':
                 text = 'ambiguous name (present in more than one card). Please specify which card to edit'
                 logger.warning(text)
@@ -4240,7 +4260,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                           print_only_visible=True)
                 
         #INVALID --------------------------------------------------------------
-        else:            
+        else:      
+            misc.sprint(card)      
             logger.warning('invalid set command %s ' % line)
             return
 
@@ -4294,7 +4315,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except Exception, error:
             logger.warning("Fail to change parameter. Please Retry. Reason: %s." % error)
             return
-        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value))
+        logger.info('modify parameter %s of the pythia8_card.dat to %s' % (name, value), '$MG:color:BLACK')
         if default and name.lower() in self.PY8Card.user_set:
             self.PY8Card.user_set.remove(name.lower())
 
@@ -4350,7 +4371,66 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
-    
+                    
+        # Check the extralibs flag.
+        if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
+            modify_extralibs, modify_extrapaths = False,False
+            extralibs = self.shower_card['extralibs'].split()
+            extrapaths = self.shower_card['extrapaths'].split()
+            # remove default stdhep/Fmcfio for recent shower
+            if self.run_card['parton_shower'] in ['PYTHIA8', 'HERWIGPP', 'HW7']:
+                if 'stdhep' in self.shower_card['extralibs']:
+                    extralibs.remove('stdhep')
+                    modify_extralibs = True
+                if 'Fmcfio' in self.shower_card['extralibs']:
+                    extralibs.remove('Fmcfio')     
+                    modify_extralibs = True               
+            if self.run_card['parton_shower'] == 'PYTHIA8':
+                # First check sanity of PY8
+                if not self.mother_interface.options['pythia8_path']:
+                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified  to MadGraph5_aMC@NLO'
+                executable = pjoin(self.mother_interface.options['pythia8_path'], 'bin', 'pythia8-config')
+                if not os.path.exists(executable):
+                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified to MadGraph5_aMC@NLO'                
+                
+                # 2. take the compilation flag of PY8 from pythia8-config
+                libs , paths = [], []
+                p = misc.subprocess.Popen([executable, '--libs'], stdout=subprocess.PIPE)
+                stdout, _ = p. communicate()
+                libs = [x[2:] for x in stdout.split() if x.startswith('-l') or paths.append(x[2:])]
+                
+                # Add additional user-defined compilation flags
+                p = misc.subprocess.Popen([executable, '--config'], stdout=subprocess.PIPE)
+                stdout, _ = p. communicate()
+                for lib in ['-ldl','-lstdc++','-lc++']:
+                    if lib in stdout:
+                        libs.append(lib[2:])                    
+
+                # This precompiler flag is in principle useful for the analysis if it writes HEPMC
+                # events, but there is unfortunately no way for now to specify it in the shower_card.
+                supports_HEPMCHACK = '-DHEPMC2HACK' in stdout
+                
+                #3. ensure that those flag are in the shower card
+                for l in libs:
+                    if l not in extralibs:
+                        modify_extralibs = True
+                        extralibs.append(l)
+                for L in paths:
+                    if L not in extrapaths:
+                        modify_extrapaths = True
+                        extrapaths.append(L)
+                        
+            # Apply the required modification
+            if modify_extralibs:
+                if extralibs:
+                    self.do_set('shower_card extralibs %s ' % ' '.join(extralibs))
+                else:
+                    self.do_set('shower_card extralibs \'\' ')
+            if modify_extrapaths:
+                if extrapaths:
+                    self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
+                else:
+                    self.do_set('shower_card extrapaths \'\' ')    
     
     def reask(self, *args, **opt):
         
@@ -4444,7 +4524,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
             
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)       
         else:
             # Here we have to remove all the previous definition of the decay
             #first find the particle
@@ -4455,8 +4534,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             text= open(path).read()
             text = decay_pattern.sub('', text)
             text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-            open(path,'w').write(text)
-        
+
+        with open(path,'w') as fsock:
+            fsock.write(text) 
+
         
 
     def do_compute_widths(self, line):
@@ -4532,7 +4613,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
                           print_only_visible=True)
-            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value))
+            logger.info("add in the pythia8_card the parameter \"%s\" with value \"%s\"" % (name, value), '$MG:color:BLACK')
         elif len(args) > 0: 
             if args[0] in self.cards:
                 card = args[0]

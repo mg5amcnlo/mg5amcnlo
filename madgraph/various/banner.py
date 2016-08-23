@@ -181,7 +181,7 @@ class Banner(dict):
             raise Exception, "Not Supported version"
         self.lhe_version = version
     
-    def get_cross(self):
+    def get_cross(self, witherror=False):
         """return the cross-section of the file"""
 
         if "init" not in self:
@@ -190,11 +190,17 @@ class Banner(dict):
         
         text = self["init"].split('\n')
         cross = 0
+        error = 0
         for line in text:
             s = line.split()
             if len(s)==4:
                 cross += float(s[0])
-        return cross
+                if witherror:
+                    error += float(s[1])**2
+        if not witherror:
+            return cross
+        else:
+            return cross, math.sqrt(error)
         
 
     
@@ -921,7 +927,7 @@ class ConfigFile(dict):
             dict.__init__(self, finput)
             assert finput.__dict__.keys()
             for key in finput.__dict__:
-                setattr(self, key, dict(getattr(finput, key)) )
+                setattr(self, key, copy.copy(getattr(finput, key)) )
             return
         else:
             dict.__init__(self)
@@ -3194,8 +3200,8 @@ class RunCardNLO(RunCard):
             raise InvalidRunCard, "'reweight_scale' and 'dynamical_scale_choice' lists should have the same length"
         if len(self['dynamical_scale_choice']) > 10 :
             raise InvalidRunCard, "Length of list for 'dynamical_scale_choice' too long: max is 10."
-        if len(self['lhaid']) > 10 :
-            raise InvalidRunCard, "Length of list for 'lhaid' too long: max is 10."
+        if len(self['lhaid']) > 25 :
+            raise InvalidRunCard, "Length of list for 'lhaid' too long: max is 25."
         if len(self['rw_rscale']) > 9 :
             raise InvalidRunCard, "Length of list for 'rw_rscale' too long: max is 9."
         if len(self['rw_fscale']) > 9 :
@@ -3271,17 +3277,23 @@ class MadLoopParam(ConfigFile):
     contains a parser to read it, facilities to write a new file,...
     """
     
-
-            
+    _ID_reduction_tool_map = {1:'CutTools',
+                             2:'PJFry++',
+                             3:'IREGI',
+                             4:'Golem95',
+                             5:'Samurai',
+                             6:'Ninja',
+                             7:'COLLIER'}
+    
     def default_setup(self):
         """initialize the directory to the default value"""
         
-        self.add_param("MLReductionLib", "6|1|2")
+        self.add_param("MLReductionLib", "6|7|1")
         self.add_param("IREGIMODE", 2)
         self.add_param("IREGIRECY", True)
         self.add_param("CTModeRun", -1)
         self.add_param("MLStabThres", 1e-3)
-        self.add_param("NRotations_DP", 1)
+        self.add_param("NRotations_DP", 0)
         self.add_param("NRotations_QP", 0)
         self.add_param("ImprovePSPoint", 2)
         self.add_param("CTLoopLibrary", 2)
@@ -3297,8 +3309,16 @@ class MadLoopParam(ConfigFile):
         self.add_param("HelicityFilterLevel", 2)
         self.add_param("LoopInitStartOver", False)
         self.add_param("HelInitStartOver", False)
-        self.add_param("UseQPIntegrandForNinja", False)        
+        self.add_param("UseQPIntegrandForNinja", True)        
         self.add_param("UseQPIntegrandForCutTools", True)
+        self.add_param("COLLIERMode", 1)
+        self.add_param("COLLIERComputeUVpoles", True)
+        self.add_param("COLLIERComputeIRpoles", True)
+        self.add_param("COLLIERRequiredAccuracy", 1.0e-8)
+        self.add_param("COLLIERCanOutput",False)
+        self.add_param("COLLIERGlobalCache",-1)
+        self.add_param("COLLIERUseCacheForPoles",False)
+        self.add_param("COLLIERUseInternalStabilityTest",True)
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

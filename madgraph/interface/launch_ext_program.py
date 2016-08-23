@@ -766,7 +766,7 @@ class Pythia8Launcher(ExtLauncher):
 
         # Make pythia8
         print "Running make for pythia8 directory"
-        misc.compile(cwd=os.path.join(self.running_dir, os.path.pardir), mode='cpp')
+        #misc.compile(cwd=os.path.join(self.running_dir, os.path.pardir), mode='cpp')
         if self.model_dir:
             print "Running make in %s" % self.model_dir
             misc.compile(cwd=self.model_dir, mode='cpp')

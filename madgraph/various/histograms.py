@@ -817,7 +817,7 @@ class HwU(Histogram):
                 data = [values[s][i] for s in xrange(len(values))]
                 sdata = sum(data)
                 sdata2 = sum(x**2 for x in data)
-                pdf_stdev = math.sqrt(sdata2 -sdata**2/float(len(values)-2))
+                pdf_stdev = math.sqrt(max(sdata2 -sdata**2/float(len(values)-2),0.0))
                 min_value.append(sdata - pdf_stdev)
                 max_value.append(sdata + pdf_stdev)                 
 

@@ -540,7 +540,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format in self.supported_ML_format:
-            for me in matrix_elements:
+            for unique_id, me in enumerate(matrix_elements):
                 calls = calls + \
                         self._curr_exporter.generate_subprocess_directory(\
                             me, self._curr_helas_model)
@@ -556,6 +556,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
                     self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
                                                        max(max_loop_vert_ranks))
+                self._curr_exporter.write_global_specs(matrix_elements)
 
         # Just the matrix.f files
         if self._export_format == 'matrix':

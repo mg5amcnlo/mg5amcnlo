@@ -1462,8 +1462,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             tools=list(set(tools)) # remove the duplication ones
             
         # not self-contained tir libraries
-        tool_var={'pjfry':2,'golem':4,'samurai':5,'ninja':6}
-        for tool in ['pjfry','golem','samurai','ninja']:
+        tool_var={'pjfry':2,'golem':4,'samurai':5,'ninja':6,'collier':7}
+        for tool in ['pjfry','golem','samurai','ninja','collier']:
             tool_dir='%s_dir'%tool
             if not tool_dir in self.tir_dir:
                 continue
@@ -1485,8 +1485,8 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         export_dir=pjoin(self.mg_root,("SAVED" if keep_folder else "")+\
                                                 temp_dir_prefix+"_%s"%proc_name)
         
-        tools_name={1:'CutTools',2:'PJFry++',3:'IREGI',4:'Golem95',5:'Samurai',
-                    6:'Ninja'}
+        tools_name=bannermod.MadLoopParam._ID_reduction_tool_map
+        
         return_dict={}
         return_dict['Stability']={}
         infos_save={'Process_output': None,
@@ -1509,7 +1509,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
             # The exceptional PS points are those which stay unstable in quad prec.
             Exceptional_PS_points = []
         
-            MLoptions={}
+            MLoptions=MLOptions
             MLoptions["MLReductionLib"]=tool
             clean = (tool==tools[0]) and not nPoints==0
             if infos_IN==None or (tool_name not in infos_IN):
@@ -1598,7 +1598,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
                             str(datetime.timedelta(seconds=sec_needed)),\
                             datetime.datetime.now().strftime("%d-%m-%Y %H:%M")))
             if logger.getEffectiveLevel()<logging.WARNING and \
-                (sec_needed>5 or (reusing and infos['Initialization'] == None)):
+                              (sec_needed>5 or infos['Initialization'] == None):
                 widgets = ['Stability check:', pbar.Percentage(), ' ', 
                                             pbar.Bar(),' ', pbar.ETA(), ' ']
                 progress_bar = pbar.ProgressBar(widgets=widgets, maxval=nPoints, 
@@ -2117,8 +2117,10 @@ def check_profile(process_definition, param_card = None,cuttools="",tir={},
 
     timing2 = myProfiler.time_matrix_element(matrix_element, reusing, 
                             param_card, keep_folder=keep_folder,options=options,
-                            MLOptions = MLoptions)
+                            MLOptions = MLoptions) 
     
+    timing2['reduction_tool'] = MLoptions['MLReductionLib'][0]
+
     if timing2 == None:
         return None, None
 
@@ -2164,6 +2166,22 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
         MLoptions = {}
     else:
         MLoptions = MLOptions
+        # Make sure that the poles computation is disabled for COLLIER
+        if 'COLLIERComputeUVpoles' not in MLoptions:
+            MLoptions['COLLIERComputeUVpoles']=False
+        if 'COLLIERComputeIRpoles' not in MLoptions:
+            MLoptions['COLLIERComputeIRpoles']=False
+        # Use high required accuracy in COLLIER's requirement if not specified
+        if 'COLLIERRequiredAccuracy' not in MLoptions:
+            MLoptions['COLLIERRequiredAccuracy']=1e-13
+        # Use loop-direction switching as stability test if not specifed (more reliable)
+        if 'COLLIERUseInternalStabilityTest' not in MLoptions:
+            MLoptions['COLLIERUseInternalStabilityTest']=False
+        # Finally we *must* forbid the use of COLLIER global cache here, because it
+        # does not work with the way we call independently CTMODERun 1 and 2
+        # with the StabilityChecker.
+        MLoptions['COLLIERGlobalCache'] = 0
+
         if "MLReductionLib" not in MLOptions:
             MLoptions["MLReductionLib"] = []
             if cuttools:
@@ -2178,6 +2196,8 @@ def check_stability(process_definition, param_card = None,cuttools="",tir={},
                 MLoptions["MLReductionLib"].extend([5])
             if "ninja_dir" in tir:
                 MLoptions["MLReductionLib"].extend([6])
+            if "collier_dir" in tir:
+                MLoptions["MLReductionLib"].extend([7])
 
     stability = myStabilityChecker.check_matrix_element_stability(matrix_element, 
                         options=options,param_card=param_card, 
@@ -2215,6 +2235,19 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
         MLoptions = {}
     else:
         MLoptions = MLOptions
+        # Make sure that the poles computation is disabled for COLLIER
+        if 'COLLIERComputeUVpoles' not in MLoptions:
+            MLoptions['COLLIERComputeUVpoles']=False
+        if 'COLLIERComputeIRpoles' not in MLoptions:
+            MLoptions['COLLIERComputeIRpoles']=False
+        # And the COLLIER global cache is active, if not specified
+        if 'COLLIERGlobalCache' not in MLoptions:
+            MLoptions['COLLIERGlobalCache']=-1
+        # And time NINJA by default if not specified:
+        if 'MLReductionLib' not in MLoptions or \
+                                            len(MLoptions['MLReductionLib'])==0:
+            MLoptions['MLReductionLib'] = [6]
+            
     timing2 = myTimer.time_matrix_element(matrix_element, reusing, param_card,
                                      keep_folder = keep_folder, options=options,
                                      MLOptions = MLoptions)
@@ -2225,6 +2258,7 @@ def check_timing(process_definition, param_card= None, cuttools="",tir={},
         # Return the merged two dictionaries
         res = dict(timing1.items()+timing2.items())
         res['loop_optimized_output']=myTimer.loop_optimized_output
+        res['reduction_tool'] = MLoptions['MLReductionLib'][0]
         return res
 
 #===============================================================================
@@ -2670,7 +2704,8 @@ The loop direction test power P is computed as follow:
         # Use nicer name for the XML tag in the log file
         xml_toolname = {'GOLEM95':'GOLEM','IREGI':'IREGI',
                         'CUTTOOLS':'CUTTOOLS','PJFRY++':'PJFRY',
-                        'NINJA':'NINJA','SAMURAI':'SAMURAI'}[toolname.upper()]
+                        'NINJA':'NINJA','SAMURAI':'SAMURAI',
+                        'COLLIER':'COLLIER'}[toolname.upper()]
         if len(UPS)>0:
             res_str_i = "\nDetails of the %d/%d UPS encountered by %s\n"\
                                                         %(len(UPS),nPS,toolname)
@@ -2811,7 +2846,7 @@ The loop direction test power P is computed as follow:
 
     try:
         import matplotlib.pyplot as plt
-        colorlist=['b','r','g','y','m','c']
+        colorlist=['b','r','g','y','m','c','k']
         for i,key in enumerate(data_plot_dict.keys()):
             color=colorlist[i]
             data_plot=data_plot_dict[key]
@@ -2852,6 +2887,8 @@ def output_timings(process, timings):
     # Define shortcut
     f = format_output
     loop_optimized_output = timings['loop_optimized_output']
+    reduction_tool        = bannermod.MadLoopParam._ID_reduction_tool_map[
+                                                      timings['reduction_tool']]
     
     res_str = "%s \n"%process.nice_string()
     try:
@@ -2877,6 +2914,7 @@ def output_timings(process, timings):
     res_str += "|= Initialization............ %s\n"\
                                             %f(timings['Initialization'],'%.3gs')
 
+    res_str += "\n= Reduction tool tested...... %s\n"%reduction_tool
     res_str += "\n= Helicity sum time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_unpolarized_total']*1000.0)
     if loop_optimized_output:
@@ -2886,7 +2924,7 @@ def output_timings(process, timings):
         total=coef_time+loop_time
         res_str += "|= Coefs. computation time... %.3gms (%d%%)\n"\
                                   %(coef_time,int(round(100.0*coef_time/total)))
-        res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
+        res_str += "|= Loop evaluation time...... %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
     res_str += "\n= One helicity time / PSpoint ========== %.3gms\n"\
                                     %(timings['run_polarized_total']*1000.0)
@@ -2897,7 +2935,7 @@ def output_timings(process, timings):
         total=coef_time+loop_time        
         res_str += "|= Coefs. computation time... %.3gms (%d%%)\n"\
                                   %(coef_time,int(round(100.0*coef_time/total)))
-        res_str += "|= Loop evaluation (OPP) time %.3gms (%d%%)\n"\
+        res_str += "|= Loop evaluation time...... %.3gms (%d%%)\n"\
                                   %(loop_time,int(round(100.0*loop_time/total)))
     res_str += "\n= Miscellaneous ========================\n"
     res_str += "|= Number of hel. computed... %s/%s\n"\
@@ -3714,9 +3752,9 @@ def check_complex_mass_scheme(process_line, param_card=None, cuttools="",tir={},
                                        order not in options['expansion_orders']]
     if len(veto_orders)>0:
         logger.warning('You did not define any parameter scaling rule for the'+\
-          " coupling orders %s. They will be "%','.join(veto_orders))+\
+          " coupling orders %s. They will be "%','.join(veto_orders)+\
           "forced to zero in the tests. Consider adding the scaling rule to"+\
-          "avoid this. (see option '--cms' in 'help check')"
+          "avoid this. (see option '--cms' in 'help check')")
         for order in veto_orders:
             multiprocess_nwa.get('orders')[order]==0
         multiprocess_nwa.set('perturbation_couplings', [order for order in
@@ -5101,14 +5139,16 @@ def CMS_save_path(extension, cms_res, used_model, opts, output_path=None):
         # Use process name if there is only one process            
         if len(cms_res['ordered_processes'])==1:
             proc = cms_res['ordered_processes'][0]
-            replacements = {' ':'','+':'p','-':'m','~':'x', '>':'_','=':'eq'}
+            replacements = [('=>','gt'),('<=','lt'),('/','_no_'),
+                            (' ',''),('+','p'),('-','m'),
+                            ('~','x'), ('>','_'),('=','eq'),('^2','squared')]
             # Remove the perturbation couplings:
             try:
                 proc=proc[:proc.index('[')]
             except ValueError:
                 pass
     
-            for key, value in replacements.items():
+            for key, value in replacements:
                 proc = proc.replace(key,value)
     
             basename =prefix+proc+'_%s_'%used_model.get('name')+\
@@ -5252,11 +5292,18 @@ def output_complex_mass_scheme(result,output_path, options, model, output='text'
         
         process_string = []
         for particle in process.split():
+            if '<=' in particle:
+                particle = particle.replace('<=',r'$\displaystyle <=$')
+            if '^2' in particle:
+                particle = particle.replace('^2',r'$\displaystyle ^2$')
             if particle=='$$':
                 process_string.append(r'\$\$')
                 continue
             if particle=='>':
                 process_string.append(r'$\displaystyle \rightarrow$')
+                continue
+            if particle=='/':
+                process_string.append(r'$\displaystyle /$')
                 continue
             process_string.append(format_particle_name(particle))              
 
@@ -5703,9 +5750,9 @@ minimum value of lambda to be considered in the CMS check."""\
                 data2.append([r'Detected asymptot',[differences_target[(process,resID)] 
                                                 for i in range(len(lambdaCMS_list))]])
             else:
-                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' '),CMSData])
-                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' '),NWAData])
-                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' '),DiffData])
+                data1.append([r'$\displaystyle CMS$  %s'%res[1].replace('_',' ').replace('#','\#'), CMSData])
+                data1.append([r'$\displaystyle NWA$  %s'%res[1].replace('_',' ').replace('#','\#'), NWAData])
+                data2.append([r'$\displaystyle\Delta$  %s'%res[1].replace('_',' ').replace('#','\#'), DiffData])
                 
         process_data_plot_dict[(process,resID)]=(data1,data2, info)
 
