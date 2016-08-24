@@ -2750,7 +2750,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
-                       'madanalysis5_path':'./HEPTools/madanalysis5',
+                       'madanalysis5_path':'./HEPTools/madanalysis5/madanalysis5',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
