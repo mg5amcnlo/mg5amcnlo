@@ -130,7 +130,7 @@ def mg5amc_py8_interface_consistency_warning(options):
     the current MG5 and Pythia8 versions. """
 
     # All this is only relevant is Pythia8 is interfaced to MG5
-    if not options['pythia8_path']:
+    if not options['pythia8_path'] or not os.path.isdir(options['pythia8_path']):
         return None
     
     if not options['mg5amc_py8_interface_path']:

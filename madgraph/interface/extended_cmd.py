@@ -1928,7 +1928,6 @@ class SmartQuestion(BasicCmd):
         else:
             self.case = True
         super(SmartQuestion, self).__init__(*arg, **opt)
-        cmd.Cmd.__init__(self, *arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
         
