@@ -1537,7 +1537,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     command += args
                 if '-from_cards' not in command:
                     command.append('-from_cards')
-                p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
+                p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=os.getcwd())
                 while p.poll() is None:
                     line = p.stdout.readline()
                     if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
@@ -1612,7 +1612,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         stdout = devnull
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
-                    mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=self.me_dir)
+                    mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
                 mycluster.wait(self.me_dir,update_status)
                 devnull.close()
                 

@@ -415,6 +415,7 @@ class ReweightInterface(extended_cmd.Cmd):
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
+        misc.sprint(os.getcwd())
         args = self.split_arg(line)
         opts = self.check_launch(args)
         if opts['rwgt_name']:

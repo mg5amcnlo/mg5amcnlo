@@ -2,9 +2,15 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 
 X.X.X (xx/xx/xx)
-        OM: NLO Re-weighting works in multi-core
-
-
+        OM: NLO/LO Re-weighting works in multi-core
+        OM: Introduces a new function for LO/NLO interface "systematics"
+            This function allows to compute systematics uncertainty from the event sample
+            It requires the event sample to have been generated with 
+                - use_syst = T (for LO sample)
+                - store_reweight_info = T (for NLO sample)
+            At LO the code is run automatically if use_syst=T (but if SysCalc is installed)
+        OM: Fix a bug in the reweight_card where relative path was not understood from the local directory 
+            where the program was runned by the user.
 
 2.4.3 (01/08/16)
         OM: Reduce the amount of log file/output generated for LO run (output can use up to three times less output).
