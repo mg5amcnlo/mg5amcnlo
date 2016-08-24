@@ -485,7 +485,7 @@ class TestMECmdShell(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
 
         if syst:
@@ -761,7 +761,7 @@ class TestMEfromfile(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
     
     def test_decay_width_nlo_model(self):
