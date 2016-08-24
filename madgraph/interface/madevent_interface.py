@@ -3270,6 +3270,11 @@ Beware that this can be dangerous for local multicore runs.""")
         args = self.split_arg(line)
         if len(args)>1 and args[0] in self._interfaced_showers:
             chosen_showers = [args.pop(0)]
+        elif '--no_default' in line:
+            # If '--no_default' was specified in the arguments, then only one 
+            # shower will be run, depending on which card is present.
+            # but we each of them are called. (each of them check if the file exists)
+            chosen_showers = list(self._interfaced_showers)
         else:
             chosen_showers = list(self._interfaced_showers)
             # It is preferable to run only one shower, even if several are available and no
@@ -3277,9 +3282,7 @@ Beware that this can be dangerous for local multicore runs.""")
             shower_priority = ['pythia8','pythia']
             chosen_showers = [sorted(chosen_showers,key=lambda sh:
                 shower_priority.index(sh) if sh in shower_priority else len(shower_priority)+1)[0]]
-            
-        # If '--no_default' was specified in the arguments, then only one 
-        # shower will be run, depending on which card is present.
+        
         for shower in chosen_showers:
             self.exec_cmd('%s %s'%(shower,' '.join(args)), 
                                                   postcmd=False, printcmd=False)
@@ -4261,7 +4264,6 @@ You can follow PY8 run with the following command (in a separate terminal):
             self.to_store.remove('pythia')
             misc.gzip(pjoin(p,'pythia_events.hep'), 
                       stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
-            self.to_store.remove('pythia')
 
         if 'pythia8' in self.to_store:            
             p = pjoin(self.me_dir,'Events')
@@ -4273,7 +4275,6 @@ You can follow PY8 run with the following command (in a separate terminal):
                 self.update_status('Storing Pythia8 files of previous run', 
                                                      level='pythia', error=True)
                 misc.gzip(file_path,stdout=file_path)
-            self.to_store.remove('pythia8')            
             
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         
