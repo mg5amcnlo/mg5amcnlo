@@ -64,7 +64,7 @@ import math
 from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
-import tests.parallel_tests.test_aloha as test_aloha
+
 
 class MadSpinError(MadGraph5Error):
     pass
@@ -2615,7 +2615,7 @@ class decay_all_events(object):
     
 
     @misc.mute_logger()
-    @test_aloha.set_global()
+    @misc.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
         i.e. the undecayed and the decay one. And associate those to the 

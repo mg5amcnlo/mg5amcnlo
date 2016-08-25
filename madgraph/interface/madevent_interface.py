@@ -3853,18 +3853,32 @@ You can follow PY8 run with the following command (in a separate terminal):
             f.close()
         tag = self.run_tag
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
-        self.cluster.launch_and_wait('../bin/internal/run_pythia', 
-                        argument= [pythia_src], stdout= pythia_log,
-                        stderr=subprocess.STDOUT,
-                        cwd=pjoin(self.me_dir,'Events'))
+        #self.cluster.launch_and_wait('../bin/internal/run_pythia', 
+        #                argument= [pythia_src], stdout= pythia_log,
+        #                stderr=subprocess.STDOUT,
+        #                cwd=pjoin(self.me_dir,'Events'))
+        output_files = ['pythia_events.hep']
+        if self.run_card['use_syst']:
+            output_files.append('syst.dat')
+        if self.run_card['ickkw'] == 1: 
+            output_files.append(['beforeveto.tree', 'xsecs.tree', 'events.tree'])
+        
+        os.environ['PDG_MASS_TBL'] = pjoin(pythia_src,'mass_width_2004.mc')
+        self.cluster.launch_and_wait(pjoin(pythia_src, 'pythia'),
+                                     input_files=[pjoin(self.me_dir, "Events", "unweighted_events.lhe"),
+                                                  pjoin(self.me_dir,'Cards','pythia_card.dat'),
+                                                  pjoin(pythia_src,'mass_width_2004.mc')],
+                                     output_files=output_files,
+                                     stdout= pythia_log,
+                                     stderr=subprocess.STDOUT,
+                                     cwd=pjoin(self.me_dir,'Events'))
+            
 
         os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe"))
 
-        if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
+        if not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
             logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
             return
-        else:
-            os.remove(pjoin(self.me_dir,'Events','pythia.done'))
         
         self.to_store.append('pythia')
         

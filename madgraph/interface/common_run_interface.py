@@ -3392,7 +3392,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['madspin'] = pjoin(self.me_dir,'Cards/madspin_card.dat')
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
-        
+        self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
+
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
