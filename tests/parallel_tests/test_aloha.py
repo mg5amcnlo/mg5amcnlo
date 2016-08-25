@@ -32,37 +32,8 @@ import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
 
-def set_global(loop=False, unitary=True, mp=False, cms=False):
 
-    def deco_set(f):
-        @wraps(f)
-        def deco_f_set(*args, **opt):
-            old_loop = aloha.loop_mode
-            old_gauge = aloha.unitary_gauge
-            old_mp = aloha.mp_precision
-            old_cms = aloha.complex_mass
-            aloha.loop_mode = loop
-            aloha.unitary_gauge = unitary
-            aloha.mp_precision = mp
-            aloha.complex_mass = cms
-            aloha_lib.KERNEL.clean()
-            try:
-                out =  f(*args, **opt)
-            except:
-                aloha.loop_mode = old_loop
-                aloha.unitary_gauge = old_gauge
-                aloha.mp_precision = old_mp
-                aloha.complex_mass = old_cms
-                raise
-            aloha.loop_mode = old_loop
-            aloha.unitary_gauge = old_gauge
-            aloha.mp_precision = old_mp
-            aloha.complex_mass = old_cms
-            aloha_lib.KERNEL.clean()
-            return out
-        return deco_f_set
-    return deco_set
-
+set_global = misc.set_global
 
 
 class TestVariable(unittest.TestCase):
