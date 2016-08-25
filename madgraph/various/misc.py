@@ -1671,7 +1671,9 @@ It has been validated for the last time with version: %s""",
 
 #decorator
 def set_global(loop=False, unitary=True, mp=False, cms=False):
-
+    from functools import wraps
+    import aloha
+    import aloha.aloha_lib as aloha_lib
     def deco_set(f):
         @wraps(f)
         def deco_f_set(*args, **opt):
