@@ -2012,11 +2012,17 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             if not bypass_run:
                 self.exec_cmd('refine %s' % nb_event, postcmd=False)
             
-                self.exec_cmd('combine_events', postcmd=False)
+                self.exec_cmd('combine_events', postcmd=False,printcmd=False)
                 self.print_results_in_shell(self.results.current)
 
-            
-                self.run_syscalc('parton')
+                if self.run_card['use_syst']:
+                    scdir = self.options['syscalc_path']
+                    if not scdir or not os.path.exists(scdir):
+                        self.exec_cmd('systematics %s --from_card' % self.run_name, postcmd=False,printcmd=False)    
+                    else:
+                        self.run_syscalc('parton')
+                
+                    
                 self.create_plot('parton')            
                 self.exec_cmd('store_events', postcmd=False)            
                 self.exec_cmd('reweight -from_cards', postcmd=False)            
@@ -3988,106 +3994,6 @@ Beware that this can be dangerous for local multicore runs.""")
         self.Gdirs = Gdirs
         return self.Gdirs
                 
-    ############################################################################
-    def set_run_name(self, name, tag=None, level='parton', reload_card=False,
-                     allow_new_tag=True):
-        """define the run name, the run_tag, the banner and the results."""
-        
-        # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
-                       'pythia': ['pythia','pgs','delphes'],
-                       'pgs': ['pgs'],
-                       'delphes':['delphes'],
-                       'plot':[],
-                       'syscalc':[]}
-        
-        
-
-        if name == self.run_name:        
-            if reload_card:
-                run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-                self.run_card = banner_mod.RunCard(run_card)
-
-            #check if we need to change the tag
-            if tag:
-                self.run_card['run_tag'] = tag
-                self.run_tag = tag
-                self.results.add_run(self.run_name, self.run_card)
-            else:
-                for tag in upgrade_tag[level]:
-                    if getattr(self.results[self.run_name][-1], tag):
-                        tag = self.get_available_tag()
-                        self.run_card['run_tag'] = tag
-                        self.run_tag = tag
-                        self.results.add_run(self.run_name, self.run_card)                        
-                        break
-            return # Nothing to do anymore
-        
-        # save/clean previous run
-        if self.run_name:
-            self.store_result()
-        # store new name
-        self.run_name = name
-        
-        new_tag = False
-        # First call for this run -> set the banner
-        self.banner = banner_mod.recover_banner(self.results, level, name)
-        if 'mgruncard' in self.banner:
-            self.run_card = self.banner.charge_card('run_card')
-        else:
-            # Read run_card
-            run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-            self.run_card = banner_mod.RunCard(run_card)   
-        
-        if tag:
-            self.run_card['run_tag'] = tag
-            new_tag = True
-        elif not self.run_name in self.results and level =='parton':
-            pass # No results yet, so current tag is fine
-        elif not self.run_name in self.results:
-            #This is only for case when you want to trick the interface
-            logger.warning('Trying to run data on unknown run.')
-            self.results.add_run(name, self.run_card)
-            self.results.update('add run %s' % name, 'all', makehtml=False)
-        else:
-            for tag in upgrade_tag[level]:
-                
-                if getattr(self.results[self.run_name][-1], tag):
-                    # LEVEL is already define in the last tag -> need to switch tag
-                    tag = self.get_available_tag()
-                    self.run_card['run_tag'] = tag
-                    new_tag = True
-                    break
-            if not new_tag:
-                # We can add the results to the current run
-                tag = self.results[self.run_name][-1]['tag']
-                self.run_card['run_tag'] = tag # ensure that run_tag is correct                
-                   
-        if allow_new_tag and (name in self.results and not new_tag):
-            self.results.def_current(self.run_name)
-        else:
-            self.results.add_run(self.run_name, self.run_card)
-
-        self.run_tag = self.run_card['run_tag']
-
-        # Return the tag of the previous run having the required data for this
-        # tag/run to working wel.
-        if level == 'parton':
-            return
-        elif level == 'pythia':
-            return self.results[self.run_name][0]['tag']
-        else:
-            for i in range(-1,-len(self.results[self.run_name])-1,-1):
-                tagRun = self.results[self.run_name][i]
-                if tagRun.pythia:
-                    return tagRun['tag']
-            
-            
-        
-        
-        
-        
-        
 
     ############################################################################
     def find_model_name(self):
@@ -4231,7 +4137,7 @@ Beware that this can be dangerous for local multicore runs.""")
         scdir = self.options['syscalc_path']
         if not scdir or not os.path.exists(scdir):
             return
-        logger.info('running syscalc on mode %s' % mode)    
+        logger.info('running SysCalc on mode %s' % mode)    
     
 
         # Check that all pdfset are correctly installed
@@ -4281,7 +4187,9 @@ Beware that this can be dangerous for local multicore runs.""")
                 if not (os.path.exists(event_path) or os.path.exists(event_path+".gz")):
                     event_path = pjoin(event_dir, 'unweighted_events.lhe')
                 output = pjoin(event_dir, 'syscalc.lhe')
+                stdout = open(pjoin(event_dir, self.run_name, '%s_systematics.log' % (mode)),'w')
             elif mode == 'Pythia':
+                stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w')
                 if 'mgpythiacard' in self.banner:
                     pat = re.compile('''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
                     data = pat.search(self.banner['mgpythiacard'])
@@ -4310,7 +4218,7 @@ Beware that this can be dangerous for local multicore runs.""")
         try:
             proc = misc.call([os.path.join(scdir, 'sys_calc'),
                                event_path, card, output],
-                            stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
+                            stdout = stdout,
                             stderr = subprocess.STDOUT,
                             cwd=event_dir)
             # Wait 5 s to make sure file is finished writing
