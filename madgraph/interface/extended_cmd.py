@@ -1166,7 +1166,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
-        elif hasattr(question_instance, 'case') and not question_instance.case:
+        elif hasattr(question_instance, 'casesensitive') and not question_instance.casesensitive:
             for entry in question_instance.allow_arg:
                 if line.lower() == entry.lower():
                     return entry
@@ -1923,10 +1923,13 @@ class SmartQuestion(BasicCmd):
         self.mother_interface = mother_interface
 
         if 'case' in opt:
-            self.case = opt['case']
+            self.casesensitive = opt['case']
             del opt['case']
+        elif 'casesensitive' in opt:
+            self.casesensitive = opt['casesensitive']
+            del opt['casesensitive']            
         else:
-            self.case = True
+            self.casesensistive = True
         super(SmartQuestion, self).__init__(*arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
@@ -2078,7 +2081,7 @@ class SmartQuestion(BasicCmd):
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
-            elif not self.case:
+            elif not self.casesensitive:
                 for ans in self.allow_arg:
                     if ans.lower() == self.value.lower():
                         self.value = ans

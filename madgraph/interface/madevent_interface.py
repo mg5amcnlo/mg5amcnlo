@@ -5138,7 +5138,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
                     question += '  Type \'help\' for the list of all valid option\n' 
                     question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
-                    answer = self.ask(question, '0', options, case=False)
+                    answer = self.ask(question, '0', options, casesensitive=False)
                 if (answer.isdigit() and answer != '0') or answer in ['shower', 'detector']:
                     if answer.isdigit():
                         key = switch_order[int(answer) - 1]

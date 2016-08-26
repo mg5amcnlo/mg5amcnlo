@@ -423,11 +423,6 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
         if cmd.options['collier'] in ['None',None,''] or\
          (cmd.options['collier'] == 'auto' and which_lib('libcollier.a') is None) or\
          which_lib(pjoin(cmd.options['collier'],'libcollier.a')) is None:
-            A = cmd.options['collier'] in ['None',None,'']
-            B = cmd.options['collier'] == 'auto' and which_lib('libcollier.a') is None
-            C = which_lib(pjoin(cmd.options['collier'],'libcollier.a')) is None
-            sprint(A,B,C, A or B or C, cmd.options['collier'], os.path.exists(pjoin(cmd.options['collier'],'libcollier.a')))
-            
             tell("Installing COLLIER...")
             cmd.do_install('collier')
 

@@ -3393,7 +3393,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
         self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
-
+        self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards', 'madanalysis5_parton_card.dat')
+        self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
@@ -3978,12 +3979,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('Invalid Command: No Delphes card defined.')
                 return
             if args[1] == 'atlas':
-                logger.info("set default ATLAS configuratin for Delphes", '$MG:color:BLACK')
+                logger.info("set default ATLAS configuration for Delphes", '$MG:color:BLACK')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_ATLAS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
             elif args[1] == 'cms':
-                logger.info("set default CMS configuratin for Delphes",'$MG:color:BLACK')
+                logger.info("set default CMS configuration for Delphes",'$MG:color:BLACK')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_CMS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
@@ -4824,27 +4825,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-1]
+                
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
-        if 'MadLoopParams' in answer:
+        elif 'MadLoopParams' in answer:
             answer = self.paths['ML']
-        if 'pythia8_card' in answer:
+        elif 'pythia8_card' in answer:
             answer = self.paths['PY8']
-        if not '.dat' in answer and not '.lhco' in answer:
-            if answer != 'trigger':
-                path = self.paths[answer]
-            else:
-                path = self.paths['delphes']
-        elif not '.lhco' in answer:
-            if '_' in answer:
-                path = self.paths[answer.split('_')[0]]
-            else:
-                path = pjoin(me_dir, 'Cards', answer)
+        if os.path.exists(answer):
+            path = answer
         else:
-            path = pjoin(me_dir, self.mw_card['mw_run']['inputfile'])
-            if not os.path.exists(path):
-                logger.info('Path in MW_card not existing')
-                path = pjoin(me_dir, 'Events', answer)
+            if not '.dat' in answer and not '.lhco' in answer:
+                if answer != 'trigger':
+                    path = self.paths[answer]
+                else:
+                    path = self.paths['delphes']
+            elif not '.lhco' in answer:
+                if '_' in answer:
+                    path = self.paths[answer.rsplit('_',1)[0]]
+                else:
+                    path = pjoin(me_dir, 'Cards', answer)
+            else:
+                path = pjoin(me_dir, self.mw_card['mw_run']['inputfile'])
+                if not os.path.exists(path):
+                    logger.info('Path in MW_card not existing')
+                    path = pjoin(me_dir, 'Events', answer)
         #security
         path = path.replace('_card_card','_card')
         try:
