@@ -1588,7 +1588,7 @@ RESTART = %(mint_mode)s
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
--1 -0.1    ! alpha, beta for Gazi
+ 1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
@@ -3295,6 +3295,99 @@ RESTART = %(mint_mode)s
             logger.warning(warning)
 
         self.update_status('Run complete', level='shower', update_results=True)
+
+    ############################################################################
+    def set_run_name(self, name, tag=None, level='parton', reload_card=False):
+         """define the run name, the run_tag, the banner and the results."""
+         
+         # when are we force to change the tag new_run:previous run requiring changes
+         upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
+                        'pythia': ['pythia','pgs','delphes'],
+                        'shower': ['shower'],
+                        'pgs': ['pgs'],
+                        'delphes':['delphes'],
+                        'plot':[]}
+         
+         
+ 
+         if name == self.run_name:        
+             if reload_card:
+                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+                 self.run_card = banner_mod.RunCardNLO(run_card)
+ 
+             #check if we need to change the tag
+             if tag:
+                 self.run_card['run_tag'] = tag
+                 self.run_tag = tag
+                 self.results.add_run(self.run_name, self.run_card)
+             else:
+                 for tag in upgrade_tag[level]:
+                     if getattr(self.results[self.run_name][-1], tag):
+                         tag = self.get_available_tag()
+                         self.run_card['run_tag'] = tag
+                         self.run_tag = tag
+                         self.results.add_run(self.run_name, self.run_card)                        
+                         break
+             return # Nothing to do anymore
+         
+         # save/clean previous run
+         if self.run_name:
+             self.store_result()
+         # store new name
+         self.run_name = name
+         
+         # Read run_card
+         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+         self.run_card = banner_mod.RunCardNLO(run_card)
+ 
+         new_tag = False
+         # First call for this run -> set the banner
+         self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
+         if tag:
+             self.run_card['run_tag'] = tag
+             new_tag = True
+         elif not self.run_name in self.results and level =='parton':
+             pass # No results yet, so current tag is fine
+         elif not self.run_name in self.results:
+             #This is only for case when you want to trick the interface
+             logger.warning('Trying to run data on unknown run.')
+             self.results.add_run(name, self.run_card)
+             self.results.update('add run %s' % name, 'all', makehtml=True)
+         else:
+             for tag in upgrade_tag[level]:
+                 
+                 if getattr(self.results[self.run_name][-1], tag):
+                     # LEVEL is already define in the last tag -> need to switch tag
+                     tag = self.get_available_tag()
+                     self.run_card['run_tag'] = tag
+                     new_tag = True
+                     break
+             if not new_tag:
+                 # We can add the results to the current run
+                 tag = self.results[self.run_name][-1]['tag']
+                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
+              
+                     
+         if name in self.results and not new_tag:
+             self.results.def_current(self.run_name)
+         else:
+             self.results.add_run(self.run_name, self.run_card)
+ 
+         self.run_tag = self.run_card['run_tag']
+ 
+         # Return the tag of the previous run having the required data for this
+         # tag/run to working wel.
+         if level == 'parton':
+             return
+         elif level == 'pythia':
+             return self.results[self.run_name][0]['tag']
+         else:
+             for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                 tagRun = self.results[self.run_name][i]
+                 if tagRun.pythia:
+                     return tagRun['tag']
+ 
+ 
 
 
     def store_result(self):

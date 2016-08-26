@@ -497,7 +497,6 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         
         opt = self.options
         
-        
         # Check if first time:
         if (opt['ninja'] is None) or (os.path.isfile(pjoin(opt['ninja'],'libninja.a'))): 
             return
@@ -919,6 +918,9 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             self.code['golem'] = 'fail'
         if not misc.which('cmake'):
             self.code['collier'] = 'off'
+            
+        if self.mother_interface:
+            misc.sprint(self.mother_interface.options)
             
             
 
