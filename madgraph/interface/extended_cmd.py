@@ -587,7 +587,6 @@ class BasicCmd(OriginalCmd):
                     try:
                         compfunc = getattr(self, 'complete_' + cmd)
                     except AttributeError, error:
-                        misc.sprint(error)
                         compfunc = self.completedefault
                     except Exception, error:
                         misc.sprint(error)

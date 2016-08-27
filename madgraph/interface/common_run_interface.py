@@ -3542,15 +3542,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
 
     def do_help(self, line, conflict_raise=False, banner=True):    
-     try:       
-         
+     try:                
         if banner:                      
             logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
          
         args = self.split_arg(line)
         # handle comand related help
-        if len(args) == 1 and hasattr(self, 'do_%s' % args[0]):
+        if len(args)==0 or (len(args) == 1 and hasattr(self, 'do_%s' % args[0])):
             out = cmd.BasicCmd.do_help(self, line)
+            if len(args)==0:
+                print 'Allowed Argument'
+                print '================'
+                print '\t'.join(self.allow_arg)
+                print 
+                print 'Special shortcut: (type help <name>)'
+                print '===================================='
+                print '    syntax: set <name> <value>' 
+                print '\t'.join(self.special_shortcut)
+                print
             if banner:
                 logger.info('*** END HELP ***', '$MG:color:BLACK')  
             return out      
@@ -3565,10 +3574,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         start = 0
         card = ''
+        if  args[0]+'_card' in self.all_card_name:
+            args[0] += '_card'
         if args[0] in self.all_card_name:
             start += 1
             card = args[0]
             if len(args) == 1:
+                if args[0] == 'pythia8_card':
+                    args[0] = 'PY8Card'              
                 if args[0] == 'param_card':
                     logger.info("Param_card information: ", '$MG:color:BLUE')
                     print "File to define the various model parameter"
@@ -3579,11 +3592,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     print(eval('self.%s' % args[0]).__doc__)
                     logger.info("List of parameter associated", '$MG:color:BLUE')
                     print "\t".join(eval('self.%s' % args[0]).keys())
-            if banner:
-                logger.info('*** END HELP ***', '$MG:color:BLACK')  
-            return 
+                if banner:
+                    logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                return 
                     
-                
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
             if args[start] not in self.run_set:
@@ -3592,7 +3604,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
                 logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
-                logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
 
             self.run_card.do_help(args[start])
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
@@ -3601,7 +3614,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
                 logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
-                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
                  
             if args[start] == 'width':
                 args[start] = 'decay'
@@ -3631,17 +3645,41 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif key:
                 logger.warning('invalid information: %s not defined in the param_card' % (key,))
         # PARAM_CARD NO BLOCK NAME ---------------------------------------------
-        elif args[start] in self.pname2block and card in ['','param_card']:                
+        elif args[start] in self.pname2block and card in ['','param_card']: 
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
                 logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
-                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
                  
             all_var = self.pname2block[args[start]]
             for bname, lhaid in all_var:
                 new_line = 'param_card %s %s %s' % (bname,
                    ' '.join([ str(i) for i in lhaid]), ' '.join(args[start+1:]))
                 self.do_help(new_line, conflict_raise=True, banner=False) 
+                
+        # MadLoop Parameter  ---------------------------------------------------
+        elif self.has_ml and args[start] in self.ml_vars \
+                                               and card in ['', 'MadLoop_card']:
+        
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the madloop_card file', '$MG:color:BLACK')                
+                
+            self.MLcard.do_help(args[start])
+
+        # Pythia8 Parameter  ---------------------------------------------------
+        elif self.has_PY8 and args[start] in self.PY8Card:
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the pythia8_card file', '$MG:color:BLACK')  
+
+            self.PY8Card.do_help(args[start])
+                
         else:
             print "no help available" 
           
@@ -3650,9 +3688,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #raw_input('press enter to quit the help')
         return        
      except Exception, error:
-         import traceback
-         traceback.print_exc()
-         print error    
+         if __debug__:
+             import traceback
+             traceback.print_exc()
+             print error    
 
     def complete_help(self, text, line, begidx, endidx):
      try:
@@ -3873,7 +3912,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
+        
         args = self.split_arg(line)
+        if len(args) == 0:
+            logger.warning("No argument. For help type 'help set'.")
         # fix some formatting problem
         if len(args)==1 and '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=',1)
