@@ -2115,15 +2115,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 # It is likely an int
                 MA5_options['MA5_stdout_lvl']=int(lvl)
             except ValueError:
+                if lvl.startswith('logging.'):
+                    lvl = lvl[8:]
                 try:
-                    # Maybe the user used something like 'logging.INFO'
-                    MA5_options['MA5_stdout_lvl']=eval(lvl)
+                    MA5_options['MA5_stdout_lvl'] = getattr(logging, lvl)
                 except:
-                    try:
-                        MA5_options['MA5_stdout_lvl']=eval('logging.%s'%lvl)
-                    except:
                         raise InvalidCmd("MA5 output level specification"+\
-                                                 " '%s' is incorrect."%str(lvl))
+                                                 " '%s' is incorrect." % str(lvl))                    
             args.remove(slt)
 
         if mode=='parton':
@@ -3797,10 +3795,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
             logger.error('problem detected: %s' % e)
-            files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'),
-                     pjoin(self.me_dir,'Cards','param_card.dat'))
-            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
-        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
+            files.cp(self.paths['param_default'], self.paths['param'])
+            self.param_card = check_param_card.ParamCard(self.paths['param'])
+        default_param = check_param_card.ParamCard(self.paths['param_default'])
         self.param_card_default = default_param
         
         try:
