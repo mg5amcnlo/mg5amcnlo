@@ -828,7 +828,7 @@ class OneTagResults(dict):
                 self.parton.append('param_card')
             
             if 'syst' not in self.parton and \
-                                    exists(pjoin(path, "%s_parton_syscalc.log" %self['tag'])):
+                                    exists(pjoin(path, "parton_systematics.log")):
                 self.parton.append('syst')
 
             for kind in ['top','HwU','pdf','ps']:
@@ -1315,8 +1315,8 @@ class OneTagResults(dict):
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
                     if 'syst' in self.parton:
-                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
-                                             % {'run_name':self['run_name'], 'tag': self['tag']}
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/parton_systematics.log">systematics</a>' \
+                                             % {'run_name':self['run_name']}
                 elif self['cross_pythia']:
                     if self.parton:
                         local_dico['cross_span'] = nb_line -1
@@ -1344,7 +1344,7 @@ class OneTagResults(dict):
                     local_dico['err'] = self['error']
                     local_dico['nb_event'] = self['nb_event']
                     if 'syst' in self.parton:
-                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/%(tag)s_parton_syscalc.log">systematics</a>' \
+                        local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/parton_systematics.log">systematics</a>' \
                                              % {'run_name':self['run_name'], 'tag': self['tag']}
                     
             elif ttype in ['pythia','pythia8'] and self['cross_pythia']:

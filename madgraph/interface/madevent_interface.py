@@ -2092,11 +2092,17 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             if not bypass_run:
                 self.exec_cmd('refine %s' % nb_event, postcmd=False)
             
-                self.exec_cmd('combine_events', postcmd=False)
+                self.exec_cmd('combine_events', postcmd=False,printcmd=False)
                 self.print_results_in_shell(self.results.current)
 
-            
-                self.run_syscalc('parton')
+                if self.run_card['use_syst']:
+                    scdir = self.options['syscalc_path']
+                    if not scdir or not os.path.exists(scdir):
+                        self.exec_cmd('systematics %s --from_card' % self.run_name, postcmd=False,printcmd=False)    
+                    else:
+                        self.run_syscalc('parton')
+                
+                    
                 self.create_plot('parton')            
                 self.exec_cmd('store_events', postcmd=False)            
                 self.exec_cmd('reweight -from_cards', postcmd=False)            
@@ -4873,11 +4879,8 @@ You can follow PY8 run with the following command (in a separate terminal):
 
         if self.run_card['event_norm'] != 'sum':
             logger.critical('SysCalc works only when event_norm is on \'sum\'.')
-            logger.critical('MG5aMC will still run it, but beware that the xsecs'+\
-                           ' in SysCalc log files will be incorrectly normalized.')
-            logger.critical('Systematic studies obtained with Pythia8 will however be correct.')
-
-        logger.info('running syscalc on mode %s' % mode)    
+            return
+        logger.info('running SysCalc on mode %s' % mode)    
     
         # Check that all pdfset are correctly installed
         lhaid = [self.run_card.get_lhapdf_id()]
@@ -4926,7 +4929,9 @@ You can follow PY8 run with the following command (in a separate terminal):
                 if not (os.path.exists(event_path) or os.path.exists(event_path+".gz")):
                     event_path = pjoin(event_dir, 'unweighted_events.lhe')
                 output = pjoin(event_dir, 'syscalc.lhe')
+                stdout = open(pjoin(event_dir, self.run_name, '%s_systematics.log' % (mode)),'w')
             elif mode == 'Pythia':
+                stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w')
                 if 'mgpythiacard' in self.banner:
                     pat = re.compile('''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
                     data = pat.search(self.banner['mgpythiacard'])
@@ -4955,7 +4960,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         try:
             proc = misc.call([os.path.join(scdir, 'sys_calc'),
                                event_path, card, output],
-                            stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
+                            stdout = stdout,
                             stderr = subprocess.STDOUT,
                             cwd=event_dir)
             # Wait 5 s to make sure file is finished writing

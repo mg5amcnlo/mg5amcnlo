@@ -1590,7 +1590,7 @@ RESTART = %(mint_mode)s
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
--1 -0.1    ! alpha, beta for Gazi
+ 1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
@@ -3298,7 +3298,6 @@ RESTART = %(mint_mode)s
 
         self.update_status('Run complete', level='shower', update_results=True)
 
-
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False):
         """define the run name, the run_tag, the banner and the results."""
@@ -4947,9 +4946,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line =  aMCatNLOCmd(force_run=True)
+                cmd_line =  aMCatNLOCmd(me_dir=os.path.dirname(root_path),force_run=True)
             else:
-                cmd_line =  aMCatNLOCmdShell(force_run=True)
+                cmd_line =  aMCatNLOCmdShell(me_dir=os.path.dirname(root_path),force_run=True)
 
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:

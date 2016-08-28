@@ -116,7 +116,19 @@ class LoopExporterFortran(object):
     def link_CutTools(self, targetPath):
         """Link the CutTools source directory inside the target path given
         in argument"""
-                
+        
+        # special mode
+        if 'heptools_install_dir' in self.opt and self.dependencies =='external':
+            if os.path.exists(pjoin(self.opt['heptools_install_dir'], 'CutTools','lib')) and\
+            not os.path.exists(pjoin(self.cuttools_dir,'includects', 'libcts.a')):
+                misc.sprint('Going to use pre-compiled version of CutTools') 
+                # Create the links to the lib folder
+                linkfiles = ['libcts.a', 'mpmodule.mod']
+                for file in linkfiles:
+                    ln(os.path.join(self.opt['heptools_install_dir'],'CutTools','lib',file),
+                                    os.path.join(targetPath,'lib'),abspath=True)
+                return
+            
         if self.dependencies=='internal':
             new_CT_path = pjoin(targetPath,'Source','CutTools')
             shutil.copytree(self.cuttools_dir, new_CT_path, symlinks=True)
@@ -139,7 +151,7 @@ class LoopExporterFortran(object):
             # the log compiler_version.log generated during CT compilation
             # misc.compile(['cleanCT'], cwd = pjoin(targetPath,'Source'))
  
-        if self.dependencies=='external':
+        elif self.dependencies=='external':
             if not os.path.exists(os.path.join(self.cuttools_dir,'includects','libcts.a')):
                 logger.info('Compiling CutTools. This has to be done only once and'+\
                                   ' can take a couple of minutes.','$MG:color:BLACK')
@@ -1813,6 +1825,16 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
  
         elif self.dependencies=='external':
             if not os.path.exists(pjoin(libpath,libname)) and tir_name=='iregi':
+                        # special mode
+                if 'heptools_install_dir' in self.opt and os.path.exists(pjoin(self.opt['heptools_install_dir'], 'IREGI')):
+                    misc.sprint('Going to use pre-compiled version of IREGI') 
+                    # Create the links to the lib folder
+                    ln(os.path.join(self.opt['heptools_install_dir'],'IREGI','src','libiregi.a'),
+                                    os.path.join(targetPath),abspath=True)
+                    return os.path.join(targetPath, 'libiregi.a')
+                
+                
+                
                 logger.info('Compiling IREGI. This has to be done only once and'+\
                              ' can take a couple of minutes.','$MG:color:BLACK')
                 

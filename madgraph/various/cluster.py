@@ -618,6 +618,8 @@ class MultiCore(Cluster):
                     if isinstance(exe,str):
                         if os.path.exists(exe) and not exe.startswith('/'):
                             exe = './' + exe
+                        if isinstance(opt['stdout'],str):
+                            opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
                         proc = misc.Popen([exe] + arg,  **opt)
@@ -673,7 +675,6 @@ class MultiCore(Cluster):
         
         tag = (prog, tuple(argument), cwd, nb_submit)
         if isinstance(prog, str):
-            
     
             opt = {'cwd': cwd, 
                    'stdout':stdout,

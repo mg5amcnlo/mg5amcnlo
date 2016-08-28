@@ -204,34 +204,6 @@ class Banner(dict):
             return cross, math.sqrt(error)
         
 
-    
-    def modify_init_cross(self, cross):
-        """modify the init information with the associate cross-section"""
-
-        assert isinstance(cross, dict)
-#        assert "all" in cross
-        assert "init" in self
-        
-        all_lines = self["init"].split('\n')
-        new_data = []
-        new_data.append(all_lines[0])
-        for i in range(1, len(all_lines)):
-            line = all_lines[i]
-            split = line.split()
-            if len(split) == 4:
-                xsec, xerr, xmax, pid = split 
-            else:
-                new_data += all_lines[i:]
-                break
-            if int(pid) not in cross:
-                raise Exception
-            pid = int(pid)
-            ratio = cross[pid]/float(xsec)
-            line = "   %+13.7e %+13.7e %+13.7e %i" % \
-                (float(cross[pid]), ratio* float(xerr), ratio*float(xmax), pid)
-            new_data.append(line)
-        self['init'] = '\n'.join(new_data)
-    
     def scale_init_cross(self, ratio):
         """modify the init information with the associate scale"""
 
@@ -254,6 +226,15 @@ class Banner(dict):
                 (ratio*float(xsec), ratio* float(xerr), ratio*float(xmax), pid)
             new_data.append(line)
         self['init'] = '\n'.join(new_data)
+    
+    def get_pdg_beam(self):
+        """return the pdg of each beam"""
+        
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        pdg1,pdg2,_ = all_lines[0].split(None, 2)
+        return int(pdg1), int(pdg2)
     
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """

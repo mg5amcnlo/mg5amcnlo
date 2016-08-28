@@ -1813,6 +1813,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         logger.info('save configuration file to %s' % filepath)
         to_write = to_keep.keys()
         text = ""
+        has_mg5_path = False
         # Use local configuration => Need to update the path
         for line in file(basefile):
             if '=' in line:
@@ -1834,6 +1835,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             else:
                 text += line
                 continue
+            if key == 'mg5_path':
+                has_mg5_path = True
             try:
                 to_write.remove(key)
             except Exception:
@@ -1844,11 +1847,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
+            
         for key in to_write:
             if key in to_keep:
                 text += '%s = %s \n' % (key, to_keep[key])
         
-        if not MADEVENT:
+        if not MADEVENT and not has_mg5_path:
             text += """\n# MG5 MAIN DIRECTORY\n"""
             text += "mg5_path = %s\n" % MG5DIR         
         

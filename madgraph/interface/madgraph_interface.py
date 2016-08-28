@@ -192,9 +192,9 @@ class CmdExtended(cmd.Cmd):
                             info['date'])
 
         if os.path.exists(pjoin(MG5DIR, '.bzr')):
-            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE)
+            proc = subprocess.Popen(['bzr', 'nick'], stdout=subprocess.PIPE,cwd=MG5DIR)
             bzrname,_ = proc.communicate()
-            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE)
+            proc = subprocess.Popen(['bzr', 'revno'], stdout=subprocess.PIPE,cwd=MG5DIR)
             bzrversion,_ = proc.communicate() 
             bzrname, bzrversion = bzrname.strip(), bzrversion.strip() 
             len_name = len(bzrname)
@@ -5341,13 +5341,16 @@ This implies that with decay chains:
             
             # Remove the tarball
             os.remove(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers.tar.gz'))
-            
-############## FOR DEBUGGING ONLY, Take HEPToolsInstaller locally ##############
-#            shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-#            shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
-#           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
-################################################################################
 
+            
+            # FOR DEBUGGING ONLY, Take HEPToolsInstaller locally
+            if '--local' in additional_options:
+                additional_options.remove('--local')
+                logger.warning('you are using a local installer. This is intended for debugging only!')
+                shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+                shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
+           'HEPToolsInstallers')),pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
+            
         # Potential change in naming convention
         name_map = {}
         try:
@@ -5369,6 +5372,13 @@ This implies that with decay chains:
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
+
+        if 'heptools_install_dir' in self.options:
+            prefix = self.options['heptools_install_dir']
+            config_file = '~/.mg5/mg5_configuration.txt'
+        else:
+            prefix = pjoin(MG5DIR, 'HEPTools')
+            config_file = ''
 
         # Add the path of pythia8 if known and the MG5 path
         if tool=='mg5amc_py8_interface':
@@ -5456,7 +5466,7 @@ This implies that with decay chains:
                         (['--force'] if '--force' in additional_options else [])
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
              'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
-             '--prefix=%s'%pjoin(MG5DIR,'HEPTools')]
+             '--prefix=%s' % prefix]
                         + lhapdf_option + compiler_options + additional_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
@@ -5468,14 +5478,14 @@ This implies that with decay chains:
 
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
-              pjoin(MG5DIR,'HEPTools')] + compiler_options + additional_options)
+              prefix] + compiler_options + additional_options)
 
         if return_code == 0:
             logger.info("%s successfully installed in %s."%(
-                   tool_to_install, pjoin(MG5DIR,'HEPTools')),'$MG:color:GREEN')
+                   tool_to_install, prefix),'$MG:color:GREEN')
         elif return_code == 66:
             answer = self.ask(question=
-"""\033[33;34mTool %s already installed in %s."""%(tool_to_install, pjoin(MG5DIR,'HEPTools'))+
+"""\033[33;34mTool %s already installed in %s."""%(tool_to_install, prefix)+
 """ Do you want to overwrite its installation?\033[0m \033[33;32my\033[0m/\033[33;31mn\033[0m >"""
     ,default='y',text_format='33;32')
             if not answer.lower() in ['y','']:
@@ -5490,37 +5500,34 @@ This implies that with decay chains:
 
         # Post-installation treatment
         if tool == 'pythia8':
-            self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
-            self.exec_cmd('save options', printcmd=False, log=False)
+            self.options['pythia8_path'] = pjoin(prefix,'pythia8')
+            self.exec_cmd('save options %s pythia8_path' % config_file, printcmd=False, log=False)
             # Automatically re-install the mg5amc_py8_interface after a fresh
             # Pythia8 installation
             self.advanced_install('mg5amc_py8_interface',
                               additional_options=additional_options+['--force'])          
         elif tool == 'lhapdf6':
-            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf6','bin',
-                                                                'lhapdf-config')
-            self.exec_cmd('save options')
+            self.options['lhapdf'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
+            self.exec_cmd('save options %s lhapdf' % config_file)
         elif tool == 'lhapdf5':
-            self.options['lhapdf'] = pjoin(MG5DIR,'HEPTools','lhapdf5','bin',
-                                                                'lhapdf-config')
-            self.exec_cmd('save options')            
+            self.options['lhapdf'] = pjoin(prefix,'lhapdf5','bin', 'lhapdf-config')
+            self.exec_cmd('save options %s lhapdf' % config_file, printcmd=False, log=False)            
         elif tool == 'madanalysis5':
-            self.options['madanalysis5_path'] = pjoin(MG5DIR,'HEPTools',
-                                                  'madanalysis5','madanalysis5')
-            self.exec_cmd('save options')
+            self.options['madanalysis5_path'] = pjoin(prefix, 'madanalysis5','madanalysis5')
+            self.exec_cmd('save options madanalysis5_path', printcmd=False, log=False)
         elif tool == 'mg5amc_py8_interface':
             # At this stage, pythia is guaranteed to be installed
             if self.options['pythia8_path'] in ['',None,'None']:
                 self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.options['mg5amc_py8_interface_path'] = \
-                                 pjoin(MG5DIR,'HEPTools','MG5aMC_PY8_interface')
-            self.exec_cmd('save options', printcmd=False)      
+            self.exec_cmd('save options %s mg5amc_py8_interface_path' % config_file, 
+                                                            printcmd=False, lot=False)      
         elif tool == 'collier':
-            self.options['collier'] = pjoin(os.curdir,'HEPTools','lib')
-            self.exec_cmd('save options')
+            self.options['collier'] = pjoin(prefix,'lib')
+            self.exec_cmd('save options %s collier' % config_file, printcmd=False, lot=False)      
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
-                                              MG5DIR,'HEPTools','ninja','lib')):
+                                              prefix,'ninja','lib')):
                 logger.warning(
 """Successful installation of Ninja, but without support for quadruple precision
 arithmetics. If you want to enable this (hence improving the treatment of numerically
@@ -5528,8 +5535,8 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
   MG5aMC>install ninja
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
-            self.options['ninja'] = pjoin(MG5DIR,'HEPTools','lib')
-            self.exec_cmd('save options', log=False, printcmd=False)
+            self.options['ninja'] = pjoin(prefix,'lib')
+            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, lot=False)      
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
@@ -5635,12 +5642,25 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
     
             data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
                          'http://madgraph.hep.uiuc.edu/package_info.dat']
+
             r = random.randint(0,1)
             r = [r, (1-r)]
-################################################################################
-#           Force MG5aMC to choose one particular server
-#            r = [1]
-################################################################################
+#           Force here to choose one particular server
+            if any(a.startswith('--source=') for a in args):
+                source = [a[9:] for a in args if a.startswith('--source=')][-1]
+                if source == 'uiuc':
+                    r = [1]
+                elif source == 'ucl':
+                    r = [0]
+                else:
+                    data_path.append(source)
+                    r = [2]
+            else: 
+                r = random.randint(0,1)
+                r = [r, (1-r)]
+
+
+
             for index in r:
                 cluster_path = data_path[index]
                 try:
@@ -6755,6 +6775,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         elif args[0] == 'options':
             partial_save = False
             to_define = {}
+            
             if any(not arg.startswith('--') and arg in self.options 
                                                                for arg in args):
                 # store in file only those ones
@@ -6789,18 +6810,19 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                             logger.info('The option %s is modified [%s] but will not be written in the configuration files.' \
                                         % (key,self.options_madgraph[key]) )
                             logger.info('If you want to make this value the default for future session, you can run \'save options --all\'')
-                
+
             if len(args) >1 and not args[1].startswith('--') and args[1] not in self.options:
                 filepath = args[1]
             else:
                 filepath = pjoin(MG5DIR, 'input', 'mg5_configuration.txt')
             
+            basedir = MG5DIR
             if partial_save:
                 basefile = filepath
             else:
                 basefile = pjoin(MG5DIR, 'input', '.mg5_configuration_default.txt')
                 
-            basedir = MG5DIR
+            
 
             if to_keep:
                 to_define = to_keep
