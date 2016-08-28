@@ -78,12 +78,11 @@
 #*********************************************************************
 #
 #*********************************************************************
-# Number of helicities to sum per event (0 = all helicities)
-# 0 gives more stable result, but longer run time (needed for
-# long decay chains e.g.).
-# Use >=2 if most helicities contribute, e.g. pure QCD.
+# handling of the helicities:
+#  0: sum over all helicities
+#  1: importance sampling over helicities
 #*********************************************************************
-   %(nhel)s  = nhel          ! Number of helicities used per event
+   %(nhel)s  = nhel          ! using helicities importance sampling or not.
 #*********************************************************************
 #
 #
