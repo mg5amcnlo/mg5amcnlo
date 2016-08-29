@@ -155,7 +155,7 @@ class IOTest(object):
                                         myloopamp,optimized_output=isOptimized)
 
         self.exporter.copy_template(model)
-        self.exporter.generate_loop_subprocess(hel_amp, self.helasModel)
+        self.exporter.generate_loop_subprocess(hel_amp, self.helasModel, unique_id=1)
         
         wanted_lorentz = hel_amp.get_used_lorentz()
         wanted_couplings = list(set(sum(hel_amp.get_used_couplings(),[])))

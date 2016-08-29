@@ -1,11 +1,10 @@
-# Defines the variable pertaining to MG5aMC environment
-PYTHIA8_PATH=NotInstalled
-MG5AMC_VERSION=SpecifiedByMG5aMCAtRunTime
 DEFAULT_F2PY_COMPILER=f2py
 DEFAULT_F_COMPILER=gfortran
 MACFLAG=
 DEFAULT_CPP_COMPILER=g++
+MG5AMC_VERSION=SpecifiedByMG5aMCAtRunTime
 STDLIB=-lstdc++
+PYTHIA8_PATH=NotInstalled
 STDLIB_FLAG=
 #end_of_make_opts_variables
 

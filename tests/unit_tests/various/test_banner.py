@@ -229,26 +229,45 @@ class TestMadAnalysis5Card(unittest.TestCase):
         
         input = StringIO.StringIO(
 """%(MG5aMCtag)s inputs = *.hepmc *.stdhep
-First command of a default analysis
-#Second command of a default analysis
+%(MG5aMCtag)s stdout_lvl=20
+%(MG5aMCtag)s reconstruction_name = reco1
+%(MG5aMCtag)s reco_output = lhe
+First command of a reco1
+Second command of a reco1
+%(MG5aMCtag)s reconstruction_name = reco2
+%(MG5aMCtag)s reco_output = root
+First command of a reco2
+Second command of a reco2
+%(MG5aMCtag)s analysis_name = FirstAnalysis
+%(MG5aMCtag)s set_reconstructions = ['reco1', 'reco2']
+First command of a first analysis
+#Second command of a first analysis
 etc...
 %(MG5aMCtag)s analysis_name = MyNewAnalysis
+%(MG5aMCtag)s set_reconstructions = ['reco1']
 First command of a new analysis
 #Second command of a new analysis
 etc...
 %(MG5aMCtag)s reconstruction_name = recoA
+%(MG5aMCtag)s reco_output = lhe
 First command of a recoA
 Second command of a recoA
 etc...
-%(MG5aMCtag)s recasting
+%(MG5aMCtag)s recasting_commands
+First command of recasting
+#Second command of recasting
+etc...
+%(MG5aMCtag)s recasting_card
 First command of recasting
 #Second command of recasting
 etc...
 %(MG5aMCtag)s analysis_name = YetANewAnalysis
+%(MG5aMCtag)s set_reconstructions = ['reco1', 'recoA']
 First command of yet a new analysis
 Second command of yet a new analysis
 etc...
 %(MG5aMCtag)s reconstruction_name = recoB
+%(MG5aMCtag)s reco_output = root
 First command of a recoB
 Second command of a recoB
 etc..."""%{'MG5aMCtag':MG5aMCtag})
@@ -261,7 +280,7 @@ etc..."""%{'MG5aMCtag':MG5aMCtag})
         self.assertEqual(myMA5Card,bannermod.MadAnalysis5Card(output))
         output.seek(0)
         output_target = input.getvalue().split('\n')
-        output_target.insert(1,'@MG5aMC analysis_name = default')
+        output_target = [l for l in output_target if not l.startswith('#')]
         self.assertEqual(output.getvalue(),'\n'.join(output_target))
         
 class TestPythia8Card(unittest.TestCase):
@@ -574,43 +593,4 @@ class TestMadLoopParam(unittest.TestCase):
         for key, value in new.items():
             if key != 'CTLoopLibrary':
                 self.assertEqual(value, param2[key])
-            
-                
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-            
-                
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-        
-            
-        
-        
-        
-        
-        

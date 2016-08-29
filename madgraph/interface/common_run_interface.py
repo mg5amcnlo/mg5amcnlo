@@ -55,7 +55,6 @@ pjoin = os.path.join
 logger = logging.getLogger('madgraph.stdout') # -> stdout
 logger_stderr = logging.getLogger('madgraph.stderr') # ->stderr
 
-
 try:
     import madgraph
 except ImportError:    
@@ -3888,7 +3887,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             args += [arg1, arg2]
         if '=' in args:
             args.remove('=')
-
+        
+        args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
             if len(args) == 1:
@@ -3986,12 +3986,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('Invalid Command: No Delphes card defined.')
                 return
             if args[1] == 'atlas':
-                logger.info("set default ATLAS configuratin for Delphes")
+                logger.info("set default ATLAS configuratin for Delphes", '$MG:color:BLACK')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_ATLAS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
             elif args[1] == 'cms':
-                logger.info("set default CMS configuratin for Delphes")
+                logger.info("set default CMS configuratin for Delphes",'$MG:color:BLACK')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_CMS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
@@ -4000,7 +4000,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
                        'delphes_card']:
             if args[1] == 'default':
-                logging.info('replace %s by the default card' % args[0])
+                logger.info('replace %s by the default card' % args[0],'$MG:color:BLACK')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
                 if args[0] == 'param_card':
                     self.param_card = check_param_card.ParamCard(self.paths['param'])
@@ -4018,7 +4018,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
         elif args[0] in ['MadLoop_card']:
             if args[1] == 'default':
-                logging.info('replace MadLoopParams.dat by the default card')
+                logger.info('replace MadLoopParams.dat by the default card','$MG:color:BLACK')
                 self.MLcard = banner_mod.MadLoopParam(self.MLcardDefault)
                 self.MLcard.write(self.paths['ML'],
                                   commentdefault=True)
@@ -4031,7 +4031,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
         elif args[0] in ['pythia8_card']:
             if args[1] == 'default':
-                logging.info('replace pythia8_card.dat by the default card')
+                logger.info('replace pythia8_card.dat by the default card','$MG:color:BLACK')
                 self.PY8Card = banner_mod.PY8Card(self.PY8CardDefault)
                 self.PY8Card.write(pjoin(self.me_dir,'Cards','pythia8_card.dat'),
                           pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
@@ -4045,7 +4045,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 return
         elif args[0] in ['madspin_card']:
             if args[1] == 'default':
-                logging.info('replace madspin_card.dat by the default card')
+                logger.info('replace madspin_card.dat by the default card','$MG:color:BLACK')
                 files.cp(self.paths['MS_default'], self.paths['madspin'])
                 return
             else:
@@ -4069,7 +4069,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.setR(args[start],default[args[start]])
                 else:
-                    logger.info('remove information %s from the run_card' % args[start])
+                    logger.info('remove information %s from the run_card' % args[start],'$MG:color:BLACK')
                     del self.run_card[args[start]]
             else:
                 if args[0].startswith('sys_') or \
@@ -4231,7 +4231,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if args[start] in default.keys():
                     self.shower_card.set_param(args[start],default[args[start]], self.paths['shower'])
                 else:
-                    logger.info('remove information %s from the shower_card' % args[start])
+                    logger.info('remove information %s from the shower_card' % args[start],'$MG:color:BLACK')
                     del self.shower_card[args[start]]
             elif args[start+1].lower() in ['t','.true.','true']:
                 self.shower_card.set_param(args[start],'.true.',self.paths['shower'])
@@ -4307,15 +4307,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             try:
                 value = mw_default[block][name]
             except KeyError:
-                logger.info('removing id "%s" from Block "%s" '% (name, block))
+                logger.info('removing id "%s" from Block "%s" '% (name, block),'$MG:color:BLACK')
                 if name in self.mw_card[block]:
                     del self.mw_card[block][name]
                 return
         if value:
-            logger.info('modify madweight_card information BLOCK "%s" with id "%s" set to %s' %\
-                    (block, name, value), '$MG:color:BLACK')
+            logger.info('modify madweight_card information BLOCK "%s" with id "%s" set to %s',
+                    block, name, value, '$MG:color:BLACK')
         else:
-            logger.value("Invalid command: No value. To set default value. Use \"default\" as value")
+            logger.warning("Invalid command: No value. To set default value. Use \"default\" as value")
             return
         
         self.mw_card[block][name] = value

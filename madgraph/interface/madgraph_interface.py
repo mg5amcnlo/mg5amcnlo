@@ -2524,6 +2524,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                                         base_dir=pjoin(MG5DIR,'models'))
             if os.environ['PYTHONPATH']:
                 for modeldir in os.environ['PYTHONPATH'].split(':'):
+                    if not modeldir:
+                            continue
                     all_name += self.find_restrict_card(path, no_restrict=False,
                                         base_dir=modeldir)
             # select the possibility according to the current line
@@ -2600,6 +2602,8 @@ class CompleteForCmd(cmd.CompleteCmd):
                                                 if file_cond(name)]
                 if mode == 'model' and 'PYTHONPATH' in os.environ:
                     for modeldir in os.environ['PYTHONPATH'].split(':'):
+                        if not modeldir:
+                            continue
                         model_list += [name for name in self.path_completion(text,
                                        modeldir, only_dirs=True)
                                        if os.path.exists(pjoin(modeldir,name, 'particles.py'))]
@@ -2750,7 +2754,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'thepeg_path': './thepeg',
                        'hepmc_path': './hepmc',
                        'madanalysis_path': './MadAnalysis',
-                       'madanalysis5_path':'./HEPTools/madanalysis5',
+                       'madanalysis5_path':'./HEPTools/madanalysis5/madanalysis5',
                        'pythia-pgs_path':'./pythia-pgs',
                        'td_path':'./td',
                        'delphes_path':'./Delphes',
