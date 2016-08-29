@@ -5300,8 +5300,10 @@ This implies that with decay chains:
         self.do_define(line)
 
     def advanced_install(self, tool_to_install, 
-                                            HepToolsInstaller_web_address=None,
-                                            additional_options=[]):
+                               HepToolsInstaller_web_address=None,
+                               custom_additional_options=[]):
+
+        additional_options = custom_additional_options
         """ Uses the HEPToolsInstaller.py script maintened online to install
         HEP tools with more complicated dependences.
         Additional options will be added to the list when calling HEPInstaller"""
@@ -5586,13 +5588,17 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    def do_install(self, line, paths=None, additional_options=[]):
+    def do_install(self, line, paths=None, custom_additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
         functions. If it contains the option '--force', then the advanced_install
         function will overwrite any existing installation of the tool without 
         warnings.
         """
+        
+        # Make sure to avoid any border effect on custom_additional_options
+        additional_options = list(custom_additional_options)
+        
         args = self.split_arg(line)
         #check the validity of the arguments
         install_options = self.check_install(args)

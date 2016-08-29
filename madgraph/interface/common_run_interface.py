@@ -3780,8 +3780,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
         self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
-        self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards', 'madanalysis5_parton_card.dat')
-        self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards', 'madanalysis5_hadron_card.dat')
+        self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat')
+        self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat')
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
@@ -5270,7 +5270,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     path = self.paths['delphes']
             elif not '.lhco' in answer:
                 if '_' in answer:
-                    path = self.paths[answer.rsplit('_',1)[0]]
+                    path = self.paths['_'.join(answer.split('_')[:-1])]
                 else:
                     path = pjoin(me_dir, 'Cards', answer)
             else:
