@@ -205,7 +205,6 @@ class Banner(dict):
             return cross, math.sqrt(error)
         
 
-        
     def scale_init_cross(self, ratio):
         """modify the init information with the associate scale"""
 
@@ -228,6 +227,15 @@ class Banner(dict):
                 (ratio*float(xsec), ratio* float(xerr), ratio*float(xmax), pid)
             new_data.append(line)
         self['init'] = '\n'.join(new_data)
+    
+    def get_pdg_beam(self):
+        """return the pdg of each beam"""
+        
+        assert "init" in self
+        
+        all_lines = self["init"].split('\n')
+        pdg1,pdg2,_ = all_lines[0].split(None, 2)
+        return int(pdg1), int(pdg2)
     
     def load_basic(self, medir):
         """ Load the proc_card /param_card and run_card """
@@ -914,7 +922,10 @@ class ConfigFile(dict):
         self.lower_to_case = {}
         self.list_parameter = set()
         self.dict_parameter = {}
+        self.comments = {} # comment associated to parameters. can be display via help message
+        
         self.default_setup()
+        
 
         # if input is define read that input
         if isinstance(finput, (file, str, StringIO.StringIO)):
@@ -1061,7 +1072,7 @@ class ConfigFile(dict):
         if change_userdefine:
             self.user_set.add(lower_name)
 
-    def add_param(self, name, value, system=False):
+    def add_param(self, name, value, system=False, comment=False):
         """add a default parameter to the class"""
 
         lower_name = name.lower()
@@ -1087,6 +1098,8 @@ class ConfigFile(dict):
                    
         if system:
             self.system_only.add(lower_name)
+        if comment:
+            self.comments[lower_name] = comment
 
     def do_help(self, name):
         """return a minimal help for the parameter"""
@@ -1094,6 +1107,8 @@ class ConfigFile(dict):
         out = "## Information on parameter %s from class %s\n" % (name, self.__class__.__name__)
         if name.lower() in self:
             out += "## current value: %s (parameter should be of type %s)\n" % (self[name], type(self[name]))
+            if name.lower() in self.comments:
+                out += '## %s\n' % self.comments[name.lower()].replace('\n', '\n## ')
         else:
             out += "## Unknown for this class\n"
         if name.lower() in self.user_set:
@@ -1455,9 +1470,6 @@ class PY8Card(ConfigFile):
         # These attributes should not be part of PY8SubRun daughter.
         self.add_default_subruns('attributes')
         
-        # Comments to be printed out with hidden parameters
-        self.hidden_param_comments = {}
-
         # Parameters which have been set by the 
         super(PY8Card, self).__init__(*args, **opts)
 
@@ -1471,7 +1483,7 @@ class PY8Card(ConfigFile):
         The option 'comment' can be used to specify a comment to write above
         hidden parameters.
         """
-        super(PY8Card, self).add_param(name, value)
+        super(PY8Card, self).add_param(name, value, comment=comment)
         name = name.lower()
         if hidden:
             self.hidden_param.append(name)
@@ -1484,12 +1496,6 @@ class PY8Card(ConfigFile):
             if not isinstance(comment, str):
                 raise MadGraph5Error("Option 'comment' must be a string, not"+\
                                                           " '%s'."%str(comment))
-            if hidden:
-                self.hidden_param_comments[name] = comment
-            else:
-                raise MadGraph5Error("Option 'comment' can only be specified"+\
-                    " for hidden parameters. Edit the pythia8_card_default"+\
-                    " template to format how visible parameters are written.")
 
     def add_subrun(self, py8_subrun):
         """Add a subrun to this PY8 Card."""
@@ -1766,9 +1772,9 @@ class PY8Card(ConfigFile):
 !
 """%(' for subrun %d'%self['Main:subrun'] if 'Main:subrun' in self else ''))
         for param in hidden_output_param:
-            if param.lower() in self.hidden_param_comments:
+            if param.lower() in self.comments:
                 comment = '\n'.join('! %s'%c for c in 
-                          self.hidden_param_comments[param.lower()].split('\n'))
+                          self.comments[param.lower()].split('\n'))
                 output.write(comment+'\n')
             output.write('%s=%s\n'%(param,PY8Card.pythia8_formatting(self[param])))
         
@@ -1964,12 +1970,15 @@ class RunCard(ConfigFile):
         self.cuts_parameter = []
         # parameter added where legacy requires an older value.
         self.system_default = {}
+
+
         
         
         super(RunCard, self).__init__(*args, **opts)
 
     def add_param(self, name, value, fortran_name=None, include=True, 
-                  hidden=False, legacy=False, cut=False, system=False, sys_default=None, **opts):
+                  hidden=False, legacy=False, cut=False, system=False, sys_default=None, 
+                  **opts):
         """ add a parameter to the card. value is the default value and 
         defines the type (int/float/bool/str) of the input.
         fortran_name defines what is the associate name in the f77 code
@@ -2292,7 +2301,7 @@ class RunCard(ConfigFile):
                 self[name] = 0       
 
 class RunCardLO(RunCard):
-    """an object to handle in a nice way the run_card infomration"""
+    """an object to handle in a nice way the run_card information"""
     
     def default_setup(self):
         """default value for the run_card.dat"""
@@ -2323,7 +2332,7 @@ class RunCardLO(RunCard):
                 
         #matching
         self.add_param("scalefact", 1.0)
-        self.add_param("ickkw", 0)
+        self.add_param("ickkw", 0,                                              comment="\'0\' for standard fixed order computation.\n\'1\' for MLM merging activates alphas and pdf re-weighting according to a kt clustering of the QCD radiation.")
         self.add_param("highestmult", 1, fortran_name="nhmult", hidden=True)
         self.add_param("ktscheme", 1, hidden=True)
         self.add_param("alpsfact", 1.0)
@@ -2344,7 +2353,7 @@ class RunCardLO(RunCard):
         self.add_param("pta", 10.0, cut=True)
         self.add_param("ptl", 10.0, cut=True)
         self.add_param("misset", 0.0, cut=True)
-        self.add_param("ptheavy", 0.0, cut=True)
+        self.add_param("ptheavy", 0.0, cut=True,                                comment='this cut apply on particle heavier than 10 GeV')
         self.add_param("ptonium", 1.0, legacy=True)
         self.add_param("ptjmax", -1.0, cut=True)
         self.add_param("ptbmax", -1.0, cut=True)
@@ -2551,7 +2560,13 @@ class RunCardLO(RunCard):
 
 
         # check validity of the pdf set
-        possible_set = ['lhapdf','mrs02nl','mrs02nn', 'mrs0119','mrs0117','mrs0121','mrs01_j', 'mrs99_1','mrs99_2','mrs99_3','mrs99_4','mrs99_5','mrs99_6', 'mrs99_7','mrs99_8','mrs99_9','mrs9910','mrs9911','mrs9912', 'mrs98z1','mrs98z2','mrs98z3','mrs98z4','mrs98z5','mrs98ht', 'mrs98l1','mrs98l2','mrs98l3','mrs98l4','mrs98l5', 'cteq3_m','cteq3_l','cteq3_d', 'cteq4_m','cteq4_d','cteq4_l','cteq4a1','cteq4a2', 'cteq4a3','cteq4a4','cteq4a5','cteq4hj','cteq4lq', 'cteq5_m','cteq5_d','cteq5_l','cteq5hj','cteq5hq', 'cteq5f3','cteq5f4','cteq5m1','ctq5hq1','cteq5l1', 'cteq6_m','cteq6_d','cteq6_l','cteq6l1', 'nn23lo','nn23lo1','nn23nlo']
+        possible_set = ['lhapdf', 'mrs02nl','mrs02nn',
+        'cteq4_m', 'cteq4_l','cteq4_d',
+        'cteq5_m','cteq5_d','cteq5_l','cteq5m1',
+        'cteq6_m','cteq6_l', 'cteq6l1',
+        'nn23lo', 'nn23lo1', 'nn23nlo']
+                        
+    
         if self['pdlabel'] not in possible_set:
             raise InvalidRunCard, 'Invalid PDF set (argument of pdlabel): %s. Possible choice are:\n %s' % (self['pdlabel'], ', '.join(possible_set))
         if self['pdlabel'] == 'lhapdf':

@@ -994,21 +994,21 @@ c     Take care of case when jcentral are zero
             pt2ijcl(nexternal-2)=q2fact(1)
             if(nexternal.gt.3) pt2ijcl(nexternal-3)=q2fact(1)
          else
-            q2fact(1)=pt2ijcl(nexternal-2)
-            q2fact(2)=q2fact(1)
+            q2fact(1)=scalefact**2*pt2ijcl(nexternal-2)
+            q2fact(2)=scalefact**2*q2fact(1)
          endif
       elseif(jcentral(1).eq.0)then
-            q2fact(1) = pt2ijcl(jfirst(1))
+            q2fact(1) = scalefact**2*pt2ijcl(jfirst(1))
       elseif(jcentral(2).eq.0)then
-            q2fact(2) = pt2ijcl(jfirst(2))
+            q2fact(2) = scalefact**2*pt2ijcl(jfirst(2))
       elseif(ickkw.eq.2.or.(pdfwgt.and.ickkw.gt.0))then
 c     Total pdf weight is f1(x1,pt2E)*fj(x1*z,Q)/fj(x1*z,pt2E)
 c     f1(x1,pt2E) is given by DSIG, just need to set scale.
 c     Use the minimum scale found for fact scale in ME
          if(jlast(1).gt.0.and.jfirst(1).le.jlast(1))
-     $        q2fact(1)=min(pt2ijcl(jfirst(1)),q2fact(1))
+     $        q2fact(1)=scalefact**2*min(pt2ijcl(jfirst(1)),q2fact(1))
          if(jlast(2).gt.0.and.jfirst(2).le.jlast(2))
-     $        q2fact(2)=min(pt2ijcl(jfirst(2)),q2fact(2))
+     $        q2fact(2)=scalefact**2*min(pt2ijcl(jfirst(2)),q2fact(2))
       endif
 
 c     Check that factorization scale is >= 2 GeV

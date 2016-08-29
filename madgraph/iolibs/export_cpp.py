@@ -1010,7 +1010,6 @@ class OneProcessExporterPythia8(OneProcessExporterCPP):
         if self.version =="8.2":
             replace_dict['include_prefix'] = 'Pythia8/'
         else:
-            raise Exception
             replace_dict['include_prefix'] = ''
             
         replace_dict['version'] = self.version

@@ -150,6 +150,10 @@ C     compute the boost for the requested transformation
       denom = pin(0)*pout(0) - pin(3)*pout(3)
       if (denom.ne.0d0) then
          get_betaz = (pin(3) * pout(0) - pout(3) * pin(0)) / denom
+      else if (pin(0).eq.pin(3)) then
+         get_betaz = (pin(0)**2 - pout(0)**2)/(pin(0)**2 + pout(0)**2)
+      else if (pin(0).eq.abs(pin(3))) then
+         get_betaz = (pout(0)**2 - pin(0)**2)/(pin(0)**2 + pout(0)**2)
       else
          get_betaz = 0d0
       endif
@@ -596,51 +600,43 @@ c
       pboost(2)=0d0
       pboost(3)=0d0
       if (nincoming.eq.2) then
-         if (xbk(1) .gt. 0d0 .and. xbk(1) .lt. 1d0 .and.
-     $       xbk(2) .gt. 0d0 .and. xbk(2) .lt. 1d0) then
-            pboost(0) = -1d0 ! special flag
-            ! construct the beam momenta in each frame and compute the related (z)boost
-            ebi(0) = p(0,1)/xbk(1)
-            ebi(1) = 0
-            ebi(2) = 0
-            ebi(3) = DSQRT(ebi(0)**2-m1**2)
-            ebo(0) = ebeam(1)
-            ebo(1) = 0
-            ebo(2) = 0
-            ebo(3) = DSQRT(ebo(0)**2-m1**2)
-            beta = get_betaz(ebi, ebo)
-c           eta = sqrt(xbk(1)*ebeam(1)/
-c     $                 (xbk(2)*ebeam(2)))
-c            pboost(0)=p(0,1)*(eta + 1d0/eta)
-c            pboost(3)=p(0,1)*(eta - 1d0/eta)
-         else if (xbk(1) .gt. 0d0 .and. xbk(1) .lt. 1d0 .and.
-     $       xbk(2) .eq. 1d0) then
-            pboost(0)=xbk(1)*ebeam(1)+ebeam(2)
-            pboost(3)=xbk(1)*ebeam(1)-
-     $           sqrt(ebeam(2)**2-m2**2)
-         else if (xbk(1) .eq. 1d0 .and.
-     $       xbk(2) .gt. 0d0 .and. xbk(2) .lt. 1d0) then
-            pboost(0)=ebeam(1)+xbk(2)*ebeam(2)
-            pboost(3)=sqrt(ebeam(1)**2-m1**2)-
-     $           xbk(2)*ebeam(2)
-         else if (xbk(1) .eq. 1d0 .and. xbk(2) .eq. 1d0) then
-            pboost(0)=ebeam(1)+ebeam(2)
-            pboost(3)=sqrt(ebeam(1)**2-m1**2)-
-     $           sqrt(ebeam(2)**2-m2**2)
+         if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
+     $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
+            if(xbk(1).eq.1d0.or.pmass(1).eq.0d0) then
+               ! construct the beam momenta in each frame and compute the related (z)boost
+               ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
+               ebi(1) = 0
+               ebi(2) = 0
+               ebi(3) = DSQRT(ebi(0)**2-m1**2)
+               ebo(0) = ebeam(1)
+               ebo(1) = 0
+               ebo(2) = 0
+               ebo(3) = DSQRT(ebo(0)**2-m1**2)
+               beta = get_betaz(ebi, ebo)
+            else
+               ebi(0) = p(0,2)/xbk(2) ! this assumes that particle 2 is massless or mass equal to beam
+               ebi(1) = 0
+               ebi(2) = 0
+               ebi(3) = -1d0*DSQRT(ebi(0)**2-m2**2)
+               ebo(0) = ebeam(2)
+               ebo(1) = 0
+               ebo(2) = 0
+               ebo(3) = -1d0*DSQRT(ebo(0)**2-m2**2)
+               beta = get_betaz(ebi, ebo)
+               ! wrong boost if both parton are massive!
+            endif
          else
             write(*,*) 'Warning bad x1 or x2 in write_leshouche',
      $           xbk(1),xbk(2)
          endif
-      endif
-      if (pboost(0).ne.-1d0) then
          do j=1,nexternal
-            call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
-            ! Add mass information in pb(4)
+            call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
             pb(4,isym(j,jsym))=pmass(j)
          enddo
       else
          do j=1,nexternal
-            call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+            call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
+            ! Add mass information in pb(4)
             pb(4,isym(j,jsym))=pmass(j)
          enddo
       endif

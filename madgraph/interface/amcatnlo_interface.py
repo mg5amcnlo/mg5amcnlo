@@ -522,6 +522,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                       output_type='amcatnlo',group_subprocesses=group_processes)
 
+            self._curr_exporter.pass_information_from_cmd(self)
+
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
                and self._export_format in ['NLO']:

@@ -69,6 +69,7 @@ except ImportError:
     import internal.histograms as histograms
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
+    import internal.lhe_parser as lhe_parser
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True    
 else:
@@ -79,6 +80,7 @@ else:
     import madgraph.various.misc as misc
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
+    import madgraph.various.lhe_parser as lhe_parser
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
@@ -532,7 +534,6 @@ class CheckValidForCmd(object):
         """return the path to the output events
         """
 
-
         if self.mode == 'madevent':
             possible_path = [
                 pjoin(self.me_dir,'Events', run_name, 'unweighted_events.lhe.gz'),
@@ -547,7 +548,10 @@ class CheckValidForCmd(object):
                 correct_path = path
                 break
         else:
-            raise self.InvalidCmd('No events file corresponding to %s run. ' % run_name)
+            if os.path.exists(run_name):
+                correct_path = run_name
+            else:
+                raise self.InvalidCmd('No events file corresponding to %s run. ' % run_name)
         return correct_path
 
 
@@ -701,6 +705,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             args.remove(arg)
 
         return args
+
 
     @misc.multiple_try(nb_try=5, sleep=2)
     def load_results_db(self):
@@ -1402,7 +1407,270 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Dummy routine, to be overwritten by daughter classes"""
 
         pass
+
+    ############################################################################
+    def help_systematics(self):
+        """help for systematics command"""
+        logger.info("syntax: systematics RUN_NAME [OUTPUT] [options]",'$MG:color:BLACK')
+        logger.info("-- Run the systematics run on the run_name run.")
+        logger.info("   RUN_NAME can be a path to a lhef file.")
+        logger.info("   OUTPUT can be the path to the output lhe file. we overwritte the input file otherwise") 
+        logger.info("")
+        logger.info("options: (value written are default)", '$MG:color:BLACK')
+        logger.info("")
+        logger.info("   --mur=0.5,1,2    # specify the values for renormalisation scale variation")
+        logger.info("   --muf=0.5,1,2    # specify the values for factorisation scale variation")
+        logger.info("   --alps=1         # specify the values for MLM emission scale variation")
+        logger.info("   --dyn=-1,1,2,3,4 # specify the dynamical schemes to use.")
+        logger.info("                    #   -1 is the one used by the sample.")
+        logger.info("                    #   > 0 correspond to options of dynamical_scale_choice of the run_card.")
+        logger.info("   --pdf=errorset   # specify the pdfs to use for pdf variation. (see below)")
+        logger.info("   --together=mur,muf,dyn # lists the parameter that must be varied simultaneously so as to ")
+        logger.info("                          # compute the weights for all combinations of their variations.")
+        logger.info("   --from_card      # use the information from the run_card (LO only).")
+        logger.info("")
+        logger.info("   Allowed value for the pdf options:", '$MG:color:BLACK')
+        logger.info("       central  : Do not perform any pdf variation"    )
+        logger.info("       errorset : runs over the  errorset")
+        logger.info("       244800   : runs over the associated set and his errorset")
+        logger.info("       244800@0 : runs over the associated set ONLY")
+#        logger.info("       244800@X : runs over the Xth set of the associated error set")
+        logger.info("       CT10     : runs over the associated set and his errorset")
+        logger.info("       CT10@0   : runs over the associated set ONLY")
+        logger.info("       CT10@X   : runs over the Xth set of the associated error set")
+        logger.info("       XX,YY,ZZ : runs over the sets for XX,YY,ZZ (those three follows above syntax)")
+        
+    def complete_systematics(self, text, line, begidx, endidx):
+        """auto completion for the systematics command"""
+ 
+        args = self.split_arg(line[0:begidx], error=False)
+        options = ['--mur=', '--muf=', '--pdf=', '--dyn=','--alps=','--together=','--from_card ']
+        
+        if len(args) == 1 and os.path.sep not in text:
+            #return valid run_name
+            data = misc.glob(pjoin('*','*events.lhe*'), pjoin(self.me_dir, 'Events'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            return  self.list_completion(text, data, line)
+        elif len(args)==1:
+            #logger.warning('1args')
+            return self.path_completion(text,
+                                        os.path.join('.',*[a for a in args \
+                                                    if a.endswith(os.path.sep)]))
+        elif len(args)==2 and os.path.sep in args[1]:
+            #logger.warning('2args %s', args[1])
+            return self.path_completion(text, '.')
+              
+        elif not line.endswith(tuple(options)):
+            return self.list_completion(text, options)
+        
+         
+    ############################################################################
+    def do_systematics(self, line):
+        """ syntax is 'systematics [INPUT [OUTPUT]] OPTIONS'
+            --mur=0.5,1,2
+            --muf=0.5,1,2
+            --alps=1
+            --dyn=-1
+            --together=mur,muf #can be repeated
+            
+            #special options
+            --from_card=
+        """
     
+        lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
+        if not lhapdf:
+            logger.info('can not run systematics since can not link python to lhapdf')
+            return
+    
+        self.update_status('Running Systematic computation', level='parton')
+        args = self.split_arg(line)
+        #split arguments and option
+        opts= []
+        args = [a for a in args if not a.startswith('-') or opts.append(a)] 
+
+        #check sanity of options
+        if any(not o.startswith(('--mur=', '--muf=', '--alps=','--dyn=','--together=','--from_card','--pdf='))
+                for o in opts):
+            raise self.InvalidCmd, "command systematics called with invalid option syntax. Please retry."
+        
+        # check that we have define the input
+        if len(args) == 0:
+            if self.run_name:
+                args[0] = self.run_name
+            else:
+                raise self.InvalidCmd, 'no default run. Please specify the run_name'
+                
+        # always pass to a path + get the event size
+        result_file= sys.stdout
+        if not os.path.sep in args[0]:
+            path = [pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe'),
+                    pjoin(self.me_dir, 'Events', args[0], 'events.lhe.gz'),
+                    pjoin(self.me_dir, 'Events', args[0], 'events.lhe')]
+            
+            for p in path:
+                if os.path.exists(p):
+                    nb_event = self.results[args[0]].get_current_info()['nb_event']
+                    
+                    
+                    if self.run_name != args[0]:
+                        tag = self.results[args[0]].tags[0]
+                        self.set_run_name(args[0], tag,'parton', False)
+                    result_file = open(pjoin(self.me_dir,'Events', self.run_name, 'parton_systematics.log'),'w')
+                    args[0] = p
+                    break
+            else:
+                raise self.InvalidCmd, 'Invalid run name. Please retry'
+        elif self.options['nb_core'] != 1:
+            lhe = lhe_parser.EventFile(args)
+            nb_event = len(lhe)
+            lhe.close()
+
+        input = args[0]
+        if len(args)>1:
+            output = pjoin(os.getcwd(),args[1])
+        else:
+            output = input
+    
+        lhaid = [self.run_card.get_lhapdf_id()]
+        if 'store_rwgt_info' in self.run_card and not self.run_card['store_rwgt_info']:
+            raise self.InvalidCmd,  "The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event file."
+        elif 'use_syst'  in self.run_card and not self.run_card['use_syst']:
+            raise self.InvalidCmd,  "The events was not generated with use_syst=True. Can not evaluate systematics error on this event file."
+        
+        try:
+            pdfsets_dir = self.get_lhapdf_pdfsetsdir()
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('Systematic computation requires lhapdf to run. Bypass Systematics')
+            return
+
+        if '--from_card' in opts:
+            opts.remove('--from_card')
+            opts.append('--from_card=internal')
+            
+            # Check that all pdfset are correctly installed
+            if 'sys_pdf' in self.run_card:
+                sys_pdf = self.run_card['sys_pdf'].split('&&')
+                lhaid += [l.split()[0] for l in sys_pdf]
+
+        else:
+            #check that all p
+            pdf = [a[6:] for a in opts if a.startswith('--pdf=')]
+            lhaid += [t.split('@')[0] for p in pdf for t in p.split(',') 
+                                            if t not in ['errorset', 'central']]
+        
+        # Copy all the relevant PDF sets
+        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+            
+        
+        if self.options['run_mode'] ==2:
+            nb_submit = min(self.options['nb_core'], nb_event//2500)
+        elif self.options['run_mode'] ==1:
+            nb_submit = min(self.options['cluster_size'], nb_event//25000)
+        else:
+            nb_submit =1 
+
+        if MADEVENT:
+            import internal.systematics as systematics
+        else:
+            import madgraph.various.systematics as systematics
+
+        #one core:
+        if nb_submit in [0,1]:
+            systematics.call_systematics([input, output] + opts, 
+                                         log=lambda x: logger.info(str(x)),
+                                         result=result_file
+                                         )
+            
+        elif self.options['run_mode'] in [1,2]:
+            event_per_job = nb_event // nb_submit
+            nb_job_with_plus_one = nb_event % nb_submit
+            start_event, stop_event = 0,0
+            for i in range(nb_submit):
+                #computing start/stop event
+                event_requested = event_per_job
+                if i < nb_job_with_plus_one:
+                    event_requested += 1
+                start_event = stop_event
+                stop_event = start_event + event_requested
+                    
+                prog = sys.executable
+                input_files = [os.path.basename(input)]
+                output_files = ['./tmp_%s_%s' % (i, os.path.basename(output)),
+                                './log_sys_%s.txt' % (i)]
+                argument = []
+                if not __debug__:
+                    argument.append('-O')
+                argument +=  [pjoin(self.me_dir, 'bin', 'internal', 'systematics.py'),
+                             input_files[0], output_files[0]] + opts +\
+                             ['--start_event=%i' % start_event,
+                              '--stop_event=%i' %stop_event,
+                              '--result=./log_sys_%s.txt' %i,
+                              '--lhapdf_config=%s' % self.options['lhapdf']]
+                required_output = output_files            
+                self.cluster.cluster_submit(prog, argument, 
+                                            input_files=input_files,
+                                            output_files=output_files,
+                                            cwd=os.path.dirname(output),
+                                            required_output=required_output,
+                                            stdout='/dev/null'
+                                            )
+            starttime = time.time()
+            update_status = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, 'running systematics'), level=None,
+                                       force=False, starttime=starttime)
+
+            self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
+            
+            #collect the data
+            all_cross = []
+            for i in range(nb_submit):
+                pos=0
+                for line in open(pjoin(os.path.dirname(output), 'log_sys_%s.txt'%i)):
+                    if line.startswith('#'):
+                        continue
+                    split = line.split()
+                    if len(split) in [0,1]:
+                        continue
+                    key = tuple(float(x) for x in split[:-1])
+                    cross= float(split[-1])
+                    if 'event_norm' in self.run_card and \
+                            self.run_card['event_norm'] in ['average', 'unity']:
+                        cross *= (event_per_job+1 if i <nb_job_with_plus_one else event_per_job)
+                    if len(all_cross) > pos:
+                        all_cross[pos] += cross
+                    else:
+                        all_cross.append(cross)
+                    pos+=1
+                        
+            if 'event_norm' in self.run_card and \
+                                       self.run_card['event_norm'] in ['unity']:
+                all_cross= [cross/nb_event for cross in all_cross]
+                
+            sys_obj = systematics.call_systematics([input, None] + opts, 
+                                         log=lambda x: logger.info(str(x)),
+                                         result=result_file,
+                                         running=False
+                                         )                    
+            sys_obj.print_cross_sections(all_cross, nb_event, result_file)
+            
+            #concatenate the output file
+            subprocess.call(['cat']+\
+                            ['./tmp_%s_%s' % (i, os.path.basename(output)) for i in range(nb_submit)],
+                            stdout=open(output,'w'),
+                            cwd=os.path.dirname(output))
+            for i in range(nb_submit):
+                os.remove('%s/tmp_%s_%s' %(os.path.dirname(output),i,os.path.basename(output)))
+            #    os.remove('%s/log_sys_%s.txt' % (os.path.dirname(output),i))
+                                                  
+
+            
+            
+
+        self.update_status('End of systematics computation', level='parton', makehtml=False)
+        
+        
     ############################################################################
     def do_reweight(self, line):
         """ syntax is "reweight RUN_NAME"
@@ -1411,9 +1679,50 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Reweight
         """
         
+        #### Utility function
+        def check_multicore(self):
+            """ determine if the cards are save for multicore use"""
+            card = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
+
+            multicore = True
+            if self.options['run_mode'] in [0,1]:
+                multicore = False
+
+            lines = [l.strip() for l in open(card) if not l.strip().startswith('#')]
+            while lines and not lines[0].startswith('launch'):
+                line = lines.pop(0)
+                # if not standard output mode forbid multicore mode
+                if line.startswith('change') and line[6:].strip().startswith('output'):
+                    return False
+                if line.startswith('change') and line[6:].strip().startswith('multicore'):
+                    split_line = line.split()
+                    if len(split_line) > 2: 
+                        multicore = bool(split_line[2])
+            # we have reached the first launch in the card ensure that no output change 
+            #are done after that point.
+            lines = [line[6:].strip() for line in lines if line.startswith('change')]
+            for line in lines:
+                if line.startswith(('process','model','output', 'rwgt_dir')):
+                    return False
+                elif line.startswith('multicore'):
+                    split_line = line.split()
+                    if len(split_line) > 1: 
+                        multicore = bool(split_line[1])
+
+            return multicore
+            
+        
+        
         if '-from_cards' in line and not os.path.exists(pjoin(self.me_dir, 'Cards', 'reweight_card.dat')):
             return
-        
+        # option for multicore to avoid that all of them create the same directory
+        if '--multicore=create' in line:
+            multicore='create'
+        elif '--multicore=wait' in line:
+            multicore='wait'
+        else:
+            multicore=False
+            
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd, '''The module reweight requires that MG5 is installed on the system.
@@ -1440,6 +1749,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if self.run_name and self.results.current and  self.results.current['cross'] == 0:
                 self.results.delete_run(self.run_name, self.run_tag)
             self.results.save()
+            # ensure that the run_card is present
+            if not hasattr(self, 'run_card'):
+                self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
+            
             # we want to run this in a separate shell to avoid hard f2py crash
             command =  [sys.executable]
             if os.path.exists(pjoin(self.me_dir, 'bin', 'madevent')):
@@ -1449,41 +1762,113 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if not isinstance(self, cmd.CmdShell):
                 command.append('--web')
             command.append('reweight')
-            if self.run_name:
-                command.append(self.run_name)
-            else:
-                command += args
-            if '-from_cards' not in command:
-                command.append('-from_cards')
-            p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=self.me_dir)
-            while p.poll() is None:
-                line = p.stdout.readline()
-                if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
-                   not '***********' in line:
-                        print line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:','')
-                elif __debug__ and line:
-                    logger.debug(line[:-1])
-            if p.returncode !=0:
-                logger.error("Reweighting failed")
+            
+            #########   START SINGLE CORE MODE ############
+            if self.options['nb_core']==1 or self.run_card['nevents'] < 101 or not check_multicore(self):
+                if self.run_name:
+                    command.append(self.run_name)
+                else:
+                    command += args
+                if '-from_cards' not in command:
+                    command.append('-from_cards')
+                p = misc.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT, cwd=os.getcwd())
+                while p.poll() is None:
+                    line = p.stdout.readline()
+                    if any(t in line for t in ['INFO:', 'WARNING:', 'CRITICAL:', 'ERROR:', 'root:','KEEP:']) and \
+                       not '***********' in line:
+                            print line[:-1].replace('INFO', 'REWEIGHT').replace('KEEP:','')
+                    elif __debug__ and line:
+                        logger.debug(line[:-1])
+                if p.returncode !=0:
+                    logger.error("Reweighting failed")
+                    return
+                self.results = self.load_results_db()
+                # forbid this function to create an empty item in results.
+                try:
+                    if self.results[self.run_name][-2]['cross']==0:
+                        self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
+                except:
+                    pass
+                try:
+                    if self.results.current['cross'] == 0 and self.run_name:
+                        self.results.delete_run(self.run_name, self.run_tag)
+                except:
+                    pass                    
+                # re-define current run     
+                try:
+                    self.results.def_current(self.run_name, self.run_tag)
+                except Exception:
+                    pass
                 return
-            self.results = self.load_results_db()
-            # forbid this function to create an empty item in results.
-            try:
-                if self.results[self.run_name][-2]['cross']==0:
-                    self.results.delete_run(self.run_name,self.results[self.run_name][-2]['tag'])
-            except:
-                pass
-            try:
-                if self.results.current['cross'] == 0 and self.run_name:
-                    self.results.delete_run(self.run_name, self.run_tag)
-            except:
-                pass                    
-            # re-define current run     
-            try:
-                self.results.def_current(self.run_name, self.run_tag)
-            except Exception:
-                pass
-            return              
+                ##########    END SINGLE CORE HANDLING #############
+            else:
+                ##########    START MULTI-CORE HANDLING #############
+                if not isinstance(self.cluster, cluster.MultiCore):
+                    mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
+                else:
+                    mycluster = self.cluster
+                
+                new_args=list(args)
+                self.check_decay_events(new_args) 
+                try:
+                    os.remove(pjoin(self.me_dir,'rw_me','rwgt.pkl'))
+                except Exception, error:
+                    pass
+                # prepare multi-core  job:
+                import madgraph.various.lhe_parser as lhe_parser
+                # args now alway content the path to the valid files
+                if 'nevt_job' in self.run_card and self.run_card['nevt_job'] !=-1:
+                    nevt_job = self.run_card['nevt_job']
+                else:
+                    nevt_job = max(5000, self.run_card['nevents']/50)
+                logger.info("split the event file in bunch of %s events" % nevt_job)
+                nb_file = lhe_parser.EventFile(new_args[0]).split(nevt_job)
+                starttime = time.time()
+                update_status = lambda idle, run, finish: \
+                    self.update_status((idle, run, finish, 'reweight'), level=None,
+                                       force=False, starttime=starttime)
+
+                all_lhe = []
+                devnull= open(os.devnull)
+                for i in range(nb_file):
+                    new_command = list(command) 
+                    new_command.append('%s_%s.lhe' % (new_args[0],i))
+                    all_lhe.append('%s_%s.lhe' % (new_args[0],i))
+                    if '-from_cards' not in command:
+                        new_command.append('-from_cards')
+                    if i==0:
+                        if __debug__:
+                            stdout = None
+                        else:
+                            stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight.log'),'w')
+                        new_command.append('--multicore=create')
+                    else:
+                        stdout = devnull
+                        #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
+                        new_command.append('--multicore=wait')
+                    mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
+                mycluster.wait(self.me_dir,update_status)
+                devnull.close()
+                
+                lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
+                nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
+                if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
+                    for f in all_lhe:
+                        if os.path.exists('%s_%s_debug.log' % (f, self.run_tag)):
+                            raise Exception, "Some of the run failed: Please read %s_%s_debug.log" % (f, self.run_tag) 
+                
+                
+                if 'event_norm' in self.run_card and self.run_card['event_norm'] == 'average':
+                    for key, value in cross_sections.items():
+                        cross_sections[key] = value / (nb_event+1)
+                lhe.remove()
+                for key in cross_sections:
+                    if key == 'orig' or key.isdigit():
+                        continue
+                    logger.info('%s : %s pb' % (key, cross_sections[key]))
+                return
+            ##########    END MULTI-CORE HANDLING #############
+                              
 
         self.to_store.append('event')
         # forbid this function to create an empty item in results.
@@ -1504,6 +1889,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         path = pjoin(self.me_dir, 'Cards', 'reweight_card.dat')
         reweight_cmd.raw_input=False
         reweight_cmd.me_dir = self.me_dir
+        reweight_cmd.multicore = multicore #allow the directory creation or not
+        print "We are in mode", multicore
         reweight_cmd.import_command_file(path)
         reweight_cmd.do_quit('')
             
@@ -1728,15 +2115,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 # It is likely an int
                 MA5_options['MA5_stdout_lvl']=int(lvl)
             except ValueError:
+                if lvl.startswith('logging.'):
+                    lvl = lvl[8:]
                 try:
-                    # Maybe the user used something like 'logging.INFO'
-                    MA5_options['MA5_stdout_lvl']=eval(lvl)
+                    MA5_options['MA5_stdout_lvl'] = getattr(logging, lvl)
                 except:
-                    try:
-                        MA5_options['MA5_stdout_lvl']=eval('logging.%s'%lvl)
-                    except:
                         raise InvalidCmd("MA5 output level specification"+\
-                                                 " '%s' is incorrect."%str(lvl))
+                                                 " '%s' is incorrect." % str(lvl))                    
             args.remove(slt)
 
         if mode=='parton':
@@ -3076,6 +3461,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         pdfsetname=set()
         for lhaid in lhaid_list:
+            if  isinstance(lhaid, str) and lhaid.isdigit():
+                lhaid = int(lhaid)
             if isinstance(lhaid, (int,float)):
                 try:
                     if lhaid in self.lhapdf_pdfsets:
@@ -3401,7 +3788,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['madspin'] = pjoin(self.me_dir,'Cards/madspin_card.dat')
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
-        
+        self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
+        self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat')
+        self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat')
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
@@ -3415,10 +3804,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except (check_param_card.InvalidParamCard, ValueError) as e:
             logger.error('Current param_card is not valid. We are going to use the default one.')
             logger.error('problem detected: %s' % e)
-            files.cp(pjoin(self.me_dir,'Cards','param_card_default.dat'),
-                     pjoin(self.me_dir,'Cards','param_card.dat'))
-            self.param_card = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card.dat'))
-        default_param = check_param_card.ParamCard(pjoin(self.me_dir,'Cards','param_card_default.dat'))
+            files.cp(self.paths['param_default'], self.paths['param'])
+            self.param_card = check_param_card.ParamCard(self.paths['param'])
+        default_param = check_param_card.ParamCard(self.paths['param_default'])
         self.param_card_default = default_param
         
         try:
@@ -3549,15 +3937,24 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
 
     def do_help(self, line, conflict_raise=False, banner=True):    
-     try:       
-         
+     try:                
         if banner:                      
             logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
          
         args = self.split_arg(line)
         # handle comand related help
-        if len(args) == 1 and hasattr(self, 'do_%s' % args[0]):
+        if len(args)==0 or (len(args) == 1 and hasattr(self, 'do_%s' % args[0])):
             out = cmd.BasicCmd.do_help(self, line)
+            if len(args)==0:
+                print 'Allowed Argument'
+                print '================'
+                print '\t'.join(self.allow_arg)
+                print 
+                print 'Special shortcut: (type help <name>)'
+                print '===================================='
+                print '    syntax: set <name> <value>' 
+                print '\t'.join(self.special_shortcut)
+                print
             if banner:
                 logger.info('*** END HELP ***', '$MG:color:BLACK')  
             return out      
@@ -3572,10 +3969,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         start = 0
         card = ''
+        if  args[0]+'_card' in self.all_card_name:
+            args[0] += '_card'
         if args[0] in self.all_card_name:
             start += 1
             card = args[0]
             if len(args) == 1:
+                if args[0] == 'pythia8_card':
+                    args[0] = 'PY8Card'              
                 if args[0] == 'param_card':
                     logger.info("Param_card information: ", '$MG:color:BLUE')
                     print "File to define the various model parameter"
@@ -3586,11 +3987,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     print(eval('self.%s' % args[0]).__doc__)
                     logger.info("List of parameter associated", '$MG:color:BLUE')
                     print "\t".join(eval('self.%s' % args[0]).keys())
-            if banner:
-                logger.info('*** END HELP ***', '$MG:color:BLACK')  
-            return 
+                if banner:
+                    logger.info('*** END HELP ***', '$MG:color:BLACK')  
+                return 
                     
-                
         #### RUN CARD
         if args[start] in [l.lower() for l in self.run_card.keys()] and card in ['', 'run_card']:
             if args[start] not in self.run_set:
@@ -3599,7 +3999,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
                 logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
-                logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the run_card file', '$MG:color:BLACK')
 
             self.run_card.do_help(args[start])
         ### PARAM_CARD WITH BLOCK NAME -----------------------------------------
@@ -3608,7 +4009,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
                 logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
-                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
                  
             if args[start] == 'width':
                 args[start] = 'decay'
@@ -3638,17 +4040,41 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             elif key:
                 logger.warning('invalid information: %s not defined in the param_card' % (key,))
         # PARAM_CARD NO BLOCK NAME ---------------------------------------------
-        elif args[start] in self.pname2block and card in ['','param_card']:                
+        elif args[start] in self.pname2block and card in ['','param_card']: 
             if args[start] in self.conflict and not conflict_raise:
                 conflict_raise = True
                 logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
-                logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the param_card file', '$MG:color:BLACK')
                  
             all_var = self.pname2block[args[start]]
             for bname, lhaid in all_var:
                 new_line = 'param_card %s %s %s' % (bname,
                    ' '.join([ str(i) for i in lhaid]), ' '.join(args[start+1:]))
                 self.do_help(new_line, conflict_raise=True, banner=False) 
+                
+        # MadLoop Parameter  ---------------------------------------------------
+        elif self.has_ml and args[start] in self.ml_vars \
+                                               and card in ['', 'MadLoop_card']:
+        
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the madloop_card file', '$MG:color:BLACK')                
+                
+            self.MLcard.do_help(args[start])
+
+        # Pythia8 Parameter  ---------------------------------------------------
+        elif self.has_PY8 and args[start] in self.PY8Card:
+            if args[start] in self.conflict and not conflict_raise:
+                conflict_raise = True
+                logger.info('**   AMBIGUOUS NAME: %s **', args[start], '$MG:color:BLACK')
+                if card == '':
+                    logger.info('**   If not explicitely speficy this parameter  will modif the pythia8_card file', '$MG:color:BLACK')  
+
+            self.PY8Card.do_help(args[start])
+                
         else:
             print "no help available" 
           
@@ -3657,9 +4083,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #raw_input('press enter to quit the help')
         return        
      except Exception, error:
-         import traceback
-         traceback.print_exc()
-         print error    
+         if __debug__:
+             import traceback
+             traceback.print_exc()
+             print error    
 
     def complete_help(self, text, line, begidx, endidx):
      try:
@@ -3880,7 +4307,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     def do_set(self, line):
         """ edit the value of one parameter in the card"""
         
+        
         args = self.split_arg(line)
+        if len(args) == 0:
+            logger.warning("No argument. For help type 'help set'.")
         # fix some formatting problem
         if len(args)==1 and '=' in args[-1]:
             arg1, arg2 = args.pop(-1).split('=',1)
@@ -3986,12 +4416,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 logger.warning('Invalid Command: No Delphes card defined.')
                 return
             if args[1] == 'atlas':
-                logger.info("set default ATLAS configuratin for Delphes", '$MG:color:BLACK')
+                logger.info("set default ATLAS configuration for Delphes", '$MG:color:BLACK')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_ATLAS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
             elif args[1] == 'cms':
-                logger.info("set default CMS configuratin for Delphes",'$MG:color:BLACK')
+                logger.info("set default CMS configuration for Delphes",'$MG:color:BLACK')
                 files.cp(pjoin(self.me_dir,'Cards', 'delphes_card_CMS.dat'),
                          pjoin(self.me_dir,'Cards', 'delphes_card.dat'))
                 return
@@ -4833,27 +5263,31 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-1]
+                
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
-        if 'MadLoopParams' in answer:
+        elif 'MadLoopParams' in answer:
             answer = self.paths['ML']
-        if 'pythia8_card' in answer:
+        elif 'pythia8_card' in answer:
             answer = self.paths['PY8']
-        if not '.dat' in answer and not '.lhco' in answer:
-            if answer != 'trigger':
-                path = self.paths[answer]
-            else:
-                path = self.paths['delphes']
-        elif not '.lhco' in answer:
-            if '_' in answer:
-                path = self.paths[answer.split('_')[0]]
-            else:
-                path = pjoin(me_dir, 'Cards', answer)
+        if os.path.exists(answer):
+            path = answer
         else:
-            path = pjoin(me_dir, self.mw_card['mw_run']['inputfile'])
-            if not os.path.exists(path):
-                logger.info('Path in MW_card not existing')
-                path = pjoin(me_dir, 'Events', answer)
+            if not '.dat' in answer and not '.lhco' in answer:
+                if answer != 'trigger':
+                    path = self.paths[answer]
+                else:
+                    path = self.paths['delphes']
+            elif not '.lhco' in answer:
+                if '_' in answer:
+                    path = self.paths['_'.join(answer.split('_')[:-1])]
+                else:
+                    path = pjoin(me_dir, 'Cards', answer)
+            else:
+                path = pjoin(me_dir, self.mw_card['mw_run']['inputfile'])
+                if not os.path.exists(path):
+                    logger.info('Path in MW_card not existing')
+                    path = pjoin(me_dir, 'Events', answer)
         #security
         path = path.replace('_card_card','_card')
         try:

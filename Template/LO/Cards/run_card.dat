@@ -78,12 +78,11 @@
 #*********************************************************************
 #
 #*********************************************************************
-# Number of helicities to sum per event (0 = all helicities)
-# 0 gives more stable result, but longer run time (needed for
-# long decay chains e.g.).
-# Use >=2 if most helicities contribute, e.g. pure QCD.
+# handling of the helicities:
+#  0: sum over all helicities
+#  1: importance sampling over helicities
 #*********************************************************************
-   %(nhel)s  = nhel          ! Number of helicities used per event
+   %(nhel)s  = nhel          ! using helicities importance sampling or not.
 #*********************************************************************
 # Generation bias, check the wiki page below for more information:   *
 #  'cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias' *
@@ -279,6 +278,6 @@
 %(sys_alpsfact)s = sys_alpsfact  # \alpha_s emission scale factors
 %(sys_matchscale)s = sys_matchscale # variation of merging scale
 # PDF sets and number of members (0 or none for all members).
-%(sys_pdf)s = sys_pdf # matching scales
+%(sys_pdf)s = sys_pdf # separate by && if more than one set.
 # MSTW2008nlo68cl.LHgrid 1  = sys_pdf
 #

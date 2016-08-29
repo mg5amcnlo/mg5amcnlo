@@ -268,7 +268,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
           pjoin('various','FO_analyse_card.py'),
           pjoin('various','histograms.py'),      
           pjoin('various','banner.py'),          
-          pjoin('various','cluster.py'),          
+          pjoin('various','cluster.py'),
+          pjoin('various','systematics.py'),          
           pjoin('various','lhe_parser.py'),
           pjoin('madevent','sum_html.py'),
           pjoin('madevent','gen_crossxhtml.py'),          
@@ -705,6 +706,13 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         run_card.write(pjoin(self.dir_path, 'Cards', 'run_card.dat'))
 
 
+    def pass_information_from_cmd(self, cmd):
+        """pass information from the command interface to the exporter.
+           Please do not modify any object of the interface from the exporter.
+        """
+
+        self.proc_defs = cmd._curr_proc_defs
+        return
 
     def finalize(self, matrix_elements, history, mg5options, flaglist):
         """Finalize FKS directory by creating jpeg diagrams, html
@@ -896,12 +904,12 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
            
         # Create the default MadAnalysis5 cards
         if 'madanalysis5_path' in self.opt and not \
-                self.opt['madanalysis5_path'] is None and not proc_defs is None:
+                self.opt['madanalysis5_path'] is None and not self.proc_defs is None:
             processes = sum([me.get('processes') for me in matrix_elements.get('matrix_elements')],[])
             # For now, simply assign all processes to each proc_defs.
             # That shouldn't really affect the default analysis card created by MA5
             self.create_default_madanalysis5_cards(
-                history, proc_defs, [processes,]*len(proc_defs),
+                history, self.proc_defs, [processes,]*len(self.proc_defs),
                 self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'),
                 levels =['hadron'])
 

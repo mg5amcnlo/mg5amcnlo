@@ -423,11 +423,6 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
         if cmd.options['collier'] in ['None',None,''] or\
          (cmd.options['collier'] == 'auto' and which_lib('libcollier.a') is None) or\
          which_lib(pjoin(cmd.options['collier'],'libcollier.a')) is None:
-            A = cmd.options['collier'] in ['None',None,'']
-            B = cmd.options['collier'] == 'auto' and which_lib('libcollier.a') is None
-            C = which_lib(pjoin(cmd.options['collier'],'libcollier.a')) is None
-            sprint(A,B,C, A or B or C, cmd.options['collier'], os.path.exists(pjoin(cmd.options['collier'],'libcollier.a')))
-            
             tell("Installing COLLIER...")
             cmd.do_install('collier')
 
@@ -1450,6 +1445,7 @@ def sprint(*args, **opt):
     if not __debug__:
         return
     
+    use_print = False
     import inspect
     if opt.has_key('cond') and not opt['cond']:
         return
@@ -1462,6 +1458,8 @@ def sprint(*args, **opt):
         level = opt['level']
     else:
         level = logging.getLogger('madgraph').level
+        if level == 0:
+            use_print = True
         #print  "madgraph level",level
         #if level == 20:
         #    level = 10 #avoid info level
@@ -1494,12 +1492,16 @@ def sprint(*args, **opt):
     else:
         intro = ''
     
-
-    log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
+    if not use_print:
+        log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
                    ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
+    else:
+        print ' '.join([intro]+[str(a) for a in args]) + \
+                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno)
 
     if wait:
         raw_input('press_enter to continue')
+
     return 
 
 ################################################################################
@@ -1747,6 +1749,7 @@ def get_older_version(v1, v2):
         elif a1 < a2:
             return v1
     return v1
+
     
 
 plugin_support = {}
@@ -1784,7 +1787,112 @@ It has been validated for the last time with version: %s""",
         plugin_support[name] = False
     return plugin_support[name]
     
-    
+
+#decorator
+def set_global(loop=False, unitary=True, mp=False, cms=False):
+    from functools import wraps
+    import aloha
+    import aloha.aloha_lib as aloha_lib
+    def deco_set(f):
+        @wraps(f)
+        def deco_f_set(*args, **opt):
+            old_loop = aloha.loop_mode
+            old_gauge = aloha.unitary_gauge
+            old_mp = aloha.mp_precision
+            old_cms = aloha.complex_mass
+            aloha.loop_mode = loop
+            aloha.unitary_gauge = unitary
+            aloha.mp_precision = mp
+            aloha.complex_mass = cms
+            aloha_lib.KERNEL.clean()
+            try:
+                out =  f(*args, **opt)
+            except:
+                aloha.loop_mode = old_loop
+                aloha.unitary_gauge = old_gauge
+                aloha.mp_precision = old_mp
+                aloha.complex_mass = old_cms
+                raise
+            aloha.loop_mode = old_loop
+            aloha.unitary_gauge = old_gauge
+            aloha.mp_precision = old_mp
+            aloha.complex_mass = old_cms
+            aloha_lib.KERNEL.clean()
+            return out
+        return deco_f_set
+    return deco_set
+   
     
     
 
+
+
+
+python_lhapdf=None
+def import_python_lhapdf(lhapdfconfig):
+    """load the python module of lhapdf return None if it can not be loaded"""
+
+    #save the result to have it faster and avoid the segfault at the second try if lhapdf is not compatible
+    global python_lhapdf
+    if python_lhapdf:
+        if python_lhapdf == -1:
+            return None
+        else:
+            return python_lhapdf
+        
+    use_lhapdf=False
+    try:
+        lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
+                                           stdout=subprocess.PIPE).stdout.read().strip()
+    except:
+        use_lhapdf=False
+        return False
+    else:
+        try:
+            candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
+                            if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
+        except OSError:
+            candidates=[]
+        for candidate in candidates:
+            if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                    break
+                except ImportError:
+                    sys.path.pop(0)
+                    continue
+    if not use_lhapdf:
+        try:
+            candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
+                            if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
+        except OSError:
+            candidates=[]
+        for candidate in candidates:
+            if os.path.isfile(os.path.join(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                    break
+                except ImportError:
+                    sys.path.pop(0)
+                    continue
+        if not use_lhapdf:
+            try:
+                import lhapdf
+                use_lhapdf=True
+            except ImportError:
+                print 'fail'
+                logger.warning("Failed to access python version of LHAPDF: "\
+                                   "If the python interface to LHAPDF is available on your system, try "\
+                                   "adding its location to the PYTHONPATH environment variable and the"\
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
+        
+    if use_lhapdf:
+        python_lhapdf = lhapdf
+        python_lhapdf.setVerbosity(0)
+    else:
+        python_lhapdf = None
+    return python_lhapdf

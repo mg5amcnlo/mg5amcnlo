@@ -117,9 +117,10 @@ class TestMECmdShell(unittest.TestCase):
         interface.exec_cmd('set madanalysis_path %s --no_save' % pjoin(MG5DIR, 'MadAnalysis'))
         interface.onecmd('output madevent %s -f' % self.run_dir)            
         
-        if not os.path.exists(pjoin(interface.options['syscalc_path'],'sys_calc')):
-            print "install SysCalc"
-            interface.onecmd('install SysCalc')
+        if os.path.exists(pjoin(interface.options['syscalc_path'],'sys_calc')):
+            shutil.rmtree(interface.options['syscalc_path'])
+            #print "install SysCalc"
+            #interface.onecmd('install SysCalc')
         
         
         self.cmd_line = MECmd.MadEventCmdShell(me_dir=self.run_dir)
@@ -475,22 +476,22 @@ class TestMECmdShell(unittest.TestCase):
             # check that the html has the information
             self.assertTrue('syst' in data[0].parton)
             # check that the code was runned correctly
-            fsock = open('%s/Events/%s/%s_parton_syscalc.log' % \
-                  (self.run_dir, data[0]['run_name'], data[0]['tag']),'r')
+            fsock = open('%s/Events/%s/parton_systematics.log' % \
+                  (self.run_dir, data[0]['run_name']),'r')
             text = fsock.read()
-            self.assertTrue(text.count('cross-section') >= 3)
+            self.assertTrue(text.count('dynamical scheme') >= 3)
         
                 
     def check_pythia_output(self, run_name='run_01', syst=False):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
 
-        if syst:
-            # check that the html has the information
-            self.assertTrue('rwt' in data[0].pythia)
+#        if syst:
+#            # check that the html has the information
+#            self.assertTrue('rwt' in data[0].pythia)
 
     def check_matched_plot(self, run_name='run_01', mintime=None, tag='fermi'):
         """ """
@@ -761,7 +762,7 @@ class TestMEfromfile(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
     
     def test_decay_width_nlo_model(self):
