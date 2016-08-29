@@ -913,7 +913,7 @@ class ConfigFile(dict):
         self.system_only = set()
         self.lower_to_case = {}
         self.list_parameter = set()
-        self.dict_parameter = set()
+        self.dict_parameter = {}
         self.default_setup()
 
         # if input is define read that input
@@ -992,7 +992,7 @@ class ConfigFile(dict):
                 self.user_set.add(lower_name)
             return  
         elif lower_name in self.dict_parameter:
-            targettype = type(dict.__getitem__(self, name)['__type__']) 
+            targettype = self.dict_parameter[lower_name] 
             full_reset = True #check if we just update the current dict or not
             
             if isinstance(value, str):
@@ -1033,7 +1033,6 @@ class ConfigFile(dict):
                 for key in value:
                     value[key] = self.format_variable(value[key], targettype, name=name)
                 if full_reset:
-                    value['__type__'] = dict.__getitem__(self, lower_name)['__type__']
                     dict.__setitem__(self, lower_name, value)
                 else:
                     dict.__getitem__(self, lower_name).update(value)
@@ -1080,8 +1079,11 @@ class ConfigFile(dict):
             allvalues = value.values()
             if any([type(allvalues[0]) != type(v) for v in allvalues]):
                 raise Exception, "All entry should have the same type"   
-            self.dict_parameter.add(lower_name)  
-            
+            self.dict_parameter[lower_name] = type(allvalues[0])  
+            if '__type__' in value:
+                del value['__type__']
+                dict.__setitem__(self, lower_name, value)
+                
                    
         if system:
             self.system_only.add(lower_name)
@@ -1182,12 +1184,6 @@ class ConfigFile(dict):
                 if name.lower() in [key.lower() for key in self] :
                     raise Exception, "Some key are not lower case %s. Invalid use of the class!"\
                                      % [key for key in self if key.lower() != key]
-
-        if name.lower() in self.dict_parameter:
-            # return a copy without the __type__
-            output = dict(dict.__getitem__(self, name.lower()))
-            del output['__type__']
-            return output
 
         return dict.__getitem__(self, name.lower())
 
