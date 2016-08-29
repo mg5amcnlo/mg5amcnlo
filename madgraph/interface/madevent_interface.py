@@ -4654,8 +4654,8 @@ You can follow PY8 run with the following command (in a separate terminal):
         
         # when are we force to change the tag new_run:previous run requiring changes
         upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
-                       'pythia': ['pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
-                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+                       'pythia': ['pythia','pgs','delphes','madanalysis5_hadron'],
+                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],

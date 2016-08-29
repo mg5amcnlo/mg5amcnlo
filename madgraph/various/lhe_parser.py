@@ -293,7 +293,6 @@ class EventFile(object):
         trunc_error allow for dynamical partial unweighting
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
-        'strategy' defines the normalisation mode: 4 -> average. 3-> sum
         """
         if not get_wgt:
             def weight(event):

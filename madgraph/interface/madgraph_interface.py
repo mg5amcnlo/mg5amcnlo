@@ -2681,7 +2681,7 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, self._install_opts)
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
-        elif len(args)==2 and args[1] in self._advanced_install_opts:           
+        elif len(args)>=2 and args[1] in self._advanced_install_opts:           
             options = ['--keep_source','--logging=']
             if args[1]=='pythia8':
                 options.append('--pythia8_tarball=')
@@ -2690,7 +2690,10 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1]=='MadAnalysis5':
                 options.append('--no_MA5_further_install')
                 options.append('--no_root_in_MA5')
-                options.append('--madanalysis5_tarball=')     
+                options.append('--madanalysis5_tarball=') 
+            for opt in options[:]:
+                if any(a.startswith(opt) for a in args):
+                    options.remove(opt)
             return self.list_completion(text, options)
         else:
             return self.list_completion(text, [])
