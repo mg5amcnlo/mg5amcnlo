@@ -2597,8 +2597,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir, 'Events',
+                                self.run_name, '%s_delphes_events.lhco.gz' % tag)\
+          and not os.path.exists(pjoin(self.me_dir, 'Events',
                                 self.run_name, '%s_delphes_events.lhco' % tag)):
-            logger.warning('We do not create lhco by default anymore')
+            logger.info('If you are interested in lhco output. please run root2lhco converter.')
+            logger.info(' or edit bin/internal/run_delphes3 to run the converter automatically.')
 
 
         #eradir = self.options['exrootanalysis_path']
@@ -2614,6 +2617,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag))
 
         self.update_status('delphes done', level='delphes', makehtml=False)
+
 
     ############################################################################
     def get_pid_final_initial_states(self):
