@@ -5603,7 +5603,6 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         args = self.split_arg(line)
         #check the validity of the arguments
         install_options = self.check_install(args)
-        misc.sprint(install_options)
 
         if sys.platform == "darwin":
             program = "curl"
