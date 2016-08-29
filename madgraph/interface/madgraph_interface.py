@@ -5301,9 +5301,10 @@ This implies that with decay chains:
 
     def advanced_install(self, tool_to_install, 
                                HepToolsInstaller_web_address=None,
-                               custom_additional_options=[]):
+                               additional_options=[]):
 
-        additional_options = custom_additional_options
+        # prevent border effects
+        add_options = list(additional_options)
         """ Uses the HEPToolsInstaller.py script maintened online to install
         HEP tools with more complicated dependences.
         Additional options will be added to the list when calling HEPInstaller"""
@@ -5346,8 +5347,8 @@ This implies that with decay chains:
 
             
             # FOR DEBUGGING ONLY, Take HEPToolsInstaller locally
-            if '--local' in additional_options:
-                additional_options.remove('--local')
+            if '--local' in add_options:
+                add_options.remove('--local')
                 logger.warning('you are using a local installer. This is intended for debugging only!')
                 shutil.rmtree(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers'))
                 shutil.copytree(os.path.abspath(pjoin(MG5DIR,os.path.pardir,
@@ -5384,7 +5385,7 @@ This implies that with decay chains:
 
         # Add the path of pythia8 if known and the MG5 path
         if tool=='mg5amc_py8_interface':
-            additional_options.append('--mg5_path=%s'%MG5DIR)
+            add_options.append('--mg5_path=%s'%MG5DIR)
             # Warn about the soft dependency to gnuplot
             if misc.which('gnuplot') is None:
                 logger.warning("==========")
@@ -5394,7 +5395,7 @@ This implies that with decay chains:
                                                       " merging with Pythia 8.")
                 logger.warning("==========")
             if self.options['pythia8_path']:
-                additional_options.append(
+                add_options.append(
                                '--with_pythia8=%s'%self.options['pythia8_path'])
 ##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
 #            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
@@ -5404,13 +5405,13 @@ This implies that with decay chains:
 
         # Special rules for certain tools
         if tool=='madanalysis5':
-            additional_options.append('--mg5_path=%s'%MG5DIR)
+            add_options.append('--mg5_path=%s'%MG5DIR)
             fastjet_config  = misc.which(self.options['fastjet'])
             if fastjet_config:
-                additional_options.append('--with_fastjet=%s'%fastjet_config)
+                add_options.append('--with_fastjet=%s'%fastjet_config)
             if self.options['delphes_path'] and os.path.isdir(
                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
-                additional_options.append('--with_delphes3=%s'%\
+                add_options.append('--with_delphes3=%s'%\
                    os.path.normpath(pjoin(MG5DIR,self.options['delphes_path'])))
 
         if tool=='pythia8':
@@ -5439,7 +5440,7 @@ This implies that with decay chains:
                     lhapdf_path = None
                 else:
                     self.advanced_install('lhapdf6',
-                                          additional_options=additional_options)
+                                          additional_options=add_options)
                     lhapdf_path = pjoin(MG5DIR,'HEPTools','lhapdf6')
                     lhapdf_version = 6
             else:
@@ -5461,26 +5462,26 @@ This implies that with decay chains:
             elif lhapdf_version==6:
                 lhapdf_option.append('--with_lhapdf5=OFF')
                 lhapdf_option.append('--with_lhapdf6=%s'%lhapdf_path)
-            # Make sure each otion in additional_options appears only once
-            additional_options = list(set(additional_options))
+            # Make sure each otion in add_options appears only once
+            add_options = list(set(add_options))
              # And that the option '--force' is placed last.
-            additional_options = [opt for opt in additional_options if opt!='--force']+\
-                        (['--force'] if '--force' in additional_options else [])
+            add_options = [opt for opt in add_options if opt!='--force']+\
+                        (['--force'] if '--force' in add_options else [])
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
              'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
              '--prefix=%s' % prefix]
-                        + lhapdf_option + compiler_options + additional_options)
+                        + lhapdf_option + compiler_options + add_options)
         else:
             logger.info('Now installing %s. Be patient...'%tool)
-            # Make sure each otion in additional_options appears only once
-            additional_options = list(set(additional_options))
+            # Make sure each otion in add_options appears only once
+            add_options = list(set(add_options))
              # And that the option '--force' is placed last.
-            additional_options = [opt for opt in additional_options if opt!='--force']+\
-                        (['--force'] if '--force' in additional_options else [])
+            add_options = [opt for opt in add_options if opt!='--force']+\
+                        (['--force'] if '--force' in add_options else [])
 
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
-              prefix] + compiler_options + additional_options)
+              prefix] + compiler_options + add_options)
 
         if return_code == 0:
             logger.info("%s successfully installed in %s."%(
@@ -5496,7 +5497,7 @@ This implies that with decay chains:
                 return
             else:
                 return self.advanced_install(tool_to_install,
-                              additional_options=additional_options+['--force'])            
+                              additional_options=add_options+['--force'])            
         else:
             raise self.InvalidCmd("Installation of %s failed."%tool_to_install)
 
@@ -5507,7 +5508,7 @@ This implies that with decay chains:
             # Automatically re-install the mg5amc_py8_interface after a fresh
             # Pythia8 installation
             self.advanced_install('mg5amc_py8_interface',
-                              additional_options=additional_options+['--force'])          
+                              additional_options=add_options+['--force'])          
         elif tool == 'lhapdf6':
             self.options['lhapdf'] = pjoin(prefix,'lhapdf6','bin', 'lhapdf-config')
             self.exec_cmd('save options %s lhapdf' % config_file)
@@ -5588,7 +5589,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
          # Return true for successful installation
         return True
 
-    def do_install(self, line, paths=None, custom_additional_options=[]):
+    def do_install(self, line, paths=None, additional_options=[]):
         """Install optional package from the MG suite.
         The argument 'additional_options' will be passed to the advanced_install
         functions. If it contains the option '--force', then the advanced_install
@@ -5597,11 +5598,12 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         """
         
         # Make sure to avoid any border effect on custom_additional_options
-        additional_options = list(custom_additional_options)
+        add_options = list(additional_options)
         
         args = self.split_arg(line)
         #check the validity of the arguments
         install_options = self.check_install(args)
+        misc.sprint(install_options)
 
         if sys.platform == "darwin":
             program = "curl"
@@ -5708,12 +5710,13 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             # Specify the path of the MG5_aMC_interface
             MG5aMC_PY8_interface_path = path['MG5aMC_PY8_interface'] if \
                                         'MG5aMC_PY8_interface' in path else 'NA'
-            additional_options.append('--mg5amc_py8_interface_tarball=%s'%\
+            add_options.append('--mg5amc_py8_interface_tarball=%s'%\
                                                    MG5aMC_PY8_interface_path)
-            additional_options.append('--logging=%d' % logger.level)
-            additional_options.extend(install_options['options_for_HEPToolsInstaller'])
+            add_options.extend(install_options['options_for_HEPToolsInstaller'])
+            if not any(opt.startswith('--logging=') for opt in add_options):
+                add_options.append('--logging=%d' % logger.level)
             return self.advanced_install(name, path['HEPToolsInstaller'],
-                                        additional_options = additional_options)
+                                        additional_options = add_options)
 
         if args[0] == 'PJFry' and not os.path.exists(
                                  pjoin(MG5DIR,'QCDLoop','lib','libqcdloop1.a')):
