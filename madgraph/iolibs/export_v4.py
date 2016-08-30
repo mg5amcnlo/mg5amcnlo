@@ -229,15 +229,16 @@ class ProcessExporterFortran(VirtualExporter):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
-            # Duplicate run_card and plot_card
+            # Move plot_card
             for card in ['plot_card']:
-                try:
-                    shutil.copy(pjoin(self.dir_path, 'Cards',
-                                             card + '.dat'),
-                               pjoin(self.dir_path, 'Cards',
-                                            card + '_default.dat'))
-                except IOError:
-                    logger.warning("Failed to copy " + card + ".dat to default")
+                if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                    try:
+                        shutil.move(pjoin(self.dir_path, 'Cards',
+                                                 card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards',
+                                                card + '_default.dat'))
+                    except IOError:
+                        logger.warning("Failed to move " + card + ".dat to default")
         elif os.getcwd() == os.path.realpath(self.dir_path):
             logger.info('working in local directory: %s' % \
                                                 os.path.realpath(self.dir_path))
@@ -254,15 +255,16 @@ class ProcessExporterFortran(VirtualExporter):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
-            # Duplicate run_card and plot_card
+            # Move plot_card
             for card in ['plot_card']:
-                try:
-                    shutil.copy(pjoin(self.dir_path, 'Cards',
-                                             card + '.dat'),
-                               pjoin(self.dir_path, 'Cards',
-                                            card + '_default.dat'))
-                except IOError:
-                    logger.warning("Failed to copy " + card + ".dat to default")            
+                if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                    try:
+                        shutil.move(pjoin(self.dir_path, 'Cards',
+                                                 card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards',
+                                                card + '_default.dat'))
+                    except IOError:
+                        logger.warning("Failed to move " + card + ".dat to default")            
         elif not os.path.isfile(pjoin(self.dir_path, 'TemplateVersion.txt')):
             assert self.mgme_dir, \
                       "No valid MG_ME path given for MG4 run directory creation."

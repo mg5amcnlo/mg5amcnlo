@@ -889,15 +889,19 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         question = """Do you want to edit a card (press enter to bypass editing)?\n"""
         possible_answer = ['0', 'done']
         card = {0:'done'}
-
+        
+        indent = max(len(path2name(card_name)) for card_name in cards)
+        question += '/'+'-'*60+'\\\n'
         for i, card_name in enumerate(cards):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '  %s / %-10s : %s\n' % (i+1, imode, card_name)
+            question += '| %-77s|\n'%((' \x1b[31m%%s\x1b[0m / %%-%ds : \x1b[32m%%s\x1b[0m'%indent)%(i+1, imode, card_name))
             card[i+1] = imode
-        if plot:
-            question += '  9 / %-10s : plot_card.dat\n' % 'plot'
+        question += '\\'+'-'*60+'/\n'
+            
+        if plot and not 'plot_card.dat' in cards:
+            question += ('  \x1b[31m9\x1b[0m / %%-%ds : \x1b[32mplot_card.dat\x1b[0m\n'%indent) % 'plot'
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'
@@ -2597,7 +2601,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir, 'Events',
-                                self.run_name, '%s_delphes_events.lhco.gz' % tag)\
+                                self.run_name, '%s_delphes_events.lhco.gz' % tag))\
           and not os.path.exists(pjoin(self.me_dir, 'Events',
                                 self.run_name, '%s_delphes_events.lhco' % tag)):
             logger.info('If you are interested in lhco output. please run root2lhco converter.')
@@ -3003,7 +3007,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
                       'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
                       'reweight_card.dat','pythia8_card.dat',
-                      'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',]
+                      'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',
+                      'plot_card.dat']
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
@@ -3784,6 +3789,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
         self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
+        self.paths['plot_default'] = pjoin(self.me_dir,'Cards','plot_card_default.dat')
         self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat')
         self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat')
 

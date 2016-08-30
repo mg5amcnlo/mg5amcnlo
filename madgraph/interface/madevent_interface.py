@@ -4986,7 +4986,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         
         available_mode = ['0']
         void = 'Not installed'
-        switch_order = ['shower', 'detector', 'madspin', 'reweight', 'madanalysis5']
+        switch_order = ['shower', 'detector', 'madspin', 'reweight', 'analysis']
         
         switch = dict((k, void) for k in switch_order)
 
@@ -4994,15 +4994,12 @@ You can follow PY8 run with the following command (in a separate terminal):
                        'detector': 'Choose the detector simulation program:',
                        'madspin': 'Decay particles with the MadSpin module:',
                        'reweight':'Add weights to the events based on changing model parameters:',
-                       'madanalysis5':'Run MadAnalysis5 on the events generated:'
+                       'analysis':'Run an analysis package on the events generated:'
                        }
 
         force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
                        ('detector', 'PGS'): {'shower':'PYTHIA6'},
-                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']},
-                       ('madanalysis5','HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
-                       ('madanalysis5','PARTON+HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
-                       ('shower', 'OFF'): {'madanalysis5': ['PARTON','OFF']} }
+                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
 
         switch_assign = lambda key, value: switch.__setitem__(key, value if value \
                                          in valid_options[key] else switch[key])
@@ -5035,31 +5032,35 @@ You can follow PY8 run with the following command (in a separate terminal):
             elif switch['shower'] == void:
                 switch['shower'] = 'OFF'            
         
+        # MadAnalysis4 options
+        if self.options['madanalysis_path']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card_default.dat')):
+                valid_options['analysis'].append('MADANALYSIS_4')
+
+            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
+                switch['analysis'] = 'MADANALYSIS_4'
+        
         # MadAnalysis5 options
         if self.options['madanalysis5_path']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')):
-                valid_options['madanalysis5'].append('PARTON')           
-            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
-                valid_options['madanalysis5'].append('HADRON')
-            if 'HADRON' in valid_options['madanalysis5'] and 'PARTON' in valid_options['madanalysis5']:
-                valid_options['madanalysis5'].append('PARTON+HADRON')
-            if len(valid_options['madanalysis5'])>1:                
-                available_mode.append('5')
-            else:
-                switch['madanalysis5'] = 'Not available yet for this output/process'
+            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')) or \
+               os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
+                valid_options['analysis'].append('MADANALYSIS_5')
 
             parton_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
                                                 'madanalysis5_parton_card.dat'))
             hadron_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
                                                 'madanalysis5_hadron_card.dat'))
-            if parton_card_present and not hadron_card_present:
-                switch['madanalysis5'] = 'PARTON'                
-            elif hadron_card_present and not parton_card_present:
-                switch['madanalysis5'] = 'HADRON'
-            elif hadron_card_present and parton_card_present:
-                switch['madanalysis5'] = 'PARTON+HADRON'
-            elif switch['madanalysis5'] == void:
-                switch['madanalysis5'] = 'OFF'
+            if hadron_card_present or parton_card_present:
+                switch['analysis'] = 'MADANALYSIS_5'
+
+        if len(valid_options['analysis'])>1:                
+            available_mode.append('5')
+            if switch['analysis'] == void:
+                # Choose a default analysis with ordered importance of the available analysis tools
+                switch['analysis'] = sorted(valid_options['analysis'],
+                            key=lambda ana: ['MADANALYSIS_5','MADANALYSIS_4','OFF'].index(ana))[0]
+        else:
+            switch['analysis'] = 'No analysis tool interfaced to MG5aMC.'
 
         # Need to allow Delphes only if a shower exists                
         if self.options['delphes_path']:
@@ -5122,7 +5123,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                     'Not available (requires NumPy)',
                     'Not available yet for this output/process']:
                 return red%switch_value
-            elif switch_value in ['ON','PARTON','HADRON','PARTON+HADRON',
+            elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
                                   'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
                                   'DELPHES-CMS','DELPHES']:
                 return green%switch_value
@@ -5135,10 +5136,12 @@ You can follow PY8 run with the following command (in a separate terminal):
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " %i %-61s %12s = %s\n"
+                    switch_format = " \x1b[31m%i\x1b[0m %-61s %12s = %s"
                     question = "The following switches determine which programs are run:\n"
+                    question += '/'+'-'*98+'\\\n'
                     for id, key in enumerate(switch_order):
-                        question += switch_format % (id+1, description[key], key, color(switch[key]))
+                        question += '| %-115s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
+                    question += '\\'+'-'*98+'/\n'
                     question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
                     question += '  Type \'help\' for the list of all valid option\n' 
@@ -5209,8 +5212,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                                     switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 
-                                'delphes','madanalysis5']:
+                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
@@ -5231,9 +5233,6 @@ You can follow PY8 run with the following command (in a separate terminal):
                     elif answer == 'madspin':
                         switch_assign('madspin', 'ON')
                         switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'madanalysis5':
-                        switch_assign('madanalysis5', valid_options['madanalysis5'][-1])
                         switch_assign('detector', 'OFF')
                     elif answer == 'reweight':
                         switch_assign('reweight', 'ON')
@@ -5265,10 +5264,12 @@ You can follow PY8 run with the following command (in a separate terminal):
             cards.append('madspin_card.dat')
         if switch['reweight'] == 'ON':
             cards.append('reweight_card.dat')
-        if switch['madanalysis5'] in ['PARTON','PARTON+HADRON']:
+        if switch['analysis'] in ['MADANALYSIS_5']:
             cards.append('madanalysis5_parton_card.dat')
-        if switch['madanalysis5'] in ['HADRON','PARTON+HADRON']:
+        if switch['analysis'] in ['MADANALYSIS_5'] and not switch['shower']=='OFF':
             cards.append('madanalysis5_hadron_card.dat')
+        if switch['analysis'] in ['MADANALYSIS_4']:
+            cards.append('plot_card.dat')
 
         self.keep_cards(cards)
         
@@ -5280,9 +5281,9 @@ You can follow PY8 run with the following command (in a separate terminal):
             return
 
         if answer == 'auto':
-            self.ask_edit_cards(cards, mode='auto')
+            self.ask_edit_cards(cards, plot=False, mode='auto')
         else:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=False)
         return
     
     ############################################################################
