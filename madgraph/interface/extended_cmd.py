@@ -600,7 +600,6 @@ class BasicCmd(OriginalCmd):
                 to_rm = len(self.completion_prefix) - 1
                 Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
                 data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
-                misc.sprint(data)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
             # correct wrong splitting with '-'/"="

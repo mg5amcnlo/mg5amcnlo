@@ -970,7 +970,6 @@ class CheckValidForCmd(object):
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
      
-        # If not pythia-pgs path
         if not self.options['pythia-pgs_path']:
             logger.info('Retry to read configuration file to find pythia-pgs path')
             self.set_configuration()
@@ -1025,12 +1024,12 @@ class CheckValidForCmd(object):
         laststep = [arg for arg in args if arg.startswith('--laststep=')]
         if laststep and len(laststep)==1:
             mode = laststep[0].split('=')[-1]
-            if mode not in ['auto', 'pythia', 'delphes']:
+            if mode not in ['auto', 'pythia','pythia8','delphes']:
                 self.help_pythia8()
                 raise self.InvalidCmd('invalid %s argument'% args[-1])     
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
-     
+
         # If not pythia-pgs path
         if not self.options['pythia8_path']:
             logger.info('Retry reading configuration file to find pythia8 path')
@@ -1070,10 +1069,9 @@ class CheckValidForCmd(object):
             self.set_run_name(self.run_name, tag, 'pythia8')
 
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
-        #output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
         if not os.path.exists('%s.gz'%input_file):
             if os.path.exists(input_file):
-                misc.gzip(input_file, keep=True, stdout=output_file)
+                misc.gzip(input_file, keep=True, stdout='%s.gz'%input_file)
             else:
                 raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)
@@ -1583,16 +1581,16 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 1:
             return self.list_completion(text, self._interfaced_showers)
         elif len(args)>1 and args[1] in self._interfaced_showers:
-            return eval("self.complete_%s(text,'%s',%d,%d)"%
-              (args[1],line.replace(args[0]+' ',''),begidx-len(args[0])-1,
-                                                         endidx-len(args[0])-1))
+            return getattr(self, 'complete_%s' % text)\
+                (text, args[1],line.replace(args[0]+' ',''), 
+                 begidx-len(args[0])-1, endidx-len(args[0])-1)
 
     def complete_pythia8(self,text, line, begidx, endidx):
         "Complete the pythia8 command"
         args = self.split_arg(line[0:begidx], error=False)
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'),pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -1612,8 +1610,8 @@ class CompleteForCmd(CheckValidForCmd):
             #return valid run_name
             data = []
             for name in ['unweighted_events.lhe']:
-                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
-                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+                data += misc.glob(pjoin('*','%s'%name), pjoin(self.me_dir, 'Events'))
+                data += misc.glob(pjoin('*','%s.gz'%name), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -3337,7 +3335,7 @@ already exists and is not a fifo file."""%fifo_path)
                 # Use defaultSet not to overwrite the current userSet status
                 PY8_Card.defaultSet('HEPMCoutput:file',fifo_path)
             HepMC_event_output=fifo_path    
-        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null']:
+        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null','None']:
             logger.warning('User disabled the HepMC output of Pythia8.')
             HepMC_event_output = None
         else:
@@ -3558,7 +3556,7 @@ Please install this tool with the following MG5_aMC command:
         self.results.add_detail('run_mode', 'madevent')
 
         # Again here 'pythia' is just a keyword for the simulation level.
-        self.update_status('Running Pythia8 [arXiv:1410.3012]', 'pythia8')
+        self.update_status('\033[92mRunning Pythia8 [arXiv:1410.3012]\033[92m', 'pythia8')
         
         tag = self.run_tag        
         # Now write Pythia8 card
