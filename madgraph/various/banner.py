@@ -2387,7 +2387,7 @@ class RunCardLO(RunCard):
         self.add_param("use_syst", True)
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
         self.add_param("sys_alpsfact", "None", include=False)
-        self.add_param("sys_matchscale", "30 50", include=False)
+        self.add_param("sys_matchscale", "auto", include=False)
         self.add_param("sys_pdf", "NNPDF23_lo_as_0130_qed", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
 

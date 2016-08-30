@@ -3365,7 +3365,6 @@ already exists and is not a fifo file."""%fifo_path)
             # Automatically set qWeed to xqcut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
                 PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
-
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
@@ -4879,6 +4878,10 @@ You can follow PY8 run with the following command (in a separate terminal):
             logger.critical('SysCalc works only when event_norm is on \'sum\'.')
             return
         logger.info('running SysCalc on mode %s' % mode)    
+    
+        # Restore the old default for SysCalc+PY6
+        if self.run_card['sys_matchscale']=='auto':
+            self.run_card['sys_matchscale'] = "30 50"
     
         # Check that all pdfset are correctly installed
         lhaid = [self.run_card.get_lhapdf_id()]
