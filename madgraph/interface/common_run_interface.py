@@ -896,15 +896,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '| %-77s|\n'%((' \x1b[31m%%s\x1b[0m / %%-%ds : \x1b[32m%%s\x1b[0m'%indent)%(i+1, imode, card_name))
+            question += '| %-78s|\n'%((' \x1b[31m%%s\x1b[0m. %%-%ds : \x1b[32m%%s\x1b[0m'%indent)%(i+1, imode, card_name))
             card[i+1] = imode
-        question += '\\'+'-'*60+'/\n'
             
         if plot and not 'plot_card.dat' in cards:
-            question += ('  \x1b[31m9\x1b[0m / %%-%ds : \x1b[32mplot_card.dat\x1b[0m\n'%indent) % 'plot'
+            question += '| %-78s|\n'%((' \x1b[31m9\x1b[0m. %%-%ds : \x1b[32mplot_card.dat\x1b[0m\n'%indent) % 'plot')
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'
+
+        question += '\\'+'-'*60+'/\n'
 
         if 'param_card.dat' in cards:
             # Add the path options

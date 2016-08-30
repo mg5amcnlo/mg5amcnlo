@@ -3555,7 +3555,7 @@ Please install this tool with the following MG5_aMC command:
         self.results.add_detail('run_mode', 'madevent')
 
         # Again here 'pythia' is just a keyword for the simulation level.
-        self.update_status('\033[92mRunning Pythia8 [arXiv:1410.3012]\033[92m', 'pythia8')
+        self.update_status('\033[92mRunning Pythia8 [arXiv:1410.3012]\x1b[0m', 'pythia8')
         
         tag = self.run_tag        
         # Now write Pythia8 card
@@ -5137,7 +5137,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " \x1b[31m%i\x1b[0m %-61s %12s = %s"
+                    switch_format = " \x1b[31m%i\x1b[0m. %-60s %12s = %s"
                     question = "The following switches determine which programs are run:\n"
                     question += '/'+'-'*98+'\\\n'
                     for id, key in enumerate(switch_order):
@@ -5304,13 +5304,13 @@ You can follow PY8 run with the following command (in a separate terminal):
         question = """Which programs do you want to run?
     0 / auto    : running existing cards\n"""
         if pythia_version==6:
-            question += """    1 / pythia  : Pythia\n"""
-            question += """    2 / pgs     : Pythia + PGS\n"""
+            question += """    1. pythia  : Pythia\n"""
+            question += """    2. pgs     : Pythia + PGS\n"""
         else:
-            question += """    1 / pythia8  : Pythia8\n"""
+            question += """    1. pythia8  : Pythia8\n"""
 
         if '3' in available_mode:
-            question += """    3 / delphes  : Pythia%s + Delphes.\n"""%pythia_suffix
+            question += """    3. delphes  : Pythia%s + Delphes.\n"""%pythia_suffix
 
         if not self.force:
             if not mode:
@@ -5350,7 +5350,7 @@ You can follow PY8 run with the following command (in a separate terminal):
             return mode
         
         if auto:
-            self.ask_edit_cards(cards, mode='auto')
+            self.ask_edit_cards(cards, mode='auto', plot=(pythia_version==6))
         else:
             self.ask_edit_cards(cards)
 
