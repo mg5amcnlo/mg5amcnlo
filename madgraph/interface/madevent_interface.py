@@ -2180,12 +2180,13 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
 
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
+                
         if self.ninitial == 1:
             logger.info("Note that since 2.3. The launch for 1>N pass in event generation\n"+
                            "    To have the previous behavior use the calculate_decay_widths function")
-            self.do_calculate_decay_widths(line, *args, **opt)
-        else:
-            self.do_generate_events(line, *args, **opt)
+        #    self.do_calculate_decay_widths(line, *args, **opt)
+        #else:
+        self.do_generate_events(line, *args, **opt)
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -3368,23 +3369,20 @@ already exists and is not a fifo file."""%fifo_path)
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
-                        PY8_Card.MadGraphSet('SysCalc:qCutList',\
-                         ','.join('%.4f'%(factor*PY8_Card['JetMatching:qCut']) for \
-                         factor in [0.5,0.75,1.0,1.5,2.0] if \
-                        factor*PY8_Card['JetMatching:qCut']>1.5*self.run_card['xqcut']))
+                        qcut = PY8_Card['JetMatching:qCut']
+                        value = [factor*qcut for factor in [0.5,0.75,1.0,1.5,2.0] if\
+                                 factor*qcut> 1.5*self.run_card['xqcut'] ]
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', value)
                     else:
                         qCutList = [float(qc) for qc in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
-                        PY8_Card.MadGraphSet('SysCalc:qCutList',','.join('%f'%qc for qc in qCutList))
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList)
 
-            for scale in PY8_Card['SysCalc:qCutList'].split(','):
-                if re.match('^\s*$',scale): continue
-                if 'auto' in scale.lower(): break
-                sc = float(scale.strip())
-                if sc<(1.5*self.run_card['xqcut']):
+            for scale in PY8_Card['SysCalc:qCutList']:
+                if scale<(1.5*self.run_card['xqcut']):
                     logger.error(
-        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%sc+\
+        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
         ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
@@ -3475,23 +3473,20 @@ already exists and is not a fifo file."""%fifo_path)
             if PY8_Card['SysCalc:tmsList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
-                        PY8_Card.MadGraphSet('SysCalc:tmsList',\
-                     ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
-                       for factor in [0.5,0.75,1.0,1.5,2.0] if 
-                   factor*PY8_Card["Merging:TMS"] >= self.run_card[CKKW_cut]))
+                        tms = PY8_Card["Merging:TMS"]
+                        value = [factor*tms for factor in [0.5,0.75,1.0,1.5,2.0]
+                                 if factor*tms > self.run_card[CKKW_cut]]
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', value)
                     else:
                         tmsList = [float(tms) for tms in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
-                        PY8_Card.MadGraphSet('SysCalc:tmsList',','.join('%f'%tms for tms in tmsList))
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList)
             
-            for scale in PY8_Card['SysCalc:tmsList'].split(','):
-                if re.match('^\s*$',scale): continue
-                if 'auto' in scale.lower(): break
-                sc = float(scale.strip())
-                if sc<self.run_card[CKKW_cut]:
+            for scale in PY8_Card['SysCalc:tmsList']:
+                if scale<self.run_card[CKKW_cut]:
                     logger.error(
-        'One of the CKKWl merging scale you chose (%f) in the variation list'%sc+\
+        'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
@@ -3555,7 +3550,7 @@ Please install this tool with the following MG5_aMC command:
         self.results.add_detail('run_mode', 'madevent')
 
         # Again here 'pythia' is just a keyword for the simulation level.
-        self.update_status('\033[92mRunning Pythia8 [arXiv:1410.3012]\x1b[0m', 'pythia8')
+        self.update_status('\033[92mRunning Pythia8 [arXiv:1410.3012]\033[0m', 'pythia8')
         
         tag = self.run_tag        
         # Now write Pythia8 card
@@ -5036,7 +5031,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         # MadAnalysis4 options
         if self.options['madanalysis_path']:
             if os.path.exists(pjoin(self.me_dir,'Cards','plot_card_default.dat')):
-                valid_options['analysis'].append('MADANALYSIS_4')
+                valid_options['analysis'].insert(0,'MADANALYSIS_4')
 
             if os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
                 switch['analysis'] = 'MADANALYSIS_4'

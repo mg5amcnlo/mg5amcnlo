@@ -1762,7 +1762,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         logger.info('Use c++ compiler ' + compiler)
         self.replace_make_opt_c_compiler(compiler)
         # Replace also for Template but not for cluster
-        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
+        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite and \
+           not __debug__ and not os.path.exists(pjoin(MG5DIR,'bin','create_release.py')):
             self.replace_make_opt_c_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
         
         return compiler
