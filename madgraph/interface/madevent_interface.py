@@ -4984,7 +4984,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         
         available_mode = ['0']
         void = 'Not installed'
-        switch_order = ['shower', 'detector', 'madspin', 'reweight', 'analysis']
+        switch_order = ['shower', 'detector', 'analysis', 'madspin', 'reweight']
         
         switch = dict((k, void) for k in switch_order)
 

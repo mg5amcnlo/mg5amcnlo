@@ -2391,7 +2391,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif mode=='parton':
             logger.info('Parton input file considered:')
             logger.info('  --> %s'%MA5_opts['inputs'])
-        logger.info('-------------------------------------------','$MG:color:GREEN')
 
         # Obtain a main MA5 interpreter
         # Ideally we would like to do it all with a single interpreter
