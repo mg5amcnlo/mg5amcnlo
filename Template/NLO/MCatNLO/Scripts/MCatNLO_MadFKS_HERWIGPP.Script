@@ -512,6 +512,21 @@ set /Herwig/Shower/AlphaQCD:NumberOfLoops 2
 EOF
 fi
 
+
+if [ $HWNEW = 1 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Shower/PartnerFinder:PartnerMethod Random
+set /Herwig/Shower/PartnerFinder:ScaleChoice Partner
+set /Herwig/Shower/Evolver:Interactions QCDOnly
+set /Herwig/Shower/Evolver:SoftCorrelations No
+set /Herwig/Shower/Evolver:SpinCorrelations Yes
+set /Herwig/Shower/GtoQQbarSplitFn:AngularOrdered Yes
+EOF
+fi
+
+
+
 cat<<EOF >> ./$ifile
 # CREATE AND APPLY CUTS
 create ThePEG::Cuts /Herwig/Cuts/NoCuts 
