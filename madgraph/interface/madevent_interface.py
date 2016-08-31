@@ -5136,9 +5136,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         if len(valid_options['analysis'])>1:                
             available_mode.append('5')
             if switch['analysis'] == void:
-                # Choose a default analysis with ordered importance of the available analysis tools
-                switch['analysis'] = sorted(valid_options['analysis'],
-                            key=lambda ana: ['MADANALYSIS_5','MADANALYSIS_4','OFF'].index(ana))[0]
+                switch['analysis'] = 'OFF'
         else:
             switch['analysis'] = 'No analysis tool interfaced to MG5aMC.'
 
@@ -5183,7 +5181,6 @@ You can follow PY8 run with the following command (in a separate terminal):
                 switch['madspin'] = 'ON'
             elif switch['madspin'] != 'ON':
                 logger.critical("Cannot run madspin: %s", switch['reweight'])            
-        
 
         for id, key in enumerate(switch_order):
             if len(valid_options[key]) >1:
@@ -5191,7 +5188,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 options.append(key)
                 
         options += ['parton'] + sorted(list(set(available_mode)))
-        options += options_legacy    
+        options += options_legacy
         #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
         
@@ -5220,7 +5217,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                     question = "The following switches determine which programs are run:\n"
                     question += '/'+'-'*98+'\\\n'
                     for id, key in enumerate(switch_order):
-                        question += '| %-114s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
+                        question += '| %-115s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
                     question += '\\'+'-'*98+'/\n'
                     question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
@@ -5431,7 +5428,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         if auto:
             self.ask_edit_cards(cards, mode='auto', plot=(pythia_version==6))
         else:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=(pythia_version==6))
 
         return mode
                 

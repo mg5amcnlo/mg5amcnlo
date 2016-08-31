@@ -229,16 +229,14 @@ class ProcessExporterFortran(VirtualExporter):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
-            # Move plot_card
+            # copy plot_card
             for card in ['plot_card']:
                 if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
                     try:
-                        shutil.move(pjoin(self.dir_path, 'Cards',
-                                                 card + '.dat'),
-                                   pjoin(self.dir_path, 'Cards',
-                                                card + '_default.dat'))
+                        shutil.copy(pjoin(self.dir_path, 'Cards',card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '_default.dat'))
                     except IOError:
-                        logger.warning("Failed to move " + card + ".dat to default")
+                        logger.warning("Failed to copy " + card + ".dat to default")
         elif os.getcwd() == os.path.realpath(self.dir_path):
             logger.info('working in local directory: %s' % \
                                                 os.path.realpath(self.dir_path))
@@ -255,16 +253,14 @@ class ProcessExporterFortran(VirtualExporter):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
-            # Move plot_card
+            # Copy plot_card
             for card in ['plot_card']:
                 if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
                     try:
-                        shutil.move(pjoin(self.dir_path, 'Cards',
-                                                 card + '.dat'),
-                                   pjoin(self.dir_path, 'Cards',
-                                                card + '_default.dat'))
+                        shutil.copy(pjoin(self.dir_path, 'Cards', card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '_default.dat'))
                     except IOError:
-                        logger.warning("Failed to move " + card + ".dat to default")            
+                        logger.warning("Failed to copy " + card + ".dat to default")            
         elif not os.path.isfile(pjoin(self.dir_path, 'TemplateVersion.txt')):
             assert self.mgme_dir, \
                       "No valid MG_ME path given for MG4 run directory creation."
@@ -424,7 +420,13 @@ class ProcessExporterFortran(VirtualExporter):
                 history, self.proc_defs, processes,
                 self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'),
                 levels = ['hadron','parton'])
-    
+            
+            for level in ['hadron','parton']:
+                # Copying these cards turn on the use of MadAnalysis5 by default.
+                if os.path.isfile(pjoin(self.dir_path,'Cards','madanalysis5_%s_card_default.dat'%level)):
+                    shutil.copy(pjoin(self.dir_path,'Cards','madanalysis5_%s_card_default.dat'%level),
+                                pjoin(self.dir_path,'Cards','madanalysis5_%s_card.dat'%level))
+
     #===========================================================================
     # Create the proc_characteristic file passing information to the run_interface
     #===========================================================================
