@@ -5366,15 +5366,18 @@ This implies that with decay chains:
      
         # Compiler options
         compiler_options = []
-        if not self.options['cpp_compiler'] is None:
+        if self.options['cpp_compiler'] is not None:
             compiler_options.append('--cpp_compiler=%s'%
                                                    self.options['cpp_compiler'])
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
-        else:
+        elif misc.which('g++'):
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence('g++'))
-
+        else:
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(None))
+            
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])

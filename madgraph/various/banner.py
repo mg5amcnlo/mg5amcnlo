@@ -978,15 +978,16 @@ class ConfigFile(dict):
             return
         
         #1. check if the parameter is set to auto -> pass it to special
-        targettype = type(dict.__getitem__(self, lower_name))
-        if targettype != str and isinstance(value, str) and value.lower() == 'auto':
-            self.auto_set.add(lower_name)
-            if lower_name in self.user_set:
-                self.user_set.remove(lower_name)
-            #keep old value.
-            return 
-        elif lower_name in self.auto_set:
-            self.auto_set.remove(lower_name)
+        if lower_name in self:
+            targettype = type(dict.__getitem__(self, lower_name))
+            if targettype != str and isinstance(value, str) and value.lower() == 'auto':
+                self.auto_set.add(lower_name)
+                if lower_name in self.user_set:
+                    self.user_set.remove(lower_name)
+                #keep old value.
+                return 
+            elif lower_name in self.auto_set:
+                self.auto_set.remove(lower_name)
             
         # 2. Find the type of the attribute that we want
         if name in self.list_parameter:
