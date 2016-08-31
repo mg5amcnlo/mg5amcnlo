@@ -960,11 +960,13 @@ class ConfigFile(dict):
         return [name for name in self]
     
     def items(self):
-        return [(self.lower_to_case[name], value) for name,value in \
-                                               super(ConfigFile, self).items()]
+        return [(name,self[name]) for name in self]
+        
     
     def __setitem__(self, name, value, change_userdefine=False):
-        """set the attribute and set correctly the type if the value is a string"""
+        """set the attribute and set correctly the type if the value is a string.
+           change_userdefine on True if we have to add the parameter in user_set
+        """
         if  not len(self):
             #Should never happen but when deepcopy/pickle
             self.__init__()

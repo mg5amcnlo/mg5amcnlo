@@ -4037,7 +4037,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
 
     def do_help(self, line, conflict_raise=False, banner=True):    
-     try:                
+#     try:                
         if banner:                      
             logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
          
@@ -4069,9 +4069,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         start = 0
         card = ''
-        if  args[0]+'_card' in self.all_card_name:
+        if  args[0]+'_card' in self.all_card_name+ self.cards:
             args[0] += '_card'
-        if args[0] in self.all_card_name:
+        elif  args[0]+'.dat' in self.all_card_name+ self.cards:
+            args[0] += '.dat'
+        elif  args[0]+'_card.dat' in self.all_card_name+ self.cards:
+            args[0] += '_card.dat'
+        if args[0] in self.all_card_name + self.cards:
             start += 1
             card = args[0]
             if len(args) == 1:
@@ -4082,6 +4086,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     print "File to define the various model parameter"
                     logger.info("List of the Block defined:",'$MG:color:BLUE')
                     print "\t".join(self.param_card.keys())
+                elif args[0].startswith('madanalysis5'):
+                    print 'This card allow to make plot with the madanalysis5 package'
+                    print 'An example card is provided. For more information about the '
+                    print 'syntax please refer to: https://madanalysis.irmp.ucl.ac.be/'
+                    print 'or to the user manual [arXiv:1206.1599]'
+                    if args[0].startswith('madanalysis5_hadron'):
+                        print 
+                        print 'This card also allow to make recasting analysis'
+                        print 'For more detail, see: arXiv:1407.3278'                   
                 elif hasattr(self, args[0]):
                     logger.info("%s information: " % args[0], '$MG:color:BLUE')
                     print(eval('self.%s' % args[0]).__doc__)
@@ -4174,7 +4187,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('**   If not explicitely speficy this parameter  will modif the pythia8_card file', '$MG:color:BLACK')  
 
             self.PY8Card.do_help(args[start])
-                
+        elif card.startswith('madanalysis5'):
+            print 'MA5'
+            
+            
         else:
             print "no help available" 
           
@@ -4182,22 +4198,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info('*** END HELP ***', '$MG:color:BLACK')    
         #raw_input('press enter to quit the help')
         return        
-     except Exception, error:
-         if __debug__:
-             import traceback
-             traceback.print_exc()
-             print error    
+#     except Exception, error:
+#         if __debug__:
+#             import traceback
+#             traceback.print_exc()
+#             print error    
 
     def complete_help(self, text, line, begidx, endidx):
-     try:
+#     try:
         possibilities = self.complete_set(text, line, begidx, endidx,formatting=False)
-        if line == '':
+        if line[:begidx].strip() == 'help':
             possibilities['Defined command'] = cmd.BasicCmd.completenames(self, text, line)#, begidx, endidx)
+            possibilities.update(self.complete_add(text, line, begidx, endidx,formatting=False))
         return self.deal_multiple_categories(possibilities)
-     except Exception, error:
-         import traceback
-         traceback.print_exc()
-         print error
+#     except Exception, error:
+#         import traceback
+#         traceback.print_exc()
+#         print error
 
 
     def complete_set(self, text, line, begidx, endidx, formatting=True):
@@ -5220,7 +5237,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '-- syntax: add filename line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
         logger.info('********************* HELP ADD ***************************') 
-    def complete_add(self, text, line, begidx, endidx):
+    def complete_add(self, text, line, begidx, endidx, formatting=True):
         """ auto-completion for add command"""
         signal.alarm(0) # avoid timer if any
                  
@@ -5229,7 +5246,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, cards)
                           
-        return self.deal_multiple_categories(possibilities)
+        return self.deal_multiple_categories(possibilities, formatting)
     
     def do_add(self, line):
         """ syntax: add filename NAME VALUE

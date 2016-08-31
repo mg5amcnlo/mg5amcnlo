@@ -165,6 +165,68 @@ class TestConfigFileCase(unittest.TestCase):
         #self.config['list_s'] = " 1\\ 2, 3, 5d1 "        
         #self.assertEqual(self.config['list_s'],['1\\', '2','3', '5d1'])
 
+
+    def test_auto_handling(self):
+        """check that any parameter can be set on auto and recover"""
+        
+        self.config['lower'] = 'auto'
+        self.assertEqual(self.config['lower'],'auto')
+        self.assertEqual(dict.__getitem__(self.config,'lower'),1)
+        self.assertTrue('lower' in self.config.auto_set)
+        self.assertFalse('lower' in self.config.user_set)
+        
+        self.config['lower'] = 2 
+        self.assertEqual(self.config['lower'], 2)
+        self.assertEqual(dict.__getitem__(self.config,'lower'),2)
+        
+        self.config.add_param('test', [1,2])
+        self.config['test'] = 'auto'
+        self.assertEqual(self.config['test'],'auto')
+        self.assertEqual(dict.__getitem__(self.config,'test'),[1,2])
+        
+        self.assertRaises(Exception, self.config.__setitem__, 'test', 'onestring')
+        self.config['test'] = '3,4'
+        self.assertEqual(self.config['test'], [3,4])
+        self.assertEqual(dict.__getitem__(self.config,'test'), [3,4])                
+        
+        self.config.set('test', ['1',5.0], user=True)
+        self.config.set('test', 'auto', changeifuserset=False)
+        self.assertEqual(self.config['test'], [1,5])
+        self.assertEqual(dict.__getitem__(self.config,'test'), [1,5])
+        
+        self.config.set('test', 'auto', user=True)
+        self.assertEqual(self.config['test'],'auto')
+        self.assertEqual(dict.__getitem__(self.config,'test'), [1,5])
+        
+        for key, value in self.config.items():
+            if key == 'test':
+                self.assertEqual(value, 'auto')
+                break
+        else:
+            self.assertFalse(True, 'wrong key when looping over key')
+        
+        
+    def test_system_only(self):
+        """test that the user can not modify a parameter system only"""
+        
+        self.config.add_param('test', [1,2], system=True)
+        
+        self.config['test'] = [3,4]
+        self.assertEqual(self.config['test'], [3,4])
+        
+        self.config.set('test', '1 4', user=True)
+        self.assertEqual(self.config['test'], [3,4])               
+        
+        self.config.set('test', '1 4', user=False)
+        self.assertEqual(self.config['test'], [1,4])         
+
+        
+        
+                 
+        
+        
+        
+        
         
     def test_for_loop(self):
         """ check correct handling of case"""
