@@ -2687,7 +2687,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 options.append('--pythia8_tarball=')
             elif args[1]=='mg5amc_py8_interface':
                 options.append('--mg5amc_py8_interface_tarball=') 
-            elif args[1]=='MadAnalysis5':
+            elif args[1] in ['MadAnalysis5','MadAnalysis']:
                 options.append('--no_MA5_further_install')
                 options.append('--no_root_in_MA5')
                 options.append('--madanalysis5_tarball=') 
@@ -2717,12 +2717,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['Delphes', 'MadAnalysis', 'ExRootAnalysis',
+    _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'SysCalc', 'Golem95', 'PJFry', 'QCDLoop']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
-                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5','MadAnalysis']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -5707,7 +5707,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         try:
             name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
-                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
+                'MadAnalysis4':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
                 'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5'
                 }
@@ -5736,7 +5737,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.do_install('QCDLoop', paths=path)
 
         if args[0] == 'Delphes':
-            args[0] = 'Delphes3'
+            args[0] = 'Delphes3'        
+        if args[0] == 'MadAnalysis4':
+            args[0] = 'MadAnalysis'
         try:
             name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
