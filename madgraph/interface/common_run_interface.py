@@ -2481,7 +2481,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 #            misc.sprint('\n'+('\n'.join('* %s'%cmd for cmd in MA5_cmds)))
 #            misc.sprint('****************************************')
         
-        logger.info('Now starting MadAnalysis5 [arXiv:1206.1599]','$MG:color:GREEN')
+        self.update_status('\033[92mRunning MadAnalysis5 [arXiv:1206.1599]\033[0m', 
+                           level='madanalysis5_%s'%mode)
         if mode=='hadron':
             logger.info('Hadron input files considered:')
             for input in MA5_opts['inputs']:
