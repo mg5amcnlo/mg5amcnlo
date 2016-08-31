@@ -5400,11 +5400,6 @@ This implies that with decay chains:
             if self.options['pythia8_path']:
                 add_options.append(
                                '--with_pythia8=%s'%self.options['pythia8_path'])
-##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
-#            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
-#                    pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
-#                                                 'MG5aMC_PY8_interface.tar.gz'))
-################################################################################
 
         # Special rules for certain tools
         if tool=='madanalysis5':
@@ -5502,6 +5497,21 @@ This implies that with decay chains:
                 return self.advanced_install(tool_to_install,
                               additional_options=add_options+['--force'])            
         else:
+            if tool=='madanalysis5' and ('--no_MA5_further_install' not in add_options or
+                                                        '--no_root_in_MA5' in add_options):
+                if not __debug__:
+                    logger.warning('Default installation of Madanalys5 failed.')
+                    logger.warning("MG5aMC will now attempt to reinstall it with the options '--no_MA5_further_install --no_root_in_MA5'.")
+                    logger.warning("This will however limit MA5 applicability for hadron-level analysis.")
+                    logger.warning("If you would like to prevent MG5aMC to re-attempt MA5 installation, start MG5aMC with './bin/mg5_aMC --debug'.")
+                    for option in ['--no_MA5_further_install', '--no_root_in_MA5', '--force']:
+                        if option not in add_options:
+                            add_options.append(option)
+                    self.advanced_install('madanalysis5', 
+                               HepToolsInstaller_web_address=HepToolsInstaller_web_address,
+                               additional_options=add_options)
+                else:
+                    logger.critical("Default installation of Madanalys5 failed, we suggest you try again with the options '--no_MA5_further_install --no_root_in_MA5'.")
             raise self.InvalidCmd("Installation of %s failed."%tool_to_install)
 
         # Post-installation treatment
@@ -5527,10 +5537,10 @@ This implies that with decay chains:
                 self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.options['mg5amc_py8_interface_path'] = \
             self.exec_cmd('save options %s mg5amc_py8_interface_path' % config_file, 
-                                                            printcmd=False, lot=False)      
+                                                            printcmd=False, log=False)      
         elif tool == 'collier':
             self.options['collier'] = pjoin(prefix,'lib')
-            self.exec_cmd('save options %s collier' % config_file, printcmd=False, lot=False)      
+            self.exec_cmd('save options %s collier' % config_file, printcmd=False, log=False)      
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
                                               prefix,'ninja','lib')):
@@ -5542,7 +5552,7 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(prefix,'lib')
-            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, lot=False)      
+            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, log=False)      
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.

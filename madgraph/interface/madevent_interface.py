@@ -4989,7 +4989,7 @@ You can follow PY8 run with the following command (in a separate terminal):
         description = {'shower': 'Choose the shower/hadronization program:',
                        'detector': 'Choose the detector simulation program:',
                        'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight':'Add weights to the events based on changing model parameters:',
+                       'reweight':'Add weights to events for different model hypothesis:',
                        'analysis':'Run an analysis package on the events generated:'
                        }
 
@@ -5136,7 +5136,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                     question = "The following switches determine which programs are run:\n"
                     question += '/'+'-'*98+'\\\n'
                     for id, key in enumerate(switch_order):
-                        question += '| %-115s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
+                        question += '| %-114s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
                     question += '\\'+'-'*98+'/\n'
                     question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'

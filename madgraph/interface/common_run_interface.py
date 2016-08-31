@@ -38,6 +38,7 @@ import time
 import traceback
 import glob
 import sets
+import StringIO
 
 try:
     import readline
@@ -896,11 +897,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '| %-78s|\n'%((' \x1b[31m%%s\x1b[0m. %%-%ds : \x1b[32m%%s\x1b[0m'%indent)%(i+1, imode, card_name))
+            question += '| %-77s|\n'%((' \x1b[31m%%s\x1b[0m. %%-%ds : \x1b[32m%%s\x1b[0m'%indent)%(i+1, imode, card_name))
             card[i+1] = imode
             
         if plot and not 'plot_card.dat' in cards:
-            question += '| %-78s|\n'%((' \x1b[31m9\x1b[0m. %%-%ds : \x1b[32mplot_card.dat\x1b[0m\n'%indent) % 'plot')
+            question += '| %-77s|\n'%((' \x1b[31m9\x1b[0m. %%-%ds : \x1b[32mplot_card.dat\x1b[0m\n'%indent) % 'plot')
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'
@@ -2105,6 +2106,100 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     # Start of MadAnalysis5 related function
     ############################################################################
+
+    @staticmethod
+    def runMA5(MA5_interpreter, MA5_cmds, MA5_runtag, logfile_path, advertise_log=True):
+        """ Run MA5 in a controlled environnment."""
+        successfull_MA5_run = True
+        try:
+            # Predefine MA5_logger as None in case we don't manage to retrieve it.
+            MA5_logger = None
+            BackUp_stdout = sys.stdout
+            sys.stdout = open(os.devnull,'w')
+            MA5_logger = logging.getLogger('MA5')
+            BackUp_MA5_handlers = MA5_logger.handlers
+            for handler in BackUp_MA5_handlers:
+                MA5_logger.removeHandler(handler)
+            file_handler = logging.FileHandler(logfile_path)
+            MA5_logger.addHandler(file_handler)
+            if advertise_log:
+                logger.info("Follow Madanalysis5 run with the following command in a separate terminal:")
+                logger.info('  tail -f %s'%logfile_path)
+            # Now the magic, finally call MA5.
+            MA5_interpreter.load(MA5_cmds)
+        except Exception as e:
+            logger.warning("MadAnalysis5 failed to run the commands for task "+
+                             "'%s'. Madanalys5 analysis will be skipped."%MA5_runtag)
+            error=StringIO.StringIO()
+            traceback.print_exc(file=error)
+            logger.debug('MadAnalysis5 error was:')
+            logger.debug('-'*60)
+            logger.debug(error.getvalue()[:-1])
+            logger.debug('-'*60)
+            successfull_MA5_run = False
+        finally:
+            sys.stdout = BackUp_stdout
+            if not MA5_logger is None:
+                for handler in MA5_logger.handlers:
+                    MA5_logger.removeHandler(handler)
+                for handler in BackUp_MA5_handlers:
+                    MA5_logger.addHandler(handler)
+        
+        return successfull_MA5_run
+
+    #===============================================================================
+    # Return a Main instance of MadAnlysis5, provided its path
+    #===============================================================================
+    @staticmethod
+    def get_MadAnalysis5_interpreter(mg5_path, ma5_path, mg5_interface=None, 
+                    logstream = sys.stdout, loglevel = logging.INFO, forced = True):
+        """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
+        
+        MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
+        
+        if MA5path is None or not os.path.isfile(pjoin(MA5path,'bin','ma5')):
+            return None
+        if MA5path not in sys.path:
+            sys.path.insert(0, MA5path)
+            
+        try:
+            # We must backup the readline module attributes because they get modified
+            # when MA5 imports root and that supersedes MG5 autocompletion
+            import readline
+            old_completer = readline.get_completer()
+            old_delims    = readline.get_completer_delims()
+            old_history   = [readline.get_history_item(i) for i in range(1,readline.get_current_history_length()+1)]
+        except ImportError:
+            old_completer, old_delims, old_history = None, None, None
+        try:
+            from madanalysis.interpreter.ma5_interpreter import MA5Interpreter
+            MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
+                                 LoggerStream=logstream,forced=forced)
+        except Exception as e:
+            logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
+            error=StringIO.StringIO()
+            traceback.print_exc(file=error)
+            logger.debug('MadAnalysis5 error was:')
+            logger.debug('-'*60)
+            logger.debug(error.getvalue()[:-1])
+            logger.debug('-'*60)          
+            MA5_interpreter = None
+        finally:
+            # Now restore the readline MG5 state
+            if not old_history is None:
+                readline.clear_history()
+                for line in old_history:
+                    readline.add_history(line)
+            if not old_completer is None:
+                readline.set_completer(old_completer)
+            if not old_delims is None:
+                readline.set_completer_delims(old_delims)
+            # Also restore the completion_display_matches_hook if an mg5 interface
+            # is specified as it could also have been potentially modified
+            if not mg5_interface is None and any(not elem is None for elem in [old_completer, old_delims, old_history]):
+                mg5_interface.set_readline_completion_display_matches_hook()
+
+        return MA5_interpreter
     
     def check_madanalysis5(self, args, mode='parton'):
         """Check the argument for the madanalysis5 command
@@ -2404,12 +2499,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             MA5_lvl = MA5_opts['MA5_stdout_lvl']
 
-        MA5_interpreter = misc.get_MadAnalysis5_interpreter(
+        MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
                 self.options['mg5_path'], 
                 self.options['madanalysis5_path'],
                 logstream=sys.stdout,
                 loglevel=MA5_lvl,
                 forced=True)
+
+        # If failed to start MA5, then just leave
+        if MA5_interpreter is None:
+            return
 
         # Now loop over the different MA5_runs
         for MA5_runtag, MA5_cmds in MA5_cmds_list:
@@ -2423,16 +2522,21 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if MA5_runtag!='default':
                 if MA5_runtag.startswith('_reco_'):
                     logger.info("MadAnalysis5 now running the reconstruction '%s'..."%
-                                              MA5_runtag[6:],'$MG:color:GREEN')
+                                                     MA5_runtag[6:],'$MG:color:GREEN')
                 elif MA5_runtag=='Recasting':
                     logger.info("MadAnalysis5 now running the recasting...",
                                                               '$MG:color:GREEN') 
                 else:
                     logger.info("MadAnalysis5 now running the '%s' analysis..."%
-                                                   MA5_runtag,'$MG:color:GREEN')                    
-            # Now the magic, finally call MA5.
-            MA5_interpreter.load(MA5_cmds)
-                     
+                                                   MA5_runtag,'$MG:color:GREEN')
+                    
+            
+            # Now the magic, let's call MA5
+            if not CommonRunCmd.runMA5(MA5_interpreter, MA5_cmds, MA5_runtag,
+                pjoin(self.me_dir,'Events',self.run_name,'%s_MA5_%s.log'%(self.run_tag,MA5_runtag))):
+                # Unsuccessful MA5 run, we therefore stop here.
+                return
+
             if MA5_runtag.startswith('_reco_'):
                 # When doing a reconstruction we must first link the event file
                 # created with MA5 reconstruction and then directly proceed to the
@@ -2510,7 +2614,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         for detail in new_details:
             self.results.add_detail(detail,new_details[detail])
 
-        self.update_status('finish', level='madanalysis5_%s'%mode,
+        self.update_status('Finished MA5 analyses.', level='madanalysis5_%s'%mode,
                                                                  makehtml=False)
  
         #Update the banner
