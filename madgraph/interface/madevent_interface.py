@@ -3593,9 +3593,9 @@ already exists and is not a fifo file."""%fifo_path)
             self.options['automatic_html_opening'] = False
 
         if self.run_card['event_norm'] not in ['unit','average']:
-            logger.critical("Pythia8 do not support normalisation to the sum.\n"+\
-                             "     The normalisation of the hpmc output file will be wrong.\n"+\
-                             "     Please use 'event_norm = average' in the run_card to avoid this problem.")
+            logger.critical("Pythia8 does not support normalization to the sum.\n"+\
+                             "The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
+                             "Please use 'event_norm = average' in the run_card to avoid this problem.")
 
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:

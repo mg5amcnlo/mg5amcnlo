@@ -913,6 +913,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Create the default MadAnalysis5 cards
         if 'madanalysis5_path' in self.opt and not \
                 self.opt['madanalysis5_path'] is None and not self.proc_defs is None:
+            misc.sprint(type(matrix_elements))
+            misc.sprint(type(matrix_elements.get('matrix_elements')[0]))
             processes = sum([me.get('processes') for me in matrix_elements.get('matrix_elements')],[])
             # For now, simply assign all processes to each proc_defs.
             # That shouldn't really affect the default analysis card created by MA5
