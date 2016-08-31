@@ -2227,27 +2227,36 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         logger.info("     Nb of events :  %s" % data['nb_event'] )
 
         if data['run_mode']=='madevent':
-            shower = None
-            for sh in ['pythia8','pythia']:
-                try:
-                    if data['cross_%s'%sh] and data['nb_event_%s'%sh]:
-                        shower = sh
-                        break
-                except KeyError:
-                    pass
-            if shower:
-                if self.ninitial == 1:
-                    logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_%s'%shower], data['error_%s'%shower]))
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                if data['cross_pythia'] == -1:
+                    path = pjoin(self.me_dir, 'Events', self.run_name, '%s_merged_xsecs.txt' % self.run_tag)
+                    cross_sections = {}
+                    if os.path.exists(path):
+                        for line in open(path):
+                            split = line.split()
+                            if len(split)!=3:
+                                continue
+                            scale, cross, error = split
+                            cross_sections[float(scale)] = (float(cross), float(error))   
+                    if len(cross_sections)>0:
+                        logger.info('     Pythia8 merged cross-sections are:')
+                        for scale in sorted(cross_sections.keys()):
+                            logger.info('      > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                                        (scale,cross_sections[scale][0],cross_sections[scale][1]))
+                    
                 else:
-                    logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_%s'%shower], data['error_%s'%shower]))            
-                    logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_%s'%shower]))
+                    if self.ninitial == 1:
+                        logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+                    else:
+                        logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+                        logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_pythia']))
                 if self.run_card['use_syst'] in self.true and \
                    (int(self.run_card['ickkw'])==1 or self.run_card['ktdurham']>0.0
                                                     or self.run_card['ptlund']>0.0):
-                    logger.info("     Notice that because SysCalc is turned on, the merging did not veto events but modified their weights instead.\n"+\
+                    logger.info("     Notice that because Systematics computation is turned on, the merging did not veto events but modified their weights instead.\n"+\
                                 "     The resulting hepmc/stdhep file should therefore be use with those weights.")
                 else:
-                    logger.info("     Nb of events after merging :  %s" % data['nb_event_%s'%shower])
+                    logger.info("     Nb of events after merging :  %s" % data['nb_event_pythia'])
 
         logger.info(" " )
 
@@ -3774,12 +3783,12 @@ You can follow PY8 run with the following command (in a separate terminal):
 
                 except ValueError:
                     # xsec is not float - this should not happen
-                    self.results.add_detail('cross_pythia8', 0)
-                    self.results.add_detail('nb_event_pythia8', 0)
-                    self.results.add_detail('error_pythia8', 0)
+                    self.results.add_detail('cross_pythia', 0)
+                    self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('error_pythia', 0)
                 else:
-                    self.results.add_detail('cross_pythia8', sigma_m)
-                    self.results.add_detail('nb_event_pythia8', Nacc)
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
                     #compute pythia error
                     error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
                     try:                   
@@ -3788,10 +3797,12 @@ You can follow PY8 run with the following command (in a separate terminal):
                         # Cannot compute error
                         error_m = -1.0
                     # works both for fixed number of generated events and fixed accepted events
-                    self.results.add_detail('error_pythia8', error_m)
+                    self.results.add_detail('error_pythia', error_m)
                 break
             pythia_log.close()
-            
+            if self.run_card['use_syst']:
+                    self.results.add_detail('cross_pythia', -1)
+                    self.results.add_detail('error_pythia', 0)
             #####
             # From the djr file generated
             #####
@@ -3829,11 +3840,11 @@ You can follow PY8 run with the following command (in a separate terminal):
                     self.results.add_detail('cross_pythia8', cross_sections[central_scale][0])
                     self.results.add_detail('error_pythia8', cross_sections[central_scale][1])
                 
-                if len(cross_sections)>0:
-                    logger.info('Pythia8 merged cross-sections are:')
-                    for scale in sorted(cross_sections.keys()):
-                        logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
-                        (scale,cross_sections[scale][0],cross_sections[scale][1]))       
+                #if len(cross_sections)>0:
+                #    logger.info('Pythia8 merged cross-sections are:')
+                #    for scale in sorted(cross_sections.keys()):
+                #        logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                #        (scale,cross_sections[scale][0],cross_sections[scale][1]))       
             
             xsecs_file = open(pjoin(self.me_dir,'Events',self.run_name,
                                                  '%s_merged_xsecs.txt'%tag),'w')
@@ -3841,7 +3852,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 xsecs_file.write('%-20s%-20s%-20s\n'%('Merging scale',
                                     'Cross-section [pb]','MC uncertainty [pb]'))
                 for scale in sorted(cross_sections.keys()):
-                   xsecs_file.write('%-20.4g%-20.6e%-20.2e\n'%
+                    xsecs_file.write('%-20.4g%-20.6e%-20.2e\n'%
                       (scale,cross_sections[scale][0],cross_sections[scale][1]))
             else:
                 xsecs_file.write('Cross-sections could not be read from the'+\
@@ -3887,6 +3898,10 @@ You can follow PY8 run with the following command (in a separate terminal):
             # initialize / remove lhapdf mode        
             self.configure_directory(html_opening =False)
             self.check_pythia(args)
+
+        if self.run_card['event_norm'] != 'sum':
+            logger.error('pythia-pgs require event_norm to be on sum. Do not run pythia6')
+            return
 
         # the args are modify and the last arg is always the mode 
         if not no_default:

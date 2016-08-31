@@ -2152,7 +2152,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     #===============================================================================
     @staticmethod
     def get_MadAnalysis5_interpreter(mg5_path, ma5_path, mg5_interface=None, 
-                    logstream = sys.stdout, loglevel = logging.INFO, forced = True):
+                    logstream = sys.stdout, loglevel =logging.INFO, forced = True):
         """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
         
         MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
@@ -2161,7 +2161,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return None
         if MA5path not in sys.path:
             sys.path.insert(0, MA5path)
-            
+        
+        if loglevel == 20:
+            raise Exception
         try:
             # We must backup the readline module attributes because they get modified
             # when MA5 imports root and that supersedes MG5 autocompletion
@@ -2503,8 +2505,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 self.options['mg5_path'], 
                 self.options['madanalysis5_path'],
                 logstream=sys.stdout,
-                loglevel=MA5_lvl,
+                loglevel=100,
                 forced=True)
+
 
         # If failed to start MA5, then just leave
         if MA5_interpreter is None:
@@ -2513,11 +2516,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Now loop over the different MA5_runs
         for MA5_runtag, MA5_cmds in MA5_cmds_list:
             
+            MA5_interpreter.setLogLevel(100)
             # Make sure to properly initialize MA5 interpreter
             if mode=='hadron':
                 MA5_interpreter.init_reco()
             else:
                 MA5_interpreter.init_parton()
+            MA5_interpreter.setLogLevel(MA5_lvl)
             
             if MA5_runtag!='default':
                 if MA5_runtag.startswith('_reco_'):
@@ -3090,6 +3095,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
 
+        if isinstance(status, str) and  status.startswith('\x1b['):
+            status = status[status.index('m')+1:-7]
         if 'arXiv' in status:
             if '[' in status:
                 status = status.split('[',1)[0]
@@ -4944,7 +4951,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
-                    
+        
+        # @LO if PY6 shower => event_norm on sum
+        if 'pythia_card.dat' in self.cards:
+            if self.run_card['event_norm'] != 'sum':
+                logger.info('PY6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
+                self.do_set('run_card event_norm sum') 
+        
+                
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
             modify_extralibs, modify_extrapaths = False,False

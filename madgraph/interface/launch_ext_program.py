@@ -669,7 +669,7 @@ see arXiv:1402.1178.'''
         try:
             os.remove('ME5_debug')
         except:
-           pass
+            pass
 
         launch.run_cmd(command)
         launch.run_cmd('quit')

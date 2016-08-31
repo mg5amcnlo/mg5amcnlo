@@ -1115,8 +1115,8 @@ class OneTagResults(dict):
                 level = 'pythia8'
                 name = 'HEPMC'                                 
                 out += self.special_link(link, level, name)
-                if 'merged_xsec' in self.pythia8:  
-                    out += """ <a href="./Events/%(run_name)s/%(tag)s_merged_xsecs.txt">merged xsection</a> """
+                #if 'merged_xsec' in self.pythia8:  
+                #    out += """ <a href="./Events/%(run_name)s/%(tag)s_merged_xsecs.txt">merged xsection</a> """
             #if 'plot' in self.pythia8:
             #    out += ' <a href="./HTML/%(run_name)s/plots_pythia_%(tag)s.html">plots</a>'
             if 'djr_plot' in self.pythia8:
@@ -1203,6 +1203,116 @@ class OneTagResults(dict):
             return out % self
                 
     
+    
+    def get_action(self, ttype, local_dico, runresults):
+        # Fill the actions
+        if ttype == 'parton':
+            if runresults.web:
+                action = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="all">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove run">
+</FORM>
+                    
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+</FORM>"""
+            else:
+                action = self.command_suggestion_html('remove %s parton --tag=%s' \
+                                                                       % (self['run_name'], self['tag']))
+                # this the detector simulation and pythia should be available only for madevent
+                if self['run_mode'] == 'madevent':
+                    action += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                else: 
+                    pass
+
+        elif ttype == 'shower':
+            if runresults.web:
+                action = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="all">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove run">
+</FORM>
+                
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run Pythia">
+</FORM>"""
+            else:
+                action = self.command_suggestion_html('remove %s parton --tag=%s' \
+                                                                   % (self['run_name'], self['tag']))
+                # this the detector simulation and pythia should be available only for madevent
+                if self['run_mode'] == 'madevent':
+                    action += self.command_suggestion_html('pythia %s ' % self['run_name'])
+                else: 
+                    pass
+
+        elif ttype in ['pythia', 'pythia8']:
+            if self['tag'] == runresults.get_last_pythia():
+                if runresults.web:
+                    action = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE="pythia">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=SUBMIT VALUE="Remove pythia">
+</FORM>
+
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Run Detector">
+</FORM>"""
+                else:
+                    action = self.command_suggestion_html(
+                                            'remove %s pythia --tag=%s' % \
+                                            (self['run_name'], self['tag']))
+                    action += self.command_suggestion_html(
+                     'delphes %(1)s' % {'1': self['run_name']})
+            else:
+                if runresults.web:
+                    action = ''
+                else:
+                    action = self.command_suggestion_html('remove %s  pythia --tag=%s'\
+                                                                        % (self['run_name'], self['tag']))
+        elif ttype in ['madanalysis5_hadron']:
+            # For now, nothing special needs to be done since we don't
+            # support actions for madanalysis5.
+            action = ''
+            
+        else:
+            if runresults.web:
+                action = """
+<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
+<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
+<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
+<INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
+<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
+<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
+<INPUT TYPE=SUBMIT VALUE="Remove """ + str(ttype) + """\">
+</FORM>"""
+            else:
+                action = self.command_suggestion_html('remove %s %s --tag=%s' %\
+                                                          (self['run_name'], ttype, self['tag']))
+        return action
+
+
     def get_nb_line(self):
         
         nb_line = 0
@@ -1227,6 +1337,13 @@ class OneTagResults(dict):
         
         sub_part_template_parton = """
         <td rowspan=%(cross_span)s><center><a href="./HTML/%(run)s/results.html"> %(cross).4g <font face=symbol>&#177;</font> %(err).2g</a> %(syst)s </center></td>
+        <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
+        <td> %(links)s</td>
+        <td> %(action)s</td>
+        </tr>"""
+
+        sub_part_template_py8 = """
+        <td rowspan=%(cross_span)s><center><a href="./Events/%(run)s/%(tag)s_merged_xsecs.txt"> merged xsection</a> %(syst)s </center></td>
         <td rowspan=%(cross_span)s><center> %(nb_event)s<center></td><td> %(type)s </td>
         <td> %(links)s</td>
         <td> %(action)s</td>
@@ -1292,8 +1409,8 @@ class OneTagResults(dict):
                 # The 'done' store in madanalysis5_parton is just a placeholder
                 # it doesn't have a corresponding line
                 continue
-            
-            local_dico = {'type': ttype, 'run': self['run_name'], 'syst': ''}
+            local_dico = {'type': ttype, 'run': self['run_name'], 'syst': '',
+                          'tag': self['tag']}
 
             if 'run_mode' in self.keys():
                 local_dico['run_mode'] = self['run_mode']
@@ -1313,6 +1430,7 @@ class OneTagResults(dict):
                     if 'syst' in self.parton:
                         local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/parton_systematics.log">systematics</a>' \
                                              % {'run_name':self['run_name']}
+                
                 elif self['cross_pythia']:
                     if self.parton:
                         local_dico['cross_span'] = nb_line -1
@@ -1342,7 +1460,14 @@ class OneTagResults(dict):
                     if 'syst' in self.parton:
                         local_dico['syst'] = '<font face=symbol>&#177;</font> <a href="./Events/%(run_name)s/parton_systematics.log">systematics</a>' \
                                              % {'run_name':self['run_name'], 'tag': self['tag']}
-                    
+            elif ttype == 'pythia8' and self['cross_pythia'] ==-1 and 'merged_xsec' in self.pythia8:
+                template = sub_part_template_py8
+                if self.parton:           
+                    local_dico['cross_span'] = nb_line - 1
+                    local_dico['nb_event'] = self['nb_event_pythia']
+                else:
+                    local_dico['cross_span'] = nb_line
+                    local_dico['nb_event'] = self['nb_event_pythia']                
             elif ttype in ['pythia','pythia8'] and self['cross_pythia']:
                 template = sub_part_template_parton
                 if self.parton:           
@@ -1377,115 +1502,9 @@ class OneTagResults(dict):
             else:
                 template = sub_part_template_pgs             
             
-            # Fill the links
+            # Fill the links/actions
             local_dico['links'] = self.get_links(ttype)
-
-            # Fill the actions
-            if ttype == 'parton':
-                if runresults.web:
-                    local_dico['action'] = """
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
-<INPUT TYPE=HIDDEN NAME=level VALUE="all">
-<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Remove run">
-</FORM>
-                    
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Run Pythia">
-</FORM>"""
-                else:
-                    local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
-                                                                       % (self['run_name'], self['tag']))
-                    # this the detector simulation and pythia should be available only for madevent
-                    if self['run_mode'] == 'madevent':
-                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
-                    else: 
-                        pass
-
-            elif ttype == 'shower':
-                if runresults.web:
-                    local_dico['action'] = """
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
-<INPUT TYPE=HIDDEN NAME=level VALUE="all">
-<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Remove run">
-</FORM>
-                    
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pythia">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Run Pythia">
-</FORM>"""
-                else:
-                    local_dico['action'] = self.command_suggestion_html('remove %s parton --tag=%s' \
-                                                                       % (self['run_name'], self['tag']))
-                    # this the detector simulation and pythia should be available only for madevent
-                    if self['run_mode'] == 'madevent':
-                        local_dico['action'] += self.command_suggestion_html('pythia %s ' % self['run_name'])
-                    else: 
-                        pass
-
-            elif ttype in ['pythia', 'pythia8']:
-                if self['tag'] == runresults.get_last_pythia():
-                    if runresults.web:
-                        local_dico['action'] = """
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
-<INPUT TYPE=HIDDEN NAME=level VALUE="pythia">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
-<INPUT TYPE=SUBMIT VALUE="Remove pythia">
-</FORM>
-
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="pgs">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Run Detector">
-</FORM>"""
-                    else:
-                        local_dico['action'] = self.command_suggestion_html(
-                                                'remove %s pythia --tag=%s' % \
-                                                (self['run_name'], self['tag']))
-                        local_dico['action'] += self.command_suggestion_html(
-                         'delphes %(1)s' % {'1': self['run_name']})
-                else:
-                    if runresults.web:
-                        local_dico['action'] = ''
-                    else:
-                        local_dico['action'] = self.command_suggestion_html('remove %s  pythia --tag=%s'\
-                                                                            % (self['run_name'], self['tag']))
-            elif ttype in ['madanalysis5_hadron']:
-                # For now, nothing special needs to be done since we don't
-                # support actions for madanalysis5.
-                local_dico['action'] = ''
-                
-            else:
-                if runresults.web:
-                    local_dico['action'] = """
-<FORM ACTION="http://%(web)s/cgi-bin/RunProcess/handle_runs-pl"  ENCTYPE="multipart/form-data" METHOD="POST">
-<INPUT TYPE=HIDDEN NAME=directory VALUE="%(me_dir)s">
-<INPUT TYPE=HIDDEN NAME=whattodo VALUE="remove_level">
-<INPUT TYPE=HIDDEN NAME=level VALUE=\"""" + str(type) + """\">
-<INPUT TYPE=HIDDEN NAME=tag VALUE=\"""" + self['tag'] + """\">
-<INPUT TYPE=HIDDEN NAME=run VALUE="%(run_name)s">
-<INPUT TYPE=SUBMIT VALUE="Remove """ + str(ttype) + """\">
-</FORM>"""
-                else:
-                    local_dico['action'] = self.command_suggestion_html('remove %s %s --tag=%s' %\
-                                                              (self['run_name'], ttype, self['tag']))
-            
+            local_dico['action'] = self.get_action(ttype, local_dico, runresults)
             # create the text
             subresults_html += template % local_dico
             
