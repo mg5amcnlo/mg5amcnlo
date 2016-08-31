@@ -3602,9 +3602,12 @@ already exists and is not a fifo file."""%fifo_path)
             self.options['automatic_html_opening'] = False
 
         if self.run_card['event_norm'] not in ['unit','average']:
-            logger.critical("Pythia8 does not support normalization to the sum.\n"+\
-                             "The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
-                             "Please use 'event_norm = average' in the run_card to avoid this problem.")
+            
+            logger.critical("Pythia8 does not support normalization to the sum. Not running Pythia8")
+            return
+                             #\n"+\
+                             #"The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
+                             #"Please use 'event_norm = average' in the run_card to avoid this problem.")
 
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
@@ -3880,7 +3883,8 @@ You can follow PY8 run with the following command (in a separate terminal):
     
     def do_pythia(self, line):
         """launch pythia"""
-                
+        
+             
         # Check argument's validity
         args = self.split_arg(line)
         if '--no_default' in args:
@@ -3890,7 +3894,7 @@ You can follow PY8 run with the following command (in a separate terminal):
             args.remove('--no_default')
         else:
             no_default = False
-            
+        
         if not self.run_name:
             self.check_pythia(args)
             self.configure_directory(html_opening =False)
@@ -3906,7 +3910,6 @@ You can follow PY8 run with the following command (in a separate terminal):
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
-
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
@@ -5408,7 +5411,6 @@ You can follow PY8 run with the following command (in a separate terminal):
             else: 
                 mode = 'pythia%s'%pythia_suffix
         logger.info('Will run in mode %s' % mode)
-                                               
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed) remove pointless one
         cards = ['pythia%s_card.dat'%pythia_suffix]
@@ -5420,7 +5422,8 @@ You can follow PY8 run with the following command (in a separate terminal):
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
                 delphes3 = False
                 cards.append('delphes_trigger.dat')
-        self.keep_cards(cards)
+        self.keep_cards(cards, ignore=['madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',
+                      'plot_card.dat'])
         
         if self.force:
             return mode

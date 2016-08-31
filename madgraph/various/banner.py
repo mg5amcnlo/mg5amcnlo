@@ -2004,6 +2004,8 @@ class RunCard(ConfigFile):
                 self.add_param(name, float(value), hidden=True, cut=True)
             else:
                 self.set( name, value, user=True)
+        # parameter not set in the run_card can be set to compatiblity value
+        self.check_validity()
                 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

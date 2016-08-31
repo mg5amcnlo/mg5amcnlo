@@ -1152,6 +1152,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     
             if not madir or not td or \
                 not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
+                misc.sprint('no plot card?', os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')))
                 return False
         else:
             PY8_plots_root_path = pjoin(self.me_dir,'HTML',
@@ -3840,7 +3841,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
               '   Set the type of beam to a given value for both beam\n'+\
               '   0 : means no PDF\n'+\
               '   1 : means proton PDF\n'+\
-              '  -1 : means proton PDF\n'+\
+              '  -1 : means antiproton PDF\n'+\
               '   2 : means PDF for elastic photon emited from a proton\n'+\
               '   3 : means PDF for elastic photon emited from an electron',
     'lhc'   : 'syntax: set lhc VALUE:\n      Set for a proton-proton collision with that given center of mass energy (in TeV)',
@@ -4955,13 +4956,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
+                    modify.append('run')
         
         # @LO if PY6 shower => event_norm on sum
         if 'pythia_card.dat' in self.cards:
             if self.run_card['event_norm'] != 'sum':
-                logger.info('PY6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
+                logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
                 self.do_set('run_card event_norm sum') 
-        
+        # @LO if PY6 shower => event_norm on sum
+        elif 'pythia8_card.dat' in self.cards:
+            if self.run_card['event_norm'] == 'sum':
+                logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
+                self.do_set('run_card event_norm average')         
                 
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
