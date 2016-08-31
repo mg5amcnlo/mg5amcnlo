@@ -319,6 +319,10 @@ class ProcessExporterFortran(VirtualExporter):
         logger.info('Generating MadAnalysis5 default cards tailored to this process')
         MA5_interpreter = common_run_interface.CommonRunCmd.\
                           get_MadAnalysis5_interpreter(MG5DIR,ma5_path,loglevel=100)
+                          
+        if MA5_interpreter is None:
+            return
+
         MA5_main = MA5_interpreter.main
        
         for lvl in ['parton','hadron']:
