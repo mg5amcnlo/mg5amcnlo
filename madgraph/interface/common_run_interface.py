@@ -901,7 +901,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             card[i+1] = imode
             
         if plot and not 'plot_card.dat' in cards:
-            question += '| %-77s|\n'%((' \x1b[31m9\x1b[0m. %%-%ds : \x1b[32mplot_card.dat\x1b[0m\n'%indent) % 'plot')
+            question += '| %-77s|\n'%((' \x1b[31m9\x1b[0m. %%-%ds : \x1b[32mplot_card.dat\x1b[0m'%indent) % 'plot')
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'
@@ -2114,8 +2114,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         try:
             # Predefine MA5_logger as None in case we don't manage to retrieve it.
             MA5_logger = None
-            BackUp_stdout = sys.stdout
-            sys.stdout = open(os.devnull,'w')
             MA5_logger = logging.getLogger('MA5')
             BackUp_MA5_handlers = MA5_logger.handlers
             for handler in BackUp_MA5_handlers:
@@ -2126,7 +2124,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 logger.info("Follow Madanalysis5 run with the following command in a separate terminal:")
                 logger.info('  tail -f %s'%logfile_path)
             # Now the magic, finally call MA5.
-            MA5_interpreter.load(MA5_cmds)
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                with misc.stdchannel_redirected(sys.stderr, os.devnull):
+                    MA5_interpreter.load(MA5_cmds)
         except Exception as e:
             logger.warning("MadAnalysis5 failed to run the commands for task "+
                              "'%s'. Madanalys5 analysis will be skipped."%MA5_runtag)
@@ -2138,7 +2138,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.debug('-'*60)
             successfull_MA5_run = False
         finally:
-            sys.stdout = BackUp_stdout
             if not MA5_logger is None:
                 for handler in MA5_logger.handlers:
                     MA5_logger.removeHandler(handler)
@@ -2161,9 +2160,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return None
         if MA5path not in sys.path:
             sys.path.insert(0, MA5path)
-        
-        if loglevel == 20:
-            raise Exception
+    
         try:
             # We must backup the readline module attributes because they get modified
             # when MA5 imports root and that supersedes MG5 autocompletion
@@ -2175,8 +2172,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             old_completer, old_delims, old_history = None, None, None
         try:
             from madanalysis.interpreter.ma5_interpreter import MA5Interpreter
-            MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
-                                 LoggerStream=logstream,forced=forced)
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                with misc.stdchannel_redirected(sys.stderr, os.devnull):
+                    MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
+                                                     LoggerStream=logstream,forced=forced)
         except Exception as e:
             logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
             error=StringIO.StringIO()
@@ -2502,6 +2501,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             MA5_lvl = MA5_opts['MA5_stdout_lvl']
 
+        # Bypass initialization information
         MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
                 self.options['mg5_path'], 
                 self.options['madanalysis5_path'],
@@ -2517,6 +2517,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Now loop over the different MA5_runs
         for MA5_runtag, MA5_cmds in MA5_cmds_list:
             
+            # Bypass the banner.
             MA5_interpreter.setLogLevel(100)
             # Make sure to properly initialize MA5 interpreter
             if mode=='hadron':
@@ -3899,6 +3900,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['plot_default'] = pjoin(self.me_dir,'Cards','plot_card_default.dat')
         self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat')
         self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat')
+        self.paths['madanalysis5_parton_default'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')
+        self.paths['madanalysis5_hadron_default'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
@@ -4554,7 +4557,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
-                       'delphes_card']:
+                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:color:BLACK')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])

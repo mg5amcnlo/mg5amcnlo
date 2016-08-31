@@ -913,7 +913,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Create the default MadAnalysis5 cards
         if 'madanalysis5_path' in self.opt and not \
                 self.opt['madanalysis5_path'] is None and not self.proc_defs is None:
-            processes = sum([me.get('processes') for me in matrix_elements.get('matrix_elements')],[])
+            # When using 
+            processes = sum([me.get('processes') if not isinstance(me, str) else [] \
+                                for me in matrix_elements.get('matrix_elements')],[])
+            if len(processes)==0:
+                logger.warning(
+"""MG5aMC could not provide to Madanalysis5 the list of processes generated.
+As a result, the default card will not be tailored to the process generated.
+This typically happens when using the 'low_mem_multicore_nlo_generation' NLO generation mode.""")
             # For now, simply assign all processes to each proc_defs.
             # That shouldn't really affect the default analysis card created by MA5
             self.create_default_madanalysis5_cards(
