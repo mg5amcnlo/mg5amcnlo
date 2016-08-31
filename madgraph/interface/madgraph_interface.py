@@ -6505,7 +6505,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if key in self.options_madgraph:
                         self.history.append('set %s %s' % (key, self.options[key]))
         
-        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+        warnings = madevent_interface.MadEventCmd.mg5amc_py8_interface_consistency_warning(self.options)
         if warnings:
             logger.warning(warnings)
 

@@ -1191,7 +1191,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('grouped_matrix', True)
         self.add_param('has_loops', False)
         self.add_param('max_n_matched_jets', 0)
-        self.add_param('colored_pdgs', '[1,2,3,4,5]')        
+        self.add_param('colored_pdgs', [1,2,3,4,5])        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1335,7 +1335,7 @@ class PY8Card(ConfigFile):
         # scale values for the extra weights related to scale and PDF variations.
         self.add_param("SysCalc:fullCutVariation", False)
         # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
-        # to indicate that he wants to pipe the output. Or \dev\null to turn the
+        # to indicate that he wants to pipe the output. Or /dev/null to turn the
         # output off.
         self.add_param("HEPMCoutput:file", 'auto')
 
@@ -2540,7 +2540,7 @@ class RunCardLO(RunCard):
         """Rules
           process 1->N all cut set on off.
           loop_induced -> MC over helicity
-          e+ e- beam -> lpp:0 ebeam:500  
+          e+ e- beam -> lpp:0 ebeam:500
           p p beam -> set maxjetflavor automatically
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
          """

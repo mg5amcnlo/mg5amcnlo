@@ -842,17 +842,15 @@ class OneTagResults(dict):
         if level in ['madanalysis5_parton','all'] and 'madanalysis5_parton' not in nolevel:
 
             if 'ma5_plot' not in self.parton and \
-               glob.glob(pjoin(path,"%s_MA5_parton_analysis_*.pdf"%self['tag'])):
+               misc.glob("%s_MA5_parton_analysis_*.pdf"%self['tag'], path):
                 self.parton.append('ma5_plot')                
 
             if 'ma5_html' not in self.parton and \
-               glob.glob(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS_*'%self['tag'],
-                                 'HTML','index.html')):
+               misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag'],'HTML','index.html'),html_path):
                 self.parton.append('ma5_html')                
             
             if 'ma5_card' not in self.parton and \
-                glob.glob(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS_*'%self['tag'],
-                                                                'history.ma5')):
+                misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag'],'history.ma5'),html_path):
                 self.parton.append('ma5_card')
 
             if 'done' not in self.madanalysis5_parton and \
@@ -862,12 +860,11 @@ class OneTagResults(dict):
         if level in ['madanalysis5_hadron','all'] and 'madanalysis5_hadron' not in nolevel:
 
             if 'ma5_plot' not in self.madanalysis5_hadron and \
-              glob.glob(pjoin(path,"%s_MA5_hadron_analysis_*.pdf"%self['tag'])):
+              misc.glob(pjoin("%s_MA5_hadron_analysis_*.pdf"%self['tag']),path):
                 self.madanalysis5_hadron.append('ma5_plot')                
 
             if 'ma5_html' not in self.madanalysis5_hadron and \
-               glob.glob(pjoin(html_path,'%s_MA5_HADRON_ANALYSIS_*'%self['tag'],
-                                 'HTML','index.html')):
+               misc.glob(pjoin('%s_MA5_HADRON_ANALYSIS_*'%self['tag'],'HTML','index.html'),html_path):
                 self.madanalysis5_hadron.append('ma5_html')                
 
             if 'ma5_cls' not in self.madanalysis5_hadron and \
@@ -875,8 +872,7 @@ class OneTagResults(dict):
                 self.madanalysis5_hadron.append('ma5_cls') 
      
             if 'ma5_card' not in self.madanalysis5_hadron and \
-               glob.glob(pjoin(html_path,'%s_MA5_PARTON_ANALYSIS_*'%self['tag'],
-                                                                'history.ma5')):
+               misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag'],'history.ma5'),html_path):
                 self.madanalysis5_hadron.append('ma5_card')
 
         if level in ['shower','all'] and 'shower' not in nolevel \
@@ -1053,8 +1049,8 @@ class OneTagResults(dict):
                         out += " <a href=\"%s\">%s</a> " % (f, '%s' % kind.upper())
             
             if 'ma5_html' in self.parton:
-                for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
-                                       '%s_MA5_PARTON_ANALYSIS_*'%self['tag'])):
+                for result in misc.glob(pjoin('%s_MA5_PARTON_ANALYSIS_*'%self['tag']),
+                                        pjoin(self.me_dir,'HTML',self['run_name'])):
                     target    = pjoin(os.curdir,os.path.relpath(result,self.me_dir),'HTML','index.html')
                     link_name = os.path.basename(result).split('PARTON_ANALYSIS')[-1]
                     out += """ <a href="%s">MA5_report%s</a> """%(target, link_name)
@@ -1162,8 +1158,8 @@ class OneTagResults(dict):
             if 'ma5_html' in self.madanalysis5_hadron:
                 # First link analysis results
                 linked_analysis = False
-                for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
-                                       '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
+                for result in misc.glob(pjoin('%s_MA5_HADRON_ANALYSIS_*'%self['tag']),
+                                        pjoin(self.me_dir,'HTML',self['run_name'])):
                     target    = pjoin(os.curdir,os.path.relpath(result,self.me_dir),'HTML','index.html')
                     link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]
                     if link_name.startswith('_reco_'):
@@ -1177,8 +1173,8 @@ class OneTagResults(dict):
     
                 # Also link reco results if no analysis was found
                 if not linked_analysis:
-                    for result in glob.glob(pjoin(self.me_dir,'HTML',self['run_name'],
-                                       '%s_MA5_HADRON_ANALYSIS_*'%self['tag'])):
+                    for result in misc.glob(pjoin('%s_MA5_HADRON_ANALYSIS_*'%self['tag']),
+                                            pjoin(self.me_dir,'HTML',self['run_name'])):
                         target    = pjoin(os.curdir,os.path.relpath(
                                         result,self.me_dir),'HTML','index.html')
                         link_name = os.path.basename(result).split('HADRON_ANALYSIS')[-1]

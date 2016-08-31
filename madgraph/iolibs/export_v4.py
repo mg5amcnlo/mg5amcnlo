@@ -3872,9 +3872,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # List of default pdgs to be considered for the CKKWl merging cut
         self.proc_characteristic['colored_pdgs'] = \
-          str(sorted(list(set([abs(p.get('pdg_code')) for p in
+          sorted(list(set([abs(p.get('pdg_code')) for p in
             matrix_element.get('processes')[0].get('model').get('particles') if
-                                                           p.get('color')>1]))))
+                                                           p.get('color')>1])))
 
         if ninitial < 1 or ninitial > 2:
             raise writers.FortranWriter.FortranWriterError, \

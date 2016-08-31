@@ -3296,6 +3296,73 @@ Beware that this can be dangerous for local multicore runs.""")
         """launch MadAnalysis5 at the parton level."""
         return self.run_madanalysis5(line,mode='parton')
 
+    #===============================================================================
+    # Return a warning (if applicable) on the consistency of the current Pythia8
+    # and MG5_aMC version specified. It is placed here because it should be accessible
+    # from both madgraph5_interface and madevent_interface
+    #===============================================================================
+    @staticmethod
+    def mg5amc_py8_interface_consistency_warning(options):
+        """ Check the consistency of the mg5amc_py8_interface installed with
+        the current MG5 and Pythia8 versions. """
+    
+        # All this is only relevant is Pythia8 is interfaced to MG5
+        if not options['pythia8_path']:
+            return None
+        
+        if not options['mg5amc_py8_interface_path']:
+            return \
+    """
+    A Pythia8 path is specified via the option 'pythia8_path' but no path for option
+    'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
+    leading order simulations with MadEvent.
+    Consider installing the MG5_aMC-PY8 interface with the following command:
+     MG5_aMC>install mg5amc_py8_interface
+    """
+        
+        # Retrieve all the on-install and current versions  
+        MG5_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                           'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+        if MG5_version_on_install == 'UNSPECIFIED':
+            MG5_version_on_install = None
+        PY8_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+                              'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+        MG5_curr_version =misc.get_pkg_info()['version']
+        try:
+            p = subprocess.Popen(['./get_pythia8_version.py',options['pythia8_path']],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                       cwd=options['mg5amc_py8_interface_path'])
+            (out, err) = p.communicate()
+            out = out.replace('\n','')
+            PY8_curr_version = out
+            # In order to test that the version is correctly formed, we try to cast
+            # it to a float
+            float(out)
+        except:
+            PY8_curr_version = None
+    
+        if not MG5_version_on_install is None and not MG5_curr_version is None:
+            if MG5_version_on_install != MG5_curr_version:
+                return \
+    """
+    The current version of MG5_aMC (v%s) is different than the one active when
+    installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    """%(MG5_curr_version, MG5_version_on_install)
+    
+        if not PY8_version_on_install is None and not PY8_curr_version is None:
+            if PY8_version_on_install != PY8_curr_version:
+                return \
+    """
+    The current version of Pythia8 (v%s) is different than the one active when
+    installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    """%(PY8_curr_version,PY8_version_on_install)
+    
+        return None
+
     def setup_Pythia8RunAndCard(self, PY8_Card, run_type):
         """ Setup the Pythia8 Run environment and card. In particular all the process and run specific parameters
         of the card are automatically set here. This function returns the path where HEPMC events will be output,
@@ -3450,7 +3517,9 @@ already exists and is not a fifo file."""%fifo_path)
     
             if PY8_Card['Merging:Process']=='<set_by_user>':
                 raise self.InvalidCmd('When running CKKWl merging, the user must'+
-                    " specifiy the option 'Merging:Process' in pythia8_card.dat")
+                    " specifiy the option 'Merging:Process' in pythia8_card.dat.\n"+
+                    "Read section 'Defining the hard process' of "+\
+                    "http://home.thep.lu.se/~torbjorn/pythia81html/CKKWLMerging.html for more information.")
             PY8_Card.MadGraphSet('TimeShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
@@ -3543,7 +3612,7 @@ Please install this tool with the following MG5_aMC command:
         else:
             pythia_main = pjoin(self.options['mg5amc_py8_interface_path'],
                                                          'MG5aMC_PY8_interface')
-            warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+            warnings = MadEventCmd.mg5amc_py8_interface_consistency_warning(self.options)
             if warnings:
                 logger.warning(warnings)
 
