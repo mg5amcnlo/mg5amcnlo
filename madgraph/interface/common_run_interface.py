@@ -1152,7 +1152,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     
             if not madir or not td or \
                 not os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')):
-                misc.sprint('no plot card?', os.path.exists(pjoin(self.me_dir, 'Cards', 'plot_card.dat')))
                 return False
         else:
             PY8_plots_root_path = pjoin(self.me_dir,'HTML',
