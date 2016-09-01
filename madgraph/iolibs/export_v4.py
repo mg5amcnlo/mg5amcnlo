@@ -229,15 +229,14 @@ class ProcessExporterFortran(VirtualExporter):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
-            # Duplicate run_card and plot_card
+            # copy plot_card
             for card in ['plot_card']:
-                try:
-                    shutil.copy(pjoin(self.dir_path, 'Cards',
-                                             card + '.dat'),
-                               pjoin(self.dir_path, 'Cards',
-                                            card + '_default.dat'))
-                except IOError:
-                    logger.warning("Failed to copy " + card + ".dat to default")
+                if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                    try:
+                        shutil.copy(pjoin(self.dir_path, 'Cards',card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '_default.dat'))
+                    except IOError:
+                        logger.warning("Failed to copy " + card + ".dat to default")
         elif os.getcwd() == os.path.realpath(self.dir_path):
             logger.info('working in local directory: %s' % \
                                                 os.path.realpath(self.dir_path))
@@ -254,15 +253,14 @@ class ProcessExporterFortran(VirtualExporter):
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template/Common'), 
                                self.dir_path)
-            # Duplicate run_card and plot_card
+            # Copy plot_card
             for card in ['plot_card']:
-                try:
-                    shutil.copy(pjoin(self.dir_path, 'Cards',
-                                             card + '.dat'),
-                               pjoin(self.dir_path, 'Cards',
-                                            card + '_default.dat'))
-                except IOError:
-                    logger.warning("Failed to copy " + card + ".dat to default")            
+                if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                    try:
+                        shutil.copy(pjoin(self.dir_path, 'Cards', card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '_default.dat'))
+                    except IOError:
+                        logger.warning("Failed to copy " + card + ".dat to default")            
         elif not os.path.isfile(pjoin(self.dir_path, 'TemplateVersion.txt')):
             assert self.mgme_dir, \
                       "No valid MG_ME path given for MG4 run directory creation."
@@ -318,16 +316,20 @@ class ProcessExporterFortran(VirtualExporter):
             return
         
         logger.info('Generating MadAnalysis5 default cards tailored to this process')
-        MA5_interpreter = misc.get_MadAnalysis5_interpreter(MG5DIR,ma5_path,
-                                                                   loglevel=100)
+        MA5_interpreter = common_run_interface.CommonRunCmd.\
+                          get_MadAnalysis5_interpreter(MG5DIR,ma5_path,loglevel=100)
         MA5_main = MA5_interpreter.main
        
         for lvl in ['parton','hadron']:
             if lvl in levels:
+                card_to_generate = pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl)
                 try:
-                    open(pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl),'w').write(
+                    open(card_to_generate,'w').write(
                         MA5_main.madgraph.generate_card(history, proc_defs, processes,lvl))
                 except Exception as e:
+                    # Make sure to remove the card generated
+                    if os.path.isfile(card_to_generate):
+                        os.remove(card_to_generate)
                     logger.warning('MadAnalysis5 failed to write a %s-level'%lvl+
                                                   ' default analysis card for this process.')
                     logger.warning('Therefore, %s-level analysis with MadAnalysis5 will not be possible.'%lvl)
@@ -397,8 +399,12 @@ class ProcessExporterFortran(VirtualExporter):
     def finalize(self, matrix_elements, history='', mg5options={}, flaglist=[]):
         """Function to finalize v4 directory, for inheritance.""" 
         
-        self.create_run_card(matrix_elements, history)         
-
+        self.create_run_card(matrix_elements, history)
+        self.create_MA5_cards(matrix_elements, history)
+    
+    def create_MA5_cards(self,matrix_elements,history):
+        """ A wrapper around the creation of the MA5 cards so that it can be 
+        bypassed by daughter classes (i.e. in standalone)."""
         if 'madanalysis5_path' in self.opt and not \
                 self.opt['madanalysis5_path'] is None and not self.proc_defs is None:
             processes = None
@@ -408,11 +414,18 @@ class ProcessExporterFortran(VirtualExporter):
             elif matrix_elements:
                 processes = [me.get('processes') 
                                  for me in matrix_elements['matrix_elements']]
+            
             self.create_default_madanalysis5_cards(
                 history, self.proc_defs, processes,
                 self.opt['madanalysis5_path'], pjoin(self.dir_path,'Cards'),
                 levels = ['hadron','parton'])
-        
+            
+            for level in ['hadron','parton']:
+                # Copying these cards turn on the use of MadAnalysis5 by default.
+                if os.path.isfile(pjoin(self.dir_path,'Cards','madanalysis5_%s_card_default.dat'%level)):
+                    shutil.copy(pjoin(self.dir_path,'Cards','madanalysis5_%s_card_default.dat'%level),
+                                pjoin(self.dir_path,'Cards','madanalysis5_%s_card.dat'%level))
+
     #===========================================================================
     # Create the proc_characteristic file passing information to the run_interface
     #===========================================================================
@@ -600,7 +613,8 @@ class ProcessExporterFortran(VirtualExporter):
         return ['$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
-                '$(LIBDIR)libcernlib.$(libext)']
+                '$(LIBDIR)libcernlib.$(libext)',
+                '$(LIBDIR)libbias.$(libext)']
 
     #===========================================================================
     # write_source_makefile
@@ -1761,7 +1775,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         logger.info('Use c++ compiler ' + compiler)
         self.replace_make_opt_c_compiler(compiler)
         # Replace also for Template but not for cluster
-        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite:
+        if not os.environ.has_key('MADGRAPH_DATA') and ReadWrite and \
+           not __debug__ and not os.path.exists(pjoin(MG5DIR,'bin','create_release.py')):
             self.replace_make_opt_c_compiler(compiler, pjoin(MG5DIR, 'Template', 'LO'))
         
         return compiler
@@ -1959,7 +1974,9 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                            pjoin(self.dir_path, 'Source', 'PDF'))
             self.write_pdf_opendata()
 
-
+    def create_MA5_cards(self,*args,**opts):
+        """ Overload the function of the mother so as to bypass this in StandAlone."""
+        pass
 
     def compiler_choice(self, compiler):
         """ Different daughter classes might want different compilers.
@@ -3849,7 +3866,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
             orders = diag.calculate_orders()
             if 'QCD' in orders:
                 max_qcd_order = max(max_qcd_order,orders['QCD'])
-        max_n_light_final_partons = max(len([1 for id in proc.get_initial_ids() 
+        max_n_light_final_partons = max(len([1 for id in proc.get_final_ids() 
             if proc.get('model').get_particle(id).get('mass')=='ZERO' and
                proc.get('model').get_particle(id).get('color')>1])
                                     for proc in matrix_element.get('processes'))
@@ -3860,9 +3877,9 @@ class ProcessExporterFortranME(ProcessExporterFortran):
 
         # List of default pdgs to be considered for the CKKWl merging cut
         self.proc_characteristic['colored_pdgs'] = \
-          str(sorted(list(set([abs(p.get('pdg_code')) for p in
+          sorted(list(set([abs(p.get('pdg_code')) for p in
             matrix_element.get('processes')[0].get('model').get('particles') if
-                                                           p.get('color')>1]))))
+                                                           p.get('color')>1])))
 
         if ninitial < 1 or ninitial > 2:
             raise writers.FortranWriter.FortranWriterError, \

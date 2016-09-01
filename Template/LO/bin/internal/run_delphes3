@@ -52,5 +52,6 @@ echo $$ >> ../myprocid
 #    sed -e "s/^/#/g" ${run}/${run}_${tag}_banner.txt > ${run}/${tag}_delphes_events.lhco
 #    echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
 #    cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
+#    gzip ${run}/${tag}_delphes_events.lhco
 #    rm -f delphes_events.lhco
 #fi

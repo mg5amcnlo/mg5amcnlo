@@ -38,6 +38,7 @@ import time
 import traceback
 import glob
 import sets
+import StringIO
 
 try:
     import readline
@@ -889,18 +890,23 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         question = """Do you want to edit a card (press enter to bypass editing)?\n"""
         possible_answer = ['0', 'done']
         card = {0:'done'}
-
+        
+        indent = max(len(path2name(card_name)) for card_name in cards)
+        question += '/'+'-'*60+'\\\n'
         for i, card_name in enumerate(cards):
             imode = path2name(card_name)
             possible_answer.append(i+1)
             possible_answer.append(imode)
-            question += '  %s / %-10s : %s\n' % (i+1, imode, card_name)
+            question += '| %-77s|\n'%((' \x1b[31m%%s\x1b[0m. %%-%ds : \x1b[32m%%s\x1b[0m'%indent)%(i+1, imode, card_name))
             card[i+1] = imode
-        if plot:
-            question += '  9 / %-10s : plot_card.dat\n' % 'plot'
+            
+        if plot and not 'plot_card.dat' in cards:
+            question += '| %-77s|\n'%((' \x1b[31m9\x1b[0m. %%-%ds : \x1b[32mplot_card.dat\x1b[0m'%indent) % 'plot')
             possible_answer.append(9)
             possible_answer.append('plot')
             card[9] = 'plot'
+
+        question += '\\'+'-'*60+'/\n'
 
         if 'param_card.dat' in cards:
             # Add the path options
@@ -2100,6 +2106,101 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     ############################################################################
     # Start of MadAnalysis5 related function
     ############################################################################
+
+    @staticmethod
+    def runMA5(MA5_interpreter, MA5_cmds, MA5_runtag, logfile_path, advertise_log=True):
+        """ Run MA5 in a controlled environnment."""
+        successfull_MA5_run = True
+        try:
+            # Predefine MA5_logger as None in case we don't manage to retrieve it.
+            MA5_logger = None
+            MA5_logger = logging.getLogger('MA5')
+            BackUp_MA5_handlers = MA5_logger.handlers
+            for handler in BackUp_MA5_handlers:
+                MA5_logger.removeHandler(handler)
+            file_handler = logging.FileHandler(logfile_path)
+            MA5_logger.addHandler(file_handler)
+            if advertise_log:
+                logger.info("Follow Madanalysis5 run with the following command in a separate terminal:")
+                logger.info('  tail -f %s'%logfile_path)
+            # Now the magic, finally call MA5.
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                with misc.stdchannel_redirected(sys.stderr, os.devnull):
+                    MA5_interpreter.load(MA5_cmds)
+        except Exception as e:
+            logger.warning("MadAnalysis5 failed to run the commands for task "+
+                             "'%s'. Madanalys5 analysis will be skipped."%MA5_runtag)
+            error=StringIO.StringIO()
+            traceback.print_exc(file=error)
+            logger.debug('MadAnalysis5 error was:')
+            logger.debug('-'*60)
+            logger.debug(error.getvalue()[:-1])
+            logger.debug('-'*60)
+            successfull_MA5_run = False
+        finally:
+            if not MA5_logger is None:
+                for handler in MA5_logger.handlers:
+                    MA5_logger.removeHandler(handler)
+                for handler in BackUp_MA5_handlers:
+                    MA5_logger.addHandler(handler)
+        
+        return successfull_MA5_run
+
+    #===============================================================================
+    # Return a Main instance of MadAnlysis5, provided its path
+    #===============================================================================
+    @staticmethod
+    def get_MadAnalysis5_interpreter(mg5_path, ma5_path, mg5_interface=None, 
+                    logstream = sys.stdout, loglevel =logging.INFO, forced = True):
+        """ Makes sure to correctly setup paths and constructs and return an MA5 path"""
+        
+        MA5path = os.path.normpath(pjoin(mg5_path,ma5_path)) 
+        
+        if MA5path is None or not os.path.isfile(pjoin(MA5path,'bin','ma5')):
+            return None
+        if MA5path not in sys.path:
+            sys.path.insert(0, MA5path)
+    
+        try:
+            # We must backup the readline module attributes because they get modified
+            # when MA5 imports root and that supersedes MG5 autocompletion
+            import readline
+            old_completer = readline.get_completer()
+            old_delims    = readline.get_completer_delims()
+            old_history   = [readline.get_history_item(i) for i in range(1,readline.get_current_history_length()+1)]
+        except ImportError:
+            old_completer, old_delims, old_history = None, None, None
+        try:
+            from madanalysis.interpreter.ma5_interpreter import MA5Interpreter
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                with misc.stdchannel_redirected(sys.stderr, os.devnull):
+                    MA5_interpreter = MA5Interpreter(MA5path, LoggerLevel=loglevel,
+                                                     LoggerStream=logstream,forced=forced)
+        except Exception as e:
+            logger.warning('MadAnalysis5 failed to start so that MA5 analysis will be skipped.')
+            error=StringIO.StringIO()
+            traceback.print_exc(file=error)
+            logger.debug('MadAnalysis5 error was:')
+            logger.debug('-'*60)
+            logger.debug(error.getvalue()[:-1])
+            logger.debug('-'*60)          
+            MA5_interpreter = None
+        finally:
+            # Now restore the readline MG5 state
+            if not old_history is None:
+                readline.clear_history()
+                for line in old_history:
+                    readline.add_history(line)
+            if not old_completer is None:
+                readline.set_completer(old_completer)
+            if not old_delims is None:
+                readline.set_completer_delims(old_delims)
+            # Also restore the completion_display_matches_hook if an mg5 interface
+            # is specified as it could also have been potentially modified
+            if not mg5_interface is None and any(not elem is None for elem in [old_completer, old_delims, old_history]):
+                mg5_interface.set_readline_completion_display_matches_hook()
+
+        return MA5_interpreter
     
     def check_madanalysis5(self, args, mode='parton'):
         """Check the argument for the madanalysis5 command
@@ -2194,7 +2295,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     misc.gzip(input_file, keep=True, stdout=output_file)
                 else:
                     logger.warning("LHE event file not found in \n%s\ns"%input_file+
-                                       "AboringParton level MA5 analysis is disabled.")                    
+                                       "Parton-level MA5 analysis will be skipped.")                 
     
         if mode=='hadron':
             # Make sure to store current results (like Pythia8 hep files)
@@ -2227,8 +2328,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
                 # Now select one source per tag, giving priority to unzipped 
                 # files with 'events' in their name (case-insensitive).
-                file_candidates = glob.glob(pjoin(self.me_dir,'Events',self.run_name,htag))+\
-                            glob.glob(pjoin(self.me_dir,'Events',self.run_name,'%s.gz'%htag))
+                file_candidates = misc.glob(htag, pjoin(self.me_dir,'Events',self.run_name))+\
+                                  misc.glob('%s.gz'%htag, pjoin(self.me_dir,'Events',self.run_name))
                 priority_files = [f for f in file_candidates if 
                                 self.run_card['run_tag'] in os.path.basename(f)]
                 priority_files = [f for f in priority_files if
@@ -2279,8 +2380,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             #return valid run_name
             data = []
             for name in banner_mod.MadAnalysis5Card._default_hadron_inputs:
-                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
-                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+                data += misc.glob(pjoin('*','%s'%name), pjoin(self.me_dir, 'Events'))
+                data += misc.glob(pjoin('*','%s.gz'%name), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -2372,18 +2473,15 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 UFO_model_path=pjoin(self.me_dir,'bin','internal','ufomodel'),
                 run_tag = self.run_tag)
 
-############################# TEMPORARY ########################################
 #       Here's how to print the MA5 commands generated by MG5aMC
 #        for MA5_runtag, MA5_cmds in MA5_cmds_list:
 #            misc.sprint('****************************************')
 #            misc.sprint('* Commands for MA5 runtag %s:'%MA5_runtag)
 #            misc.sprint('\n'+('\n'.join('* %s'%cmd for cmd in MA5_cmds)))
 #            misc.sprint('****************************************')
-############################# TEMPORARY ########################################
         
-        logger.info('-------------------------------------------','$MG:color:GREEN')
-        logger.info('Now starting MadAnalysis5 [arXiv:1206.1599]','$MG:color:GREEN')
-        logger.info('-------------------------------------------','$MG:color:GREEN')
+        self.update_status('\033[92mRunning MadAnalysis5 [arXiv:1206.1599]\033[0m', 
+                           level='madanalysis5_%s'%mode)
         if mode=='hadron':
             logger.info('Hadron input files considered:')
             for input in MA5_opts['inputs']:
@@ -2391,7 +2489,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         elif mode=='parton':
             logger.info('Parton input file considered:')
             logger.info('  --> %s'%MA5_opts['inputs'])
-        logger.info('-------------------------------------------','$MG:color:GREEN')
 
         # Obtain a main MA5 interpreter
         # Ideally we would like to do it all with a single interpreter
@@ -2404,40 +2501,54 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             MA5_lvl = MA5_opts['MA5_stdout_lvl']
 
-        MA5_interpreter = misc.get_MadAnalysis5_interpreter(
+        # Bypass initialization information
+        MA5_interpreter = CommonRunCmd.get_MadAnalysis5_interpreter(
                 self.options['mg5_path'], 
                 self.options['madanalysis5_path'],
                 logstream=sys.stdout,
-                loglevel=MA5_lvl,
+                loglevel=100,
                 forced=True)
+
+
+        # If failed to start MA5, then just leave
+        if MA5_interpreter is None:
+            return
 
         # Now loop over the different MA5_runs
         for MA5_runtag, MA5_cmds in MA5_cmds_list:
             
+            # Bypass the banner.
+            MA5_interpreter.setLogLevel(100)
             # Make sure to properly initialize MA5 interpreter
             if mode=='hadron':
                 MA5_interpreter.init_reco()
             else:
                 MA5_interpreter.init_parton()
+            MA5_interpreter.setLogLevel(MA5_lvl)
             
             if MA5_runtag!='default':
                 if MA5_runtag.startswith('_reco_'):
                     logger.info("MadAnalysis5 now running the reconstruction '%s'..."%
-                                              MA5_runtag[6:],'$MG:color:GREEN')
+                                                     MA5_runtag[6:],'$MG:color:GREEN')
                 elif MA5_runtag=='Recasting':
                     logger.info("MadAnalysis5 now running the recasting...",
                                                               '$MG:color:GREEN') 
                 else:
                     logger.info("MadAnalysis5 now running the '%s' analysis..."%
-                                                   MA5_runtag,'$MG:color:GREEN')                    
-            # Now the magic, finally call MA5.
-            MA5_interpreter.load(MA5_cmds)
-                     
+                                                   MA5_runtag,'$MG:color:GREEN')
+                    
+            
+            # Now the magic, let's call MA5
+            if not CommonRunCmd.runMA5(MA5_interpreter, MA5_cmds, MA5_runtag,
+                pjoin(self.me_dir,'Events',self.run_name,'%s_MA5_%s.log'%(self.run_tag,MA5_runtag))):
+                # Unsuccessful MA5 run, we therefore stop here.
+                return
+
             if MA5_runtag.startswith('_reco_'):
-                # When doing a reconstruction we must first copy the event file
-                # created and then directly proceed to the next batch of instructions
-                # There can be several output directory if there were several
-                # input files.
+                # When doing a reconstruction we must first link the event file
+                # created with MA5 reconstruction and then directly proceed to the
+                # next batch of instructions. There can be several output directory 
+                # if there were several input files.
                 links_created=[]
                 for i, input in enumerate(MA5_opts['inputs']):
                     # Make sure it is not an lhco or root input, which would not
@@ -2447,9 +2558,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     reco_output = pjoin(self.me_dir,
                            'MA5_%s_ANALYSIS%s_%d'%(mode.upper(),MA5_runtag,i+1))
                     # Look for either a root or .lhe.gz output
-                    reco_event_file = glob.glob(pjoin(reco_output,'Output',
-                      '_reco_events','*.lhe.gz')) + glob.glob(pjoin(
-                                  reco_output,'Output','_reco_events','*.root'))
+                    reco_event_file = misc.glob('*.lhe.gz',pjoin(reco_output,'Output','_reco_events'))+\
+                                      misc.glob('*.root',pjoin(reco_output,'Output','_reco_events'))
                     if len(reco_event_file)==0:
                         raise MadGraph5Error, "MadAnalysis5 failed to produce the "+\
                   "reconstructed event file for reconstruction '%s'."%MA5_runtag[6:]
@@ -2479,7 +2589,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                   %(mode.upper(),MA5_runtag),'PDF','main.pdf')
             if not os.path.isfile(target):
                 raise MadGraph5Error, "MadAnalysis5 failed to produced "+\
-          "an output for the parton analysis '%s' in\n   %s"%(MA5_runtag,target)
+                        "an output for the analysis '%s' in\n   %s"%(MA5_runtag,target)
 
             # Copy the PDF report or CLs in the Events/run directory.
             if MA5_runtag.upper()=='RECASTING':
@@ -2511,7 +2621,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         for detail in new_details:
             self.results.add_detail(detail,new_details[detail])
 
-        self.update_status('finish', level='madanalysis5_%s'%mode,
+        self.update_status('Finished MA5 analyses.', level='madanalysis5_%s'%mode,
                                                                  makehtml=False)
  
         #Update the banner
@@ -2597,8 +2707,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         cwd=pjoin(self.me_dir,'Events'))
 
         if not os.path.exists(pjoin(self.me_dir, 'Events',
+                                self.run_name, '%s_delphes_events.lhco.gz' % tag))\
+          and not os.path.exists(pjoin(self.me_dir, 'Events',
                                 self.run_name, '%s_delphes_events.lhco' % tag)):
-            logger.warning('We do not create lhco by default anymore')
+            logger.info('If you are interested in lhco output. please run root2lhco converter.')
+            logger.info(' or edit bin/internal/run_delphes3 to run the converter automatically.')
 
 
         #eradir = self.options['exrootanalysis_path']
@@ -2614,6 +2727,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             misc.gzip(pjoin(self.me_dir, 'Events', self.run_name, '%s_delphes_events.lhco' % tag))
 
         self.update_status('delphes done', level='delphes', makehtml=False)
+
 
     ############################################################################
     def get_pid_final_initial_states(self):
@@ -2983,6 +3097,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 logger.info(' Idle: %s,  Running: %s,  Completed: %s' % status[:3])
 
+        if isinstance(status, str) and  status.startswith('\x1b['):
+            status = status[status.index('m')+1:-7]
         if 'arXiv' in status:
             if '[' in status:
                 status = status.split('[',1)[0]
@@ -2999,7 +3115,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         check_card = ['pythia_card.dat', 'pgs_card.dat','delphes_card.dat',
                       'delphes_trigger.dat', 'madspin_card.dat', 'shower_card.dat',
                       'reweight_card.dat','pythia8_card.dat',
-                      'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',]
+                      'madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',
+                      'plot_card.dat']
 
         cards_path = pjoin(self.me_dir,'Cards')
         for card in check_card:
@@ -3732,7 +3849,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
               '   Set the type of beam to a given value for both beam\n'+\
               '   0 : means no PDF\n'+\
               '   1 : means proton PDF\n'+\
-              '  -1 : means proton PDF\n'+\
+              '  -1 : means antiproton PDF\n'+\
               '   2 : means PDF for elastic photon emited from a proton\n'+\
               '   3 : means PDF for elastic photon emited from an electron',
     'lhc'   : 'syntax: set lhc VALUE:\n      Set for a proton-proton collision with that given center of mass energy (in TeV)',
@@ -3789,8 +3906,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['reweight'] = pjoin(self.me_dir,'Cards','reweight_card.dat')
         self.paths['delphes'] = pjoin(self.me_dir,'Cards','delphes_card.dat')
         self.paths['plot'] = pjoin(self.me_dir,'Cards','plot_card.dat')
+        self.paths['plot_default'] = pjoin(self.me_dir,'Cards','plot_card_default.dat')
         self.paths['madanalysis5_parton'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card.dat')
         self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat')
+        self.paths['madanalysis5_parton_default'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')
+        self.paths['madanalysis5_hadron_default'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
@@ -3937,7 +4057,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     self.conflict.append(var)
 
     def do_help(self, line, conflict_raise=False, banner=True):    
-     try:                
+#     try:                
         if banner:                      
             logger.info('*** HELP MESSAGE ***', '$MG:color:BLACK')
          
@@ -3969,9 +4089,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         start = 0
         card = ''
-        if  args[0]+'_card' in self.all_card_name:
+        if  args[0]+'_card' in self.all_card_name+ self.cards:
             args[0] += '_card'
-        if args[0] in self.all_card_name:
+        elif  args[0]+'.dat' in self.all_card_name+ self.cards:
+            args[0] += '.dat'
+        elif  args[0]+'_card.dat' in self.all_card_name+ self.cards:
+            args[0] += '_card.dat'
+        if args[0] in self.all_card_name + self.cards:
             start += 1
             card = args[0]
             if len(args) == 1:
@@ -3982,6 +4106,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     print "File to define the various model parameter"
                     logger.info("List of the Block defined:",'$MG:color:BLUE')
                     print "\t".join(self.param_card.keys())
+                elif args[0].startswith('madanalysis5'):
+                    print 'This card allow to make plot with the madanalysis5 package'
+                    print 'An example card is provided. For more information about the '
+                    print 'syntax please refer to: https://madanalysis.irmp.ucl.ac.be/'
+                    print 'or to the user manual [arXiv:1206.1599]'
+                    if args[0].startswith('madanalysis5_hadron'):
+                        print 
+                        print 'This card also allow to make recasting analysis'
+                        print 'For more detail, see: arXiv:1407.3278'                   
                 elif hasattr(self, args[0]):
                     logger.info("%s information: " % args[0], '$MG:color:BLUE')
                     print(eval('self.%s' % args[0]).__doc__)
@@ -4074,7 +4207,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('**   If not explicitely speficy this parameter  will modif the pythia8_card file', '$MG:color:BLACK')  
 
             self.PY8Card.do_help(args[start])
-                
+        elif card.startswith('madanalysis5'):
+            print 'MA5'
+            
+            
         else:
             print "no help available" 
           
@@ -4082,22 +4218,23 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             logger.info('*** END HELP ***', '$MG:color:BLACK')    
         #raw_input('press enter to quit the help')
         return        
-     except Exception, error:
-         if __debug__:
-             import traceback
-             traceback.print_exc()
-             print error    
+#     except Exception, error:
+#         if __debug__:
+#             import traceback
+#             traceback.print_exc()
+#             print error    
 
     def complete_help(self, text, line, begidx, endidx):
-     try:
+#     try:
         possibilities = self.complete_set(text, line, begidx, endidx,formatting=False)
-        if line == '':
+        if line[:begidx].strip() == 'help':
             possibilities['Defined command'] = cmd.BasicCmd.completenames(self, text, line)#, begidx, endidx)
+            possibilities.update(self.complete_add(text, line, begidx, endidx,formatting=False))
         return self.deal_multiple_categories(possibilities)
-     except Exception, error:
-         import traceback
-         traceback.print_exc()
-         print error
+#     except Exception, error:
+#         import traceback
+#         traceback.print_exc()
+#         print error
 
 
     def complete_set(self, text, line, begidx, endidx, formatting=True):
@@ -4155,7 +4292,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         else:
             start = 1
             if args[1] in  ['run_card', 'param_card', 'MadWeight_card', 'shower_card', 
-                            'MadLoop_card','pythia8_card','delphes_card']:
+                            'MadLoop_card','pythia8_card','delphes_card','plot_card',
+                            'madanalysis5_parton_card','madanalysis5_hadron_card']:
                 start = 2
             if args[-1] in self.pname2block.keys():
                 allowed['value'] = 'default'
@@ -4428,7 +4566,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             
             
         if args[0] in ['run_card', 'param_card', 'MadWeight_card', 'shower_card',
-                       'delphes_card']:
+                       'delphes_card','madanalysis5_hadron_card','madanalysis5_parton_card']:
             if args[1] == 'default':
                 logger.info('replace %s by the default card' % args[0],'$MG:color:BLACK')
                 files.cp(self.paths['%s_default' %args[0][:-5]], self.paths[args[0][:-5]])
@@ -4827,7 +4965,19 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
-                    
+                    modify.append('run')
+        
+        # @LO if PY6 shower => event_norm on sum
+        if 'pythia_card.dat' in self.cards:
+            if self.run_card['event_norm'] != 'sum':
+                logger.info('Pythia6 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
+                self.do_set('run_card event_norm sum') 
+        # @LO if PY6 shower => event_norm on sum
+        elif 'pythia8_card.dat' in self.cards:
+            if self.run_card['event_norm'] == 'sum':
+                logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
+                self.do_set('run_card event_norm average')         
+                
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
             modify_extralibs, modify_extrapaths = False,False
@@ -5120,7 +5270,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '-- syntax: add filename line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
         logger.info('********************* HELP ADD ***************************') 
-    def complete_add(self, text, line, begidx, endidx):
+    def complete_add(self, text, line, begidx, endidx, formatting=True):
         """ auto-completion for add command"""
         signal.alarm(0) # avoid timer if any
                  
@@ -5129,7 +5279,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, cards)
                           
-        return self.deal_multiple_categories(possibilities)
+        return self.deal_multiple_categories(possibilities, formatting)
     
     def do_add(self, line):
         """ syntax: add filename NAME VALUE

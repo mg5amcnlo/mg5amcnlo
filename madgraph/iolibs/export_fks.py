@@ -84,10 +84,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         Template, and clean the directory
         For now it is just the same as copy_v4template, but it will be modified
         """
+        
         mgme_dir = self.mgme_dir
         dir_path = self.dir_path
         clean =self.opt['clean']
-        
         
         #First copy the full template tree if dir_path doesn't exit
         if not os.path.isdir(dir_path):
@@ -98,8 +98,16 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                         os.path.basename(dir_path))
             shutil.copytree(os.path.join(mgme_dir, 'Template', 'NLO'), dir_path, True)
             # distutils.dir_util.copy_tree since dir_path already exists
-            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
-                               dir_path)
+            dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),dir_path)
+            # Copy plot_card
+            for card in ['plot_card']:
+                if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                    try:
+                        shutil.copy(pjoin(self.dir_path, 'Cards', card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '_default.dat'))
+                    except IOError:
+                        logger.warning("Failed to move " + card + ".dat to default")
+            
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \
@@ -905,7 +913,14 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         # Create the default MadAnalysis5 cards
         if 'madanalysis5_path' in self.opt and not \
                 self.opt['madanalysis5_path'] is None and not self.proc_defs is None:
-            processes = sum([me.get('processes') for me in matrix_elements.get('matrix_elements')],[])
+            # When using 
+            processes = sum([me.get('processes') if not isinstance(me, str) else [] \
+                                for me in matrix_elements.get('matrix_elements')],[])
+            if len(processes)==0:
+                logger.warning(
+"""MG5aMC could not provide to Madanalysis5 the list of processes generated.
+As a result, the default card will not be tailored to the process generated.
+This typically happens when using the 'low_mem_multicore_nlo_generation' NLO generation mode.""")
             # For now, simply assign all processes to each proc_defs.
             # That shouldn't really affect the default analysis card created by MA5
             self.create_default_madanalysis5_cards(
@@ -3103,6 +3118,15 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
             # distutils.dir_util.copy_tree since dir_path already exists
             dir_util.copy_tree(pjoin(self.mgme_dir, 'Template', 'Common'),
                                dir_path)
+            # Copy plot_card
+            for card in ['plot_card']:
+                if os.path.isfile(pjoin(self.dir_path, 'Cards',card + '.dat')):
+                    try:
+                        shutil.copy(pjoin(self.dir_path, 'Cards', card + '.dat'),
+                                   pjoin(self.dir_path, 'Cards', card + '_default.dat'))
+                    except IOError:
+                        logger.warning("Failed to copy " + card + ".dat to default")
+
         elif not os.path.isfile(os.path.join(dir_path, 'TemplateVersion.txt')):
             if not mgme_dir:
                 raise MadGraph5Error, \

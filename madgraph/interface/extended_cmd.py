@@ -271,7 +271,11 @@ class OriginalCmd(object):
 
     def completenames(self, text, *ignored):
         dotext = 'do_'+text
-        return [a[3:] for a in self.get_names() if a.startswith(dotext)]
+        
+        done = set() # store the command already handle
+        
+        return [a[3:] for a in self.get_names() 
+                if a.startswith(dotext) and a not in done and not done.add(a)]
 
     def complete(self, text, state):
         """Return the next possible completion for 'text'.
@@ -446,6 +450,7 @@ class BasicCmd(OriginalCmd):
 
     def preloop(self):
         self.set_readline_completion_display_matches_hook()
+        super(BasicCmd, self).preloop()
 
     def deal_multiple_categories(self, dico, formatting=True, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
@@ -600,7 +605,6 @@ class BasicCmd(OriginalCmd):
                 to_rm = len(self.completion_prefix) - 1
                 Nbegidx = len(line.rsplit(os.path.sep, 1)[0]) + 1
                 data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
-                misc.sprint(data)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
             # correct wrong splitting with '-'/"="
@@ -1556,6 +1560,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def postloop(self):
         """ """
         
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                readline.set_completer(self.old_completer)
+                del self.old_completer
+            except ImportError:
+                pass
+            except AttributeError:
+                pass
+        
         args = self.split_arg(self.lastcmd)
         if args and args[0] in ['quit','exit']:
             if 'all' in args:
@@ -1563,6 +1577,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len(args) >1 and args[1].isdigit():
                 if args[1] not in  ['0', '1']:
                     return True
+                                
         return False
         
     #===============================================================================

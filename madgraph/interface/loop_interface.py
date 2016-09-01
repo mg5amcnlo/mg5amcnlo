@@ -498,7 +498,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         opt = self.options
         
         # Check if first time:
-        if (opt['ninja'] is None) or (os.path.isfile(pjoin(opt['ninja'],'libninja.a'))): 
+        if (opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a'))): 
             return
         
         logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:color:BLACK')

@@ -971,7 +971,6 @@ class CheckValidForCmd(object):
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
      
-        # If not pythia-pgs path
         if not self.options['pythia-pgs_path']:
             logger.info('Retry to read configuration file to find pythia-pgs path')
             self.set_configuration()
@@ -1026,12 +1025,12 @@ class CheckValidForCmd(object):
         laststep = [arg for arg in args if arg.startswith('--laststep=')]
         if laststep and len(laststep)==1:
             mode = laststep[0].split('=')[-1]
-            if mode not in ['auto', 'pythia', 'delphes']:
+            if mode not in ['auto', 'pythia','pythia8','delphes']:
                 self.help_pythia8()
                 raise self.InvalidCmd('invalid %s argument'% args[-1])     
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
-     
+
         # If not pythia-pgs path
         if not self.options['pythia8_path']:
             logger.info('Retry reading configuration file to find pythia8 path')
@@ -1071,10 +1070,9 @@ class CheckValidForCmd(object):
             self.set_run_name(self.run_name, tag, 'pythia8')
 
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
-        #output_file = pjoin(self.me_dir, 'Events', 'unweighted_events.lhe.gz')
         if not os.path.exists('%s.gz'%input_file):
             if os.path.exists(input_file):
-                misc.gzip(input_file, keep=True, stdout=output_file)
+                misc.gzip(input_file, keep=True, stdout='%s.gz'%input_file)
             else:
                 raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)
@@ -1584,16 +1582,16 @@ class CompleteForCmd(CheckValidForCmd):
         if len(args) == 1:
             return self.list_completion(text, self._interfaced_showers)
         elif len(args)>1 and args[1] in self._interfaced_showers:
-            return eval("self.complete_%s(text,'%s',%d,%d)"%
-              (args[1],line.replace(args[0]+' ',''),begidx-len(args[0])-1,
-                                                         endidx-len(args[0])-1))
+            return getattr(self, 'complete_%s' % text)\
+                (text, args[1],line.replace(args[0]+' ',''), 
+                 begidx-len(args[0])-1, endidx-len(args[0])-1)
 
     def complete_pythia8(self,text, line, begidx, endidx):
         "Complete the pythia8 command"
         args = self.split_arg(line[0:begidx], error=False)
         if len(args) == 1:
             #return valid run_name
-            data = glob.glob(pjoin(self.me_dir, 'Events', '*','unweighted_events.lhe.gz'))
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'),pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -1613,8 +1611,8 @@ class CompleteForCmd(CheckValidForCmd):
             #return valid run_name
             data = []
             for name in ['unweighted_events.lhe']:
-                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s'%name))
-                data += glob.glob(pjoin(self.me_dir, 'Events', '*','%s.gz'%name))
+                data += misc.glob(pjoin('*','%s'%name), pjoin(self.me_dir, 'Events'))
+                data += misc.glob(pjoin('*','%s.gz'%name), pjoin(self.me_dir, 'Events'))
             data = [n.rsplit('/',2)[1] for n in data]
             tmp1 =  self.list_completion(text, data)
             if not self.run_name:
@@ -2183,12 +2181,13 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
 
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
+                
         if self.ninitial == 1:
             logger.info("Note that since 2.3. The launch for 1>N pass in event generation\n"+
                            "    To have the previous behavior use the calculate_decay_widths function")
-            self.do_calculate_decay_widths(line, *args, **opt)
-        else:
-            self.do_generate_events(line, *args, **opt)
+        #    self.do_calculate_decay_widths(line, *args, **opt)
+        #else:
+        self.do_generate_events(line, *args, **opt)
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -2229,27 +2228,36 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         logger.info("     Nb of events :  %s" % data['nb_event'] )
 
         if data['run_mode']=='madevent':
-            shower = None
-            for sh in ['pythia8','pythia']:
-                try:
-                    if data['cross_%s'%sh] and data['nb_event_%s'%sh]:
-                        shower = sh
-                        break
-                except KeyError:
-                    pass
-            if shower:
-                if self.ninitial == 1:
-                    logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_%s'%shower], data['error_%s'%shower]))
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                if data['cross_pythia'] == -1:
+                    path = pjoin(self.me_dir, 'Events', self.run_name, '%s_merged_xsecs.txt' % self.run_tag)
+                    cross_sections = {}
+                    if os.path.exists(path):
+                        for line in open(path):
+                            split = line.split()
+                            if len(split)!=3:
+                                continue
+                            scale, cross, error = split
+                            cross_sections[float(scale)] = (float(cross), float(error))   
+                    if len(cross_sections)>0:
+                        logger.info('     Pythia8 merged cross-sections are:')
+                        for scale in sorted(cross_sections.keys()):
+                            logger.info('      > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                                        (scale,cross_sections[scale][0],cross_sections[scale][1]))
+                    
                 else:
-                    logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_%s'%shower], data['error_%s'%shower]))            
-                    logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_%s'%shower]))
+                    if self.ninitial == 1:
+                        logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+                    else:
+                        logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+                        logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_pythia']))
                 if self.run_card['use_syst'] in self.true and \
                    (int(self.run_card['ickkw'])==1 or self.run_card['ktdurham']>0.0
                                                     or self.run_card['ptlund']>0.0):
-                    logger.info("     Notice that because SysCalc is turned on, the merging did not veto events but modified their weights instead.\n"+\
+                    logger.info("     Notice that because Systematics computation is turned on, the merging did not veto events but modified their weights instead.\n"+\
                                 "     The resulting hepmc/stdhep file should therefore be use with those weights.")
                 else:
-                    logger.info("     Nb of events after merging :  %s" % data['nb_event_%s'%shower])
+                    logger.info("     Nb of events after merging :  %s" % data['nb_event_pythia'])
 
         logger.info(" " )
 
@@ -3423,6 +3431,73 @@ Beware that this can be dangerous for local multicore runs.""")
         """launch MadAnalysis5 at the parton level."""
         return self.run_madanalysis5(line,mode='parton')
 
+    #===============================================================================
+    # Return a warning (if applicable) on the consistency of the current Pythia8
+    # and MG5_aMC version specified. It is placed here because it should be accessible
+    # from both madgraph5_interface and madevent_interface
+    #===============================================================================
+    @staticmethod
+    def mg5amc_py8_interface_consistency_warning(options):
+        """ Check the consistency of the mg5amc_py8_interface installed with
+        the current MG5 and Pythia8 versions. """
+    
+        # All this is only relevant is Pythia8 is interfaced to MG5
+        if not options['pythia8_path']:
+            return None
+        
+        if not options['mg5amc_py8_interface_path']:
+            return \
+    """
+    A Pythia8 path is specified via the option 'pythia8_path' but no path for option
+    'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
+    leading order simulations with MadEvent.
+    Consider installing the MG5_aMC-PY8 interface with the following command:
+     MG5_aMC>install mg5amc_py8_interface
+    """
+        
+        # Retrieve all the on-install and current versions  
+        MG5_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+                           'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+        if MG5_version_on_install == 'UNSPECIFIED':
+            MG5_version_on_install = None
+        PY8_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+                              'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+        MG5_curr_version =misc.get_pkg_info()['version']
+        try:
+            p = subprocess.Popen(['./get_pythia8_version.py',pjoin(MG5DIR,options['pythia8_path'])],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                       cwd=pjoin(MG5DIR,options['mg5amc_py8_interface_path']))
+            (out, err) = p.communicate()
+            out = out.replace('\n','')
+            PY8_curr_version = out
+            # In order to test that the version is correctly formed, we try to cast
+            # it to a float
+            float(out)
+        except:
+            PY8_curr_version = None
+    
+        if not MG5_version_on_install is None and not MG5_curr_version is None:
+            if MG5_version_on_install != MG5_curr_version:
+                return \
+    """
+    The current version of MG5_aMC (v%s) is different than the one active when
+    installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    """%(MG5_curr_version, MG5_version_on_install)
+    
+        if not PY8_version_on_install is None and not PY8_curr_version is None:
+            if PY8_version_on_install != PY8_curr_version:
+                return \
+    """
+    The current version of Pythia8 (v%s) is different than the one active when
+    installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    """%(PY8_curr_version,PY8_version_on_install)
+    
+        return None
+
     def setup_Pythia8RunAndCard(self, PY8_Card, run_type):
         """ Setup the Pythia8 Run environment and card. In particular all the process and run specific parameters
         of the card are automatically set here. This function returns the path where HEPMC events will be output,
@@ -3463,7 +3538,7 @@ already exists and is not a fifo file."""%fifo_path)
                 # Use defaultSet not to overwrite the current userSet status
                 PY8_Card.defaultSet('HEPMCoutput:file',fifo_path)
             HepMC_event_output=fifo_path    
-        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null']:
+        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null','None']:
             logger.warning('User disabled the HepMC output of Pythia8.')
             HepMC_event_output = None
         else:
@@ -3493,27 +3568,23 @@ already exists and is not a fifo file."""%fifo_path)
             # Automatically set qWeed to xqcut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
                 PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
-
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
-                        PY8_Card.MadGraphSet('SysCalc:qCutList',\
-                         ','.join('%.4f'%(factor*PY8_Card['JetMatching:qCut']) for \
-                         factor in [0.5,0.75,1.0,1.5,2.0] if \
-                        factor*PY8_Card['JetMatching:qCut']>1.5*self.run_card['xqcut']))
+                        qcut = PY8_Card['JetMatching:qCut']
+                        value = [factor*qcut for factor in [0.5,0.75,1.0,1.5,2.0] if\
+                                 factor*qcut> 1.5*self.run_card['xqcut'] ]
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', value)
                     else:
                         qCutList = [float(qc) for qc in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
-                        PY8_Card.MadGraphSet('SysCalc:qCutList',','.join('%f'%qc for qc in qCutList))
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList)
 
-            for scale in PY8_Card['SysCalc:qCutList'].split(','):
-                if re.match('^\s*$',scale): continue
-                if 'auto' in scale.lower(): break
-                sc = float(scale.strip())
-                if sc<(1.5*self.run_card['xqcut']):
+            for scale in PY8_Card['SysCalc:qCutList']:
+                if scale<(1.5*self.run_card['xqcut']):
                     logger.error(
-        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%sc+\
+        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
         ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
@@ -3581,7 +3652,9 @@ already exists and is not a fifo file."""%fifo_path)
     
             if PY8_Card['Merging:Process']=='<set_by_user>':
                 raise self.InvalidCmd('When running CKKWl merging, the user must'+
-                    " specifiy the option 'Merging:Process' in pythia8_card.dat")
+                    " specifiy the option 'Merging:Process' in pythia8_card.dat.\n"+
+                    "Read section 'Defining the hard process' of "+\
+                    "http://home.thep.lu.se/~torbjorn/pythia81html/CKKWLMerging.html for more information.")
             PY8_Card.MadGraphSet('TimeShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
@@ -3604,23 +3677,20 @@ already exists and is not a fifo file."""%fifo_path)
             if PY8_Card['SysCalc:tmsList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
-                        PY8_Card.MadGraphSet('SysCalc:tmsList',\
-                     ','.join('%.4f'%(factor*PY8_Card["Merging:TMS"]) \
-                       for factor in [0.5,0.75,1.0,1.5,2.0] if 
-                   factor*PY8_Card["Merging:TMS"] >= self.run_card[CKKW_cut]))
+                        tms = PY8_Card["Merging:TMS"]
+                        value = [factor*tms for factor in [0.5,0.75,1.0,1.5,2.0]
+                                 if factor*tms > self.run_card[CKKW_cut]]
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', value)
                     else:
                         tmsList = [float(tms) for tms in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
-                        PY8_Card.MadGraphSet('SysCalc:tmsList',','.join('%f'%tms for tms in tmsList))
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList)
             
-            for scale in PY8_Card['SysCalc:tmsList'].split(','):
-                if re.match('^\s*$',scale): continue
-                if 'auto' in scale.lower(): break
-                sc = float(scale.strip())
-                if sc<self.run_card[CKKW_cut]:
+            for scale in PY8_Card['SysCalc:tmsList']:
+                if scale<self.run_card[CKKW_cut]:
                     logger.error(
-        'One of the CKKWl merging scale you chose (%f) in the variation list'%sc+\
+        'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
         " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
@@ -3658,9 +3728,12 @@ already exists and is not a fifo file."""%fifo_path)
             self.options['automatic_html_opening'] = False
 
         if self.run_card['event_norm'] not in ['unit','average']:
-            logger.critical("Pythia8 do not support normalisation to the sum.\n"+\
-                             "     The normalisation of the hpmc output file will be wrong.\n"+\
-                             "     Please use 'event_norm = average' in the run_card to avoid this problem.")
+            
+            logger.critical("Pythia8 does not support normalization to the sum. Not running Pythia8")
+            return
+                             #\n"+\
+                             #"The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
+                             #"Please use 'event_norm = average' in the run_card to avoid this problem.")
 
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
@@ -3677,14 +3750,14 @@ Please install this tool with the following MG5_aMC command:
         else:
             pythia_main = pjoin(self.options['mg5amc_py8_interface_path'],
                                                          'MG5aMC_PY8_interface')
-            warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+            warnings = MadEventCmd.mg5amc_py8_interface_consistency_warning(self.options)
             if warnings:
                 logger.warning(warnings)
 
         self.results.add_detail('run_mode', 'madevent')
 
         # Again here 'pythia' is just a keyword for the simulation level.
-        self.update_status('Running Pythia8 [arXiv:1410.3012]', 'pythia8')
+        self.update_status('\033[92mRunning Pythia8 [arXiv:1410.3012]\033[0m', 'pythia8')
         
         tag = self.run_tag        
         # Now write Pythia8 card
@@ -3839,12 +3912,12 @@ You can follow PY8 run with the following command (in a separate terminal):
 
                 except ValueError:
                     # xsec is not float - this should not happen
-                    self.results.add_detail('cross_pythia8', 0)
-                    self.results.add_detail('nb_event_pythia8', 0)
-                    self.results.add_detail('error_pythia8', 0)
+                    self.results.add_detail('cross_pythia', 0)
+                    self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('error_pythia', 0)
                 else:
-                    self.results.add_detail('cross_pythia8', sigma_m)
-                    self.results.add_detail('nb_event_pythia8', Nacc)
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
                     #compute pythia error
                     error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
                     try:                   
@@ -3853,10 +3926,12 @@ You can follow PY8 run with the following command (in a separate terminal):
                         # Cannot compute error
                         error_m = -1.0
                     # works both for fixed number of generated events and fixed accepted events
-                    self.results.add_detail('error_pythia8', error_m)
+                    self.results.add_detail('error_pythia', error_m)
                 break
             pythia_log.close()
-            
+            if self.run_card['use_syst']:
+                    self.results.add_detail('cross_pythia', -1)
+                    self.results.add_detail('error_pythia', 0)
             #####
             # From the djr file generated
             #####
@@ -3894,11 +3969,11 @@ You can follow PY8 run with the following command (in a separate terminal):
                     self.results.add_detail('cross_pythia8', cross_sections[central_scale][0])
                     self.results.add_detail('error_pythia8', cross_sections[central_scale][1])
                 
-                if len(cross_sections)>0:
-                    logger.info('Pythia8 merged cross-sections are:')
-                    for scale in sorted(cross_sections.keys()):
-                        logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
-                        (scale,cross_sections[scale][0],cross_sections[scale][1]))       
+                #if len(cross_sections)>0:
+                #    logger.info('Pythia8 merged cross-sections are:')
+                #    for scale in sorted(cross_sections.keys()):
+                #        logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                #        (scale,cross_sections[scale][0],cross_sections[scale][1]))       
             
             xsecs_file = open(pjoin(self.me_dir,'Events',self.run_name,
                                                  '%s_merged_xsecs.txt'%tag),'w')
@@ -3906,7 +3981,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 xsecs_file.write('%-20s%-20s%-20s\n'%('Merging scale',
                                     'Cross-section [pb]','MC uncertainty [pb]'))
                 for scale in sorted(cross_sections.keys()):
-                   xsecs_file.write('%-20.4g%-20.6e%-20.2e\n'%
+                    xsecs_file.write('%-20.4g%-20.6e%-20.2e\n'%
                       (scale,cross_sections[scale][0],cross_sections[scale][1]))
             else:
                 xsecs_file.write('Cross-sections could not be read from the'+\
@@ -3934,7 +4009,8 @@ You can follow PY8 run with the following command (in a separate terminal):
     
     def do_pythia(self, line):
         """launch pythia"""
-                
+        
+             
         # Check argument's validity
         args = self.split_arg(line)
         if '--no_default' in args:
@@ -3944,7 +4020,7 @@ You can follow PY8 run with the following command (in a separate terminal):
             args.remove('--no_default')
         else:
             no_default = False
-            
+        
         if not self.run_name:
             self.check_pythia(args)
             self.configure_directory(html_opening =False)
@@ -3953,10 +4029,13 @@ You can follow PY8 run with the following command (in a separate terminal):
             self.configure_directory(html_opening =False)
             self.check_pythia(args)
 
+        if self.run_card['event_norm'] != 'sum':
+            logger.error('pythia-pgs require event_norm to be on sum. Do not run pythia6')
+            return
+
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
-
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
@@ -4819,8 +4898,8 @@ You can follow PY8 run with the following command (in a separate terminal):
         
         # when are we force to change the tag new_run:previous run requiring changes
         upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
-                       'pythia': ['pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
-                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+                       'pythia': ['pythia','pgs','delphes','madanalysis5_hadron'],
+                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],
@@ -5047,6 +5126,10 @@ You can follow PY8 run with the following command (in a separate terminal):
             return
         logger.info('running SysCalc on mode %s' % mode)    
     
+        # Restore the old default for SysCalc+PY6
+        if self.run_card['sys_matchscale']=='auto':
+            self.run_card['sys_matchscale'] = "30 50"
+    
         # Check that all pdfset are correctly installed
         lhaid = [self.run_card.get_lhapdf_id()]
         sys_pdf = self.run_card['sys_pdf'].split('&&')
@@ -5151,23 +5234,20 @@ You can follow PY8 run with the following command (in a separate terminal):
         
         available_mode = ['0']
         void = 'Not installed'
-        switch_order = ['shower', 'detector', 'madspin', 'reweight', 'madanalysis5']
+        switch_order = ['shower', 'detector', 'analysis', 'madspin', 'reweight']
         
         switch = dict((k, void) for k in switch_order)
 
         description = {'shower': 'Choose the shower/hadronization program:',
                        'detector': 'Choose the detector simulation program:',
                        'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight':'Add weights to the events based on changing model parameters:',
-                       'madanalysis5':'Run MadAnalysis5 on the events generated:'
+                       'reweight':'Add weights to events for different model hypothesis:',
+                       'analysis':'Run an analysis package on the events generated:'
                        }
 
         force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
                        ('detector', 'PGS'): {'shower':'PYTHIA6'},
-                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']},
-                       ('madanalysis5','HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
-                       ('madanalysis5','PARTON+HADRON'): {'shower': ['PYTHIA8', 'PYTHIA6']},
-                       ('shower', 'OFF'): {'madanalysis5': ['PARTON','OFF']} }
+                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
 
         switch_assign = lambda key, value: switch.__setitem__(key, value if value \
                                          in valid_options[key] else switch[key])
@@ -5200,31 +5280,33 @@ You can follow PY8 run with the following command (in a separate terminal):
             elif switch['shower'] == void:
                 switch['shower'] = 'OFF'            
         
+        # MadAnalysis4 options
+        if self.options['madanalysis_path']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card_default.dat')):
+                valid_options['analysis'].insert(0,'MADANALYSIS_4')
+
+            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
+                switch['analysis'] = 'MADANALYSIS_4'
+        
         # MadAnalysis5 options
         if self.options['madanalysis5_path']:
-            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')):
-                valid_options['madanalysis5'].append('PARTON')           
-            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
-                valid_options['madanalysis5'].append('HADRON')
-            if 'HADRON' in valid_options['madanalysis5'] and 'PARTON' in valid_options['madanalysis5']:
-                valid_options['madanalysis5'].append('PARTON+HADRON')
-            if len(valid_options['madanalysis5'])>1:                
-                available_mode.append('5')
-            else:
-                switch['madanalysis5'] = 'Not available yet for this output/process'
+            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')) or \
+               os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
+                valid_options['analysis'].append('MADANALYSIS_5')
 
             parton_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
                                                 'madanalysis5_parton_card.dat'))
             hadron_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
                                                 'madanalysis5_hadron_card.dat'))
-            if parton_card_present and not hadron_card_present:
-                switch['madanalysis5'] = 'PARTON'                
-            elif hadron_card_present and not parton_card_present:
-                switch['madanalysis5'] = 'HADRON'
-            elif hadron_card_present and parton_card_present:
-                switch['madanalysis5'] = 'PARTON+HADRON'
-            elif switch['madanalysis5'] == void:
-                switch['madanalysis5'] = 'OFF'
+            if hadron_card_present or parton_card_present:
+                switch['analysis'] = 'MADANALYSIS_5'
+
+        if len(valid_options['analysis'])>1:                
+            available_mode.append('5')
+            if switch['analysis'] == void:
+                switch['analysis'] = 'OFF'
+        else:
+            switch['analysis'] = 'No analysis tool interfaced to MG5aMC.'
 
         # Need to allow Delphes only if a shower exists                
         if self.options['delphes_path']:
@@ -5267,7 +5349,6 @@ You can follow PY8 run with the following command (in a separate terminal):
                 switch['madspin'] = 'ON'
             elif switch['madspin'] != 'ON':
                 logger.critical("Cannot run madspin: %s", switch['reweight'])            
-        
 
         for id, key in enumerate(switch_order):
             if len(valid_options[key]) >1:
@@ -5275,7 +5356,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 options.append(key)
                 
         options += ['parton'] + sorted(list(set(available_mode)))
-        options += options_legacy    
+        options += options_legacy
         #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
         
@@ -5287,7 +5368,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                     'Not available (requires NumPy)',
                     'Not available yet for this output/process']:
                 return red%switch_value
-            elif switch_value in ['ON','PARTON','HADRON','PARTON+HADRON',
+            elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
                                   'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
                                   'DELPHES-CMS','DELPHES']:
                 return green%switch_value
@@ -5300,10 +5381,12 @@ You can follow PY8 run with the following command (in a separate terminal):
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " %i %-61s %12s = %s\n"
+                    switch_format = " \x1b[31m%i\x1b[0m. %-60s %12s = %s"
                     question = "The following switches determine which programs are run:\n"
+                    question += '/'+'-'*98+'\\\n'
                     for id, key in enumerate(switch_order):
-                        question += switch_format % (id+1, description[key], key, color(switch[key]))
+                        question += '| %-115s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
+                    question += '\\'+'-'*98+'/\n'
                     question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
                     question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
                     question += '  Type \'help\' for the list of all valid option\n' 
@@ -5374,8 +5457,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                                     switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 
-                                'delphes','madanalysis5']:
+                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
@@ -5396,9 +5478,6 @@ You can follow PY8 run with the following command (in a separate terminal):
                     elif answer == 'madspin':
                         switch_assign('madspin', 'ON')
                         switch_assign('shower', 'OFF')
-                        switch_assign('detector', 'OFF')
-                    elif answer == 'madanalysis5':
-                        switch_assign('madanalysis5', valid_options['madanalysis5'][-1])
                         switch_assign('detector', 'OFF')
                     elif answer == 'reweight':
                         switch_assign('reweight', 'ON')
@@ -5430,10 +5509,12 @@ You can follow PY8 run with the following command (in a separate terminal):
             cards.append('madspin_card.dat')
         if switch['reweight'] == 'ON':
             cards.append('reweight_card.dat')
-        if switch['madanalysis5'] in ['PARTON','PARTON+HADRON']:
+        if switch['analysis'] in ['MADANALYSIS_5']:
             cards.append('madanalysis5_parton_card.dat')
-        if switch['madanalysis5'] in ['HADRON','PARTON+HADRON']:
+        if switch['analysis'] in ['MADANALYSIS_5'] and not switch['shower']=='OFF':
             cards.append('madanalysis5_hadron_card.dat')
+        if switch['analysis'] in ['MADANALYSIS_4']:
+            cards.append('plot_card.dat')
 
         self.keep_cards(cards)
         
@@ -5445,9 +5526,9 @@ You can follow PY8 run with the following command (in a separate terminal):
             return
 
         if answer == 'auto':
-            self.ask_edit_cards(cards, mode='auto')
+            self.ask_edit_cards(cards, plot=False, mode='auto')
         else:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=False)
         return
     
     ############################################################################
@@ -5467,13 +5548,13 @@ You can follow PY8 run with the following command (in a separate terminal):
         question = """Which programs do you want to run?
     0 / auto    : running existing cards\n"""
         if pythia_version==6:
-            question += """    1 / pythia  : Pythia\n"""
-            question += """    2 / pgs     : Pythia + PGS\n"""
+            question += """    1. pythia  : Pythia\n"""
+            question += """    2. pgs     : Pythia + PGS\n"""
         else:
-            question += """    1 / pythia8  : Pythia8\n"""
+            question += """    1. pythia8  : Pythia8\n"""
 
         if '3' in available_mode:
-            question += """    3 / delphes  : Pythia%s + Delphes.\n"""%pythia_suffix
+            question += """    3. delphes  : Pythia%s + Delphes.\n"""%pythia_suffix
 
         if not self.force:
             if not mode:
@@ -5495,7 +5576,6 @@ You can follow PY8 run with the following command (in a separate terminal):
             else: 
                 mode = 'pythia%s'%pythia_suffix
         logger.info('Will run in mode %s' % mode)
-                                               
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed) remove pointless one
         cards = ['pythia%s_card.dat'%pythia_suffix]
@@ -5507,15 +5587,16 @@ You can follow PY8 run with the following command (in a separate terminal):
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
                 delphes3 = False
                 cards.append('delphes_trigger.dat')
-        self.keep_cards(cards)
+        self.keep_cards(cards, ignore=['madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',
+                      'plot_card.dat'])
         
         if self.force:
             return mode
         
         if auto:
-            self.ask_edit_cards(cards, mode='auto')
+            self.ask_edit_cards(cards, mode='auto', plot=(pythia_version==6))
         else:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=(pythia_version==6))
 
         return mode
                 

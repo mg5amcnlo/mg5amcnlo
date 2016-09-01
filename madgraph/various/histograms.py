@@ -2088,7 +2088,8 @@ class HwUList(histograms_PhysicsObjectList):
                              " is not yet supported. Supported formats are %s."\
                                                  %HwU.output_formats_implemented
 
-        if isinstance(path, str) and '.' not in os.path.basename(path):
+        if isinstance(path, str) and not any(ext in os.path.basename(path) \
+                                   for ext in ['.Hwu','.ps','.gnuplot','.pdf']):
             output_base_name = os.path.basename(path)
             HwU_stream       = open(path+'.HwU','w')
         else:

@@ -171,7 +171,7 @@ class TestConfigFileCase(unittest.TestCase):
         # add a parameter which can be a list
         self.config.add_param("dict", {'__type__':1.0})
         self.assertEqual(self.config['dict'], {})
-        self.assertEqual(dict.__getitem__(self.config,'dict'), {'__type__':1.0})
+        self.assertEqual(dict.__getitem__(self.config,'dict'), {})
          
         # try to write info in it via the string
         self.config['dict'] = "1,2"
@@ -194,10 +194,63 @@ class TestConfigFileCase(unittest.TestCase):
         
         self.assertRaises(Exception, self.config.__setitem__, 'dict', [1,2,3])
         self.assertRaises(Exception, self.config.__setitem__, 'dict', {'test':'test'})
-        self.assertRaises(Exception, self.config.__setitem__, 'dict', "22")        
+        self.assertRaises(Exception, self.config.__setitem__, 'dict', "22")
 
-
+    def test_auto_handling(self):
+        """check that any parameter can be set on auto and recover"""
         
+        self.config['lower'] = 'auto'
+        self.assertEqual(self.config['lower'],'auto')
+        self.assertEqual(dict.__getitem__(self.config,'lower'),1)
+        self.assertTrue('lower' in self.config.auto_set)
+        self.assertFalse('lower' in self.config.user_set)
+        
+        self.config['lower'] = 2 
+        self.assertEqual(self.config['lower'], 2)
+        self.assertEqual(dict.__getitem__(self.config,'lower'),2)
+        
+        self.config.add_param('test', [1,2])
+        self.config['test'] = 'auto'
+        self.assertEqual(self.config['test'],'auto')
+        self.assertEqual(dict.__getitem__(self.config,'test'),[1,2])
+        
+        self.assertRaises(Exception, self.config.__setitem__, 'test', 'onestring')
+        self.config['test'] = '3,4'
+        self.assertEqual(self.config['test'], [3,4])
+        self.assertEqual(dict.__getitem__(self.config,'test'), [3,4])                
+        
+        self.config.set('test', ['1',5.0], user=True)
+        self.config.set('test', 'auto', changeifuserset=False)
+        self.assertEqual(self.config['test'], [1,5])
+        self.assertEqual(dict.__getitem__(self.config,'test'), [1,5])
+        
+        self.config.set('test', 'auto', user=True)
+        self.assertEqual(self.config['test'],'auto')
+        self.assertEqual(dict.__getitem__(self.config,'test'), [1,5])
+        
+        for key, value in self.config.items():
+            if key == 'test':
+                self.assertEqual(value, 'auto')
+                break
+        else:
+            self.assertFalse(True, 'wrong key when looping over key')
+        
+        
+    def test_system_only(self):
+        """test that the user can not modify a parameter system only"""
+        
+        self.config.add_param('test', [1,2], system=True)
+        
+        self.config['test'] = [3,4]
+        self.assertEqual(self.config['test'], [3,4])
+        
+        self.config.set('test', '1 4', user=True)
+        self.assertEqual(self.config['test'], [3,4])               
+        
+        self.config.set('test', '1 4', user=False)
+        self.assertEqual(self.config['test'], [1,4])         
+
+      
     def test_for_loop(self):
         """ check correct handling of case"""
     

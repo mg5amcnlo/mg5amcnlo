@@ -320,6 +320,13 @@ class TestMECmdShell(unittest.TestCase):
                     '%s/Cards/run_card.dat' % self.run_dir)
         shutil.copy('%s/Cards/pythia_card_default.dat' % self.run_dir,
                     '%s/Cards/pythia_card.dat' % self.run_dir)
+        shutil.copy('%s/Cards/plot_card_default.dat' % self.run_dir,
+                    '%s/Cards/plot_card.dat' % self.run_dir)        
+        try:
+            os.remove(pjoin(self.run_dir, 'Cards',  'madanalysis5_parton_card.dat'))
+            os.remove(pjoin(self.run_dir, 'Cards',  'madanalysis5_hadron_card.dat'))
+        except:
+            pass
         self.do('generate_events -f')     
         
         
@@ -336,6 +343,7 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(cmd, os.getcwd())        
         self.do('generate_events -f')
         self.assertEqual(int(self.cmd_line.run_card['nevents']), 44)
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Cards', 'plot_card.dat')))
         self.do('pythia run_01 -f')
         self.do('quit')
         
@@ -350,6 +358,7 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.assertEqual(cmd, os.getcwd())
+        self.assertFalse(self.debugging)
         
     def test_group_subprocess(self):
         """check that both u u > u u gives the same result"""
@@ -546,6 +555,7 @@ class TestMECmdShell(unittest.TestCase):
         """ """
         path = '%(path)s/HTML/%(run)s/plots_pythia_%(tag)s/DJR1.ps' % \
                                 {'path':self.run_dir,'run': run_name, 'tag': tag}
+
         self.assertTrue(os.path.exists(path))
         
         if mintime:

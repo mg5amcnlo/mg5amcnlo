@@ -562,8 +562,8 @@ C       COUNT NUMBER OF MASSLESS OUTGOING PARTICLES, SINCE WE DO NOT WANT
 C       TO APPLY A CUT FOR JUST A SINGLE MASSIVE PARTICLE IN THE FINAL STATE.
         NMASSLESS = 0
         DO I=NINCOMING+1,NEXTERNAL
-          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and. 
-     &                          DSQRT(DOT( P(0,I), P(0,I))) .LT. 5D0) THEN
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and.
+     &                        is_a_j(i).or.is_a_b(i)) then
             NMASSLESS = NMASSLESS + 1
           ENDIF
         ENDDO
@@ -665,7 +665,7 @@ C       THIS CUT WILL ONLY APPLY TO THE TWO-MASSLESS PARTICLE STATE.
         NMASSLESS = 0
         DO I=NINCOMING+1,NEXTERNAL
           if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and. 
-     &                          DSQRT(DOT( P(0,I), P(0,I))) .LT. 5D0) THEN
+     &                          is_a_j(i).or.is_a_b(i)) THEN
             NMASSLESS = NMASSLESS + 1
           ENDIF
         ENDDO

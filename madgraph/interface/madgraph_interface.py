@@ -2685,16 +2685,19 @@ class CompleteForCmd(cmd.CompleteCmd):
             return self.list_completion(text, self._install_opts)
         elif len(args) and args[0] == 'update':
             return self.list_completion(text, ['-f','--timeout='])
-        elif len(args)==2 and args[1] in self._advanced_install_opts:           
+        elif len(args)>=2 and args[1] in self._advanced_install_opts:           
             options = ['--keep_source','--logging=']
             if args[1]=='pythia8':
                 options.append('--pythia8_tarball=')
             elif args[1]=='mg5amc_py8_interface':
                 options.append('--mg5amc_py8_interface_tarball=') 
-            elif args[1]=='MadAnalysis5':
+            elif args[1] in ['MadAnalysis5','MadAnalysis']:
                 options.append('--no_MA5_further_install')
                 options.append('--no_root_in_MA5')
-                options.append('--madanalysis5_tarball=')     
+                options.append('--madanalysis5_tarball=') 
+            for opt in options[:]:
+                if any(a.startswith(opt) for a in args):
+                    options.remove(opt)
             return self.list_completion(text, options)
         else:
             return self.list_completion(text, [])
@@ -2718,12 +2721,12 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
     _check_opts = ['full', 'timing', 'stability', 'profile', 'permutation',
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
-    _install_opts = ['Delphes', 'MadAnalysis', 'ExRootAnalysis',
+    _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
                      'update', 'SysCalc', 'Golem95', 'PJFry', 'QCDLoop']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
-                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5']
+                              'hepmc','mg5amc_py8_interface','ninja','oneloop','MadAnalysis5','MadAnalysis']
 
     _install_opts.extend(_advanced_install_opts)
 
@@ -5367,15 +5370,18 @@ This implies that with decay chains:
      
         # Compiler options
         compiler_options = []
-        if not self.options['cpp_compiler'] is None:
+        if self.options['cpp_compiler'] is not None:
             compiler_options.append('--cpp_compiler=%s'%
                                                    self.options['cpp_compiler'])
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence(self.options['cpp_compiler']))
-        else:
+        elif misc.which('g++'):
             compiler_options.append('--cpp_standard_lib=%s'%
                misc.detect_cpp_std_lib_dependence('g++'))
-
+        else:
+            compiler_options.append('--cpp_standard_lib=%s'%
+               misc.detect_cpp_std_lib_dependence(None))
+            
         if not self.options['fortran_compiler'] is None:
             compiler_options.append('--fortran_compiler=%s'%
                                                self.options['fortran_compiler'])
@@ -5401,11 +5407,6 @@ This implies that with decay chains:
             if self.options['pythia8_path']:
                 add_options.append(
                                '--with_pythia8=%s'%self.options['pythia8_path'])
-##### FOR DEBUGGING ONLY, until the mg5amc_py8_interface is put online  ########
-#            additional_options.append('--mg5amc_py8_interface_tarball=%s'%
-#                    pjoin(MG5DIR,os.path.pardir,'MG5aMC_PY8_interface',
-#                                                 'MG5aMC_PY8_interface.tar.gz'))
-################################################################################
 
         # Special rules for certain tools
         if tool=='madanalysis5':
@@ -5503,6 +5504,21 @@ This implies that with decay chains:
                 return self.advanced_install(tool_to_install,
                               additional_options=add_options+['--force'])            
         else:
+            if tool=='madanalysis5' and ('--no_MA5_further_install' not in add_options or
+                                                        '--no_root_in_MA5' in add_options):
+                if not __debug__:
+                    logger.warning('Default installation of Madanalys5 failed.')
+                    logger.warning("MG5aMC will now attempt to reinstall it with the options '--no_MA5_further_install --no_root_in_MA5'.")
+                    logger.warning("This will however limit MA5 applicability for hadron-level analysis.")
+                    logger.warning("If you would like to prevent MG5aMC to re-attempt MA5 installation, start MG5aMC with './bin/mg5_aMC --debug'.")
+                    for option in ['--no_MA5_further_install', '--no_root_in_MA5', '--force']:
+                        if option not in add_options:
+                            add_options.append(option)
+                    self.advanced_install('madanalysis5', 
+                               HepToolsInstaller_web_address=HepToolsInstaller_web_address,
+                               additional_options=add_options)
+                else:
+                    logger.critical("Default installation of Madanalys5 failed, we suggest you try again with the options '--no_MA5_further_install --no_root_in_MA5'.")
             raise self.InvalidCmd("Installation of %s failed."%tool_to_install)
 
         # Post-installation treatment
@@ -5528,10 +5544,10 @@ This implies that with decay chains:
                 self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
             self.options['mg5amc_py8_interface_path'] = \
             self.exec_cmd('save options %s mg5amc_py8_interface_path' % config_file, 
-                                                            printcmd=False, lot=False)      
+                                                            printcmd=False, log=False)      
         elif tool == 'collier':
             self.options['collier'] = pjoin(prefix,'lib')
-            self.exec_cmd('save options %s collier' % config_file, printcmd=False, lot=False)      
+            self.exec_cmd('save options %s collier' % config_file, printcmd=False, log=False)      
         elif tool == 'ninja':
             if not misc.get_ninja_quad_prec_support(pjoin(
                                               prefix,'ninja','lib')):
@@ -5543,7 +5559,7 @@ unstable points in the loop matrix elements) you can try to reinstall Ninja with
 After having made sure to have selected a C++ compiler in the 'cpp' option of
 MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.options['ninja'] = pjoin(prefix,'lib')
-            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, lot=False)      
+            self.exec_cmd('save options %s ninja' % config_file, printcmd=False, log=False)      
             
         # Now warn the user if he didn't add HEPTools first in his environment
         # variables.
@@ -5698,7 +5714,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
         try:
             name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
-                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
+                'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'madanalysis5',
+                'MadAnalysis4':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
                 'PJFry':'PJFry','QCDLoop':'QCDLoop','MadAnalysis5':'madanalysis5'
                 }
@@ -5727,7 +5744,9 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.do_install('QCDLoop', paths=path)
 
         if args[0] == 'Delphes':
-            args[0] = 'Delphes3'
+            args[0] = 'Delphes3'        
+        if args[0] == 'MadAnalysis4':
+            args[0] = 'MadAnalysis'
         try:
             name = {'td_mac': 'td', 'td_linux':'td', 'Delphes2':'Delphes',
                 'Delphes3':'Delphes', 'pythia-pgs':'pythia-pgs',
@@ -6493,7 +6512,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                     if key in self.options_madgraph:
                         self.history.append('set %s %s' % (key, self.options[key]))
         
-        warnings = misc.mg5amc_py8_interface_consistency_warning(self.options)
+        warnings = madevent_interface.MadEventCmd.mg5amc_py8_interface_consistency_warning(self.options)
         if warnings:
             logger.warning(warnings)
 

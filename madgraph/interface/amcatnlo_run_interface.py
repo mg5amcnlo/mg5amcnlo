@@ -3303,10 +3303,8 @@ RESTART = %(mint_mode)s
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
-                       'pythia': ['pythia','pgs','delphes'],
-                       'shower': ['shower'],
-                       'pgs': ['pgs'],
+        upgrade_tag = {'parton': ['parton','delphes','shower','madanalysis5_hadron'],
+                       'shower': ['shower','delphes','madanalysis5_hadron'],
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],
                        'plot':[]}

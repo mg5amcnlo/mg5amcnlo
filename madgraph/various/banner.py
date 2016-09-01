@@ -918,6 +918,7 @@ class ConfigFile(dict):
         
         # Initialize it with all the default value
         self.user_set = set()
+        self.auto_set = set()
         self.system_only = set()
         self.lower_to_case = {}
         self.list_parameter = set()
@@ -962,11 +963,13 @@ class ConfigFile(dict):
         return [name for name in self]
     
     def items(self):
-        return [(self.lower_to_case[name], value) for name,value in \
-                                               super(ConfigFile, self).items()]
+        return [(name,self[name]) for name in self]
+        
     
     def __setitem__(self, name, value, change_userdefine=False):
-        """set the attribute and set correctly the type if the value is a string"""
+        """set the attribute and set correctly the type if the value is a string.
+           change_userdefine on True if we have to add the parameter in user_set
+        """
         if  not len(self):
             #Should never happen but when deepcopy/pickle
             self.__init__()
@@ -977,13 +980,27 @@ class ConfigFile(dict):
         # 0. check if this parameter is a system only one
         if change_userdefine and lower_name in self.system_only:
             logger.critical('%s is a private entry which can not be modify by the user. Keep value at %s' % (name,self[name]))
+            return
         
-        # 1. Find the type of the attribute that we want
-        if lower_name in self.list_parameter:
-            if isinstance(self[name], list):
-                targettype = type(self[name][0])
+        #1. check if the parameter is set to auto -> pass it to special
+        if lower_name in self:
+            targettype = type(dict.__getitem__(self, lower_name))
+            if targettype != str and isinstance(value, str) and value.lower() == 'auto':
+                self.auto_set.add(lower_name)
+                if lower_name in self.user_set:
+                    self.user_set.remove(lower_name)
+                #keep old value.
+                return 
+            elif lower_name in self.auto_set:
+                self.auto_set.remove(lower_name)
+            
+        # 2. Find the type of the attribute that we want
+        if name in self.list_parameter:
+            if isinstance(dict.__getitem__(self,name), list):
+                targettype = type(dict.__getitem__(self,name)[0])
             else:
-                targettype = type(self[name]) #should not happen but ok
+                #should not happen but better save than sorry
+                targettype = type(dict.__getitem__(self,name)) 
                 
             if isinstance(value, str):
                 # split for each comma/space
@@ -1194,11 +1211,15 @@ class ConfigFile(dict):
 
     def __getitem__(self, name):
         
+        lower_name = name.lower()
         if __debug__:
-            if name.lower() not in self:
-                if name.lower() in [key.lower() for key in self] :
+            if lower_name not in self:
+                if lower_name in [key.lower() for key in self] :
                     raise Exception, "Some key are not lower case %s. Invalid use of the class!"\
                                      % [key for key in self if key.lower() != key]
+        
+        if lower_name in self.auto_set:
+            return 'auto'
 
         return dict.__getitem__(self, name.lower())
 
@@ -1237,7 +1258,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('has_loops', False)
         self.add_param('bias_module','None')
         self.add_param('max_n_matched_jets', 0)
-        self.add_param('colored_pdgs', '[1,2,3,4,5]')        
+        self.add_param('colored_pdgs', [1,2,3,4,5])        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1381,7 +1402,7 @@ class PY8Card(ConfigFile):
         # scale values for the extra weights related to scale and PDF variations.
         self.add_param("SysCalc:fullCutVariation", False)
         # Select the HepMC output. The user can prepend 'fifo:<optional_fifo_path>'
-        # to indicate that he wants to pipe the output. Or \dev\null to turn the
+        # to indicate that he wants to pipe the output. Or /dev/null to turn the
         # output off.
         self.add_param("HEPMCoutput:file", 'auto')
 
@@ -1416,7 +1437,8 @@ class PY8Card(ConfigFile):
         # for MLM merging
         self.add_param("JetMatching:merge", False, hidden=True, always_write_to_card=False,
           comment='Specifiy if we are merging sample of different multiplicity.')
-        self.add_param("SysCalc:qCutList", 'auto', hidden=True, always_write_to_card=False)
+        self.add_param("SysCalc:qCutList", [10.0,20.0], hidden=True, always_write_to_card=False)
+        self['SysCalc:qCutList'] = 'auto'
         self.add_param("SysCalc:qWeed",-1.0,hidden=True, always_write_to_card=False,
           comment='Value of the merging scale below which one does not even write the HepMC event.')
         self.add_param("JetMatching:doVeto", False, hidden=True, always_write_to_card=False,
@@ -1429,7 +1451,8 @@ class PY8Card(ConfigFile):
         # for CKKWL merging (common with UMEPS, UNLOPS)
         self.add_param("TimeShower:pTmaxMatch", 2, hidden=True, always_write_to_card=False)
         self.add_param("SpaceShower:pTmaxMatch", 1, hidden=True, always_write_to_card=False)
-        self.add_param("SysCalc:tmsList", 'auto', hidden=True, always_write_to_card=False)
+        self.add_param("SysCalc:tmsList", [10.0,20.0], hidden=True, always_write_to_card=False)
+        self['SysCalc:tmsList'] = 'auto'
         self.add_param("Merging:muFac", 91.188, hidden=True, always_write_to_card=False,
                         comment='Set factorisation scales of the 2->2 process.')
         self.add_param("Merging:applyVeto", False, hidden=True, always_write_to_card=False,
@@ -1547,11 +1570,14 @@ class PY8Card(ConfigFile):
                 formatv = 'float'
             elif isinstance(value, str):
                 formatv = 'str'
+            elif isinstance(value, list):
+                formatv = 'list'
             else:
                 logger.debug("unknow format for pythia8_formatting: %s" , value)
                 formatv = 'str'
         else:
             assert formatv
+            
         if formatv == 'unknown':
             # No formatting then
             return str(value)
@@ -1571,8 +1597,16 @@ class PY8Card(ConfigFile):
                     raise
         elif formatv == 'float':
             return '%.10e' % float(value)
+        elif formatv == 'shortfloat':
+            return '%.3f' % float(value)        
         elif formatv == 'str':
             return "%s" % value
+        elif formatv == 'list':
+            if len(value) and isinstance(value[0],float):
+                return ', '.join([PY8Card.pythia8_formatting(arg, 'shortfloat') for arg in value])
+            else:
+                return ', '.join([PY8Card.pythia8_formatting(arg) for arg in value])
+            
 
     def write(self, output_file, template, read_subrun=False, 
                            print_only_visible=False, direct_pythia_input=False):
@@ -2035,6 +2069,8 @@ class RunCard(ConfigFile):
                 self.add_param(name, float(value), hidden=True, cut=True)
             else:
                 self.set( name, value, user=True)
+        # parameter not set in the run_card can be set to compatiblity value
+        self.check_validity()
                 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -2103,16 +2139,19 @@ class RunCard(ConfigFile):
         """return self[name] if exist otherwise default. log control if we 
         put a warning or not if we use the default value"""
 
-        if name.lower() not in self.user_set:
+        lower_name = name.lower()
+        if lower_name not in self.user_set:
             if log_level is None:
-                if name.lower() in self.system_only:
+                if lower_name in self.system_only:
                     log_level = 5
-                elif name.lower() in self.hidden_param:
+                elif lower_name in self.auto_set:
+                    log_level = 5
+                elif lower_name in self.hidden_param:
                     log_level = 10
                 else:
                     log_level = 20
             if not default:
-                default = self[name]
+                default = dict.__getitem__(self, name.lower())
             logger.log(log_level, '%s missed argument %s. Takes default: %s'
                                    % (self.filename, name, default))
             self[name] = default
@@ -2465,7 +2504,7 @@ class RunCardLO(RunCard):
         self.add_param("use_syst", True)
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
         self.add_param("sys_alpsfact", "None", include=False)
-        self.add_param("sys_matchscale", "30 50", include=False)
+        self.add_param("sys_matchscale", "auto", include=False)
         self.add_param("sys_pdf", "NNPDF23_lo_as_0130_qed", include=False)
         self.add_param("sys_scalecorrelation", -1, include=False)
 
@@ -2584,7 +2623,7 @@ class RunCardLO(RunCard):
         """Rules
           process 1->N all cut set on off.
           loop_induced -> MC over helicity
-          e+ e- beam -> lpp:0 ebeam:500  
+          e+ e- beam -> lpp:0 ebeam:500
           p p beam -> set maxjetflavor automatically
           more than one multiplicity: ickkw=1 xqcut=30 use_syst=F
          """

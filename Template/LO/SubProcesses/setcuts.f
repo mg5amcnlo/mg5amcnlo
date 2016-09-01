@@ -237,7 +237,8 @@ c-onium
 c        Remember mergeable particles
          do j=1,pdgs_for_merging_cut(0)
            if (    pdgs_for_merging_cut(j) .ne. 0
-     $       .and. abs(idup(i,1,iproc)) .eq.pdgs_for_merging_cut(j) ) then
+     $       .and. abs(idup(i,1,iproc)) .eq.pdgs_for_merging_cut(j)
+     $       .and..not.from_decay(i) ) then
              is_pdg_for_merging_cut(i)=.true.
              exit
             endif

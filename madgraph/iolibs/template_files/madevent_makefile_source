@@ -46,6 +46,10 @@ $(LIBDIR)libpdf.$(libext): PDF
 	cd PDF; make	
 $(LIBDIR)libcernlib.$(libext): CERNLIB
 	cd CERNLIB; make
+# The bias library is here the dummy by default; compilation of other ones specified in the run_card will be done by MG5aMC directly.
+$(LIBDIR)libbias.$(libext): BIAS/dummy
+	cd BIAS/dummy; make
+
 %(model)s
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 

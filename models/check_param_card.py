@@ -519,13 +519,15 @@ class ParamCard(dict):
         return diff 
 
     
-    def get_value(self, blockname, lhecode):
+    def get_value(self, blockname, lhecode, default=None):
         try:
             return self[blockname].get(lhecode).value
         except KeyError:
             if blockname == 'width':
                 blockname = 'decay'
-                return self.get_value(blockname, lhecode)
+                return self.get_value(blockname, lhecode,default=default)
+            elif default is not None:
+                return default
             raise
 
     def write_inc_file(self, outpath, identpath, default, need_mp=False):

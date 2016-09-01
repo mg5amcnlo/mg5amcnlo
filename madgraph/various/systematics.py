@@ -80,7 +80,10 @@ class Systematics(object):
         #check for beam
         beam1, beam2 = self.banner.get_pdg_beam()
         if abs(beam1) != 2212 and abs(beam2) != 2212:
-            raise SystematicsError, 'can only reweight proton beam'
+            self.b1 = 0
+            self.b2 = 0 
+            pdf = 'central'
+            #raise SystematicsError, 'can only reweight proton beam'
         elif abs(beam1) != 2212:
             self.b1 = 0
             self.b2 = beam2//2212
@@ -179,9 +182,30 @@ class Systematics(object):
                 break
         else:
             self.orig_pdf = lhapdf.mkPDF(self.orig_pdf)
-        self.log( "# events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
+        if not self.b1 == 0 == self.b2: 
+            self.log( "# events generated with PDF: %s (%s)" %(self.orig_pdf.set().name,self.orig_pdf.lhapdfID ))
         # create all the function that need to be called
         self.get_all_fct() # define self.fcts and self.args
+        
+        # For e+/e- type of collision initialise the running of alps
+        if self.b1 == 0 == self.b2:
+            from models.model_reader import Alphas_Runner
+            if not hasattr(self.banner, 'param_card'):
+                param_card = self.banner.charge_card('param_card')
+            else:
+                param_card = self.banner.param_card
+            
+            asmz = param_card.get_value('sminputs', 3, 0.13)
+            nloop =2
+            zmass = param_card.get_value('mass', 23, 91.188)
+            cmass = param_card.get_value('mass', 4, 1.4)
+            if cmass == 0:
+                cmass = 1.4
+            bmass = param_card.get_value('mass', 5, 4.7)
+            if bmass == 0:
+                cmass = 4.7
+            self.alpsrunner = Alphas_Runner(asmz, nloop, zmass, cmass, bmass)
+        
 
     def run(self, stdout=sys.stdout):
         """ """
@@ -391,15 +415,17 @@ class Systematics(object):
                     if in_pdf:
                         text += "</weightgroup> # PDFSET -> PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID]
+                    descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
-                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, pdfset.description)
+                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdf.lhapdfID 
                 elif pdf.memberID == 1 and (pdf.lhapdfID - pdf.memberID) in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET -> PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID - 1]
+                    descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
-                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, pdfset.description)
+                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
                 elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
                     text += "</weightgroup> # PDFSET -> PDF\n"
@@ -430,10 +456,10 @@ class Systematics(object):
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
             if pdf != self.orig_pdf:
-                tag += 'LHAPDF="%s" ' % pdf.lhapdfID
-                info += 'LHAPDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+                tag += 'PDF="%s" ' % pdf.lhapdfID
+                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
             else:
-                tag += 'LHAPDF="%s" ' % pdf.lhapdfID
+                tag += 'PDF="%s" ' % pdf.lhapdfID
                 
             text +='<weight id="%s" %s> %s </weight>\n' % (cid, tag, info)
             cid+=1
@@ -559,14 +585,21 @@ class Systematics(object):
             loinfo['pdf_q2'][-1] = mur
             
         
+        
         # MUR part
-        wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
+        if self.b1 == 0 == self.b2:
+            wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
+        else:
+            wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
         wgt *= self.get_pdfQ(pdf, self.b1*loinfo['pdf_pdg_code1'][-1], loinfo['pdf_x1'][-1], Dmuf*muf1) 
         wgt *= self.get_pdfQ(pdf, self.b2*loinfo['pdf_pdg_code2'][-1], loinfo['pdf_x2'][-1], Dmuf*muf2) 
-        
+
         for scale in loinfo['asrwt']:
-            wgt *= pdf.alphasQ(Dalps*scale)
+            if self.b1 == 0 == self.b2:
+                wgt = self.alpsrunner(Dalps*scale)
+            else:
+                wgt *= pdf.alphasQ(Dalps*scale)
         
         # ALS part
         for i in range(loinfo['n_pdfrw1']-1):
@@ -613,7 +646,13 @@ class Systematics(object):
                 tmp = onewgt.pwgt[0]
                 tmp += onewgt.pwgt[1] * math.log(Dmur**2 * mur2/ Q2)
                 tmp += onewgt.pwgt[2] * math.log(Dmuf**2 * muf2/ Q2)
-                tmp *= math.sqrt(4*math.pi*pdf.alphasQ2(Dmur**2*mur2))**onewgt.qcdpower
+                
+                if self.b1 == 0 == self.b2:
+                    alps = self.alpsrunner(Dmur*math.sqrt(mur2))
+                else:
+                    alps = pdf.alphasQ2(Dmur**2*mur2)
+                
+                tmp *= math.sqrt(4*math.pi*alps)**onewgt.qcdpower
                 
                 if wgtpdf == 0: #happens for nn23pdf due to wrong set in lhapdf
                     key = (self.b1*onewgt.pdgs[0], self.b2*onewgt.pdgs[1], onewgt.bjks[0],onewgt.bjks[1], muf2)
