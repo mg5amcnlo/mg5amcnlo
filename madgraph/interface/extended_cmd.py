@@ -271,7 +271,11 @@ class OriginalCmd(object):
 
     def completenames(self, text, *ignored):
         dotext = 'do_'+text
-        return [a[3:] for a in self.get_names() if a.startswith(dotext)]
+        
+        done = set() # store the command already handle
+        
+        return [a[3:] for a in self.get_names() 
+                if a.startswith(dotext) and a not in done and not done.add(a)]
 
     def complete(self, text, state):
         """Return the next possible completion for 'text'.
@@ -436,9 +440,17 @@ class OriginalCmd(object):
 class BasicCmd(OriginalCmd):
     """Simple extension for the readline"""
 
-    def preloop(self):
+    def set_readline_completion_display_matches_hook(self):
+        """ This has been refactorized here so that it can be called when another
+        program called by MG5 (such as MadAnalysis5) changes this attribute of readline"""
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
+        else:
+            readline.set_completion_display_matches_hook()
+
+    def preloop(self):
+        self.set_readline_completion_display_matches_hook()
+        super(BasicCmd, self).preloop()
 
     def deal_multiple_categories(self, dico, formatting=True, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
@@ -557,7 +569,6 @@ class BasicCmd(OriginalCmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-        
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -581,13 +592,12 @@ class BasicCmd(OriginalCmd):
                     try:
                         compfunc = getattr(self, 'complete_' + cmd)
                     except AttributeError, error:
-                        misc.sprint(error)
                         compfunc = self.completedefault
                     except Exception, error:
                         misc.sprint(error)
             else:
                 compfunc = self.completenames
-                
+
             # correct wrong splittion with '\ '
             if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
                 Ntext = line.split(os.path.sep)[-1]
@@ -597,18 +607,19 @@ class BasicCmd(OriginalCmd):
                 data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
-            # correct wrong splitting with '-'
-            elif line and line[begidx-1] == '-':
+            # correct wrong splitting with '-'/"="
+            elif line and line[begidx-1] in ['-',"=",':']:
              try:    
+                sep = line[begidx-1]
                 Ntext = line.split()[-1]
-                self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
+                self.completion_prefix = Ntext.rsplit(sep,1)[0] + sep
                 to_rm = len(self.completion_prefix)
                 Nbegidx = len(line.rsplit(None, 1)[0])
                 data = compfunc(Ntext, line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]
              except Exception, error:
-                 print error
+                 print error                
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
@@ -1158,6 +1169,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
+        elif hasattr(question_instance, 'casesensitive') and not question_instance.casesensitive:
+            for entry in question_instance.allow_arg:
+                if line.lower() == entry.lower():
+                    return entry
         elif any(line.lower()==opt.lower() for opt in options): 
             possibility = [opt for opt in options if line.lower()==opt.lower()]
             if len (possibility)==1:
@@ -1545,6 +1560,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def postloop(self):
         """ """
         
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                readline.set_completer(self.old_completer)
+                del self.old_completer
+            except ImportError:
+                pass
+            except AttributeError:
+                pass
+        
         args = self.split_arg(self.lastcmd)
         if args and args[0] in ['quit','exit']:
             if 'all' in args:
@@ -1552,6 +1577,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len(args) >1 and args[1].isdigit():
                 if args[1] not in  ['0', '1']:
                     return True
+                                
         return False
         
     #===============================================================================
@@ -1766,7 +1792,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             Cmd.check_save(self, args)
             
         # find base file for the configuration
-        if'HOME' in os.environ and os.environ['HOME']  and \
+        if 'HOME' in os.environ and os.environ['HOME']  and \
         os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
             base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
             if hasattr(self, 'me_dir'):
@@ -1913,6 +1939,15 @@ class SmartQuestion(BasicCmd):
         self.history_header = ''
         self.default_value = str(default)
         self.mother_interface = mother_interface
+
+        if 'case' in opt:
+            self.casesensitive = opt['case']
+            del opt['case']
+        elif 'casesensitive' in opt:
+            self.casesensitive = opt['casesensitive']
+            del opt['casesensitive']            
+        else:
+            self.casesensistive = True
         super(SmartQuestion, self).__init__(*arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
@@ -1940,6 +1975,8 @@ class SmartQuestion(BasicCmd):
             return self.deal_multiple_categories(out)
         except Exception, error:
             print error
+    
+    completedefault = completenames
 
     def get_names(self):
         # This method used to pull in base class attributes
@@ -2004,6 +2041,34 @@ class SmartQuestion(BasicCmd):
                 return False
             
         return False
+    
+    def do_help(self, line):
+        
+        text=line
+        out ={}
+        out['Options'] = Cmd.list_completion(text, self.allow_arg)
+        out['command'] = BasicCmd.completenames(self, text)
+        
+        if not text:
+            if out['Options']:
+                logger.info( "Here is the list of all valid options:", '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['Options']))
+            if out['command']: 
+                logger.info( "Here is the list of command available:", '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['command']))
+        else:
+            if out['Options']:
+                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['Options']))
+            if out['command']: 
+                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['command']))
+            elif not  out['Options']:
+                logger.info( "No possibility starting with \'%s\'" % text, '$MG:color:BLACK')           
+        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:color:BLACK')
+    def complete_help(self, text, line, begidx, endidx):
+        """ """
+        return self.completenames(text, line)
         
     def default(self, line):
         """Default action if line is not recognized"""
@@ -2021,7 +2086,7 @@ class SmartQuestion(BasicCmd):
 
 
     def postcmd(self, stop, line):
-        
+
         try:    
             if self.value in self.allow_arg:
                 return True
@@ -2034,6 +2099,14 @@ class SmartQuestion(BasicCmd):
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
+            elif not self.casesensitive:
+                for ans in self.allow_arg:
+                    if ans.lower() == self.value.lower():
+                        self.value = ans
+                        return True
+                        break
+                else:
+                    raise Exception
             else: 
                 raise Exception
         except Exception,error:

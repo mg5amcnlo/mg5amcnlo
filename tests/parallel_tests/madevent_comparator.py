@@ -522,17 +522,36 @@ class MG5Runner(MadEventRunner):
         for key,value in numsubProc.items():
             output['number_of_P'+key]=str(value)
 
-        #Part 2: cross section                                                                                                                                   
+        #Part 2: cross section
         for name in SubProc:
             if os.path.exists(dir_name+'/SubProcesses/'+name+'/run_01_results.dat'):
                 filepath = dir_name+'/SubProcesses/'+name+'/run_01_results.dat'
             else:
                 filepath = dir_name+'/SubProcesses/'+name+'/results.dat'
+            if not os.path.exists(filepath):
+                break
+
             for line in file(filepath):
                 splitline=line.split()
                 #if len(splitline)==8:
                 output['cross_'+name]=splitline[0]
                 print "found %s %s" % (splitline[0], splitline[1])
+        else:
+            return output   
+        
+        filepath = dir_name+'/HTML/run_01/results.html'
+        text = open(filepath).read()    
+        
+        #id="#P1_qq_ll" href=#P1_qq_ll onClick="check_link('#P1_qq_ll','#P1_qq_ll','#P1_qq_ll')"> 842.9
+        info = re.findall('id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
+        for name,value in info:
+            output['cross_'+name] = value
+
+            
+            
+            
+
+        
         return output
 
 class MG5OldRunner(MG5Runner):

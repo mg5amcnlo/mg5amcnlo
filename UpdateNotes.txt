@@ -4,22 +4,22 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.5.0 (xx/xx/xx)
      FUNCTIONALITY
      -------------
+       VH+OM: Adding an official interface to PY8 for the parton-shower
        OM: Introduces a new function for LO/NLO interface "systematics"
             This function allows to compute systematics uncertainty from the event sample
             It requires the event sample to have been generated with 
                 - use_syst = T (for LO sample)
                 - store_reweight_info = T (for NLO sample)
             At LO the code is run automatically if use_syst=T (but if SysCalc is installed)
-
+       VH+SP: extend support for CKKWL
+       VH: extend install command to install: lhapdf/pythia8
        VH: adding the possibility to install COLLIER and to use it to reduce the loop-matrix element
        OM+VH: At the first loop/NLO computation, a new question will now be asked to choose which program
            to install to compute the loop. You can still install additional method later via the "install" command
-       OM: add an automatic update of the param_card to write the correct value for all dependent parameter.
-       OM: add the check that the param_card is compatible with the model restriction.
-       OM: NLO/LO Re-weighting works in multi-core
 
-     CODE IMPROVMENT
-     ---------------
+
+     CODE IMPROVMENT / small feature
+     -------------------------------
        OM: Modify the structure of the output format such that all the internal format have the same structure
        OM: Adding the Plugin directory. Three kind of plugin are currently supported
            - plugin defining a new type of output format
@@ -27,13 +27,18 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
            - plugin modifying the main interface of MG5aMCnlo 
            More informations/examples are available here:
            https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/Plugin
+       OM: Adding the possiblity of having detailled help at the time of the edition of the cards.
+            help mass / help mt / help nevents provided some information on the parameters.
+       OM: NLO/LO Re-weighting works in multi-core
+       OM: add an automatic update of the param_card to write the correct value for all dependent parameter.
+       OM: add the check that the param_card is compatible with the model restriction.
+       OM: Adding the run_card options "event_norm" for the LO run_card (same meaning as NLO one)
 
      BUG FIXING
      ----------
        OM: Fix a bug in the helicity by helicity reweighting method. (introduced in 2.4.3)
        OM: Fix a bug in the reweight_card where relative path was not understood from the local directory 
             where the program was runned by the user.
-
 
 2.4.3 (01/08/16)
         OM: Reduce the amount of log file/output generated for LO run (output can use up to three times less output).

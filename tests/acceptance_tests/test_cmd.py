@@ -172,7 +172,9 @@ class TestCmdShell1(unittest.TestCase):
                     'exrootanalysis_path': './ExRootAnalysis', 
                     'eps_viewer': None, 
                     'automatic_html_opening': True, 
-                    'pythia8_path': './pythia8',
+                    'pythia8_path': './HEPTools/pythia8',
+                    'mg5amc_py8_interface_path': './HEPTools/MG5aMC_PY8_interface',
+                    'madanalysis5_path': './HEPTools/madanalysis5/madanalysis5',
                     'group_subprocesses': 'Auto',
                     'complex_mass_scheme': False,
                     'gauge': 'unitary',
@@ -933,6 +935,8 @@ C
                                                'lib', 'libdsample.a')))
         self.assertTrue(os.path.exists(os.path.join(self.out_dir,
                                                'lib', 'libpdf.a')))
+        self.assertTrue(os.path.exists(os.path.join(self.out_dir,
+                                               'lib', 'libbias.a')))
         # Check that gensym compiles
         status = subprocess.call(['make', 'gensym'],
                                  stdout=devnull, 

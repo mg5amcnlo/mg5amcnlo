@@ -56,10 +56,17 @@
 # timeout = 60
 
 #! Pythia8 path.
-#!  Defines the path to the main pythia8 directory (i.e. that containing
-#!  the pythia8 configure script) .
+#!  Defines the path to the pythia8 installation directory (i.e. the
+#!  on containing the lib, bin and include directories) .
 #!  If using a relative path, that starts from the mg5 directory
-# pythia8_path =
+# pythia8_path = ./HEPTools/pythia8
+
+#! MG5aMC_PY8_interface path
+#!  Defines the path of the C++ driver file that is used by MG5_aMC to
+#!  steer the Pythia8 shower.
+#!  Can be installed directly from within MG5_aMC with the following command:
+#!     MG5_aMC> install mg5amc_py8_interface
+# mg5amc_py8_interface_path = ./HEPTools/MG5aMC_PY8_interface 
 
 #! Herwig++ paths
 #!  specify here the paths also to HepMC ant ThePEG
@@ -132,9 +139,13 @@
 #!  relative path start from main directory
 # delphes_path = ./Delphes
 
-#! MadAnalysis Package [For Drawing output]
+#! MadAnalysis4 fortran-based package [for basic analysis]
 #!  relative path start from main directory
 # madanalysis_path = ./MadAnalysis
+
+#! MadAnalysis5 python-based Package [For advanced analysis]
+#!  relative path start from main directory
+# madanalysis5_path = ./HEPTools/madanalysis5/madanalysis5
 
 #! ExRootAnalysis Package
 #!  relative path start from main directory

@@ -9,6 +9,7 @@ delphesdir=$1
 run=$2
 tag=$3
 cross=$4 
+file=$5
 
 main=`pwd`
 
@@ -22,17 +23,35 @@ if [ ! -e $delphesdir/DelphesSTDHEP ]; then
   exit
 fi
 
+if [ ${file: -3} == ".gz" ]
+then
+  if [ ${file: -7} == ".hep.gz" ]
+  then
+      gunzip --stdout $file | $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
+  else
+      gunzip --stdout $file | $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root      
+  fi
+else
+  if [ ${file: -4} == ".hep" ]
+  then
+      $delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file
+  else
+      $delphesdir/DelphesHepMC ../Cards/delphes_card.dat  ${run}/${tag}_delphes_events.root $file      
+  fi
+fi
+
 echo $$ >> ../myprocid
 
-# Set delphes path in delphes_card.dat
-
-$delphesdir/DelphesSTDHEP ../Cards/delphes_card.dat delphes.root pythia_events.hep
-$delphesdir/root2lhco delphes.root delphes_events.lhco
-
-if [ -e delphes_events.lhco ]; then
-# write the delphes banner
-    sed -e "s/^/#/g" ${run}/${run}_${tag}_banner.txt > ${run}/${tag}_delphes_events.lhco
-    echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
-    cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
-    rm -f delphes_events.lhco
-fi
+# Uncomment the following to have the LHCO file:
+#
+#
+#$delphesdir/root2lhco ${run}/${tag}_delphes.root delphes_events.lhco
+#
+#if [ -e delphes_events.lhco ]; then
+## write the delphes banner
+#    sed -e "s/^/#/g" ${run}/${run}_${tag}_banner.txt > ${run}/${tag}_delphes_events.lhco
+#    echo "##  Integrated weight (pb)  : ${cross}" >> ${run}/${tag}_delphes_events.lhco
+#    cat delphes_events.lhco >> ${run}/${tag}_delphes_events.lhco
+#    gzip ${run}/${tag}_delphes_events.lhco
+#    rm -f delphes_events.lhco
+#fi

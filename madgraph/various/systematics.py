@@ -415,15 +415,17 @@ class Systematics(object):
                     if in_pdf:
                         text += "</weightgroup> # PDFSET -> PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID]
+                    descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
-                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, pdfset.description)
+                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdf.lhapdfID 
                 elif pdf.memberID == 1 and (pdf.lhapdfID - pdf.memberID) in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET -> PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID - 1]
+                    descrip = pdfset.description.replace('=>',';').replace('>','.gt.').replace('<','.lt.')
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
-                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, pdfset.description)
+                            (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
                 elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
                     text += "</weightgroup> # PDFSET -> PDF\n"
@@ -454,10 +456,10 @@ class Systematics(object):
                 info += 'dyn_scale_choice=%s ' % {1:'sum pt', 2:'HT',3:'HT/2',4:'sqrts'}[dyn]
                                            
             if pdf != self.orig_pdf:
-                tag += 'LHAPDF="%s" ' % pdf.lhapdfID
-                info += 'LHAPDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
+                tag += 'PDF="%s" ' % pdf.lhapdfID
+                info += 'PDF=%s MemberID=%s' % (pdf.lhapdfID-pdf.memberID, pdf.memberID)
             else:
-                tag += 'LHAPDF="%s" ' % pdf.lhapdfID
+                tag += 'PDF="%s" ' % pdf.lhapdfID
                 
             text +='<weight id="%s" %s> %s </weight>\n' % (cid, tag, info)
             cid+=1

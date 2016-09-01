@@ -498,7 +498,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         opt = self.options
         
         # Check if first time:
-        if (opt['ninja'] is None) or (os.path.isfile(pjoin(opt['ninja'],'libninja.a'))): 
+        if (opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a'))): 
             return
         
         logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:color:BLACK')
@@ -918,12 +918,26 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             self.code['golem'] = 'fail'
         if not misc.which('cmake'):
             self.code['collier'] = 'off'
-            
-        if self.mother_interface:
-            misc.sprint(self.mother_interface.options)
-            
-            
-
+        
+        #check if some partial installation is already done.  
+        if 'mother_interface' in opts:
+            mother = opts['mother_interface']
+            if  'heptools_install_dir' in mother.options:
+                install_dir1 = mother.options['heptools_install_dir'] 
+                install_dir2 = mother.options['heptools_install_dir']
+                if os.path.exists(pjoin(install_dir1, 'CutTools')):
+                    self.code['cuttools'] =  mother.options['heptools_install_dir']           
+                if os.path.exists(pjoin(install_dir1, 'IREGI')):
+                    self.code['iregi'] =  mother.options['heptools_install_dir']
+            else:
+                install_dir1 = pjoin(MG5DIR, 'HEPTools')
+                install_dir2 = MG5DIR     
+            if os.path.exists(pjoin(install_dir1, 'collier')):
+                self.code['collier'] =  pjoin(install_dir1, 'collier')
+            if os.path.exists(pjoin(install_dir2, 'PJFry','bin','qd-config')):
+                self.code['collier'] =  pjoin(install_dir2, 'PJFry')
+            if os.path.exists(pjoin(install_dir2, 'golem95')):
+                self.code['collier'] =  pjoin(install_dir2, 'golem95')
         
         # 1. create the question
         question, allowed_answer = self.create_question(first=True)

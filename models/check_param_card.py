@@ -688,6 +688,31 @@ class ParamCard(dict):
             self.append(new_block)
         new_block.append(parameter)
         
+    def do_help(self, block, lhacode, default=None):
+        
+        if not lhacode:
+            logger.info("Information on block parameter %s:" % block, '$MG:color:BLUE')
+            print  str(self[block])
+        elif default:
+            pname2block, restricted = default.analyze_param_card()
+            if (block, lhacode) in restricted:
+                logger.warning("This parameter will not be consider by MG5_aMC")
+                print( "    MadGraph will use the following formula:")
+                print restricted[(block, lhacode)]
+                print( "     Note that some code (MadSpin/Pythia/...) will read directly the value")  
+            else:
+                for name, values in pname2block.items():
+                    if  (block, lhacode) in values:
+                        valid_name = name
+                        break
+                logger.info("Information for parameter %s of the param_card" % valid_name, '$MG:color:BLUE')
+                print("Part of Block \"%s\" with identification number %s" % (block, lhacode))        
+                print("Current value: %s" % self[block].get(lhacode).value)
+                print("Default value: %s" % default[block].get(lhacode).value)
+                print("comment present in the cards: %s " %  default[block].get(lhacode).comment)
+
+            
+     
              
     def mod_param(self, old_block, old_lha, block=None, lhacode=None, 
                                               value=None, comment=None):

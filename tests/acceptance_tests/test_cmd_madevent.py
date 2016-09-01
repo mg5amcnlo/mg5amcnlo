@@ -21,7 +21,9 @@ import shutil
 import sys
 import logging
 import time
-import tempfile   
+import tempfile
+import math
+from __builtin__ import True
 
 logger = logging.getLogger('test_cmd')
 
@@ -44,10 +46,6 @@ _pickle_path =os.path.join(_file_path, 'input_files')
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error, InvalidCmd
 
 pjoin = os.path.join
-
-    
-    
-
 
 #===============================================================================
 # TestCmd
@@ -138,7 +136,58 @@ class TestMECmdShell(unittest.TestCase):
         """ exec a line in the cmd under test """        
         self.cmd_line.run_cmd(line)
         
-  
+
+    def test_madevent_ptj_bias(self):
+        """ Test that biasing LO event generation works as intended. """
+        self.out_dir = self.run_dir
+
+        if not self.debugging or not os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
+            self.generate('d d~ > u u~', 'sm')
+            run_card = banner.RunCardLO(pjoin(self.out_dir, 'Cards','run_card.dat'))
+            run_card.set('bias_module','ptj_bias',user=True)
+            run_card.set('bias_parameters',"{'ptj_bias_target_ptj': 1000.0,'ptj_bias_enhancement_power': 4.0}",user=True)
+            run_card.set('use_syst',False)
+            run_card.set('nevents',10000)            
+            run_card.write(pjoin(self.out_dir, 'Cards','run_card.dat'))
+            self.do('launch -f')
+            run_card = banner.RunCardLO(pjoin(self.out_dir, 'Cards','run_card.dat'))
+            run_card.set('bias_module','dummy',user=True)
+            run_card.set('bias_parameters',"{}",user=True)
+            run_card.set('use_syst',False)
+            run_card.set('nevents',10000)
+            run_card.write(pjoin(self.out_dir, 'Cards','run_card.dat'))
+            self.do('launch -f')
+            if self.debugging:
+                if os.path.isdir(pjoin(MG5DIR,'BackUp_tmp_test')):
+                    shutil.rmtree(pjoin(MG5DIR,'BackUp_tmp_test'))
+                shutil.copytree(pjoin(MG5DIR,'tmp_test'),
+                                pjoin(MG5DIR,'BackUp_tmp_test'))
+        else:
+            shutil.rmtree(pjoin(MG5DIR,'tmp_test'))
+            shutil.copytree(pjoin(MG5DIR,'BackUp_tmp_test'),pjoin(MG5DIR,'tmp_test'))
+
+        biased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_01','unweighted_events.lhe.gz'))
+        unbiased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_02','unweighted_events.lhe.gz'))
+                
+        biased_events_ptj  = []
+        biased_events_wgts = []
+        for event in biased_events:
+            biased_events_ptj.append(math.sqrt(event[2].px**2+event[2].py**2))
+            biased_events_wgts.append(event.wgt)
+        
+        biased_median_ptj = sorted(biased_events_ptj)[len(biased_events_ptj)//2]
+        unbiased_events_ptj = []
+        for event in unbiased_events:
+            unbiased_events_ptj.append(math.sqrt(event[2].px**2+event[2].py**2))
+        unbiased_median_ptj = sorted(unbiased_events_ptj )[len(unbiased_events_ptj)//2]
+        
+        # Make that not all biased events have the same weights
+        self.assertGreater(len(set(biased_events_wgts)),1)
+        # Make sure that there is significantly more events in the ptj tail
+        self.assertGreater(biased_median_ptj,5.0*unbiased_median_ptj)
+        # Make sure that the cross-section is close enough for the bias and unbiased samples
+        self.assertLess((abs(biased_events.cross-unbiased_events.cross)/abs(unbiased_events.cross)),0.03)
+
     def test_madspin_gridpack(self):
 
         self.out_dir = self.run_dir
@@ -271,6 +320,13 @@ class TestMECmdShell(unittest.TestCase):
                     '%s/Cards/run_card.dat' % self.run_dir)
         shutil.copy('%s/Cards/pythia_card_default.dat' % self.run_dir,
                     '%s/Cards/pythia_card.dat' % self.run_dir)
+        shutil.copy('%s/Cards/plot_card_default.dat' % self.run_dir,
+                    '%s/Cards/plot_card.dat' % self.run_dir)        
+        try:
+            os.remove(pjoin(self.run_dir, 'Cards',  'madanalysis5_parton_card.dat'))
+            os.remove(pjoin(self.run_dir, 'Cards',  'madanalysis5_hadron_card.dat'))
+        except:
+            pass
         self.do('generate_events -f')     
         
         
@@ -287,6 +343,7 @@ class TestMECmdShell(unittest.TestCase):
         self.assertEqual(cmd, os.getcwd())        
         self.do('generate_events -f')
         self.assertEqual(int(self.cmd_line.run_card['nevents']), 44)
+        self.assertTrue(os.path.exists(pjoin(self.run_dir, 'Cards', 'plot_card.dat')))
         self.do('pythia run_01 -f')
         self.do('quit')
         
@@ -301,6 +358,7 @@ class TestMECmdShell(unittest.TestCase):
         
         
         self.assertEqual(cmd, os.getcwd())
+        self.assertFalse(self.debugging)
         
     def test_group_subprocess(self):
         """check that both u u > u u gives the same result"""
@@ -486,7 +544,7 @@ class TestMECmdShell(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
 
 #        if syst:
@@ -497,6 +555,7 @@ class TestMECmdShell(unittest.TestCase):
         """ """
         path = '%(path)s/HTML/%(run)s/plots_pythia_%(tag)s/DJR1.ps' % \
                                 {'path':self.run_dir,'run': run_name, 'tag': tag}
+
         self.assertTrue(os.path.exists(path))
         
         if mintime:
@@ -550,6 +609,7 @@ class TestMEfromfile(unittest.TestCase):
                  generate_events
                  parton
                  set nevents 100
+                 set event_norm sum
                  add_time_of_flight --threshold=4e-14
                  pythia
                  """ %self.run_dir
@@ -762,7 +822,7 @@ class TestMEfromfile(unittest.TestCase):
         """ """
         # check that the number of event is fine:
         data = self.load_result(run_name)
-        self.assertTrue('lhe' in data[0].pythia)
+        self.assertTrue('hep' in data[0].pythia)
         self.assertTrue('log' in data[0].pythia)
     
     def test_decay_width_nlo_model(self):

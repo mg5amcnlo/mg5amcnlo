@@ -1222,6 +1222,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file, options)
+            self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
+
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
@@ -2962,14 +2964,14 @@ RESTART = %(mint_mode)s
 
         
         # libdl may be needded for pythia 82xx
-        if shower == 'PYTHIA8' and not \
-           os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')) and \
-           'dl' not in self.shower_card['extralibs'].split():
-            # 'dl' has to be linked with the extralibs
-            self.shower_card['extralibs'] += ' dl'
-            logger.warning("'dl' was added to extralibs from the shower_card.dat.\n" + \
-                          "It is needed for the correct running of PY8.2xx.\n" + \
-                          "If this library cannot be found on your system, a crash will occur.")
+        #if shower == 'PYTHIA8' and not \
+        #   os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')) and \
+        #   'dl' not in self.shower_card['extralibs'].split():
+        #    # 'dl' has to be linked with the extralibs
+        #    self.shower_card['extralibs'] += ' dl'
+        #    logger.warning("'dl' was added to extralibs from the shower_card.dat.\n" + \
+        #                  "It is needed for the correct running of PY8.2xx.\n" + \
+        #                  "If this library cannot be found on your system, a crash will occur.")
 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
@@ -3298,96 +3300,91 @@ RESTART = %(mint_mode)s
 
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False):
-         """define the run name, the run_tag, the banner and the results."""
-         
-         # when are we force to change the tag new_run:previous run requiring changes
-         upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
-                        'pythia': ['pythia','pgs','delphes'],
-                        'shower': ['shower'],
-                        'pgs': ['pgs'],
-                        'delphes':['delphes'],
-                        'plot':[]}
-         
-         
- 
-         if name == self.run_name:        
-             if reload_card:
-                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-                 self.run_card = banner_mod.RunCardNLO(run_card)
- 
-             #check if we need to change the tag
-             if tag:
-                 self.run_card['run_tag'] = tag
-                 self.run_tag = tag
-                 self.results.add_run(self.run_name, self.run_card)
-             else:
-                 for tag in upgrade_tag[level]:
-                     if getattr(self.results[self.run_name][-1], tag):
-                         tag = self.get_available_tag()
-                         self.run_card['run_tag'] = tag
-                         self.run_tag = tag
-                         self.results.add_run(self.run_name, self.run_card)                        
-                         break
-             return # Nothing to do anymore
-         
-         # save/clean previous run
-         if self.run_name:
-             self.store_result()
-         # store new name
-         self.run_name = name
-         
-         # Read run_card
-         run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
-         self.run_card = banner_mod.RunCardNLO(run_card)
- 
-         new_tag = False
-         # First call for this run -> set the banner
-         self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
-         if tag:
-             self.run_card['run_tag'] = tag
-             new_tag = True
-         elif not self.run_name in self.results and level =='parton':
-             pass # No results yet, so current tag is fine
-         elif not self.run_name in self.results:
-             #This is only for case when you want to trick the interface
-             logger.warning('Trying to run data on unknown run.')
-             self.results.add_run(name, self.run_card)
-             self.results.update('add run %s' % name, 'all', makehtml=True)
-         else:
-             for tag in upgrade_tag[level]:
-                 
-                 if getattr(self.results[self.run_name][-1], tag):
-                     # LEVEL is already define in the last tag -> need to switch tag
-                     tag = self.get_available_tag()
-                     self.run_card['run_tag'] = tag
-                     new_tag = True
-                     break
-             if not new_tag:
-                 # We can add the results to the current run
-                 tag = self.results[self.run_name][-1]['tag']
-                 self.run_card['run_tag'] = tag # ensure that run_tag is correct                
-              
-                     
-         if name in self.results and not new_tag:
-             self.results.def_current(self.run_name)
-         else:
-             self.results.add_run(self.run_name, self.run_card)
- 
-         self.run_tag = self.run_card['run_tag']
- 
-         # Return the tag of the previous run having the required data for this
-         # tag/run to working wel.
-         if level == 'parton':
-             return
-         elif level == 'pythia':
-             return self.results[self.run_name][0]['tag']
-         else:
-             for i in range(-1,-len(self.results[self.run_name])-1,-1):
-                 tagRun = self.results[self.run_name][i]
-                 if tagRun.pythia:
-                     return tagRun['tag']
- 
- 
+        """define the run name, the run_tag, the banner and the results."""
+        
+        # when are we force to change the tag new_run:previous run requiring changes
+        upgrade_tag = {'parton': ['parton','delphes','shower','madanalysis5_hadron'],
+                       'shower': ['shower','delphes','madanalysis5_hadron'],
+                       'delphes':['delphes'],
+                       'madanalysis5_hadron':['madanalysis5_hadron'],
+                       'plot':[]}
+
+        if name == self.run_name:        
+            if reload_card:
+                run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+                self.run_card = banner_mod.RunCardNLO(run_card)
+
+            #check if we need to change the tag
+            if tag:
+                self.run_card['run_tag'] = tag
+                self.run_tag = tag
+                self.results.add_run(self.run_name, self.run_card)
+            else:
+                for tag in upgrade_tag[level]:
+                    if getattr(self.results[self.run_name][-1], tag):
+                        tag = self.get_available_tag()
+                        self.run_card['run_tag'] = tag
+                        self.run_tag = tag
+                        self.results.add_run(self.run_name, self.run_card)                        
+                        break
+            return # Nothing to do anymore
+        
+        # save/clean previous run
+        if self.run_name:
+            self.store_result()
+        # store new name
+        self.run_name = name
+        
+        # Read run_card
+        run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
+        self.run_card = banner_mod.RunCardNLO(run_card)
+
+        new_tag = False
+        # First call for this run -> set the banner
+        self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
+        if tag:
+            self.run_card['run_tag'] = tag
+            new_tag = True
+        elif not self.run_name in self.results and level =='parton':
+            pass # No results yet, so current tag is fine
+        elif not self.run_name in self.results:
+            #This is only for case when you want to trick the interface
+            logger.warning('Trying to run data on unknown run.')
+            self.results.add_run(name, self.run_card)
+            self.results.update('add run %s' % name, 'all', makehtml=True)
+        else:
+            for tag in upgrade_tag[level]:
+                
+                if getattr(self.results[self.run_name][-1], tag):
+                    # LEVEL is already define in the last tag -> need to switch tag
+                    tag = self.get_available_tag()
+                    self.run_card['run_tag'] = tag
+                    new_tag = True
+                    break
+            if not new_tag:
+                # We can add the results to the current run
+                tag = self.results[self.run_name][-1]['tag']
+                self.run_card['run_tag'] = tag # ensure that run_tag is correct                
+             
+                    
+        if name in self.results and not new_tag:
+            self.results.def_current(self.run_name)
+        else:
+            self.results.add_run(self.run_name, self.run_card)
+
+        self.run_tag = self.run_card['run_tag']
+
+        # Return the tag of the previous run having the required data for this
+        # tag/run to working wel.
+        if level == 'parton':
+            return
+        elif level == 'pythia':
+            return self.results[self.run_name][0]['tag']
+        else:
+            for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                tagRun = self.results[self.run_name][i]
+                if tagRun.pythia:
+                    return tagRun['tag']
 
 
     def store_result(self):
@@ -4457,10 +4454,10 @@ RESTART = %(mint_mode)s
             options['reweightonly'] = False
         
         
-        void = 'NOT INSTALLED'
-        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight']
+        void = 'Not installed'
+        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight','madanalysis5']
         switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
-                  'madspin': void,'reweight':'OFF'}
+                  'madspin': void,'reweight':'OFF','madanalysis5':void}
         if not switch:
             switch = switch_default
         else:
@@ -4472,18 +4469,26 @@ RESTART = %(mint_mode)s
                                 'fixed_order': default_switch,
                                 'shower': default_switch,
                                 'madspin': default_switch,
-                                'reweight': default_switch}
+                                'reweight': default_switch,
+                                'madanalysis5':['OFF','HADRON']}
+
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 
+                                       'madanalysis5_hadron_card_default.dat')):
+            allowed_switch_value['madanalysis5']=[]
 
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
                        'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight': 'Add weights to the events based on changing model parameters:'}
+                       'reweight': 'Add weights to the events based on changing model parameters:',
+                       'madanalysis5':'Run MadAnalysis5 on the events generated:'}
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
                        ('reweight', 'ON'): {'fixed_order':'OFF'},
-                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF'}
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF','madanalysis5':'OFF'},
+                       ('madanalysis5','HADRON'): {'shower': 'ON','fixed_order':'OFF'},
+                       ('shower','OFF'): {'madanalysis5': 'OFF'},   
                        }
         special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
 
@@ -4494,10 +4499,12 @@ RESTART = %(mint_mode)s
             switch['shower'] = 'Not available for decay'
             switch['madspin'] = 'Not available for decay'
             switch['reweight'] = 'Not available for decay'
+            switch['madanalysis5'] = 'Not available for decay'
             allowed_switch_value['fixed_order'] = ['ON']
             allowed_switch_value['shower'] = ['OFF']
             allowed_switch_value['madspin'] = ['OFF']
             allowed_switch_value['reweight'] = ['OFF']
+            allowed_switch_value['madanalysis5'] = ['OFF']
             available_mode = ['0','1']
             special_values = ['LO', 'NLO']
         else: 
@@ -4514,7 +4521,13 @@ RESTART = %(mint_mode)s
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
                 switch['shower'] = 'ON'
             else:
-                switch['shower'] = 'OFF' 
+                switch['shower'] = 'OFF'
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card_default.dat')):
+                available_mode.append('6')
+                if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card.dat')):
+                    switch['madanalysis5'] = 'HADRON'
+                else:
+                    switch['madanalysis5'] = 'OFF'                
                 
         if (not aMCatNLO or self.options['mg5_path']) and '3' in available_mode:
             available_mode.append('4')
@@ -4546,7 +4559,7 @@ RESTART = %(mint_mode)s
         alias = {}
         for id, key in enumerate(switch_order):
             if switch[key] != void and switch[key] in allowed_switch_value[key] and \
-                len(allowed_switch_value[key]) >1:
+                                              len(allowed_switch_value[key])>1:
                 answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
                 #allow lower case for on/off
                 alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
@@ -4664,6 +4677,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 cards.append('madspin_card.dat')
             if switch['reweight'] == 'ON':
                 cards.append('reweight_card.dat')
+            if switch['madanalysis5'] == 'HADRON':
+                cards.append('madanalysis5_hadron_card.dat')                
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
         if mode == 'onlyshower':

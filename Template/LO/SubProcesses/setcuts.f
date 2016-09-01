@@ -81,6 +81,11 @@ C
       logical  do_cuts(nexternal)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM, do_cuts 
+
+c     Store which external particles undergo the ktdurham and ptlund cuts.
+      LOGICAL  is_pdg_for_merging_cut(NEXTERNAL)
+      COMMON /TO_MERGE_CUTS/is_pdg_for_merging_cut, from_decay
+
 c
 c
 c     reading parameters
@@ -228,55 +233,17 @@ c-neutrino's for missing et
          if (abs(idup(i,1,iproc)).eq.16) is_a_nu(i)=.true.  ! no cuts on vt vt~
          if (pmass(i).gt.10d0)     is_heavy(i)=.true. ! heavy fs particle
 c-onium
-c         if (idup(i,1,iproc).eq.441)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.10441)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.100441)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.10443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.20443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.100443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.30443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.9000443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.9010443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.9020443)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.445)   is_a_onium(i)=.true. ! charmonium
-c         if (idup(i,1,iproc).eq.9000445)   is_a_onium(i)=.true. ! charmonium
 
-c         if (idup(i,1,iproc).eq.551)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.10551)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.100551)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.110551)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.200551)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.210551)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.10553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.20553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.30553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.100553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.110553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.120553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.130553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.200553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.210553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.220553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.300553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.9000553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.9010553)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.555)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.10555)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.20555)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.100555)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.110555)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.200555)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.557)   is_a_onium(i)=.true. ! bottomonium
-c         if (idup(i,1,iproc).eq.100557)   is_a_onium(i)=.true. ! bottomonium
+c        Remember mergeable particles
+         do j=1,pdgs_for_merging_cut(0)
+           if (    pdgs_for_merging_cut(j) .ne. 0
+     $       .and. abs(idup(i,1,iproc)) .eq.pdgs_for_merging_cut(j)
+     $       .and..not.from_decay(i) ) then
+             is_pdg_for_merging_cut(i)=.true.
+             exit
+            endif
+         enddo
 
-c         if (idup(i,1,iproc).eq.541)   is_a_onium(i)=.true. ! Bc
-c         if (idup(i,1,iproc).eq.10541)   is_a_onium(i)=.true. ! Bc
-c         if (idup(i,1,iproc).eq.543)   is_a_onium(i)=.true. ! Bc
-c         if (idup(i,1,iproc).eq.10543)   is_a_onium(i)=.true. ! Bc
-c         if (idup(i,1,iproc).eq.20543)   is_a_onium(i)=.true. ! Bc
-c         if (idup(i,1,iproc).eq.545)   is_a_onium(i)=.true. ! Bc
       enddo
 
 

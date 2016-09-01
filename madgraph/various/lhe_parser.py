@@ -7,6 +7,7 @@ import math
 import time
 import os
 import shutil
+import sys
 
 pjoin = os.path.join
 
@@ -283,10 +284,9 @@ class EventFile(object):
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
-            
-    
-    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, event_target=0, 
-                 log_level=logging.INFO):
+                
+    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
+                 event_target=0, log_level=logging.INFO, normalization='average'):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
@@ -307,7 +307,6 @@ class EventFile(object):
         else:
             unwgt_name = get_wgt.func_name
 
-        
         # check which weight to write
         if hasattr(self, "written_weight"):
             written_weight = lambda x: math.copysign(self.written_weight,float(x))
@@ -351,18 +350,21 @@ class EventFile(object):
                 banner = self.get_banner()
                 # 1. modify the cross-section
                 banner.modify_init_cross(cross)
-                strategy = banner.get_lha_strategy()
-                # 2. modify the lha strategy
-                if strategy >0:  
-                    banner.set_lha_strategy(4)
-                else:
-                    banner.set_lha_strategy(-4)
                 # 3. add information about change in weight
                 banner["unweight"] = "unweighted by %s" % unwgt_name
             else:
                 banner = self.banner
-
-        
+            # modify the lha strategy
+            curr_strategy = banner.get_lha_strategy()
+            if normalization in ['unit', 'sum']:
+                strategy = 3
+            else:
+                strategy = 4
+            if curr_strategy >0: 
+                banner.set_lha_strategy(abs(strategy))
+            else:
+                banner.set_lha_strategy(-1*abs(strategy))
+                
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
         nb_keep = 0
@@ -461,7 +463,7 @@ class EventFile(object):
           nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
         #correct the weight in the file if not the correct number of event
-        if nb_keep != event_target and hasattr(self, "written_weight"):
+        if nb_keep != event_target and hasattr(self, "written_weight") and strategy !=4:
             written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
             startfile = EventFile(outputpath)
             tmpname = pjoin(os.path.dirname(outputpath), "wgtcorrected_"+ os.path.basename(outputpath))
@@ -484,9 +486,9 @@ class EventFile(object):
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000, "maxevent":float("inf"),'no_output':False}
+        opt= {"print_step": 5000, "maxevent":float("inf"),'no_output':False}
         opt.update(opts)
-        
+        start = time.time()
         nb_fct = len(fcts)
         out = []
         for i in range(nb_fct):
@@ -495,16 +497,15 @@ class EventFile(object):
         nb_event = 0
         for event in self:
             nb_event += 1
-            if opt["print_step"] and nb_event % opt["print_step"] == 0:
+            if opt["print_step"] and (nb_event % opt["print_step"]) == 0:
                 if hasattr(self,"len"):
-                    logger.info("currently at %s/%s event" % (nb_event, self.len))
+                    print("currently at %s/%s event [%is]" % (nb_event, self.len, time.time()-start))
                 else:
-                    logger.info("currently at %s event" % nb_event)
+                    print("currently at %s event [%is]" % (nb_event, time.time()-start))
             for i in range(nb_fct):
-                if opts['no_output']:
-                    fcts[i](event)
-                else:
-                    out[i].append(fcts[i](event))
+                value = fcts[i](event)
+                if not opts['no_output']:
+                    out[i].append(value)
             if nb_event > opt['maxevent']:
                 break
         if nb_fct == 1:
@@ -514,7 +515,7 @@ class EventFile(object):
 
     def split(self, nb_event=0):
         """split the file in multiple file. Do not change the weight!"""
-    
+
         nb_file = -1
         for i, event in enumerate(self):
             if i % nb_event == 0:
@@ -532,40 +533,59 @@ class EventFile(object):
             current.close()   
         return nb_file +1
 
-    def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
-        
-        first=True
-        def add_to_Hwu(event):
-            """function to update the HwU on the flight"""
+    def update_HwU(self, hwu, fct, name='lhe', keep_wgt=False, maxevents=sys.maxint):
+        """take a HwU and add this event file for the function fct"""
+                
+        if not isinstance(hwu, list):
+            hwu = [hwu]
 
-            value = fct(event)
+        class HwUUpdater(object):
             
-            # initialise the curve for the first call
-            if first:
-                # register the variables
-                if isinstance(value, dict):
-                    hwu.add_line(value.keys())
-                else:
-                    hwu.add_line(name)
-                    if keep_wgt is True:
-                        hwu.add_line(['%s_%s' % (name, key)
-                                                for key in event.reweight_data])
-                first = False
-            # Fill the histograms
-            if isinstance(value, dict):
-                hwu.addEvent(value)
-            else:
-                hwu.addEvent({name:value})
-                if keep_wgt:
-                    event.parse_reweight()
-                    if keep_wgt is True:
-                        data = dict(('%s_%s' % (name, key),value)
-                                                for key in event.reweight_data)
-                        hwu.addEvent(data)
-    
+            def __init__(self, fct, keep_wgt):
+                
+                self.fct = fct
+                self.first = True
+                self.keep_wgt = keep_wgt
+                
+            def add(self, event):
+
+                value = self.fct(event)
+                # initialise the curve for the first call
+                if self.first:
+                    for h in hwu:
+                        # register the variables
+                        if isinstance(value, dict):
+                            h.add_line(value.keys())
+                        else:
+                        
+                            h.add_line(name)
+                            if self.keep_wgt is True:
+                                event.parse_reweight()
+                                h.add_line(['%s_%s' % (name, key)
+                                                    for key in event.reweight_data])
+                            elif self.keep_wgt:
+                                h.add_line(self.keep_wgt.values())                            
+                    self.first = False
+                # Fill the histograms
+                for h in hwu:
+                    if isinstance(value, tuple):
+                        h.addEvent(value[0], value[1])
+                    else:
+                        h.addEvent(value,{name:event.wgt})
+                        if self.keep_wgt:
+                            event.parse_reweight()
+                            if self.keep_wgt is True:
+                                data = dict(('%s_%s' % (name, key),event.reweight_data[key])
+                                                    for key in event.reweight_data)
+                                h.addEvent(value, data)
+                            else:
+                                data = dict(( value,event.reweight_data[key])
+                                                    for key,value in self.keep_wgt.items())
+                                h.addEvent(value, data)
+                                
+                                      
         
-        
-        self.apply_fct_on_event(add_to_Hwu, no_output=True)
+        self.apply_fct_on_event(HwUUpdater(fct,keep_wgt).add, no_output=True,maxevent=maxevents)
         return hwu
     
     def create_syscalc_data(self, out_path, pythia_input=None):
@@ -715,7 +735,7 @@ class MultiEventFile(EventFile):
             raise Exception
     
 
-    def define_init_banner(self, wgt):
+    def define_init_banner(self, wgt, lha_strategy):
         """define the part of the init_banner"""
         
         if not self.banner:
@@ -789,11 +809,11 @@ class MultiEventFile(EventFile):
                     "wgt": wgt}
             init_information["cross_info"].append( cross_info % conv)
         init_information["cross_info"] = '\n'.join(init_information["cross_info"])
-            
+        init_information['lha_stra'] = -1 * abs(lha_strategy)
         
         
         template_init =\
-        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i -3 %(nprup)i
+        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i %(lha_stra)i %(nprup)i
 %(cross_info)s
 %(generator_info)s
 """
@@ -901,8 +921,20 @@ class MultiEventFile(EventFile):
         
 
         if 'event_target' in opts and opts['event_target']:
-            new_wgt = sum(self.across)/opts['event_target']
-            self.define_init_banner(new_wgt)
+            if 'normalization' in opts:
+                if opts['normalization'] == 'sum':
+                    new_wgt = sum(self.across)/opts['event_target']
+                    strategy = 3
+                elif opts['normalization'] == 'average':
+                    strategy = 4
+                    new_wgt = sum(self.across)                    
+                elif opts['normalization'] == 'unit':
+                    strategy =3
+                    new_wgt = 1.
+            else:
+                strategy = 4
+                new_wgt = sum(self.across)
+            self.define_init_banner(new_wgt, strategy)
             self.written_weight = new_wgt
         elif 'write_init' in opts and opts['write_init']:
             self.define_init_banner(0)
@@ -1115,7 +1147,7 @@ class Event(list):
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
             pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''',re.I)
-            data = pattern.findall(self.tag)
+            data = pattern.findall(self.tag[start:stop])
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
@@ -1743,8 +1775,8 @@ class Event(list):
         scale = 0 
         for particle in self:
             if particle.status != 1:
-                continue 
-            p = FourMomentum(particle)
+                continue
+            p=FourMomentum(particle)
             scale += math.sqrt(p.mass_sqr + p.pt**2)
     
         return prefactor * scale
@@ -2001,12 +2033,6 @@ class FourMomentum(object):
         
         
         
-        
-        
-        """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
-        the output is the 4-momenta in the frame of this 4-momenta
-        function copied from HELAS routine."""
-                
 
 class OneNLOWeight(object):
         

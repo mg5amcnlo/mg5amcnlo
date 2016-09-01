@@ -613,7 +613,6 @@ class LoopMatrixElementEvaluator(MatrixElementEvaluator):
             FortranModel = helas_call_writers.FortranUFOHelasCallWriter(model)
             FortranExporter.copy_template(model)
             FortranExporter.generate_subprocess_directory(matrix_element, FortranModel)
-            #FortranExporter.write_global_specs(matrix_element)
             wanted_lorentz = list(set(matrix_element.get_used_lorentz()))
             wanted_couplings = list(set([c for l in matrix_element.get_used_couplings() \
                                                                     for c in l]))
@@ -1067,8 +1066,7 @@ class LoopMatrixElementTimer(LoopMatrixElementEvaluator):
         
         MLcard = bannermod.MadLoopParam(MLCardPath)
         for key,value in params.items():
-            MLcard.set(key, value, ifnotdefault=False)
-
+            MLcard.set(key, value, changeifuserset=False)
         MLcard.write(MLCardPath, commentdefault=True)
 
     def skip_loop_evaluation_setup(self, dir_name, skip=True):

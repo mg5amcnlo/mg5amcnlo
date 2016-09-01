@@ -63,3 +63,11 @@ C     Controls wheter to perform Monte-Carlo sampling over grouped subprocesses
 C
       logical MC_grouped_subproc
       common/to_MC_grouped_subproc/MC_grouped_subproc
+
+C
+C Controls what are the PDGs included in the CKKWl merging procedure, i.e. what
+C are the PDGs subject to the ktdurham cut
+C
+      integer pdgs_for_merging_cut(0:1000)
+      common/TO_MERGE/pdgs_for_merging_cut
+

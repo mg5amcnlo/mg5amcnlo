@@ -1041,7 +1041,6 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
 
         writer.writelines(proc_include)
                                 
-                                
     def generate_subprocess_directory(self, matrix_element, fortran_model):
         """ To overload the default name for this function such that the correct
         function is used when called from the command interface """
@@ -3245,7 +3244,6 @@ class LoopInducedExporterMENoGroup(LoopInducedExporterME,
         # And the finilize_v4 from LoopInducedExporterME which essentially takes
         # care of MadLoop virtuals initialization
         LoopInducedExporterME.finalize(self, *args, **opts)
-
 
     def generate_subprocess_directory(self, matrix_element, fortran_model, me_number):
         """Generate the Pn directory for a subprocess group in MadEvent,
