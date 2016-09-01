@@ -1201,7 +1201,18 @@ class ConfigFile(dict):
                 try:
                     value = float(value)
                 except ValueError:
-                    raise Exception, "%s can not be mapped to a float" % value
+                    try:
+                        split = re.split('(\*|/)',value)
+                        v = float(split[0])
+                        for i in range((len(split)//2)):
+                            if split[2*i+1] == '*':
+                                v *=  float(split[2*i+2])
+                            else:
+                                v /=  float(split[2*i+2])
+                    except:
+                        raise Exception, "%s can not be mapped to a float" % value
+                    finally:
+                        value = v
             else:
                 raise Exception, "type %s is not handle by the card" % targettype
             
