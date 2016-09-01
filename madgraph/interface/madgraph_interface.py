@@ -2692,9 +2692,14 @@ class CompleteForCmd(cmd.CompleteCmd):
             elif args[1]=='mg5amc_py8_interface':
                 options.append('--mg5amc_py8_interface_tarball=') 
             elif args[1] in ['MadAnalysis5','MadAnalysis']:
-                options.append('--no_MA5_further_install')
+                #options.append('--no_MA5_further_install')
                 options.append('--no_root_in_MA5')
-                options.append('--madanalysis5_tarball=') 
+                options.append('--update')
+                options.append('--madanalysis5_tarball=')
+                for prefix in ['--with', '--veto']:
+                    for prog in ['fastjet', 'delphes', 'delphesma5tune']:
+                        options.append('%s-%s' % (prefix, prog))
+                         
             for opt in options[:]:
                 if any(a.startswith(opt) for a in args):
                     options.remove(opt)
@@ -5309,12 +5314,13 @@ This implies that with decay chains:
     def advanced_install(self, tool_to_install, 
                                HepToolsInstaller_web_address=None,
                                additional_options=[]):
-
-        # prevent border effects
-        add_options = list(additional_options)
         """ Uses the HEPToolsInstaller.py script maintened online to install
         HEP tools with more complicated dependences.
         Additional options will be added to the list when calling HEPInstaller"""
+        
+        # prevent border effects
+        add_options = list(additional_options)
+
         # Always refresh the installer if already present
         if not os.path.isdir(pjoin(MG5DIR,'HEPTools','HEPToolsInstallers')):
             if HepToolsInstaller_web_address is None:
@@ -5411,9 +5417,11 @@ This implies that with decay chains:
         # Special rules for certain tools
         if tool=='madanalysis5':
             add_options.append('--mg5_path=%s'%MG5DIR)
-            fastjet_config  = misc.which(self.options['fastjet'])
-            if fastjet_config:
-                add_options.append('--with_fastjet=%s'%fastjet_config)
+            if not any(opt.startswith(('--with-fastjet', '--veto-fastjet')) for opt in add_options):
+                fastjet_config  = misc.which(self.options['fastjet'])
+                if fastjet_config:
+                    add_options.append('--with_fastjet=%s'%fastjet_config)
+           
             if self.options['delphes_path'] and os.path.isdir(
                   os.path.normpath(pjoin(MG5DIR,self.options['delphes_path']))):
                 add_options.append('--with_delphes3=%s'%\
@@ -5483,7 +5491,6 @@ This implies that with decay chains:
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
-
             return_code = misc.call([pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
@@ -5491,6 +5498,13 @@ This implies that with decay chains:
         if return_code == 0:
             logger.info("%s successfully installed in %s."%(
                    tool_to_install, prefix),'$MG:color:GREEN')
+            
+            if tool=='madanalysis5':
+                if not any(o.startswith(('--with-','--veto-','--update')) for o in add_options):
+                    logger.info('    To install recasting capabilities of madanalysis5 and/or', '$MG:color:BLACK')
+                    logger.info('    to allow delphes analysis at parton level.','$MG:color:BLACK')
+                    logger.info('    Please run \'install MadAnalysis5 --with-delphes --update\':', '$MG:color:BLACK')
+            
         elif return_code == 66:
             answer = self.ask(question=
 """\033[33;34mTool %s already installed in %s."""%(tool_to_install, prefix)+
@@ -5648,6 +5662,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'mg5amc_py8_interface':['arXiv:1410.3012','arXiv:XXXX.YYYYY'],
                           'ninja':['arXiv:1203.0291','arXiv:1403.1229','arXiv:1604.01363'],
                           'MadAnalysis5':['arXiv:1206.1599'],
+                          'MadAnalysis':['arXiv:1206.1599'],
                           'collier':['arXiv:1604.06792'],
                           'oneloop':['arXiv:1007.4716']}
 
@@ -5735,6 +5750,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             add_options.extend(install_options['options_for_HEPToolsInstaller'])
             if not any(opt.startswith('--logging=') for opt in add_options):
                 add_options.append('--logging=%d' % logger.level)
+
             return self.advanced_install(name, path['HEPToolsInstaller'],
                                         additional_options = add_options)
 
