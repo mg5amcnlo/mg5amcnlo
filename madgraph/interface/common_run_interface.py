@@ -2523,6 +2523,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if MA5_interpreter is None:
             return
 
+        first_analysis=True
         # Now loop over the different MA5_runs
         for MA5_runtag, MA5_cmds in MA5_cmds_list:
             
@@ -2547,12 +2548,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                                    MA5_runtag,'$MG:color:GREEN')
                     
             
-            # Now the magic, let's call MA5
+            # Filter out fifo if it is not the first analysis
+            if not first_analysis and any(input.endswith('.fifo') for input in MA5_opts['inputs']):
+                MA5_opts['inputs'] = [input for input in MA5_opts['inputs'] if not input.endswith('.fifo')]
+                logger.warning('Only the first MA5 analysis can be run on a fifo. Subsequent analysis will skip fifo inputs.')
+            
+            # Now the magic, let's call MA5            
             if not CommonRunCmd.runMA5(MA5_interpreter, MA5_cmds, MA5_runtag,
                 pjoin(self.me_dir,'Events',self.run_name,'%s_MA5_%s.log'%(self.run_tag,MA5_runtag))):
                 # Unsuccessful MA5 run, we therefore stop here.
                 return
-
+            first_analysis = False
+            
             if MA5_runtag.startswith('_reco_'):
                 # When doing a reconstruction we must first link the event file
                 # created with MA5 reconstruction and then directly proceed to the
