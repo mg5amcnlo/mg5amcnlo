@@ -78,7 +78,7 @@ class TestBanner(unittest.TestCase):
 
 class TestConfigFileCase(unittest.TestCase):
     """ A class to test the TestConfig functionality """
-    # a lot of the funtionality are actually already tested in the child
+    # a lot of the functionality are actually already tested in the child
     # TESTMadLoopParam and are not repeated here.
      
     def setUp(self):
@@ -165,6 +165,36 @@ class TestConfigFileCase(unittest.TestCase):
         #self.config['list_s'] = " 1\\ 2, 3, 5d1 "        
         #self.assertEqual(self.config['list_s'],['1\\', '2','3', '5d1'])
 
+    def test_handling_dict_of_values(self):
+        """check that the read/write of a list of value works"""
+        
+        # add a parameter which can be a list
+        self.config.add_param("dict", {'__type__':1.0})
+        self.assertEqual(self.config['dict'], {})
+        self.assertEqual(dict.__getitem__(self.config,'dict'), {})
+         
+        # try to write info in it via the string
+        self.config['dict'] = "1,2"
+        self.assertEqual(self.config['dict'],{'1':2.0})
+        self.config['dict'] = "3,4"
+        self.assertEqual(self.config['dict'],{'1':2.0, '3': 4.0})
+        self.config['dict'] = "5 6"
+        self.assertEqual(self.config['dict'],{'1':2.0, '3': 4.0, '5':6.0})
+        self.config['dict'] = "7:8"
+        self.assertEqual(self.config['dict'],{'1':2.0, '3': 4.0, '5':6.0, '7':8.0 })
+        self.config['dict'] = "7: 9.2"
+        self.assertEqual(self.config['dict'],{'1':2.0, '3': 4.0, '5':6.0, '7':9.2 })        
+        
+        
+        self.config['dict'] = "{5:6,'7':8}"
+        self.assertEqual(self.config['dict'],{'5':6.0, '7': 8.0})        
+        
+        self.config['dict'] = {'5':6,'3':4+0j}
+        self.assertEqual(self.config['dict'],{'5':6.0, '3': 4.0})           
+        
+        self.assertRaises(Exception, self.config.__setitem__, 'dict', [1,2,3])
+        self.assertRaises(Exception, self.config.__setitem__, 'dict', {'test':'test'})
+        self.assertRaises(Exception, self.config.__setitem__, 'dict', "22")
 
     def test_auto_handling(self):
         """check that any parameter can be set on auto and recover"""
@@ -220,14 +250,7 @@ class TestConfigFileCase(unittest.TestCase):
         self.config.set('test', '1 4', user=False)
         self.assertEqual(self.config['test'], [1,4])         
 
-        
-        
-                 
-        
-        
-        
-        
-        
+      
     def test_for_loop(self):
         """ check correct handling of case"""
     
@@ -446,7 +469,7 @@ class TestRunCard(unittest.TestCase):
         #check all list/dict are define
         self.assertTrue(hasattr(run_card2, 'user_set'))
         self.assertTrue(hasattr(run_card2, 'hidden_param'))
-        self.assertTrue(hasattr(run_card2, 'not_in_include')) 
+        self.assertTrue(hasattr(run_card2, 'includepath')) 
         self.assertTrue(hasattr(run_card2, 'fortran_name'))
         self.assertFalse(hasattr(run_card2, 'default'))
         self.assertTrue(hasattr(run_card2, 'cuts_parameter'))   

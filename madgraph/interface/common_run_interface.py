@@ -779,7 +779,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     else:
                         raise MadGraph5Error("lhaid %s is not a valid PDF identification number. This can be due to the use of an outdated version of LHAPDF, or %s is not a LHAGlue number corresponding to a central PDF set (but rather one of the error sets)." % (lhaid,lhaid))
                 run_card['lhapdfsetname']=lhapdfsetname
-            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+            run_card.write_include_file(opt['output_dir'])
 
         if mode in ['MadLoop', 'all']:
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'MadLoopParams.dat')):          
@@ -3465,8 +3465,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         stored in make_opts_var"""
         make_opts = os.path.join(self.me_dir, 'Source', 'make_opts')
         
+        # Set some environment variables common to all interfaces
+        if not hasattr(self,'options') or not 'pythia8_path' in self.options or \
+           not self.options['pythia8_path'] or \
+           not os.path.isfile(pjoin(self.options['pythia8_path'],'bin','pythia8-config')):
+            self.make_opts_var['PYTHIA8_PATH']='NotInstalled'
+        else:
+            self.make_opts_var['PYTHIA8_PATH']=self.options['pythia8_path']
+
+        self.make_opts_var['MG5AMC_VERSION'] = misc.get_pkg_info()['version']
+
         return self.update_make_opts_full(make_opts, self.make_opts_var)
-        
 
     @staticmethod
     def update_make_opts_full(path, def_variables, keep_old=True):
@@ -4631,7 +4640,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('remove information %s from the run_card' % args[start],'$MG:color:BLACK')
                     del self.run_card[args[start]]
             else:
-                if args[0].startswith('sys_') or args[0] in self.run_card.list_parameter:
+                if args[0].startswith('sys_') or \
+                   args[0] in self.run_card.list_parameter or \
+                   args[0] in self.run_card.dict_parameter:
                     val = ' '.join(args[start+1:])
                     val = val.split('#')[0]
                 else:
@@ -4845,7 +4856,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 
         #INVALID --------------------------------------------------------------
         else:      
-            misc.sprint(card)      
             logger.warning('invalid set command %s ' % line)
             return
 

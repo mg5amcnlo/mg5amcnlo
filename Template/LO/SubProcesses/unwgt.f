@@ -240,9 +240,9 @@ c           Set sign of uwgt to sign of wgt
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
-            call write_leshouche(p,uwgt,numproc)
+            call write_leshouche(p,uwgt,numproc,.True.)
          elseif (xwgt .gt. 0d0 .and. nw .lt. 5) then
-            call write_leshouche(p,wgt/twgt*1d-6,numproc)
+            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True.)
 c $E$ S-COMMENT_C $E$
          endif
          maxwgt=max(maxwgt,xwgt)
@@ -441,7 +441,7 @@ c      endif
 c      close(lun)
       end
 
-      SUBROUTINE write_leshouche(p,wgt,numproc)
+      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events)
 C**************************************************************************
 C     Writes out information for event
 C**************************************************************************
@@ -464,15 +464,16 @@ c     Arguments
 c
       double precision p(0:3,nexternal),wgt
       integer numproc
+      logical do_write_events
 c
 c     Local
 c
       integer i,j,k,iini,ifin
       double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
-      integer ip, np, ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
+      integer ip, np, ic, nc
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
-      double precision pboost(0:3),pb(0:4,-nexternal+3:2*nexternal-3)
+      double precision pboost(0:3)
       double precision beta, get_betaz
       double precision ebi(0:3), ebo(0:3)
       double precision ptcltmp(nexternal), pdum(0:3)
@@ -481,19 +482,14 @@ c
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
 
-      integer isym(nexternal,99), nsym, jsym
+      integer nsym
 
-      double precision sscale,aaqcd,aaqed
-      integer ievent,npart
+      integer ievent
       logical flip
 
       real ran1
       external ran1
 
-      character*1000 buff
-      character*(s_bufflen) s_buff(7)
-      integer nclus
-      character*(clus_bufflen) buffclus(nexternal)
       character*40 cfmt
 C     
 C     GLOBAL
@@ -514,9 +510,6 @@ C
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
 
-      integer ngroup
-      common/to_group/ngroup
-
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 c
@@ -533,17 +526,24 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 c      data ncolflow/maxamps*0/
 c      data ncolalt/maxamps*0/
 
-      include 'symswap.inc'
       include 'coupl.inc'
+
+      include 'lhe_event_infos.inc'
+      data AlreadySetInBiasModule/.False./
+
+      include 'symswap.inc'
 C-----
 C  BEGIN CODE
 C-----
       
-      if (nw .ge. maxevents) return
+      if ((nw .ge. maxevents).and.do_write_events) return
 
-c     Store weight for event
-      nw = nw+1
-      swgt(nw)=wgt
+C     if all the necessary inputs to write the events have already been
+C     computed in the bias module, then directly jump to write_events
+      if (AlreadySetInBiasModule) then
+        goto 1123
+      endif
+
 c
 c     In case of identical particles symmetry, choose assignment
 c
@@ -741,6 +741,19 @@ c     Write out buffers for clustering info
          enddo
          write(buffclus(nexternal),'(a)')'</clustering>'
       endif
+
+C     If the arguments of write_event have already been set in the
+C     bias module, then the beginning of the routine will directly
+C     jump here.
+
+ 1123 continue
+      if (.not.do_write_events) then
+        return
+      endif
+
+c     Store weight for event
+      nw = nw+1
+      swgt(nw)=wgt
 
       call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
      &   sscale,aaqcd,aaqed,buff,use_syst,s_buff,nclus,buffclus)

@@ -18,6 +18,7 @@
 from __future__ import division
 
 import atexit
+import collections
 import cmath
 import glob
 import logging
@@ -65,7 +66,7 @@ except ImportError:
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.banner as banner_mod
-    import internal.misc as misc    
+    import internal.misc as misc
     from internal import InvalidCmd, MadGraph5Error, ReadWrite
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
@@ -2622,7 +2623,68 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
             
-            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+            # Ensure that the bias parameters has all the required input from the
+            # run_card
+            if run_card['bias_module'].lower() not in ['dummy','none']:
+                # Using basename here means that the module will not be overwritten if already existing.
+                bias_module_path = pjoin(self.me_dir,'Source','BIAS',
+                                         os.path.basename(run_card['bias_module']))
+                if not os.path.isdir(bias_module_path):
+                    if not os.path.isdir(run_card['bias_module']):
+                        raise InvalidCmd("The bias module at '%s' cannot be found."%run_card['bias_module'])
+                    else:
+                        for mandatory_file in ['makefile','%s.f'%os.path.basename(run_card['bias_module'])]:
+                            if not os.path.isfile(pjoin(run_card['bias_module'],mandatory_file)):
+                                raise InvalidCmd("Could not find the mandatory file '%s' in bias module '%s'."%(
+                                                                         mandatory_file,run_card['bias_module']))
+                        shutil.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
+                                                                     os.path.basename(run_card['bias_module'])))
+                
+                #check expected parameters for the module.
+                default_bias_parameters = {}
+                start, last = False,False
+                for line in open(pjoin(bias_module_path,'%s.f'%os.path.basename(bias_module_path))):
+                    if start and last:
+                        break
+                    if not start and not re.search('c\s*parameters\s*=\s*{',line, re.I):
+                        continue
+                    start = True
+                    if not line.startswith('C'):
+                        continue
+                    line = line[1:]
+                    if '{' in line:
+                        line = line.split('{')[-1]
+                    # split for } ! #
+                    split_result = re.split('(\}|!|\#)', line,1, re.M)
+                    line = split_result[0]
+                    sep = split_result[1] if len(split_result)>1 else None
+                    if sep == '}':
+                        last = True
+                    if ',' in line:
+                        for pair in line.split(','):
+                            if not pair.strip():
+                                continue
+                            x,y =pair.split(':') 
+                            x=x.strip()
+                            if x.startswith(('"',"'")) and x.endswith(x[0]):
+                                x = x[1:-1] 
+                            default_bias_parameters[x] = y
+                    elif ':' in line:
+                        x,y = line.split(':')
+                        x = x.strip()
+                        if x.startswith(('"',"'")) and x.endswith(x[0]):
+                            x = x[1:-1] 
+                        default_bias_parameters[x] = y
+                for key,value in run_card['bias_parameters'].items():
+                    if key not in default_bias_parameters:
+                        logger.warning('%s not supported by the bias module. We discard this entry.', key)
+                    else:
+                        default_bias_parameters[key] = value
+                run_card['bias_parameters'] = default_bias_parameters  
+              
+              
+            # Finally write the include file          
+            run_card.write_include_file(opt['output_dir'])
         
 
         if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
@@ -2693,7 +2755,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','6|7|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|7|1', changeifuserset=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
@@ -2928,7 +2990,6 @@ Beware that this can be dangerous for local multicore runs.""")
                 return
             logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
         
-
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
             # Splitted mode handle the cluster submition internally.
@@ -3140,6 +3201,11 @@ Beware that this can be dangerous for local multicore runs.""")
             
             self.results.add_detail('nb_event', nb_event)
         
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+            self.correct_bias()
+        
+        
+        
         self.to_store.append('event')
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
@@ -3151,6 +3217,66 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.create_root_file(output='%s/unweighted_events.root' % \
                                                                   self.run_name)
     
+    ############################################################################ 
+    def correct_bias(self):
+        """check the first event and correct the weight by the bias 
+           and correct the cross-section.
+           If the event do not have the bias tag it means that the bias is 
+           one modifying the cross-section/shape so we have nothing to do
+        """
+
+        lhe = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz'))
+        init = False
+        cross = collections.defaultdict(float)
+        nb_event = 0
+        for event in lhe:
+            rwgt_info = event.parse_reweight()
+            if not init:
+                if 'bias' in rwgt_info:
+                    output = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.unweighted_events.lhe.tmp.gz'),'w')
+                    #output.write(lhe.banner)
+                    init = True
+                else:
+                    return
+            #change the weight
+            event.wgt /= rwgt_info['bias']
+            #remove the bias info
+            del event.reweight_data['bias']
+            # compute the new cross-section
+            cross[event.ievent] += event.wgt
+            nb_event +=1
+            output.write(str(event))
+        output.write('</LesHouchesEvents>')
+        output.close()
+        lhe.close()
+                
+        # MODIFY THE BANNER i.e. INIT BLOCK
+        # ensure information compatible with normalisation choice
+        total_cross = sum(cross[key] for key in cross)
+        if 'event_norm' in self.run_card: # if not this is "sum"
+            if self.run_card['event_norm'] == 'average':
+                total_cross = total_cross / nb_event
+                for key in cross:
+                    cross[key] /= nb_event
+            elif self.run_card['event_norm'] == 'unity':
+                total_cross = self.results.current['cross'] * total_cross / nb_event
+                for key in cross:
+                    cross[key] *= total_cross / nb_event              
+                
+        bannerfile = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.banner.tmp.gz'),'w')
+        banner = banner_mod.Banner(lhe.banner)
+        banner.modify_init_cross(cross)
+        banner.write(bannerfile, close_tag=False)
+        bannerfile.close()
+        # replace the lhe file by the new one
+        os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        os.remove(bannerfile.name)
+        os.remove(output.name)
+        
+                
+        self.results.current['cross'] = total_cross
+        self.results.current['error'] = 0
+         
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""
@@ -3330,17 +3456,17 @@ Beware that this can be dangerous for local multicore runs.""")
     """
         
         # Retrieve all the on-install and current versions  
-        MG5_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+        MG5_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
                            'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
         if MG5_version_on_install == 'UNSPECIFIED':
             MG5_version_on_install = None
-        PY8_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
+        PY8_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
                               'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
         MG5_curr_version =misc.get_pkg_info()['version']
         try:
-            p = subprocess.Popen(['./get_pythia8_version.py',options['pythia8_path']],
+            p = subprocess.Popen(['./get_pythia8_version.py',pjoin(MG5DIR,options['pythia8_path'])],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                                       cwd=options['mg5amc_py8_interface_path'])
+                                       cwd=pjoin(MG5DIR,options['mg5amc_py8_interface_path']))
             (out, err) = p.communicate()
             out = out.replace('\n','')
             PY8_curr_version = out
@@ -4664,11 +4790,50 @@ You can follow PY8 run with the following command (in a separate terminal):
         self.do_treatcards('')
         
         logger.info("compile Source Directory")
+        
         # Compile
         for name in [ 'all', '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
+        bias_name = os.path.basename(self.run_card['bias_module'])
+        if bias_name.lower()=='none':
+            bias_name = 'dummy'
+
+        # Always refresh the bias dependencies file
+        if os.path.exists(pjoin(self.me_dir, 'SubProcesses','bias_dependencies')):
+            os.remove(pjoin(self.me_dir, 'SubProcesses','bias_dependencies'))
+        if os.path.exists(pjoin(self.me_dir, 'Source','BIAS',bias_name,'bias_dependencies')):
+            files.ln(pjoin(self.me_dir, 'Source','BIAS',bias_name,'bias_dependencies'),
+                                                        pjoin(self.me_dir, 'SubProcesses'))
+
+        if self.proc_characteristics['bias_module']!=bias_name and \
+             os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):
+                os.remove(pjoin(self.me_dir, 'lib','libbias.a'))
+            
+        # Finally compile the bias module as well
+        if self.run_card['bias_module']!='dummy':
+            logger.debug("Compiling the bias module '%s'"%bias_name)
+            # Verify the compatibility of the specified module
+            bias_module_valid = misc.Popen(['make','requirements'],
+                       cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+            if 'VALID' not in bias_module_valid.upper() or \
+               'INVALID' in bias_module_valid.upper():
+                raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
+                                                          (bias_name,bias_module_valid))
         
+        self.compile(arg=[], cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name))
+        self.proc_characteristics['bias_module']=bias_name
+        # Update the proc_characterstics file
+        self.proc_characteristics.write(
+                   pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 
+        # Make sure that madevent will be recompiled
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                             'subproc.mg'))]
+        for nb_proc,subdir in enumerate(subproc):
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
+            self.compile(['clean'], cwd=Pdir)
+
     ############################################################################
     ##  HELPING ROUTINE
     ############################################################################

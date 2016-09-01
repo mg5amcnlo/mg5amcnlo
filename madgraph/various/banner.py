@@ -15,6 +15,7 @@
 """A File for splitting"""
 
 from __future__ import division
+import collections
 import copy
 import logging
 import numbers
@@ -330,6 +331,7 @@ class Banner(dict):
         data[-2] = '%s' % value
         all_lines[0] = ' '.join(data)
         self['init'] = '\n'.join(all_lines)
+
 
     def modify_init_cross(self, cross):
         """modify the init information with the associate cross-section"""
@@ -920,6 +922,7 @@ class ConfigFile(dict):
         self.system_only = set()
         self.lower_to_case = {}
         self.list_parameter = set()
+        self.dict_parameter = {}
         self.comments = {} # comment associated to parameters. can be display via help message
         
         self.default_setup()
@@ -1016,6 +1019,56 @@ class ConfigFile(dict):
             if change_userdefine:
                 self.user_set.add(lower_name)
             return  
+        elif lower_name in self.dict_parameter:
+            targettype = self.dict_parameter[lower_name] 
+            full_reset = True #check if we just update the current dict or not
+            
+            if isinstance(value, str):
+                value = value.strip()
+                # allowed entry:
+                #   name : value   => just add the entry
+                #   name , value   => just add the entry
+                #   name  value    => just add the entry
+                #   {name1:value1, name2:value2}   => full reset
+                
+                # split for each comma/space
+                if value.startswith('{') and value.endswith('}'):
+                    new_value = {}
+                    for pair in value[1:-1].split(','):
+                        if not pair.strip():
+                            break
+                        x, y = pair.split(':')
+                        x, y = x.strip(), y.strip()
+                        if x.startswith(('"',"'")) and x.endswith(x[0]):
+                            x = x[1:-1] 
+                        new_value[x] = y
+                    value = new_value
+                elif ',' in value:
+                    x,y = value.split(',')
+                    value = {x.strip():y.strip()}
+                    full_reset = False
+                    
+                elif ':' in value:
+                    x,y = value.split(':')
+                    value = {x.strip():y.strip()}
+                    full_reset = False       
+                else:
+                    x,y = value.split()
+                    value = {x:y}
+                    full_reset = False 
+            
+            if isinstance(value, dict):
+                for key in value:
+                    value[key] = self.format_variable(value[key], targettype, name=name)
+                if full_reset:
+                    dict.__setitem__(self, lower_name, value)
+                else:
+                    dict.__getitem__(self, lower_name).update(value)
+            else:
+                raise Exception, '%s should be of dict type'% lower_name
+            if change_userdefine:
+                self.user_set.add(lower_name)
+            return
         elif name in self:            
             targettype = type(self[name])
         else:
@@ -1050,6 +1103,16 @@ class ConfigFile(dict):
             if any([type(value[0]) != type(v) for v in value]):
                 raise Exception, "All entry should have the same type"
             self.list_parameter.add(lower_name)
+        elif isinstance(value, dict):
+            allvalues = value.values()
+            if any([type(allvalues[0]) != type(v) for v in allvalues]):
+                raise Exception, "All entry should have the same type"   
+            self.dict_parameter[lower_name] = type(allvalues[0])  
+            if '__type__' in value:
+                del value['__type__']
+                dict.__setitem__(self, lower_name, value)
+                
+                   
         if system:
             self.system_only.add(lower_name)
         if comment:
@@ -1193,6 +1256,7 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('ninitial', 0)
         self.add_param('grouped_matrix', True)
         self.add_param('has_loops', False)
+        self.add_param('bias_module','None')
         self.add_param('max_n_matched_jets', 0)
         self.add_param('colored_pdgs', [1,2,3,4,5])        
 
@@ -1930,8 +1994,8 @@ class RunCard(ConfigFile):
         
         #parameter for which no warning should be raised if not define
         self.hidden_param = []
-        # parameter which should not be hardcoded in the config file
-        self.not_in_include = []
+        # in which include file the parameer should be written
+        self.includepath = collections.defaultdict(list)
         #some parameter have different name in fortran code
         self.fortran_name = {}
         #parameter which are not supported anymore. (no action on the code)
@@ -1963,14 +2027,15 @@ class RunCard(ConfigFile):
         name = name.lower()
         if fortran_name:
             self.fortran_name[name] = fortran_name
-        if not include:
-            self.not_in_include.append(name)
-        if hidden or system:
-            self.hidden_param.append(name)
         if legacy:
             self.legacy_parameter[name] = value
-            if include:
-                self.not_in_include.append(name)
+            include = False
+        if include is True:
+            self.includepath[True].append(name)
+        elif include:
+            self.includepath[include].append(name)
+        if hidden or system:
+            self.hidden_param.append(name)
         if cut:
             self.cuts_parameter.append(name)
         if sys_default is not None:
@@ -2116,7 +2181,7 @@ class RunCard(ConfigFile):
             elif isinstance(value, str):
                 formatv = 'str'
             else:
-                logger.debug("unknow format for f77_formatting: %s" , value)
+                logger.debug("unknow format for f77_formatting: %s" , str(value))
                 formatv = 'str'
         else:
             assert formatv
@@ -2160,47 +2225,56 @@ class RunCard(ConfigFile):
                 self.set(name, value, changeifuserset=False)
 
 
-    def write_include_file(self, output_file):
-        """ """
+    def write_include_file(self, output_dir):
+        """Write the various include file in output_dir.
+        The entry True of self.includepath will be written in run_card.inc
+        The entry False will not be written anywhere"""
         
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
         
-        fsock = file_writers.FortranWriter(output_file)  
-        for key in self:
-            if key in self.not_in_include:
-                continue
-            
-            #define the fortran name
-            if key in self.fortran_name:
-                fortran_name = self.fortran_name[key]
+        for incname in self.includepath:
+            if incname is True:
+                pathinc = 'run_card.inc'
             else:
-                fortran_name = key
+                pathinc = incname
                 
-            #get the value with warning if the user didn't set it
-            value = self.get_default(key)
-            # Special treatment for strings containing a list of
-            # strings. Convert it to a list of strings
-            if isinstance(value, list):
-                # in case of a list, add the length of the list as 0th
-                # element in fortran. Only in case of integer or float
-                # list (not for bool nor string)
-                if isinstance(value[0], bool):
-                    pass
-                elif isinstance(value[0], int):
-                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
+            fsock = file_writers.FortranWriter(pjoin(output_dir,pathinc))  
+            for key in self.includepath[incname]:                
+                #define the fortran name
+                if key in self.fortran_name:
+                    fortran_name = self.fortran_name[key]
+                else:
+                    fortran_name = key
+                    
+                #get the value with warning if the user didn't set it
+                value = self.get_default(key)
+                # Special treatment for strings containing a list of
+                # strings. Convert it to a list of strings
+                if isinstance(value, list):
+                    # in case of a list, add the length of the list as 0th
+                    # element in fortran. Only in case of integer or float
+                    # list (not for bool nor string)
+                    if isinstance(value[0], bool):
+                        pass
+                    elif isinstance(value[0], int):
+                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(len(value)))
+                        fsock.writelines(line)
+                    elif isinstance(value[0], float):
+                        line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
+                        fsock.writelines(line)
+                    # output the rest of the list in fortran
+                    for i,v in enumerate(value):
+                        line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
+                        fsock.writelines(line)
+                elif isinstance(value, dict):
+                    for fortran_name, onevalue in value.items():
+                        line = '%s = %s \n' % (fortran_name, self.f77_formatting(onevalue))
+                        fsock.writelines(line)                       
+                else:
+                    line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
                     fsock.writelines(line)
-                elif isinstance(value[0], float):
-                    line = '%s(%s) = %s \n' % (fortran_name, 0, self.f77_formatting(float(len(value))))
-                    fsock.writelines(line)
-                # output the rest of the list in fortran
-                for i,v in enumerate(value):
-                    line = '%s(%s) = %s \n' % (fortran_name, i+1, self.f77_formatting(v))
-                    fsock.writelines(line)
-            else:
-                line = '%s = %s \n' % (fortran_name, self.f77_formatting(value))
-                fsock.writelines(line)
-        fsock.close()   
+            fsock.close()   
 
 
     def get_banner_init_information(self):
@@ -2292,6 +2366,10 @@ class RunCardLO(RunCard):
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
         self.add_param("dynamical_scale_choice", -1)
         
+        # Bias module options
+        self.add_param("bias_module", 'None', include=False)
+        self.add_param('bias_parameters', {'__type__':1.0}, include='BIAS/bias.inc')
+                
         #matching
         self.add_param("scalefact", 1.0)
         self.add_param("ickkw", 0,                                              comment="\'0\' for standard fixed order computation.\n\'1\' for MLM merging activates alphas and pdf re-weighting according to a kt clustering of the QCD radiation.")

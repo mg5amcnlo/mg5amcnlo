@@ -1,6 +1,13 @@
 include ../../Source/make_opts
 FFLAGS+= -w
 
+# Load additional dependencies of the bias module, if present
+ifeq (,$(wildcard ../bias_dependencies))
+BIASDEPENDENCIES =
+else
+include ../bias_dependencies
+endif
+
 # Definitions
 
 LIBDIR = ../../lib/
@@ -17,9 +24,9 @@ else
     MADLOOP_LIB =
 endif
 
-LINKLIBS = $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS) -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(llhapdf) 
+LINKLIBS = $(LINK_MADLOOP_LIB) $(LINK_LOOP_LIBS) -L../../lib/ -ldhelas -ldsample -lmodel -lgeneric -lpdf -lcernlib $(llhapdf) -lbias 
 
-LIBS = $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(MADLOOP_LIB) $(LOOP_LIBS)
+LIBS = $(LIBDIR)libbias.$(libext) $(LIBDIR)libdhelas.$(libext) $(LIBDIR)libdsample.$(libext) $(LIBDIR)libgeneric.$(libext) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libcernlib.$(libext) $(MADLOOP_LIB) $(LOOP_LIBS)
 
 # Source files
 
@@ -34,7 +41,7 @@ SYMMETRY = symmetry.o idenparts.o
 # Binaries
 
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
-	$(FC) -o $(PROG) $(PROCESS) $(LINKLIBS) $(LDFLAGS)
+	$(FC) -o $(PROG) $(PROCESS) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
 
 gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
 	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric $(LDFLAGS)

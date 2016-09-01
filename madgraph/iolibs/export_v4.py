@@ -268,8 +268,7 @@ class ProcessExporterFortran(VirtualExporter):
             shutil.copy(pjoin(self.mgme_dir, 'MGMEVersion.txt'), self.dir_path)
         except IOError:
             MG5_version = misc.get_pkg_info()
-            open(pjoin(self.dir_path, 'MGMEVersion.txt'), 'w').write( \
-                "5." + MG5_version['version'])
+            open(pjoin(self.dir_path, 'MGMEVersion.txt'), 'w').write(MG5_version['version'])
 
         #Ensure that the Template is clean
         if self.opt['clean']:
@@ -563,6 +562,8 @@ class ProcessExporterFortran(VirtualExporter):
         ln(self.dir_path + '/Source/run.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxparticles.inc', self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/run_config.inc', self.dir_path + '/SubProcesses', log=False)
+        ln(self.dir_path + '/Source/lhe_event_infos.inc', self.dir_path + '/SubProcesses', log=False)
+        
 
     #===========================================================================
     # export the helas routine
@@ -615,7 +616,8 @@ class ProcessExporterFortran(VirtualExporter):
         return ['$(LIBDIR)libdhelas.$(libext)',
                 '$(LIBDIR)libpdf.$(libext)',
                 '$(LIBDIR)libmodel.$(libext)',
-                '$(LIBDIR)libcernlib.$(libext)']
+                '$(LIBDIR)libcernlib.$(libext)',
+                '$(LIBDIR)libbias.$(libext)']
 
     #===========================================================================
     # write_source_makefile
@@ -3558,6 +3560,7 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                      'maxconfigs.inc',
                      'maxparticles.inc',
                      'run_config.inc',
+                     'lhe_event_infos.inc',
                      'setcuts.f',
                      'setscales.f',
                      'sudakov.inc',

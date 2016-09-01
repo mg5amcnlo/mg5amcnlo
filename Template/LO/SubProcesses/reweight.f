@@ -1087,7 +1087,53 @@ c
       endif
       return
       end
+
+      double precision function custom_bias(p, original_weight, numproc)
+c***********************************************************
+c     Returns a bias weight as instructed by the bias module
+c***********************************************************
+      implicit none
+
+      include 'nexternal.inc'
+      include 'maxparticles.inc'
+      include 'run_config.inc'
+      include 'lhe_event_infos.inc'
+      include 'run.inc'
+
+      DOUBLE PRECISION P(0:3,NEXTERNAL)
+      integer numproc
+
+      double precision original_weight
+
+      double precision bias_weight
+      logical is_bias_dummy, requires_full_event_info
+      common/bias/bias_weight,is_bias_dummy,requires_full_event_info
+
       
+C     If the bias module necessitates the full event information
+C     then we must call write_leshouches here already so as to set it.
+C     The weight specified at this stage is irrelevant since we
+C     use do_write_events set to .False.
+      AlreadySetInBiasModule = .False.      
+      if (requires_full_event_info) then
+        call write_leshouche(p,-1.0d0,numproc,.False.)
+C     Write the event in the string evt_record, part of the
+C     lhe_event_info common block
+        event_record(:) = ''
+        call write_event_to_stream(event_record,pb(0,1),1.0d0,npart,
+     &      jpart(1,1),ngroup,sscale,aaqcd,aaqed,buff,use_syst,
+     &      s_buff, nclus, buffclus)
+        AlreadySetInBiasModule = .True. 
+      else
+        AlreadySetInBiasModule = .False.
+      endif
+C     Apply the bias weight. The default run_card entry 'None' for the 
+c     'bias_weight' option will implement a constant bias_weight of 1.0 below.
+      call bias_wgt(p, original_weight, bias_weight)
+      custom_bias = bias_weight
+
+      end
+
       double precision function rewgt(p)
 c**************************************************
 c   reweight the hard me according to ckkw

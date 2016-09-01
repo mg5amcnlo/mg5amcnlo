@@ -84,7 +84,11 @@
 #*********************************************************************
    %(nhel)s  = nhel          ! using helicities importance sampling or not.
 #*********************************************************************
-#
+# Generation bias, check the wiki page below for more information:   *
+#  'cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias' *
+#*********************************************************************
+ %(bias_module)s = bias_module  ! Bias type of bias, [None, ptj_bias, <custom_folder>]
+ %(bias_parameters)s = bias_parameters ! Specifies the parameters of the module.
 #
 #*******************************                                                 
 # Parton level cuts definition *
