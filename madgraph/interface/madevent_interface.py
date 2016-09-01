@@ -3242,7 +3242,19 @@ Beware that this can be dangerous for local multicore runs.""")
         output.close()
         lhe.close()
                 
-        # TODO. MODIFY THE BANNER i.e. INIT BLOCK
+        # MODIFY THE BANNER i.e. INIT BLOCK
+        # ensure information compatible with normalisation choice
+        total_cross = sum(cross[key] for key in cross)
+        if 'event_norm' in self.run_card: # if not this is "sum"
+            if self.run_card['event_norm'] == 'average':
+                total_cross = total_cross / nb_event
+                for key in cross:
+                    cross[key] /= nb_event
+            elif self.run_card['event_norm'] == 'unity':
+                total_cross = self.results.current['cross'] * total_cross / nb_event
+                for key in cross:
+                    cross[key] *= total_cross / nb_event              
+                
         bannerfile = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.banner.tmp.gz'),'w')
         banner = banner_mod.Banner(lhe.banner)
         banner.modify_init_cross(cross)
@@ -3253,12 +3265,6 @@ Beware that this can be dangerous for local multicore runs.""")
         os.remove(bannerfile.name)
         os.remove(output.name)
         
-        total_cross = sum(cross[key] for key in cross)
-        if 'event_norm' in self.run_card: # if not this is "sum"
-            if self.run_card['event_norm'] == 'average':
-                total_cross = total_cross / nb_event
-            elif self.run_card['event_norm'] == 'unity':
-                total_cross = self.results.current['cross'] * total_cross / nb_event
                 
         self.results.current['cross'] = total_cross
         self.results.current['error'] = 0

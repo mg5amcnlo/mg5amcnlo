@@ -168,9 +168,7 @@ class TestMECmdShell(unittest.TestCase):
 
         biased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_01','unweighted_events.lhe.gz'))
         unbiased_events = lhe_parser.EventFile(pjoin(self.out_dir, 'Events','run_02','unweighted_events.lhe.gz'))
-        
-        misc.sprint(biased_events.cross,unbiased_events.cross)
-        
+                
         biased_events_ptj  = []
         biased_events_wgts = []
         for event in biased_events:
