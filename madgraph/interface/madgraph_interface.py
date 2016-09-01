@@ -2698,7 +2698,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 options.append('--madanalysis5_tarball=')
                 for prefix in ['--with', '--veto']:
                     for prog in ['fastjet', 'delphes', 'delphesma5tune']:
-                        options.append('%s-%s' % (prefix, prog))
+                        options.append('%s_%s' % (prefix, prog))
                          
             for opt in options[:]:
                 if any(a.startswith(opt) for a in args):
@@ -5417,7 +5417,7 @@ This implies that with decay chains:
         # Special rules for certain tools
         if tool=='madanalysis5':
             add_options.append('--mg5_path=%s'%MG5DIR)
-            if not any(opt.startswith(('--with-fastjet', '--veto-fastjet')) for opt in add_options):
+            if not any(opt.startswith(('--with_fastjet', '--veto_fastjet')) for opt in add_options):
                 fastjet_config  = misc.which(self.options['fastjet'])
                 if fastjet_config:
                     add_options.append('--with_fastjet=%s'%fastjet_config)
@@ -5500,10 +5500,10 @@ This implies that with decay chains:
                    tool_to_install, prefix),'$MG:color:GREEN')
             
             if tool=='madanalysis5':
-                if not any(o.startswith(('--with-','--veto-','--update')) for o in add_options):
+                if not any(o.startswith(('--with_','--veto_','--update')) for o in add_options):
                     logger.info('    To install recasting capabilities of madanalysis5 and/or', '$MG:color:BLACK')
                     logger.info('    to allow delphes analysis at parton level.','$MG:color:BLACK')
-                    logger.info('    Please run \'install MadAnalysis5 --with-delphes --update\':', '$MG:color:BLACK')
+                    logger.info('    Please run \'install MadAnalysis5 --with_delphes --update\':', '$MG:color:BLACK')
             
         elif return_code == 66:
             answer = self.ask(question=
@@ -5518,7 +5518,8 @@ This implies that with decay chains:
                 return self.advanced_install(tool_to_install,
                               additional_options=add_options+['--force'])            
         else:
-            if tool=='madanalysis5' and ('--no_MA5_further_install' not in add_options or
+            if tool=='madanalysis5' and '--update' not in add_options and \
+                                 ('--no_MA5_further_install' not in add_options or
                                                         '--no_root_in_MA5' in add_options):
                 if not __debug__:
                     logger.warning('Default installation of Madanalys5 failed.')
