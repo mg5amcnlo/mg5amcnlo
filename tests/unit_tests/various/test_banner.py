@@ -467,12 +467,33 @@ class TestRunCard(unittest.TestCase):
         fsock = tempfile.NamedTemporaryFile(mode = 'w')
         run_card.write(fsock)
       
-        run_card2 = bannermod.RunCard(fsock.name)
-      
+        #card should be identical if we do not run the consistency post-processing
+        run_card2 = bannermod.RunCard(fsock.name, consistency=False)
         for key in run_card:
-            self.assertEqual(run_card[key], run_card2[key])  
+            self.assertEqual(run_card[key], run_card2[key], 'not equal entry for %s" %s!=%s' %(key,run_card[key], run_card2[key]))  
             
-
+        #but default can be updated otherwise
+        run_card3 = bannermod.RunCard(fsock.name)
+        has_difference = False
+        has_userset = False
+        for key in run_card:
+            key = key.lower()
+            if run_card[key] != run_card3[key]:
+                has_difference = True
+                self.assertTrue(key.lower() in run_card.hidden_param) 
+                self.assertTrue(key.lower not in run_card3.user_set)
+            if key in run_card3.user_set:
+                has_userset=True   
+                self.assertFalse(key in run_card.user_set)            
+        self.assertTrue(has_difference)
+        self.assertTrue(has_userset)
+        
+        #write run_card3 and check that nothing is changed
+        fsock2 = tempfile.NamedTemporaryFile(mode = 'w')
+        run_card3.write(fsock2)
+        
+        self.assertEqual(open(fsock.name).read(), open(fsock2.name).read())
+            
 
 MadLoopParam = bannermod.MadLoopParam
 class TestMadLoopParam(unittest.TestCase):
