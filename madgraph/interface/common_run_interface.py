@@ -2111,6 +2111,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     def runMA5(MA5_interpreter, MA5_cmds, MA5_runtag, logfile_path, advertise_log=True):
         """ Run MA5 in a controlled environnment."""
         successfull_MA5_run = True
+                
         try:
             # Predefine MA5_logger as None in case we don't manage to retrieve it.
             MA5_logger = None
@@ -2126,6 +2127,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             # Now the magic, finally call MA5.
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 with misc.stdchannel_redirected(sys.stderr, os.devnull):
+                    MA5_interpreter.print_banner()
                     MA5_interpreter.load(MA5_cmds)
         except Exception as e:
             logger.warning("MadAnalysis5 failed to run the commands for task "+
