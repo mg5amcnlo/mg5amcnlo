@@ -609,6 +609,7 @@ class TestMEfromfile(unittest.TestCase):
                  generate_events
                  parton
                  set nevents 100
+                 set event_norm sum
                  add_time_of_flight --threshold=4e-14
                  pythia
                  """ %self.run_dir

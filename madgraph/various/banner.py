@@ -903,7 +903,7 @@ class ConfigFile(dict):
     """ a class for storing/dealing with input file.
     """     
 
-    def __init__(self, finput=None):
+    def __init__(self, finput=None, **opt):
         """initialize a new instance. input can be an instance of MadLoopParam,
         a file, a path to a file, or simply Nothing"""                
         
@@ -930,7 +930,7 @@ class ConfigFile(dict):
 
         # if input is define read that input
         if isinstance(finput, (file, str, StringIO.StringIO)):
-            self.read(finput)
+            self.read(finput, **opt)
 
     def default_setup(self):
         pass
@@ -1969,7 +1969,7 @@ class RunCard(ConfigFile):
 
     filename = 'run_card'
 
-    def __new__(cls, finput=None):
+    def __new__(cls, finput=None, **opt):
         if cls is RunCard:
             if not finput:
                 target_class = RunCardLO
@@ -1984,9 +1984,9 @@ class RunCard(ConfigFile):
                     target_class = RunCardLO
             else:
                 return None
-            return super(RunCard, cls).__new__(target_class, finput)
+            return super(RunCard, cls).__new__(target_class, finput, **opt)
         else:
-            return super(RunCard, cls).__new__(cls, finput)
+            return super(RunCard, cls).__new__(cls, finput, **opt)
 
     def __init__(self, *args, **opts):
         
@@ -2043,7 +2043,7 @@ class RunCard(ConfigFile):
 
 
 
-    def read(self, finput):
+    def read(self, finput, consistency=True):
         """Read the input file, this can be a path to a file, 
            a file object, a str with the content of the file."""
            
@@ -2070,7 +2070,8 @@ class RunCard(ConfigFile):
             else:
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
-        self.check_validity()
+        if consistency:
+            self.check_validity()
                 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

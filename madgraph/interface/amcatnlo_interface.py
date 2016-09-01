@@ -323,9 +323,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
-
         mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
-        misc.sprint(type(self.history))
         self.setup()
 
     def setup(self):
@@ -521,7 +519,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         if self._export_format in ['NLO']:
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                       output_type='amcatnlo',group_subprocesses=group_processes)
-
+            
             self._curr_exporter.pass_information_from_cmd(self)
 
         # check if a dir with the same name already exists
@@ -549,6 +547,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes=group_processes)
+
+        # Pass potential new information generated during the export.
+        self._curr_exporter.pass_information_from_cmd(self)
 
         # Automatically run finalize
         self.finalize(nojpeg)
@@ -659,7 +660,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             global glob_directories_map
             glob_directories_map = []
 
+            # Save processes instances generated
             self.born_processes_for_olp = []
+            self.born_processes = []
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 if not self.options['low_mem_multicore_nlo_generation']:
@@ -671,6 +674,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
                             path,self.options['OLP'])
                     self._fks_directories.extend(self._curr_exporter.fksdirs)
                     self.born_processes_for_olp.append(me.born_matrix_element.get('processes')[0])
+                    self.born_processes.append(me.born_matrix_element.get('processes'))
                 else:
                     glob_directories_map.append(\
                             [self._curr_exporter, me, self._curr_helas_model, 
