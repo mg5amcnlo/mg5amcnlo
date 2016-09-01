@@ -467,6 +467,8 @@ class MG5Runner(MadEventRunner):
         cmd = cmd_interface.MasterCmd()
         cmd.no_notification()
         cmd.exec_cmd('import command %s' %proc_card_location)
+        misc.sprint(proc_card_location)
+        stop
         #for line in proc_card.split('\n'):
         #    cmd.exec_cmd(line, errorhandling=False)
         os.remove(proc_card_location)
@@ -522,7 +524,7 @@ class MG5Runner(MadEventRunner):
         for key,value in numsubProc.items():
             output['number_of_P'+key]=str(value)
 
-        #Part 2: cross section                                                                                                                                   
+        #Part 2: cross section
         for name in SubProc:
             if os.path.exists(dir_name+'/SubProcesses/'+name+'/run_01_results.dat'):
                 filepath = dir_name+'/SubProcesses/'+name+'/run_01_results.dat'

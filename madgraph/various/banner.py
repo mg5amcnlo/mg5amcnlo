@@ -2728,6 +2728,7 @@ class MadAnalysis5Card(dict):
     
     _default_hadron_inputs = ['*.hepmc', '*.hep', '*.stdhep', '*.lhco','*.root']
     _default_parton_inputs = ['*.lhe']
+    _skip_analysis         = False
     
     @classmethod
     def events_can_be_reconstructed(cls, file_path):
@@ -2839,6 +2840,9 @@ class MadAnalysis5Card(dict):
                 if option=='inputs':
                     self['inputs'].extend([v.strip() for v in value.split(',')])
                 
+                elif option == 'skip_analysis':
+                    self._skip_analysis = True
+
                 elif option=='stdout_lvl':
                     try: # It is likely an int
                         self['stdout_lvl']=int(value)
@@ -2966,7 +2970,10 @@ class MadAnalysis5Card(dict):
             raise MadGraph5Error('Incorrect input for the write function of'+\
               ' the MadAnalysis5Card card. Received argument type is: %s'%str(type(output)))
         
-        output_lines = ['%s inputs = %s'%(self._MG5aMC_escape_tag,','.join(self['inputs']))]
+        output_lines = []
+        if self._skip_analysis:
+            output_lines.append('%s skip_analysis'%self._MG5aMC_escape_tag)
+        output_lines.append('%s inputs = %s'%(self._MG5aMC_escape_tag,','.join(self['inputs'])))
         if not self['stdout_lvl'] is None:
             output_lines.append('%s stdout_lvl=%s'%(self._MG5aMC_escape_tag,self['stdout_lvl']))
         for definition_type, name in self['order']:

@@ -77,19 +77,25 @@ class TestMG5aMCDistribution(unittest.TestCase):
                       'http://madgraph.phys.ucl.ac.be/package_info.dat'))['HEPToolsInstaller']
                 subprocess.call('tar -xzf %s'%TestMG5aMCDistribution.get_data(online_path,tmp_path), 
                                                                             cwd=tmp_path, shell=True)                
-                shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'ONLINE_VERSION'))
+                shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'ONLINE_VERSION_UCL'))
+                online_path = dict(tuple(line.split()[:2]) for line in urllib.urlopen(
+                      'http://madgraph.hep.uiuc.edu/package_info.dat'))['HEPToolsInstaller']
+                subprocess.call('tar -xzf %s'%TestMG5aMCDistribution.get_data(online_path,tmp_path), 
+                                                                            cwd=tmp_path, shell=True)                
+                shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'ONLINE_VERSION_UIUC'))                
                 for path in misc.glob(pjoin('BZR_VERSION','*'),tmp_path):
                     if os.path.basename(path)=='.bzr':
                         continue
                     file_name = os.path.basename(path)
-                    for comparison in ['OFFLINE_VERSION','ONLINE_VERSION']:
+                    for comparison in ['OFFLINE_VERSION','ONLINE_VERSION_UCL','ONLINE_VERSION_UIUC']:
 #                        misc.sprint('Testing %s in %s vs %s.'%(file_name,'BZR_VERSION',comparison))
                         diff = subprocess.Popen('diff %s %s'%(path,
                                 pjoin(tmp_path,comparison,file_name)),
                                 cwd=tmp_path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         diff = diff.communicate()[0]
-                        self.assertEqual('HEPToolsInstallers | %s vs %s | %s: %s'%('BZR_VERSION',comparison,file_name,diff), 
-                                         'HEPToolsInstallers | %s vs %s | %s: '%('BZR_VERSION',comparison,file_name))
+                        self.assertEqual(diff,'',
+                            'Comparison of HEPToolsInstallers | %s vs %s | %s failed.\n'%('BZR_VERSION',comparison,file_name)+
+                            "Consider updating MG servers and '%s'."%pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz'))
 
         def test_short_OfflineToolsTarballs(self):
             """ Test whether the current Offline Ninja+oneloop+collier tarball is up to date."""
@@ -103,4 +109,4 @@ class TestMG5aMCDistribution(unittest.TestCase):
                     diff = subprocess.Popen('diff %s %s'%(TestMG5aMCDistribution.get_data(online_path,tmp_path),local_path),
                                 cwd=tmp_path, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     diff = diff.communicate()[0]
-                    self.assertEqual('%s tarball: %s'%(name,diff), '%s tarball: '%name)                
+                    self.assertEqual(diff,'',"Comparison of the online and offline tarball '%s' failed. Consider updating it."%local_path)                
