@@ -67,7 +67,6 @@ class TestMG5aMCDistribution(unittest.TestCase):
             """ Test whether the current OfflineHEPToolsInstaller is up to date."""
             
             with misc.TMP_directory() as tmp_path:
-                tmp_path = '/Users/valentin/Documents/Work/MG5/plugin_plus_py8/TMMT'
                 subprocess.call('bzr branch lp:~maddevelopers/mg5amcnlo/HEPToolsInstallers BZR_VERSION',
                                 cwd=tmp_path, shell=True)
                 shutil.copy(pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz'),
