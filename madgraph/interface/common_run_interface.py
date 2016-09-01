@@ -2411,8 +2411,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
     def run_madanalysis5(self, line, mode='parton'):
         """launch MadAnalysis5 at the parton level or at the hadron level with
-        a specific command line."""
-        
+        a specific command line."""  
+
         # Check argument's validity
         args = self.split_arg(line)
         
@@ -2433,8 +2433,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         else:
             # Called issued by the user itself and only MA5 will be run.
             # we must therefore ask wheter the user wants to edit the card
-            self.ask_madanalysis5_run_configuration(runtype=mode)        
-        
+            self.ask_madanalysis5_run_configuration(runtype=mode) 
+
         if not self.options['madanalysis5_path'] or \
             all(not os.path.exists(pjoin(self.me_dir, 'Cards',card)) for card in
                ['madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat']):
@@ -2466,7 +2466,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         MA5_card = banner_mod.MadAnalysis5Card(pjoin(self.me_dir, 'Cards',
                                     'madanalysis5_%s_card.dat'%mode), mode=mode)
-        
+
         MA5_cmds_list = MA5_card.get_MA5_cmds(MA5_opts['inputs'],
                 pjoin(self.me_dir,'MA5_%s_ANALYSIS'%mode.upper()),
                 run_dir_path = pjoin(self.me_dir,'Events', self.run_name),

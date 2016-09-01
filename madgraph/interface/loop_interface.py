@@ -918,13 +918,7 @@ class AskLoopInstaller(cmd.OneLinePathCompletion):
             self.code['golem'] = 'fail'
         if not misc.which('cmake'):
             self.code['collier'] = 'off'
-            
-        if self.mother_interface:
-            misc.sprint(self.mother_interface.options)
-            
-            
 
-        
         # 1. create the question
         question, allowed_answer = self.create_question(first=True)
         

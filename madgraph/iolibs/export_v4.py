@@ -397,7 +397,6 @@ class ProcessExporterFortran(VirtualExporter):
         
         self.proc_defs = cmd._curr_proc_defs
 
-        
     #===========================================================================
     # Create jpeg diagrams, html pages,proc_card_mg5.dat and madevent.tar.gz
     #===========================================================================

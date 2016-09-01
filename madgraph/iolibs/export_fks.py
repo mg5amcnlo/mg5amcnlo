@@ -718,8 +718,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         """pass information from the command interface to the exporter.
            Please do not modify any object of the interface from the exporter.
         """
-
         self.proc_defs = cmd._curr_proc_defs
+        if hasattr(cmd,'born_processes'):
+            self.born_processes = cmd.born_processes
+        else:
+            self.born_processes = []
         return
 
     def finalize(self, matrix_elements, history, mg5options, flaglist):
@@ -916,6 +919,11 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
             # When using 
             processes = sum([me.get('processes') if not isinstance(me, str) else [] \
                                 for me in matrix_elements.get('matrix_elements')],[])
+
+            # Try getting the processes from the generation info directly if no ME are
+            # available (as it is the case for parallel generation
+            if len(processes)==0:
+                processes = self.born_processes
             if len(processes)==0:
                 logger.warning(
 """MG5aMC could not provide to Madanalysis5 the list of processes generated.
