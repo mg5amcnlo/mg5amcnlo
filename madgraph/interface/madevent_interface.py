@@ -3516,12 +3516,12 @@ Beware that this can be dangerous for local multicore runs.""")
             fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
             fifo_path  = None
             if len(fifo_specs)<=1:
-                fifo_path = pjoin(self.me_dir,'Events', self.run_name,'PY8_hepmc.fifo')
+                fifo_path = pjoin(self.me_dir,'Events', self.run_name,'PY8.hepmc.fifo')
                 if os.path.exists(fifo_path):
                     os.remove(fifo_path)
                 misc.mkfifo(fifo_path)
                 # Use defaultSet not to overwrite the current userSet status
-                PY8_Card.defaultSet('HEPMCoutput:file','PY8_hepmc.fifo')
+                PY8_Card.defaultSet('HEPMCoutput:file','PY8.hepmc.fifo')
             else:
                 fifo_path = fifo_specs[1]
                 if os.path.exists(fifo_path):
