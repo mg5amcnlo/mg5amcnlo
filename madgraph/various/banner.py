@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-"""A File for splitting"""
 
 from __future__ import division
 import collections
@@ -3049,11 +3048,24 @@ class MadAnalysis5Card(dict):
                 res.append('set %s.type = %s'%(dataset_name, type))
             return res
         
+        fifo_status = {'warned_fifo':False,'fifo_used_up':False}
+        def warn_fifo(input):
+            if not input.endswith('.fifo'):
+                return False
+            if not fifo_status['fifo_used_up']:
+                fifo_status['fifo_used_up'] = True
+                return False
+            else:
+                if not fifo_status['warned_fifo']:
+                    logger.warning('Only the first MA5 analysis/reconstructions can be run on a fifo. Subsequent runs will skip fifo inputs.')
+                    fifo_status['warned_fifo'] = True
+                return True
+            
         # Then the event file(s) input(s)
         inputs_load = []
         for input in inputs:
             inputs_load.extend(get_import(input))
-            
+        
         submit_command = 'submit %s'%submit_folder+'_%s'
         
         # Keep track of the reconstruction outpus in the MA5 workflow
@@ -3069,6 +3081,7 @@ class MadAnalysis5Card(dict):
         recasting_card_path = pjoin(run_dir_path,
        '_'.join([run_tag,os.path.basename(submit_folder),'recasting_card.dat']))
 
+        # Make sure to only run over one analysis over each fifo.
         for definition_type, name in self['order']:
             if definition_type == 'reconstruction':   
                 analysis_cmds = list(self['reconstruction'][name]['commands'])
@@ -3076,6 +3089,9 @@ class MadAnalysis5Card(dict):
                 for i_input, input in enumerate(inputs):
                     # Skip lhco/root as they must not be reconstructed
                     if not MadAnalysis5Card.events_can_be_reconstructed(input):
+                        continue
+                    # Make sure the input is not a used up fifo.
+                    if warn_fifo(input):
                         continue
                     analysis_cmds.append('import %s as reco_events'%input)
                     if self['reconstruction'][name]['reco_output']=='lhe':
@@ -3092,7 +3108,8 @@ class MadAnalysis5Card(dict):
                     
                 reconstruction_outputs[name]= [pjoin(run_dir_path,rec_out) 
                                                     for rec_out in reco_outputs]
-                cmds_list.append(('_reco_%s'%name,analysis_cmds))
+                if len(reco_outputs)>0:
+                    cmds_list.append(('_reco_%s'%name,analysis_cmds))
 
             elif definition_type == 'analyses':
                 if self['mode']=='parton':
@@ -3124,14 +3141,20 @@ class MadAnalysis5Card(dict):
                 if name == 'commands':
                     recasting_cmds = list(self['recasting']['commands'])
                     # Exclude LHCO files here of course
+                    n_inputs = 0
                     for input in inputs:
                         if not MadAnalysis5Card.events_can_be_reconstructed(input):
                             continue
+                        # Make sure the input is not a used up fifo.
+                        if warn_fifo(input):
+                            continue
                         recasting_cmds.extend(get_import(input,'signal'))
+                        n_inputs += 1
 
                     recasting_cmds.append('set main.recast.card_path=%s'%recasting_card_path)
                     recasting_cmds.append(submit_command%'Recasting')
-                    cmds_list.append( ('Recasting',recasting_cmds))
+                    if n_inputs>0:
+                        cmds_list.append( ('Recasting',recasting_cmds))
 
         return cmds_list
 
