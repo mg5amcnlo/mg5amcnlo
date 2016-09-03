@@ -3863,7 +3863,30 @@ You can follow PY8 run with the following command (in a separate terminal):
                                           %HepMC_event_output,'$MG:color:GREEN')
             return
         else:
+            if self.options['run_mode']!=0:
+                # Start a parallelization instance (stored in self.cluster)
+                self.configure_run_mode(self.options['run_mode'])
+                if self.options['run_mode']==1:
+                    n_cores = max(self.options['cluster_size'],1)
+                elif self.options['run_mode']==2:
+                    n_cores = max(self.cluster.nb_core,1)
+                
+                lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
+                lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
+                                                    self.run_name,PY8_Card.subruns[0]['Beams:LHEF']))
+                n_events = len(lhe_file)
+    
+                # Implement a security to insure a minimum numbe of events per job
+                if self.options['run_mode']==2:
+                    min_n_events_per_job = 100
+                elif self.options['run_mode']==1:
+                    min_n_events_per_job = 1000                   
+                min_n_core = n_events//min_n_events_per_job
+                n_cores = min(min_n_core,n_cores)
+
             if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
+                # No need for parallelization anymore
+                self.cluster = None
                 logger.info('Follow Pythia8 shower by running the '+
                     'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
         
@@ -3880,23 +3903,6 @@ You can follow PY8 run with the following command (in a separate terminal):
                     logger.error("Either run in single core or change event_norm to 'average'.")
                     raise InvalidCmd("Pythia8 parallelization with event_norm set to 'sum' is not supported."
                                     "Either run in single core or change event_norm to 'average'.")
-                
-                # Start a parallelization instance (stored in self.cluster)
-                self.configure_run_mode(self.options['run_mode'])
-                if self.options['run_mode']==1:
-                    n_cores = max(self.options['cluster_size'],1)
-                elif self.options['run_mode']==2:
-                    n_cores = max(self.cluster.nb_core,1)
-                
-                lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
-                lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
-                                                    self.run_name,PY8_Card.subruns[0]['Beams:LHEF']))
-                n_events = len(lhe_file)
-
-                # Implement a security to insure a minimum numbe of events per job
-                min_n_events_per_job = 100
-                min_n_core = n_events//min_n_events_per_job
-                n_cores = min(min_n_core,n_cores)
 
                 # Create the parallelization folder
                 parallelization_dir = pjoin(self.me_dir,'Events',self.run_name,'PY8_parallelization')
@@ -3961,7 +3967,7 @@ tar -czf split_$1.tar.gz split_$1
                 for i in range(n_events%n_cores):
                     partition[i] += 1
                 
-                logger.info('Splitting .lhe event file for PY8 parallelization.')    
+                logger.info('Splitting .lhe event file for PY8 parallelization...')    
                 n_splits = lhe_file.split(partition=partition, cwd=parallelization_dir, zip=True)                
                 
                 # Distribute the split events
@@ -4131,6 +4137,7 @@ tar -czf split_$1.tar.gz split_$1
                         if n_tail>1:
                             raise MadGraph5Error,'HEPMC files should only have one trailing command.'
                         ###################################################################### 
+                        # This is the most efficient way of putting together HEPMC's, *BUT*  #
                         #    WARNING: NEED TO RENDER THE CODE BELOW SAFE TOWARDS INJECTION   #
                         ######################################################################
                         for hepmc_file in all_hepmc_files:
