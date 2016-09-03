@@ -38,6 +38,7 @@ import time
 import tarfile
 import StringIO
 import shutil
+import copy
 import xml.dom.minidom as minidom
 
 try:
@@ -77,6 +78,8 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
+    import internal.histograms as histograms
+    from internal.files import ln
 else:
     # import from madgraph directory
     MADEVENT = False
@@ -92,8 +95,10 @@ else:
     import madgraph.various.misc as misc
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
+    import madgraph.various.histograms as histograms
 
-    import models.check_param_card as check_param_card    
+    import models.check_param_card as check_param_card
+    from madgraph.iolibs.files import ln    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
 
 
@@ -3502,7 +3507,7 @@ Beware that this can be dangerous for local multicore runs.""")
         """ Setup the Pythia8 Run environment and card. In particular all the process and run specific parameters
         of the card are automatically set here. This function returns the path where HEPMC events will be output,
         if any."""
-
+        
         HepMC_event_output = None
         tag = self.run_tag
         
@@ -3554,7 +3559,7 @@ already exists and is not a fifo file."""%fifo_path)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
                 PY8_Card.MadGraphSet('JetMatching:qCut',1.5*self.run_card['xqcut'])
-                
+            
             if PY8_Card['JetMatching:qCut']<(1.5*self.run_card['xqcut']):
                 logger.error(
     'The MLM merging qCut parameter you chose (%f) is less than'%PY8_Card['JetMatching:qCut']+
@@ -3568,6 +3573,7 @@ already exists and is not a fifo file."""%fifo_path)
             # Automatically set qWeed to xqcut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
                 PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
+
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
@@ -3580,7 +3586,7 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
                         PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList)
-
+            
             for scale in PY8_Card['SysCalc:qCutList']:
                 if scale<(1.5*self.run_card['xqcut']):
                     logger.error(
@@ -3728,12 +3734,11 @@ already exists and is not a fifo file."""%fifo_path)
             self.options['automatic_html_opening'] = False
 
         if self.run_card['event_norm'] not in ['unit','average']:
-            
             logger.critical("Pythia8 does not support normalization to the sum. Not running Pythia8")
             return
-                             #\n"+\
-                             #"The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
-                             #"Please use 'event_norm = average' in the run_card to avoid this problem.")
+             #\n"+\
+             #"The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
+             #"Please use 'event_norm = average' in the run_card to avoid this problem.")
 
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
@@ -3837,6 +3842,11 @@ Please install this tool with the following MG5_aMC command:
                               ( os.path.exists(HepMC_event_output) and \
                               stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode))
         startPY8timer = time.time()
+        
+        # Information that will be extracted from this PY8 run
+        PY8_extracted_information={ 'sigma_m':None, 'Nacc':None, 'Ntry':None,
+                                    'cross_sections':{} }
+
         if is_HepMC_output_fifo:
             logger.info(
 """Pythia8 is set to output HEPMC events to to a fifo file.
@@ -3853,17 +3863,287 @@ You can follow PY8 run with the following command (in a separate terminal):
                                           %HepMC_event_output,'$MG:color:GREEN')
             return
         else:
-            logger.info('Follow Pythia8 shower by running the '+
-                'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
-    
-            ret_code = self.cluster.launch_and_wait(wrapper_path, 
-                    argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
-                                  cwd=pjoin(self.me_dir,'Events',self.run_name))
-            if ret_code != 0:
-                raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
-                    ' code %d.\n'%ret_code+\
-                    'You can find more information in this log file:\n%s'%pythia_log
+            if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
+                logger.info('Follow Pythia8 shower by running the '+
+                    'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
         
+                ret_code = self.cluster.launch_and_wait(wrapper_path, 
+                        argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
+                                      cwd=pjoin(self.me_dir,'Events',self.run_name))
+                if ret_code != 0:
+                    raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
+                        ' code %d.\n'%ret_code+\
+                        'You can find more information in this log file:\n%s'%pythia_log
+            else:
+                if self.run_card['event_norm']=='sum':
+                    logger.error("")
+                    logger.error("Either run in single core or change event_norm to 'average'.")
+                    raise InvalidCmd("Pythia8 parallelization with event_norm set to 'sum' is not supported."
+                                    "Either run in single core or change event_norm to 'average'.")
+                
+                # Start a parallelization instance (stored in self.cluster)
+                self.configure_run_mode(self.options['run_mode'])
+                if self.options['run_mode']==1:
+                    n_cores = max(self.options['cluster_size'],1)
+                elif self.options['run_mode']==2:
+                    n_cores = max(self.cluster.nb_core,1)
+                
+                lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
+                lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
+                                                    self.run_name,PY8_Card.subruns[0]['Beams:LHEF']))
+                n_events = len(lhe_file)
+
+                # Implement a security to insure a minimum numbe of events per job
+                min_n_events_per_job = 100
+                min_n_core = n_events//min_n_events_per_job
+                n_cores = min(min_n_core,n_cores)
+
+                # Create the parallelization folder
+                parallelization_dir = pjoin(self.me_dir,'Events',self.run_name,'PY8_parallelization')
+                if os.path.isdir(parallelization_dir):
+                    shutil.rmtree(parallelization_dir)
+                os.mkdir(parallelization_dir)
+                # Copy what should be the now standalone executable for PY8
+                shutil.copy(pythia_main,parallelization_dir)
+                # Add a safe card in parallelization
+                ParallelPY8Card = copy.copy(PY8_Card)
+                # Normalize the name of the HEPMCouput and lhe input
+                if HepMC_event_output:
+                    ParallelPY8Card['HEPMCoutput:file']='events.hepmc'
+                else:
+                    ParallelPY8Card['HEPMCoutput:file']='/dev/null'
+                    
+                ParallelPY8Card.subruns[0].systemSet('Beams:LHEF','events.lhe.gz')
+                ParallelPY8Card.write(pjoin(parallelization_dir,'PY8Card.dat'),
+                                      pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                                                                    direct_pythia_input=True)
+                # Write the wrapper
+                wrapper_path = pjoin(parallelization_dir,'run_PY8.sh')
+                wrapper = open(wrapper_path,'w')
+                if self.options['cluster_temp_path'] is None:
+                    exe_cmd = \
+"""#!%s
+./%s >& PY8_log.txt
+"""
+                else:
+                    exe_cmd = \
+"""#!%s
+ln -s ./events_$1.lhe.gz ./events.lhe.gz
+./%s >& PY8_log.txt
+mkdir split_$1
+if [ -f ./events.hepmc ];
+then
+   mv ./events.hepmc ./split_$1/
+fi
+if [ -f ./pts.dat ];
+then
+   mv ./pts.dat ./split_$1/
+fi
+if [ -f ./djrs.dat ];
+then
+   mv ./djrs.dat ./split_$1/
+fi
+if [ -f ./PY8_log.txt ];
+then
+   mv ./PY8_log.txt ./split_$1/
+fi
+tar -czf split_$1.tar.gz split_$1
+"""
+                exe_cmd = exe_cmd%(shell_exe,' '.join([os.path.basename(pythia_main),'PY8Card.dat']))
+                wrapper.write(exe_cmd)
+                wrapper.close()
+                # Set it as executable
+                st = os.stat(wrapper_path)
+                os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
+                
+                # Split the .lhe event file, create event partition
+                partition=[n_events//n_cores]*n_cores
+                for i in range(n_events%n_cores):
+                    partition[i] += 1
+                
+                logger.info('Splitting .lhe event file for PY8 parallelization.')    
+                n_splits = lhe_file.split(partition=partition, cwd=parallelization_dir, zip=True)                
+                
+                # Distribute the split events
+                split_files    = []
+                split_dirs     = []
+                for split_id in range(n_splits):
+                    split_files.append('events_%s.lhe.gz'%split_id)
+                    split_dirs.append(pjoin(parallelization_dir,'split_%d'%split_id))
+                    # Add the necessary run content
+                    shutil.move(pjoin(parallelization_dir,lhe_file.name+'_%d.lhe.gz'%split_id),
+                                pjoin(parallelization_dir,split_files[-1]))
+                
+                logger.info('Submitting Pythia8 jobs...')
+                for i, split_file in enumerate(split_files):
+                    in_files = [pjoin(parallelization_dir,os.path.basename(pythia_main)),
+                                pjoin(parallelization_dir,'PY8Card.dat'), 
+                                pjoin(parallelization_dir,split_file)]
+                    if self.options['cluster_temp_path'] is None:
+                        out_files = []
+                        os.mkdir(pjoin(parallelization_dir,'split_%d'%i))
+                        selected_cwd = pjoin(parallelization_dir,'split_%d'%i)
+                        for in_file in in_files+[pjoin(parallelization_dir,'run_PY8.sh')]:
+                            # Make sure to rename the split_file link from events_<x>.lhe.gz to events.lhe.gz
+                            if os.path.basename(in_file)==split_file:
+                                ln(in_file,selected_cwd,name='events.lhe.gz')
+                            else:
+                                ln(in_file,selected_cwd)                                
+                        in_files  = []
+                    else:
+                        out_files = ['split_%d.tar.gz'%i]
+                        selected_cwd = parallelization_dir
+                    self.cluster.submit2(wrapper_path, 
+                            argument=[str(i)], cwd=selected_cwd, 
+                            input_files=in_files,
+                            output_files=out_files,
+                            required_output=out_files)
+                
+                def wait_monitoring(Idle, Running, Done):
+                    if Idle+Running+Done == 0:
+                        return
+                    logger.info('Pythia8 shower jobs: %d Idle, %d Running, %d Done [%s]'\
+                                %(Idle, Running, Done, misc.format_time(time.time() - startPY8timer)))
+                self.cluster.wait(parallelization_dir,wait_monitoring)
+                
+                logger.info('Merging results from the split PY8 runs...')
+                if self.options['cluster_temp_path']:
+                    # Decompressing the output
+                    for i, split_file in enumerate(split_files):
+                        misc.call(['tar','-xzf','split_%d.tar.gz'%i],cwd=parallelization_dir)
+                        os.remove(pjoin(parallelization_dir,'split_%d.tar.gz'%i))
+                
+                # Now merge logs
+                pythia_log_file = open(pythia_log,'w')
+                
+                n_added = 0
+                for split_dir in split_dirs:
+                    log_file = pjoin(split_dir,'PY8_log.txt')
+                    pythia_log_file.write('='*35+'\n')
+                    pythia_log_file.write(' -> Pythia8 log file for run %d <-'%i+'\n')
+                    pythia_log_file.write('='*35+'\n')
+                    pythia_log_file.write(open(log_file,'r').read()+'\n')
+                    if run_type in merged_run_types:
+                        sigma_m, Nacc, Ntry = self.parse_PY8_log_file(log_file)
+                        if any(elem is None for elem in [sigma_m, Nacc, Ntry]):
+                            continue
+                        n_added += 1
+                        if PY8_extracted_information['sigma_m'] is None:
+                           PY8_extracted_information['sigma_m'] = sigma_m
+                        else:
+                           PY8_extracted_information['sigma_m'] += sigma_m  
+                        if PY8_extracted_information['Nacc'] is None:
+                           PY8_extracted_information['Nacc'] = Nacc
+                        else:
+                           PY8_extracted_information['Nacc'] += Nacc
+                        if PY8_extracted_information['Ntry'] is None:
+                           PY8_extracted_information['Ntry'] = Ntry
+                        else:
+                           PY8_extracted_information['Ntry'] += Ntry
+                # Normalize the values added
+                if n_added>0:
+                    PY8_extracted_information['sigma_m'] /= float(n_added)               
+                
+                # djr plots
+                djr_HwU = None
+                n_added = 0
+                for split_dir in split_dirs:
+                    djr_file = pjoin(split_dir,'djrs.dat')
+                    if not os.path.isfile(djr_file):
+                        continue
+                    xsecs = self.extract_cross_sections_from_DJR(djr_file)
+                    if len(xsecs)>0:
+                        n_added += 1
+                        if len(PY8_extracted_information['cross_sections'])==0:
+                            PY8_extracted_information['cross_sections'] = xsecs
+                            # Square the error term
+                            for key in PY8_extracted_information['cross_sections']:
+                                PY8_extracted_information['cross_sections'][key][1] = \
+                                    PY8_extracted_information['cross_sections'][key][1]**2
+                        else:
+                            for key, value in xsecs.items():
+                                PY8_extracted_information['cross_sections'][key][0] += value[0]
+                                # Add error in quadrature
+                                PY8_extracted_information['cross_sections'][key][1] += value[1]**2
+                    new_djr_HwU = histograms.HwUList(djr_file,run_id=0)
+                    if djr_HwU is None:
+                        djr_HwU = new_djr_HwU
+                    else:
+                        for i, hist in enumerate(djr_HwU):
+                            djr_HwU[i] = hist + new_djr_HwU[i]
+                if not djr_HwU is None:
+                    djr_HwU.output(pjoin(self.me_dir,'Events',self.run_name,'djrs'),format='HwU')
+                    shutil.move(pjoin(self.me_dir,'Events',self.run_name,'djrs.HwU'),
+                                pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag))
+                if n_added>0:
+                    for key in PY8_extracted_information['cross_sections']:
+                        PY8_extracted_information['cross_sections'][key][0] /= float(n_added)
+                        PY8_extracted_information['cross_sections'][key][1] = \
+                         math.sqrt(PY8_extracted_information['cross_sections'][key][1])/float(n_added)
+
+                # pts plots
+                pts_HwU = None
+                for split_dir in split_dirs:
+                    pts_file = pjoin(split_dir,'pts.dat')
+                    if not os.path.isfile(pts_file):
+                        continue
+                    new_pts_HwU = histograms.HwUList(pts_file,run_id=0)
+                    if pts_HwU is None:
+                        pts_HwU = new_pts_HwU
+                    else:
+                        for i, hist in enumerate(pts_HwU):
+                            pts_HwU[i] = hist + new_pts_HwU[i]
+                if not pts_HwU is None:
+                    pts_HwU.output(pjoin(self.me_dir,'Events',self.run_name,'pts'),format='HwU')
+                    shutil.move(pjoin(self.me_dir,'Events',self.run_name,'pts.HwU'),
+                                pjoin(self.me_dir,'Events',self.run_name,'%s_pts.dat'%tag))
+
+                # HepMC events now.
+                all_hepmc_files = []
+                for split_dir in split_dirs:
+                    hepmc_file = pjoin(split_dir,'events.hepmc')
+                    if not os.path.isfile(hepmc_file):
+                        continue
+                    all_hepmc_files.append(hepmc_file)
+                
+                if len(all_hepmc_files)>0:
+                    hepmc_output = pjoin(self.me_dir,'Events',self.run_name,HepMC_event_output)
+                    with misc.TMP_directory() as tmp_dir:
+                        # Use system calls to quickly put these together
+                        header = open(pjoin(tmp_dir,'header.hepmc'),'w')
+                        n_head = 0
+                        for line in open(all_hepmc_files[0],'r'):
+                            if not line.startswith('E'):
+                                n_head += 1
+                                header.write(line)
+                            else:
+                                break
+                        header.close()
+                        tail = open(pjoin(tmp_dir,'tail.hepmc'),'w')
+                        n_tail = 0               
+                        for line in misc.BackRead(all_hepmc_files[-1]):
+                            if line.startswith('HepMC::'):
+                                n_tail += 1
+                                tail.write(line)
+                            else:
+                                break
+                        tail.close()
+                        if n_tail>1:
+                            raise MadGraph5Error,'HEPMC files should only have one trailing command.'
+                        ###################################################################### 
+                        #    WARNING: NEED TO RENDER THE CODE BELOW SAFE TOWARDS INJECTION   #
+                        ######################################################################
+                        for hepmc_file in all_hepmc_files:
+                            # Remove in an efficient way the starting and trailing HEPMC tags
+                            os.system(' '.join(['sed','-i',"''","'%s;$d'"%
+                                        (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))                            
+                        os.system(' '.join(['cat',pjoin(tmp_dir,'header.hepmc')]+all_hepmc_files+
+                                                    [pjoin(tmp_dir,'tail.hepmc'),'>',hepmc_output]))
+
+                # We are done with the parallelization directory. Clean it.
+                if os.path.isdir(parallelization_dir):
+                    shutil.rmtree(parallelization_dir)
+
         # Properly rename the djr and pts output if present.
         djr_output = pjoin(self.me_dir,'Events', self.run_name, 'djrs.dat')
         if os.path.isfile(djr_output):
@@ -3875,7 +4155,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                                             self.run_name, '%s_pts.dat' % tag))
             
         if not os.path.isfile(pythia_log) or \
-             'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[-20]):
+             'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[:-20]):
             logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
             return
         
@@ -3888,70 +4168,34 @@ You can follow PY8 run with the following command (in a separate terminal):
 
         # Study matched cross-sections
         if run_type in merged_run_types:
-            #####
             # From the log file
-            #####
-            # read the line from the bottom of the file
-            pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
-                                                        '%s_pythia8.log' % tag))
-            # The main89 driver should be modified so as to allow for easier parsing
-            pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")            
-            for line in pythia_log: 
-                info = pythiare.search(line)
-                if not info:
-                    continue
-                try:
-                    # Pythia cross section in mb, we want pb
-                    sigma_m = float(info.group('xsec')) *1e9
-                    Nacc = int(info.group('generated'))
-                    Ntry = int(info.group('tried'))
-                    if Nacc==0:
-                        raise self.InvalidCmd, 'Pythia8 shower failed since it'+\
-                         ' did not accept any event from the MG5aMC event file.'+\
-                         'You can find more information in this log file:\n%s'%pythia_log
+            if all(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
+                PY8_extracted_information['sigma_m'],PY8_extracted_information['Nacc'],\
+                    PY8_extracted_information['Ntry'] = self.parse_PY8_log_file(
+                      pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))
 
-                except ValueError:
-                    # xsec is not float - this should not happen
-                    self.results.add_detail('cross_pythia', 0)
-                    self.results.add_detail('nb_event_pythia', 0)
-                    self.results.add_detail('error_pythia', 0)
-                else:
-                    self.results.add_detail('cross_pythia', sigma_m)
-                    self.results.add_detail('nb_event_pythia', Nacc)
-                    #compute pythia error
-                    error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
-                    try:                   
-                        error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
-                    except ZeroDivisionError:
-                        # Cannot compute error
-                        error_m = -1.0
-                    # works both for fixed number of generated events and fixed accepted events
-                    self.results.add_detail('error_pythia', error_m)
-                break
-            pythia_log.close()
+            if not any(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
+                self.results.add_detail('cross_pythia', PY8_extracted_information['sigma_m'])
+                self.results.add_detail('nb_event_pythia', PY8_extracted_information['Nacc'])
+                # Compute pythia error
+                error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
+                try:                   
+                    error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                except ZeroDivisionError:
+                    # Cannot compute error
+                    error_m = -1.0
+                # works both for fixed number of generated events and fixed accepted events
+                self.results.add_detail('error_pythia', error_m)
+
             if self.run_card['use_syst']:
                     self.results.add_detail('cross_pythia', -1)
                     self.results.add_detail('error_pythia', 0)
-            #####
+
             # From the djr file generated
-            #####
             djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
-            cross_sections = None 
-            if os.path.isfile(djr_output):
-                run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
-                all_nodes = dict((int(node.getAttribute('id')),node) for
-                                                              node in run_nodes)
-                try:
-                    selected_run_node = all_nodes[0]
-                except:
-                    selected_run_node = None
-                if selected_run_node:
-                    xsections = selected_run_node.getElementsByTagName("xsection")
-                    # We need to translate PY8's output in mb into pb
-                    cross_sections = dict((xsec.getAttribute('name'),
-                    (float(xsec.childNodes[0].data.split()[0])*1e9,
-                     float(xsec.childNodes[0].data.split()[1])*1e9))
-                                                          for xsec in xsections)
+            if os.path.isfile(djr_output) and len(PY8_extracted_information['cross_sections'])==0:
+                PY8_extracted_information['cross_sections'] = self.extract_cross_sections_from_DJR(djr_output)
+            cross_sections = PY8_extracted_information['cross_sections']     
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
                 # with central parameters and a different merging scale
@@ -3969,11 +4213,10 @@ You can follow PY8 run with the following command (in a separate terminal):
                     self.results.add_detail('cross_pythia8', cross_sections[central_scale][0])
                     self.results.add_detail('error_pythia8', cross_sections[central_scale][1])
                 
-                #if len(cross_sections)>0:
-                #    logger.info('Pythia8 merged cross-sections are:')
-                #    for scale in sorted(cross_sections.keys()):
-                #        logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
-                #        (scale,cross_sections[scale][0],cross_sections[scale][1]))       
+                #logger.info('Pythia8 merged cross-sections are:')
+                #for scale in sorted(cross_sections.keys()):
+                #   logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                #               (scale,cross_sections[scale][0],cross_sections[scale][1]))       
             
             xsecs_file = open(pjoin(self.me_dir,'Events',self.run_name,
                                                  '%s_merged_xsecs.txt'%tag),'w')
@@ -4006,6 +4249,43 @@ You can follow PY8 run with the following command (in a separate terminal):
         if self.options['delphes_path']:
             self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
         self.print_results_in_shell(self.results.current)
+    
+    def parse_PY8_log_file(self, log_file_path):
+        """ Parse a log file to extract number of event and cross-section. """
+        pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
+        for line in misc.BackRead(log_file_path): 
+            info = pythiare.search(line)
+            if not info:
+                continue
+            try:
+                # Pythia cross section in mb, we want pb
+                sigma_m = float(info.group('xsec')) *1e9
+                Nacc = int(info.group('generated'))
+                Ntry = int(info.group('tried'))
+                if Nacc==0:
+                    raise self.InvalidCmd, 'Pythia8 shower failed since it'+\
+                     ' did not accept any event from the MG5aMC event file.'
+                return sigma_m, Nacc, Ntry
+            except ValueError:
+                return None,None,None
+        raise self.InvalidCmd, "Could not find cross-section and event number information "+\
+                         "in Pythia8 log\n  '%s'."%log_file_path
+    
+    def extract_cross_sections_from_DJR(self,djr_output):
+        """Extract cross-sections from a djr XML output."""
+        run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
+        all_nodes = dict((int(node.getAttribute('id')),node) for
+                                                      node in run_nodes)
+        try:
+            selected_run_node = all_nodes[0]
+        except:
+            return {}
+        xsections = selected_run_node.getElementsByTagName("xsection")
+        # We need to translate PY8's output in mb into pb
+        return dict((xsec.getAttribute('name'),
+        [float(xsec.childNodes[0].data.split()[0])*1e9,
+         float(xsec.childNodes[0].data.split()[1])*1e9])
+                                              for xsec in xsections)
     
     def do_pythia(self, line):
         """launch pythia"""

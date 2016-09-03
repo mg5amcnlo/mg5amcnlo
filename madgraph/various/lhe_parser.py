@@ -513,19 +513,26 @@ class EventFile(object):
         else:
             return out
 
-    def split(self, nb_event=0):
+    def split(self, nb_event=0, partition=None, cwd=os.path.curdir, zip=False):
         """split the file in multiple file. Do not change the weight!"""
 
         nb_file = -1
         for i, event in enumerate(self):
-            if i % nb_event == 0:
+            if (not (partition is None) and i==sum(partition[:nb_file+1])) or \
+                                   (partition is None and i % nb_event == 0):
                 if i:
                     #close previous file
                     current.write('</LesHouchesEvent>\n')
                     current.close()
                 # create the new file
                 nb_file +=1
-                current = open('%s_%s.lhe' % (self.name, nb_file),'w')
+                # If end of partition then finish writing events here.
+                if not partition is None and (nb_file+1>len(partition)):
+                    return nb_file+1
+                if zip:
+                    current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.name, nb_file)),'w')
+                else:
+                    current = open(pjoin(cwd,'%s_%s.lhe' % (self.name, nb_file)),'w')                    
                 current.write(self.banner)
             current.write(str(event))
         if i!=0:

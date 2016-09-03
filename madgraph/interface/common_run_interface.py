@@ -3860,6 +3860,17 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                         'ilc': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
                         'lcc':['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
                         'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
+                        'simplepy8':['pythia8_card hadronlevel:all False',
+                                     'pythia8_card partonlevel:mpi False',
+                                     'pythia8_card BeamRemnants:primordialKT False',
+                                     'pythia8_card PartonLevel:Remnants False',
+                                     'pythia8_card Check:event False',
+                                     'pythia8_card TimeShower:QEDshowerByQ False',
+                                     'pythia8_card TimeShower:QEDshowerByL False',
+                                     'pythia8_card SpaceShower:QEDshowerByQ False',
+                                     'pythia8_card SpaceShower:QEDshowerByL False',
+                                     'pythia8_card PartonLevel:FSRinResonances False',
+                                     'pythia8_card ProcessLevel:resonanceDecays False']
                         }
 
     special_shortcut_help = {              
@@ -3873,7 +3884,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
               '   3 : means PDF for elastic photon emited from an electron',
     'lhc'   : 'syntax: set lhc VALUE:\n      Set for a proton-proton collision with that given center of mass energy (in TeV)',
     'lep'   : 'syntax: set lep VALUE:\n      Set for a electron-positron collision with that given center of mass energy (in GeV)',
-    'fixed_scale' : 'syntax: set fixed_scale VALUE:\n      Set all scales to the give value (in GeV)',              
+    'fixed_scale' : 'syntax: set fixed_scale VALUE:\n      Set all scales to the give value (in GeV)',
+    'simplepy8' : 'syntax: Turn off non-perturbative slow features of PY8.'           
     }
     
     def load_default(self):
