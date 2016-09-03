@@ -4,7 +4,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.5.0 (xx/xx/xx)
      FUNCTIONALITY
      -------------
-       VH+OM: Adding an official interface to PY8 for the parton-shower
+	   VH: Parallelization of PY8 at LO
+       VH+OM: Adding an official interface to PY8 at LO
        OM: Introduces a new function for LO/NLO interface "systematics"
             This function allows to compute systematics uncertainty from the event sample
             It requires the event sample to have been generated with 
