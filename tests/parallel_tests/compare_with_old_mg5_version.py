@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 249 #2.0.0
+    reference_number = 255 #2.0.0
     nb_test = 0
     
     
@@ -220,11 +220,12 @@ class OLDMG5Comparator(unittest.TestCase):
            in the model. In consequence, you need to change the old MG5 comparison
            point. (Since the default use another model)."""
 
-#        return # By default no need this
+        return # By default no need this
         self.create_short_parallel_sqso()
         self.create_short_paralel_sm()
         self.create_short_paralel_mssm()
         self.create_short_paralel_heft()
+        self.assertTrue(False)
         
 
     def create_short_paralel_sm(self):
@@ -428,7 +429,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         my_proc_list = ['p p > j j']
         values = {'number_of_P0': '1',
-                  'cross_P0_qq_qq': '0.20466E+06'}
+                  'cross_P0_qq_qq': '6.269e+04'}
 
         # Store list of non-zero processes and results in file                                                                                                                          
         self.compare_cross_section_to_values(values, my_proc_list,

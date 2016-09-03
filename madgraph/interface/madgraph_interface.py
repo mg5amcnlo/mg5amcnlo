@@ -5556,8 +5556,8 @@ This implies that with decay chains:
         elif tool == 'mg5amc_py8_interface':
             # At this stage, pythia is guaranteed to be installed
             if self.options['pythia8_path'] in ['',None,'None']:
-                self.options['pythia8_path'] = pjoin(MG5DIR,'HEPTools','pythia8')
-            self.options['mg5amc_py8_interface_path'] = \
+                self.options['pythia8_path'] = pjoin(prefix,'pythia8')
+            self.options['mg5amc_py8_interface_path'] = pjoin(prefix, 'mg5amc_py8_interface')
             self.exec_cmd('save options %s mg5amc_py8_interface_path' % config_file, 
                                                             printcmd=False, log=False)      
         elif tool == 'collier':
