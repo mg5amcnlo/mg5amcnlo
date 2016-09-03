@@ -937,7 +937,7 @@ class MultiEventFile(EventFile):
             self.define_init_banner(new_wgt, strategy)
             self.written_weight = new_wgt
         elif 'write_init' in opts and opts['write_init']:
-            self.define_init_banner(0)
+            self.define_init_banner(0,0)
             del opts['write_init']
 
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)

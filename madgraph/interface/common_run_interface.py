@@ -1488,7 +1488,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.info('can not run systematics since can not link python to lhapdf')
             return
     
-        self.update_status('Running Systematic computation', level='parton')
+        self.update_status('Running Systematics computation', level='parton')
         args = self.split_arg(line)
         #split arguments and option
         opts= []

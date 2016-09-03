@@ -121,7 +121,6 @@ class MadEventComparator(me_comparator.MEComparator):
                            runner in self.me_runners]) + \
                   self._fixed_string_length("Relative diff.", col_size) + \
                   "Result"
-
         for prop in self.results[0]:
             loc_results = []
             succeed = True
@@ -142,6 +141,9 @@ class MadEventComparator(me_comparator.MEComparator):
             else:
                 # check the type (integer/float/string)
                 type = detect_type(loc_results[0])
+                if type == 'int':
+                    if any(detect_type(loc)=='float' for loc in loc_results):
+                        type = 'float'
                 if type == 'float':
                     if max(loc_results) == 0.0 and min(loc_results) == 0.0:
                         res_str += self._fixed_string_length("0", col_size)
