@@ -3456,7 +3456,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #return valid run_name
         data = misc.glob(pjoin('*','*events.lhe*'), pjoin(self.me_dir, 'Events'))
-        data = [n.rsplit('/',2)[1] for n in data]
+        data = list(set([n.rsplit('/',2)[1] for n in data]))
         if not '-f' in args:
             data.append('-f')
         tmp1 =  self.list_completion(text, data)
