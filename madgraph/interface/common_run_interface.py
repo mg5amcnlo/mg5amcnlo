@@ -624,8 +624,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
             me_dir = root_path
-
-        self.me_dir = me_dir
+        
+        if os.path.isabs(me_dir):
+            self.me_dir = me_dir
+        else:
+            self.me_dir = pjoin(os.getcwd(),me_dir)
+            
         self.options = options
         
         self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
@@ -1541,9 +1545,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         lhaid = [self.run_card.get_lhapdf_id()]
         if 'store_rwgt_info' in self.run_card and not self.run_card['store_rwgt_info']:
             raise self.InvalidCmd,  "The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event file."
-        elif 'use_syst'  in self.run_card and not self.run_card['use_syst']:
-            raise self.InvalidCmd,  "The events was not generated with use_syst=True. Can not evaluate systematics error on this event file."
-        
+        elif 'use_syst'  in self.run_card:
+            if not self.run_card['use_syst']:
+                raise self.InvalidCmd,  "The events was not generated with use_syst=True. Can not evaluate systematics error on this event file."
+            elif self.proc_characteristics['ninitial'] ==1:
+                if '--from_card' in opts:
+                    logger.warning('systematics not available for decay processes. Bypass it')
+                    return
+                else:
+                    raise self.InvalidCmd, 'systematics not available for decay processes.'
+                
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
         except Exception, error:
@@ -3525,7 +3536,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     else:
                         need_keys.remove(key)
                 else: 
-                    misc.sprint("end on line", line)
                     make_opts_variable = False
                     content.append(line)
             else:                  
