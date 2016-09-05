@@ -1,0 +1,3 @@
+# This card is used only if MA5 failed to create a default for this run
+# We therefore use as default: do nothing
+@MG5aMC skip_analysis

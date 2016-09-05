@@ -328,8 +328,7 @@ class ProcessExporterFortran(VirtualExporter):
             if lvl in levels:
                 card_to_generate = pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl)
                 try:
-                    open(card_to_generate,'w').write(
-                        MA5_main.madgraph.generate_card(history, proc_defs, processes,lvl))
+                    text = MA5_main.madgraph.generate_card(history, proc_defs, processes,lvl)
                 except Exception as e:
                     # Make sure to remove the card generated
                     if os.path.isfile(card_to_generate):
@@ -343,6 +342,8 @@ class ProcessExporterFortran(VirtualExporter):
                     logger.debug('-'*60)
                     logger.debug(error.getvalue()[:-1])
                     logger.debug('-'*60)
+                else:
+                    open(card_to_generate,'w').write(text)
 
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
