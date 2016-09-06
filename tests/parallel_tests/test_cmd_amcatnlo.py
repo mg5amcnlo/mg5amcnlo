@@ -53,7 +53,7 @@ class MECmdShell(IOTests.IOTestManager):
     """this treats all the command not related to MG_ME"""
     
     loadtime = time.time()
-    debugging = True
+    debugging = False
     
     def setUp(self):
         
@@ -297,7 +297,7 @@ class MECmdShell(IOTests.IOTestManager):
         """tests if the p p > go go (in the mssm) process works"""
         start= time.time()
         self.generate(['p p > go go [real=QCD]'], 'MSSM_SLHA2')
-
+        misc.sprint( 'ppgg[real=QCD] generated in', time.time()-start)
 
 
         ####NLO
@@ -312,7 +312,7 @@ class MECmdShell(IOTests.IOTestManager):
 
         start = time.time()
         self.do('launch NLO -f')
-        misc.sprint( 'launch in aMC@NLO in ', time.time()-start)
+        misc.sprint( 'launch in NLO in ', time.time()-start)
         # test the plot file exists
         self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
@@ -327,14 +327,14 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue( '10000 = nevents' in card)
         card = card.replace('10000 = nevents', '100 = nevents')
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        misc.sprint( 'ppgg[real=QCD] generated in', time.time()-start)
+
         start = time.time()
         self.do('launch aMC@NLO -fp')
         misc.sprint( 'launch in aMC@NLO in ', time.time()-start)
         # test the lhe event file exists
         self.assertTrue(os.path.exists('%s/Events/run_02/events.lhe.gz' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_02/run_01_tag_1_banner.txt' % self.path))
+        self.assertTrue(os.path.exists('%s/Events/run_02/run_02_tag_1_banner.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/res_0.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/res_1.txt' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_0.html' % self.path))
@@ -342,6 +342,7 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
 
 
+        self.assertFalse(self.debugging)
     
 
     def test_short_launch_amcatnlo_name(self):
