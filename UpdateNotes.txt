@@ -4,7 +4,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
 2.5.0 (xx/xx/xx)
      FUNCTIONALITY
      -------------
-       VH+OM: Adding an official interface to PY8 for the parton-shower
+       VH+OM: Adding an official interface to PY8 for the parton-shower at Leading-Order
        VH+OM+MA5: Adding an official interface for plotting/analysis/recasting
        OM: Introduces a new function for LO/NLO interface "systematics"
             This function allows to compute systematics uncertainty from the event sample
@@ -36,7 +36,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
        VH: adding the possibility to install COLLIER and to use it to reduce the loop-matrix element
        OM+VH: At the first loop/NLO computation, a new question will now be asked to choose which program
            to install to compute the loop. You can still install additional method later via the "install" command
-
+       OM: Replace the mssm model by the MSSM_SLHA2 following the SLHA2 instead of the SLHA1 convention
 
      BUG FIXING
      ----------

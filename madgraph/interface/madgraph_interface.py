@@ -2697,7 +2697,7 @@ class CompleteForCmd(cmd.CompleteCmd):
                 options.append('--update')
                 options.append('--madanalysis5_tarball=')
                 for prefix in ['--with', '--veto']:
-                    for prog in ['fastjet', 'delphes', 'delphesma5tune']:
+                    for prog in ['fastjet', 'delphes', 'delphesMA5tune']:
                         options.append('%s_%s' % (prefix, prog))
                          
             for opt in options[:]:

@@ -39,7 +39,7 @@ ZERO = 0
 # Logger for model_reader
 #===============================================================================
 
-logger = logging.getLogger('models.model_reader')
+logger = logging.getLogger('madgraph.models')
 
 #===============================================================================
 # ModelReader: Used to read a param_card and calculate parameters and
