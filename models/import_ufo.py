@@ -167,10 +167,16 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
             # It might be that the default of the model is CMS.
             model.change_mass_to_complex_scheme(toCMS=False)
 
+        blocks = model.get_param_block()
         if model_name == 'mssm' or os.path.basename(model_name) == 'mssm':
             keep_external=True
+        elif all( b in blocks for b in ['USQMIX', 'SL2', 'MSOFT', 'YE', 'NMIX', 'TU','MSE2','UPMNS']):
+            keep_external=True
+        elif model_name == 'MSSM_SLHA2' or os.path.basename(model_name) == 'MSSM_SLHA2':
+            keep_external=True            
         else:
             keep_external=False
+        logger.info('Detect SLHA2 format. keeping restricted parameter in the param_card')
         model.restrict_model(restrict_file, rm_parameter=not decay,
            keep_external=keep_external, complex_mass_scheme=complex_mass_scheme)
         model.path = model_path
@@ -1576,6 +1582,7 @@ class RestrictModel(model_reader.ModelReader):
         
         if self.get('name') == "mssm" and not keep_external:
             raise Exception
+
         self.restrict_card = param_card
         # Reset particle dict to ensure synchronized particles and interactions
         self.set('particles', self.get('particles'))
@@ -1838,6 +1845,13 @@ class RestrictModel(model_reader.ModelReader):
                     if value == coupling:
                         pct[0]['counterterm'][pct[1]][key] = main
 
+
+                
+    def get_param_block(self):
+        """return the list of block defined in the param_card"""
+        
+        blocks = set([p.lhablock for p in self['parameters'][('external',)]])
+        return blocks
          
     def merge_iden_parameters(self, parameters, keep_external=False):
         """ merge the identical parameters given in argument.

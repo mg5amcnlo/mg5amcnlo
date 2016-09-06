@@ -99,15 +99,22 @@ class ModelReader(loop_base_objects.LoopModel):
             if set(key) != set(parameter_dict.keys()):
                 # the two card are different. check if this critical
 
-                fail = True    
+                fail = True
+                missing_block = ','.join(set(parameter_dict.keys()).difference(set(key)))
+                unknow_block = ','.join(set(key).difference(set(parameter_dict.keys())))
+                
+                
+                    
                 msg = '''Invalid restriction card (not same block)
     %s != %s.
     Missing block: %s
     Unknown block : %s''' % (set(key), set(parameter_dict.keys()),
-                             ','.join(set(parameter_dict.keys()).difference(set(key))),
-                             ','.join(set(key).difference(set(parameter_dict.keys()))))
-                if msg =="Invalid restriction card (not same block)\n    set(['yu', 'umix', 'ae', 'ad', 'decay', 'nmix', 'ye', 'sbotmix', 'msoft', 'yd', 'vmix', 'au', 'mass', 'alpha', 'modsel', 'sminputs', 'staumix', 'stopmix', 'hmix']) != set(['umix', 'msoft', 'msu2', 'fralpha', 'msd2', 'msl2', 'decay', 'tu', 'selmix', 'td', 'te', 'usqmix', 'dsqmix', 'ye', 'yd', 'sminputs', 'yu', 'mse2', 'nmix', 'vmix', 'msq2', 'mass', 'hmix']).\n    Missing block: te,msl2,dsqmix,tu,selmix,msu2,msq2,usqmix,td,fralpha,mse2,msd2\n    Unknown block : ae,ad,sbotmix,au,alpha,modsel,staumix,stopmix" \
-                or self['name'].startswith('mssm-') or self['name'] == 'mssm':
+                             missing_block, unknow_block)
+                if not missing_block:
+                    logger.warning("Unknow type of information in the card: %s" % unknow_block)
+                    fail = False
+                elif msg =="Invalid restriction card (not same block)\n    set(['yu', 'umix', 'ae', 'ad', 'decay', 'nmix', 'ye', 'sbotmix', 'msoft', 'yd', 'vmix', 'au', 'mass', 'alpha', 'modsel', 'sminputs', 'staumix', 'stopmix', 'hmix']) != set(['umix', 'msoft', 'msu2', 'fralpha', 'msd2', 'msl2', 'decay', 'tu', 'selmix', 'td', 'te', 'usqmix', 'dsqmix', 'ye', 'yd', 'sminputs', 'yu', 'mse2', 'nmix', 'vmix', 'msq2', 'mass', 'hmix']).\n    Missing block: te,msl2,dsqmix,tu,selmix,msu2,msq2,usqmix,td,fralpha,mse2,msd2\n    Unknown block : ae,ad,sbotmix,au,alpha,modsel,staumix,stopmix" \
+                  or self['name'].startswith('mssm-') or self['name'] == 'mssm':
                     if not set(parameter_dict.keys()).difference(set(key)):
                         fail = False
                     else:

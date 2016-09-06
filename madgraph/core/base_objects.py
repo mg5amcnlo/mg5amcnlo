@@ -1585,6 +1585,7 @@ class Model(PhysicsObject):
         return [c for c in range(1, len(self.get('particles')) + 1) if \
                 c not in self.get('particle_dict').keys()][0]
                 
+
     def write_param_card(self, filepath=None):
         """Write out the param_card, and return as string."""
         

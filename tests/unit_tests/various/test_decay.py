@@ -656,7 +656,7 @@ class Test_DecayModel(unittest.TestCase):
         """Set up decay model"""
         
         if not hasattr(Test_DecayModel, 'base_model'):
-            Test_DecayModel.base_model = import_ufo.import_model('mssm')
+            Test_DecayModel.base_model = import_ufo.import_model('MSSM_SLHA2')
             Test_DecayModel.my_testmodel_base = import_ufo.import_model('sm')
         
         #Full SM DecayModel
@@ -871,7 +871,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         decay_mssm = decay_objects.DecayModel(mssm, True)
         decay_mssm.find_decay_groups()
         goal_groups = [[25, 35, 36, 37],
@@ -885,7 +885,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_modified_mssm(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         particles = mssm.get('particles')
         no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
                                   1000025, 1000035, 1000037, -1000037]
@@ -927,7 +927,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_general(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         decay_mssm = decay_objects.DecayModel(mssm, True)
         # Read data to find massless SM-like particle
         param_path = os.path.join(_file_path,
@@ -964,7 +964,7 @@ class Test_DecayModel(unittest.TestCase):
            Test to get decay_groups and stable_particles from get."""
 
         # Setup the mssm with parameters read in.
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         decay_mssm = decay_objects.DecayModel(mssm, True)
         particles = decay_mssm.get('particles')
         param_path = os.path.join(_file_path,
@@ -1271,7 +1271,7 @@ class Test_DecayModel(unittest.TestCase):
 
 
         # Read mssm
-        model_base = import_ufo.import_model('mssm')
+        model_base = import_ufo.import_model('MSSM_SLHA2')
         model = decay_objects.DecayModel(model_base, True)
         param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         model.read_param_card(param_path)
@@ -2098,7 +2098,7 @@ class Test_Channel(unittest.TestCase):
 
 
         """ Test on MSSM, to get a feeling on the execution time. """        
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         param_path = os.path.join(_file_path,'../../models/mssm/restrict_default.dat')
         decay_mssm = decay_objects.DecayModel(mssm, force=True)
         decay_mssm.read_param_card(param_path)
@@ -2402,7 +2402,7 @@ class Test_Channel(unittest.TestCase):
 
 
         """ MSSM test
-        model_base = import_ufo.import_model('mssm')
+        model_base = import_ufo.import_model('MSSM_SLHA2')
         param_path = os.path.join(_file_path,
         '../input_files/param_card_mssm.dat')
         model = decay_objects.DecayModel(model_base, force=True)
@@ -2461,7 +2461,7 @@ class Test_Channel(unittest.TestCase):
             2. the apx_decaywidth_nextlevel comes from the right level."""
 
         # Options for the test
-        model_name = 'mssm'
+        model_name = 'MSSM_SLHA2'
         test_param_card = False
         test_param_card_suffix = 'test1'
         smart_find = False
@@ -2495,7 +2495,7 @@ class Test_Channel(unittest.TestCase):
             model.find_all_channels(channel_number)
 
         # Read MG4 param_card
-        if model_name == "mssm":
+        if model_name == "MSSM_SLHA2":
             if test_param_card:
                 MG4_param_path = os.path.join(_file_path,
                                               '../input_files/param_card_test1.dat')

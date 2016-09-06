@@ -243,7 +243,7 @@ class TestLorentzInvariance(unittest.TestCase):
     """Test class for the Lorentz Invariance and boost_momenta"""
     
     def setUp(self):
-        sm_path = import_ufo.find_ufo_path('mssm')
+        sm_path = import_ufo.find_ufo_path('MSSM_SLHA2')
         self.base_model = import_ufo.import_model(sm_path)
         
     def test_boost_momenta(self):
