@@ -70,3 +70,8 @@ SysCalc:fullCutVariation = off
 ! ==========================
 ! User customized parameters 
 ! ==========================
+!
+! By default, Pythia8 generates multi-parton interaction events. The is
+! often irrelevant for phenomenology and very slow. You can turn this 
+! feature off by uncommenting the line below if so desired.
+!partonlevel:mpi = off
