@@ -445,7 +445,7 @@ class TestAddVariable(unittest.TestCase):
         
     def test_short_replace(self):
         """test that the replace command works"""
-        
+
         id = self.var1.get_id()
         new = self.add1.replace(id, self.add2)
         
