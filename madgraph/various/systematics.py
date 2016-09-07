@@ -714,7 +714,16 @@ def call_systematics(args, result=sys.stdout, running=True,
         if opts['from_card'] != ['internal']:
             card = banner.RunCard(opts['from_card'][0])
         else:
-            lhe = lhe_parser.EventFile(input)
+            for i in range(10):
+                try:
+                    lhe = lhe_parser.EventFile(input)
+                    break
+                except OSError,error:
+                    print error
+                    time.sleep(15*(i+1))
+            else:
+                raise
+                    
             card = banner.RunCard(banner.Banner(lhe.banner)['mgruncard'])
             lhe.close()
             
