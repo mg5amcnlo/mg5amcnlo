@@ -330,9 +330,7 @@ class ProcessExporterFortran(VirtualExporter):
                 try:
                     text = MA5_main.madgraph.generate_card(history, proc_defs, processes,lvl)
                 except Exception as e:
-                    # Make sure to remove the card generated
-                    if os.path.isfile(card_to_generate):
-                        os.remove(card_to_generate)
+                    # keep the default card (skip only)
                     logger.warning('MadAnalysis5 failed to write a %s-level'%lvl+
                                                   ' default analysis card for this process.')
                     logger.warning('Therefore, %s-level analysis with MadAnalysis5 will not be possible.'%lvl)

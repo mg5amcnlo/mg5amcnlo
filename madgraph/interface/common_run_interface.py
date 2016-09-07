@@ -2481,8 +2481,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                     'madanalysis5_%s_card.dat'%mode), mode=mode)
 
         if MA5_card._skip_analysis:
-            logger.warning('Madanalysis5 %s-level analysis was skipped following user request.'%mode)
-            logger.warning("To run the analysis, remove or comment the tag '%s skip_analysis' "
+            logger.info('Madanalysis5 %s-level analysis was skipped following user request.'%mode)
+            logger.info("To run the analysis, remove or comment the tag '%s skip_analysis' "
                 %banner_mod.MadAnalysis5Card._MG5aMC_escape_tag+
                 "in\n  '%s'."%pjoin(self.me_dir, 'Cards','madanalysis5_%s_card.dat'%mode))
             return
