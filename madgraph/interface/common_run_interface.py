@@ -4086,8 +4086,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.PY8Card = banner_mod.PY8Card(self.paths['PY8'])
             self.PY8CardDefault = banner_mod.PY8Card()
             
-            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
-                                     k.lower() not in self.PY8Card.hidden_param]
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys()]
             # check for conflict
             for var in self.py8_vars:
                 if var in self.run_card:
@@ -5536,8 +5535,7 @@ You can also copy/paste, your event file here.''')
                 self.PY8Card = banner_mod.PY8Card(self.paths['PY8_default'])
 
             self.PY8Card.read(self.paths['PY8'], setter='user')
-            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
-                                     k.lower() not in self.PY8Card.hidden_param]
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys()]
         elif path == self.paths['MadWeight']:
             try:
                 import madgraph.madweight.Cards as mwcards
