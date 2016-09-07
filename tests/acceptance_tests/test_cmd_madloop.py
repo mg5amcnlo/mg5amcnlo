@@ -534,3 +534,14 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
 
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
+
+        #remove some function from some file:
+        IOTests.IOTest.remove_f77_function_from_file(
+                    pjoin(self.IOpath,'ggttx_IOTest', 'SubProcesses','MadLoopCommons.f'),
+                    'PRINT_MADLOOP_BANNER')
+        
+
+
+
+
+

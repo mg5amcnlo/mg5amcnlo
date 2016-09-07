@@ -70,6 +70,7 @@ class MECmdShell(IOTests.IOTestManager):
             self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
             
         self.path = pjoin(self.tmpdir,'MGProcess')
+        
     def tearDown(self):
         if not self.debugging:
             shutil.rmtree(self.tmpdir)

@@ -316,9 +316,12 @@ class ProcessExporterFortran(VirtualExporter):
             return
         
         logger.info('Generating MadAnalysis5 default cards tailored to this process')
-        MA5_interpreter = common_run_interface.CommonRunCmd.\
+        try:
+            MA5_interpreter = common_run_interface.CommonRunCmd.\
                           get_MadAnalysis5_interpreter(MG5DIR,ma5_path,loglevel=100)
-                          
+        except (Exception, SystemExit) as e:
+            logger.warning('Fail to create a MadAnalysis5 instance. Therefore the default analysis with MadAnalysis5 will be empty.')
+            return
         if MA5_interpreter is None:
             return
 
@@ -329,11 +332,11 @@ class ProcessExporterFortran(VirtualExporter):
                 card_to_generate = pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl)
                 try:
                     text = MA5_main.madgraph.generate_card(history, proc_defs, processes,lvl)
-                except Exception as e:
+                except (Exception, SystemExit) as e:
                     # keep the default card (skip only)
                     logger.warning('MadAnalysis5 failed to write a %s-level'%lvl+
                                                   ' default analysis card for this process.')
-                    logger.warning('Therefore, %s-level analysis with MadAnalysis5 will not be possible.'%lvl)
+                    logger.warning('Therefore, %s-level default analysis with MadAnalysis5 will be empty.'%lvl)
                     error=StringIO()
                     traceback.print_exc(file=error)
                     logger.debug('MadAnalysis5 error was:')
