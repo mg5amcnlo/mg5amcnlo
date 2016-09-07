@@ -3863,14 +3863,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
                      'madweight_card', 'MadLoopParams', 'shower_card']
 
-    special_shortcut = {'ebeam':['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s'],
-                        'lpp': ['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ],
-                        'lhc': ['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
-                        'lep': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
-                        'ilc': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
-                        'lcc':['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
-                        'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
-                        'simplepy8':['pythia8_card hadronlevel:all False',
+    special_shortcut = {'ebeam':([float],['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s']),
+                        'lpp': ([int],['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ]),
+                        'lhc': ([int],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
+                        'lep': ([int],['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2']),
+                        'ilc': ([int],['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2']),
+                        'lcc': ([int],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
+                        'fixed_scale': ([float],['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s']),
+                        'simplepy8':([],['pythia8_card hadronlevel:all False',
                                      'pythia8_card partonlevel:mpi False',
                                      'pythia8_card BeamRemnants:primordialKT False',
                                      'pythia8_card PartonLevel:Remnants False',
@@ -3880,7 +3880,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                      'pythia8_card SpaceShower:QEDshowerByQ False',
                                      'pythia8_card SpaceShower:QEDshowerByL False',
                                      'pythia8_card PartonLevel:FSRinResonances False',
-                                     'pythia8_card ProcessLevel:resonanceDecays False']
+                                     'pythia8_card ProcessLevel:resonanceDecays False',
+                                     ]),
+                        'mpi':([bool],['pythia8_card partonlevel:mpi %(0)s'])
                         }
 
     special_shortcut_help = {              
@@ -4500,23 +4502,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
-            if len(args) == 1:
-                values = {}
-            elif len(args) == 2: 
-                targettype = float
-                if args[1].strip().isdigit():
-                    targettype = int
-                 
-                try:  
-                    values = {'0': targettype(args[1])}
-                except ValueError as e:
-                    logger.warning("Wrong argument: The last entry should be a number.")
+            targettypes , cmd = self.special_shortcut[args[0]]
+            if len(args) != len(targettypes) +1:
+                logger.warning('shortcut %s requires %s argument' % (args[0], len(targettypes)))
+                if len(args) < len(targettypes) +1:
                     return
-            else:
-                logger.warning("too many argument for this command")
-                return
+                else:
+                    logger.warning('additional argument will be ignored')
+            values ={}
+            for i, argtype in enumerate(targettypes):           
+                try:  
+                    values = {str(i): banner_mod.ConfigFile.format_variable(args[i+1], argtype, args[0])}
+                except ValueError as e:
+                    logger.warning("Wrong argument: The entry #%s should be of type %s.", i+1, argtype)
+                    return
+            #else:
+            #    logger.warning("too many argument for this command")
+            #    return
             
-            for arg in self.special_shortcut[args[0]]:
+            for arg in cmd:
                 try:
                     text = arg % values
                 except KeyError:
@@ -4898,6 +4902,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #INVALID --------------------------------------------------------------
         else:      
             logger.warning('invalid set command %s ' % line)
+            arg = args[start].lower()
+            if self.has_PY8:   
+                close_opts = [name for name in self.PY8Card if name.lower().startswith(arg[:3]) or arg in name.lower()]
+                if close_opts:
+                    logger.info('Did you mean one of the following PY8 options:\n%s' % '\t'.join(close_opts))
+            if self.run_card:
+                close_opts = [name for name in self.run_card if name.lower().startswith(arg[:3]) or arg in name.lower()]
+                if close_opts:
+                    logger.info('Did you mean one of the following run_card options:\n%s' % '\t'.join(close_opts))
+                
             return
 
     def setM(self, block, name, value):
