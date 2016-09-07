@@ -1483,6 +1483,17 @@ class PY8Card(ConfigFile):
         self.add_param("Merging:Dparameter", 0.4, hidden=True, always_write_to_card=False)        
         self.add_param("Merging:doPTLundMerging", False, hidden=True, always_write_to_card=False)
 
+        # Special Pythia8 paremeters useful to simplify the shower.
+        self.add_param("BeamRemnants:primordialKT", False, hidden=True, always_write_to_card=True)
+        self.add_param("PartonLevel:Remnants", False, hidden=True, always_write_to_card=True)
+        self.add_param("Check:event", False, hidden=True, always_write_to_card=True)
+        self.add_param("TimeShower:QEDshowerByQ", False, hidden=True, always_write_to_card=True)
+        self.add_param("TimeShower:QEDshowerByL", False, hidden=True, always_write_to_card=True)
+        self.add_param("SpaceShower:QEDshowerByQ", False, hidden=True, always_write_to_card=True)
+        self.add_param("SpaceShower:QEDshowerByL", False, hidden=True, always_write_to_card=True)
+        self.add_param("PartonLevel:FSRinResonances", False, hidden=True, always_write_to_card=True)
+        self.add_param("ProcessLevel:resonanceDecays", False, hidden=True, always_write_to_card=True)
+
         # Add parameters controlling the subruns execution flow.
         # These parameters should not be part of PY8SubRun daughter.
         self.add_default_subruns('parameters')
