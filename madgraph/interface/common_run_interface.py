@@ -3896,7 +3896,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     'lhc'   : 'syntax: set lhc VALUE:\n      Set for a proton-proton collision with that given center of mass energy (in TeV)',
     'lep'   : 'syntax: set lep VALUE:\n      Set for a electron-positron collision with that given center of mass energy (in GeV)',
     'fixed_scale' : 'syntax: set fixed_scale VALUE:\n      Set all scales to the give value (in GeV)',
-    'simplepy8' : 'Turn off non-perturbative slow features of Pythia8.'
+    'simplepy8' : 'Turn off non-perturbative slow features of Pythia8.',
     'mpi' : 'syntax: set mpi value: allow to turn mpi in Pythia8 on/off'         
     }
     
