@@ -2177,6 +2177,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         # Extract number of external particles
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
         replace_dict['nexternal'] = nexternal
+        replace_dict['nincoming'] = ninitial
 
         # Extract ncomb
         ncomb = matrix_element.get_helicity_combinations()
@@ -2203,6 +2204,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         replace_dict['ncolor'] = ncolor
 
         replace_dict['hel_avg_factor'] = matrix_element.get_hel_avg_factor()
+        replace_dict['beamone_helavgfactor'], replace_dict['beamtwo_helavgfactor'] =\
+                                       matrix_element.get_beams_hel_avg_factor()
 
         # Extract color data lines
         color_data_lines = self.get_color_data_lines(matrix_element)
