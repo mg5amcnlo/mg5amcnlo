@@ -38,7 +38,7 @@ class OLDMG5Comparator(unittest.TestCase):
     """A class to compare the value of a old MG5 version and the current one"""
     
     old_mg5 = None # link to the previous version of MG5 (prevent multiple build)
-    reference_number = 259 #2.0.0
+    reference_number = 263 #2.4.0
     nb_test = 0
     
     
@@ -777,7 +777,7 @@ class OLDMG5Comparator(unittest.TestCase):
         # Create a list of processes to check automatically                                                                                                                             
         proc_lists = [['p p > t t~'], ['u d~ > W+ j', 'u d~ > W+ j j']]
         #proc_lists = [['p p > t t~']]
-        proc_lists = [['u d~ > W+ j', 'u d~ > W+ j j']]
+        #proc_lists = [['u d~ > W+ j', 'u d~ > W+ j j']]
         # Store list of non-zero processes and results in file                                                                                                                          
         pickle_file = os.path.join(_pickle_path, "mg5_short_parraleltest_cross_sm.pkl")
         for my_proc_list in proc_lists:
