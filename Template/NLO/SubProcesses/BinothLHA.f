@@ -61,6 +61,7 @@ c general MadFKS parameters
       integer nsqso, MLResArrayDim
       REAL*8 POL(2)
       COMMON/TO_POLARIZATION/POL
+      double precision HelNormalizationFactor
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
       integer ntot,nsun,nsps,nups,neps,n100,nddp,nqdp,nini,n10,n1(0:9)
@@ -157,12 +158,21 @@ c virtual as flat as possible
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
      $           ,tolerance,accuracies,ret_code)
             prec_found = accuracies(0)
+
+            HelNormalizationFactor = 4.0d0
+            IF(POL(1).ne.1.0d0) THEN
+              HelNormalizationFactor = HelNormalizationFactor/2.0d0
+            ENDIF
+            IF(POL(2).ne.1.0d0) THEN
+              HelNormalizationFactor = HelNormalizationFactor/2.0d0
+            ENDIF
+
             virt_wgt = virt_wgt + virt_wgts_hel(1,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
+     $           /volh/HelNormalizationFactor/dble(ngluons)
             single   = single   + virt_wgts_hel(2,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
+     $           /volh/HelNormalizationFactor/dble(ngluons)
             double   = double   + virt_wgts_hel(3,0)*dble(goodhel(ihel))
-     $           /volh/4d0/dble(ngluons)
+     $           /volh/HelNormalizationFactor/dble(ngluons)
 c Average over initial state helicities (and take the ngluon factor into
 c account)
             if (nincoming.ne.2) then
