@@ -36,6 +36,14 @@ logger = logging.getLogger('madgraph.model')
 
 class USRMODERROR(Exception): pass
 
+
+def repr(obj):
+    
+    text = obj.__repr__()
+    if text.startswith('_'):
+        text =  '%s%s' % (str(obj.__class__.__name__)[0].upper(), text)
+    return text
+
 class UFOModel(object):
     """ The class storing the current status of the model """
     
@@ -118,6 +126,23 @@ class UFOModel(object):
         self.write_restrict_card(outputdir)
     
   
+    def mod_file(self, inputpath, outputpath):
+        
+        fsock = open(outputpath, 'w')
+        
+        to_change = {}
+        to_change.update(self.translate)
+        to_change.update(self.old_new)
+        for particle in self.particles:
+            if hasattr(particle, 'replace') and particle.replace:
+                misc.sprint(particle.get('name'), particle.replace.get('name'))
+        
+        pattern = re.compile(r'\b(%s)\b' % ('|'.join(to_change)))
+        for line in open(inputpath):
+            line =  pattern.sub(lambda mo: to_change[mo.group()], line)
+            fsock.write(line)
+        
+  
     def write_restrict_card(self, outputdir):
         """ propagate model restriction of the original model. """
 
@@ -145,7 +170,7 @@ class UFOModel(object):
                         logger.warning("%s will not acting for %s %s" % (p, block, lhaid))
                         param_card[block.lower()].get(lhaid).value = value
                 # all added -> write it
-                param_card.write(pjoin(outputdir, p))
+                param_card.write(pjoin(outputdir, p), precision=7)
 
                         
                     
@@ -175,13 +200,13 @@ class UFOModel(object):
         elif isinstance(param, dict):
             return '{%s}' % ','.join(['%s: %s' % (self.format_param(key), self.format_param(value)) for key, value in param.items()])
         elif param.__class__.__name__ == 'Parameter':
-            return 'Param.%s' % param.__repr__()
+            return 'Param.%s' % repr(param)
         elif param.__class__.__name__ == 'Coupling':
-            return 'C.%s' % param.__repr__()
+            return 'C.%s' % repr(param)
         elif param.__class__.__name__ == 'Lorentz':
-            return 'L.%s' % param.__repr__()
+            return 'L.%s' % repr(param)
         elif param.__class__.__name__ == 'Particle':
-            return 'P.%s' % param.__repr__()
+            return 'P.%s' % repr(param)
         elif param is None:
             return 'None'
         else:
@@ -202,7 +227,7 @@ class UFOModel(object):
         else:
             args = []
         if args:
-            text = """%s = %s(""" % (obj.__repr__(), obj.__class__.__name__)
+            text = """%s = %s(""" % (repr(obj), obj.__class__.__name__)
         else:
             text = """%s = %s(""" % (obj.name, obj.__class__.__name__)
             
@@ -873,7 +898,7 @@ from object_library import all_propagators, Propagator
                                 first =False
                             old_part = p
                 # end for the case security
-                identify_pid[new_part.pdg_code] = old_part.pdg_code                
+                identify_pid[new_part.pdg_code] = old_part.pdg_code   
                 if new_part is None:
                     raise USRMODERROR, "particle %s not in added model" % new
                 if old_part is None:
@@ -885,7 +910,7 @@ from object_library import all_propagators, Propagator
                         raise USRMODERROR, "failed identification (one particle is self-conjugate and not the other)"
                     logger.info("adding identification for anti-particle: %s=%s" % (new_anti, old_anti))
                     identify_particles[new_anti] = old_anti
-       
+                    
         for parameter in model.all_parameters:
             self.add_parameter(parameter, identify_pid)
         for coupling in model.all_couplings:

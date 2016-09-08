@@ -393,8 +393,7 @@ class SubProcessGroup(base_objects.PhysicsObject):
         assert isinstance(amplitudes, diagram_generation.AmplitudeList), \
                   "Argument to group_amplitudes must be AmplitudeList"
 
-        if criteria in ['matrix', 'standalone','pythia8','standalone_cpp','matchbox_cpp',
-                        'matchbox']:
+        if not criteria:
             criteria = 'madevent'
         assert criteria in ['madevent', 'madweight']
 
@@ -695,7 +694,7 @@ class DecayChainSubProcessGroup(SubProcessGroup):
 
         assert isinstance(decay_chain_amps, diagram_generation.DecayChainAmplitudeList), \
                   "Argument to group_amplitudes must be DecayChainAmplitudeList"
-        if criteria in ['matrix', 'standalone','pythia8','standalone_cpp']:
+        if criteria in ['matrix', 'standalone','pythia8','standalone_cpp', False]:
             criteria = 'madevent'
         assert criteria in ['madevent', 'madweight']
         

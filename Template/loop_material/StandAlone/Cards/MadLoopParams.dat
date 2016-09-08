@@ -4,8 +4,8 @@
 
 !     
 #MLReductionLib
-!6|1|2
-! Default :: 6|1|2
+!6|7|1
+! Default :: 6|7|1
 !     The tensor integral reduction library.The current choices are:
 !     1 | CutTools
 !     2 | PJFry++
@@ -13,6 +13,7 @@
 !     4 | Golem95
 !     5 | Samurai
 !     6 | Ninja
+!     7 | COLLIER
 !     One can use the combinations to reduce integral,e.g.
 !     1|2|3 means first use CutTools, if it is not stable, use PJFry++, 
 !     if it is still unstable, use IREGI. If it failed, use QP of CutTools.
@@ -22,15 +23,15 @@
 !     When using quadruple precision with Ninja or CutTools, the reduction will 
 !     always be done in quadruple precision, but the parameters below allow you to
 !     chose if you want to also recompute the *integrand* in quadruple precision.
-!     Doing so is slow and typically does not improve the accuracy for Ninja, so it 
-!     is disabled by default in this case.
+!     Doing so is slow but might improve the accuracy in some situation.
 #UseQPIntegrandForCutTools
 !.TRUE.
 ! Default :: .TRUE.
 #UseQPIntegrandForNinja
-!.FALSE.
-! Default :: .FALSE.
+!.TRUE.
+! Default :: .TRUE.
 !
+
 !     =================================================================================
 !     The parameters below set the parameters for IREGI
 !     =================================================================================
@@ -38,9 +39,9 @@
 #IREGIMODE
 !2
 ! Default :: 2
-!     IMODE=0, IBP reduction
-!     IMODE=1, PaVe reduction
-!     IMODE=2, PaVe reduction with stablility improved by IBP reduction
+!     IREGIMODE=0, IBP reduction
+!     IREGIMODE=1, PaVe reduction
+!     IREGIMODE=2, PaVe reduction with stablility improved by IBP reduction
 
 #IREGIRECY
 !.TRUE.
@@ -59,7 +60,7 @@
 !       2   |  Double precision, loops reduced with propagator with reversed order                               
 !       4   |  Quadruple precision, loops reduced with propagator in original order                               
 !       5   |  Quadruple precision, loops reduced with propagator with reversed order                          
-!      -1   |  Exhaustive automated numerical stability checks. See below for details.
+!      -1   | Exhaustive automated numerical stability checks. See below for details.
 !     
 !     Due to the architecture of the program, you are better off
 !     rerunning the full PS point in quadruple precision than just a single loop 
@@ -84,8 +85,8 @@
 !     Below you can chose if you want to use zero, one or two rotations of the PS point 
 !     in QP.
 #NRotations_DP
-!1
-! Default :: 1
+!0
+! Default :: 0
 #NRotations_QP
 !0
 ! Default :: 0
@@ -114,6 +115,7 @@
 #ImprovePSPoint
 !2
 ! Default :: 2
+
 !     =================================================================================
 !     The parameters below set two CutTools internal parameters accessible to the user. 
 !     =================================================================================
@@ -223,6 +225,73 @@
 !     This decides wether consecutive consistency for the helicity filtering setup is also 
 !     required. Better to set it to false as it can cause problems for unstable processes.
 #HelInitStartOver
+!.FALSE.
+! Default :: .FALSE.
+
+!     =================================================================================
+!     The parameters below set the main parameters for COLLIER
+!     To edit more specific technical COLLIER parameters, modify directly the content
+!     of the subroutine 'INITCOLLIER' in the file 'MadLoopCommons.f'
+!     =================================================================================
+
+!     Decide if COLLIER must be computed multiple times to evaluate the UV pole residues
+!     (Withing a Monte-Carlo performed in MG5aMC, this is automatically disabled internally)
+#COLLIERComputeUVpoles
+!.TRUE.
+! Default :: .TRUE.
+
+!     Decide if COLLIER must be computed multiple times to evaluate the IR pole residues
+!     (Withing a Monte-Carlo performed in MG5aMC, this is automatically disabled internally)
+#COLLIERComputeIRpoles
+!.TRUE.
+! Default :: .TRUE.
+
+!     Decide if COLLIER must be computed multiple times to evaluate the IR pole residues
+#COLLIERRequiredAccuracy
+!1.0d-8
+! Default :: 1.0d-8
+!     A value of -1.0d0 means that it will be automatically set from MLStabThres.
+!     The default value of 1.0d-8 corresponds to the value for which COLLIER's authors
+!     have optimized the library.
+
+!     Decide whether to use COLLIER's internal stability test or the loop-direction
+!     switch test instead.
+#COLLIERUseInternalStabilityTest
+!.TRUE.
+! Default :: .TRUE.
+!     COLLIER's internal stability test is at no extra cost but not as reliable
+!     as the loop-direction switch test, which however doubles the reduction time.
+!     This parameter is only relevant when running MadLoop with CTModeRun=-1.
+!     If you find a large number of unstable points with COLLIER for complicated
+!     processes, set this parameter to .FALSE. to make sure the PS points flagged
+!     as unstable with COLLIER really are so.
+
+!     Set up to which N-loop to use the COLLIER global caching system.
+#COLLIERGlobalCache
+!-1
+! Default :: -1
+!     -1 : Enable the global cache for all loops 
+!      0 : Disable the global cache alltogether
+!      N : Enable the global cache but only for up to N-loops
+
+!     Use the global cache when evaluating the poles as well (more memory consuming)
+!     During a Monte-Carlo it is typically not useful anyway, because the pole  
+!     computation is automatically disabled for COLLIER, irrespectively of the value
+!     of the parameters COLLIERCompute<UV/IR>poles specified above.
+#COLLIERUseCacheForPoles
+!.FALSE.
+! Default :: .FALSE.
+
+!     Choose which branch(es) of COLLIER have to be used
+#COLLIERMode
+!1
+! Default :: 1
+!     COLLIERMode=1 : COLI branch 
+!     COLLIERMode=2 : DD branch
+!     COLLIERMode=3 : Both DD and COLI branch compared
+
+!     Decide if COLLIER can output its information in a log directory.
+#COLLIERCanOutput
 !.FALSE.
 ! Default :: .FALSE.
 

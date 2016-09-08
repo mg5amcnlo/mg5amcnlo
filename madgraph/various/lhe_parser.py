@@ -7,6 +7,7 @@ import math
 import time
 import os
 import shutil
+import sys
 
 pjoin = os.path.join
 
@@ -178,6 +179,8 @@ class EventFile(object):
             if '.gz' in path and isinstance(self, EventFileNoGzip) and\
                 mode == 'r' and os.path.exists(path[:-3]):
                 super(EventFile, self).__init__(path[:-3], mode, *args, **opt)
+            else:
+                raise
                 
         self.banner = ''
         if mode == 'r':
@@ -281,10 +284,9 @@ class EventFile(object):
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
-            
-    
-    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, event_target=0, 
-                 log_level=logging.INFO):
+                
+    def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
+                 event_target=0, log_level=logging.INFO, normalization='average'):
         """unweight the current file according to wgt information wgt.
         which can either be a fct of the event or a tag in the rwgt list.
         max_wgt allow to do partial unweighting. 
@@ -305,7 +307,6 @@ class EventFile(object):
         else:
             unwgt_name = get_wgt.func_name
 
-        
         # check which weight to write
         if hasattr(self, "written_weight"):
             written_weight = lambda x: math.copysign(self.written_weight,float(x))
@@ -349,18 +350,21 @@ class EventFile(object):
                 banner = self.get_banner()
                 # 1. modify the cross-section
                 banner.modify_init_cross(cross)
-                strategy = banner.get_lha_strategy()
-                # 2. modify the lha strategy
-                if strategy >0:  
-                    banner.set_lha_strategy(4)
-                else:
-                    banner.set_lha_strategy(-4)
                 # 3. add information about change in weight
                 banner["unweight"] = "unweighted by %s" % unwgt_name
             else:
                 banner = self.banner
-
-        
+            # modify the lha strategy
+            curr_strategy = banner.get_lha_strategy()
+            if normalization in ['unit', 'sum']:
+                strategy = 3
+            else:
+                strategy = 4
+            if curr_strategy >0: 
+                banner.set_lha_strategy(abs(strategy))
+            else:
+                banner.set_lha_strategy(-1*abs(strategy))
+                
         # Do the reweighting (up to 20 times if we have target_event)
         nb_try = 20
         nb_keep = 0
@@ -380,7 +384,7 @@ class EventFile(object):
                     max_wgt = max(min_max_wgt, needed_max_wgt)
                     max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
-                        if nb_keep <= event_target:
+                        if nb_keep <= event_target and log_level>=10:
                             logger.log(log_level+10,"fail to reach target %s", event_target)
                             break   
                         else:
@@ -424,8 +428,9 @@ class EventFile(object):
                     #no outputpath define -> wants only the nb of unweighted events
                     continue
                 elif event_target and i != nb_try-1 and nb_keep >= event_target *1.05:
+                    outfile.write("</LesHouchesEvents>\n")
                     outfile.close()
-#                    logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
+                    #logger.log(log_level, "Found Too much event %s. Try to reduce truncation" % nb_keep)
                     continue
                 else:
                     outfile.write("</LesHouchesEvents>\n")
@@ -437,6 +442,7 @@ class EventFile(object):
                     outfile.close()
                 break                    
             elif outputpath:
+                outfile.write("</LesHouchesEvents>\n")
                 outfile.close()
 #                logger.log(log_level, "Found only %s event. Reduce max_wgt" % nb_keep)
             
@@ -457,7 +463,7 @@ class EventFile(object):
           nb_keep, nb_events_unweighted/nb_event*100, trunc_cross/cross['abs']*100, i)
      
         #correct the weight in the file if not the correct number of event
-        if nb_keep != event_target and hasattr(self, "written_weight"):
+        if nb_keep != event_target and hasattr(self, "written_weight") and strategy !=4:
             written_weight = lambda x: math.copysign(self.written_weight*event_target/nb_keep, float(x))
             startfile = EventFile(outputpath)
             tmpname = pjoin(os.path.dirname(outputpath), "wgtcorrected_"+ os.path.basename(outputpath))
@@ -471,16 +477,18 @@ class EventFile(object):
             outfile.close()
             shutil.move(tmpname, outputpath)
             
-     
+        
+        
+            
         self.max_wgt = max_wgt
         return nb_keep
     
     def apply_fct_on_event(self, *fcts, **opts):
         """ apply one or more fct on all event. """
         
-        opt= {"print_step": 2000, "maxevent":float("inf"),'no_output':False}
+        opt= {"print_step": 5000, "maxevent":float("inf"),'no_output':False}
         opt.update(opts)
-        
+        start = time.time()
         nb_fct = len(fcts)
         out = []
         for i in range(nb_fct):
@@ -489,16 +497,15 @@ class EventFile(object):
         nb_event = 0
         for event in self:
             nb_event += 1
-            if opt["print_step"] and nb_event % opt["print_step"] == 0:
+            if opt["print_step"] and (nb_event % opt["print_step"]) == 0:
                 if hasattr(self,"len"):
-                    logger.info("currently at %s/%s event" % (nb_event, self.len))
+                    print("currently at %s/%s event [%is]" % (nb_event, self.len, time.time()-start))
                 else:
-                    logger.info("currently at %s event" % nb_event)
+                    print("currently at %s event [%is]" % (nb_event, time.time()-start))
             for i in range(nb_fct):
-                if opts['no_output']:
-                    fcts[i](event)
-                else:
-                    out[i].append(fcts[i](event))
+                value = fcts[i](event)
+                if not opts['no_output']:
+                    out[i].append(value)
             if nb_event > opt['maxevent']:
                 break
         if nb_fct == 1:
@@ -506,41 +513,79 @@ class EventFile(object):
         else:
             return out
 
-    
-    def update_Hwu(self, hwu, fct, name='lhe', keep_wgt=True):
-        
-        first=True
-        def add_to_Hwu(event):
-            """function to update the HwU on the flight"""
+    def split(self, nb_event=0):
+        """split the file in multiple file. Do not change the weight!"""
 
-            value = fct(event)
+        nb_file = -1
+        for i, event in enumerate(self):
+            if i % nb_event == 0:
+                if i:
+                    #close previous file
+                    current.write('</LesHouchesEvent>\n')
+                    current.close()
+                # create the new file
+                nb_file +=1
+                current = open('%s_%s.lhe' % (self.name, nb_file),'w')
+                current.write(self.banner)
+            current.write(str(event))
+        if i!=0:
+            current.write('</LesHouchesEvent>\n')
+            current.close()   
+        return nb_file +1
+
+    def update_HwU(self, hwu, fct, name='lhe', keep_wgt=False, maxevents=sys.maxint):
+        """take a HwU and add this event file for the function fct"""
+                
+        if not isinstance(hwu, list):
+            hwu = [hwu]
+
+        class HwUUpdater(object):
             
-            # initialise the curve for the first call
-            if first:
-                # register the variables
-                if isinstance(value, dict):
-                    hwu.add_line(value.keys())
-                else:
-                    hwu.add_line(name)
-                    if keep_wgt is True:
-                        hwu.add_line(['%s_%s' % (name, key)
-                                                for key in event.reweight_data])
-                first = False
-            # Fill the histograms
-            if isinstance(value, dict):
-                hwu.addEvent(value)
-            else:
-                hwu.addEvent({name:value})
-                if keep_wgt:
-                    event.parse_reweight()
-                    if keep_wgt is True:
-                        data = dict(('%s_%s' % (name, key),value)
-                                                for key in event.reweight_data)
-                        hwu.addEvent(data)
-    
+            def __init__(self, fct, keep_wgt):
+                
+                self.fct = fct
+                self.first = True
+                self.keep_wgt = keep_wgt
+                
+            def add(self, event):
+
+                value = self.fct(event)
+                # initialise the curve for the first call
+                if self.first:
+                    for h in hwu:
+                        # register the variables
+                        if isinstance(value, dict):
+                            h.add_line(value.keys())
+                        else:
+                        
+                            h.add_line(name)
+                            if self.keep_wgt is True:
+                                event.parse_reweight()
+                                h.add_line(['%s_%s' % (name, key)
+                                                    for key in event.reweight_data])
+                            elif self.keep_wgt:
+                                h.add_line(self.keep_wgt.values())                            
+                    self.first = False
+                # Fill the histograms
+                for h in hwu:
+                    if isinstance(value, tuple):
+                        h.addEvent(value[0], value[1])
+                    else:
+                        h.addEvent(value,{name:event.wgt})
+                        if self.keep_wgt:
+                            event.parse_reweight()
+                            if self.keep_wgt is True:
+                                data = dict(('%s_%s' % (name, key),event.reweight_data[key])
+                                                    for key in event.reweight_data)
+                                h.addEvent(value, data)
+                            else:
+                                data = dict(( value,event.reweight_data[key])
+                                                    for key,value in self.keep_wgt.items())
+                                h.addEvent(value, data)
+                                
+                                      
         
-        
-        self.apply_fct_on_event(add_to_Hwu, no_output=True)
+        self.apply_fct_on_event(HwUUpdater(fct,keep_wgt).add, no_output=True,maxevent=maxevents)
         return hwu
     
     def create_syscalc_data(self, out_path, pythia_input=None):
@@ -620,13 +665,14 @@ class MultiEventFile(EventFile):
        The number of events in each file need to be provide in advance 
        (if not provide the file is first read to find that number"""
     
-    def __new__(cls, start_list=[]):
+    def __new__(cls, start_list=[],parse=True):
         return object.__new__(MultiEventFile)
     
-    def __init__(self, start_list=[]):
+    def __init__(self, start_list=[], parse=True):
         """if trunc_error is define here then this allow
         to only read all the files twice and not three times."""
         self.files = []
+        self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
         self.initial_nb_events = []
         self.total_event_in_files = 0
@@ -636,8 +682,11 @@ class MultiEventFile(EventFile):
         self.across = []
         self.scales = []
         if start_list:
-            for p in start_list:
-                self.add(p)
+            if parse:
+                for p in start_list:
+                    self.add(p)
+            else:
+                self.files = start_list
         self._configure = False
         
     def add(self, path, cross, error, across):
@@ -686,7 +735,7 @@ class MultiEventFile(EventFile):
             raise Exception
     
 
-    def define_init_banner(self, wgt):
+    def define_init_banner(self, wgt, lha_strategy):
         """define the part of the init_banner"""
         
         if not self.banner:
@@ -760,11 +809,11 @@ class MultiEventFile(EventFile):
                     "wgt": wgt}
             init_information["cross_info"].append( cross_info % conv)
         init_information["cross_info"] = '\n'.join(init_information["cross_info"])
-            
+        init_information['lha_stra'] = -1 * abs(lha_strategy)
         
         
         template_init =\
-        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i -3 %(nprup)i
+        """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i %(lha_stra)i %(nprup)i
 %(cross_info)s
 %(generator_info)s
 """
@@ -859,7 +908,7 @@ class MultiEventFile(EventFile):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-        
+
         if isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
@@ -872,15 +921,86 @@ class MultiEventFile(EventFile):
         
 
         if 'event_target' in opts and opts['event_target']:
-            new_wgt = sum(self.across)/opts['event_target']
-            self.define_init_banner(new_wgt)
+            if 'normalization' in opts:
+                if opts['normalization'] == 'sum':
+                    new_wgt = sum(self.across)/opts['event_target']
+                    strategy = 3
+                elif opts['normalization'] == 'average':
+                    strategy = 4
+                    new_wgt = sum(self.across)                    
+                elif opts['normalization'] == 'unit':
+                    strategy =3
+                    new_wgt = 1.
+            else:
+                strategy = 4
+                new_wgt = sum(self.across)
+            self.define_init_banner(new_wgt, strategy)
             self.written_weight = new_wgt
         elif 'write_init' in opts and opts['write_init']:
-            self.define_init_banner(0)
+            self.define_init_banner(0,0)
             del opts['write_init']
-
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
+    def write(self, path, random=False, banner=None, get_info=False):
+        """ """
+        
+        if isinstance(path, str):
+            out = EventFile(path, 'w')
+            if self.parsefile and not banner:    
+                banner = self.files[0].banner
+            elif not banner:
+                firstlhe = EventFile(self.files[0])
+                banner = firstlhe.banner                
+        else: 
+            out = path
+        if banner:
+            out.write(banner)
+        nb_event = 0
+        info = collections.defaultdict(float)
+        if random and self.open:
+            for event in self:
+                nb_event +=1
+                out.write(event)
+                if get_info:
+                    event.parse_reweight()
+                    for key, value in event.reweight_data.items():
+                        info[key] += value
+                    info['central'] += event.wgt
+        elif not random:
+            for i,f in enumerate(self.files):
+                #check if we need to parse the file or not
+                if not self.parsefile:
+                    if i==0:
+                        try:
+                            lhe = firstlhe
+                        except:
+                            lhe = EventFile(f)
+                    else:
+                        lhe = EventFile(f)
+                else:
+                    lhe = f
+                for event in lhe:
+                    nb_event +=1
+                    if get_info:
+                        event.parse_reweight()
+                        for key, value in event.reweight_data.items():
+                            info[key] += value
+                        info['central'] += event.wgt
+                    out.write(str(event))
+                lhe.close()
+        out.write("</LesHouchesEvents>\n") 
+        return nb_event, info
+                            
+    def remove(self):
+        """ """
+        if self.parsefile:
+            for f in self.files:
+                os.remove(f.name)
+        else:
+            for f in self.files:
+                os.remove(f)
+            
+        
            
 class Event(list):
     """Class storing a single event information (list of particles + global information)"""
@@ -1025,8 +1145,8 @@ class Event(list):
         self.reweight_order = []
         start, stop = self.tag.find('<rwgt>'), self.tag.find('</rwgt>')
         if start != -1 != stop :
-            pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''')
-            data = pattern.findall(self.tag)
+            pattern = re.compile(r'''<\s*wgt id=(?:\'|\")(?P<id>[^\'\"]+)(?:\'|\")\s*>\s*(?P<val>[\ded+-.]*)\s*</wgt>''',re.I)
+            data = pattern.findall(self.tag[start:stop])
             try:
                 self.reweight_data = dict([(pid, float(value)) for (pid, value) in data
                                            if not self.reweight_order.append(pid)])
@@ -1046,7 +1166,54 @@ class Event(list):
         
             text = self.tag[start+8:stop]
             self.nloweight = NLO_PARTIALWEIGHT(text, self)
+        return self.nloweight
         
+    def parse_lo_weight(self):
+        """ """
+        if hasattr(self, 'loweight'):
+            return self.loweight
+        
+        start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
+        
+        if start != -1 != stop :
+            text = self.tag[start+8:stop]
+#<rscale>  3 0.29765919e+03</rscale>
+#<asrwt>0</asrwt>
+#<pdfrwt beam="1">  1       21 0.15134321e+00 0.29765919e+03</pdfrwt>
+#<pdfrwt beam="2">  1       21 0.38683649e-01 0.29765919e+03</pdfrwt>
+#<totfact> 0.17315115e+03</totfact>
+            self.loweight={}
+            for line in text.split('\n'):
+                line = line.replace('<', ' <').replace("'",'"')
+                if 'rscale' in line:
+                    _, nqcd, scale, _ = line.split()
+                    self.loweight['n_qcd'] = int(nqcd)
+                    self.loweight['ren_scale'] = float(scale)
+                elif '<pdfrwt beam="1"' in line:
+                    args = line.split()
+                    self.loweight['n_pdfrw1'] = int(args[2])
+                    npdf = self.loweight['n_pdfrw1']
+                    self.loweight['pdf_pdg_code1'] = [int(i) for i in args[3:3+npdf]]
+                    self.loweight['pdf_x1'] = [float(i) for i in args[3+npdf:3+2*npdf]]
+                    self.loweight['pdf_q1'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
+                elif '<pdfrwt beam="2"' in line:
+                    args = line.split()
+                    self.loweight['n_pdfrw2'] = int(args[2])
+                    npdf = self.loweight['n_pdfrw2']
+                    self.loweight['pdf_pdg_code2'] = [int(i) for i in args[3:3+npdf]]
+                    self.loweight['pdf_x2'] = [float(i) for i in args[3+npdf:3+2*npdf]]
+                    self.loweight['pdf_q2'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
+                elif '<asrwt>' in line:
+                    args = line.replace('>','> ').split()
+                    nalps = int(args[1])
+                    self.loweight['asrwt'] = [float(a) for a in args[2:2+nalps]] 
+                    
+                elif 'totfact' in line:
+                    args = line.split() 
+                    self.loweight['tot_fact'] = float(args[1])
+        else:
+            return None
+        return self.loweight
             
     def parse_matching_scale(self):
         """Parse the line containing the starting scale for the shower"""
@@ -1607,10 +1774,40 @@ class Event(list):
         scale = 0 
         for particle in self:
             if particle.status != 1:
-                continue 
-            scale += particle.mass**2 + particle.momentum.pt**2
+                continue
+            p=FourMomentum(particle)
+            scale += math.sqrt(p.mass_sqr + p.pt**2)
     
         return prefactor * scale
+    
+
+    def get_et_scale(self, prefactor=1):
+        
+        scale = 0 
+        for particle in self:
+            if particle.status != 1:
+                continue 
+            p = FourMomentum(particle)
+            pt = p.pt
+            if (pt>0):
+                scale += p.E*pt/math.sqrt(pt**2+p.pz**2)
+    
+        return prefactor * scale    
+    
+    def get_sqrts_scale(self, prefactor=1):
+        
+        scale = 0 
+        init = []
+        for particle in self:
+            if particle.status == -1:
+                init.append(FourMomentum(particle))
+        if len(init) == 1:
+            return init[0].mass
+        elif len(init)==2:
+            return math.sqrt((init[0]+init[1])**2)
+                   
+    
+    
     
     def get_momenta_str(self, get_order, allow_reversed=True):
         """return the momenta str in the order asked for"""
@@ -1785,7 +1982,7 @@ class FourMomentum(object):
         if power == 1:
             return FourMomentum(self)
         elif power == 2:
-            return self.mass_sqr()
+            return self.mass_sqr
     
     def __repr__(self):
         return 'FourMomentum(%s,%s,%s,%s)' % (self.E, self.px, self.py,self.pz)
@@ -1825,8 +2022,8 @@ class FourMomentum(object):
         gammabeta = pz  / math.sqrt(E**2-pz**2)
         
         out =  FourMomentum([gamma*self.E - gammabeta*self.pz,
+                            self.px,
                             self.py,
-                            self.pz,
                             gamma*self.pz - gammabeta*self.E])
         
         if abs(out.pz) < 1e-6 * out.E:
@@ -1835,12 +2032,6 @@ class FourMomentum(object):
         
         
         
-        
-        
-        """mom 4-momenta is suppose to be given in the rest frame of this 4-momenta.
-        the output is the 4-momenta in the frame of this 4-momenta
-        function copied from HELAS routine."""
-                
 
 class OneNLOWeight(object):
         
@@ -1849,6 +2040,20 @@ class OneNLOWeight(object):
 
         if isinstance(input, str):
             self.parse(input)
+        
+    def __str__(self):
+        
+        out = """        pwgt: %(pwgt)s
+        born, real : %(born)s %(real)s
+        pdgs : %(pdgs)s
+        bjks : %(bjks)s
+        scales**2, gs: %(scales2)s %(gs)s
+        born/real related : %(born_related)s %(real_related)s
+        type / nfks : %(type)s  %(nfks)s
+        to merge : %(to_merge_pdg)s in %(merge_new_pdg)s
+        ref_wgt :  %(ref_wgt)s""" % self.__dict__
+        return out
+        
         
     def parse(self, text):
         """parse the line and create the related object"""
@@ -2086,6 +2291,42 @@ class NLO_PARTIALWEIGHT(object):
         @property
         def aqcd(self):
             return self.event.aqcd
+        
+        def get_ht_scale(self, prefactor=1):
+        
+            scale = 0 
+            for particle in self:
+                p = particle
+                scale += math.sqrt(max(0, p.mass_sqr + p.pt**2))
+        
+            return prefactor * scale
+        
+        def get_et_scale(self, prefactor=1):
+            
+            scale = 0 
+            for particle in self:
+                p = particle
+                pt = p.pt
+                if (pt>0):
+                    scale += p.E*pt/math.sqrt(pt**2+p.pz**2)
+        
+            return prefactor * scale    
+        
+        
+        def get_sqrts_scale(self, event,prefactor=1):
+            
+            scale = 0 
+            nb_init = 0
+            for particle in event:
+                if particle.status == -1:
+                    nb_init+=1
+            if nb_init == 1:
+                return self[0].mass
+            elif nb_init==2:
+                return math.sqrt((self[0]+self[1])**2)
+                   
+    
+        
             
     def __init__(self, input, event):
         

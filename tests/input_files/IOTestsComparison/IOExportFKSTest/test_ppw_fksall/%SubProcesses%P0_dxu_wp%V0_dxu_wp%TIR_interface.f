@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and TIR.
 C     
-C     Process: d~ u > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: s~ c > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: d~ u > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: s~ c > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -45,15 +45,17 @@ C
       INTEGER I, J, K
       INTEGER NLOOPCOEFS
       LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+     $ ,COLLIERINIT
       COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
-     $ ,NINJAINIT
+     $ ,NINJAINIT,COLLIERINIT
 
 C     This variable will be used to detect changes in the TIR library
 C      used so as to force the reset of the TIR filter.
       INTEGER LAST_LIB_USED
       DATA LAST_LIB_USED/-1/
 
-      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3)
+      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3),TIRCOEFSERRORS(0:LOOPMAXC
+     $OEFS-1,3)
       COMPLEX*16 PJCOEFS(0:LOOPMAXCOEFS-1,3)
 C     
 C     EXTERNAL FUNCTIONS
@@ -67,7 +69,6 @@ C
       REAL*8 LSCALE
       COMMON/CT/LSCALE,CTMODE
 
-C     The variables below are just for monitoring purposes. 
       INTEGER ID,SQSOINDEX,R
       COMMON/LOOP/ID,SQSOINDEX,R
 
@@ -173,17 +174,29 @@ C     NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       SELECT CASE(MLREDUCTIONLIB(I_LIB))
       CASE(2)
 C     PJFry++
-      CALL SWITCH_ORDER(CTMODE,NLOOPLINE,PL,PDEN,M2L)
-      CALL PMLOOP(NLOOPLINE,RANK,PL,PDEN,M2L,MU_R,PJCOEFS(0:NLOOPCOEFS
-     $ -1,1:3),STABLE)
-C     CONVERT TO MADLOOP CONVENTION
-      CALL CONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+      WRITE(*,*) 'ERROR:: PJFRY++ is not interfaced.'
+      STOP
       CASE(3)
 C     IREGI
       CALL IMLOOP(CTMODE,IREGIMODE,NLOOPLINE,LOOPMAXCOEFS,RANK,PDEN
      $ ,M2L,MU_R,PJCOEFS,STABLE)
 C     CONVERT TO MADLOOP CONVENTION
       CALL CONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)
+      CASE(7)
+C     COLLIER
+      CALL COLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS
+     $ ,TIRCOEFSERRORS)
+C     Shift the TIR coefficients by the corresponding COLLIER error if
+C      in CTMODE 2.
+      IF (COLLIERUSEINTERNALSTABILITYTEST.AND.CTMODE.EQ.2) THEN
+C       We add here the numerical inaccuracies linearly to be
+C        conservative 
+        DO I=1,3
+          DO J=0,NLOOPCOEFS-1
+            TIRCOEFS(J,I)=TIRCOEFS(J,I)+TIRCOEFSERRORS(J,I)
+          ENDDO
+        ENDDO
+      ENDIF
       END SELECT
       DO I=1,3
         RES(I)=(0.0D0,0.0D0)
@@ -198,6 +211,8 @@ C     IF(MLReductionLib(I_LIB).EQ.2) THEN
 C     WRITE(*,*) 'PJFry: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ELSEIF(MLReductionLib(I_LIB).EQ.3) THEN
 C     WRITE(*,*) 'Iregi: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ELSEIF(MLReductionLib(I_LIB).EQ.7) THEN
+C     WRITE(*,*) 'COLLIER: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ENDIF
       END
 
@@ -322,8 +337,9 @@ C     GLOBAL VARIABLES
 C     
       INCLUDE 'MadLoopParams.inc'
       LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+     $ ,COLLIERINIT
       COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
-     $ ,NINJAINIT
+     $ ,NINJAINIT,COLLIERINIT
 
 C     ----------
 C     BEGIN CODE
@@ -366,9 +382,9 @@ C
 C     CONSTANTS
 C     
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=4)
+      PARAMETER (NLOOPLIB=7)
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=2)
+      PARAMETER (QP_NLOOPLIB=1)
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=1)
 C     
@@ -466,49 +482,6 @@ C      kept as it might be called by the MC).
       END SUBROUTINE
 
 
-
-      SUBROUTINE CONVERT_PJFRY_COEFFS(RANK,PJCOEFS,TIRCOEFS)
-C     GLOABLE VARIABLES
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
-C     ARGUMENTS
-      INTEGER RANK
-      COMPLEX*16 PJCOEFS(0:LOOPMAXCOEFS-1,3)
-      COMPLEX*16 TIRCOEFS(0:LOOPMAXCOEFS-1,3)
-C     Reduction Coefficient 1
-      TIRCOEFS(0,1:3)=PJCOEFS(0,1:3)
-      IF(RANK.LE.0)RETURN
-C     Reduction Coefficient q(0)
-      TIRCOEFS(1,1:3)=PJCOEFS(1,1:3)
-C     Reduction Coefficient q(1)
-      TIRCOEFS(2,1:3)=PJCOEFS(2,1:3)
-C     Reduction Coefficient q(2)
-      TIRCOEFS(3,1:3)=PJCOEFS(3,1:3)
-C     Reduction Coefficient q(3)
-      TIRCOEFS(4,1:3)=PJCOEFS(4,1:3)
-      IF(RANK.LE.1)RETURN
-C     Reduction Coefficient q(0)^2
-      TIRCOEFS(5,1:3)=PJCOEFS(5,1:3)
-C     Reduction Coefficient q(0)*q(1)
-      TIRCOEFS(6,1:3)=PJCOEFS(6,1:3)
-C     Reduction Coefficient q(1)^2
-      TIRCOEFS(7,1:3)=PJCOEFS(7,1:3)
-C     Reduction Coefficient q(0)*q(2)
-      TIRCOEFS(8,1:3)=PJCOEFS(8,1:3)
-C     Reduction Coefficient q(1)*q(2)
-      TIRCOEFS(9,1:3)=PJCOEFS(9,1:3)
-C     Reduction Coefficient q(2)^2
-      TIRCOEFS(10,1:3)=PJCOEFS(10,1:3)
-C     Reduction Coefficient q(0)*q(3)
-      TIRCOEFS(11,1:3)=PJCOEFS(11,1:3)
-C     Reduction Coefficient q(1)*q(3)
-      TIRCOEFS(12,1:3)=PJCOEFS(12,1:3)
-C     Reduction Coefficient q(2)*q(3)
-      TIRCOEFS(13,1:3)=PJCOEFS(13,1:3)
-C     Reduction Coefficient q(3)^2
-      TIRCOEFS(14,1:3)=PJCOEFS(14,1:3)
-      IF(RANK.LE.2)RETURN
-      END
 
       SUBROUTINE CONVERT_IREGI_COEFFS(RANK,IREGICOEFS,TIRCOEFS)
 C     GLOABLE VARIABLES

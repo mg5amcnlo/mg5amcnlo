@@ -18,6 +18,7 @@
 from __future__ import division
 
 import atexit
+import collections
 import cmath
 import glob
 import logging
@@ -35,6 +36,9 @@ import sys
 import traceback
 import time
 import tarfile
+import StringIO
+import shutil
+import xml.dom.minidom as minidom
 
 try:
     import readline
@@ -62,7 +66,7 @@ except ImportError:
     import internal.extended_cmd as cmd
     import internal.common_run_interface as common_run
     import internal.banner as banner_mod
-    import internal.misc as misc    
+    import internal.misc as misc
     from internal import InvalidCmd, MadGraph5Error, ReadWrite
     import internal.files as files
     import internal.gen_crossxhtml as gen_crossxhtml
@@ -323,6 +327,20 @@ class CmdExtended(common_run.CommonRunCmd):
 #===============================================================================
 class HelpToCmd(object):
     """ The Series of help routine for the MadEventCmd"""
+    
+    def help_pythia(self):
+        logger.info("syntax: pythia [RUN] [--run_options]")
+        logger.info("-- run pythia on RUN (current one by default)")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--tag=', 'define the tag for the pythia run'),
+                               ('--no_default', 'not run if pythia_card not present')])
+
+    def help_pythia8(self):
+        logger.info("syntax: pythia8 [RUN] [--run_options]")
+        logger.info("-- run pythia8 on RUN (current one by default)")
+        self.run_options_help([('-f','answer all question by default'),
+                               ('--tag=', 'define the tag for the pythia8 run'),
+                               ('--no_default', 'not run if pythia8_card not present')])
     
     def help_banner_run(self):
         logger.info("syntax: banner_run Path|RUN [--run_options]")
@@ -939,8 +957,8 @@ class CheckValidForCmd(object):
     
     def check_pythia(self, args):
         """Check the argument for pythia command
-        syntax is  "pythia [NAME]" 
-        Note that other option are already remove at this point
+        syntax: pythia [NAME] 
+        Note that other option are already removed at this point
         """
         
         mode = None
@@ -953,7 +971,6 @@ class CheckValidForCmd(object):
         elif laststep:
             raise self.InvalidCmd('only one laststep argument is allowed')
      
-        # If not pythia-pgs path
         if not self.options['pythia-pgs_path']:
             logger.info('Retry to read configuration file to find pythia-pgs path')
             self.set_configuration()
@@ -996,6 +1013,69 @@ class CheckValidForCmd(object):
             files.ln(input_file, os.path.dirname(output_file))
         else:
             misc.gunzip(input_file, keep=True, stdout=output_file)
+        
+        args.append(mode)
+    
+    def check_pythia8(self, args):
+        """Check the argument for pythia command
+        syntax: pythia8 [NAME] 
+        Note that other option are already removed at this point
+        """        
+        mode = None
+        laststep = [arg for arg in args if arg.startswith('--laststep=')]
+        if laststep and len(laststep)==1:
+            mode = laststep[0].split('=')[-1]
+            if mode not in ['auto', 'pythia','pythia8','delphes']:
+                self.help_pythia8()
+                raise self.InvalidCmd('invalid %s argument'% args[-1])     
+        elif laststep:
+            raise self.InvalidCmd('only one laststep argument is allowed')
+
+        # If not pythia-pgs path
+        if not self.options['pythia8_path']:
+            logger.info('Retry reading configuration file to find pythia8 path')
+            self.set_configuration()
+            
+        if not self.options['pythia8_path'] or not \
+            os.path.exists(pjoin(self.options['pythia8_path'],'bin','pythia8-config')):
+            error_msg = 'No valid pythia8 path set.\n'
+            error_msg += 'Please use the set command to define the path and retry.\n'
+            error_msg += 'You can also define it in the configuration file.\n'
+            error_msg += 'Finally, it can be installed automatically using the'
+            error_msg += ' install command.\n'
+            raise self.InvalidCmd(error_msg)
+
+        tag = [a for a in args if a.startswith('--tag=')]
+        if tag: 
+            args.remove(tag[0])
+            tag = tag[0][6:]
+
+        if len(args) == 0 and not self.run_name:
+            if self.results.lastrun:
+                args.insert(0, self.results.lastrun)
+            else:
+                raise self.InvalidCmd('No run name currently define. '+
+                                                 'Please add this information.')             
+        
+        if len(args) >= 1:
+            if args[0] != self.run_name and\
+             not os.path.exists(pjoin(self.me_dir,'Events',args[0], 
+                                                  'unweighted_events.lhe.gz')):
+                raise self.InvalidCmd('No events file corresponding to %s run. '
+                                                                      % args[0])
+            self.set_run_name(args[0], tag, 'pythia8')
+        else:
+            if tag:
+                self.run_card['run_tag'] = tag
+            self.set_run_name(self.run_name, tag, 'pythia8')
+
+        input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
+        if not os.path.exists('%s.gz'%input_file):
+            if os.path.exists(input_file):
+                misc.gzip(input_file, keep=True, stdout='%s.gz'%input_file)
+            else:
+                raise self.InvalidCmd('No event file corresponding to %s run. '
+                                                                % self.run_name)
         
         args.append(mode)
     
@@ -1179,64 +1259,7 @@ class CheckValidForCmd(object):
                 self.run_card['run_tag'] = tag
             self.set_run_name(self.run_name, tag, 'pgs')
         
-        return lock
-
-    def check_delphes(self, arg):
-        """Check the argument for pythia command
-        syntax is "delphes [NAME]" 
-        Note that other option are already remove at this point
-        """
-        
-        # If not pythia-pgs path
-        if not self.options['delphes_path']:
-            logger.info('Retry to read configuration file to find delphes path')
-            self.set_configuration()
-      
-        if not self.options['delphes_path']:
-            error_msg = 'No valid Delphes path set.\n'
-            error_msg += 'Please use the set command to define the path and retry.\n'
-            error_msg += 'You can also define it in the configuration file.\n'
-            raise self.InvalidCmd(error_msg)  
-
-        tag = [a for a in arg if a.startswith('--tag=')]
-        if tag: 
-            arg.remove(tag[0])
-            tag = tag[0][6:]
-            
-                  
-        if len(arg) == 0 and not self.run_name:
-            if self.results.lastrun:
-                arg.insert(0, self.results.lastrun)
-            else:
-                raise self.InvalidCmd('No run name currently define. Please add this information.')             
-        
-        if len(arg) == 1 and self.run_name == arg[0]:
-            arg.pop(0)
-        
-        if not len(arg) and \
-           not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
-            self.help_pgs()
-            raise self.InvalidCmd('''No file file pythia_events.hep currently available
-            Please specify a valid run_name''')
-        
-        lock = None                
-        if len(arg) == 1:
-            prev_tag = self.set_run_name(arg[0], tag, 'delphes')
-            if  not os.path.exists(pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)):
-                raise self.InvalidCmd('No events file corresponding to %s run with tag %s.:%s '\
-                    % (self.run_name, prev_tag, 
-                       pjoin(self.me_dir,'Events',self.run_name, '%s_pythia_events.hep.gz' % prev_tag)))
-            else:
-                input_file = pjoin(self.me_dir,'Events', self.run_name, '%s_pythia_events.hep.gz' % prev_tag)
-                output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
-                lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
-        else:
-            if tag:
-                self.run_card['run_tag'] = tag
-            self.set_run_name(self.run_name, tag, 'delphes')
-            
-        return lock               
+        return lock            
 
     def check_display(self, args):
         """check the validity of line
@@ -1293,7 +1316,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, ['--threshold='], line)
     
-    def complete_banner_run(self, text, line, begidx, endidx):
+    def complete_banner_run(self, text, line, begidx, endidx, formatting=True):
        "Complete the banner run command"
        try:
   
@@ -1331,7 +1354,7 @@ class CompleteForCmd(CheckValidForCmd):
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
-        return self.deal_multiple_categories(possibilites)
+        return self.deal_multiple_categories(possibilites, formatting)
     
         
        except Exception, error:
@@ -1511,7 +1534,7 @@ class CompleteForCmd(CheckValidForCmd):
         else:
             return self.list_completion(text, self._plot_mode + self.results.keys())
         
-    def complete_syscalc(self, text, line, begidx, endidx):
+    def complete_syscalc(self, text, line, begidx, endidx, formatting=True):
         """ Complete the syscalc command """
         
         output = {}
@@ -1527,7 +1550,7 @@ class CompleteForCmd(CheckValidForCmd):
                 tags = ['--tag=%s' % tag['tag'] for tag in self.results[run]]
                 output['options'] += tags
         
-        return self.deal_multiple_categories(output)
+        return self.deal_multiple_categories(output, formatting)
         
     def complete_remove(self, text, line, begidx, endidx):
         """Complete the remove command """
@@ -1552,9 +1575,64 @@ class CompleteForCmd(CheckValidForCmd):
             data = [n.rsplit('/',2)[1] for n in data]
             return self.list_completion(text, ['all'] + data)
          
-        
+    
+    def complete_shower(self,text, line, begidx, endidx):
+        "Complete the shower command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            return self.list_completion(text, self._interfaced_showers)
+        elif len(args)>1 and args[1] in self._interfaced_showers:
+            return getattr(self, 'complete_%s' % text)\
+                (text, args[1],line.replace(args[0]+' ',''), 
+                 begidx-len(args[0])-1, endidx-len(args[0])-1)
+
+    def complete_pythia8(self,text, line, begidx, endidx):
+        "Complete the pythia8 command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            #return valid run_name
+            data = misc.glob(pjoin('*','unweighted_events.lhe.gz'),pjoin(self.me_dir, 'Events'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, self._run_options + ['-f', 
+                                                '--no_default', '--tag='], line)
+                return tmp1 + tmp2
+        elif line[-1] != '=':
+            return self.list_completion(text, self._run_options + ['-f', 
+                                                 '--no_default','--tag='], line)
+
+    def complete_madanalysis5_parton(self,text, line, begidx, endidx):
+        "Complete the madanalysis5 command"
+        args = self.split_arg(line[0:begidx], error=False)
+        if len(args) == 1:
+            #return valid run_name
+            data = []
+            for name in ['unweighted_events.lhe']:
+                data += misc.glob(pjoin('*','%s'%name), pjoin(self.me_dir, 'Events'))
+                data += misc.glob(pjoin('*','%s.gz'%name), pjoin(self.me_dir, 'Events'))
+            data = [n.rsplit('/',2)[1] for n in data]
+            tmp1 =  self.list_completion(text, data)
+            if not self.run_name:
+                return tmp1
+            else:
+                tmp2 = self.list_completion(text, ['-f',
+                '--MA5_stdout_lvl=','--no_default','--tag='], line)
+                return tmp1 + tmp2            
+        elif '--MA5_stdout_lvl=' in line and not any(arg.startswith(
+                                          '--MA5_stdout_lvl=') for arg in args):
+            return self.list_completion(text, 
+                ['--MA5_stdout_lvl=%s'%opt for opt in 
+                ['logging.INFO','logging.DEBUG','logging.WARNING',
+                                                'logging.CRITICAL','90']], line)
+        else:
+            return self.list_completion(text,  ['-f', 
+                             '--MA5_stdout_lvl=','--no_default','--tag='], line)
+
     def complete_pythia(self,text, line, begidx, endidx):
-        "Complete the pythia command"
+        "Complete the pythia command"     
         args = self.split_arg(line[0:begidx], error=False)
 
         if len(args) == 1:
@@ -1609,6 +1687,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
     _run_options = ['--cluster','--multicore','--nb_core=','--nb_core=2', '-c', '-m']
     _generate_options = ['-f', '--laststep=parton', '--laststep=pythia', '--laststep=pgs', '--laststep=delphes']
     _calculate_decay_options = ['-f', '--accuracy=0.']
+    _interfaced_showers = ['pythia','pythia8']
     _set_options = ['stdout_level','fortran_compiler','timeout']
     _plot_mode = ['all', 'parton','pythia','pgs','delphes','channel', 'banner']
     _syscalc_mode = ['all', 'parton','pythia']
@@ -2012,19 +2091,28 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
             if not bypass_run:
                 self.exec_cmd('refine %s' % nb_event, postcmd=False)
             
-                self.exec_cmd('combine_events', postcmd=False)
+                self.exec_cmd('combine_events', postcmd=False,printcmd=False)
                 self.print_results_in_shell(self.results.current)
 
-            
-                self.run_syscalc('parton')
+                if self.run_card['use_syst']:
+                    scdir = self.options['syscalc_path']
+                    if not scdir or not os.path.exists(scdir):
+                        self.exec_cmd('systematics %s --from_card' % self.run_name, postcmd=False,printcmd=False)    
+                    else:
+                        self.run_syscalc('parton')
+                
+                    
                 self.create_plot('parton')            
                 self.exec_cmd('store_events', postcmd=False)            
                 self.exec_cmd('reweight -from_cards', postcmd=False)            
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
-                self.exec_cmd('pythia --no_default', postcmd=False, printcmd=False)
-                # pythia launches pgs/delphes if needed    
+
+                self.exec_cmd('madanalysis5_parton --no_default', postcmd=False, printcmd=False)
+                # shower launches pgs/delphes if needed    
+                self.exec_cmd('shower --no_default', postcmd=False, printcmd=False)
+                self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
                 self.store_result()
             
             if self.param_card_iterator:
@@ -2035,7 +2123,9 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                     #check if the param_card defines a scan.
                     orig_name = self.run_name
                     for card in param_card_iterator:
+                        path = pjoin(self.me_dir,'Cards','param_card.dat')
                         card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                        self.check_param_card(path, dependent=True)
                         next_name = param_card_iterator.get_next_name(self.run_name)
                         try:
                             self.exec_cmd("generate_events -f %s" % next_name,
@@ -2091,12 +2181,13 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
 
     def do_launch(self, line, *args, **opt):
         """Main Commands: exec generate_events for 2>N and calculate_width for 1>N"""
+                
         if self.ninitial == 1:
             logger.info("Note that since 2.3. The launch for 1>N pass in event generation\n"+
                            "    To have the previous behavior use the calculate_decay_widths function")
-            self.do_calculate_decay_widths(line, *args, **opt)
-        else:
-            self.do_generate_events(line, *args, **opt)
+        #    self.do_calculate_decay_widths(line, *args, **opt)
+        #else:
+        self.do_generate_events(line, *args, **opt)
             
     def print_results_in_shell(self, data):
         """Have a nice results prints in the shell,
@@ -2135,15 +2226,39 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
         else:
             logger.info("     Cross-section :   %.4g +- %.4g pb" % (data['cross'], data['error']))
         logger.info("     Nb of events :  %s" % data['nb_event'] )
-        if data['cross_pythia'] and data['nb_event_pythia']:
-            if self.ninitial == 1:
-                logger.info("     Matched Width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
-            else:
-                logger.info("     Matched Cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
-            logger.info("     Nb of events after Matching :  %s" % data['nb_event_pythia'])
-            if self.run_card['use_syst'] in self.true:
-                logger.info("     Be carefull that matched information are here NOT for the central value. Refer to SysCalc output for it")
-            
+
+        if data['run_mode']=='madevent':
+            if data['cross_pythia'] and data['nb_event_pythia']:
+                if data['cross_pythia'] == -1:
+                    path = pjoin(self.me_dir, 'Events', self.run_name, '%s_merged_xsecs.txt' % self.run_tag)
+                    cross_sections = {}
+                    if os.path.exists(path):
+                        for line in open(path):
+                            split = line.split()
+                            if len(split)!=3:
+                                continue
+                            scale, cross, error = split
+                            cross_sections[float(scale)] = (float(cross), float(error))   
+                    if len(cross_sections)>0:
+                        logger.info('     Pythia8 merged cross-sections are:')
+                        for scale in sorted(cross_sections.keys()):
+                            logger.info('      > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                                        (scale,cross_sections[scale][0],cross_sections[scale][1]))
+                    
+                else:
+                    if self.ninitial == 1:
+                        logger.info("     Matched width :   %.4g +- %.4g GeV" % (data['cross_pythia'], data['error_pythia']))
+                    else:
+                        logger.info("     Matched cross-section :   %.4g +- %.4g pb" % (data['cross_pythia'], data['error_pythia']))            
+                        logger.info("     Nb of events after matching/merging :  %d" % int(data['nb_event_pythia']))
+                if self.run_card['use_syst'] in self.true and \
+                   (int(self.run_card['ickkw'])==1 or self.run_card['ktdurham']>0.0
+                                                    or self.run_card['ptlund']>0.0):
+                    logger.info("     Notice that because Systematics computation is turned on, the merging did not veto events but modified their weights instead.\n"+\
+                                "     The resulting hepmc/stdhep file should therefore be use with those weights.")
+                else:
+                    logger.info("     Nb of events after merging :  %s" % data['nb_event_pythia'])
+
         logger.info(" " )
 
     def print_results_in_file(self, data, path, mode='w', format='full'):
@@ -2508,7 +2623,68 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
             
-            run_card.write_include_file(pjoin(opt['output_dir'],'run_card.inc'))
+            # Ensure that the bias parameters has all the required input from the
+            # run_card
+            if run_card['bias_module'].lower() not in ['dummy','none']:
+                # Using basename here means that the module will not be overwritten if already existing.
+                bias_module_path = pjoin(self.me_dir,'Source','BIAS',
+                                         os.path.basename(run_card['bias_module']))
+                if not os.path.isdir(bias_module_path):
+                    if not os.path.isdir(run_card['bias_module']):
+                        raise InvalidCmd("The bias module at '%s' cannot be found."%run_card['bias_module'])
+                    else:
+                        for mandatory_file in ['makefile','%s.f'%os.path.basename(run_card['bias_module'])]:
+                            if not os.path.isfile(pjoin(run_card['bias_module'],mandatory_file)):
+                                raise InvalidCmd("Could not find the mandatory file '%s' in bias module '%s'."%(
+                                                                         mandatory_file,run_card['bias_module']))
+                        shutil.copytree(run_card['bias_module'], pjoin(self.me_dir,'Source','BIAS',
+                                                                     os.path.basename(run_card['bias_module'])))
+                
+                #check expected parameters for the module.
+                default_bias_parameters = {}
+                start, last = False,False
+                for line in open(pjoin(bias_module_path,'%s.f'%os.path.basename(bias_module_path))):
+                    if start and last:
+                        break
+                    if not start and not re.search('c\s*parameters\s*=\s*{',line, re.I):
+                        continue
+                    start = True
+                    if not line.startswith('C'):
+                        continue
+                    line = line[1:]
+                    if '{' in line:
+                        line = line.split('{')[-1]
+                    # split for } ! #
+                    split_result = re.split('(\}|!|\#)', line,1, re.M)
+                    line = split_result[0]
+                    sep = split_result[1] if len(split_result)>1 else None
+                    if sep == '}':
+                        last = True
+                    if ',' in line:
+                        for pair in line.split(','):
+                            if not pair.strip():
+                                continue
+                            x,y =pair.split(':') 
+                            x=x.strip()
+                            if x.startswith(('"',"'")) and x.endswith(x[0]):
+                                x = x[1:-1] 
+                            default_bias_parameters[x] = y
+                    elif ':' in line:
+                        x,y = line.split(':')
+                        x = x.strip()
+                        if x.startswith(('"',"'")) and x.endswith(x[0]):
+                            x = x[1:-1] 
+                        default_bias_parameters[x] = y
+                for key,value in run_card['bias_parameters'].items():
+                    if key not in default_bias_parameters:
+                        logger.warning('%s not supported by the bias module. We discard this entry.', key)
+                    else:
+                        default_bias_parameters[key] = value
+                run_card['bias_parameters'] = default_bias_parameters  
+              
+              
+            # Finally write the include file          
+            run_card.write_include_file(opt['output_dir'])
         
 
         if self.proc_characteristics['loop_induced'] and mode in ['loop', 'all']:
@@ -2523,7 +2699,7 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 logger.info(
 """You chose to have MadLoop writing out filters. 
 Beware that this can be dangerous for local multicore runs.""")
-            self.MadLoopparam.set('WriteOutFilters',False, ifnotdefault=False)
+            self.MadLoopparam.set('WriteOutFilters',False, changeifuserset=False)
             
             # The conservative settings below for 'CTModeInit' and 'ZeroThres'
             # help adress issues for processes like g g > h z, and g g > h g
@@ -2535,30 +2711,30 @@ Beware that this can be dangerous for local multicore runs.""")
             # initialization points only*. This avoids numerical accuracy issues
             # when setting up the helicity filters and does not significantly
             # slow down the run.
-#            self.MadLoopparam.set('CTModeInit',4, ifnotdefault=False)
+#            self.MadLoopparam.set('CTModeInit',4, changeifuserset=False)
             # Consequently, we can allow for a finer threshold for vanishing
             # helicity configuration
-#            self.MadLoopparam.set('ZeroThres',1.0e-11, ifnotdefault=False)
+#            self.MadLoopparam.set('ZeroThres',1.0e-11, changeifuserset=False)
 
 #           It is a bit superficial to use the level 2 which tries to numerically
 #           map matching helicities (because of CP symmetry typically) together.
 #           It is useless in the context of MC over helicities and it can 
 #           potentially make the helicity double checking fail.
-            self.MadLoopparam.set('HelicityFilterLevel',1, ifnotdefault=False)
+            self.MadLoopparam.set('HelicityFilterLevel',1, changeifuserset=False)
 
 #           To be on the safe side however, we ask for 4 consecutive matching
 #           helicity filters.
-            self.MadLoopparam.set('CheckCycle',4, ifnotdefault=False)
+            self.MadLoopparam.set('CheckCycle',4, changeifuserset=False)
             
-            # For now it is tricky to have eahc channel performing the helicity
+            # For now it is tricky to have each channel performing the helicity
             # double check. What we will end up doing is probably some kind
             # of new initialization round at the beginning of each launch
             # command, to reset the filters.    
             self.MadLoopparam.set('DoubleCheckHelicityFilter',False,
-                                                             ifnotdefault=False)
+                                                             changeifuserset=False)
           
             # Thanks to TIR recycling, TIR is typically much faster for Loop-induced
-            # processes, so that we place OPP last.
+            # processes when not doing MC over helicities, so that we place OPP last.
             if not hasattr(self, 'run_card'):
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
@@ -2571,7 +2747,7 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','2|6|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','7|6|1', ifnotdefault=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                     not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
@@ -2579,7 +2755,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     logger.warning(
     """You chose to set the preferred reduction technique in MadLoop to be different than OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when MC over helicity-- being to first start with OPP reduction.""")
-                self.MadLoopparam.set('MLReductionLib','6|1|2', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','6|7|1', changeifuserset=False)
 
             # Also TIR cache will only work when NRotations_DP=0 (but only matters
             # when not MC-ing over helicities) so it will be hard-reset by MadLoop
@@ -2597,17 +2773,17 @@ Beware that this can be dangerous for local multicore runs.""")
     zero by MadLoop. You can avoid this by changing the parameter 'FORCE_ML_HELICITY_SUM' int he matrix<i>.f
     files to be .TRUE. so that the sum over helicity configurations is performed within MadLoop (in which case
     the helicity of final state particles cannot be speicfied in the LHE file.""")
-                self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
-                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)
+                self.MadLoopparam.set('NRotations_DP',0,changeifuserset=False)
+                self.MadLoopparam.set('NRotations_QP',0,changeifuserset=False)
             else:
                 # When MC-ing over helicities, the manual TIR cache clearing is
                 # not necessary, so that one can use the lorentz check
                 # Using NRotations_DP=1 slows down the code by close to 100%
                 # but it is typicaly safer.
-                # self.MadLoopparam.set('NRotations_DP',0,ifnotdefault=False)
+                # self.MadLoopparam.set('NRotations_DP',0,changeifuserset=False)
                 # Revert to the above to be slightly less robust but twice faster.
-                self.MadLoopparam.set('NRotations_DP',1,ifnotdefault=False)
-                self.MadLoopparam.set('NRotations_QP',0,ifnotdefault=False)                
+                self.MadLoopparam.set('NRotations_DP',1,changeifuserset=False)
+                self.MadLoopparam.set('NRotations_QP',0,changeifuserset=False)                
             
             # Finally, the stability tests are slightly less reliable for process
             # with less or equal than 4 final state particles because the 
@@ -2623,9 +2799,9 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to increase the default value of the MadLoop parameter 'MLStabThres' above 1.0e-7.
     Stability tests can be less reliable on the limited kinematic of processes with less or equal
     than four external legs, so this is not recommended (especially not for g g > z z).""")
-                self.MadLoopparam.set('MLStabThres',1.0e-7,ifnotdefault=False)
+                self.MadLoopparam.set('MLStabThres',1.0e-7,changeifuserset=False)
             else:
-                self.MadLoopparam.set('MLStabThres',1.0e-4,ifnotdefault=False)            
+                self.MadLoopparam.set('MLStabThres',1.0e-4,changeifuserset=False)            
 
             #write the output file
             self.MadLoopparam.write(pjoin(self.me_dir,"SubProcesses","MadLoop5_resources",
@@ -2814,7 +2990,6 @@ Beware that this can be dangerous for local multicore runs.""")
                 return
             logger.info("Current estimate of cross-section: %s +- %s" % (cross, error))
         
-
         if isinstance(x_improve, gen_ximprove.gen_ximprove_v4):
             # Non splitted mode is based on writting ajob so need to track them
             # Splitted mode handle the cluster submition internally.
@@ -2910,7 +3085,8 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('Combining Events', level='parton')
 
         
-        if False: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
+
+        if self.run_card['gridpack']: #not hasattr(self, "refine_mode") or self.refine_mode == "old":
             try:
                 os.remove(pjoin(self.me_dir,'SubProcesses', 'combine.log'))
             except Exception:
@@ -2966,8 +3142,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.banner.add_to_file(pjoin(self.me_dir,'Events', 'unweighted_events.lhe'),        
                                     out=pjoin(self.me_dir,'Events', self.run_name, 'unweighted_events.lhe'))        
 
-                    
-        elif True:#self.refine_mode == "new":
+        else:
             # Define The Banner
             tag = self.run_card['run_tag']
             # Update the banner with the pythia card
@@ -2999,13 +3174,14 @@ Beware that this can be dangerous for local multicore runs.""")
                                  result.get('xerru'),
                                  result.get('axsec')
                                  )
+
                     sum_xsec += result.get('xsec')
                     sum_xerru.append(result.get('xerru'))
                     sum_axsec += result.get('axsec')
                     
                     if len(AllEvent) >= 80: #perform a partial unweighting
                         AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                              get_wgt, log_level=logging.DEBUG, write_init=True)
+                              get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
                         AllEvent = lhe_parser.MultiEventFile()
                         AllEvent.banner = self.banner
                         AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
@@ -3013,17 +3189,25 @@ Beware that this can be dangerous for local multicore runs.""")
                                      math.sqrt(sum(x**2 for x in sum_xerru)),
                                      sum_axsec) 
                         partials +=1
-                       
+            
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
-                              log_level=logging.DEBUG)
+                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'])
             
             if partials:
                 misc.sprint("used partials")
                 for i in range(partials):
-                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
-            
+                    try:
+                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
+                    except Exception:
+                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe" % i))
+                       
             self.results.add_detail('nb_event', nb_event)
+        
+        if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:
+            self.correct_bias()
+        
+        
         
         self.to_store.append('event')
         eradir = self.options['exrootanalysis_path']
@@ -3036,6 +3220,66 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.create_root_file(output='%s/unweighted_events.root' % \
                                                                   self.run_name)
     
+    ############################################################################ 
+    def correct_bias(self):
+        """check the first event and correct the weight by the bias 
+           and correct the cross-section.
+           If the event do not have the bias tag it means that the bias is 
+           one modifying the cross-section/shape so we have nothing to do
+        """
+
+        lhe = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe.gz'))
+        init = False
+        cross = collections.defaultdict(float)
+        nb_event = 0
+        for event in lhe:
+            rwgt_info = event.parse_reweight()
+            if not init:
+                if 'bias' in rwgt_info:
+                    output = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.unweighted_events.lhe.tmp.gz'),'w')
+                    #output.write(lhe.banner)
+                    init = True
+                else:
+                    return
+            #change the weight
+            event.wgt /= rwgt_info['bias']
+            #remove the bias info
+            del event.reweight_data['bias']
+            # compute the new cross-section
+            cross[event.ievent] += event.wgt
+            nb_event +=1
+            output.write(str(event))
+        output.write('</LesHouchesEvents>')
+        output.close()
+        lhe.close()
+                
+        # MODIFY THE BANNER i.e. INIT BLOCK
+        # ensure information compatible with normalisation choice
+        total_cross = sum(cross[key] for key in cross)
+        if 'event_norm' in self.run_card: # if not this is "sum"
+            if self.run_card['event_norm'] == 'average':
+                total_cross = total_cross / nb_event
+                for key in cross:
+                    cross[key] /= nb_event
+            elif self.run_card['event_norm'] == 'unity':
+                total_cross = self.results.current['cross'] * total_cross / nb_event
+                for key in cross:
+                    cross[key] *= total_cross / nb_event              
+                
+        bannerfile = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.banner.tmp.gz'),'w')
+        banner = banner_mod.Banner(lhe.banner)
+        banner.modify_init_cross(cross)
+        banner.write(bannerfile, close_tag=False)
+        bannerfile.close()
+        # replace the lhe file by the new one
+        os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        os.remove(bannerfile.name)
+        os.remove(output.name)
+        
+                
+        self.results.current['cross'] = total_cross
+        self.results.current['error'] = 0
+         
     ############################################################################ 
     def do_store_events(self, line):
         """Advanced commands: Launch store events"""
@@ -3163,9 +3407,613 @@ Beware that this can be dangerous for local multicore runs.""")
         self.update_status('gridpack created', level='gridpack')
         
     ############################################################################      
+    def do_shower(self, line):
+        """launch the shower"""
+
+        args = self.split_arg(line)
+        if len(args)>1 and args[0] in self._interfaced_showers:
+            chosen_showers = [args.pop(0)]
+        elif '--no_default' in line:
+            # If '--no_default' was specified in the arguments, then only one 
+            # shower will be run, depending on which card is present.
+            # but we each of them are called. (each of them check if the file exists)
+            chosen_showers = list(self._interfaced_showers)
+        else:
+            chosen_showers = list(self._interfaced_showers)
+            # It is preferable to run only one shower, even if several are available and no
+            # specific one has been selected
+            shower_priority = ['pythia8','pythia']
+            chosen_showers = [sorted(chosen_showers,key=lambda sh:
+                shower_priority.index(sh) if sh in shower_priority else len(shower_priority)+1)[0]]
+        
+        for shower in chosen_showers:
+            self.exec_cmd('%s %s'%(shower,' '.join(args)), 
+                                                  postcmd=False, printcmd=False)
+
+    def do_madanalysis5_parton(self, line):
+        """launch MadAnalysis5 at the parton level."""
+        return self.run_madanalysis5(line,mode='parton')
+
+    #===============================================================================
+    # Return a warning (if applicable) on the consistency of the current Pythia8
+    # and MG5_aMC version specified. It is placed here because it should be accessible
+    # from both madgraph5_interface and madevent_interface
+    #===============================================================================
+    @staticmethod
+    def mg5amc_py8_interface_consistency_warning(options):
+        """ Check the consistency of the mg5amc_py8_interface installed with
+        the current MG5 and Pythia8 versions. """
+    
+        # All this is only relevant is Pythia8 is interfaced to MG5
+        if not options['pythia8_path']:
+            return None
+        
+        if not options['mg5amc_py8_interface_path']:
+            return \
+    """
+    A Pythia8 path is specified via the option 'pythia8_path' but no path for option
+    'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
+    leading order simulations with MadEvent.
+    Consider installing the MG5_aMC-PY8 interface with the following command:
+     MG5_aMC>install mg5amc_py8_interface
+    """
+        
+        # Retrieve all the on-install and current versions  
+        MG5_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+                           'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+        if MG5_version_on_install == 'UNSPECIFIED':
+            MG5_version_on_install = None
+        PY8_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+                              'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+        MG5_curr_version =misc.get_pkg_info()['version']
+        try:
+            p = subprocess.Popen(['./get_pythia8_version.py',pjoin(MG5DIR,options['pythia8_path'])],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                       cwd=pjoin(MG5DIR,options['mg5amc_py8_interface_path']))
+            (out, err) = p.communicate()
+            out = out.replace('\n','')
+            PY8_curr_version = out
+            # In order to test that the version is correctly formed, we try to cast
+            # it to a float
+            float(out)
+        except:
+            PY8_curr_version = None
+    
+        if not MG5_version_on_install is None and not MG5_curr_version is None:
+            if MG5_version_on_install != MG5_curr_version:
+                return \
+    """
+    The current version of MG5_aMC (v%s) is different than the one active when
+    installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    """%(MG5_curr_version, MG5_version_on_install)
+    
+        if not PY8_version_on_install is None and not PY8_curr_version is None:
+            if PY8_version_on_install != PY8_curr_version:
+                return \
+    """
+    The current version of Pythia8 (v%s) is different than the one active when
+    installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
+    Please consider refreshing the installation of this interface with the command:
+     MG5_aMC>install mg5amc_py8_interface
+    """%(PY8_curr_version,PY8_version_on_install)
+    
+        return None
+
+    def setup_Pythia8RunAndCard(self, PY8_Card, run_type):
+        """ Setup the Pythia8 Run environment and card. In particular all the process and run specific parameters
+        of the card are automatically set here. This function returns the path where HEPMC events will be output,
+        if any."""
+
+        HepMC_event_output = None
+        tag = self.run_tag
+        
+        PY8_Card.subruns[0].systemSet('Beams:LHEF',"unweighted_events.lhe.gz")
+
+        if PY8_Card['HEPMCoutput:file']=='auto':
+            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
+                                                  '%s_pythia8_events.hepmc'%tag)
+            PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag)
+        elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
+            fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
+            fifo_path  = None
+            if len(fifo_specs)<=1:
+                fifo_path = pjoin(self.me_dir,'Events', self.run_name,'PY8.hepmc.fifo')
+                if os.path.exists(fifo_path):
+                    os.remove(fifo_path)
+                misc.mkfifo(fifo_path)
+                # Use defaultSet not to overwrite the current userSet status
+                PY8_Card.defaultSet('HEPMCoutput:file','PY8.hepmc.fifo')
+            else:
+                fifo_path = fifo_specs[1]
+                if os.path.exists(fifo_path):
+                    if stat.S_ISFIFO(os.stat(fifo_path).st_mode):
+                        logger.warning('PY8 will be reusing already existing '+
+                                         'custom fifo file at:\n  %s'%fifo_path)
+                    else:
+                        raise InvalidCmd(
+"""The fifo path speficied for the PY8 parameter 'HEPMCoutput:file':
+   %s
+already exists and is not a fifo file."""%fifo_path)
+                else:
+                    misc.mkfifo(fifo_path)
+                # Use defaultSet not to overwrite the current userSet status
+                PY8_Card.defaultSet('HEPMCoutput:file',fifo_path)
+            HepMC_event_output=fifo_path    
+        elif PY8_Card['HEPMCoutput:file'] in ['','/dev/null','None']:
+            logger.warning('User disabled the HepMC output of Pythia8.')
+            HepMC_event_output = None
+        else:
+            # Normalize the relative path if given as relative by the user.
+            HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
+                                                   PY8_Card['HEPMCoutput:file'])
+
+        # We specify by hand all necessary parameters, so that there is no
+        # need to read parameters from the Banner.
+        PY8_Card.MadGraphSet('JetMatching:setMad', False)
+        if run_type=='MLM':
+            # MadGraphSet sets the corresponding value (in system mode)
+            # only if it is not already user_set.
+            if PY8_Card['JetMatching:qCut']==-1.0:
+                PY8_Card.MadGraphSet('JetMatching:qCut',1.5*self.run_card['xqcut'])
+                
+            if PY8_Card['JetMatching:qCut']<(1.5*self.run_card['xqcut']):
+                logger.error(
+    'The MLM merging qCut parameter you chose (%f) is less than'%PY8_Card['JetMatching:qCut']+
+    '1.5*xqcut, with xqcut your run_card parameter (=%f).\n'%self.run_card['xqcut']+
+    'It would be better/safer to use a larger qCut or a smaller xqcut.')
+
+            # Also make sure to use the shower starting scales specified in the LHE
+            # unless the user specified it
+            PY8_Card.systemSet('Beams:setProductionScalesFromLHEF',True)
+
+            # Automatically set qWeed to xqcut if not defined by the user.
+            if PY8_Card['SysCalc:qWeed']==-1.0:
+                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
+            if PY8_Card['SysCalc:qCutList']=='auto':
+                if self.run_card['use_syst']:
+                    if self.run_card['sys_matchscale']=='auto':
+                        qcut = PY8_Card['JetMatching:qCut']
+                        value = [factor*qcut for factor in [0.5,0.75,1.0,1.5,2.0] if\
+                                 factor*qcut> 1.5*self.run_card['xqcut'] ]
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', value)
+                    else:
+                        qCutList = [float(qc) for qc in self.run_card['sys_matchscale'].split()]
+                        if PY8_Card['JetMatching:qCut'] not in qCutList:
+                            qCutList.append(PY8_Card['JetMatching:qCut'])
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList)
+
+            for scale in PY8_Card['SysCalc:qCutList']:
+                if scale<(1.5*self.run_card['xqcut']):
+                    logger.error(
+        'One of the MLM merging qCut parameter you chose (%f) in the variation list'%scale+\
+        " (either via 'SysCalc:qCutList' in the PY8 shower card or "+\
+        "'sys_matchscale' in the run_card) is less than 1.5*xqcut, where xqcut is"+
+        ' the run_card parameter (=%f)\n'%self.run_card['xqcut']+
+        'It would be better/safer to use a larger qCut or a smaller xqcut.')
+                
+            # Specific MLM settings
+            # PY8 should not implement the MLM veto since the driver should do it
+            # if merging scale variation is turned on
+            if self.run_card['use_syst']:
+                PY8_Card.MadGraphSet('JetMatching:doVeto',False)
+
+            PY8_Card.MadGraphSet('JetMatching:merge',True)
+            PY8_Card.MadGraphSet('JetMatching:scheme',1)
+            # Use the parameter maxjetflavor for JetMatching:nQmatch which specifies
+            # up to which parton must be matched.Merging:nQuarksMerge
+            PY8_Card.MadGraphSet('JetMatching:nQmatch',self.run_card['maxjetflavor'])
+            # For MLM, a cone radius of 1.0 is to be prefered.
+            PY8_Card.MadGraphSet('JetMatching:coneRadius',1.0)
+            # And the value of etaj_max is already infinity by default.
+            # PY8_Card.MadGraphSet('JetMatching:etaJetMax',1000.0)
+            if not hasattr(self,'proc_characteristic'):
+                self.proc_characteristic = self.get_characteristics()
+            nJetMax = self.proc_characteristic['max_n_matched_jets']
+            if PY8_Card['JetMatching:nJetMax'.lower()] == -1 and\
+                         'JetMatching:nJetMax'.lower() not in PY8_Card.user_set:
+                logger.info("No user-defined value for Pythia8 parameter "+
+            "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
+                PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
+        # We use the positivity of 'ktdurham' cut as a CKKWl marker.
+        elif run_type=='CKKW':
+            CKKW_cut = None
+            # Specific CKKW settings
+            if self.run_card['ptlund']<=0.0 and self.run_card['ktdurham']>0.0:
+                PY8_Card.subruns[0].MadGraphSet('Merging:doKTMerging',True)
+                PY8_Card.subruns[0].MadGraphSet('Merging:Dparameter',
+                                                    self.run_card['dparameter'])
+                CKKW_cut = 'ktdurham'
+            elif self.run_card['ptlund']>0.0 and self.run_card['ktdurham']<=0.0:
+                PY8_Card.subruns[0].MadGraphSet('Merging:doPTLundMerging',True)
+                CKKW_cut = 'ptlund'                
+            else:
+                raise InvalidCmd("*Either* the 'ptlund' or 'ktdurham' cut in "+\
+                  " the run_card must be turned on to activate CKKW(L) merging"+
+                  " with Pythia8, but *both* cuts cannot be turned on at the same time."+
+                  "\n ptlund=%f, ktdurham=%f."%(self.run_card['ptlund'],self.run_card['ktdurham']))
+
+            
+            # Automatically set qWeed to the CKKWL cut if not defined by the user.
+            if PY8_Card['SysCalc:qWeed']==-1.0:
+                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card[CKKW_cut])
+            
+            # MadGraphSet sets the corresponding value (in system mode)
+            # only if it is not already user_set.
+            if PY8_Card['Merging:TMS']==-1.0:
+                if self.run_card[CKKW_cut]>0.0:
+                    PY8_Card.MadGraphSet('Merging:TMS',self.run_card[CKKW_cut])
+                else:
+                    raise self.InvalidCmd('When running CKKWl merging, the user'+\
+                 " select a '%s' cut larger than 0.0 in the run_card."%CKKW_cut)
+            if PY8_Card['Merging:TMS']<self.run_card[CKKW_cut]:
+                logger.error(
+    'The CKKWl merging scale you chose (%f) is less than'%PY8_Card['Merging:TMS']+
+    'the %s cut specified in the run_card parameter (=%f).\n'%(CKKW_cut,self.run_card[CKKW_cut])+
+    'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
+    
+            if PY8_Card['Merging:Process']=='<set_by_user>':
+                raise self.InvalidCmd('When running CKKWl merging, the user must'+
+                    " specifiy the option 'Merging:Process' in pythia8_card.dat.\n"+
+                    "Read section 'Defining the hard process' of "+\
+                    "http://home.thep.lu.se/~torbjorn/pythia81html/CKKWLMerging.html for more information.")
+            PY8_Card.MadGraphSet('TimeShower:pTmaxMatch',1)
+            PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch',1)
+            PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
+            # PY8 should not implement the CKKW veto since the driver should do it.
+            if self.run_card['use_syst']:
+                PY8_Card.MadGraphSet('Merging:applyVeto',False)
+                PY8_Card.MadGraphSet('Merging:includeWeightInXsection',False)
+            # Use the parameter maxjetflavor for Merging:nQuarksMerge which specifies
+            # up to which parton must be matched.
+            PY8_Card.MadGraphSet('Merging:nQuarksMerge',self.run_card['maxjetflavor'])
+            if not hasattr(self,'proc_characteristic'):
+                self.proc_characteristic = self.get_characteristics()
+            nJetMax = self.proc_characteristic['max_n_matched_jets']
+            if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
+                             'Merging:nJetMax'.lower() not in PY8_Card.user_set:
+                logger.info("No user-defined value for Pythia8 parameter "+
+                "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
+                PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
+                
+            if PY8_Card['SysCalc:tmsList']=='auto':
+                if self.run_card['use_syst']:
+                    if self.run_card['sys_matchscale']=='auto':
+                        tms = PY8_Card["Merging:TMS"]
+                        value = [factor*tms for factor in [0.5,0.75,1.0,1.5,2.0]
+                                 if factor*tms > self.run_card[CKKW_cut]]
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', value)
+                    else:
+                        tmsList = [float(tms) for tms in self.run_card['sys_matchscale'].split()]
+                        if PY8_Card['Merging:TMS'] not in tmsList:
+                            tmsList.append(PY8_Card['Merging:TMS'])
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList)
+            
+            for scale in PY8_Card['SysCalc:tmsList']:
+                if scale<self.run_card[CKKW_cut]:
+                    logger.error(
+        'One of the CKKWl merging scale you chose (%f) in the variation list'%scale+\
+        " (either via 'SysCalc:tmsList' in the PY8 shower card or "+\
+        "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
+        'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
+        'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
+
+        return HepMC_event_output
+
+    def do_pythia8(self, line):
+        """launch pythia8"""
+
+        # Check argument's validity
+        args = self.split_arg(line)
+        if '--no_default' in args:
+            if not os.path.exists(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat')):
+                return
+            no_default = True
+            args.remove('--no_default')
+        else:
+            no_default = False
+            
+        if not self.run_name:
+            self.check_pythia8(args)
+            self.configure_directory(html_opening =False)
+        else:
+            # initialize / remove lhapdf mode        
+            self.configure_directory(html_opening =False)
+            self.check_pythia8(args)        
+
+        # the args are modify and the last arg is always the mode 
+        if not no_default:
+            self.ask_pythia_run_configuration(args[-1], pythia_version=8)
+
+        if self.options['automatic_html_opening']:
+            misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
+            self.options['automatic_html_opening'] = False
+
+        if self.run_card['event_norm'] not in ['unit','average']:
+            
+            logger.critical("Pythia8 does not support normalization to the sum. Not running Pythia8")
+            return
+                             #\n"+\
+                             #"The normalisation of the hepmc output file will be wrong (i.e. non-standard).\n"+\
+                             #"Please use 'event_norm = average' in the run_card to avoid this problem.")
+
+        # Update the banner with the pythia card
+        if not self.banner or len(self.banner) <=1:
+            # Here the level keyword 'pythia' must not be changed to 'pythia8'.
+            self.banner = banner_mod.recover_banner(self.results, 'pythia')
+        
+        if not self.options['mg5amc_py8_interface_path'] or not \
+             os.path.exists(pjoin(self.options['mg5amc_py8_interface_path'],
+                                                       'MG5aMC_PY8_interface')):
+            raise self.InvalidCmd(
+"""The MG5aMC_PY8_interface tool cannot be found, so that MadEvent cannot steer Pythia8 shower.
+Please install this tool with the following MG5_aMC command:
+  MG5_aMC> install mg5amc_py8_interface_path""")
+        else:
+            pythia_main = pjoin(self.options['mg5amc_py8_interface_path'],
+                                                         'MG5aMC_PY8_interface')
+            warnings = MadEventCmd.mg5amc_py8_interface_consistency_warning(self.options)
+            if warnings:
+                logger.warning(warnings)
+
+        self.results.add_detail('run_mode', 'madevent')
+
+        # Again here 'pythia' is just a keyword for the simulation level.
+        self.update_status('\033[92mRunning Pythia8 [arXiv:1410.3012]\033[0m', 'pythia8')
+        
+        tag = self.run_tag        
+        # Now write Pythia8 card
+        # Start by reading, starting from the default one so that the 'user_set'
+        # tag are correctly set.
+        PY8_Card = banner_mod.PY8Card(pjoin(self.me_dir, 'Cards', 
+                                                    'pythia8_card_default.dat'))
+        PY8_Card.read(pjoin(self.me_dir, 'Cards', 'pythia8_card.dat'),
+                                                                  setter='user')
+        
+        run_type = 'default'
+        merged_run_types = ['MLM','CKKW']
+        if int(self.run_card['ickkw'])==1:
+            run_type = 'MLM'
+        elif int(self.run_card['ickkw'])==2 or \
+                   self.run_card['ktdurham']>0.0 or self.run_card['ptlund']>0.0:
+            run_type = 'CKKW'
+
+        # Edit the card and run environment according to the run specification
+        HepMC_event_output = self.setup_Pythia8RunAndCard(PY8_Card, run_type)
+
+        # Now write the card.
+        pythia_cmd_card = pjoin(self.me_dir, 'Events', self.run_name ,
+                                                         '%s_pythia8.cmd' % tag)
+        cmd_card = StringIO.StringIO()
+        PY8_Card.write(cmd_card,pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
+                                                       direct_pythia_input=True)
+        
+        # Now setup the preamble to make sure that everything will use the locally
+        # installed tools (if present) even if the user did not add it to its
+        # environment variables.
+        if MADEVENT:
+            preamble = misc.get_HEPTools_location_setter(
+               pjoin(self.options['mg5amc_py8_interface_path'],os.pardir),'lib')
+        else:
+            preamble = misc.get_HEPTools_location_setter(
+                                                 pjoin(MG5DIR,'HEPTools'),'lib')
+            
+        open(pythia_cmd_card,'w').write("""!
+! It is possible to run this card manually with:
+!    %s %s
+!
+"""%(preamble+pythia_main,os.path.basename(pythia_cmd_card))+cmd_card.getvalue())
+        
+        # launch pythia8
+        pythia_log = pjoin(self.me_dir, 'Events', self.run_name ,
+                                                         '%s_pythia8.log' % tag)
+
+        # Write a bash wrapper to run the shower with custom environment variables
+        wrapper_path = pjoin(self.me_dir,'Events',self.run_name,'run_shower.sh')
+        wrapper = open(wrapper_path,'w')
+        shell = 'bash' if misc.get_shell_type() in ['bash',None] else 'tcsh'
+        shell_exe = None
+        if os.path.exists('/usr/bin/env'):
+            shell_exe = '/usr/bin/env %s'%shell
+        else:
+            shell_exe = misc.which(shell)
+            if not shell_exe:
+                self.InvalidCmd('No shell could be found in your environment.\n'+
+                  "Make sure that either '%s' is in your path or that the"%shell+\
+                  " command '/usr/bin/env %s' exists and returns a valid path."%shell)
+                
+        exe_cmd = "#!%s\n%s"%(shell_exe,' '.join(
+                     [preamble+pythia_main,
+                      os.path.basename(pythia_cmd_card)]))
+
+        wrapper.write(exe_cmd)
+        wrapper.close()
+
+        # Set it as executable
+        st = os.stat(wrapper_path)
+        os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
+
+        # If the target HEPMC output file is a fifo, don't hang MG5_aMC and let
+        # it proceed.
+        is_HepMC_output_fifo = False if not HepMC_event_output else \
+                              ( os.path.exists(HepMC_event_output) and \
+                              stat.S_ISFIFO(os.stat(HepMC_event_output).st_mode))
+        startPY8timer = time.time()
+        if is_HepMC_output_fifo:
+            logger.info(
+"""Pythia8 is set to output HEPMC events to to a fifo file.
+You can follow PY8 run with the following command (in a separate terminal):
+    tail -f %s"""%pythia_log)
+            py8_log = open(pythia_log,'w')
+            py8_bkgrd_proc = misc.Popen([wrapper_path],
+                    stdout=py8_log,stderr=py8_log,
+                                  cwd=pjoin(self.me_dir,'Events',self.run_name))
+            # Now directly return to madevent interactive interface if we are piping PY8
+            if not no_default:
+                logger.info('You can now run a tool that reads the following fifo file:'+\
+                '\n   %s\nwhere PY8 outputs HEPMC events (e.g. MadAnalysis5).'
+                                          %HepMC_event_output,'$MG:color:GREEN')
+            return
+        else:
+            logger.info('Follow Pythia8 shower by running the '+
+                'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
+    
+            ret_code = self.cluster.launch_and_wait(wrapper_path, 
+                    argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
+                                  cwd=pjoin(self.me_dir,'Events',self.run_name))
+            if ret_code != 0:
+                raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
+                    ' code %d.\n'%ret_code+\
+                    'You can find more information in this log file:\n%s'%pythia_log
+        
+        # Properly rename the djr and pts output if present.
+        djr_output = pjoin(self.me_dir,'Events', self.run_name, 'djrs.dat')
+        if os.path.isfile(djr_output):
+            shutil.move(djr_output, pjoin(self.me_dir,'Events',
+                                            self.run_name, '%s_djrs.dat' % tag))
+        pt_output = pjoin(self.me_dir,'Events', self.run_name, 'pts.dat')
+        if os.path.isfile(pt_output):
+            shutil.move(pt_output, pjoin(self.me_dir,'Events',
+                                            self.run_name, '%s_pts.dat' % tag))
+            
+        if not os.path.isfile(pythia_log) or \
+             'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[-20]):
+            logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
+            return
+        
+        # Plot for Pythia8
+        successful = self.create_plot('Pythia8')
+        if not successful:
+            logger.warning('Failed to produce Pythia8 merging plots.')
+        
+        self.to_store.append('pythia8')
+
+        # Study matched cross-sections
+        if run_type in merged_run_types:
+            #####
+            # From the log file
+            #####
+            # read the line from the bottom of the file
+            pythia_log = misc.BackRead(pjoin(self.me_dir,'Events', self.run_name, 
+                                                        '%s_pythia8.log' % tag))
+            # The main89 driver should be modified so as to allow for easier parsing
+            pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")            
+            for line in pythia_log: 
+                info = pythiare.search(line)
+                if not info:
+                    continue
+                try:
+                    # Pythia cross section in mb, we want pb
+                    sigma_m = float(info.group('xsec')) *1e9
+                    Nacc = int(info.group('generated'))
+                    Ntry = int(info.group('tried'))
+                    if Nacc==0:
+                        raise self.InvalidCmd, 'Pythia8 shower failed since it'+\
+                         ' did not accept any event from the MG5aMC event file.'+\
+                         'You can find more information in this log file:\n%s'%pythia_log
+
+                except ValueError:
+                    # xsec is not float - this should not happen
+                    self.results.add_detail('cross_pythia', 0)
+                    self.results.add_detail('nb_event_pythia', 0)
+                    self.results.add_detail('error_pythia', 0)
+                else:
+                    self.results.add_detail('cross_pythia', sigma_m)
+                    self.results.add_detail('nb_event_pythia', Nacc)
+                    #compute pythia error
+                    error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
+                    try:                   
+                        error_m = math.sqrt((error * Nacc/Ntry)**2 + sigma_m**2 *(1-Nacc/Ntry)/Nacc)
+                    except ZeroDivisionError:
+                        # Cannot compute error
+                        error_m = -1.0
+                    # works both for fixed number of generated events and fixed accepted events
+                    self.results.add_detail('error_pythia', error_m)
+                break
+            pythia_log.close()
+            if self.run_card['use_syst']:
+                    self.results.add_detail('cross_pythia', -1)
+                    self.results.add_detail('error_pythia', 0)
+            #####
+            # From the djr file generated
+            #####
+            djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
+            cross_sections = None 
+            if os.path.isfile(djr_output):
+                run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
+                all_nodes = dict((int(node.getAttribute('id')),node) for
+                                                              node in run_nodes)
+                try:
+                    selected_run_node = all_nodes[0]
+                except:
+                    selected_run_node = None
+                if selected_run_node:
+                    xsections = selected_run_node.getElementsByTagName("xsection")
+                    # We need to translate PY8's output in mb into pb
+                    cross_sections = dict((xsec.getAttribute('name'),
+                    (float(xsec.childNodes[0].data.split()[0])*1e9,
+                     float(xsec.childNodes[0].data.split()[1])*1e9))
+                                                          for xsec in xsections)
+            if cross_sections:
+                # Filter the cross_sections specified an keep only the ones 
+                # with central parameters and a different merging scale
+                a_float_re = '[\+|-]?\d+(\.\d*)?([EeDd][\+|-]?\d+)?'
+                central_merging_re = re.compile(
+                  '^\s*Weight_MERGING\s*=\s*(?P<merging>%s)\s*$'%a_float_re,
+                                                                  re.IGNORECASE)                
+                cross_sections = dict(
+                    (float(central_merging_re.match(xsec).group('merging')),value)
+                        for xsec, value in cross_sections.items() if not 
+                                         central_merging_re.match(xsec) is None)
+                central_scale = PY8_Card['JetMatching:qCut'] if \
+                        int(self.run_card['ickkw'])==1 else PY8_Card['Merging:TMS']
+                if central_scale in cross_sections:
+                    self.results.add_detail('cross_pythia8', cross_sections[central_scale][0])
+                    self.results.add_detail('error_pythia8', cross_sections[central_scale][1])
+                
+                #if len(cross_sections)>0:
+                #    logger.info('Pythia8 merged cross-sections are:')
+                #    for scale in sorted(cross_sections.keys()):
+                #        logger.info(' > Merging scale = %-6.4g : %-11.5g +/- %-7.2g [pb]'%\
+                #        (scale,cross_sections[scale][0],cross_sections[scale][1]))       
+            
+            xsecs_file = open(pjoin(self.me_dir,'Events',self.run_name,
+                                                 '%s_merged_xsecs.txt'%tag),'w')
+            if cross_sections:
+                xsecs_file.write('%-20s%-20s%-20s\n'%('Merging scale',
+                                    'Cross-section [pb]','MC uncertainty [pb]'))
+                for scale in sorted(cross_sections.keys()):
+                    xsecs_file.write('%-20.4g%-20.6e%-20.2e\n'%
+                      (scale,cross_sections[scale][0],cross_sections[scale][1]))
+            else:
+                xsecs_file.write('Cross-sections could not be read from the'+\
+                    "XML node 'xsection' of the .dat file produced by Pythia8.")
+            xsecs_file.close()
+            
+        #Update the banner
+        # We add directly the pythia command card because it has the full 
+        # information
+        self.banner.add(pythia_cmd_card)
+
+        if int(self.run_card['ickkw']):
+            # Add the matched cross-section
+            if 'MGGenerationInfo' in self.banner:
+                self.banner['MGGenerationInfo'] += '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+            else:
+                self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
+        banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
+        self.banner.write(banner_path)
+
+        self.update_status('Pythia8 shower finished after %s.'%misc.format_time(time.time() - startPY8timer), level='pythia8')
+        if self.options['delphes_path']:
+            self.exec_cmd('delphes --no_default', postcmd=False, printcmd=False)
+        self.print_results_in_shell(self.results.current)
+    
     def do_pythia(self, line):
         """launch pythia"""
         
+             
         # Check argument's validity
         args = self.split_arg(line)
         if '--no_default' in args:
@@ -3175,20 +4023,22 @@ Beware that this can be dangerous for local multicore runs.""")
             args.remove('--no_default')
         else:
             no_default = False
-            
+        
         if not self.run_name:
             self.check_pythia(args)
             self.configure_directory(html_opening =False)
         else:
             # initialize / remove lhapdf mode        
             self.configure_directory(html_opening =False)
-            self.check_pythia(args)        
-        
-        
+            self.check_pythia(args)
+
+        if self.run_card['event_norm'] != 'sum':
+            logger.error('pythia-pgs require event_norm to be on sum. Do not run pythia6')
+            return
+
         # the args are modify and the last arg is always the mode 
         if not no_default:
             self.ask_pythia_run_configuration(args[-1])
-
         if self.options['automatic_html_opening']:
             misc.open_file(os.path.join(self.me_dir, 'crossx.html'))
             self.options['automatic_html_opening'] = False
@@ -3196,11 +4046,11 @@ Beware that this can be dangerous for local multicore runs.""")
         # Update the banner with the pythia card
         if not self.banner or len(self.banner) <=1:
             self.banner = banner_mod.recover_banner(self.results, 'pythia')
-                     
-   
 
         pythia_src = pjoin(self.options['pythia-pgs_path'],'src')
         
+        self.results.add_detail('run_mode', 'madevent')
+
         self.update_status('Running Pythia', 'pythia')
         try:
             os.remove(pjoin(self.me_dir,'Events','pythia.done'))
@@ -3217,20 +4067,32 @@ Beware that this can be dangerous for local multicore runs.""")
             f.close()
         tag = self.run_tag
         pythia_log = pjoin(self.me_dir, 'Events', self.run_name , '%s_pythia.log' % tag)
-        self.cluster.launch_and_wait('../bin/internal/run_pythia', 
-                        argument= [pythia_src], stdout= pythia_log,
-                        stderr=subprocess.STDOUT,
-                        cwd=pjoin(self.me_dir,'Events'))
+        #self.cluster.launch_and_wait('../bin/internal/run_pythia', 
+        #                argument= [pythia_src], stdout= pythia_log,
+        #                stderr=subprocess.STDOUT,
+        #                cwd=pjoin(self.me_dir,'Events'))
+        output_files = ['pythia_events.hep']
+        if self.run_card['use_syst']:
+            output_files.append('syst.dat')
+        if self.run_card['ickkw'] == 1: 
+            output_files.append(['beforeveto.tree', 'xsecs.tree', 'events.tree'])
+        
+        os.environ['PDG_MASS_TBL'] = pjoin(pythia_src,'mass_width_2004.mc')
+        self.cluster.launch_and_wait(pjoin(pythia_src, 'pythia'),
+                                     input_files=[pjoin(self.me_dir, "Events", "unweighted_events.lhe"),
+                                                  pjoin(self.me_dir,'Cards','pythia_card.dat'),
+                                                  pjoin(pythia_src,'mass_width_2004.mc')],
+                                     output_files=output_files,
+                                     stdout= pythia_log,
+                                     stderr=subprocess.STDOUT,
+                                     cwd=pjoin(self.me_dir,'Events'))
+            
 
         os.remove(pjoin(self.me_dir, "Events", "unweighted_events.lhe"))
 
-
-
-        if not os.path.exists(pjoin(self.me_dir,'Events','pythia.done')):
+        if not os.path.exists(pjoin(self.me_dir,'Events','pythia_events.hep')):
             logger.warning('Fail to produce pythia output. More info in \n     %s' % pythia_log)
             return
-        else:
-            os.remove(pjoin(self.me_dir,'Events','pythia.done'))
         
         self.to_store.append('pythia')
         
@@ -3273,10 +4135,7 @@ Beware that this can be dangerous for local multicore runs.""")
         eradir = self.options['exrootanalysis_path']
         madir = self.options['madanalysis_path']
         td = self.options['td_path']
-        
-        
- 
-        
+
         #Update the banner
         self.banner.add(pjoin(self.me_dir, 'Cards','pythia_card.dat'))
         if int(self.run_card['ickkw']):
@@ -3287,12 +4146,15 @@ Beware that this can be dangerous for local multicore runs.""")
                 self.banner['MGGenerationInfo'] = '#  Matched Integrated weight (pb)  :  %s\n' % self.results.current['cross_pythia']
         banner_path = pjoin(self.me_dir, 'Events', self.run_name, '%s_%s_banner.txt' % (self.run_name, tag))
         self.banner.write(banner_path)
-        
+
         # Creating LHE file
         self.run_hep2lhe(banner_path)
+        
         if int(self.run_card['ickkw']):
             misc.gzip(pjoin(self.me_dir,'Events','beforeveto.tree'),
-                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))           
+                      stdout=pjoin(self.me_dir,'Events',self.run_name, tag+'_pythia_beforeveto.tree.gz'))  
+
+                     
         if self.run_card['use_syst'] in self.true:
             # Calculate syscalc info based on syst.dat
             try:
@@ -3318,7 +4180,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if os.path.exists(pjoin(self.me_dir,'Events','pythia_events.lhe')):
             misc.gzip(pjoin(self.me_dir,'Events','pythia_events.lhe'),
                       stdout=pjoin(self.me_dir,'Events', self.run_name,'%s_pythia_events.lhe.gz' % tag))
-                
+
         self.update_status('finish', level='pythia', makehtml=False)
         self.exec_cmd('pgs --no_default', postcmd=False, printcmd=False)
         if self.options['delphes_path']:
@@ -3559,12 +4421,11 @@ Beware that this can be dangerous for local multicore runs.""")
         if self.ninitial == 1:
             logger.error('SysCalc can\'t be run for decay processes')
             return
-        
+    
         logger.info('Calculating systematics for run %s' % self.run_name)
         
         self.ask_edit_cards(['run_card'], args)
         self.run_card = banner_mod.RunCard(pjoin(self.me_dir, 'Cards', 'run_card.dat'))
-                    
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
             if os.path.exists(filename+'.gz'):
@@ -3612,7 +4473,7 @@ Beware that this can be dangerous for local multicore runs.""")
             return 
         
         tag = self.run_card['run_tag']
-        self.update_status('storring files of previous run', level=None,\
+        self.update_status('storing files of previous run', level=None,\
                                                      error=True)
         if 'event' in self.to_store:
             if not os.path.exists(pjoin(self.me_dir, 'Events',self.run_name, 'unweighted_events.lhe.gz')) and\
@@ -3628,10 +4489,21 @@ Beware that this can be dangerous for local multicore runs.""")
             p = pjoin(self.me_dir,'Events')
             n = self.run_name
             t = tag
-            misc.gzip(pjoin(p,'pythia_events.hep'), 
-                      stdout=pjoin(p,'%s/%s_pythia_events.hep' % (n,t)))
-
             self.to_store.remove('pythia')
+            misc.gzip(pjoin(p,'pythia_events.hep'), 
+                      stdout=pjoin(p, str(n),'%s_pythia_events.hep' % t))
+
+        if 'pythia8' in self.to_store:            
+            p = pjoin(self.me_dir,'Events')
+            n = self.run_name
+            t = tag
+            file_path = pjoin(p, n ,'%s_pythia8_events.hepmc'%t)
+            self.to_store.remove('pythia8')
+            if os.path.isfile(file_path):
+                self.update_status('Storing Pythia8 files of previous run', 
+                                                     level='pythia', error=True)
+                misc.gzip(file_path,stdout=file_path)
+            
         self.update_status('Done', level='pythia',makehtml=False,error=True)
         
         self.to_store = []
@@ -3847,7 +4719,6 @@ Beware that this can be dangerous for local multicore runs.""")
     def configure_directory(self, html_opening=True):
         """ All action require before any type of run """   
 
-
         # Basic check
         assert os.path.exists(pjoin(self.me_dir,'SubProcesses'))
 
@@ -3913,7 +4784,7 @@ Beware that this can be dangerous for local multicore runs.""")
                                                                
         if self.run_card['ickkw'] == 2:
             logger.info('Running with CKKW matching')
-            self.treat_CKKW_matching()
+            self.treat_ckkw_matching()
 
         # add the make_opts_var to make_opts
         self.update_make_opts()
@@ -3922,11 +4793,50 @@ Beware that this can be dangerous for local multicore runs.""")
         self.do_treatcards('')
         
         logger.info("compile Source Directory")
+        
         # Compile
         for name in [ 'all', '../bin/internal/combine_events']:
             self.compile(arg=[name], cwd=os.path.join(self.me_dir, 'Source'))
         
+        bias_name = os.path.basename(self.run_card['bias_module'])
+        if bias_name.lower()=='none':
+            bias_name = 'dummy'
+
+        # Always refresh the bias dependencies file
+        if os.path.exists(pjoin(self.me_dir, 'SubProcesses','bias_dependencies')):
+            os.remove(pjoin(self.me_dir, 'SubProcesses','bias_dependencies'))
+        if os.path.exists(pjoin(self.me_dir, 'Source','BIAS',bias_name,'bias_dependencies')):
+            files.ln(pjoin(self.me_dir, 'Source','BIAS',bias_name,'bias_dependencies'),
+                                                        pjoin(self.me_dir, 'SubProcesses'))
+
+        if self.proc_characteristics['bias_module']!=bias_name and \
+             os.path.isfile(pjoin(self.me_dir, 'lib','libbias.a')):
+                os.remove(pjoin(self.me_dir, 'lib','libbias.a'))
+            
+        # Finally compile the bias module as well
+        if self.run_card['bias_module']!='dummy':
+            logger.debug("Compiling the bias module '%s'"%bias_name)
+            # Verify the compatibility of the specified module
+            bias_module_valid = misc.Popen(['make','requirements'],
+                       cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name),
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()[0]
+            if 'VALID' not in bias_module_valid.upper() or \
+               'INVALID' in bias_module_valid.upper():
+                raise InvalidCmd("The bias module '%s' cannot be used because of:\n%s"%
+                                                          (bias_name,bias_module_valid))
         
+        self.compile(arg=[], cwd=os.path.join(self.me_dir, 'Source','BIAS',bias_name))
+        self.proc_characteristics['bias_module']=bias_name
+        # Update the proc_characterstics file
+        self.proc_characteristics.write(
+                   pjoin(self.me_dir,'SubProcesses','proc_characteristics')) 
+        # Make sure that madevent will be recompiled
+        subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
+                                                             'subproc.mg'))]
+        for nb_proc,subdir in enumerate(subproc):
+            Pdir = pjoin(self.me_dir, 'SubProcesses',subdir.strip())
+            self.compile(['clean'], cwd=Pdir)
+
     ############################################################################
     ##  HELPING ROUTINE
     ############################################################################
@@ -3974,16 +4884,31 @@ Beware that this can be dangerous for local multicore runs.""")
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
                      allow_new_tag=True):
         """define the run name, the run_tag, the banner and the results."""
+
+        def get_last_tag(self, level):
+            # Return the tag of the previous run having the required data for this
+            # tag/run to working wel.
+            if level == 'parton':
+                return
+            elif level in ['pythia','pythia8','madanalysis5_parton','madanalysis5_hadron']:
+                return self.results[self.run_name][0]['tag']
+            else:
+                for i in range(-1,-len(self.results[self.run_name])-1,-1):
+                    tagRun = self.results[self.run_name][i]
+                    if tagRun.pythia or tagRun.shower or tagRun.pythia8 :
+                        return tagRun['tag']
+    
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes'],
-                       'pythia': ['pythia','pgs','delphes'],
+        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','madanalysis5_hadron','madanalysis5_parton'],
+                       'pythia': ['pythia','pgs','delphes','madanalysis5_hadron'],
+                       'pythia8': ['pythia8','pgs','delphes','madanalysis5_hadron'],
                        'pgs': ['pgs'],
                        'delphes':['delphes'],
+                       'madanalysis5_hadron':['madanalysis5_hadron'],
+                       'madanalysis5_parton':['madanalysis5_parton'],
                        'plot':[],
                        'syscalc':[]}
-        
-        
 
         if name == self.run_name:        
             if reload_card:
@@ -4001,9 +4926,10 @@ Beware that this can be dangerous for local multicore runs.""")
                         tag = self.get_available_tag()
                         self.run_card['run_tag'] = tag
                         self.run_tag = tag
-                        self.results.add_run(self.run_name, self.run_card)                        
+                        self.results.add_run(self.run_name, self.run_card)
                         break
-            return # Nothing to do anymore
+            return get_last_tag(self, level)
+
         
         # save/clean previous run
         if self.run_name:
@@ -4052,24 +4978,8 @@ Beware that this can be dangerous for local multicore runs.""")
 
         self.run_tag = self.run_card['run_tag']
 
-        # Return the tag of the previous run having the required data for this
-        # tag/run to working wel.
-        if level == 'parton':
-            return
-        elif level == 'pythia':
-            return self.results[self.run_name][0]['tag']
-        else:
-            for i in range(-1,-len(self.results[self.run_name])-1,-1):
-                tagRun = self.results[self.run_name][i]
-                if tagRun.pythia:
-                    return tagRun['tag']
+        return get_last_tag(self, level)
             
-            
-        
-        
-        
-        
-        
 
     ############################################################################
     def find_model_name(self):
@@ -4177,13 +5087,13 @@ Beware that this can be dangerous for local multicore runs.""")
             else:
                 msg = 'No sudakov grid file for parameter choice. Start to generate it. This might take a while'
                 logger.info(msg)
-                self.update_status('GENERATE SUDAKOF GRID', level='parton')
+                self.update_status('GENERATE SUDAKOV GRID', level='parton')
                 
                 for i in range(-2,6):
                     self.cluster.submit('%s/gensudgrid ' % self.dirbin, 
-                                    arguments = [i],
-                                    cwd=self.me_dir, 
-                                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % i,'w')))
+                    argument = ['%d'%i],
+                    cwd=self.me_dir, 
+                    stdout=open(pjoin(self.me_dir, 'gensudgrid%s.log' % i),'w'))
                 self.monitor()
                 for i in range(-2,6):
                     path = pjoin(self.me_dir, 'lib', 'issudgrid.dat')
@@ -4213,9 +5123,16 @@ Beware that this can be dangerous for local multicore runs.""")
         scdir = self.options['syscalc_path']
         if not scdir or not os.path.exists(scdir):
             return
-        logger.info('running syscalc on mode %s' % mode)    
-    
 
+        if self.run_card['event_norm'] != 'sum':
+            logger.critical('SysCalc works only when event_norm is on \'sum\'.')
+            return
+        logger.info('running SysCalc on mode %s' % mode)    
+    
+        # Restore the old default for SysCalc+PY6
+        if self.run_card['sys_matchscale']=='auto':
+            self.run_card['sys_matchscale'] = "30 50"
+    
         # Check that all pdfset are correctly installed
         lhaid = [self.run_card.get_lhapdf_id()]
         sys_pdf = self.run_card['sys_pdf'].split('&&')
@@ -4263,7 +5180,9 @@ Beware that this can be dangerous for local multicore runs.""")
                 if not (os.path.exists(event_path) or os.path.exists(event_path+".gz")):
                     event_path = pjoin(event_dir, 'unweighted_events.lhe')
                 output = pjoin(event_dir, 'syscalc.lhe')
+                stdout = open(pjoin(event_dir, self.run_name, '%s_systematics.log' % (mode)),'w')
             elif mode == 'Pythia':
+                stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w')
                 if 'mgpythiacard' in self.banner:
                     pat = re.compile('''^\s*qcut\s*=\s*([\+\-\d.e]*)''', re.M+re.I)
                     data = pat.search(self.banner['mgpythiacard'])
@@ -4292,7 +5211,7 @@ Beware that this can be dangerous for local multicore runs.""")
         try:
             proc = misc.call([os.path.join(scdir, 'sys_calc'),
                                event_path, card, output],
-                            stdout = open(pjoin(event_dir, self.run_name, '%s_%s_syscalc.log' % (tag,mode)),'w'),
+                            stdout = stdout,
                             stderr = subprocess.STDOUT,
                             cwd=event_dir)
             # Wait 5 s to make sure file is finished writing
@@ -4317,133 +5236,256 @@ Beware that this can be dangerous for local multicore runs.""")
         """Ask the question when launching generate_events/multi_run"""
         
         available_mode = ['0']
-        void = 'NOT INSTALLED'
-        switch_order = ['pythia', 'pgs', 'delphes', 'madspin', 'reweight']
-        switch = {'pythia': void, 'pgs': void, 'delphes': void,
-                  'madspin': void, 'reweight': void}
-        description = {'pythia': 'Run the pythia shower/hadronization:',
-                       'pgs': 'Run PGS as detector simulator:',
-                       'delphes':'Run Delphes as detector simulator:',
-                       'madspin':'Decay particles with the MadSpin module:',
-                       'reweight':'Add weights to the events based on changing model parameters:',
-                       }
-        force_switch = {('pythia', 'OFF'): {'pgs': 'OFF', 'delphes': 'OFF'},
-                       ('pgs', 'ON'): {'pythia':'ON'},
-                       ('delphes', 'ON'): {'pythia': 'ON'}}
-        switch_assign = lambda key, value: switch.__setitem__(key, value if switch[key] != void else void )
-
+        void = 'Not installed'
+        switch_order = ['shower', 'detector', 'analysis', 'madspin', 'reweight']
         
+        switch = dict((k, void) for k in switch_order)
+
+        description = {'shower': 'Choose the shower/hadronization program:',
+                       'detector': 'Choose the detector simulation program:',
+                       'madspin': 'Decay particles with the MadSpin module:',
+                       'reweight':'Add weights to events for different model hypothesis:',
+                       'analysis':'Run an analysis package on the events generated:'
+                       }
+
+        force_switch = {('shower', 'OFF'): {'detector': 'OFF'},
+                       ('detector', 'PGS'): {'shower':'PYTHIA6'},
+                       ('detector', 'DELPHES'): {'shower': ['PYTHIA8', 'PYTHIA6']}}
+
+        switch_assign = lambda key, value: switch.__setitem__(key, value if value \
+                                         in valid_options[key] else switch[key])
+
+        valid_options = dict((k, ['OFF']) for k in switch_order) # track of all possible input for an entry
+        options =  ['auto', 'done']
+        options_legacy = []
+                
         # Init the switch value according to the current status
         if self.options['pythia-pgs_path']:
             available_mode.append('1')
             available_mode.append('2')
+            valid_options['shower'].append('PYTHIA6')
+            valid_options['detector'].append('PGS')
+            options_legacy += ['pythia', 'pgs', 'pythia=ON', 'pythia=OFF', 'pgs=ON', 'pgs=OFF']
             if os.path.exists(pjoin(self.me_dir,'Cards','pythia_card.dat')):
-                switch['pythia'] = 'ON'
+                switch['shower'] = 'PYTHIA6'
             else:
-                switch['pythia'] = 'OFF'
+                switch['shower'] = 'OFF'
             if os.path.exists(pjoin(self.me_dir,'Cards','pgs_card.dat')):
-                switch['pgs'] = 'ON'
+                switch['detector'] = 'PGS'
             else:
-                switch['pgs'] = 'OFF'                
-            if self.options['delphes_path']:
-                available_mode.append('3')
+                switch['detector'] = 'OFF'
+        
+        if self.options['pythia8_path']:
+            available_mode.append('1')
+            valid_options['shower'].append('PYTHIA8')
+            if os.path.exists(pjoin(self.me_dir,'Cards','pythia8_card.dat')):
+                switch['shower'] = 'PYTHIA8'
+            elif switch['shower'] == void:
+                switch['shower'] = 'OFF'            
+        
+        # MadAnalysis4 options
+        if self.options['madanalysis_path']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card_default.dat')):
+                valid_options['analysis'].insert(0,'MADANALYSIS_4')
+
+            if os.path.exists(pjoin(self.me_dir,'Cards','plot_card.dat')):
+                switch['analysis'] = 'MADANALYSIS_4'
+        
+        # MadAnalysis5 options
+        if self.options['madanalysis5_path']:
+            if os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')) or \
+               os.path.exists(pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')):
+                valid_options['analysis'].append('MADANALYSIS_5')
+
+            parton_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
+                                                'madanalysis5_parton_card.dat'))
+            hadron_card_present = os.path.exists(pjoin(self.me_dir,'Cards',
+                                                'madanalysis5_hadron_card.dat'))
+            if hadron_card_present or parton_card_present:
+                switch['analysis'] = 'MADANALYSIS_5'
+
+        if len(valid_options['analysis'])>1:                
+            available_mode.append('5')
+            if switch['analysis'] == void:
+                switch['analysis'] = 'OFF'
+        else:
+            switch['analysis'] = 'No analysis tool interfaced to MG5aMC.'
+
+        # Need to allow Delphes only if a shower exists                
+        if self.options['delphes_path']:
+            if valid_options['shower'] != ['OFF']:
+                available_mode.append('2')
+                valid_options['detector'].append('DELPHES') 
+                options += ['delphes',   'delphes=ON', 'delphes=OFF']             
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
-                    switch['delphes'] = 'ON'
+                    switch['detector'] = 'DELPHES'
                 else:
-                    switch['delphes'] = 'OFF'
-                    
+                    switch['detector'] = 'OFF'
+            elif valid_options['detector'] == ['OFF']:
+                switch['detector'] = "Requires a shower"
+                        
         # Check switch status for MS/reweight
         if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
-            available_mode.append('4')
-            available_mode.append('5')
+            available_mode.append('3')
+            valid_options['madspin'] = ['ON', 'OFF']
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
             if misc.has_f2py() or self.options['f2py_compiler']:
+                available_mode.append('4')
+                valid_options['reweight'] = ['ON', 'OFF']
                 if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                     switch['reweight'] = 'ON'
                 else:
                     switch['reweight'] = 'OFF'
             else: 
                 switch['reweight'] = 'Not available (requires NumPy)'
-                 
+                       
         if '-R' in args or '--reweight' in args:
             if switch['reweight'] == 'OFF':
                 switch['reweight'] = 'ON'
             elif switch['reweight'] != 'ON':
                 logger.critical("Cannot run reweight: %s", switch['reweight'])
         if '-M' in args or '--madspin' in args:
-            switch['madspin'] = 'ON'
+            if switch['madspin'] == 'OFF':
+                switch['madspin'] = 'ON'
+            elif switch['madspin'] != 'ON':
+                logger.critical("Cannot run madspin: %s", switch['reweight'])            
 
-        options = list(available_mode) + ['auto', 'done']
         for id, key in enumerate(switch_order):
-            if switch[key] not in [void, 'Not available (requires NumPy)']:
-                options += ['%s=%s' % (key, s) for s in ['ON','OFF']]
+            if len(valid_options[key]) >1:
+                options += ['%s=%s' % (key, s) for s in valid_options[key]]
                 options.append(key)
-        options.append('parton')    
-        
+                
+        options += ['parton'] + sorted(list(set(available_mode)))
+        options += options_legacy
+        #options += ['pythia=ON', 'pythia=OFF', 'delphes=ON', 'delphes=OFF', 'pgs=ON', 'pgs=OFF']
         #ask the question
+        
+        def color(switch_value):
+            green = '\x1b[32m%s\x1b[0m' 
+            bold = '\x1b[33m%s\x1b[0m'
+            red   = '\x1b[31m%s\x1b[0m'
+            if switch_value in ['OFF',void,'Requires a shower',
+                    'Not available (requires NumPy)',
+                    'Not available yet for this output/process']:
+                return red%switch_value
+            elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
+                                  'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
+                                  'DELPHES-CMS','DELPHES']:
+                return green%switch_value
+            else:
+                return bold%switch_value                
+
         if mode or not self.force:
             answer = ''
             while answer not in ['0', 'done', 'auto']:
                 if mode:
                     answer = mode
                 else:      
-                    switch_format = " %i %-61s %10s=%s\n"
+                    switch_format = " \x1b[31m%i\x1b[0m. %-60s %12s = %s"
                     question = "The following switches determine which programs are run:\n"
+                    question += '/'+'-'*98+'\\\n'
                     for id, key in enumerate(switch_order):
-                        question += switch_format % (id+1, description[key], key, switch[key])
-                    question += '  Either type the switch number (1 to %s) to change its default setting,\n' % (id+1)
-                    question += '  or set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
+                        question += '| %-115s|\n'%(switch_format%(id+1, description[key], key, color(switch[key])))
+                    question += '\\'+'-'*98+'/\n'
+                    question += '  Either type the switch number (1 to %s) to change its setting,\n' % (id+1)
+                    question += '  Set any switch explicitly (e.g. type \'madspin=ON\' at the prompt)\n'
+                    question += '  Type \'help\' for the list of all valid option\n' 
                     question += '  Type \'0\', \'auto\', \'done\' or just press enter when you are done.\n'
-                    answer = self.ask(question, '0', options)
-                if answer.isdigit() and answer != '0':
-                    key = switch_order[int(answer) - 1]
-                    answer = '%s=%s' % (key, 'ON' if switch[key] == 'OFF' else 'OFF')
+                    answer = self.ask(question, '0', options, casesensitive=False)
+                if (answer.isdigit() and answer != '0') or answer in ['shower', 'detector']:
+                    if answer.isdigit():
+                        key = switch_order[int(answer) - 1]
+                    else:
+                        key = answer
+                    for i, opt in enumerate(valid_options[key]):
+                        if opt == switch[key]:
+                            break
+                    i +=1
+                    if i == len(valid_options[key]):
+                        i=0
+                    answer = '%s=%s' % (key, valid_options[key][i])
 
                 if '=' in answer:
                     key, status = answer.split('=')
+                    key, status = key.lower().strip(), status.upper().strip()
+                    
+                    if key not in switch:
+                        # this means use use outdated switch. Use converter to new syntax
+                        logger.warning("Using old syntax. Please check that we run what you expect.")
+                        if key == "pythia" and status == "ON":
+                            key, status = "shower", "PYTHIA6"
+                        elif key == "pythia" and status == "OFF":
+                            key, status = "shower", "OFF"
+                        elif key == "pgs" and status == "ON":
+                            if switch["detector"] in ["OFF", "PGS"] :
+                                key, status = "detector", "PGS"
+                            else:
+                                key, status = "detector", "DELPHES+PGS"
+                        elif key == "delphes" and status == "ON":
+                            if switch["detector"] in ["OFF", "DELPHES"] :
+                                key, status = "detector", "DELPHES"
+                            else:
+                                key, status = "detector", "DELPHES+PGS"                                
+                        elif key == "pgs" and status == "OFF":
+                            if switch["detector"] in ["OFF", "PGS"] :
+                                key, status = "detector", "OFF"
+                            elif switch["detector"] == "DELPHES+PGS":
+                                key, status = "detector", "DELPHES"
+                            else:
+                                key, status = "detector", switch['detector']
+                        elif key == "delphes" and status == "OFF":
+                            if switch["detector"] in ["OFF", "DELPHES"] :
+                                key, status = "detector", "OFF"
+                            elif switch["detector"] == "DELPHES+PGS":
+                                key, status = "detector", "PGS"
+                            else:
+                                key, status = "detector", switch['detector']                            
+                                                  
+
                     switch[key] = status
                     if (key, status) in force_switch:
                         for key2, status2 in force_switch[(key, status)].items():
-                            if switch[key2] not in  [status2, void]:
-                                logger.info('For coherence \'%s\' is set to \'%s\''
-                                            % (key2, status2), '$MG:color:BLACK')
-                                switch[key2] = status2
+                            if isinstance(status2, str):
+                                if switch[key2] not in  [status2, void]:
+                                    logger.info('For coherence \'%s\' is set to \'%s\''
+                                                % (key2, status2), '$MG:color:BLACK')
+                                    switch[key2] = status2
+                            else:
+                                if switch[key2] not in  status2 + [void]:
+                                    logger.info('For coherence \'%s\' is set to \'%s\''
+                                                % (key2, status2[0]), '$MG:color:BLACK')
+                                    switch[key2] = status2[0]
                 elif answer in ['0', 'auto', 'done']:
                     continue
-                else:
+                elif answer in ['parton', 'pythia','pgs','madspin','reweight', 'delphes']:
                     logger.info('pass in %s only mode' % answer, '$MG:color:BLACK')
                     switch_assign('madspin', 'OFF')
                     switch_assign('reweight', 'OFF')
                     if answer == 'parton':
-                        switch_assign('pythia', 'OFF')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OFF')
+                        switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF')
                     elif answer == 'pythia':
-                        switch_assign('pythia', 'ON')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OFF')
+                        switch_assign('shower', 'PYTHIA6')
+                        switch_assign('detector', 'OFF')
                     elif answer == 'pgs':
-                        switch_assign('pythia', 'ON')
-                        switch_assign('pgs', 'ON')
-                        switch_assign('delphes', 'OFF')
+                        switch_assign('shower', 'PYTHIA6')
+                        switch_assign('detector', 'PGS')
                     elif answer == 'delphes':
-                        switch_assign('pythia', 'ON')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'ON')
+                        switch_assign('shower', 'PYTHIA6')
+                        if switch['shower'] == 'OFF':
+                            switch_assign('shower', 'PYTHIA8')
+                        switch_assign('detector', 'DELPHES')
                     elif answer == 'madspin':
                         switch_assign('madspin', 'ON')
-                        switch_assign('pythia', 'OFF')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OF')                        
+                        switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF')
                     elif answer == 'reweight':
                         switch_assign('reweight', 'ON')
-                        switch_assign('pythia', 'OFF')
-                        switch_assign('pgs', 'OFF')
-                        switch_assign('delphes', 'OFF')
-                    
+                        switch_assign('shower', 'OFF')
+                        switch_assign('detector', 'OFF') 
                     
                 if mode:
                     answer =  '0' #mode auto didn't pass here (due to the continue)
@@ -4454,11 +5496,13 @@ Beware that this can be dangerous for local multicore runs.""")
         #exists (copy default if needed)
 
         cards = ['param_card.dat', 'run_card.dat']
-        if switch['pythia'] == 'ON':
+        if switch['shower'] in ['PY6', 'PYTHIA6']:
             cards.append('pythia_card.dat')
-        if switch['pgs'] == 'ON':
+        if switch['shower'] in ['PY8', 'PYTHIA8']:
+            cards.append('pythia8_card.dat')            
+        if switch['detector'] in  ['PGS','DELPHES+PGS']:
             cards.append('pgs_card.dat')
-        if switch['delphes'] == 'ON':
+        if switch['detector'] in ['DELPHES', 'DELPHES+PGS']:
             cards.append('delphes_card.dat')
             delphes3 = True
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
@@ -4468,6 +5512,13 @@ Beware that this can be dangerous for local multicore runs.""")
             cards.append('madspin_card.dat')
         if switch['reweight'] == 'ON':
             cards.append('reweight_card.dat')
+        if switch['analysis'] in ['MADANALYSIS_5']:
+            cards.append('madanalysis5_parton_card.dat')
+        if switch['analysis'] in ['MADANALYSIS_5'] and not switch['shower']=='OFF':
+            cards.append('madanalysis5_hadron_card.dat')
+        if switch['analysis'] in ['MADANALYSIS_4']:
+            cards.append('plot_card.dat')
+
         self.keep_cards(cards)
         
         if os.path.isfile(pjoin(self.me_dir,'Cards','MadLoopParams.dat')):
@@ -4478,26 +5529,35 @@ Beware that this can be dangerous for local multicore runs.""")
             return
 
         if answer == 'auto':
-            self.ask_edit_cards(cards, mode='auto')
+            self.ask_edit_cards(cards, plot=False, mode='auto')
         else:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=False)
         return
     
     ############################################################################
-    def ask_pythia_run_configuration(self, mode=None):
+    def ask_pythia_run_configuration(self, mode=None, pythia_version=6):
         """Ask the question when launching pythia"""
         
-        available_mode = ['0', '1', '2']
+        pythia_suffix = '' if pythia_version==6 else '%d'%pythia_version
+        
+        available_mode = ['0', '1']
+        if pythia_version==6:
+            available_mode.append('2')
         if self.options['delphes_path']:
                 available_mode.append('3')
-        name = {'0': 'auto', '1': 'pythia', '2':'pgs', '3':'delphes'}
+        name = {'0': 'auto', '2':'pgs', '3':'delphes'}
+        name['1'] = 'pythia%s'%pythia_suffix
         options = available_mode + [name[val] for val in available_mode]
         question = """Which programs do you want to run?
-    0 / auto    : running existing card
-    1 / pythia  : Pythia 
-    2 / pgs     : Pythia + PGS\n"""
+    0 / auto    : running existing cards\n"""
+        if pythia_version==6:
+            question += """    1. pythia  : Pythia\n"""
+            question += """    2. pgs     : Pythia + PGS\n"""
+        else:
+            question += """    1. pythia8  : Pythia8\n"""
+
         if '3' in available_mode:
-            question += """    3 / delphes  : Pythia + Delphes.\n"""
+            question += """    3. delphes  : Pythia%s + Delphes.\n"""%pythia_suffix
 
         if not self.force:
             if not mode:
@@ -4511,18 +5571,18 @@ Beware that this can be dangerous for local multicore runs.""")
         auto = False
         if mode == 'auto':
             auto = True
-            if os.path.exists(pjoin(self.me_dir, 'Cards', 'pgs_card.dat')):
+            if pythia_version==6 and os.path.exists(pjoin(self.me_dir,
+                                                      'Cards', 'pgs_card.dat')):
                 mode = 'pgs'
             elif os.path.exists(pjoin(self.me_dir, 'Cards', 'delphes_card.dat')):
                 mode = 'delphes'
             else: 
-                mode = 'pythia'
+                mode = 'pythia%s'%pythia_suffix
         logger.info('Will run in mode %s' % mode)
-                                               
         # Now that we know in which mode we are check that all the card
         #exists (copy default if needed) remove pointless one
-        cards = ['pythia_card.dat']
-        if mode == 'pgs':
+        cards = ['pythia%s_card.dat'%pythia_suffix]
+        if mode == 'pgs' and pythia_version==6:
             cards.append('pgs_card.dat')
         if mode == 'delphes':
             cards.append('delphes_card.dat')
@@ -4530,21 +5590,18 @@ Beware that this can be dangerous for local multicore runs.""")
             if os.path.exists(pjoin(self.options['delphes_path'], 'data')):
                 delphes3 = False
                 cards.append('delphes_trigger.dat')
-        self.keep_cards(cards)
+        self.keep_cards(cards, ignore=['madanalysis5_parton_card.dat','madanalysis5_hadron_card.dat',
+                      'plot_card.dat'])
         
         if self.force:
             return mode
         
         if auto:
-            self.ask_edit_cards(cards, mode='auto')
+            self.ask_edit_cards(cards, mode='auto', plot=(pythia_version==6))
         else:
-            self.ask_edit_cards(cards)
+            self.ask_edit_cards(cards, plot=(pythia_version==6))
 
         return mode
-                
-  
-            
-
                 
 #===============================================================================
 # MadEventCmd

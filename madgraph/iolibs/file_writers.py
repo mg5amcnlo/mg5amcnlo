@@ -302,7 +302,8 @@ class FortranWriter(FileWriter):
 
         if line.startswith('F2PY'):
             return ["C%s\n" % line.strip()]
-        
+        elif line.startswith(('C','c')):
+            return ['%s\n' % line] 
 
         res_lines = []
 

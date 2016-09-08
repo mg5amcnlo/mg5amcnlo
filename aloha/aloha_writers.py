@@ -468,10 +468,10 @@ class ALOHAWriterForFortran(WriteALOHA):
                    'log': 'log(dble(%s))',
                    'asin': 'asin(dble(%s))',
                    'acos': 'acos(dble(%s))',
-                   'abs': 'abs(%s)',
-                   'fabs': 'abs(%s)',
-                   'math.abs': 'abs(%s)',
-                   'cmath.abs': 'abs(%s)',
+                   'abs': 'std::abs(%s)',
+                   'fabs': 'std::abs(%s)',
+                   'math.abs': 'std::abs(%s)',
+                   'cmath.abs': 'std::abs(%s)',
                    '':'(%s)'
                    }
             
@@ -1255,14 +1255,14 @@ class ALOHAWriterForCPP(WriteALOHA):
     writer = writers.CPPWriter
 
     type2def = {}    
-    type2def['int'] = 'int'
+    type2def['int'] = 'int '
     type2def['double'] = 'double '
-    type2def['complex'] = 'complex<double> '
+    type2def['complex'] = 'std::complex<double> '
     
     #variable overwritten by gpu
     realoperator = '.real()'
     imagoperator = '.imag()'
-    ci_definition = ' complex<double> cI = complex<double>(0.,1.);\n'
+    ci_definition = 'static std::complex<double> cI = std::complex<double>(0.,1.);\n'
     
     
     def change_number_format(self, number):
@@ -1335,7 +1335,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conj(dcmplx(%s))',
                    '/' : '{0}/%s'.format(one),
-                   'abs': 'abs(%s)'
+                   'abs': 'std::abs(%s)'
                    }
             
         if fct in self.fct_format:
@@ -1375,10 +1375,10 @@ class ALOHAWriterForCPP(WriteALOHA):
             args.append('%s%s%s'% (type, argname, list_arg))
                 
         if not self.offshell:
-            output = 'complex<double> & vertex'
+            output = 'std::complex<double> & vertex'
             #self.declaration.add(('complex','vertex'))
         else:
-            output = 'complex<double> %(spin)s%(id)d[]' % {
+            output = 'std::complex<double> %(spin)s%(id)d[]' % {
                      'spin': self.particles[self.outgoing -1],
                      'id': self.outgoing}
             self.declaration.add(('list_complex', output))
@@ -1450,7 +1450,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         
         for i,type in enumerate(self.particles):
             if self.declaration.is_used('OM%s' % (i+1)):
-                out.write("    OM{0} = {1};\n    if (M{0} != {1})\n OM{0}={2}/pow(M{0},2);\n".format( 
+                out.write("    OM{0} = {1};\n    if (M{0} != {1})\n OM{0}={2}/(M{0}*M{0});\n".format( 
                          i+1, self.change_number_format(0), self.change_number_format(1)))
             
             if i+1 == self.outgoing:
@@ -1551,13 +1551,13 @@ class ALOHAWriterForCPP(WriteALOHA):
                         out.write('    denom = %(COUP)s/(%(denom)s)\n' % {'COUP': coup_name,\
                                 'denom':self.write_obj(self.routine.denominator)}) 
                     else:
-                        out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
+                        out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - M%(i)s * (M%(i)s -cI* W%(i)s));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
                 else:
                     if self.routine.denominator:
                         raise Exception, 'modify denominator are not compatible with complex mass scheme'                
 
-                    out.write('    denom = %(coup)s/(pow(P%(i)s[0],2)-pow(P%(i)s[1],2)-pow(P%(i)s[2],2)-pow(P%(i)s[3],2) - pow(M%(i)s,2));\n' % \
+                    out.write('    denom = %(coup)s/((P%(i)s[0]*P%(i)s[0])-(P%(i)s[1]*P%(i)s[1])-(P%(i)s[2]*P%(i)s[2])-(P%(i)s[3]*P%(i)s[3]) - (M%(i)s*M%(i)s));\n' % \
                       {'i': self.outgoing, 'coup': coup_name})
                 self.declaration.add(('complex','denom'))
                 if aloha.loop_mode:
@@ -1574,7 +1574,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                                         self.write_obj(numerator.get_rep(ind))))
         return out.getvalue()
         
-    remove_double = re.compile('complex<double> (?P<name>[\w]+)\[\]')
+    remove_double = re.compile('std::complex<double> (?P<name>[\w]+)\[\]')
     def define_symmetry(self, new_nb, couplings=None):
         """Write the call for symmetric routines"""
         number = self.offshell
@@ -1594,8 +1594,7 @@ class ALOHAWriterForCPP(WriteALOHA):
         if not self.mode == 'no_include':
             h_string.write('#ifndef '+ self.name + '_guard\n')
             h_string.write('#define ' + self.name + '_guard\n')
-            h_string.write('#include <complex>\n')
-            h_string.write('using namespace std;\n\n')
+            h_string.write('#include <complex>\n\n')
 
         h_header = self.get_header_txt(mode='no_include__is_h', couplings=couplings)
         h_string.write(h_header)

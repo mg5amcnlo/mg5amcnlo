@@ -16,6 +16,7 @@
 """A set of functions performing routine administrative I/O tasks."""
 
 import contextlib
+import itertools
 import logging
 import os
 import re
@@ -49,76 +50,7 @@ else:
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
 pjoin = os.path.join
-
-#===============================================================================
-# Return a warning (if applicable) on the consistency of the current Pythia8
-# and MG5_aMC version specified. It is placed here because it should be accessible
-# from both madgraph5_interface and madevent_interface
-#===============================================================================
-def mg5amc_py8_interface_consistency_warning(options):
-    """ Check the consistency of the mg5amc_py8_interface installed with
-    the current MG5 and Pythia8 versions. """
-
-    return None
-    # All this is only relevant is Pythia8 is interfaced to MG5
-    if not options['pythia8_path']:
-        return None
-    
-    if not options['mg5amc_py8_interface_path']:
-        return \
-"""
-A Pythia8 path is specified via the option 'pythia8_path' but no path for option
-'mg5amc_py8_interface_path' is specified. This means that Pythia8 cannot be used
-leading order simulations with MadEvent.
-Consider installing the MG5_aMC-PY8 interface with the following command:
- MG5_aMC>install mg5amc_py8_interface
-"""
-    
-    # Retrieve all the on-install and current versions  
-    MG5_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
-                       'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
-    if MG5_version_on_install == 'UNSPECIFIED':
-        MG5_version_on_install = None
-    PY8_version_on_install = open(pjoin(options['mg5amc_py8_interface_path'],
-                          'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
-    MG5_curr_version = get_pkg_info()['version']
-    try:
-        p = subprocess.Popen(['./get_pythia8_version.py',options['pythia8_path']],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                                   cwd=options['mg5amc_py8_interface_path'])
-        (out, err) = p.communicate()
-        out = out.replace('\n','')
-        PY8_curr_version = out
-        # In order to test that the version is correctly formed, we try to cast
-        # it to a float
-        float(out)
-    except:
-        PY8_curr_version = None
-
-    if not MG5_version_on_install is None and not MG5_curr_version is None:
-        if MG5_version_on_install != MG5_curr_version:
-            return \
-"""
-The current version of MG5_aMC (v%s) is different than the one active when
-installing the 'mg5amc_py8_interface_path' (which was MG5aMC v%s). 
-Please consider refreshing the installation of this interface with the command:
- MG5_aMC>install mg5amc_py8_interface
-"""%(MG5_curr_version, MG5_version_on_install)
-
-    if not PY8_version_on_install is None and not PY8_curr_version is None:
-        if PY8_version_on_install != PY8_curr_version:
-            return \
-"""
-The current version of Pythia8 (v%s) is different than the one active when
-installing the 'mg5amc_py8_interface' tool (which was Pythia8 v%s). 
-Please consider refreshing the installation of this interface with the command:
- MG5_aMC>install mg5amc_py8_interface
-"""%(PY8_curr_version,PY8_version_on_install)
-
-    return None
    
-
-
 #===============================================================================
 # parse_info_str
 #===============================================================================
@@ -222,6 +154,8 @@ def find_includes_path(start_path, extension):
     one found which contains at least one file ending with the string extension
     given in argument."""
     
+    if not os.path.isdir(start_path):
+        return None
     subdirs=[pjoin(start_path,dir) for dir in os.listdir(start_path)]
     for subdir in subdirs:
         if os.path.isfile(subdir):
@@ -308,7 +242,7 @@ def deactivate_dependence(dependency, cmd=None, log = None):
             log(msg)
     
 
-    if dependency in ['pjfry','golem','samurai','ninja']:
+    if dependency in ['pjfry','golem','samurai','ninja','collier']:
         if cmd.options[dependency] not in ['None',None,'']:
             tell("Deactivating MG5_aMC dependency '%s'"%dependency)
             cmd.options[dependency] = None
@@ -350,6 +284,13 @@ def activate_dependence(dependency, cmd=None, log = None, MG5dir=None):
             tell("Installing ninja...")
             cmd.do_install('ninja')
  
+    if dependency=='collier':
+        if cmd.options['collier'] in ['None',None,''] or\
+         (cmd.options['collier'] == 'auto' and which_lib('libcollier.a') is None) or\
+         which_lib(pjoin(cmd.options['collier'],'libcollier.a')) is None:
+            tell("Installing COLLIER...")
+            cmd.do_install('collier')
+
 #===============================================================================
 # find a library
 #===============================================================================
@@ -499,7 +440,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
         if not cwd:
             cwd = os.getcwd()
         all_file = [f.lower() for f in os.listdir(cwd)]
-        if 'makefile' not in all_file:
+        if 'makefile' not in all_file and '-f' not in arg:
             raise OSError, 'no makefile present in %s' % os.path.realpath(cwd)
 
         if mode == 'fortran' and  not (which('g77') or which('gfortran')):
@@ -616,14 +557,16 @@ class MuteLogger(object):
         self.levels = old_levels
         
     def __exit__(self, ctype, value, traceback ):
-        for name, level, path, level in zip(self.names, self.levels, self.files, self.levels):
-            if 'keep' in self.opts and not self.opts['keep']:
-                self.restore_logFile_for_logger(name, level, path=path)
+        for name, level, path in zip(self.names, self.levels, self.files):
+
+            if path:
+                if 'keep' in self.opts and not self.opts['keep']:
+                    self.restore_logFile_for_logger(name, level, path=path)
+                else:
+                    self.restore_logFile_for_logger(name, level)
             else:
-                self.restore_logFile_for_logger(name, level)
-            
-            log_module = logging.getLogger(name)
-            log_module.setLevel(level)         
+                log_module = logging.getLogger(name)
+                log_module.setLevel(level)         
         
     def setup_logFile_for_logger(self, path, full_logname, **opts):
         """ Setup the logger by redirecting them all to logfiles in tmp """
@@ -885,7 +828,6 @@ def mult_try_open(filepath, *args, **opt):
     """try to open a file with multiple try to ensure that filesystem is sync"""  
     return open(filepath, *args, ** opt)
 
-
 ################################################################################
 # TAIL FUNCTION
 ################################################################################
@@ -910,6 +852,17 @@ def tail(f, n, offset=None):
         avg_line_length *= 1.3
         avg_line_length = int(avg_line_length)
 
+def mkfifo(fifo_path):
+    """ makes a piping fifo (First-in First-out) file and nicely intercepts 
+    error in case the file format of the target drive doesn't suppor tit."""
+
+    try:
+        os.mkfifo(fifo_path)
+    except:
+        raise OSError('MadGraph5_aMCatNLO could not create a fifo file at:\n'+
+          '   %s\n'%fifo_path+'Make sure that this file does not exist already'+
+          ' and that the file format of the target drive supports fifo file (i.e not NFS).')
+
 ################################################################################
 # LAST LINE FUNCTION
 ################################################################################
@@ -917,7 +870,7 @@ def get_last_line(fsock):
     """return the last line of a file"""
     
     return tail(fsock, 1)[0]
-    
+
 class BackRead(file):
     """read a file returning the lines in reverse order for each call of readline()
 This actually just reads blocks (4096 bytes by default) of data from the end of
@@ -1322,7 +1275,11 @@ def sprint(*args, **opt):
     if not __debug__:
         return
     
+    use_print = False
     import inspect
+    if opt.has_key('cond') and not opt['cond']:
+        return
+    
     if opt.has_key('log'):
         log = opt['log']
     else:
@@ -1331,10 +1288,17 @@ def sprint(*args, **opt):
         level = opt['level']
     else:
         level = logging.getLogger('madgraph').level
+        if level == 0:
+            use_print = True
         #print  "madgraph level",level
         #if level == 20:
         #    level = 10 #avoid info level
         #print "use", level
+    if opt.has_key('wait'):
+        wait = bool(opt['wait'])
+    else:
+        wait = False
+        
     lineno  =  inspect.currentframe().f_back.f_lineno
     fargs =  inspect.getframeinfo(inspect.currentframe().f_back)
     filename, lineno = fargs[:2]
@@ -1358,9 +1322,16 @@ def sprint(*args, **opt):
     else:
         intro = ''
     
-
-    log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
+    if not use_print:
+        log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
                    ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))
+    else:
+        print ' '.join([intro]+[str(a) for a in args]) + \
+                   ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno)
+
+    if wait:
+        raw_input('press_enter to continue')
+
     return 
 
 ################################################################################
@@ -1563,7 +1534,7 @@ class ProcessTimer:
 #    except psutil.error.NoSuchProcess:
 #      pass
 
-
+## Define apple_notify (in a way which is system independent
 try:
     import Foundation
     import objc
@@ -1583,3 +1554,175 @@ try:
 except:
     def apple_notify(subtitle, info_text, userInfo={}):
         return
+## End apple notify
+
+
+def get_older_version(v1, v2):
+    """ return v2  if v1>v2
+        return v1 if v1<v2
+        return v1 if v1=v2 
+        return v1 if v2 is not in 1.2.3.4.5 format
+        return v2 if v1 is not in 1.2.3.4.5 format
+    """
+    from itertools import izip_longest
+    for a1, a2 in izip_longest(v1, v2, fillvalue=0):
+        try:
+            a1= int(a1)
+        except:
+            return v2
+        try:
+            a2= int(a2)
+        except:
+            return v1        
+        if a1 > a2:
+            return v2
+        elif a1 < a2:
+            return v1
+    return v1
+
+    
+
+plugin_support = {}
+def is_plugin_supported(obj):
+    global plugin_support
+    
+    name = obj.__name__
+    if name in plugin_support:
+        return plugin_support[name]
+    
+    # get MG5 version
+    if '__mg5amcnlo__' in plugin_support:
+        mg5_ver = plugin_support['__mg5amcnlo__']
+    else:
+        info = get_pkg_info()
+        mg5_ver = info['version'].split('.')
+    try:
+        min_ver = obj.minimal_mg5amcnlo_version
+        max_ver = obj.maximal_mg5amcnlo_version
+        val_ver = obj.latest_validated_version
+    except:
+        logger.error("Plugin %s misses some required info to be valid. It is therefore discarded" % name)
+        plugin_support[name] = False
+        return
+    
+    if get_older_version(min_ver, mg5_ver) == min_ver and \
+       get_older_version(mg5_ver, max_ver) == mg5_ver:
+        plugin_support[name] = True
+        if get_older_version(mg5_ver, val_ver) == val_ver:
+            logger.warning("""Plugin %s has marked as NOT being validated with this version. 
+It has been validated for the last time with version: %s""",
+                                        name, '.'.join(str(i) for i in val_ver))
+    else:
+        logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
+        plugin_support[name] = False
+    return plugin_support[name]
+    
+
+#decorator
+def set_global(loop=False, unitary=True, mp=False, cms=False):
+    from functools import wraps
+    import aloha
+    import aloha.aloha_lib as aloha_lib
+    def deco_set(f):
+        @wraps(f)
+        def deco_f_set(*args, **opt):
+            old_loop = aloha.loop_mode
+            old_gauge = aloha.unitary_gauge
+            old_mp = aloha.mp_precision
+            old_cms = aloha.complex_mass
+            aloha.loop_mode = loop
+            aloha.unitary_gauge = unitary
+            aloha.mp_precision = mp
+            aloha.complex_mass = cms
+            aloha_lib.KERNEL.clean()
+            try:
+                out =  f(*args, **opt)
+            except:
+                aloha.loop_mode = old_loop
+                aloha.unitary_gauge = old_gauge
+                aloha.mp_precision = old_mp
+                aloha.complex_mass = old_cms
+                raise
+            aloha.loop_mode = old_loop
+            aloha.unitary_gauge = old_gauge
+            aloha.mp_precision = old_mp
+            aloha.complex_mass = old_cms
+            aloha_lib.KERNEL.clean()
+            return out
+        return deco_f_set
+    return deco_set
+   
+    
+    
+
+
+
+
+python_lhapdf=None
+def import_python_lhapdf(lhapdfconfig):
+    """load the python module of lhapdf return None if it can not be loaded"""
+
+    #save the result to have it faster and avoid the segfault at the second try if lhapdf is not compatible
+    global python_lhapdf
+    if python_lhapdf:
+        if python_lhapdf == -1:
+            return None
+        else:
+            return python_lhapdf
+        
+    use_lhapdf=False
+    try:
+        lhapdf_libdir=subprocess.Popen([lhapdfconfig,'--libdir'],\
+                                           stdout=subprocess.PIPE).stdout.read().strip()
+    except:
+        use_lhapdf=False
+        return False
+    else:
+        try:
+            candidates=[dirname for dirname in os.listdir(lhapdf_libdir) \
+                            if os.path.isdir(os.path.join(lhapdf_libdir,dirname))]
+        except OSError:
+            candidates=[]
+        for candidate in candidates:
+            if os.path.isfile(os.path.join(lhapdf_libdir,candidate,'site-packages','lhapdf.so')):
+                sys.path.insert(0,os.path.join(lhapdf_libdir,candidate,'site-packages'))
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                    break
+                except ImportError:
+                    sys.path.pop(0)
+                    continue
+    if not use_lhapdf:
+        try:
+            candidates=[dirname for dirname in os.listdir(lhapdf_libdir+'64') \
+                            if os.path.isdir(os.path.join(lhapdf_libdir+'64',dirname))]
+        except OSError:
+            candidates=[]
+        for candidate in candidates:
+            if os.path.isfile(os.path.join(lhapdf_libdir+'64',candidate,'site-packages','lhapdf.so')):
+                sys.path.insert(0,os.path.join(lhapdf_libdir+'64',candidate,'site-packages'))
+                try:
+                    import lhapdf
+                    use_lhapdf=True
+                    break
+                except ImportError:
+                    sys.path.pop(0)
+                    continue
+        if not use_lhapdf:
+            try:
+                import lhapdf
+                use_lhapdf=True
+            except ImportError:
+                print 'fail'
+                logger.warning("Failed to access python version of LHAPDF: "\
+                                   "If the python interface to LHAPDF is available on your system, try "\
+                                   "adding its location to the PYTHONPATH environment variable and the"\
+                                   "LHAPDF library location to LD_LIBRARY_PATH (linux) or DYLD_LIBRARY_PATH (mac os x).")
+        
+    if use_lhapdf:
+        python_lhapdf = lhapdf
+        python_lhapdf.setVerbosity(0)
+    else:
+        python_lhapdf = None
+    return python_lhapdf
