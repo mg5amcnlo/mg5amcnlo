@@ -92,6 +92,8 @@ class ReweightInterface(extended_cmd.Cmd):
         self.second_model = None
         self.second_process = None
         self.mg5cmd = master_interface.MasterCmd()
+        if mother:
+            self.mg5cmd.options.update(mother.options)
         self.seed = None
         self.output_type = "default"
         self.helicity_reweighting = True

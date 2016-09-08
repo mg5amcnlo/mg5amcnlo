@@ -96,9 +96,9 @@ c     Set stot
          if (abs(lpp(1)) .eq. 3) m1 = 0.000511d0
          if (abs(lpp(2)) .eq. 3) m2 = 0.000511d0
          pi1(0)=ebeam(1)
-         pi1(3)=sqrt(ebeam(1)**2-m1**2)
+         pi1(3)=sqrt(max(ebeam(1)**2-m1**2,0d0))
          pi2(0)=ebeam(2)
-         pi2(3)=-sqrt(ebeam(2)**2-m2**2)
+         pi2(3)=-sqrt(max(ebeam(2)**2-m2**2,0d0))
          stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
       endif
 

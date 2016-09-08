@@ -2187,13 +2187,13 @@ class TestFKSCommon(unittest.TestCase):
         """ for the mssm, the soft_particles should be the same as for the sm"""
         # QCD
         dict_mssm = fks_common.find_pert_particles_interactions(\
-                import_ufo.import_model('mssm'),'QCD')
+                import_ufo.import_model('MSSM_SLHA2'),'QCD')
         dict_sm = fks_common.find_pert_particles_interactions(\
                 import_ufo.import_model('sm'),'QCD')
         self.assertEqual(dict_sm['soft_particles'], dict_mssm['soft_particles'])
         # QED
         dict_mssm = fks_common.find_pert_particles_interactions(\
-                import_ufo.import_model('mssm'),'QED')
+                import_ufo.import_model('MSSM_SLHA2'),'QED')
         dict_sm = fks_common.find_pert_particles_interactions(\
                 import_ufo.import_model('sm'),'QED')
         self.assertEqual(dict_sm['soft_particles'], dict_mssm['soft_particles'])

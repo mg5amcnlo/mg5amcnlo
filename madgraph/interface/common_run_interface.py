@@ -37,7 +37,6 @@ import sys
 import time
 import traceback
 import glob
-import sets
 import StringIO
 
 try:
@@ -624,8 +623,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         # Define current MadEvent directory
         if me_dir is None and MADEVENT:
             me_dir = root_path
-
-        self.me_dir = me_dir
+        
+        if os.path.isabs(me_dir):
+            self.me_dir = me_dir
+        else:
+            self.me_dir = pjoin(os.getcwd(),me_dir)
+            
         self.options = options
         
         self.param_card_iterator = [] #an placeholder containing a generator of paramcard for scanning
@@ -1488,7 +1491,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             logger.info('can not run systematics since can not link python to lhapdf')
             return
     
-        self.update_status('Running Systematic computation', level='parton')
+        self.update_status('Running Systematics computation', level='parton')
         args = self.split_arg(line)
         #split arguments and option
         opts= []
@@ -1541,9 +1544,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         lhaid = [self.run_card.get_lhapdf_id()]
         if 'store_rwgt_info' in self.run_card and not self.run_card['store_rwgt_info']:
             raise self.InvalidCmd,  "The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event file."
-        elif 'use_syst'  in self.run_card and not self.run_card['use_syst']:
-            raise self.InvalidCmd,  "The events was not generated with use_syst=True. Can not evaluate systematics error on this event file."
-        
+        elif 'use_syst'  in self.run_card:
+            if not self.run_card['use_syst']:
+                raise self.InvalidCmd,  "The events was not generated with use_syst=True. Can not evaluate systematics error on this event file."
+            elif self.proc_characteristics['ninitial'] ==1:
+                if '--from_card' in opts:
+                    logger.warning('systematics not available for decay processes. Bypass it')
+                    return
+                else:
+                    raise self.InvalidCmd, 'systematics not available for decay processes.'
+                
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
         except Exception, error:
@@ -2470,8 +2480,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                     'madanalysis5_%s_card.dat'%mode), mode=mode)
 
         if MA5_card._skip_analysis:
-            logger.warning('Madanalysis5 %s-level analysis was skipped following user request.'%mode)
-            logger.warning("To run the analysis, remove or comment the tag '%s skip_analysis' "
+            logger.info('Madanalysis5 %s-level analysis was skipped following user request.'%mode)
+            logger.info("To run the analysis, remove or comment the tag '%s skip_analysis' "
                 %banner_mod.MadAnalysis5Card._MG5aMC_escape_tag+
                 "in\n  '%s'."%pjoin(self.me_dir, 'Cards','madanalysis5_%s_card.dat'%mode))
             return
@@ -3448,7 +3458,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
 
         #return valid run_name
         data = misc.glob(pjoin('*','*events.lhe*'), pjoin(self.me_dir, 'Events'))
-        data = [n.rsplit('/',2)[1] for n in data]
+        data = list(set([n.rsplit('/',2)[1] for n in data]))
         if not '-f' in args:
             data.append('-f')
         tmp1 =  self.list_completion(text, data)
@@ -3528,7 +3538,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     else:
                         need_keys.remove(key)
                 else: 
-                    misc.sprint("end on line", line)
                     make_opts_variable = False
                     content.append(line)
             else:                  
@@ -3853,14 +3862,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     all_card_name = ['param_card', 'run_card', 'pythia_card', 'pythia8_card', 
                      'madweight_card', 'MadLoopParams', 'shower_card']
 
-    special_shortcut = {'ebeam':['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s'],
-                        'lpp': ['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ],
-                        'lhc': ['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
-                        'lep': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
-                        'ilc': ['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2'],
-                        'lcc':['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2'],
-                        'fixed_scale': ['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s'],
-                        'simplepy8':['pythia8_card hadronlevel:all False',
+    special_shortcut = {'ebeam':([float],['run_card ebeam1 %(0)s', 'run_card ebeam2 %(0)s']),
+                        'lpp': ([int],['run_card lpp1 %(0)s', 'run_card lpp2 %(0)s' ]),
+                        'lhc': ([int],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
+                        'lep': ([int],['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2']),
+                        'ilc': ([int],['run_card lpp1 0', 'run_card lpp2 0', 'run_card ebeam1 %(0)s/2', 'run_card ebeam2 %(0)s/2']),
+                        'lcc': ([int],['run_card lpp1 1', 'run_card lpp2 1', 'run_card ebeam1 %(0)s*1000/2', 'run_card ebeam2 %(0)s*1000/2']),
+                        'fixed_scale': ([float],['run_card fixed_fac_scale T', 'run_card fixed_ren_scale T', 'run_card scale %(0)s', 'run_card dsqrt_q2fact1 %(0)s' ,'run_card dsqrt_q2fact2 %(0)s']),
+                        'simplepy8':([],['pythia8_card hadronlevel:all False',
                                      'pythia8_card partonlevel:mpi False',
                                      'pythia8_card BeamRemnants:primordialKT False',
                                      'pythia8_card PartonLevel:Remnants False',
@@ -3870,7 +3879,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                                      'pythia8_card SpaceShower:QEDshowerByQ False',
                                      'pythia8_card SpaceShower:QEDshowerByL False',
                                      'pythia8_card PartonLevel:FSRinResonances False',
-                                     'pythia8_card ProcessLevel:resonanceDecays False']
+                                     'pythia8_card ProcessLevel:resonanceDecays False',
+                                     ]),
+                        'mpi':([bool],['pythia8_card partonlevel:mpi %(0)s'])
                         }
 
     special_shortcut_help = {              
@@ -3885,7 +3896,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     'lhc'   : 'syntax: set lhc VALUE:\n      Set for a proton-proton collision with that given center of mass energy (in TeV)',
     'lep'   : 'syntax: set lep VALUE:\n      Set for a electron-positron collision with that given center of mass energy (in GeV)',
     'fixed_scale' : 'syntax: set fixed_scale VALUE:\n      Set all scales to the give value (in GeV)',
-    'simplepy8' : 'syntax: Turn off non-perturbative slow features of PY8.'           
+    'simplepy8' : 'Turn off non-perturbative slow features of Pythia8.'
+    'mpi' : 'syntax: set mpi value: allow to turn mpi in Pythia8 on/off'         
     }
     
     def load_default(self):
@@ -4074,8 +4086,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.PY8Card = banner_mod.PY8Card(self.paths['PY8'])
             self.PY8CardDefault = banner_mod.PY8Card()
             
-            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
-                                     k.lower() not in self.PY8Card.hidden_param]
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys()]
             # check for conflict
             for var in self.py8_vars:
                 if var in self.run_card:
@@ -4490,23 +4501,25 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         args[:-1] = [ a.lower() for a in args[:-1]]
         # special shortcut:
         if args[0] in self.special_shortcut:
-            if len(args) == 1:
-                values = {}
-            elif len(args) == 2: 
-                targettype = float
-                if args[1].strip().isdigit():
-                    targettype = int
-                 
-                try:  
-                    values = {'0': targettype(args[1])}
-                except ValueError as e:
-                    logger.warning("Wrong argument: The last entry should be a number.")
+            targettypes , cmd = self.special_shortcut[args[0]]
+            if len(args) != len(targettypes) +1:
+                logger.warning('shortcut %s requires %s argument' % (args[0], len(targettypes)))
+                if len(args) < len(targettypes) +1:
                     return
-            else:
-                logger.warning("too many argument for this command")
-                return
+                else:
+                    logger.warning('additional argument will be ignored')
+            values ={}
+            for i, argtype in enumerate(targettypes):           
+                try:  
+                    values = {str(i): banner_mod.ConfigFile.format_variable(args[i+1], argtype, args[0])}
+                except ValueError as e:
+                    logger.warning("Wrong argument: The entry #%s should be of type %s.", i+1, argtype)
+                    return
+            #else:
+            #    logger.warning("too many argument for this command")
+            #    return
             
-            for arg in self.special_shortcut[args[0]]:
+            for arg in cmd:
                 try:
                     text = arg % values
                 except KeyError:
@@ -4888,6 +4901,16 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         #INVALID --------------------------------------------------------------
         else:      
             logger.warning('invalid set command %s ' % line)
+            arg = args[start].lower()
+            if self.has_PY8:   
+                close_opts = [name for name in self.PY8Card if name.lower().startswith(arg[:3]) or arg in name.lower()]
+                if close_opts:
+                    logger.info('Did you mean one of the following PY8 options:\n%s' % '\t'.join(close_opts))
+            if self.run_card:
+                close_opts = [name for name in self.run_card if name.lower().startswith(arg[:3]) or arg in name.lower()]
+                if close_opts:
+                    logger.info('Did you mean one of the following run_card options:\n%s' % '\t'.join(close_opts))
+                
             return
 
     def setM(self, block, name, value):
@@ -5512,8 +5535,7 @@ You can also copy/paste, your event file here.''')
                 self.PY8Card = banner_mod.PY8Card(self.paths['PY8_default'])
 
             self.PY8Card.read(self.paths['PY8'], setter='user')
-            self.py8_vars = [k.lower() for k in self.PY8Card.keys() if 
-                                     k.lower() not in self.PY8Card.hidden_param]
+            self.py8_vars = [k.lower() for k in self.PY8Card.keys()]
         elif path == self.paths['MadWeight']:
             try:
                 import madgraph.madweight.Cards as mwcards

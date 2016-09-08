@@ -384,7 +384,7 @@ class EventFile(object):
                     max_wgt = max(min_max_wgt, needed_max_wgt)
                     max_wgt = min(max_wgt, all_wgt[-1])
                     if max_wgt == last_max_wgt:
-                        if nb_keep <= event_target:
+                        if nb_keep <= event_target and log_level>=10:
                             logger.log(log_level+10,"fail to reach target %s", event_target)
                             break   
                         else:
@@ -915,7 +915,7 @@ class MultiEventFile(EventFile):
         event_target reweight for that many event with maximal trunc_error.
         (stop to write event when target is reached)
         """
-        
+
         if isinstance(get_wgt, str):
             unwgt_name =get_wgt 
             def get_wgt_multi(event):
@@ -944,9 +944,8 @@ class MultiEventFile(EventFile):
             self.define_init_banner(new_wgt, strategy)
             self.written_weight = new_wgt
         elif 'write_init' in opts and opts['write_init']:
-            self.define_init_banner(0)
+            self.define_init_banner(0,0)
             del opts['write_init']
-
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
     def write(self, path, random=False, banner=None, get_info=False):

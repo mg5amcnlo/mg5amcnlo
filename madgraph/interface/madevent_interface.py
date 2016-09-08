@@ -3186,7 +3186,7 @@ Beware that this can be dangerous for local multicore runs.""")
                     
                     if len(AllEvent) >= 80: #perform a partial unweighting
                         AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
-                              get_wgt, log_level=logging.DEBUG, write_init=True)
+                              get_wgt, log_level=5,  trunc_error=1e-2, event_target=self.run_card['nevents'])
                         AllEvent = lhe_parser.MultiEventFile()
                         AllEvent.banner = self.banner
                         AllEvent.add(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),
@@ -3202,8 +3202,11 @@ Beware that this can be dangerous for local multicore runs.""")
             if partials:
                 misc.sprint("used partials")
                 for i in range(partials):
-                    os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
-            
+                    try:
+                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
+                    except Exception:
+                        os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe" % i))
+                       
             self.results.add_detail('nb_event', nb_event)
         
         if self.run_card['bias_module'].lower() not in  ['dummy', 'none']:

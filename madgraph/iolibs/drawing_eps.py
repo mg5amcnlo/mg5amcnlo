@@ -552,7 +552,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                     continue
                 norm = math.sqrt(new_direction[0]**2+new_direction[1]**2)
                 new_direction = (new_direction[0]/norm, new_direction[1]/norm)
-                misc.sprint(new_direction)
                 if not direction:
                     direction = new_direction
                 else:

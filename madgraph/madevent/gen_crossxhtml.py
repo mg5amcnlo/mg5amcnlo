@@ -1419,6 +1419,8 @@ class OneTagResults(dict):
             if not first:
                 if ttype == 'reweight':
                     template = sub_part_template_reweight
+                elif ttype=='pythia8' and self['cross_pythia'] == -1:
+                    template = sub_part_template_py8
                 else:
                     template = sub_part_template_parton
                 first = ttype

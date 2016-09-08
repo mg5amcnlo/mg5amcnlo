@@ -34,6 +34,7 @@ import mg5decay.decay_objects as decay_objects
 import tests.input_files.import_vertexlist as import_vertexlist
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.various.diagram_symmetry as diagram_symmetry
+import madgraph.various.misc as misc
 
 
 _file_path = os.path.split(os.path.dirname(os.path.realpath(__file__)))[0]
@@ -645,20 +646,28 @@ class Test_DecayParticleList(unittest.TestCase):
         for num, part in decay_partlist.generate_dict().items():
             self.assertTrue(isinstance(part, decay_objects.DecayParticle))
 
-
 #===============================================================================
 # TestDecayModel
 #===============================================================================
-class Test_DecayModel(unittest.TestCase):
+class Test_DecayModel2(unittest.TestCase):
     """Test class for the DecayModel object"""
+
 
     def setUp(self):
         """Set up decay model"""
         
-        if not hasattr(Test_DecayModel, 'base_model'):
-            Test_DecayModel.base_model = import_ufo.import_model('mssm')
-            Test_DecayModel.my_testmodel_base = import_ufo.import_model('sm')
-        
+        start = time.time()
+        if not hasattr(Test_DecayModel2, 'base_model'):
+            if hasattr(Test_DecayModel, 'base_model'):
+                Test_DecayModel2.base_model = Test_DecayModel.base_model
+                Test_DecayModel2.my_testmodel_base = Test_DecayModel.my_testmodel_base
+            else:
+                Test_DecayModel2.base_model = import_ufo.import_model('MSSM_SLHA2')
+                Test_DecayModel2.my_testmodel_base = import_ufo.import_model('sm')
+
+        #if hasattr(Test_DecayModel2,'my_testmodel'):
+        #    return
+
         #Full SM DecayModel
         self.decay_model = decay_objects.DecayModel(self.base_model, True)
 
@@ -689,39 +698,7 @@ class Test_DecayModel(unittest.TestCase):
         self.my_testmodel.set('interactions', interactions)
 
         import_vertexlist.make_vertexlist(self.my_testmodel)
-
-        #import madgraph.iolibs.export_v4 as export_v4
-        #writer = export_v4.UFO_model_to_mg4(self.base_model,'temp')
-        #writer.build()
-
-    def test_read_param_card(self):
-        """Test reading a param card"""
-        param_path = os.path.join(_file_path, '../input_files/param_card_mssm.dat')
-        self.decay_model.read_param_card(os.path.join(param_path))
-
-        for param in sum([self.base_model.get('parameters')[key] for key \
-                              in self.base_model.get('parameters')], []):
-            if param.name:
-                value = eval("decay_objects.%s" % param.name)
-                self.assertTrue(isinstance(value, int) or \
-                                    isinstance(value, float) or \
-                                    isinstance(value, complex))
-
-    def test_setget(self):
-        """ Test the set and get for special properties"""
-
-        self.my_testmodel.set('vertexlist_found', True)
-        self.assertEqual(self.my_testmodel.get('vertexlist_found'), True)
-
-        self.my_testmodel.set('vertexlist_found', False)
-        self.assertRaises(self.my_testmodel.PhysicsObjectError,
-                          self.my_testmodel.filter, 'max_vertexorder', 'a')
-        self.assertRaises(self.my_testmodel.PhysicsObjectError,
-                          self.my_testmodel.filter, 'stable_particles', 
-                          [self.my_testmodel.get('particles'), ['a']])
-        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
-                          self.my_testmodel.filter, 'vertexlist_found', 4)
-                          
+        #Test_DecayModel2.my_testmodel = self.my_testmodel        
 
     def test_particles_type(self):
         """Test if the DecayModel can convert the assign particle into
@@ -770,7 +747,98 @@ class Test_DecayModel(unittest.TestCase):
 
         # Test if the particls in interaction is converted to DecayParticle
         self.assertTrue(isinstance(self.decay_model['interactions'][-1]['particles'], decay_objects.DecayParticleList))
-                        
+           
+    def test_read_param_card(self):
+        """Test reading a param card"""
+        param_path = os.path.join(_file_path, '../input_files/param_card_mssm.dat')
+        self.decay_model.read_param_card(os.path.join(param_path))
+
+        for param in sum([self.base_model.get('parameters')[key] for key \
+                              in self.base_model.get('parameters')], []):
+            if param.name:
+                value = eval("decay_objects.%s" % param.name)
+                self.assertTrue(isinstance(value, int) or \
+                                    isinstance(value, float) or \
+                                    isinstance(value, complex))
+
+
+#===============================================================================
+# TestDecayModel
+#===============================================================================
+class Test_DecayModel(unittest.TestCase):
+    """Test class for the DecayModel object"""
+
+
+    def setUp(self):
+        """Set up decay model"""
+        
+        start = time.time()
+        if not hasattr(Test_DecayModel, 'base_model'):
+            if hasattr(Test_DecayModel, 'base_model'):
+                Test_DecayModel.base_model = Test_DecayModel2.base_model
+                Test_DecayModel.my_testmodel_base = Test_DecayModel2.my_testmodel_base
+            else:
+                Test_DecayModel.base_model = import_ufo.import_model('MSSM_SLHA2')
+                Test_DecayModel.my_testmodel_base = import_ufo.import_model('sm')
+        
+        if hasattr(Test_DecayModel,'my_testmodel'):
+            return
+        
+        #Full SM DecayModel
+        self.decay_model = decay_objects.DecayModel(self.base_model, True)
+
+        #My_small sm DecayModel
+        self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base, True)
+        param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')
+        self.my_testmodel.read_param_card(param_path)
+
+        # Simplify the model
+        particles = self.my_testmodel.get('particles')
+        interactions = self.my_testmodel.get('interactions')
+        inter_list = copy.copy(interactions)
+        no_want_pid = [1, 2, 3, 4, 13, 14, 15, 16, 21, 23, 25]
+        for pid in no_want_pid:
+            particles.remove(self.my_testmodel.get_particle(pid))
+
+        for particle in particles:
+            particle.set('charge', 0)
+
+        for inter in inter_list:
+            if any([p.get('pdg_code') in no_want_pid for p in \
+                        inter.get('particles')]):
+                interactions.remove(inter)
+
+        # Set a new name
+        self.my_testmodel.set('name', 'my_smallsm')
+        self.my_testmodel.set('particles', particles)
+        self.my_testmodel.set('interactions', interactions)
+
+        import_vertexlist.make_vertexlist(self.my_testmodel)
+
+        #import madgraph.iolibs.export_v4 as export_v4
+        #writer = export_v4.UFO_model_to_mg4(self.base_model,'temp')
+        #writer.build()
+        Test_DecayModel.my_testmodel = self.my_testmodel
+        
+
+    def test_setget(self):
+        """ Test the set and get for special properties"""
+
+        start = time.time()
+        self.my_testmodel.set('vertexlist_found', True)
+        self.assertEqual(self.my_testmodel.get('vertexlist_found'), True)
+
+        self.my_testmodel.set('vertexlist_found', False)
+        self.assertRaises(self.my_testmodel.PhysicsObjectError,
+                          self.my_testmodel.filter, 'max_vertexorder', 'a')
+        self.assertRaises(self.my_testmodel.PhysicsObjectError,
+                          self.my_testmodel.filter, 'stable_particles', 
+                          [self.my_testmodel.get('particles'), ['a']])
+        self.assertRaises(decay_objects.DecayModel.PhysicsObjectError,
+                          self.my_testmodel.filter, 'vertexlist_found', 4)
+                          
+
+             
 
     def test_find_vertexlist(self):
         """Test of the find_vertexlist"""
@@ -871,7 +939,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         decay_mssm = decay_objects.DecayModel(mssm, True)
         decay_mssm.find_decay_groups()
         goal_groups = [[25, 35, 36, 37],
@@ -885,7 +953,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_modified_mssm(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         particles = mssm.get('particles')
         no_want_particle_codes = [1000022, 1000023, 1000024, -1000024, 
                                   1000025, 1000035, 1000037, -1000037]
@@ -927,7 +995,7 @@ class Test_DecayModel(unittest.TestCase):
     def test_find_mssm_decay_groups_general(self):
         """Test finding the decay groups of the MSSM"""
 
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         decay_mssm = decay_objects.DecayModel(mssm, True)
         # Read data to find massless SM-like particle
         param_path = os.path.join(_file_path,
@@ -964,7 +1032,7 @@ class Test_DecayModel(unittest.TestCase):
            Test to get decay_groups and stable_particles from get."""
 
         # Setup the mssm with parameters read in.
-        mssm = import_ufo.import_model('mssm')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
         decay_mssm = decay_objects.DecayModel(mssm, True)
         particles = decay_mssm.get('particles')
         param_path = os.path.join(_file_path,
@@ -1271,7 +1339,7 @@ class Test_DecayModel(unittest.TestCase):
 
 
         # Read mssm
-        model_base = import_ufo.import_model('mssm')
+        model_base = import_ufo.import_model('MSSM_SLHA2')
         model = decay_objects.DecayModel(model_base, True)
         param_path = os.path.join(_file_path,'../input_files/param_card_mssm.dat')
         model.read_param_card(param_path)
@@ -2098,8 +2166,8 @@ class Test_Channel(unittest.TestCase):
 
 
         """ Test on MSSM, to get a feeling on the execution time. """        
-        mssm = import_ufo.import_model('mssm')
-        param_path = os.path.join(_file_path,'../../models/mssm/restrict_default.dat')
+        mssm = import_ufo.import_model('MSSM_SLHA2')
+        param_path = os.path.join(_file_path,'../../models/MSSM_SLHA2/restrict_default.dat')
         decay_mssm = decay_objects.DecayModel(mssm, force=True)
         decay_mssm.read_param_card(param_path)
         
@@ -2402,7 +2470,7 @@ class Test_Channel(unittest.TestCase):
 
 
         """ MSSM test
-        model_base = import_ufo.import_model('mssm')
+        model_base = import_ufo.import_model('MSSM_SLHA2')
         param_path = os.path.join(_file_path,
         '../input_files/param_card_mssm.dat')
         model = decay_objects.DecayModel(model_base, force=True)
@@ -2461,7 +2529,7 @@ class Test_Channel(unittest.TestCase):
             2. the apx_decaywidth_nextlevel comes from the right level."""
 
         # Options for the test
-        model_name = 'mssm'
+        model_name = 'MSSM_SLHA2'
         test_param_card = False
         test_param_card_suffix = 'test1'
         smart_find = False
@@ -2495,7 +2563,7 @@ class Test_Channel(unittest.TestCase):
             model.find_all_channels(channel_number)
 
         # Read MG4 param_card
-        if model_name == "mssm":
+        if model_name == "MSSM_SLHA2":
             if test_param_card:
                 MG4_param_path = os.path.join(_file_path,
                                               '../input_files/param_card_test1.dat')
@@ -2609,13 +2677,17 @@ class Test_Channel(unittest.TestCase):
 class Test_IdentifyHelasTag(unittest.TestCase):
     """ Test for IdentifyHelasTag, and all the related functions. """
 
-    my_testmodel_base = import_ufo.import_model('sm')
+
+    @classmethod
+    def modelsetup(cls):
+        if not hasattr(cls, 'my_testmodel_base'):        
+            cls.my_testmodel_base = import_ufo.import_model('sm')
     my_channel = decay_objects.Channel()
     h_tt_bbmmvv = decay_objects.Channel()
 
     def setUp(self):
         """ Set up necessary objects for the test"""
-
+        Test_IdentifyHelasTag.modelsetup()
         #Import a model from my_testmodel
         self.my_testmodel = decay_objects.DecayModel(self.my_testmodel_base, True)
         param_path = os.path.join(_file_path,'../input_files/param_card_sm.dat')

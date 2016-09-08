@@ -340,7 +340,8 @@ c     Determine minimum target weight given truncation parameter
 c
       xsum = 0d0
       i = nw
-      do while (xsum-dabs(swgt(i))*(nw-i) .lt. xtot*trunc_max .and. i .gt. 2)
+      do while (xsum-dabs(swgt(i))*(nw-i) .lt. xtot*trunc_max
+     $ .and. i .gt. 2)
          xsum = xsum + dabs(swgt(i))
          i = i-1
       enddo

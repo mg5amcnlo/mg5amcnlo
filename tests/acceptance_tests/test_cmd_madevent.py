@@ -106,7 +106,7 @@ class TestMECmdShell(unittest.TestCase):
             p = subprocess.Popen([pjoin(MG5DIR,'bin','mg5')],
                              stdin=subprocess.PIPE,
                              stdout=stdout,stderr=stderr)
-            out = p.communicate('install MadAnalysis')
+            out = p.communicate('install MadAnalysis4')
         misc.compile(cwd=pjoin(MG5DIR,'MadAnalysis'))
 
         if not misc.which('root'):

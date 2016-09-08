@@ -571,23 +571,23 @@ class TestCmdShell2(unittest.TestCase,
         if os.path.isdir(self.out_dir):
             shutil.rmtree(self.out_dir)
 
-        self.do('import model mssm-full')
+        self.do('import model MSSM_SLHA2-full')
         self.do('generate g g > go go QED=2')
         self.do('output standalone_cpp %s ' % self.out_dir)
         devnull = open(os.devnull,'w')
     
-        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_Sigma_mssm_full_gg_gogo',
+        logfile = os.path.join(self.out_dir,'SubProcesses', 'P0_Sigma_MSSM_SLHA2_full_gg_gogo',
                                'check.log')
         # Check that check_sa.cc compiles
         subprocess.call(['make'],
                         stdout=devnull, stderr=devnull, 
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_mssm_full_gg_gogo'))
+                                         'P0_Sigma_MSSM_SLHA2_full_gg_gogo'))
         
         subprocess.call('./check', 
                         stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
                         cwd=os.path.join(self.out_dir, 'SubProcesses',
-                                         'P0_Sigma_mssm_full_gg_gogo'), shell=True)
+                                         'P0_Sigma_MSSM_SLHA2_full_gg_gogo'), shell=True)
     
         log_output = open(logfile, 'r').read()
         me_re = re.compile('Matrix element\s*=\s*(?P<value>[\d\.eE\+-]+)\s*GeV',
@@ -1426,7 +1426,7 @@ P1_qq_wp_wp_lvl
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
         self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)
         self.do('save model /tmp/model.pkl')
-        self.do('import model mssm-full')
+        self.do('import model MSSM_SLHA2-full')
         self.do('load model /tmp/model.pkl')
         self.assertEqual(len(self.cmd._curr_model.get('particles')), 17)
         self.assertEqual(len(self.cmd._curr_model.get('interactions')), 56)

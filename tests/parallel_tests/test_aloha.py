@@ -445,7 +445,7 @@ class TestAddVariable(unittest.TestCase):
         
     def test_short_replace(self):
         """test that the replace command works"""
-        
+
         id = self.var1.get_id()
         new = self.add1.replace(id, self.add2)
         
@@ -3420,7 +3420,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
     def test_short_mssm_subset_creation(self):
         """ test the creation of subpart of ALOHA routines 
         including clash routines """
-        helas_suite = create_aloha.AbstractALOHAModel('mssm')
+        helas_suite = create_aloha.AbstractALOHAModel('MSSM_SLHA2')
         
         requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1',), (), 2),
@@ -3455,7 +3455,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
 
     def test_short_aloha_FFVC(self):
         """ test the FFV creation of vertex """
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
 
         FFV = Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
@@ -3478,7 +3478,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         """Test analytical expression for four fermion (provide by Tim M).
         it's particularity is about to have contraction A and 4*A """
         
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         FFFF = Lorentz(name = 'FFFF3',
                  spins = [ 2, 2, 2, 2 ],
                  structure = 'Gamma(-2,-4,3)*Gamma(-2,-3,1)*Gamma(-1,2,-3)*Gamma(-1,4,-4) - Gamma(-1,-2,3)*Gamma(-1,4,-2)*Identity(1,2) - Gamma(-1,-2,1)*Gamma(-1,2,-2)*Identity(3,4) + 4*Identity(1,2)*Identity(3,4)')
@@ -3513,7 +3513,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         
         
         aloha_lib.KERNEL.clean()
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         VVS1 = Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],
                  structure = 'P(1,1)*P(2,1) - P(-1,1)**2*Metric(1,2)')
@@ -3574,7 +3574,7 @@ end
     def test_short_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         FFV = Lorentz(name = 'FFV2',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
@@ -3626,7 +3626,7 @@ end
     def test_short_aloha_expr_FFFF(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         FFFF = Lorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
                 structure = 'Identity(2,1)*Identity(4,3)')
