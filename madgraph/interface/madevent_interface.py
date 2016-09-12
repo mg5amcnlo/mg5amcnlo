@@ -3462,19 +3462,27 @@ Beware that this can be dangerous for local multicore runs.""")
     Consider installing the MG5_aMC-PY8 interface with the following command:
      MG5_aMC>install mg5amc_py8_interface
     """
-        
+       
+        mg5amc_py8_interface_path = options['mg5amc_py8_interface_path']
+        py8_path                  = options['pythia8_path']
+        # If the specified interface path is relative, make it absolut w.r.t MGDIR if
+        # avaialble.
+        if not MADEVENT:
+            mg5amc_py8_interface_path = pjoin(MG5DIR,mg5amc_py8_interface_path)
+            py8_path                  = pjoin(MG5DIR,py8_path)
+
         # Retrieve all the on-install and current versions  
-        MG5_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+        MG5_version_on_install = open(pjoin(mg5amc_py8_interface_path,
                            'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
         if MG5_version_on_install == 'UNSPECIFIED':
             MG5_version_on_install = None
-        PY8_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+        PY8_version_on_install = open(pjoin(mg5amc_py8_interface_path,
                               'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
         MG5_curr_version =misc.get_pkg_info()['version']
         try:
-            p = subprocess.Popen(['./get_pythia8_version.py',pjoin(MG5DIR,options['pythia8_path'])],
+            p = subprocess.Popen(['./get_pythia8_version.py',py8_path],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                                       cwd=pjoin(MG5DIR,options['mg5amc_py8_interface_path']))
+                             cwd=mg5amc_py8_interface_path)
             (out, err) = p.communicate()
             out = out.replace('\n','')
             PY8_curr_version = out
