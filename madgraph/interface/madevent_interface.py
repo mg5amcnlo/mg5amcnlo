@@ -4032,7 +4032,6 @@ tar -czf split_$1.tar.gz split_$1
                 
                 # Now merge logs
                 pythia_log_file = open(pythia_log,'w')
-                
                 n_added = 0
                 for split_dir in split_dirs:
                     log_file = pjoin(split_dir,'PY8_log.txt')
@@ -4059,7 +4058,8 @@ tar -czf split_$1.tar.gz split_$1
                            PY8_extracted_information['Ntry'] += Ntry
                 # Normalize the values added
                 if n_added>0:
-                    PY8_extracted_information['sigma_m'] /= float(n_added)               
+                    PY8_extracted_information['sigma_m'] /= float(n_added)
+                pythia_log_file.close()
                 
                 # djr plots
                 djr_HwU = None
@@ -4171,9 +4171,9 @@ tar -czf split_$1.tar.gz split_$1
         if os.path.isfile(pt_output):
             shutil.move(pt_output, pjoin(self.me_dir,'Events',
                                             self.run_name, '%s_pts.dat' % tag))
-            
+
         if not os.path.isfile(pythia_log) or \
-             'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[:-20]):
+             'Inclusive cross section:' not in '\n'.join(open(pythia_log,'r').readlines()[-20:]):
             logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
             return
         
