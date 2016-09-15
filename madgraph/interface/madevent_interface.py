@@ -3893,7 +3893,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 elif self.options['run_mode']==1:
                     min_n_events_per_job = 1000                   
                 min_n_core = n_events//min_n_events_per_job
-                n_cores = min(min_n_core,n_cores)
+                n_cores = max(min(min_n_core,n_cores),1)
 
             if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                 # No need for parallelization anymore
