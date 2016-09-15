@@ -3462,19 +3462,27 @@ Beware that this can be dangerous for local multicore runs.""")
     Consider installing the MG5_aMC-PY8 interface with the following command:
      MG5_aMC>install mg5amc_py8_interface
     """
-        
+       
+        mg5amc_py8_interface_path = options['mg5amc_py8_interface_path']
+        py8_path                  = options['pythia8_path']
+        # If the specified interface path is relative, make it absolut w.r.t MGDIR if
+        # avaialble.
+        if not MADEVENT:
+            mg5amc_py8_interface_path = pjoin(MG5DIR,mg5amc_py8_interface_path)
+            py8_path                  = pjoin(MG5DIR,py8_path)
+
         # Retrieve all the on-install and current versions  
-        MG5_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+        MG5_version_on_install = open(pjoin(mg5amc_py8_interface_path,
                            'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
         if MG5_version_on_install == 'UNSPECIFIED':
             MG5_version_on_install = None
-        PY8_version_on_install = open(pjoin(MG5DIR,options['mg5amc_py8_interface_path'],
+        PY8_version_on_install = open(pjoin(mg5amc_py8_interface_path,
                               'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
         MG5_curr_version =misc.get_pkg_info()['version']
         try:
-            p = subprocess.Popen(['./get_pythia8_version.py',pjoin(MG5DIR,options['pythia8_path'])],
+            p = subprocess.Popen(['./get_pythia8_version.py',py8_path],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
-                                       cwd=pjoin(MG5DIR,options['mg5amc_py8_interface_path']))
+                             cwd=mg5amc_py8_interface_path)
             (out, err) = p.communicate()
             out = out.replace('\n','')
             PY8_curr_version = out
@@ -3885,7 +3893,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                 elif self.options['run_mode']==1:
                     min_n_events_per_job = 1000                   
                 min_n_core = n_events//min_n_events_per_job
-                n_cores = min(min_n_core,n_cores)
+                n_cores = max(min(min_n_core,n_cores),1)
 
             if self.options['run_mode']==0 or (self.options['run_mode']==2 and self.options['nb_core']==1):
                 # No need for parallelization anymore
@@ -4024,7 +4032,6 @@ tar -czf split_$1.tar.gz split_$1
                 
                 # Now merge logs
                 pythia_log_file = open(pythia_log,'w')
-                
                 n_added = 0
                 for split_dir in split_dirs:
                     log_file = pjoin(split_dir,'PY8_log.txt')
@@ -4051,7 +4058,8 @@ tar -czf split_$1.tar.gz split_$1
                            PY8_extracted_information['Ntry'] += Ntry
                 # Normalize the values added
                 if n_added>0:
-                    PY8_extracted_information['sigma_m'] /= float(n_added)               
+                    PY8_extracted_information['sigma_m'] /= float(n_added)
+                pythia_log_file.close()
                 
                 # djr plots
                 djr_HwU = None
@@ -4163,9 +4171,9 @@ tar -czf split_$1.tar.gz split_$1
         if os.path.isfile(pt_output):
             shutil.move(pt_output, pjoin(self.me_dir,'Events',
                                             self.run_name, '%s_pts.dat' % tag))
-            
+
         if not os.path.isfile(pythia_log) or \
-             'PYTHIA Abort' in '\n'.join(open(pythia_log,'r').readlines()[:-20]):
+             'Inclusive cross section:' not in '\n'.join(open(pythia_log,'r').readlines()[-20:]):
             logger.warning('Fail to produce a pythia8 output. More info in \n     %s'%pythia_log)
             return
         

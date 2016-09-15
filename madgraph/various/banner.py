@@ -1484,15 +1484,15 @@ class PY8Card(ConfigFile):
         self.add_param("Merging:doPTLundMerging", False, hidden=True, always_write_to_card=False)
 
         # Special Pythia8 paremeters useful to simplify the shower.
-        self.add_param("BeamRemnants:primordialKT", False, hidden=True, always_write_to_card=True, comment="see http://home.thep.lu.se/~torbjorn/pythia82html/BeamRemnants.html")
-        self.add_param("PartonLevel:Remnants", False, hidden=True, always_write_to_card=True, comment="Master switch for addition of beam remnants. Cannot be used to generate complete events")
-        self.add_param("Check:event", False, hidden=True, always_write_to_card=True, comment="check physical sanity of the events")
-        self.add_param("TimeShower:QEDshowerByQ", False, hidden=True, always_write_to_card=True, comment="Allow quarks to radiate photons for FSR, i.e. branchings q -> q gamma")
-        self.add_param("TimeShower:QEDshowerByL", False, hidden=True, always_write_to_card=True, comment="Allow leptons to radiate photons for FSR, i.e. branchings l -> l gamma")
-        self.add_param("SpaceShower:QEDshowerByQ", False, hidden=True, always_write_to_card=True, comment="Allow quarks to radiate photons for ISR, i.e. branchings q -> q gamma")
-        self.add_param("SpaceShower:QEDshowerByL", False, hidden=True, always_write_to_card=True, comment="Allow leptons to radiate photonsfor ISR, i.e. branchings l -> l gamma")
-        self.add_param("PartonLevel:FSRinResonances", False, hidden=True, always_write_to_card=True, comment="Do not allow shower to run from decay product of unstable particle")
-        self.add_param("ProcessLevel:resonanceDecays", False, hidden=True, always_write_to_card=True, comment="Do not allow unstable particle to decay.")
+        self.add_param("BeamRemnants:primordialKT", True, hidden=True, always_write_to_card=False, comment="see http://home.thep.lu.se/~torbjorn/pythia82html/BeamRemnants.html")
+        self.add_param("PartonLevel:Remnants", True, hidden=True, always_write_to_card=False, comment="Master switch for addition of beam remnants. Cannot be used to generate complete events")
+        self.add_param("Check:event", True, hidden=True, always_write_to_card=False, comment="check physical sanity of the events")
+        self.add_param("TimeShower:QEDshowerByQ", True, hidden=True, always_write_to_card=False, comment="Allow quarks to radiate photons for FSR, i.e. branchings q -> q gamma")
+        self.add_param("TimeShower:QEDshowerByL", True, hidden=True, always_write_to_card=False, comment="Allow leptons to radiate photons for FSR, i.e. branchings l -> l gamma")
+        self.add_param("SpaceShower:QEDshowerByQ", True, hidden=True, always_write_to_card=False, comment="Allow quarks to radiate photons for ISR, i.e. branchings q -> q gamma")
+        self.add_param("SpaceShower:QEDshowerByL", True, hidden=True, always_write_to_card=False, comment="Allow leptons to radiate photonsfor ISR, i.e. branchings l -> l gamma")
+        self.add_param("PartonLevel:FSRinResonances", True, hidden=True, always_write_to_card=False, comment="Do not allow shower to run from decay product of unstable particle")
+        self.add_param("ProcessLevel:resonanceDecays", True, hidden=True, always_write_to_card=False, comment="Do not allow unstable particle to decay.")
 
         # Add parameters controlling the subruns execution flow.
         # These parameters should not be part of PY8SubRun daughter.
