@@ -4607,6 +4607,23 @@ class HelasMatrixElement(base_objects.PhysicsObject):
                       [ len(model.get('particle_dict')[leg.get('id')].\
                                    get_helicity_states())\
                         for leg in initial_legs ])
+
+    def get_beams_hel_avg_factor(self):
+        """ Calculate the denominator factor due to the average over initial
+        state spin only. Returns the result for beam one and two separately
+        so that the averaging can be done correctly for partial polarization."""
+
+        model = self.get('processes')[0].get('model')
+        initial_legs = filter(lambda leg: leg.get('state') == False, \
+                              self.get('processes')[0].get('legs'))
+        
+        beam_avg_factors = [ len(model.get('particle_dict')[leg.get('id')].\
+                                get_helicity_states()) for leg in initial_legs ]
+        if len(beam_avg_factors)==1:
+            # For a 1->N process, we simply return 1 for the second entry.
+            return beam_avg_factors[0],1
+        else:
+            return beam_avg_factors[0],beam_avg_factors[1]
         
     def get_denominator_factor(self):
         """Calculate the denominator factor due to:

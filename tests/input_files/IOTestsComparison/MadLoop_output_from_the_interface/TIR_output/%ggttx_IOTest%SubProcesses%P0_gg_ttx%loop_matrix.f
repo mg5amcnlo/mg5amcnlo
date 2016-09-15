@@ -54,6 +54,8 @@ C
       PARAMETER (NCOLORROWS=NLOOPAMPS)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
+      INTEGER NINITIAL
+      PARAMETER (NINITIAL=2)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10,NLOOPWAVEFUNCS=93)
       INTEGER    NCOMB
@@ -114,7 +116,7 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,J,K,H,HEL_MULT,I_QP_LIB,DUMMY
+      INTEGER I,J,K,L,H,HEL_MULT,I_QP_LIB,DUMMY
 
       CHARACTER*512 PARAMFN,HELCONFIGFN,LOOPFILTERFN,COLORNUMFN
      $ ,COLORDENOMFN,HELFILTERFN
@@ -181,6 +183,9 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       DATA IDEN/256/
       INTEGER HELAVGFACTOR
       DATA HELAVGFACTOR/4/
+C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
+      INTEGER BEAMS_HELAVGFACTOR(2)
+      DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
       LOGICAL DONEHELDOUBLECHECK
       DATA DONEHELDOUBLECHECK/.FALSE./
       INTEGER NEPS
@@ -201,6 +206,7 @@ C
       INTEGER ML5_0_ML5SQSOINDEX
       INTEGER ML5_0_ISSAME
       LOGICAL ML5_0_ISZERO
+      LOGICAL ML5_0_IS_HEL_SELECTED
       INTEGER SET_RET_CODE_U
 C     
 C     GLOBAL VARIABLES
@@ -429,6 +435,13 @@ C      independently by each SubProcess.
       COMMON/ML5_0_FPE_IN_REDUCTION/FPE_IN_DP_REDUCTION,
      $  FPE_IN_QP_REDUCTION
 
+C     This array specify potential special requirements on the
+C      helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such
+C      requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
+
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -449,6 +462,18 @@ C     ----------
         IF (FORBID_HEL_DOUBLECHECK) THEN
           DOUBLECHECKHELICITYFILTER = .FALSE.
         ENDIF
+
+C       Make sure that HELFILTERLEVEL is at most 1 if the beam is
+C        polarized
+        IF (POLARIZATIONS(0,0).EQ.0) THEN
+          IF (HELICITYFILTERLEVEL.GT.1) THEN
+            WRITE(*,*) '##INFO: When using polarized beam, the'
+     $       //' helicity filter of MadLoop can be at most 1. Now'
+     $       //' setting HELICITYFILTERLEVEL to 1.'
+            HELICITYFILTERLEVEL = 1
+          ENDIF
+        ENDIF
+
 
 C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
 C        if AUTOMATIC_CACHE_CLEARING is disabled.
@@ -886,6 +911,13 @@ C       computed in quadruple precision.
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
      $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
      $   .NE.0)))) THEN
+
+C         Handle the possible requirement of specific polarizations
+          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
+     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+            CYCLE
+          ENDIF
+
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO
@@ -976,7 +1008,8 @@ C     Free cache when using IREGI
       ENDDO
 
 
-      IF(SKIPLOOPEVAL) THEN
+      IF(SKIPLOOPEVAL.OR.(.NOT.LOOP_REQ_SO_DONE.AND..NOT.MP_LOOP_REQ_SO
+     $_DONE)) THEN
         GOTO 1226
       ENDIF
 
@@ -1025,13 +1058,18 @@ C     Make sure that no NaN is present in the result
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
         IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
-C         TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING
-C          CHECK PHASE
-          DO I=0,NSQUAREDSO
-            DO K=1,3
-              BUFFR(K,I)=BUFFR(K,I)+ANS(K,I)
+C         Make sure that that no polarization constraint filters out
+C          this helicity
+          IF (POLARIZATIONS(0,0).EQ.-1.OR.ML5_0_IS_HEL_SELECTED(HELPICK
+     $ED)) THEN
+C           TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING
+C            CHECK PHASE
+            DO I=0,NSQUAREDSO
+              DO K=1,3
+                BUFFR(K,I)=BUFFR(K,I)+ANS(K,I)
+              ENDDO
             ENDDO
-          ENDDO
+          ENDIF
         ENDIF
 C       SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING
 C        THE HELICITY FILTER SETUP
@@ -1239,6 +1277,13 @@ C         ENDDO
           ANS(K,I)=ANS(K,I)/DBLE(IDEN)
           IF (USERHEL.NE.-1) THEN
             ANS(K,I)=ANS(K,I)*HELAVGFACTOR
+          ELSE
+            DO J=1,NINITIAL
+              IF (POLARIZATIONS(J,0).NE.-1) THEN
+                ANS(K,I)=ANS(K,I)*BEAMS_HELAVGFACTOR(J)
+                ANS(K,I)=ANS(K,I)/POLARIZATIONS(J,0)
+              ENDIF
+            ENDDO
           ENDIF
         ENDDO
       ENDDO
@@ -1617,6 +1662,61 @@ C     --=========================================--
 C     General Helper functions and subroutine
 C     for the main sloopmatrix subroutine
 C     --=========================================--
+
+      LOGICAL FUNCTION ML5_0_IS_HEL_SELECTED(HELID)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=16)
+C     
+C     ARGUMENTS
+C     
+      INTEGER HELID
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL FOUNDIT
+C     
+C     GLOBALS
+C     
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      COMMON/ML5_0_HELCONFIGS/HELC
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      ML5_0_IS_HEL_SELECTED = .TRUE.
+      IF (POLARIZATIONS(0,0).EQ.-1) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).EQ.-1) THEN
+          CYCLE
+        ENDIF
+        FOUNDIT = .FALSE.
+        DO J=1,POLARIZATIONS(I,0)
+          IF (HELC(I,HELID).EQ.POLARIZATIONS(I,J)) THEN
+            FOUNDIT = .TRUE.
+            EXIT
+          ENDIF
+        ENDDO
+        IF(.NOT.FOUNDIT) THEN
+          ML5_0_IS_HEL_SELECTED = .FALSE.
+          RETURN
+        ENDIF
+      ENDDO
+      RETURN
+
+      END
 
       LOGICAL FUNCTION ML5_0_ISZERO(TOTEST, REFERENCE_VALUE, LOOP,
      $  SOINDEX)
@@ -2320,6 +2420,120 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       SQSO_TARGET = SOTARGET
+      END
+
+      SUBROUTINE ML5_0_SET_LEG_POLARIZATION(LEG_ID, LEG_POLARIZATION)
+      IMPLICIT NONE
+C     
+C     ARGUMENTS
+C     
+      INTEGER LEG_ID
+      INTEGER LEG_POLARIZATION
+C     
+C     LOCALS
+C     
+      INTEGER I
+      INTEGER LEG_POLARIZATIONS(0:5)
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IF (LEG_POLARIZATION.EQ.-10000) THEN
+        LEG_POLARIZATIONS(0)=-1
+        DO I=1,5
+          LEG_POLARIZATIONS(I)=-10000
+        ENDDO
+      ELSE
+        LEG_POLARIZATIONS(0)=1
+        LEG_POLARIZATIONS(1)=LEG_POLARIZATION
+        DO I=2,5
+          LEG_POLARIZATIONS(I)=-10000
+        ENDDO
+      ENDIF
+      CALL ML5_0_SET_LEG_POLARIZATIONS(LEG_ID,LEG_POLARIZATIONS)
+
+      END
+
+      SUBROUTINE ML5_0_SET_LEG_POLARIZATIONS(LEG_ID, LEG_POLARIZATIONS)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER NPOLENTRIES
+      PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=16)
+C     
+C     ARGUMENTS
+C     
+      INTEGER LEG_ID
+      INTEGER LEG_POLARIZATIONS(0:5)
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL ALL_SUMMED_OVER
+C     
+C     GLOBALS
+C     
+C     Entry 0 of the first dimension is all -1 if there is no
+C      polarization requirement.
+C     Then for each leg with ID legID, it is either summed over if
+C     POLARIZATIONS(legID,0) is -1, or the list of helicity considered
+C      for that
+C     leg is POLARIZATIONS(legID,1: POLARIZATIONS(legID,0)   ).
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
+
+      INTEGER BORN_POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BORN_BEAM_POL/BORN_POLARIZATIONS
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IF (LEG_POLARIZATIONS(0).EQ.-1) THEN
+        DO I=0,5
+          POLARIZATIONS(LEG_ID,I)=-1
+        ENDDO
+      ELSE
+        DO I=0,LEG_POLARIZATIONS(0)
+          POLARIZATIONS(LEG_ID,I)=LEG_POLARIZATIONS(I)
+        ENDDO
+        DO I=LEG_POLARIZATIONS(0)+1,5
+          POLARIZATIONS(LEG_ID,I)=-10000
+        ENDDO
+      ENDIF
+
+      ALL_SUMMED_OVER = .TRUE.
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).NE.-1) THEN
+          ALL_SUMMED_OVER = .FALSE.
+          EXIT
+        ENDIF
+      ENDDO
+      IF (ALL_SUMMED_OVER) THEN
+        DO I=0,5
+          POLARIZATIONS(0,I)=-1
+        ENDDO
+      ELSE
+        DO I=0,5
+          POLARIZATIONS(0,I)=0
+        ENDDO
+      ENDIF
+
+      DO I=0,NEXTERNAL
+        DO J=0,5
+          BORN_POLARIZATIONS(I,J) = POLARIZATIONS(I,J)
+        ENDDO
+      ENDDO
+
+
+      RETURN
+
       END
 
       SUBROUTINE ML5_0_SLOOPMATRIXHEL(P,HEL,ANS)

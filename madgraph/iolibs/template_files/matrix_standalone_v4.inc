@@ -48,6 +48,10 @@ C CONSTANTS
 C  
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
+	  INTEGER    NINITIAL 
+      PARAMETER (NINITIAL=%(nincoming)d)
+      INTEGER NPOLENTRIES
+      PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
 	  INTEGER HELAVGFACTOR
@@ -64,7 +68,10 @@ C
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
       REAL*8 T
       REAL*8 %(proc_prefix)sMATRIX
-      INTEGER IHEL,IDEN, I
+      INTEGER IHEL,IDEN, I, J
+C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
+      INTEGER BEAMS_HELAVGFACTOR(2)
+	  DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
@@ -79,6 +86,15 @@ C
 
 %(helicity_lines)s
 %(den_factor_line)s
+
+	  INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+      COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
+C
+C     FUNCTIONS
+C
+      LOGICAL %(proc_prefix)sIS_BORN_HEL_SELECTED
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -101,9 +117,14 @@ C     For this reason, we simply remove the filterin when there is only three ex
           DO IHEL=1,NCOMB
 	         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN		  
                 IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
-                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1))            
-                    ANS=ANS+T
-                    IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
+				    IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
+                        CYCLE
+                    ENDIF
+                    T=%(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1))
+                    IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
+                        ANS=ANS+T
+                    ENDIF
+				    IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
                         GOODHEL(IHEL)=.TRUE.
                     ENDIF
                 ENDIF
@@ -112,8 +133,15 @@ C     For this reason, we simply remove the filterin when there is only three ex
       ANS=ANS/DBLE(IDEN)
 	  IF(USERHEL.NE.-1) THEN
           ANS=ANS*HELAVGFACTOR	  
+	  ELSE
+		DO J=1,NINITIAL
+		  IF (POLARIZATIONS(J,0).ne.-1) THEN
+            ANS=ANS*BEAMS_HELAVGFACTOR(J)
+            ANS=ANS/POLARIZATIONS(J,0)
+		  ENDIF
+		ENDDO
 	  ENDIF
-      END
+	  END
        
        
       REAL*8 FUNCTION %(proc_prefix)sMATRIX(P,NHEL,IC)
@@ -221,4 +249,58 @@ CF2PY INTENT(IN) :: PATH
       call setpara(PATH)  !first call to setup the paramaters    
       return 
       end      
+
+      LOGICAL FUNCTION %(proc_prefix)sIS_BORN_HEL_SELECTED(HELID)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=%(ncomb)d)
+C
+C     ARGUMENTS
+C
+      INTEGER HELID
+C
+C     LOCALS
+C
+      INTEGER I,J
+      LOGICAL FOUNDIT
+C
+C     GLOBALS
+C
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      COMMON/%(proc_prefix)sBORN_HEL_CONFIGS/HELC
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
+C     ----------
+C     BEGIN CODE
+C     ----------
       
+      %(proc_prefix)sIS_BORN_HEL_SELECTED = .True.
+      if (POLARIZATIONS(0,0).eq.-1) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).eq.-1) THEN
+          CYCLE
+        ENDIF
+        FOUNDIT = .FALSE.
+        DO J=1,POLARIZATIONS(I,0)
+          IF (HELC(I,HELID).eq.POLARIZATIONS(I,J)) THEN
+            FOUNDIT = .True.
+            EXIT
+          ENDIF
+        ENDDO
+        IF(.not.FOUNDIT) THEN
+          %(proc_prefix)sIS_BORN_HEL_SELECTED = .False.
+          RETURN
+        ENDIF
+      ENDDO
+
+      RETURN
+      END
