@@ -183,7 +183,7 @@ outputEvtFile.write(evtFile.banner)
 
 # List the channel present in the process output
 channel_list = [ os.path.basename(chan) for chan in \
-                 misc.glob('P*', pjoin(proc_path, 'SubProcesses'))) ]
+                 misc.glob('P*', pjoin(proc_path, 'SubProcesses')) ]
 
 # Now scan over events
 # For each encountered channel, store the corresponding process runner
