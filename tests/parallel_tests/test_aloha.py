@@ -32,37 +32,8 @@ import models.sm.object_library as object_library
 import tests.unit_tests as unittest
 import madgraph.various.misc as misc
 
-def set_global(loop=False, unitary=True, mp=False, cms=False):
 
-    def deco_set(f):
-        @wraps(f)
-        def deco_f_set(*args, **opt):
-            old_loop = aloha.loop_mode
-            old_gauge = aloha.unitary_gauge
-            old_mp = aloha.mp_precision
-            old_cms = aloha.complex_mass
-            aloha.loop_mode = loop
-            aloha.unitary_gauge = unitary
-            aloha.mp_precision = mp
-            aloha.complex_mass = cms
-            aloha_lib.KERNEL.clean()
-            try:
-                out =  f(*args, **opt)
-            except:
-                aloha.loop_mode = old_loop
-                aloha.unitary_gauge = old_gauge
-                aloha.mp_precision = old_mp
-                aloha.complex_mass = old_cms
-                raise
-            aloha.loop_mode = old_loop
-            aloha.unitary_gauge = old_gauge
-            aloha.mp_precision = old_mp
-            aloha.complex_mass = old_cms
-            aloha_lib.KERNEL.clean()
-            return out
-        return deco_f_set
-    return deco_set
-
+set_global = misc.set_global
 
 
 class TestVariable(unittest.TestCase):
@@ -474,7 +445,7 @@ class TestAddVariable(unittest.TestCase):
         
     def test_short_replace(self):
         """test that the replace command works"""
-        
+
         id = self.var1.get_id()
         new = self.add1.replace(id, self.add2)
         
@@ -3236,34 +3207,32 @@ end
         goal_h = """#ifndef VVS1_1_guard
 #define VVS1_1_guard
 #include <complex>
-using namespace std;
 
-void VVS1_1(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[]);
-void VVS1_2(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[]);
+void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
+void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[]);
 #endif
 
 #ifndef VVS1_2_1_guard
 #define VVS1_2_1_guard
 #include <complex>
-using namespace std;
 
-void VVS1_2_1(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[]);
-void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[]);
+void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
+void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[]);
 #endif
 
 """
         goal_cpp = """#include "VVS1_1.h"
 
-void VVS1_1(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[])
+void VVS1_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
 {
- complex<double> cI = complex<double>(0.,1.);
+static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
- complex<double>  TMP0;
- complex<double>  denom;
+ std::complex<double>  TMP0;
+ std::complex<double>  denom;
  double  OM1;
     OM1 = 0.;
     if (M1 != 0.)
- OM1=1./pow(M1,2);
+ OM1=1./(M1*M1);
     V1[0] = +V2[0]+S3[0];
     V1[1] = +V2[1]+S3[1];
 P1[0] = -V1[0].real();
@@ -3271,25 +3240,25 @@ P1[1] = -V1[1].real();
 P1[2] = -V1[1].imag();
 P1[3] = -V1[0].imag();
  TMP0 = (V2[2]*P1[0]-V2[3]*P1[1]-V2[4]*P1[2]-V2[5]*P1[3]);
-    denom = COUP/(pow(P1[0],2)-pow(P1[1],2)-pow(P1[2],2)-pow(P1[3],2) - M1 * (M1 -cI* W1));
+    denom = COUP/((P1[0]*P1[0])-(P1[1]*P1[1])-(P1[2]*P1[2])-(P1[3]*P1[3]) - M1 * (M1 -cI* W1));
     V1[2]= denom*S3[2]*(-cI*(V2[2])+cI*(P1[0]*OM1*TMP0));
     V1[3]= denom*S3[2]*(-cI*(V2[3])+cI*(P1[1]*OM1*TMP0));
     V1[4]= denom*S3[2]*(-cI*(V2[4])+cI*(P1[2]*OM1*TMP0));
     V1[5]= denom*S3[2]*(-cI*(V2[5])+cI*(P1[3]*OM1*TMP0));
 }
 
-void VVS1_2(complex<double> V2[], complex<double> S3[], complex<double> COUP, double M1, double W1,complex<double> V1[])
+void VVS1_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP, double M1, double W1,std::complex<double> V1[])
 {
 
  VVS1_1(V2,S3,COUP,M1,W1,V1);
 }
-void VVS1_2_1(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
+void VVS1_2_1(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
- complex<double> cI = complex<double>(0.,1.);
+static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
- complex<double>  denom;
- int i;
- complex<double>  Vtmp[6];
+ std::complex<double>  denom;
+ int  i;
+ std::complex<double>  Vtmp[6];
  double  OM1;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
@@ -3300,13 +3269,13 @@ while (i < 6)
  i++;
 }
 }
-void VVS1_2_2(complex<double> V2[], complex<double> S3[], complex<double> COUP1, complex<double> COUP2, double M1, double W1,complex<double> V1[])
+void VVS1_2_2(std::complex<double> V2[], std::complex<double> S3[], std::complex<double> COUP1, std::complex<double> COUP2, double M1, double W1,std::complex<double> V1[])
 {
- complex<double> cI = complex<double>(0.,1.);
+static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
- complex<double>  denom;
- int i;
- complex<double>  Vtmp[6];
+ std::complex<double>  denom;
+ int  i;
+ std::complex<double>  Vtmp[6];
  double  OM1;
     VVS1_1(V2,S3,COUP1,M1,W1,V1);
     VVS2_1(V2,S3,COUP2,M1,W1,Vtmp);
@@ -3451,7 +3420,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
     def test_short_mssm_subset_creation(self):
         """ test the creation of subpart of ALOHA routines 
         including clash routines """
-        helas_suite = create_aloha.AbstractALOHAModel('mssm')
+        helas_suite = create_aloha.AbstractALOHAModel('MSSM_SLHA2')
         
         requested_routines=[(('FFV1',) , (), 0), 
                             (('FFV1',), (), 2),
@@ -3486,7 +3455,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
 
     def test_short_aloha_FFVC(self):
         """ test the FFV creation of vertex """
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
 
         FFV = Lorentz(name = 'FFV',
                  spins = [ 2, 2, 3 ],
@@ -3509,7 +3478,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         """Test analytical expression for four fermion (provide by Tim M).
         it's particularity is about to have contraction A and 4*A """
         
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         FFFF = Lorentz(name = 'FFFF3',
                  spins = [ 2, 2, 2, 2 ],
                  structure = 'Gamma(-2,-4,3)*Gamma(-2,-3,1)*Gamma(-1,2,-3)*Gamma(-1,4,-4) - Gamma(-1,-2,3)*Gamma(-1,4,-2)*Identity(1,2) - Gamma(-1,-2,1)*Gamma(-1,2,-2)*Identity(3,4) + 4*Identity(1,2)*Identity(3,4)')
@@ -3544,7 +3513,7 @@ def VVS1_2_2(V2,S3,COUP1,COUP2,M1,W1):
         
         
         aloha_lib.KERNEL.clean()
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         VVS1 = Lorentz(name = 'VVS1',
                  spins = [ 3, 3, 1 ],
                  structure = 'P(1,1)*P(2,1) - P(-1,1)**2*Metric(1,2)')
@@ -3605,7 +3574,7 @@ end
     def test_short_aloha_expr_FFV2C1(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         FFV = Lorentz(name = 'FFV2',
                  spins = [ 2, 2, 3 ],
                  structure = 'Gamma(3,2,\'s1\')*ProjM(\'s1\',1)')
@@ -3657,7 +3626,7 @@ end
     def test_short_aloha_expr_FFFF(self):
         """Test analytical expression for fermion clash routine"""
         
-        from models.mssm.object_library import Lorentz
+        from models.MSSM_SLHA2.object_library import Lorentz
         FFFF = Lorentz(name = 'FFFF1',
                 spins = [ 2, 2, 2, 2 ],
                 structure = 'Identity(2,1)*Identity(4,3)')
@@ -4684,26 +4653,25 @@ end
         solution_h = """#ifndef FFV1C1_1_guard
 #define FFV1C1_1_guard
 #include <complex>
-using namespace std;
 
-void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[]);
+void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[]);
 #endif
 
 """
         solution_c="""#include "FFV1C1_1.h"
 
-void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[])
+void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[])
 {
- complex<double> cI = complex<double>(0.,1.);
+static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P2[4];
- complex<double>  denom;
+ std::complex<double>  denom;
     F2[0] = +F1[0]+V3[0];
     F2[1] = +F1[1]+V3[1];
 P2[0] = -F2[0].real();
 P2[1] = -F2[1].real();
 P2[2] = -F2[1].imag();
 P2[3] = -F2[0].imag();
-    denom = COUP/(pow(P2[0],2)-pow(P2[1],2)-pow(P2[2],2)-pow(P2[3],2) - M2 * (M2 -cI* W2));
+    denom = COUP/((P2[0]*P2[0])-(P2[1]*P2[1])-(P2[2]*P2[2])-(P2[3]*P2[3]) - M2 * (M2 -cI* W2));
     F2[2]= denom*(-cI)*(F1[2]*(P2[0]*(V3[5]-V3[2])+(P2[1]*(V3[3]-cI*(V3[4]))+(P2[2]*(V3[4]+cI*(V3[3]))+P2[3]*(V3[5]-V3[2]))))+(F1[3]*(P2[0]*(V3[3]+cI*(V3[4]))+(P2[1]*(-1.)*(V3[2]+V3[5])+(P2[2]*(-1.)*(+cI*(V3[2]+V3[5]))+P2[3]*(V3[3]+cI*(V3[4])))))+M2*(F1[4]*(V3[2]+V3[5])+F1[5]*(V3[3]+cI*(V3[4])))));
     F2[3]= denom*cI*(F1[2]*(P2[0]*(+cI*(V3[4])-V3[3])+(P2[1]*(V3[2]-V3[5])+(P2[2]*(-cI*(V3[2])+cI*(V3[5]))+P2[3]*(V3[3]-cI*(V3[4])))))+(F1[3]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(-1.)*(V3[3]+cI*(V3[4]))+(P2[2]*(+cI*(V3[3])-V3[4])-P2[3]*(V3[2]+V3[5]))))+M2*(F1[4]*(+cI*(V3[4])-V3[3])+F1[5]*(V3[5]-V3[2]))));
     F2[4]= denom*cI*(F1[4]*(P2[0]*(V3[2]+V3[5])+(P2[1]*(+cI*(V3[4])-V3[3])+(P2[2]*(-1.)*(V3[4]+cI*(V3[3]))-P2[3]*(V3[2]+V3[5]))))+(F1[5]*(P2[0]*(V3[3]+cI*(V3[4]))+(P2[1]*(V3[5]-V3[2])+(P2[2]*(-cI*(V3[2])+cI*(V3[5]))-P2[3]*(V3[3]+cI*(V3[4])))))+M2*(F1[2]*(V3[5]-V3[2])+F1[3]*(V3[3]+cI*(V3[4])))));
@@ -4714,11 +4682,11 @@ P2[3] = -F2[0].imag();
 
         solution2_c = """#include "FFV1C1_1.h"
 
-void FFV1C1_1(complex<double> F1[], complex<double> V3[], complex<double> COUP, double M2, double W2,complex<double> F2[])
+void FFV1C1_1(std::complex<double> F1[], std::complex<double> V3[], std::complex<double> COUP, double M2, double W2,std::complex<double> F2[])
 {
- complex<double> cI = complex<double>(0.,1.);
+ std::complex<double> cI = std::complex<double>(0.,1.);
  double  P2[4];
- complex<double>  denom;
+ std::complex<double>  denom;
     F2[0] = +F1[0]+V3[0];
     F2[1] = +F1[1]+V3[1];
 P2[0] = -F2[0].real();
@@ -4761,27 +4729,26 @@ P2[3] = -F2[0].imag();
         solution_h = """#ifndef FFV1C1_2_guard
 #define FFV1C1_2_guard
 #include <complex>
-using namespace std;
 
-void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[]);
+void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[]);
 #endif
 
 """
 
         solution_c = """#include "FFV1C1_2.h"
 
-void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
+void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[])
 {
- complex<double> cI = complex<double>(0.,1.);
+static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
- complex<double>  denom;
+ std::complex<double>  denom;
     F1[0] = +F2[0]+V3[0];
     F1[1] = +F2[1]+V3[1];
 P1[0] = -F1[0].real();
 P1[1] = -F1[1].real();
 P1[2] = -F1[1].imag();
 P1[3] = -F1[0].imag();
-    denom = COUP/(pow(P1[0],2)-pow(P1[1],2)-pow(P1[2],2)-pow(P1[3],2) - M1 * (M1 -cI* W1));
+    denom = COUP/((P1[0]*P1[0])-(P1[1]*P1[1])-(P1[2]*P1[2])-(P1[3]*P1[3]) - M1 * (M1 -cI* W1));
     F1[2]= denom*(-cI)*(F2[2]*(P1[0]*(V3[2]+V3[5])+(P1[1]*(-1.)*(V3[3]+cI*(V3[4]))+(P1[2]*(+cI*(V3[3])-V3[4])-P1[3]*(V3[2]+V3[5]))))+(F2[3]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*(V3[5]-V3[2])+(P1[2]*(-cI*(V3[5])+cI*(V3[2]))+P1[3]*(+cI*(V3[4])-V3[3]))))+M1*(F2[4]*(V3[2]-V3[5])+F2[5]*(+cI*(V3[4])-V3[3]))));
     F1[3]= denom*cI*(F2[2]*(P1[0]*(-1.)*(V3[3]+cI*(V3[4]))+(P1[1]*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))-P1[3]*(V3[3]+cI*(V3[4])))))+(F2[3]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]-cI*(V3[4]))+(P1[2]*(V3[4]+cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+M1*(F2[4]*(V3[3]+cI*(V3[4]))-F2[5]*(V3[2]+V3[5]))));
     F1[4]= denom*cI*(F2[4]*(P1[0]*(V3[5]-V3[2])+(P1[1]*(V3[3]+cI*(V3[4]))+(P1[2]*(V3[4]-cI*(V3[3]))+P1[3]*(V3[5]-V3[2]))))+(F2[5]*(P1[0]*(V3[3]-cI*(V3[4]))+(P1[1]*(-1.)*(V3[2]+V3[5])+(P1[2]*(+cI*(V3[2]+V3[5]))+P1[3]*(V3[3]-cI*(V3[4])))))+M1*(F2[2]*(-1.)*(V3[2]+V3[5])+F2[3]*(+cI*(V3[4])-V3[3]))));
@@ -4791,11 +4758,11 @@ P1[3] = -F1[0].imag();
 """
         solution2_c="""#include "FFV1C1_2.h"
 
-void FFV1C1_2(complex<double> F2[], complex<double> V3[], complex<double> COUP, double M1, double W1,complex<double> F1[])
+void FFV1C1_2(std::complex<double> F2[], std::complex<double> V3[], std::complex<double> COUP, double M1, double W1,std::complex<double> F1[])
 {
- complex<double> cI = complex<double>(0.,1.);
+ std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
- complex<double>  denom;
+ std::complex<double>  denom;
     F1[0] = +F2[0]+V3[0];
     F1[1] = +F2[1]+V3[1];
 P1[0] = -F1[0].real();
@@ -4929,11 +4896,10 @@ end
         solution_h="""#ifndef SSS1_1_guard
 #define SSS1_1_guard
 #include <complex>
-using namespace std;
 
-void SSS1_1(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[]);
-void SSS1_2(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[]);
-void SSS1_3(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[]);
+void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
+void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
+void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[]);
 #endif
 
 """     
@@ -4954,27 +4920,27 @@ void SSS1_3(complex<double> S2[], complex<double> S3[], complex<double> COUP, co
 
         solution_c = """#include "SSS1_1.h"
 
-void SSS1_1(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[])
+void SSS1_1(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
 {
- complex<double> cI = complex<double>(0.,1.);
+static std::complex<double> cI = std::complex<double>(0.,1.);
  double  P1[4];
- complex<double>  denom;
+ std::complex<double>  denom;
     S1[0] = +S2[0]+S3[0];
     S1[1] = +S2[1]+S3[1];
 P1[0] = -S1[0].real();
 P1[1] = -S1[1].real();
 P1[2] = -S1[1].imag();
 P1[3] = -S1[0].imag();
-    denom = COUP/(pow(P1[0],2)-pow(P1[1],2)-pow(P1[2],2)-pow(P1[3],2) - pow(M1,2));
+    denom = COUP/((P1[0]*P1[0])-(P1[1]*P1[1])-(P1[2]*P1[2])-(P1[3]*P1[3]) - (M1*M1));
     S1[2]= denom*cI * S3[2]*S2[2];
 }
 
-void SSS1_2(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[])
+void SSS1_2(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);
 }
-void SSS1_3(complex<double> S2[], complex<double> S3[], complex<double> COUP, complex<double> M1,complex<double> S1[])
+void SSS1_3(std::complex<double> S2[], std::complex<double> S3[], std::complex<double> COUP, std::complex<double> M1,std::complex<double> S1[])
 {
 
  SSS1_1(S2,S3,COUP,M1,S1);

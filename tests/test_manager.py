@@ -370,12 +370,15 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
         # them later here.
         IOTestsFunctions = IOTestFinder()
         IOTestsFunctions.collect_function(IOTestsClass,prefix='testIO')
+        if len(IOTestsFunctions) ==0:
+            continue
+
         for IOTestFunction in IOTestsFunctions:
             start = time.time()
             # Add all the tests automatically (i.e. bypass filters) if the 
             # specified test is the name of the IOtest. the [7:] is to
             # skip the testIO prefix
-            name_filer_bu = None         
+            name_filer_bu = None     
             if IOTestFunction.split('.')[-1][7:] in \
                                                  IOTestManager.testNames_filter:
                 name_filer_bu = IOTestManager.testNames_filter
@@ -395,7 +398,6 @@ def runIOTests(arg=[''],update=True,force=0,synchronize=False):
                 print colored%(34,"Loading IOtest %s is slow (%s)"%
                         (colored%(32,'.'.join(IOTestFunction.split('.')[-3:])),
                                              colored%(34,'%.2fs'%setUp_time)))
-    
     if len(IOTestsInstances)==0:
         print "No IOTest found."
         return
@@ -661,7 +663,6 @@ class TestFinder(list):
             base += '.' + class_.__name__
         else:
             base = class_.__name__
-        
         candidate = [base + '.' + name for name in dir(class_) if \
                        name.startswith(prefix)\
                        and inspect.ismethod(eval('class_.' + name))]

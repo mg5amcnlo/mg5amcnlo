@@ -12,8 +12,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
 C     Modules
 C     
@@ -55,6 +55,8 @@ C
       PARAMETER (NCOLORROWS=NLOOPAMPS)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=3)
+      INTEGER NINITIAL
+      PARAMETER (NINITIAL=2)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=3,NLOOPWAVEFUNCS=3)
       INTEGER    NCOMB
@@ -77,13 +79,13 @@ C     These are constants related to the split orders
       PARAMETER (NSQUAREDSOP1=NSQUAREDSO+1)
 C     The total number of loop reduction libraries
 C     At present, there are only CutTools,PJFry++,IREGI,Golem95,Samurai
-C      and Ninja
+C     , Ninja and COLLIER
       INTEGER NLOOPLIB
-      PARAMETER (NLOOPLIB=6)
+      PARAMETER (NLOOPLIB=7)
 C     Only CutTools or possibly Ninja (if installed with qp support)
 C      provide QP
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=2)
+      PARAMETER (QP_NLOOPLIB=1)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/STABILITY_TESTS/MAXSTABILITYLENGTH
@@ -115,7 +117,7 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER I,J,K,H,HEL_MULT,I_QP_LIB,DUMMY
+      INTEGER I,J,K,L,H,HEL_MULT,I_QP_LIB,DUMMY
 
       CHARACTER*512 PARAMFN,HELCONFIGFN,LOOPFILTERFN,COLORNUMFN
      $ ,COLORDENOMFN,HELFILTERFN
@@ -182,6 +184,9 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       DATA IDEN/36/
       INTEGER HELAVGFACTOR
       DATA HELAVGFACTOR/4/
+C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
+      INTEGER BEAMS_HELAVGFACTOR(2)
+      DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
       LOGICAL DONEHELDOUBLECHECK
       DATA DONEHELDOUBLECHECK/.FALSE./
       INTEGER NEPS
@@ -202,11 +207,13 @@ C
       INTEGER ML5SQSOINDEX
       INTEGER ISSAME
       LOGICAL ISZERO
+      LOGICAL IS_HEL_SELECTED
       INTEGER SET_RET_CODE_U
 C     
 C     GLOBAL VARIABLES
 C     
       INCLUDE 'process_info.inc'
+      INCLUDE 'unique_id.inc'
       INCLUDE 'coupl.inc'
       INCLUDE 'mp_coupl.inc'
       INCLUDE 'MadLoopParams.inc'
@@ -236,23 +243,23 @@ C
       COMMON/MP_DONE/MP_DONE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING LOOPLIBS ARE
 C      AVAILABLE OR NOT
-      LOGICAL LOOPLIBS_AVAILABLE(6)
-      DATA LOOPLIBS_AVAILABLE/.TRUE.,.TRUE.,.TRUE.,.TRUE.,.FALSE.
-     $ ,.TRUE./
+      LOGICAL LOOPLIBS_AVAILABLE(NLOOPLIB)
+      DATA LOOPLIBS_AVAILABLE/.TRUE.,.FALSE.,.TRUE.,.TRUE.,.FALSE.
+     $ ,.TRUE.,.TRUE./
       COMMON/LOOPLIBS_AV/ LOOPLIBS_AVAILABLE
 C     A FLAG TO DENOTE WHETHER THE CORRESPONDING DIRECTION TESTS
 C      AVAILABLE OR NOT IN THE LOOPLIBS
-      LOGICAL LOOPLIBS_DIRECTEST(6)
+      LOGICAL LOOPLIBS_DIRECTEST(NLOOPLIB)
       DATA LOOPLIBS_DIRECTEST /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.
-     $ ,.TRUE./
+     $ ,.TRUE.,.TRUE./
 C     Specifying for which reduction tool quadruple precision is
 C      available.
 C     The index 0 is dummy and simply means that the corresponding
 C      loop_library is not available
 C     in which case neither is its quadruple precision version.
-      LOGICAL LOOPLIBS_QPAVAILABLE(0:6)
+      LOGICAL LOOPLIBS_QPAVAILABLE(0:7)
       DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
-     $ ,.FALSE.,.FALSE.,.TRUE./
+     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE./
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT
@@ -333,7 +340,6 @@ C      subroutine of MadLoopCommons.dat
       INTEGER I_LIB
       DATA I_LIB/1/
       COMMON/I_LIB/I_LIB
-C     UTIL NOW, ONLY CUTTOOLS PROVIDE QP
       LOGICAL QP_TOOLS_AVAILABLE
       DATA QP_TOOLS_AVAILABLE/.FALSE./
       INTEGER INDEX_QP_TOOLS(QP_NLOOPLIB+1)
@@ -392,6 +398,21 @@ C     RETURNCODE=100*RET_CODE_H+10*RET_CODE_T+RET_CODE_U
       CHARACTER(512) MLPATH
       COMMON/MLPATH/MLPATH
 
+C     This is just so that if the user disabled the computation of
+C      poles by COLLIER
+C     using the MadLoop subroutine, we don't overwrite his choice when
+C      reading the parameters
+      LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
+     $TATION_CHOICE
+      DATA  FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION
+     $ ,FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION/.FALSE.,.FALSE./
+      COMMON/COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_
+     $COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
+     $CHOICE
+
 C     This variable controls the general initialization which is
 C      *common* between all MadLoop SubProcesses.
 C     For example setting the MadLoopPath or reading the ML runtime
@@ -413,6 +434,14 @@ C      independently by each SubProcess.
       LOGICAL FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
       DATA FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION/.FALSE.,.FALSE./
       COMMON/FPE_IN_REDUCTION/FPE_IN_DP_REDUCTION, FPE_IN_QP_REDUCTION
+
+C     This array specify potential special requirements on the
+C      helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such
+C      requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/BEAM_POL/POLARIZATIONS
+
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -424,9 +453,27 @@ C     ----------
         CALL SETMADLOOPPATH(TMP)
         CALL JOINPATH(MLPATH,PARAMFNAME,PARAMFN)
         CALL MADLOOPPARAMREADER(PARAMFN,.TRUE.)
+        IF (FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION) THEN
+          COLLIERCOMPUTEUVPOLES = COLLIER_UV_POLE_COMPUTATION_CHOICE
+        ENDIF
+        IF (FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION) THEN
+          COLLIERCOMPUTEIRPOLES = COLLIER_IR_POLE_COMPUTATION_CHOICE
+        ENDIF
         IF (FORBID_HEL_DOUBLECHECK) THEN
           DOUBLECHECKHELICITYFILTER = .FALSE.
         ENDIF
+
+C       Make sure that HELFILTERLEVEL is at most 1 if the beam is
+C        polarized
+        IF (POLARIZATIONS(0,0).EQ.0) THEN
+          IF (HELICITYFILTERLEVEL.GT.1) THEN
+            WRITE(*,*) '##INFO: When using polarized beam, the'
+     $       //' helicity filter of MadLoop can be at most 1. Now'
+     $       //' setting HELICITYFILTERLEVEL to 1.'
+            HELICITYFILTERLEVEL = 1
+          ENDIF
+        ENDIF
+
 
 C       Make sure that NROTATIONS_QP and NROTATIONS_DP are set to zero
 C        if AUTOMATIC_CACHE_CLEARING is disabled.
@@ -766,6 +813,9 @@ C     Make sure we start with empty caches
         CALL CLEAR_CACHES()
       ENDIF
 
+C     Now make sure to turn on the global COLLIER cache if applicable
+      CALL SET_COLLIER_GLOBAL_CACHE(.TRUE.)
+
       IF (IMPROVEPSPOINT.GE.0) THEN
 C       Make the input PS more precise (exact onshell and
 C        energy-momentum conservation)
@@ -861,6 +911,13 @@ C       computed in quadruple precision.
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
      $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
      $   .NE.0)))) THEN
+
+C         Handle the possible requirement of specific polarizations
+          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
+     $0,0).EQ.0.AND.(.NOT.IS_HEL_SELECTED(H))) THEN
+            CYCLE
+          ENDIF
+
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO
@@ -951,7 +1008,8 @@ C     Free cache when using IREGI
       ENDDO
 
 
-      IF(SKIPLOOPEVAL) THEN
+      IF(SKIPLOOPEVAL.OR.(.NOT.LOOP_REQ_SO_DONE.AND..NOT.MP_LOOP_REQ_SO
+     $_DONE)) THEN
         GOTO 1226
       ENDIF
 
@@ -1000,13 +1058,18 @@ C     Make sure that no NaN is present in the result
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED)) THEN
         IF((USERHEL.EQ.-1).OR.(USERHEL.EQ.HELPICKED)) THEN
-C         TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING
-C          CHECK PHASE
-          DO I=0,NSQUAREDSO
-            DO K=1,3
-              BUFFR(K,I)=BUFFR(K,I)+ANS(K,I)
+C         Make sure that that no polarization constraint filters out
+C          this helicity
+          IF (POLARIZATIONS(0,0).EQ.-1.OR.IS_HEL_SELECTED(HELPICKED))
+     $      THEN
+C           TO KEEP TRACK OF THE FINAL ANSWER TO BE RETURNED DURING
+C            CHECK PHASE
+            DO I=0,NSQUAREDSO
+              DO K=1,3
+                BUFFR(K,I)=BUFFR(K,I)+ANS(K,I)
+              ENDDO
             ENDDO
-          ENDDO
+          ENDIF
         ENDIF
 C       SAVE RESULT OF EACH INDEPENDENT HELICITY FOR COMPARISON DURING
 C        THE HELICITY FILTER SETUP
@@ -1214,6 +1277,13 @@ C         ENDDO
           ANS(K,I)=ANS(K,I)/DBLE(IDEN)
           IF (USERHEL.NE.-1) THEN
             ANS(K,I)=ANS(K,I)*HELAVGFACTOR
+          ELSE
+            DO J=1,NINITIAL
+              IF (POLARIZATIONS(J,0).NE.-1) THEN
+                ANS(K,I)=ANS(K,I)*BEAMS_HELAVGFACTOR(J)
+                ANS(K,I)=ANS(K,I)/POLARIZATIONS(J,0)
+              ENDIF
+            ENDDO
           ENDIF
         ENDDO
       ENDDO
@@ -1570,18 +1640,83 @@ C     Make sure that we finish by emptying caches
       IF (AUTOMATIC_CACHE_CLEARING) THEN
         CALL CLEAR_CACHES()
       ENDIF
+
+C     Now make sure to turn off the global COLLIER cache if applicable
+      CALL SET_COLLIER_GLOBAL_CACHE(.FALSE.)
+
       END
 
       SUBROUTINE CLEAR_CACHES()
-C     Clears all the caches used at some point in MadLoop
+C     
+C     This routine can be called directly from the user if
+C     AUTOMATIC_CACHE_CLEARING is set to False. It must then be called
+C      after
+C     ech event
+C     
       CALL CLEAR_TIR_CACHE()
       CALL NINJA_CLEAR_INTEGRAL_CACHE()
+      CALL CLEAR_COLLIER_CACHE()
       END
 
 C     --=========================================--
 C     General Helper functions and subroutine
 C     for the main sloopmatrix subroutine
 C     --=========================================--
+
+      LOGICAL FUNCTION IS_HEL_SELECTED(HELID)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=3)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=12)
+C     
+C     ARGUMENTS
+C     
+      INTEGER HELID
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL FOUNDIT
+C     
+C     GLOBALS
+C     
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      COMMON/HELCONFIGS/HELC
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/BEAM_POL/POLARIZATIONS
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IS_HEL_SELECTED = .TRUE.
+      IF (POLARIZATIONS(0,0).EQ.-1) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).EQ.-1) THEN
+          CYCLE
+        ENDIF
+        FOUNDIT = .FALSE.
+        DO J=1,POLARIZATIONS(I,0)
+          IF (HELC(I,HELID).EQ.POLARIZATIONS(I,J)) THEN
+            FOUNDIT = .TRUE.
+            EXIT
+          ENDIF
+        ENDDO
+        IF(.NOT.FOUNDIT) THEN
+          IS_HEL_SELECTED = .FALSE.
+          RETURN
+        ENDIF
+      ENDDO
+      RETURN
+
+      END
 
       LOGICAL FUNCTION ISZERO(TOTEST, REFERENCE_VALUE, LOOP, SOINDEX)
       IMPLICIT NONE
@@ -1716,6 +1851,13 @@ C
       REAL*8 ACCURACIES(3)
       REAL*8 LIST(MAXSTABILITYLENGTH)
 
+C     
+C     GLOBAL VARIABLES
+C     
+      INTEGER I_LIB
+      COMMON/I_LIB/I_LIB
+      INCLUDE 'MadLoopParams.inc'
+
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -1763,6 +1905,16 @@ C       The following is used instead
         ENDDO
         IF (AVG.NE.0.0D0) THEN
           ACC(K)  = ACC(K) / ( ABS(AVG) / 3.0D0)
+        ENDIF
+
+C       When using COLLIER with the internal stability test, the first
+C        evaluation is typically more reliable so we do not want to
+C        use the average but rather the first evaluation.
+        IF (MLREDUCTIONLIB(I_LIB).EQ.7.AND.COLLIERUSEINTERNALSTABILITYT
+     $EST) THEN
+          DO I=1,3
+            ESTIMATE(I,K) = FULLLIST(I,K,1)
+          ENDDO
         ENDIF
 
       ENDDO
@@ -2119,6 +2271,60 @@ C     --=========================================--
 C     Definition of additional access routines
 C     --=========================================--
 
+      SUBROUTINE COLLIER_COMPUTE_UV_POLES(ONOFF)
+C     
+C     This function can be called by the MadLoop user so as to chose
+C      to have COLLIER
+C     compute the UV pole or not (it costs more time).
+C     
+      LOGICAL ONOFF
+
+      INCLUDE 'MadLoopParams.inc'
+
+      LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
+     $TATION_CHOICE
+      COMMON/COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_
+     $COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
+     $CHOICE
+
+      COLLIERCOMPUTEUVPOLES                        = ONOFF
+C     This is just so that if we read the param again, we don't
+C      overwrite the choice made here
+      FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION = .TRUE.
+      COLLIER_UV_POLE_COMPUTATION_CHOICE           = ONOFF
+
+      END SUBROUTINE
+
+      SUBROUTINE COLLIER_COMPUTE_IR_POLES(ONOFF)
+C     
+C     This function can be called by the MadLoop user so as to chose
+C      to have COLLIER
+C     compute the IR pole or not (it costs more time).
+C     
+      LOGICAL ONOFF
+
+      INCLUDE 'MadLoopParams.inc'
+
+      LOGICAL FORCED_CHOICE_OF_COLLIER_UV_POLE_COMPUTATION,
+     $  FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+      LOGICAL COLLIER_UV_POLE_COMPUTATION_CHOICE, COLLIER_IR_POLE_COMPU
+     $TATION_CHOICE
+      COMMON/COLLIERPOLESFORCEDCHOICE/FORCED_CHOICE_OF_COLLIER_UV_POLE_
+     $COMPUTATION, FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION
+     $ ,COLLIER_UV_POLE_COMPUTATION_CHOICE,COLLIER_IR_POLE_COMPUTATION_
+     $CHOICE
+
+      COLLIERCOMPUTEIRPOLES         = ONOFF
+C     This is just so that if we read the param again, we don't
+C      overwrite the choice made here
+      FORCED_CHOICE_OF_COLLIER_IR_POLE_COMPUTATION = .TRUE.
+      COLLIER_IR_POLE_COMPUTATION_CHOICE           = ONOFF
+
+      END SUBROUTINE
+
       SUBROUTINE FORCE_STABILITY_CHECK(ONOFF)
 C     
 C     This function can be called by the MadLoop user so as to always
@@ -2184,6 +2390,120 @@ C     ----------
 C     BEGIN CODE
 C     ----------
       SQSO_TARGET = SOTARGET
+      END
+
+      SUBROUTINE SET_LEG_POLARIZATION(LEG_ID, LEG_POLARIZATION)
+      IMPLICIT NONE
+C     
+C     ARGUMENTS
+C     
+      INTEGER LEG_ID
+      INTEGER LEG_POLARIZATION
+C     
+C     LOCALS
+C     
+      INTEGER I
+      INTEGER LEG_POLARIZATIONS(0:5)
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IF (LEG_POLARIZATION.EQ.-10000) THEN
+        LEG_POLARIZATIONS(0)=-1
+        DO I=1,5
+          LEG_POLARIZATIONS(I)=-10000
+        ENDDO
+      ELSE
+        LEG_POLARIZATIONS(0)=1
+        LEG_POLARIZATIONS(1)=LEG_POLARIZATION
+        DO I=2,5
+          LEG_POLARIZATIONS(I)=-10000
+        ENDDO
+      ENDIF
+      CALL SET_LEG_POLARIZATIONS(LEG_ID,LEG_POLARIZATIONS)
+
+      END
+
+      SUBROUTINE SET_LEG_POLARIZATIONS(LEG_ID, LEG_POLARIZATIONS)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=3)
+      INTEGER NPOLENTRIES
+      PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=12)
+C     
+C     ARGUMENTS
+C     
+      INTEGER LEG_ID
+      INTEGER LEG_POLARIZATIONS(0:5)
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL ALL_SUMMED_OVER
+C     
+C     GLOBALS
+C     
+C     Entry 0 of the first dimension is all -1 if there is no
+C      polarization requirement.
+C     Then for each leg with ID legID, it is either summed over if
+C     POLARIZATIONS(legID,0) is -1, or the list of helicity considered
+C      for that
+C     leg is POLARIZATIONS(legID,1: POLARIZATIONS(legID,0)   ).
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+      COMMON/BEAM_POL/POLARIZATIONS
+
+      INTEGER BORN_POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/BORN_BEAM_POL/BORN_POLARIZATIONS
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IF (LEG_POLARIZATIONS(0).EQ.-1) THEN
+        DO I=0,5
+          POLARIZATIONS(LEG_ID,I)=-1
+        ENDDO
+      ELSE
+        DO I=0,LEG_POLARIZATIONS(0)
+          POLARIZATIONS(LEG_ID,I)=LEG_POLARIZATIONS(I)
+        ENDDO
+        DO I=LEG_POLARIZATIONS(0)+1,5
+          POLARIZATIONS(LEG_ID,I)=-10000
+        ENDDO
+      ENDIF
+
+      ALL_SUMMED_OVER = .TRUE.
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).NE.-1) THEN
+          ALL_SUMMED_OVER = .FALSE.
+          EXIT
+        ENDIF
+      ENDDO
+      IF (ALL_SUMMED_OVER) THEN
+        DO I=0,5
+          POLARIZATIONS(0,I)=-1
+        ENDDO
+      ELSE
+        DO I=0,5
+          POLARIZATIONS(0,I)=0
+        ENDDO
+      ENDIF
+
+      DO I=0,NEXTERNAL
+        DO J=0,5
+          BORN_POLARIZATIONS(I,J) = POLARIZATIONS(I,J)
+        ENDDO
+      ENDDO
+
+
+      RETURN
+
       END
 
       SUBROUTINE SLOOPMATRIXHEL(P,HEL,ANS)

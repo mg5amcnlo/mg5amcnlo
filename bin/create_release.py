@@ -55,7 +55,7 @@ from datetime import date
 
 root_path = path.split(path.dirname(path.realpath( __file__ )))[0]
 sys.path.append(root_path)
-
+pjoin =os.path.join
 import madgraph.various.misc as misc
 from madgraph import MG5DIR
 
@@ -214,7 +214,7 @@ if status1:
     logging.error('Non-0 exit code %d from epydoc. Please check output.' % \
                  status)
     sys.exit()
-# tarring the apidoc directory
+#3. tarring the apidoc directory
 status2 = subprocess.call(['tar', 'czf', 'doc.tgz', 'apidoc'], cwd=filepath)
 
 if status2:
@@ -225,7 +225,26 @@ else:
     # remove the apidoc file.
     shutil.rmtree(os.path.join(filepath,'apidoc'))
 
-# 3. tar the MadGraph5_vVERSION directory.
+# 4. Download the offline installer
+install_str = """
+cd %s
+rm -rf download-temp &> /dev/null;
+mkdir -v download-temp;
+cd download-temp;
+bzr branch lp:~maddevelopers/mg5amcnlo/HEPToolsInstallers;
+rm -rfv `find HEPToolsInstallers -name .bzr -type d` > /dev/null;
+tar czf OfflineHEPToolsInstaller.tar.gz HEPToolsInstallers/ > /dev/null;
+mv OfflineHEPToolsInstaller.tar.gz ../vendor;
+cd ..;
+rm -rf download-temp;
+""" % filepath
+os.system(install_str) 
+
+if not os.path.exists(os.path.join(filepath, 'vendor', 'OfflineHEPToolsInstaller.tar.gz')):
+    print 'Fail to create OfflineHEPToolsInstaller'
+    sys.exit()
+
+# 5. tar the MadGraph5_vVERSION directory.
 
 logging.info("Create the tar file " + filename)
 # clean all the pyc
@@ -238,79 +257,14 @@ if status2:
     sys.exit()
 
 logging.info("Running tests on directory %s", filepath)
-
-
-logging.config.fileConfig(os.path.join(root_path,'tests','.mg5_logging.conf'))
-logging.root.setLevel(eval('logging.CRITICAL'))
-for name in logging.Logger.manager.loggerDict.keys():
-    logging.getLogger(name).setLevel(eval('logging.CRITICAL'))
-logging.getLogger('cmdprint').setLevel(eval('logging.CRITICAL'))
-logging.getLogger('tutorial').setLevel(eval('logging.CRITICAL'))
-
-# Change path to use now only the directory comming from bzr
-sys.path.insert(0, os.path.realpath(filepath))
-import tests.test_manager as test_manager
-
-# reload from the bzr directory the element loaded here (otherwise it's 
-#mixes the path for the tests
-import madgraph
-reload(madgraph)
-import madgraph.various
-reload(madgraph.various)
-import madgraph.various.misc
-reload(madgraph.various.misc)
-
-
-test_results = test_manager.run(package=os.path.join('tests',
-                                                     'unit_tests'))
-
-if test_results.errors:
-    logging.error("Removing %s and quitting..." % filename)
-    os.remove(filename)
-    exit()
-
-
-a_test_results = test_manager.run(package=os.path.join('tests',
-                                                       'acceptance_tests'),
-                                  )
-# Set logging level according to the logging level given by options
-logging.basicConfig(level=vars(logging)[options.logging],
-                    format="%(message)s")
-logging.root.setLevel(vars(logging)[options.logging])
-
-if a_test_results.errors:
-    logging.error("Removing %s and quitting..." % filename)
-    os.remove(filename)
-    exit()
-
-p_test_results = test_manager.run(['test_short_.*'],
-                                  re_opt=0,
-                                  package=os.path.join('tests',
-                                                       'parallel_tests')
-                                  )
-
-if not test_results.wasSuccessful():
-    logging.error("Failed %d unit tests, please check!" % \
-                    (len(test_results.errors) + len(test_results.failures)))
-
-if not a_test_results.wasSuccessful():
-    logging.error("Failed %d acceptance tests, please check!" % \
-                  (len(a_test_results.errors) + len(a_test_results.failures)))
-
-if not p_test_results.wasSuccessful():
-    logging.error("Failed %d parallel tests, please check!" % \
-                  (len(p_test_results.errors) + len(p_test_results.failures)))
-
-if p_test_results.errors:
-    logging.error("Removing %s and quitting..." % filename)
-    os.remove(filename)
-    exit()
-
-
-try:
-    os.remove("%s.asc" % filename)
-except:
-    pass
+print os.listdir(filepath)
+import subprocess
+status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0'],cwd=filepath)
+print "status:", status
+status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0', '-pA'],cwd=filepath)
+print "status:", status
+status = subprocess.call([pjoin('tests', 'test_manager.py'),'-t0','-pP' ,'test_short.*'],cwd=filepath)
+print "status:", status
 
 try:
     status1 = subprocess.call(['gpg', '--armor', '--sign', '--detach-sig',
@@ -323,12 +277,5 @@ except:
                     "gpg --armor --sign --detach-sig " + filename)
 
 
-if not a_test_results.failures and not test_results.failures and not p_test_results.failures:
-    logging.info("All good. Removing temporary %s directory." % filepath)
-    shutil.rmtree(filepath)
-else:
-    logging.error("Some failures - please check before using release file")
-    if p_test_results.failures:
-        logging.error('This include discrepancy in parallel test please be carefull')
-
-logging.info("Thanks for creating a release.")
+logging.info("Thanks for creating a release. please check that the tests were sucessfull before releasing the version")
+sys.exit()

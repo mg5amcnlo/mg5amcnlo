@@ -270,6 +270,8 @@ C
      $         //' an unknown reason.'
             ENDIF
           ENDIF
+          WRITE (*,'(1x,a23,3x,i3)') 'MadLoop return code   ='
+     $     ,RETURNCODE
           WRITE (*,*) '---------------------------------'
           IF (NLOOPCHOSEN.NE.NSQUAREDSO) THEN
             WRITE (*,*) 'Selected squared coupling orders combination'

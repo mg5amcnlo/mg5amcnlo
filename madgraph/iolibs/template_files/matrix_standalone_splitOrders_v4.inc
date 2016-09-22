@@ -73,6 +73,10 @@ C CONSTANTS
 C  
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=%(nexternal)d)
+	  INTEGER    NINITIAL 
+      PARAMETER (NINITIAL=%(nincoming)d)
+      INTEGER NPOLENTRIES
+      PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
       INTEGER                 NCOMB         
       PARAMETER (             NCOMB=%(ncomb)d)
       INTEGER NSQAMPSO
@@ -88,22 +92,36 @@ C
       REAL*8 P(0:3,NEXTERNAL),ANS(0:NSQAMPSO)
 C  
 C LOCAL VARIABLES 
-C  
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+C
+      INTEGER NTRY
       REAL*8 T(NSQAMPSO), BUFF
-      INTEGER IHEL,IDEN, I
+      INTEGER IHEL,IDEN, I, J
+C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
+      INTEGER BEAMS_HELAVGFACTOR(2)
+	  DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/%(beamone_helavgfactor)d,%(beamtwo_helavgfactor)d/
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
-%(helicity_lines)s
 %(den_factor_line)s
 C
 C GLOBAL VARIABLES
 C
+      INTEGER NHEL(NEXTERNAL,NCOMB)
+%(helicity_lines)s
+      COMMON/%(proc_prefix)sBORN_HEL_CONFIGS/NHEL
+      
       INTEGER USERHEL
 	  DATA USERHEL/-1/	  	  
 	  COMMON/%(proc_prefix)sHELUSERCHOICE/USERHEL
+      
+	  INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+      COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
+C
+C     FUNCTIONS
+C
+      LOGICAL %(proc_prefix)sIS_BORN_HEL_SELECTED
 
 C ----------
 C BEGIN CODE
@@ -129,10 +147,15 @@ C     For this reason, we simply remove the filterin when there is only three ex
       DO IHEL=1,NCOMB
 	     IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
            IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN
+              IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).ne.-1.and.(.not.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL))) THEN
+                CYCLE
+              ENDIF
               CALL %(proc_prefix)sMATRIX(P ,NHEL(1,IHEL),JC(1), T)
 	 	      BUFF=0D0
-			  DO I=1,NSQAMPSO			
-                ANS(I)=ANS(I)+T(I)
+			  DO I=1,NSQAMPSO
+                IF(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_BORN_HEL_SELECTED(IHEL)) THEN
+                  ANS(I)=ANS(I)+T(I)
+				ENDIF
 			    BUFF=BUFF+T(I)
 		      ENDDO
               IF (BUFF .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
@@ -149,9 +172,17 @@ C     For this reason, we simply remove the filterin when there is only three ex
 		ENDIF
 	  ENDDO
 	  IF(USERHEL.NE.-1) THEN
-		ANS(0)=ANS(0)*HELAVGFACTOR
-		DO I=1,NSQAMPSO
+		DO I=0,NSQAMPSO
           ANS(I)=ANS(I)*HELAVGFACTOR
+		ENDDO
+	  ELSE
+		DO J=1,NINITIAL
+		  IF (POLARIZATIONS(J,0).ne.-1) THEN
+		    DO I=0,NSQAMPSO
+              ANS(I)=ANS(I)*BEAMS_HELAVGFACTOR(J)
+              ANS(I)=ANS(I)/POLARIZATIONS(J,0)
+		    ENDDO
+		  ENDIF
 		ENDDO
 	  ENDIF
       END
@@ -301,4 +332,59 @@ C     ROUTINE FOR F2PY to read the benchmark point.
 CF2PY INTENT(IN) :: PATH 
       call setpara(PATH)  !first call to setup the paramaters    
       return 
-      end      
+      end
+
+      LOGICAL FUNCTION %(proc_prefix)sIS_BORN_HEL_SELECTED(HELID)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=%(nexternal)d)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=%(ncomb)d)
+C
+C     ARGUMENTS
+C
+      INTEGER HELID
+C
+C     LOCALS
+C
+      INTEGER I,J
+      LOGICAL FOUNDIT
+C
+C     GLOBALS
+C
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      COMMON/%(proc_prefix)sBORN_HEL_CONFIGS/HELC
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/%(proc_prefix)sBORN_BEAM_POL/POLARIZATIONS
+C     ----------
+C     BEGIN CODE
+C     ----------
+      
+      %(proc_prefix)sIS_BORN_HEL_SELECTED = .True.
+      if (POLARIZATIONS(0,0).eq.-1) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).eq.-1) THEN
+          CYCLE
+        ENDIF
+        FOUNDIT = .FALSE.
+        DO J=1,POLARIZATIONS(I,0)
+          IF (HELC(I,HELID).eq.POLARIZATIONS(I,J)) THEN
+            FOUNDIT = .True.
+            EXIT
+          ENDIF
+        ENDDO
+        IF(.not.FOUNDIT) THEN
+          %(proc_prefix)sIS_BORN_HEL_SELECTED = .False.
+          RETURN
+        ENDIF
+      ENDDO
+
+      RETURN
+      END

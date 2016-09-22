@@ -45,9 +45,11 @@ import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.iolibs.export_fks as export_fks
 import madgraph.iolibs.export_v4 as export_v4
+import madgraph.iolibs.helas_call_writers as helas_call_writers
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.core.helas_objects as helas_objects
+
 import madgraph.various.cluster as cluster
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner_mod
@@ -261,7 +263,7 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             return self.list_completion(text, content)
 
 
-    def complete_launch(self, text, line, begidx, endidx):
+    def complete_launch(self, text, line, begidx, endidx, formatting=True):
         """ complete the launch command"""
         args = self.split_arg(line[0:begidx])
 
@@ -299,7 +301,7 @@ class CompleteFKS(mg_interface.CompleteForCmd):
             out['Options'] = self.list_completion(text, opt, line)
         
 
-        return self.deal_multiple_categories(out)
+        return self.deal_multiple_categories(out, formatting)
 
 class HelpFKS(mg_interface.HelpToCmd):
 
@@ -321,9 +323,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
     def __init__(self, mgme_dir = '', *completekey, **stdin):
         """ Special init tasks for the Loop Interface """
-
         mg_interface.MadGraphCmd.__init__(self, mgme_dir = '', *completekey, **stdin)
-        misc.sprint(type(self.history))
         self.setup()
 
     def setup(self):
@@ -460,6 +460,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
 
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
+        self._curr_proc_defs.append(myprocdef)
+
 #        if myprocdef['perturbation_couplings']!=['QCD']:
 #            message = ""FKS for reals only available in QCD for now, you asked %s" \
 #                        % ', '.join(myprocdef['perturbation_couplings'])"
@@ -517,6 +519,8 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         if self._export_format in ['NLO']:
             self._curr_exporter = export_v4.ExportV4Factory(self, noclean, 
                       output_type='amcatnlo',group_subprocesses=group_processes)
+            
+            self._curr_exporter.pass_information_from_cmd(self)
 
         # check if a dir with the same name already exists
         if not force and not noclean and os.path.isdir(self._export_dir)\
@@ -544,6 +548,9 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # Perform export and finalize right away
         self.export(nojpeg, main_file_name, group_processes=group_processes)
 
+        # Pass potential new information generated during the export.
+        self._curr_exporter.pass_information_from_cmd(self)
+
         # Automatically run finalize
         self.finalize(nojpeg)
             
@@ -562,6 +569,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
     def export(self, nojpeg = False, main_file_name = "", group_processes=False):
         """Export a generated amplitude to file"""
 
+        self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         def generate_matrix_elements(self, group=False):
             """Helper function to generate the matrix elements before
             exporting"""
@@ -652,21 +660,24 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
             global glob_directories_map
             glob_directories_map = []
 
+            # Save processes instances generated
             self.born_processes_for_olp = []
+            self.born_processes = []
             for ime, me in \
                 enumerate(self._curr_matrix_elements.get('matrix_elements')):
                 if not self.options['low_mem_multicore_nlo_generation']:
                     #me is a FKSHelasProcessFromReals
                     calls = calls + \
                             self._curr_exporter.generate_directories_fks(me, 
-                            self._curr_fortran_model, 
+                            self._curr_helas_model, 
                             ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                             path,self.options['OLP'])
                     self._fks_directories.extend(self._curr_exporter.fksdirs)
                     self.born_processes_for_olp.append(me.born_matrix_element.get('processes')[0])
+                    self.born_processes.append(me.born_matrix_element.get('processes'))
                 else:
                     glob_directories_map.append(\
-                            [self._curr_exporter, me, self._curr_fortran_model, 
+                            [self._curr_exporter, me, self._curr_helas_model, 
                              ime, len(self._curr_matrix_elements.get('matrix_elements')), 
                              path, self.options['OLP']])
 

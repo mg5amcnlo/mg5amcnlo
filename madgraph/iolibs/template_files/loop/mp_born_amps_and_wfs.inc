@@ -35,7 +35,10 @@ C
       INTEGER I,J,H
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
 	  DATA IC/NEXTERNAL*1/
-
+C
+C FUNCTIONS
+C
+      LOGICAL %(proc_prefix)sIS_HEL_SELECTED
 C  
 C GLOBAL VARIABLES
 C  
@@ -74,6 +77,11 @@ C
 	  LOGICAL MP_DONE_ONCE
 	  common/%(proc_prefix)sMP_DONE_ONCE/MP_DONE_ONCE
 
+C     This array specify potential special requirements on the helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/%(proc_prefix)sBEAM_POL/POLARIZATIONS
+
 C ----------
 C BEGIN CODE
 C ---------
@@ -87,6 +95,10 @@ CALL MP_UPDATE_AS_PARAM()
 
 DO H=1,NCOMB
   IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.((CHECKPHASE.OR..NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+C Handle the possible requirement of specific polarizations
+  IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0).eq.0.AND.(.NOT.%(proc_prefix)sIS_HEL_SELECTED(H))) THEN
+    CYCLE
+  ENDIF
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO

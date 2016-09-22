@@ -369,7 +369,6 @@ if __name__=='__main__':
     # styles = ['funky']
     
     f_code = ""
-    
     for style in styles:
         f_code += "\nwrite(*,*) ''\nwrite(*,*) 'Style %s with default options.'\n"%style
         f_code += MadLoopBannerStyles.get_MadLoop_Banner(style=style)

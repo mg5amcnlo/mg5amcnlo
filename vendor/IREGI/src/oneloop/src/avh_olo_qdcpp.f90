@@ -18,7 +18,7 @@
 !!
 
 
-module avh_olo_prec
+module avh_olo_forIREGI_prec
   use qdmodule
 
   implicit none
@@ -75,7 +75,7 @@ contains
   subroutine set_precision( newprc )
 !***********************************************************************
 !***********************************************************************
-  use avh_olo_units
+  use avh_olo_forIREGI_units
   logical ,intent(out) :: newprc
   integer :: ndec                                  
   if (prcpar.eq.1) then                    

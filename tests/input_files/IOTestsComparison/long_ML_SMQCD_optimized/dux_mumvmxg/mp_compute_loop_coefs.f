@@ -8,7 +8,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d u~ > m- vm~ g QED<=2 QCD<=1 [ virt = QCD ]
+C     Process: d u~ > m- vm~ g QCD<=1 QED<=2 [ virt = QCD ]
 C     
 C     Modules
 C     
@@ -73,6 +73,7 @@ C
 C     
 C     FUNCTIONS
 C     
+      LOGICAL ML5_0_IS_HEL_SELECTED
       INTEGER ML5_0_ML5SOINDEX_FOR_BORN_AMP
       INTEGER ML5_0_ML5SOINDEX_FOR_LOOP_AMP
       INTEGER ML5_0_ML5SQSOINDEX
@@ -153,6 +154,13 @@ C
 
       INTEGER LIBINDEX
       COMMON/ML5_0_I_LIB/LIBINDEX
+
+C     This array specify potential special requirements on the
+C      helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such
+C      requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
 
 C     ----------
 C     BEGIN CODE
@@ -245,6 +253,13 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
      $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
      $   .NE.0)))) THEN
+
+C         Handle the possible requirement of specific polarizations
+          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
+     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+            CYCLE
+          ENDIF
+
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO

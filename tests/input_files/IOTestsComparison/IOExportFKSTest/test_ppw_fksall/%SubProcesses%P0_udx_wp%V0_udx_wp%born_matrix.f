@@ -67,8 +67,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -76,6 +76,10 @@ C     CONSTANTS
 C     
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=3)
+      INTEGER    NINITIAL
+      PARAMETER (NINITIAL=2)
+      INTEGER NPOLENTRIES
+      PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=12)
       INTEGER NSQAMPSO
@@ -92,13 +96,21 @@ C
 C     
 C     LOCAL VARIABLES 
 C     
-      INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+      INTEGER NTRY
       REAL*8 T(NSQAMPSO), BUFF
-      INTEGER IHEL,IDEN, I
+      INTEGER IHEL,IDEN, I, J
+C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
+      INTEGER BEAMS_HELAVGFACTOR(2)
+      DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
       DATA GOODHEL/NCOMB*.FALSE./
+      DATA IDEN/36/
+C     
+C     GLOBAL VARIABLES
+C     
+      INTEGER NHEL(NEXTERNAL,NCOMB)
       DATA (NHEL(I,   1),I=1,3) / 1,-1,-1/
       DATA (NHEL(I,   2),I=1,3) / 1,-1, 0/
       DATA (NHEL(I,   3),I=1,3) / 1,-1, 1/
@@ -111,13 +123,19 @@ C
       DATA (NHEL(I,  10),I=1,3) /-1, 1,-1/
       DATA (NHEL(I,  11),I=1,3) /-1, 1, 0/
       DATA (NHEL(I,  12),I=1,3) /-1, 1, 1/
-      DATA IDEN/36/
-C     
-C     GLOBAL VARIABLES
-C     
+      COMMON/BORN_HEL_CONFIGS/NHEL
+
       INTEGER USERHEL
       DATA USERHEL/-1/
       COMMON/HELUSERCHOICE/USERHEL
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+      COMMON/BORN_BEAM_POL/POLARIZATIONS
+C     
+C     FUNCTIONS
+C     
+      LOGICAL IS_BORN_HEL_SELECTED
 
 C     ----------
 C     BEGIN CODE
@@ -149,10 +167,17 @@ C      only three external particles.
       DO IHEL=1,NCOMB
         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
           IF (GOODHEL(IHEL) .OR. NTRY .LT. 2 .OR.USERHEL.NE.-1) THEN
+            IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).NE.
+     $       -1.AND.(.NOT.IS_BORN_HEL_SELECTED(IHEL))) THEN
+              CYCLE
+            ENDIF
             CALL MATRIX(P ,NHEL(1,IHEL),JC(1), T)
             BUFF=0D0
             DO I=1,NSQAMPSO
-              ANS(I)=ANS(I)+T(I)
+              IF(POLARIZATIONS(0,0).EQ.-1.OR.IS_BORN_HEL_SELECTED(IHEL)
+     $         ) THEN
+                ANS(I)=ANS(I)+T(I)
+              ENDIF
               BUFF=BUFF+T(I)
             ENDDO
             IF (BUFF .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
@@ -169,9 +194,17 @@ C      only three external particles.
         ENDIF
       ENDDO
       IF(USERHEL.NE.-1) THEN
-        ANS(0)=ANS(0)*HELAVGFACTOR
-        DO I=1,NSQAMPSO
+        DO I=0,NSQAMPSO
           ANS(I)=ANS(I)*HELAVGFACTOR
+        ENDDO
+      ELSE
+        DO J=1,NINITIAL
+          IF (POLARIZATIONS(J,0).NE.-1) THEN
+            DO I=0,NSQAMPSO
+              ANS(I)=ANS(I)*BEAMS_HELAVGFACTOR(J)
+              ANS(I)=ANS(I)/POLARIZATIONS(J,0)
+            ENDDO
+          ENDIF
         ENDDO
       ENDIF
       END
@@ -215,8 +248,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -331,6 +364,61 @@ C     ROUTINE FOR F2PY to read the benchmark point.
       CHARACTER*180 PATH
 CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters    
+      RETURN
+      END
+
+      LOGICAL FUNCTION IS_BORN_HEL_SELECTED(HELID)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=3)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=12)
+C     
+C     ARGUMENTS
+C     
+      INTEGER HELID
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL FOUNDIT
+C     
+C     GLOBALS
+C     
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      COMMON/BORN_HEL_CONFIGS/HELC
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/BORN_BEAM_POL/POLARIZATIONS
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IS_BORN_HEL_SELECTED = .TRUE.
+      IF (POLARIZATIONS(0,0).EQ.-1) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).EQ.-1) THEN
+          CYCLE
+        ENDIF
+        FOUNDIT = .FALSE.
+        DO J=1,POLARIZATIONS(I,0)
+          IF (HELC(I,HELID).EQ.POLARIZATIONS(I,J)) THEN
+            FOUNDIT = .TRUE.
+            EXIT
+          ENDIF
+        ENDDO
+        IF(.NOT.FOUNDIT) THEN
+          IS_BORN_HEL_SELECTED = .FALSE.
+          RETURN
+        ENDIF
+      ENDDO
+
       RETURN
       END
 
