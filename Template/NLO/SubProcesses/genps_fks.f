@@ -1972,7 +1972,10 @@ c     s_mass(i)
          endif
 c If numerical inaccuracy, quit loop
          if (xjac0.lt.0d0) then
-            write (*,*) 'WARNING #31 in genps_fks.f',i,s(i),smin,smax
+            if (xjac0.gt.-400d0 .or. xjac0.le.-500d0) then
+               write (*,*) 'WARNING #31 in genps_fks.f',i,s(i),smin,smax
+     $              ,xjac0
+            endif
             xjac0 = -6
             pass=.false.
             return
@@ -2249,7 +2252,7 @@ c ARGUMENTS
      $     ,cBW_width(-1:1),jac,s
 c LOCAL      
       double precision stot,tmp,vol_new,x_min,x_max,x_new,fract,x_mass
-     $     ,xg,A,B,C,D,E,F,G,bs(-1:1)
+     $     ,xg,A,B,C,D,E,F,G,bs(-1:1),maxi,mini
       integer j
       logical firsttime
       data firsttime/.true./
@@ -2280,14 +2283,24 @@ c     flat transformation:
          endif
          if (x.lt.fract) then
 c     flat transformation:
-            A=(s_mass-smin)/fract
+            if (s_mass.lt.smin) then
+               jac=-421d0
+               return
+            endif
+            maxi=min(s_mass,smax)
+            A=(maxi-smin)/fract
             B=smin
             s=A*x+B
             jac=jac*A
          else
 c     S=A/(B-x) transformation:
-            A=s_mass*smax*(1d0-fract)/(smax-s_mass)
-            B=(smax-fract*s_mass)/(smax-s_mass)
+            if (s_mass.gt.smax) then
+               jac=-422d0
+               return
+            endif
+            mini=max(s_mass,smin)
+            A=mini*smax*(1d0-fract)/(smax-mini)
+            B=(smax-fract*mini)/(smax-mini)
             s=A/(B-x)
             jac=jac*s**2/A
          endif
@@ -2310,12 +2323,22 @@ c     flat distribution below the split, and a BW above the split.
          bs(-1)=qmass+bs(-1)*qwidth
          bs(-1)=bs(-1)**2
          if (x.lt.fract) then
-            A=(bs(-1)-smin)/fract
+            if(smin.gt.bs(-1)) then
+               jac=-441d0
+               return
+            endif
+            maxi=min(bs(-1),smax)
+            A=(maxi-smin)/fract
             B=smin
             s=A*x+B
             jac=jac*A
          else
-            A=atan((qmass-bs(-1)/qmass)/qwidth)
+            if(smax.lt.bs(-1)) then
+               jac=-442d0
+               return
+            endif
+            mini=max(bs(-1),smin)
+            A=atan((qmass-mini/qmass)/qwidth)
             B=atan((qmass-smax/qmass)/qwidth)
             C=((1d0-x)*A+(x-fract)*B)/(1d0-fract)
             s=qmass*(qmass-qwidth*tan(C))
@@ -2334,19 +2357,35 @@ c     alternative mass.
          bs(1)=qmass+bs(1)*qwidth
          bs(1)=bs(1)**2
          if (x.lt.fract) then
+            if(smin.gt.bs(1)) then
+               jac=-451d0
+               return
+            endif
+            maxi=min(bs(1),smax)
             A=atan((qmass-smin/qmass)/qwidth)
-            B=atan((qmass-bs(1)/qmass)/qwidth)
+            B=atan((qmass-maxi/qmass)/qwidth)
             C=((B-A)*x+fract*A)/fract
             s=qmass*(qmass-qwidth*tan(C))
             jac=jac*qmass*qwidth*(A-B)/((cos(C))**2*fract)
          elseif (x.lt.1d0-fract) then
-            A=(cBW_mass(1)**2-bs(1))/(1d0-2d0*fract)
-            B=((1d0-fract)*bs(1)-fract*cBW_mass(1)**2)/(1d0-2d0*fract)
+            if(smin.gt.cBW_mass(1)**2 .or. smax.lt.bs(1)) then
+               jac=-452d0
+               return
+            endif
+            maxi=min(cBW_mass(1)**2,smax)
+            mini=max(bs(1),smin)
+            A=(maxi-mini)/(1d0-2d0*fract)
+            B=((1d0-fract)*mini-fract*maxi)/(1d0-2d0*fract)
             s=A*x+B
             jac=jac*A
          else
-            A=cBW_mass(1)**2*smax*fract/(smax-cBW_mass(1)**2)
-            B=(smax-(1d0-fract)*cBW_mass(1)**2)/(smax-cBW_mass(1)**2)
+            if(smax.lt.cBW_mass(1)**2) then
+               jac=-453d0
+               return
+            endif
+            mini=max(cBW_mass(1)**2,smin)
+            A=mini*smax*fract/(smax-mini)
+            B=(smax-(1d0-fract)*mini)/(smax-mini)
             s=A/(B-x)
             jac=jac*s**2/A
          endif
@@ -2362,24 +2401,46 @@ c     above alternative mass.
             bs(j)=bs(j)**2
          enddo
          if (x.lt.fract) then
-            A=(bs(-1)-smin)/fract
+            if(smin.gt.bs(-1)) then
+               jac=-461d0
+               return
+            endif
+            maxi=min(bs(-1),smax)
+            A=(maxi-smin)/fract
             B=smin
             s=A*x+B
             jac=jac*A
          elseif(x.lt.1d0-fract) then
-            A=atan((qmass-bs(-1)/qmass)/qwidth)
-            B=atan((qmass-bs( 1)/qmass)/qwidth)
+            if(smin.gt.bs(1) .or. smax.lt.bs(-1)) then
+               jac=-462d0
+               return
+            endif
+            maxi=min(bs(1),smax)
+            mini=max(bs(-1),smin)
+            A=atan((qmass-mini/qmass)/qwidth)
+            B=atan((qmass-maxi/qmass)/qwidth)
             C=((1d0-fract-x)*A+(x-fract)*B)/(1d0-2d0*fract)
             s=qmass*(qmass-qwidth*tan(C))
             jac=-jac*qmass*qwidth*(B-A)/((cos(C))**2*(1d0-2d0*fract))
          elseif(x.lt.1d0-fract/2d0) then
-            A=2d0*(cBW_mass(1)**2-bs(1))/fract
-            B=2d0*cBW_mass(1)**2-bs(1)+2d0*(bs(1)-cBW_mass(1)**2)/fract
+            if(smin.gt.cBW_mass(1)**2 .or. smax.lt.bs(1)) then
+               jac=-463d0
+               return
+            endif
+            maxi=min(cBW_mass(1)**2,smax)
+            mini=max(bs(1),smin)
+            A=2d0*(maxi-mini)/fract
+            B=2d0*maxi-mini-2d0*(maxi-mini)/fract
             s=A*x+B
             jac=jac*A
          else
-            A=cBW_mass(1)**2*smax*fract/(2d0*(smax-cBW_mass(1)**2))
-            B=(smax-(1d0-fract/2d0)*cBW_mass(1)**2)/(smax-cBW_mass(1)**2)
+            if(smax.lt.cBW_mass(1)**2) then
+               jac=-464d0
+               return
+            endif
+            mini=max(cBW_mass(1)**2,smin)
+            A=mini*smax*fract/(2d0*(smax-mini))
+            B=(smax-(1d0-fract/2d0)*mini)/(smax-mini)
             s=A/(B-x)
             jac=jac*s**2/A
          endif
