@@ -330,7 +330,7 @@ c     Next do the T-channel branchings
 c
       if (nt_channel.ne.0) then
          call generate_t_channel_branchings(ns_channel,nbranch,itree
-     $        ,stot,m,s,x,pb,xjac0,xpswgt0,pass)
+     $        ,m,s,x,pb,xjac0,xpswgt0,pass)
          if (.not.pass) goto 222
       endif
 c
@@ -1108,8 +1108,8 @@ c
          costh_i_fks=y_ij_fks+(1-y_ij_fks**2)*xi_i_fks/sqrt(cffC2)
          if(abs(costh_i_fks).gt.1.d0)costh_i_fks=y_ij_fks
       else
-         costh_i_fks=(x3len_fks_mother**2-x3len_j_fks**2+x3len_i_fks**2)/
-     &               (2*x3len_fks_mother*x3len_i_fks)
+         costh_i_fks=(x3len_fks_mother**2-x3len_j_fks**2+x3len_i_fks**2)
+     $        /(2*x3len_fks_mother*x3len_i_fks)
          if(abs(costh_i_fks).gt.1.d0+qtiny)then
             write(*,*)'Fatal error #8 in one_tree',
      &           costh_i_fks,xi_i_fks,y_ij_fks,xmrec2
@@ -1981,7 +1981,8 @@ c If numerical inaccuracy, quit loop
             return
          endif
          if (s(i).lt.smin .or. s(i).gt.smax) then
-            write (*,*) 'WARNING #32 in genps_fks.f',i,s(i),smin,smax,x(-i)
+            write (*,*) 'WARNING #32 in genps_fks.f',i,s(i),smin,smax,x(
+     $           -i)
             xjac0=-5
             pass=.false.
             return
@@ -2005,7 +2006,7 @@ c
 
 
       subroutine generate_t_channel_branchings(ns_channel,nbranch,itree
-     $     ,stot,m,s,x,pb,xjac0,xpswgt0,pass)
+     $     ,m,s,x,pb,xjac0,xpswgt0,pass)
 c First we need to determine the energy of the remaining particles this
 c is essentially in place of the cos(theta) degree of freedom we have
 c with the s channel decay sequence
@@ -2023,7 +2024,7 @@ c with the s channel decay sequence
       logical pass
 c
       double precision totalmass,smin,smax,s1,ma2,mbq,m12,mnq,tmin,tmax
-     &     ,t,tmax_temp,phi,dum,dum3(-1:1),s_m,stot,tm
+     &     ,t,tmax_temp,phi,dum,dum3(-1:1),s_m,tm
       integer i,ibranch,idim
       double precision lambda,dot
       external lambda,dot
@@ -2241,7 +2242,6 @@ c     itype=3: Breit-Wigner
 c     itype=4: Conflicting BW, with alternative mass smaller
 c     itype=5: Conflicting BW, with alternative mass larger
 c     itype=6: Conflicting BW on both sides
-c     itype=7: flat between 0 and s_mass/stot, 1/x^2 above
 c
       implicit none
       include 'nexternal.inc'
@@ -2251,24 +2251,9 @@ c ARGUMENTS
       double precision x,smin,smax,s_mass,qmass,qwidth,cBW_mass(-1:1)
      $     ,cBW_width(-1:1),jac,s
 c LOCAL      
-      double precision stot,tmp,vol_new,x_min,x_max,x_new,fract,x_mass
-     $     ,xg,A,B,C,D,E,F,G,bs(-1:1),maxi,mini
+      double precision tmp,vol_new,x_min,x_max,x_new,fract,x_mass,xg,A
+     $     ,B,C,D,E,F,G,bs(-1:1),maxi,mini
       integer j
-      logical firsttime
-      data firsttime/.true./
-      save stot
-c GLOBAL
-      double precision pmass(nexternal)
-      common /to_mass/pmass
-c 
-      if (firsttime) then
-         if (nincoming.eq.2) then
-            stot = 4d0*ebeam(1)*ebeam(2)
-         else
-            stot=pmass(1)**2
-         endif
-         firsttime=.false.
-      endif
 c
       if (itype.eq.1) then
 c     flat transformation:
@@ -2306,7 +2291,7 @@ c     S=A/(B-x) transformation:
          endif
       elseif(itype.eq.3) then
 c     Normal Breit-Wigner, i.e.
-c        \int_0^stot ds g(s)/((s-qmass^2)^2-qmass^2*qwidth^2) =
+c        \int_smin^smax ds g(s)/((s-qmass^2)^2-qmass^2*qwidth^2) =
 c        \int_0^1 dx g(s(x))
          A=atan((qmass-smin/qmass)/qwidth)
          B=atan((qmass-smax/qmass)/qwidth)
