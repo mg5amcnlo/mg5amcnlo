@@ -1829,8 +1829,15 @@ c Jacobian due to delta() of tau_born
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
-      call trans_x(2,idim,x,smin,smax,s_mass,dum,dum
-     $     ,dum3,dum3,jac,s)
+      if (s_mass.gt.smin) then
+         call trans_x(2,idim,x,smin,smax,s_mass,dum,dum
+     $        ,dum3,dum3,jac,s)
+      elseif(s_mass.eq.smin) then
+         call trans_x(7,idim,x,smin,smax,s_mass,dum,dum
+     $        ,dum3,dum3,jac,s)
+      else
+         write (*,*) 'ERROR #39 in genps_fks.f',s_mass,smin
+      endif
       tau=s/stot
       jac=jac/stot
       return
@@ -1955,7 +1962,7 @@ c     use flat distribution
             elseif (smin.ge.s_mass(i) .and. smin.gt.0d0) then
 c     A lower limit on smin, which is larger than lower limit from cuts
 c     or masses. Use 1/x importance sampling
-               call trans_x(2,-i,x(-i),smin,smax,s_mass(i),qmass(i)
+               call trans_x(7,-i,x(-i),smin,smax,s_mass(i),qmass(i)
      $              ,qwidth(i),cBW_mass(-1,i),cBW_width(-1,i),xjac0
      $              ,s(i))
             elseif (smin.lt.s_mass(i) .and. s_mass(i).gt.0d0) then
@@ -1971,8 +1978,9 @@ c     s_mass(i)
             endif
          endif
 c If numerical inaccuracy, quit loop
-         if (xjac0.lt.0d0) then
-            if (xjac0.gt.-400d0 .or. xjac0.le.-500d0) then
+         if (xjac0.le.0d0) then
+            if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
+     $           xjac0.ne.0d0)then
                write (*,*) 'WARNING #31 in genps_fks.f',i,s(i),smin,smax
      $              ,xjac0
             endif
@@ -2057,6 +2065,16 @@ c of the t-channel line.
          s_m=s_m-sqrt(s_mass(itree(2,ibranch)))
          call trans_x(2,idim,x(idim),smin,smax,s_m**2,dum
      $        ,dum,dum3(-1),dum3(-1),xjac0,s1)
+         if (xjac0.le.0d0) then
+            if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
+     $           xjac0.ne.0d0)then
+               write (*,*) 'WARNING #31a in genps_fks.f',ibranch,s1
+     $              ,smin,smax,s_m**2,xjac0
+            endif
+            xjac0 = -6
+            pass=.false.
+            return
+         endif
          m(ibranch-1)=sqrt(s1)
          if (m(ibranch-1)**2.lt.smin.or.m(ibranch-1)**2.gt.smax
      &        .or.m(ibranch-1).ne.m(ibranch-1)) then
@@ -2090,6 +2108,16 @@ c
          call yminmax(s1,t,m12,ma2,mbq,mnq,tmin,tmax)
          call trans_x(2,-ibranch,x(-ibranch),-tmax,-tmin,s_mass(ibranch)
      $        ,dum,dum,dum3(-1),dum3(-1),xjac0,tm)
+         if (xjac0.le.0d0) then
+            if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
+     $           xjac0.ne.0d0)then
+               write (*,*) 'WARNING #31b in genps_fks.f',ibranch,tm
+     $              ,-tmax,-tmin,xjac0
+            endif
+            xjac0 = -6
+            pass=.false.
+            return
+         endif
          t=-tm
          if (t .lt. tmin .or. t .gt. tmax) then
             write (*,*) "WARNING #35 in genps_fks.f",t,tmin,tmax
@@ -2429,6 +2457,16 @@ c     above alternative mass.
             s=A/(B-x)
             jac=jac*s**2/A
          endif
+      elseif (itype.eq.7) then
+c     S=A/(B-x) transformation:
+         if (smin.le.0d0) then
+            jac=-471d0
+            return
+         endif
+         A=smin*smax/(smax-smin)
+         B=smax/(smax-smin)
+         s=A/(B-x)
+         jac=jac*s**2/A
       endif
       return
       end
