@@ -1821,7 +1821,8 @@ c Jacobian due to delta() of tau_born
       integer nsamp,idim
       parameter (nsamp=1)
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
-     &     ,tau_lower_bound
+     &     ,tau_lower_bound,tiny
+      parameter (tiny=1d-8)
       common/ctau_lower_bound/tau_Born_lower_bound
      &     ,tau_lower_bound_resonance,tau_lower_bound
       character*4 abrv
@@ -1829,10 +1830,10 @@ c Jacobian due to delta() of tau_born
       smin=tau_born_lower_bound*stot
       smax=stot
       s_mass=tau_lower_bound_resonance*stot
-      if (s_mass.gt.smin) then
+      if (s_mass.gt.smin+tiny) then
          call trans_x(2,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
-      elseif(s_mass.eq.smin) then
+      elseif(abs(s_mass-smin).lt.tiny) then
          call trans_x(7,idim,x,smin,smax,s_mass,dum,dum
      $        ,dum3,dum3,jac,s)
       else
@@ -1918,7 +1919,7 @@ c For e+e- collisions, set tau to one and y to zero
 c Randomize the order with which to generate the s-channel masses:
          call sChan_order(ns_channel,order)
          i=order(ii)
-c Generate invariant masses for all s-channel branchings of the Born
+c     Generate invariant masses for all s-channel branchings of the Born
          smin = (m(itree(1,i))+m(itree(2,i)))**2
          smax = (sqrtshat_born-totalmass+sqrt(smin))**2
          if(smax.lt.smin.or.smax.lt.0.d0.or.smin.lt.0.d0)then
@@ -1973,7 +1974,7 @@ c     s_mass(i)
      $              ,s(i))
             else
                write (*,*) "ERROR in genps_fks.f:"/
-     $              /" cannot set s-channel without BW"
+     $              /" cannot set s-channel without BW",i,smin,s_mass(i)
                stop 1
             endif
          endif
@@ -2032,7 +2033,8 @@ c with the s channel decay sequence
       logical pass
 c
       double precision totalmass,smin,smax,s1,ma2,mbq,m12,mnq,tmin,tmax
-     &     ,t,tmax_temp,phi,dum,dum3(-1:1),s_m,tm
+     &     ,t,tmax_temp,phi,dum,dum3(-1:1),s_m,tm,tiny
+      parameter (tiny=1d-8)
       integer i,ibranch,idim
       double precision lambda,dot
       external lambda,dot
@@ -2063,8 +2065,13 @@ c of the t-channel line.
          endif
          idim=(nbranch-1+(-ibranch)*2)
          s_m=s_m-sqrt(s_mass(itree(2,ibranch)))
-         call trans_x(2,idim,x(idim),smin,smax,s_m**2,dum
-     $        ,dum,dum3(-1),dum3(-1),xjac0,s1)
+         if (abs(smin-s_m**2).lt.tiny) then
+            call trans_x(1,idim,x(idim),smin,smax,s_m**2,dum
+     $           ,dum,dum3(-1),dum3(-1),xjac0,s1)
+         else
+            call trans_x(1,idim,x(idim),smin,smax,s_m**2,dum
+     $           ,dum,dum3(-1),dum3(-1),xjac0,s1)
+         endif
          if (xjac0.le.0d0) then
             if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
      $           xjac0.ne.0d0)then
@@ -2106,7 +2113,7 @@ c
          m12 = m(itree(2,ibranch))**2
          mnq = m(ibranch-1)**2
          call yminmax(s1,t,m12,ma2,mbq,mnq,tmin,tmax)
-         call trans_x(2,-ibranch,x(-ibranch),-tmax,-tmin,s_mass(ibranch)
+         call trans_x(1,-ibranch,x(-ibranch),-tmax,-tmin,s_mass(ibranch)
      $        ,dum,dum,dum3(-1),dum3(-1),xjac0,tm)
          if (xjac0.le.0d0) then
             if ((xjac0.gt.-400d0 .or. xjac0.le.-500d0) .and.
