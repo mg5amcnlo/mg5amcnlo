@@ -4267,6 +4267,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 #             print error    
 
     def complete_help(self, text, line, begidx, endidx):
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
 #     try:
         possibilities = self.complete_set(text, line, begidx, endidx,formatting=False)
         if line[:begidx].strip() == 'help':
@@ -4277,6 +4283,18 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 #         import traceback
 #         traceback.print_exc()
 #         print error
+
+    def complete_update(self, text, line, begidx, endidx):
+        prev_timer = signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
+        
+        arg = line[:begidx].split()
+        if len(arg) <=1:
+            return self.list_completion(text, ['dependent', 'missing'], line)
 
 
     def complete_set(self, text, line, begidx, endidx, formatting=True):
@@ -5098,37 +5116,68 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         if self.has_mw and not os.path.exists(pjoin(self.me_dir,'Cards','transfer_card.dat')):
             logger.warning('No transfer function currently define. Please use the change_tf command to define one.')
     
+    fail_due_to_format = 0 #parameter to avoid infinite loop
     def postcmd(self, stop, line):
         ending_question = cmd.OneLinePathCompletion.postcmd(self,stop,line)
 
         if ending_question:
             self.check_card_consistency()
-            self.do_update_dependent('', timer=20)
+            try:
+                self.do_update('dependent', timer=20)
+            except MadGraph5Error, error:
+                if 'Missing block:' in str(error):
+                    self.fail_due_to_format +=1
+                    if self.fail_due_to_format == 10:
+                        missing, unknow = str(error).split('\n')[-2:]
+                        logger.warning("Invalid param_card:\n%s\n%s\n" % (missing, unknow))
+                        logger.info("Type \"update missing\" to use default value.\n ", '$MG:color:BLACK')
+                        self.value = False # to avoid that entering a command stop the question
+                        return self.reask(True)
+                    else:
+                        raise
+            
             return ending_question
     
-    def do_update_dependent(self, line, timer=0):
-        """Change the mass/width of particles which are not free parameter for the 
-        model."""
-        if not self.mother_interface:
-            logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+    
+    
+    
+    
+    def do_update(self, line, timer=0):
+        """ syntax: update dependent: Change the mass/width of particles which are not free parameter for the model.
+                    update missing:   add to the current param_card missing blocks/parameters."""
         
-        pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
-        pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)
-        param_text= open(self.paths['param']).read()
-        
-        if pattern_scan.search(param_text):
-            #for block, key in self.restricted_value:
-            #    self.param_card[block].get(key).value = -9.999e-99
-            #    self.param_card.write(self.paths['param'])
+        args = self.split_arg(line)
+        if len(args)==0:
+            logger.warning('miss an argument (dependent or missing). Please retry')
             return
-        elif pattern_width.search(param_text):
-            self.do_compute_widths('')
-            self.param_card = check_param_card.ParamCard(self.paths['param'])
-    
-        # calling the routine doing the work    
-        self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
-                               self.paths['param'], timer)
-    
+        
+        if args[0] == 'dependent':
+            if not self.mother_interface:
+                logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
+            
+            pattern_width = re.compile(r'''decay\s+(\+?\-?\d+)\s+auto(@NLO|)''',re.I)
+            pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)
+            param_text= open(self.paths['param']).read()
+            
+            if pattern_scan.search(param_text):
+                #for block, key in self.restricted_value:
+                #    self.param_card[block].get(key).value = -9.999e-99
+                #    self.param_card.write(self.paths['param'])
+                return
+            elif pattern_width.search(param_text):
+                self.do_compute_widths('')
+                self.param_card = check_param_card.ParamCard(self.paths['param'])
+        
+            # calling the routine doing the work    
+            self.update_dependent(self.mother_interface, self.me_dir, self.param_card,
+                                   self.paths['param'], timer)
+            
+        elif args[0] == 'missing':
+            self.update_missing()
+            return
+
+            
+            
     @staticmethod
     def update_dependent(mecmd, me_dir, param_card, path ,timer=0):
         """static method which can also be called from outside the class
@@ -5153,7 +5202,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         except TimeOutError:
             logger.warning('The model takes too long to load so we bypass the updating of dependent parameter.\n'+\
                            'This might create trouble for external program (like MadSpin/shower/...)\n'+\
-                           'The update can be forced without timer by typing \'update_dependent\' at the time of the card edition')
+                           'The update can be forced without timer by typing \'update dependent\' at the time of the card edition')
             modify =False
         except Exception:
             logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
@@ -5177,11 +5226,93 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     
     
+    def update_missing(self):
+        
+        def check_block(self, blockname):
+            add_entry = 0
+            block = self.param_card_default[blockname]
+            for key in block.keys():
+                if key not in input_in_block:
+                    param = block.get(key)
+                    if blockname != 'decay':
+                        text.append('\t%s\t%s # %s\n' % (' \t'.join([`i` for i in param.lhacode]), param.value, param.comment))
+                    else: 
+                        text.append('DECAY \t%s\t%s # %s\n' % (' \t'.join([`i` for i in param.lhacode]), param.value, param.comment))
+                    add_entry += 1
+            if add_entry:
+                text.append('\n')
+            return add_entry
+        
+        # Add to the current param_card all the missing input at default value
+        current_block = ''
+        input_in_block = set()
+        defined_blocks = set()
+        decay = set()
+        text = []
+        add_entry = 0
+        for line in open(self.paths['param']):
+            
+            new_block = re.findall(r'^\s*(block|decay)\s*(\w*)', line, re.I)               
+            if new_block:                       
+                new_block = new_block[0]
+                defined_blocks.add(new_block[1].lower())
+                if current_block:
+                    add_entry += check_block(self, current_block)
+
+                current_block= new_block[1]
+                input_in_block = set()
+                if new_block[0].lower() == 'decay':
+                    decay.add((int(new_block[1]),))
+                    current_block = ''
+                if new_block[1].lower() == 'qnumbers':
+                    current_block = ''
+    
+            text.append(line) 
+            if not current_block:
+                continue
+            
+            #normal line. 
+            #strip comment
+            line = line.split('#',1)[0]
+            split  = line.split()
+            if not split:
+                continue
+            else:
+                try:
+                    lhacode = [int(i) for i in split[:-1]]
+                except:
+                    continue
+                input_in_block.add(tuple(lhacode))
+                    
+        if current_block:
+            add_entry += check_block(self, current_block)
+        
+        # special check for missing block
+        for block in self.param_card_default:
+
+            if block.startswith(('qnumbers', 'decay')):
+                continue
+
+            if block not in defined_blocks:
+                add_entry += len(self.param_card_default[block])
+                text.append(str(self.param_card_default[block])) 
+            
+        # special check for the decay
+        input_in_block = decay
+        add_entry += check_block(self, 'decay')
+        
+        if add_entry:
+            logger.info('write new param_card with %s new parameter(s).', add_entry, '$MG:color:BLACK')
+            open(self.paths['param'],'w').write(''.join(text))
+            self.reload_card(self.paths['param'])
+        else:
+            logger.info('No missing parameter detected.', '$MG:color:BLACK')
+    
     
     def check_answer_consistency(self):
         """function called if the code reads a file"""
         self.check_card_consistency()
-        self.do_update_dependent('', timer=20) 
+        self.do_update('dependent', timer=20) 
       
     def help_set(self):
         '''help message for set'''
@@ -5311,6 +5442,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
     def complete_compute_widths(self, *args, **opts):
         signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
         return self.mother_interface.complete_compute_widths(*args,**opts)
 
 
@@ -5324,9 +5460,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '-- syntax: add filename line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
         logger.info('********************* HELP ADD ***************************') 
+
     def complete_add(self, text, line, begidx, endidx, formatting=True):
         """ auto-completion for add command"""
         signal.alarm(0) # avoid timer if any
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
                  
         possibilities = {} 
         cards = [c.rsplit('.',1)[0] for c in self.cards]   
@@ -5380,7 +5522,11 @@ class AskforEditCard(cmd.OneLinePathCompletion):
 
     def complete_asperge(self, text, line, begidx, endidx, formatting=True):
         signal.alarm(0) # avoid timer if any
-
+        if prev_timer:
+            nb_back = len(line)
+            self.stdout.write('\b'*nb_back + '[timer stopped]\n')
+            self.stdout.write(line)
+            self.stdout.flush()
         blockname = self.pname2block.keys()
         # remove those that we know for sure are not mixing
         wrong = ['decay', 'mass', 'sminput']
