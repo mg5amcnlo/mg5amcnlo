@@ -3348,7 +3348,7 @@ def plot_from_HWU(path, ax, hwu_variable, hwu_central, *args, **opts):
     if hwu_error:
         if not 'hwu_error_mode' in opts:
             opts['hwu_error_mode']=None
-        h_min, h_max = selected_hist.get_uncertainty_band(error, mode=hwu_error_mode)
+        h_min, h_max = select_hist.get_uncertainty_band(hwu_error, mode=hwu_error_mode)
         if hwu_mult != 1:
             h_min = [hwu_mult*b for b in h_min] 
             h_max = [hwu_mult*b for b in h_max] 
@@ -3685,7 +3685,9 @@ def fill_between_steps(x, y1, y2=0, h_align='right', ax=None, **kwargs):
         yy2 = []; [(yy2.append(d),yy2.append(d)) for d in y2]
     else:
         yy2=y2
-
+    if len(yy2) != len(yy1):
+        yy2 = []; [(yy2.append(d),yy2.append(d)) for d in y2]
+        
     # now to the plotting part:
     ax.fill_between(xx, yy1, y2=yy2, **kwargs)
 

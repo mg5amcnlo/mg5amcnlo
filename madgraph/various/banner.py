@@ -994,13 +994,12 @@ class ConfigFile(dict):
                 self.auto_set.remove(lower_name)
             
         # 2. Find the type of the attribute that we want
-        if name in self.list_parameter:
-            if isinstance(dict.__getitem__(self,name), list):
-                targettype = type(dict.__getitem__(self,name)[0])
+        if lower_name in self.list_parameter:
+            if isinstance(self[name], list):
+                targettype = type(self[name][0])
             else:
                 #should not happen but better save than sorry
                 targettype = type(dict.__getitem__(self,name)) 
-                
             if isinstance(value, str):
                 # split for each comma/space
                 value = value.strip()
@@ -1209,6 +1208,7 @@ class ConfigFile(dict):
                             else:
                                 v /=  float(split[2*i+2])
                     except:
+                        v=0
                         raise Exception, "%s can not be mapped to a float" % value
                     finally:
                         value = v
@@ -1937,8 +1937,11 @@ class PY8Card(ConfigFile):
             # Read parameter. The case of a parameter not defined in the card is
             # handled directly in ConfigFile.
             lname = param.lower()
+            current_type = type(self[lname])
+            if current_type is list:
+                current_type = type(self[lname][0])
             if lname not in self or \
-                         self.format_variable(value, type(self[lname]),
+                         self.format_variable(value, current_type,
                                                        name=param)!=self[lname]:
                 # Use the appropriate authority to set the new/changed variable
                 if setter == 'user':

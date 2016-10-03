@@ -203,7 +203,7 @@ class Systematics(object):
                 cmass = 1.4
             bmass = param_card.get_value('mass', 5, 4.7)
             if bmass == 0:
-                cmass = 4.7
+                bmass = 4.7
             self.alpsrunner = Alphas_Runner(asmz, nloop, zmass, cmass, bmass)
         
 

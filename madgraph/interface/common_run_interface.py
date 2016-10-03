@@ -5037,7 +5037,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
-                    modify.append('run')
         
         # @LO if PY6 shower => event_norm on sum
         if 'pythia_card.dat' in self.cards:
