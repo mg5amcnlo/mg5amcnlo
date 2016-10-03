@@ -212,7 +212,7 @@ c           Here we set if the BW is "on-shell" for LesHouches
 c
             onshell = (abs(xmass - prmass(i,iconfig)) .lt.
      $           bwcutoff*prwidth(i,iconfig).and.
-     $           (prwidth(i,iconfig)/prmass(i,iconfig).lt.0.1d0.and.
+     $           (prwidth(i,iconfig)/prmass(i,iconfig).lt.0.1d0.or.
      $            gForceBW(i,iconfig).eq.1))
             if(onshell)then
 c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
