@@ -5440,7 +5440,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         print '  if --add is present, just add a new decay for the associate particle.'
         
     def complete_compute_widths(self, *args, **opts):
-        signal.alarm(0) # avoid timer if any
+        prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
@@ -5456,26 +5456,41 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '-- syntax: add pythia8_card NAME VALUE')
         logger.info( "   add a definition of name in the pythia8_card with the given value")
         logger.info( "   Do not work for the param_card"        )
-        logger.info( '-- syntax: add filename line')
+        logger.info( '-- syntax: add filename [OPTION] line')
         logger.info( '   add the given LINE to the end of the associate file (all file supportedd).')
+        logger.info( '   OPTION parameter allows to change the position where to write in the file')
+        logger.info( '     --after_line=banner : write the line at the end of the banner')
+        logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
+        logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
+        logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
+        logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
         logger.info('********************* HELP ADD ***************************') 
 
     def complete_add(self, text, line, begidx, endidx, formatting=True):
         """ auto-completion for add command"""
-        signal.alarm(0) # avoid timer if any
+
+        prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
             self.stdout.write(line)
             self.stdout.flush()
-                 
-        possibilities = {} 
-        cards = [c.rsplit('.',1)[0] for c in self.cards]   
-        possibilities['category of parameter (optional)'] = \
+        
+        split = line[:begidx].split()
+        if len(split)==1:
+            possibilities = {} 
+            cards = [c.rsplit('.',1)[0] for c in self.cards]   
+            possibilities['category of parameter (optional)'] = \
                           self.list_completion(text, cards)
-                          
+        elif len(split) == 2:
+            possibilities = {} 
+            options = ['--line_position=','--after_line=banner', '--after_line="','--before_line="']   
+            possibilities['category of parameter (optional)'] = \
+                          self.list_completion(text, options, line)
+        else:
+            return                          
         return self.deal_multiple_categories(possibilities, formatting)
-    
+
     def do_add(self, line):
         """ syntax: add filename NAME VALUE
             syntax: add filename LINE"""
@@ -5501,12 +5516,71 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.error("unknow card %s. Please retry." % args[0])
                 return
-            
-            ff = open(pjoin(self.me_dir,'Cards',card),'a')
-            ff.write("%s \n" % line.split(None,1)[1])
-            ff.close()
+
+            # handling the various option on where to write the line            
+            if args[1].startswith('--line_position='):
+                #position in file determined by user
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                pos = int(args[1].split('=',1)[1])
+                newline = line.split(None,2)[2]
+                split.insert(pos, newline)
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ))
+                
+            elif args[1].startswith('--after_line=banner'):
+                # write the line at the first not commented line
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                for posline,l in  enumerate(split):
+                    if not l.startswith('#'):
+                        break
+                split.insert(posline, line.split(None,2)[2])
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))
+                
+            elif args[1].startswith('--before_line='):
+                # catch the line/regular expression and write before that line
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                search_pattern=r'''before_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                pattern = re.search(search_pattern, line).group()[13:-1]
+                for posline,l in enumerate(split):
+                    if re.search(pattern, l):
+                        break
+                else:
+                    raise Exception, 'invalid regular expression: not found in file'
+                split.insert(posline, re.split(search_pattern,line)[-1])
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))                
+                        
+                
+        
+            elif args[1].startswith('--after_line='):
+                # catch the line/regular expression and write after that line
+                text = open(pjoin(self.me_dir,'Cards',card)).read()
+                split = text.split('\n')
+                search_pattern = r'''after_line=(?P<quote>["'])(?:(?=(\\?))\2.)*?\1'''
+                pattern = re.search(search_pattern, line).group()[12:-1]
+                for posline,l in enumerate(split):
+                    if re.search(pattern, l):
+                        break
+                else:
+                    posline=len(split)
+                split.insert(posline+1, re.split(search_pattern,line)[-1])
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write('\n'.join(split))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))                                 
+            else:
+                ff = open(pjoin(self.me_dir,'Cards',card),'a')
+                ff.write("%s \n" % line.split(None,1)[1])
+                ff.close()
+                logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ))
             self.reload_card(pjoin(self.me_dir,'Cards',card))
-            logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ))
+            
 
 
     def help_asperge(self):
@@ -5520,7 +5594,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         print '   diagonalize the associate mass matrices (here m1 and m2).'
 
     def complete_asperge(self, text, line, begidx, endidx, formatting=True):
-        signal.alarm(0) # avoid timer if any
+        prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
             self.stdout.write('\b'*nb_back + '[timer stopped]\n')
