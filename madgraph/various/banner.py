@@ -2248,6 +2248,7 @@ class RunCard(ConfigFile):
         for name, value in self.system_default.items():
                 self.set(name, value, changeifuserset=False)
 
+    default_include_file = 'run_card.inc'
 
     def write_include_file(self, output_dir):
         """Write the various include file in output_dir.
@@ -2259,7 +2260,7 @@ class RunCard(ConfigFile):
         
         for incname in self.includepath:
             if incname is True:
-                pathinc = 'run_card.inc'
+                pathinc = self.default_include_file
             else:
                 pathinc = incname
                 

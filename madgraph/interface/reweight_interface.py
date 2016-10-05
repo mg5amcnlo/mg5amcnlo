@@ -1565,9 +1565,9 @@ class ReweightInterface(extended_cmd.Cmd):
             #compile the module to combine the weight
             misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
             #link it 
+            if path_me not in sys.path:
+                sys.path.insert(0, os.path.realpath(path_me))
             with misc.chdir(pjoin(path_me)):
-                if path_me not in sys.path:
-                    sys.path.insert(0, path_me)
                 mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
                 mymod =  mymod.Source.rwgt2py
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
