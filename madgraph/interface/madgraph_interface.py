@@ -2727,7 +2727,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                    'gauge','lorentz', 'brs', 'cms']
     _import_formats = ['model_v4', 'model', 'proc_v4', 'command', 'banner']
     _install_opts = ['Delphes', 'MadAnalysis4', 'ExRootAnalysis',
-                     'update', 'SysCalc', 'Golem95', 'PJFry', 'QCDLoop']
+                     'update', 'SysCalc', 'Golem95', 'PJFry', 'QCDLoop', 'maddm']
     
     # The targets below are installed using the HEPToolsInstaller.py script
     _advanced_install_opts = ['pythia8','zlib','boost','lhapdf6','lhapdf5','collier',
@@ -5649,6 +5649,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             self.install_update(['update']+install_options['update_options'],wget=program)
             return
 
+        plugin = ['maddm']
+        
         advertisements = {'pythia-pgs':['arXiv:0603175'],
                           'Delphes':['arXiv:1307.6346'],
                           'Delphes2':['arXiv:0903.2225'],
@@ -5665,7 +5667,8 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                           'MadAnalysis5':['arXiv:1206.1599'],
                           'MadAnalysis':['arXiv:1206.1599'],
                           'collier':['arXiv:1604.06792'],
-                          'oneloop':['arXiv:1007.4716']}
+                          'oneloop':['arXiv:1007.4716'],
+                          'maddm':['arXiv:1505.04190']}
 
 
         if args[0] in advertisements:
@@ -5770,6 +5773,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 'ExRootAnalysis': 'ExRootAnalysis','MadAnalysis':'MadAnalysis',
                 'SysCalc':'SysCalc', 'Golem95': 'golem95',
                 'PJFry':'PJFry','QCDLoop':'QCDLoop',
+                'maddm':'maddm'
                 }
             name = name[args[0]]
         except:
@@ -5909,7 +5913,52 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 make_flags.append('CXX=%s' % self.options['cpp_compiler'])
             
 
-        if logger.level <= logging.INFO:
+        if name in plugin:
+            logger.info('no compilation needed for plugin. Loading plugin information')
+            try:
+                shutil.rmtree(pjoin(MG5DIR, 'PLUGIN', name))
+            except Exception:
+                pass
+            shutil.move(pjoin(os.path.join(MG5DIR, name)), os.path.join(MG5DIR, 'PLUGIN', name))
+            # read the __init__.py to check if we need to add a new executable
+            try:
+                __import__('PLUGIN.%s' % name, globals(), locals(), [], -1)
+                plugin = sys.modules['PLUGIN.%s' % name] 
+                new_interface = plugin.new_interface
+                new_output = plugin.new_output
+                latest_validated_version = plugin.latest_validated_version
+                minimal_mg5amcnlo_version = plugin.minimal_mg5amcnlo_version
+                maximal_mg5amcnlo_version = plugin.maximal_mg5amcnlo_version
+            except Exception, error:
+                raise Exception, 'Plugin %s fail to be loaded. Please contact the author of the PLUGIN\n Error %s' % (name, error)
+                
+            logger.info('Plugin %s correctly interfaced. Latest official validition for MG5aMC version %s.' % (name, '.'.join(`i` for i in latest_validated_version)))
+            if new_interface:
+                ff = open(pjoin(MG5DIR, 'bin', name) , 'w') 
+                if __debug__:
+                    text = '''#! /usr/bin/env python
+import os
+import sys
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+exe_path = os.path.join(root_path,'bin','mg5_aMC')
+sys.argv.pop(0)
+os.system('%s -tt %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
+'''                    
+                else:
+                    text = '''#! /usr/bin/env python
+import os
+import sys
+root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
+exe_path = os.path.join(root_path,'bin','mg5_aMC')
+sys.argv.pop(0)
+os.system('%s -O -W ignore::DeprecationWarning %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
+'''                    
+                ff.write(text)
+                ff.close()
+                logger.info('To use this module, you need to quite MG5aMC and run the executable bin/%s' % name)
+            status=0
+                
+        elif logger.level <= logging.INFO:
             devnull = open(os.devnull,'w')
             try:
                 misc.call(['make', 'clean'], stdout=devnull, stderr=-2)
@@ -5939,7 +5988,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                                                cwd = os.path.join(MG5DIR, name))
 
         if not status:
-            logger.info('Compilation succeeded')
+            logger.info('Installation succeeded')
         else:
             # For pythia-pgs check when removing the "-fno-second-underscore" flag
             if name == 'pythia-pgs':
