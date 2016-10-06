@@ -5942,8 +5942,8 @@ import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
-os.system('%s -tt %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''                    
+os.system('%s  -tt %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
+'''.format(name)                    
                 else:
                     text = '''#! /usr/bin/env python
 import os
@@ -5951,10 +5951,12 @@ import sys
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 exe_path = os.path.join(root_path,'bin','mg5_aMC')
 sys.argv.pop(0)
-os.system('%s -O -W ignore::DeprecationWarning %s %s' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
-'''                    
+os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executable, str(exe_path) , ' '.join(sys.argv) ))
+'''.format(name)                     
                 ff.write(text)
                 ff.close()
+                import stat
+                os.chmod(pjoin(MG5DIR, 'bin', name), stat.S_IRWXU)
                 logger.info('To use this module, you need to quite MG5aMC and run the executable bin/%s' % name)
             status=0
                 
