@@ -618,7 +618,7 @@ class Systematics(object):
         """return the new weight for NLO event --with weight information-- """
         
         wgt = 0 
-        nloinfo = event.parse_nlo_weight()
+        nloinfo = event.parse_nlo_weight(real_type=(1,11,12,13))
         for cevent in nloinfo.cevents:
             if dyn == 1: 
                 mur2 = cevent.get_et_scale(1.)**2
@@ -673,6 +673,7 @@ class Systematics(object):
                         misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
                         misc.sprint(onewgt)
                         misc.sprint(cevent)
+                        misc.sprint(mur2,muf2)
                         raise Exception, 'not enough agreement between stored value and computed one'
                 
                 

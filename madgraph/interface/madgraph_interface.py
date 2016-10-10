@@ -5934,7 +5934,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
                 
             logger.info('Plugin %s correctly interfaced. Latest official validition for MG5aMC version %s.' % (name, '.'.join(`i` for i in latest_validated_version)))
             if new_interface:
-                ff = open(pjoin(MG5DIR, 'bin', name) , 'w') 
+                ff = open(pjoin(MG5DIR, 'bin', '%s.py' % name) , 'w') 
                 if __debug__:
                     text = '''#! /usr/bin/env python
 import os
@@ -5957,7 +5957,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 ff.close()
                 import stat
                 os.chmod(pjoin(MG5DIR, 'bin', name), stat.S_IRWXU)
-                logger.info('To use this module, you need to quite MG5aMC and run the executable bin/%s' % name)
+                logger.info('To use this module, you need to quite MG5aMC and run the executable bin/%s.py' % name)
             status=0
                 
         elif logger.level <= logging.INFO:
