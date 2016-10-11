@@ -1558,6 +1558,9 @@ This will take effect only in a NEW terminal
                 if '-noclean' not in args and os.path.exists(self._export_dir):
                     args.append('-noclean')
             elif path != 'auto':
+                if path in ['HELAS', 'tests', 'MadSpin', 'madgraph', 'mg5decay', 'vendor']:
+                    if os.getcwd() == MG5DIR:
+                        raise self.InvalidCmd, "This name correspond to a buildin MG5 directory. Please choose another name"
                 self._export_dir = path
             elif path == 'auto':
                 if self.options['pythia8_path']:
@@ -2930,6 +2933,11 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
         if '--diagram_filter' in args:
             diagram_filter = True
             args.remove('--diagram_filter')
+        
+        standalone_only = False
+        if '--standalone' in args:
+            standalone_only = True
+            args.remove('--standalone')            
 
         # Check the validity of the arguments
         self.check_add(args)
@@ -2995,7 +3003,7 @@ This implies that with decay chains:
             # Check that we have the same number of initial states as
             # existing processes
             if self._curr_amps and self._curr_amps[0].get_ninitial() != \
-               myprocdef.get_ninitial():
+               myprocdef.get_ninitial() and not standalone_only:
                 raise self.InvalidCmd("Can not mix processes with different number of initial states.")               
 
             self._curr_proc_defs.append(myprocdef)

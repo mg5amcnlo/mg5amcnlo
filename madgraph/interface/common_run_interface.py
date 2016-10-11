@@ -3701,7 +3701,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         Version which can be used independently of the class.
         local path is used if the global installation fails.
         """
-           
+
         if not lhapdf_version:
             lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
@@ -5386,8 +5386,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             text = open(path).read()
             line = line.replace('--add', '').replace('-add','')
             logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
-            
-            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            if 'launch' in text:
+                text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            else: 
+                text += '\ndecay %s\n launch \n' % line
         else:
             # Here we have to remove all the previous definition of the decay
             #first find the particle
@@ -5397,10 +5399,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             decay_pattern = re.compile(r"^\s*decay\s+%s\s*>[\s\w+-~]*?$" % particle, re.I+re.M)
             text= open(path).read()
             text = decay_pattern.sub('', text)
-            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-
+            if 'launch' in text:
+                text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            else: 
+                text += '\ndecay %s\n launch \n' % line
+                
         with open(path,'w') as fsock:
             fsock.write(text) 
+        self.reload_card(path)
 
         
 
@@ -5463,8 +5469,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
         logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
+        logger.info('      --clean remove all previously existing file')
         logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
         logger.info('********************* HELP ADD ***************************') 
+
 
     def complete_add(self, text, line, begidx, endidx, formatting=True):
         """ auto-completion for add command"""
@@ -5516,9 +5524,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.error("unknow card %s. Please retry." % args[0])
                 return
-
             # handling the various option on where to write the line            
-            if args[1].startswith('--line_position='):
+            if args[1] == '--clean':
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write("# %s \n" % card)
+                ff.write("%s \n" %  line.split(None,2)[2])
+                ff.close()
+                logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
+
+            elif args[1].startswith('--line_position='):
                 #position in file determined by user
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
@@ -5527,7 +5541,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
@@ -5539,7 +5553,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
@@ -5555,10 +5569,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))                
-                        
-                
-        
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                
+                                
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
@@ -5573,12 +5585,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))                                 
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                                 
             else:
                 ff = open(pjoin(self.me_dir,'Cards',card),'a')
                 ff.write("%s \n" % line.split(None,1)[1])
                 ff.close()
-                logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ))
+                logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ),'$MG:color:BLACK')
+
             self.reload_card(pjoin(self.me_dir,'Cards',card))
             
 
