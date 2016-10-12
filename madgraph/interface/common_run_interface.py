@@ -2304,7 +2304,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             MA5_options['inputs'] = '%s.gz'%input_file
             if not os.path.exists('%s.gz'%input_file):
                 if os.path.exists(input_file):
-                    misc.gzip(input_file, keep=True, stdout=output_file)
+                    misc.gzip(input_file, stdout='%s.gz' % input_file)
                 else:
                     logger.warning("LHE event file not found in \n%s\ns"%input_file+
                                        "Parton-level MA5 analysis will be skipped.")                 

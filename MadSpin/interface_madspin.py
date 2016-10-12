@@ -1210,12 +1210,16 @@ class MadSpinInterface(extended_cmd.Cmd):
                 r = r * tot
                 cumul = 0
                 for j,events in evt_decayfile[particle.pdg].items():
+                    
                     cumul += events.cross
                     if r < cumul:
                         decay_file = events
                         decay_file_nb = j
-                    else:
                         break
+                    else:
+                        continue
+                else:
+                    raise Exception
             # So now we know which file to read. Do it and re-generate events for that 
             # file if needed.
             while 1:

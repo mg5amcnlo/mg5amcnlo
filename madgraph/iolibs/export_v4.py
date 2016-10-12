@@ -1992,7 +1992,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         text+='all: %s\n\techo \'done\'' % deppython
             
-        ff = open(pjoin(self.dir_path, 'Subprocesses', 'makefile'),'a')
+        ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
         ff.write(text)
         ff.close()
         

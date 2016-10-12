@@ -2025,7 +2025,6 @@ class decay_all_events(object):
         self.all_decay = {}
 
 
-        misc.sprint("generate the BR")
         # generate BR and all the square matrix element based on the banner.
         pickle_info = pjoin(self.path_me,"production_me", "all_ME.pkl")
         if not options["use_old_dir"] or not os.path.exists(pickle_info):
@@ -2042,7 +2041,7 @@ class decay_all_events(object):
                                           (self.all_ME,self.all_decay,self.width_estimator))                
         
         misc.sprint("BR DONE")
-        if not self.options["onlyhelicity"]:
+        if not self.options["onlyhelicity"] and self.options['spinmode'] != 'onshell':
             resonances = self.width_estimator.resonances
             logger.debug('List of resonances: %s' % resonances)
             self.extract_resonances_mass_width(resonances) 
@@ -4034,7 +4033,7 @@ class decay_all_events_onshell(decay_all_events):
             pass       
         
         # 1. compute the partial width------------------------------------------
-        self.get_branching_ratio()
+        #self.get_branching_ratio()
         
         # 2. compute the production matrix element -----------------------------
         processes = [line[9:].strip() for line in self.banner.proc_card

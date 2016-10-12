@@ -1223,6 +1223,10 @@ class Model(PhysicsObject):
             self['order_hierarchy'] = {}
             self['expansion_order'] = None
 
+        if name == 'name2pdg':
+            self['name2pgg'] = value
+            return
+
         result = Model.__bases__[0].set(self, name, value, force) # call the mother routine
 
         if name == 'particles':
