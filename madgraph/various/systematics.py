@@ -97,11 +97,11 @@ class Systematics(object):
         if isinstance(self.banner.run_card, banner_mod.RunCardLO):
             self.is_lo = True
             if not self.banner.run_card['use_syst']:
-                raise SystematicsError, 'The events was not generated with use_syst=True. Can not evaluate systematics error on this event.'
+                raise SystematicsError, 'The events have not been generated with use_syst=True. Cannot evaluate systematics error on these events.'
         else:
             self.is_lo = False
             if not self.banner.run_card['store_rwgt_info']:
-                raise SystematicsError, 'The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event.'
+                raise SystematicsError, 'The events have not been generated with store_rwgt_info=True. Cannot evaluate systematics error on these events.'
 
         # MUR/MUF/ALPS PARSING
         if isinstance(mur, str):
@@ -163,7 +163,7 @@ class Systematics(object):
                         try:
                             self.pdf.append(lhapdf.mkPDF(int(name)+int(arg)))
                         except:
-                            raise Exception, 'invididual error set need to called with name not with lhapdfID'
+                            raise Exception, 'Individual error sets need to be called with LHAPDF NAME not with LHAGLUE NUMBER'
                     else:
                         self.pdf.append(lhapdf.mkPDF(name, int(arg)))
                 else:
@@ -227,10 +227,10 @@ class Systematics(object):
                 break
             if self.is_lo:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 2500 ==0:
-                    self.log( '# currently at event %s [ellapsed time: %.2g s]' % (nb_event, time.time()-start_time))
+                    self.log( '# currently at event %s [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
             else:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 1000 ==0:
-                    self.log( '# currently at event %i [ellapsed time: %.2g s]' % (nb_event, time.time()-start_time))
+                    self.log( '# currently at event %i [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
                     
             self.new_event() #re-init the caching of alphas/pdf
             if self.is_lo:
