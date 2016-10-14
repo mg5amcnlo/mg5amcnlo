@@ -3308,7 +3308,7 @@ RESTART = %(mint_mode)s
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],
                        'plot':[]}
-
+        
         if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
@@ -3342,6 +3342,8 @@ RESTART = %(mint_mode)s
         new_tag = False
         # First call for this run -> set the banner
         self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
+        if 'mgruncard' in self.banner:
+            self.run_card = self.banner.charge_card('run_card')
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True

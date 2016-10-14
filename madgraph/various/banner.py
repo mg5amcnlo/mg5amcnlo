@@ -246,8 +246,7 @@ class Banner(dict):
             self.add(pjoin(medir,'Cards', 'proc_card_mg5.dat'))
         else:
             self.add(pjoin(medir,'Cards', 'proc_card.dat'))
-    
-    
+        
     def change_seed(self, seed):
         """Change the seed value in the banner"""
         #      0       = iseed
@@ -550,7 +549,9 @@ class Banner(dict):
             self.charge_card(attr_tag) 
 
         card = getattr(self, attr_tag)
-        if len(arg) == 1:
+        if len(arg) == 0:
+            return card
+        elif len(arg) == 1:
             if tag == 'mg5proccard':
                 try:
                     return card.get(arg[0])
@@ -682,10 +683,24 @@ def recover_banner(results_object, level, run=None, tag=None):
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
     if not os.path.exists(banner_path):
-         if level != "parton" and tag != _tag:
+        if level != "parton" and tag != _tag:
             return recover_banner(results_object, level, _run, results_object[_run].tags[0])
-         # security if the banner was remove (or program canceled before created it)
-         return Banner()  
+        elif level == 'parton':
+            paths = [pjoin(path,'Events',run, 'unweighted_events.lhe.gz'),
+                     pjoin(path,'Events',run, 'unweighted_events.lhe'),
+                     pjoin(path,'Events',run, 'events.lhe.gz'),
+                     pjoin(path,'Events',run, 'events.lhe')]
+            for p in paths:
+                if os.path.exists(p):
+                    if MADEVENT:
+                        import internal.lhe_parser as lhe_parser
+                    else:
+                        import madgraph.various.lhe_parser as lhe_parser
+                    lhe = lhe_parser.EventFile(p)
+                    return Banner(lhe.banner)
+
+        # security if the banner was remove (or program canceled before created it)
+        return Banner()  
     banner = Banner(banner_path)
     
     
@@ -2095,7 +2110,14 @@ class RunCard(ConfigFile):
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
         if consistency:
-            self.check_validity()
+                try:
+                    self.check_validity()
+                except InvalidRunCard, error:
+                    if consistency == 'warning':
+                        logger.warning(str(error))
+                    else:
+                        raise
+                    
                 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -2128,7 +2150,7 @@ class RunCard(ConfigFile):
                     if name in self.list_parameter:
                         value = ', '.join([str(v) for v in value])
                     if python_template:
-                        text += line % {name:value}
+                        text += line % {nline[1].strip():value}
                     else:
                         if not comment or comment[-1]!='\n':
                             endline = '\n'

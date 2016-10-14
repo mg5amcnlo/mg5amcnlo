@@ -633,6 +633,10 @@ class Systematics(object):
             muf2 = mur2
             
             for onewgt in cevent.wgts:
+                if not __debug__ and (dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf):
+                    wgt += onewgt.ref_wgt 
+                
+                
                 if dyn == -1:
                     mur2 = onewgt.scales2[1]
                     muf2 = onewgt.scales2[2]

@@ -176,12 +176,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
-        if '[' in process:
+        if '[' in process and isinstance(self.banner.get('run_card'), banner.RunCardNLO):
             if not self.banner.get_detail('run_card', 'store_rwgt_info'):
                 logger.warning("The information to perform a proper NLO reweighting is not present in the event file.")
                 logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
-            
+
             if 'OLP' in self.mother.options:
                 if self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
@@ -1402,7 +1402,14 @@ class ReweightInterface(extended_cmd.Cmd):
             for proc in data['processes']:
                 if '[' not in proc:
                     raise
-                commandline += "add process %s ;" % proc
+                # pass to virtsq=
+                base, post = proc.split('[',1)
+                nlo_order, post = post.split(']',1)
+                if '=' not in nlo_order:
+                    nlo_order = 'virt=%s' % nlo_order
+                elif 'noborn' in nlo_order:
+                    nlo_order = nlo_order.replace('noborn', 'virt')
+                commandline += "add process %s [%s] %s;" % (base,nlo_order,post)
             commandline = commandline.replace('add process', 'generate',1)
             logger.info("RETRY with %s", commandline)
             mgcmd.exec_cmd(commandline, precmd=True)

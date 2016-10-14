@@ -1508,7 +1508,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 args[0] = self.run_name
             else:
                 raise self.InvalidCmd, 'no default run. Please specify the run_name'
-                
+        
+        if args[0] != self.run_name:
+            misc.sprint('set run name %s' % args[0])
+            self.set_run_name(args[0])
+          
         # always pass to a path + get the event size
         result_file= sys.stdout
         if not os.path.sep in args[0]:
@@ -3973,7 +3977,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.param_card_default = default_param
         
         try:
-            self.run_card = banner_mod.RunCard(self.paths['run'])
+            self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
         except IOError:
             self.run_card = {}
         try:
