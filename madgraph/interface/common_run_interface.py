@@ -1510,7 +1510,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 raise self.InvalidCmd, 'no default run. Please specify the run_name'
         
         if args[0] != self.run_name:
-            misc.sprint('set run name %s' % args[0])
             self.set_run_name(args[0])
           
         # always pass to a path + get the event size
@@ -1641,8 +1640,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     self.update_status((idle, run, finish, 'running systematics'), level=None,
                                        force=False, starttime=starttime)
 
-            self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
-            
+            try:
+                self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
+            except Exception:
+                self.cluster.remove()
+                old_run_mode = self.options['run_mode']
+                self.options['run_mode'] =0
+                try:
+                    out = self.do_systematics(line)
+                finally:
+                    self.options['run_mode']  =  old_run_mode
             #collect the data
             all_cross = []
             for i in range(nb_submit):
