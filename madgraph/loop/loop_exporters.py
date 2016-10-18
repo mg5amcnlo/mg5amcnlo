@@ -94,7 +94,7 @@ class LoopExporterFortran(object):
                         'samurai':'msamurai.mod',
                         'collier': 'collier.mod'}
 
-    def __init__(self, dir_path = "", opt=None):
+    def __init__(self, dir_path = "", opt=None, cmd_options={}):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
@@ -110,7 +110,7 @@ class LoopExporterFortran(object):
         self.dependencies = self.opt['output_dependencies']
         self.compute_color_flows = self.opt['compute_color_flows']
 
-        super(LoopExporterFortran,self).__init__(dir_path, self.opt)        
+        super(LoopExporterFortran,self).__init__(dir_path, self.opt, cmd_options=cmd_options)        
 
 
     def link_CutTools(self, targetPath):
@@ -1609,12 +1609,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # using a standalone verison independent of gosam_contrib
     all_tir=['pjfry','iregi','ninja','golem','samurai','collier']
     
-    def __init__(self, dir_path = "", opt=None):
+    def __init__(self, dir_path = "", opt=None, cmd_options={}):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
         information on where to find all the loop-related source files, 
         like CutTools and TIR"""
 
-        super(LoopProcessOptimizedExporterFortranSA,self).__init__(dir_path, opt)
+        super(LoopProcessOptimizedExporterFortranSA,self).__init__(dir_path, opt, cmd_options=cmd_options)
 
         # TIR available ones
         self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True,

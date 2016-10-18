@@ -96,6 +96,7 @@ class VirtualExporter(object):
     
     
     def __init__(self, dir_path = "", opt=None):
+        # cmd_options is a dictionary with all the optional argurment passed at output time 
         return
 
     def copy_template(self, model):
@@ -138,7 +139,8 @@ class ProcessExporterFortran(VirtualExporter):
 
     default_opt = {'clean': False, 'complex_mass':False,
                         'export_format':'madevent', 'mp': False,
-                        'v5_model': True
+                        'v5_model': True,
+                        'output_options':{}
                         }
     grouped_mode = False
 
@@ -151,6 +153,8 @@ class ProcessExporterFortran(VirtualExporter):
         self.opt = dict(self.default_opt)
         if opt:
             self.opt.update(opt)
+        
+        self.cmd_options = self.opt['output_options']
         
         #place holder to pass information to the run_interface
         self.proc_characteristic = banner_mod.ProcCharacteristic()
@@ -1848,7 +1852,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
 
     matrix_template = "matrix_standalone_v4.inc"
 
-    def __init__(self, *args, **opts):
+    def __init__(self, *args,**opts):
         """add the format information compare to standard init"""
         
         if 'format' in opts:
@@ -1856,6 +1860,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             del opts['format']
         else:
             self.format = 'standalone'
+        
+        self.prefix_info = {}
         ProcessExporterFortran.__init__(self, *args, **opts)
 
     def copy_template(self, model):
@@ -1894,7 +1900,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         # Add file in SubProcesses
         shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f_sp'), 
-                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
+                    pjoin(self.dir_path, 'SubProcesses', 'makefileP'))
         
         if self.format == 'standalone':
             shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'check_sa.f'), 
@@ -1978,6 +1984,78 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             files.copytree(pjoin(MG5DIR, 'Template', 'NLO', 'Source', 'PDF'),
                            pjoin(self.dir_path, 'Source', 'PDF'))
             self.write_pdf_opendata()
+            
+        
+        
+        if self.prefix_info:
+            self.write_f2py_splitter()
+            self.write_f2py_makefile()
+            
+            
+    def write_f2py_splitter(self):
+        """write a function to call the correct matrix element"""
+        
+        template = """
+%s
+  subroutine smatrixhel(pdgs, npdg, p, nhel, ANS)
+  IMPLICIT NONE
+
+CF2PY real(8), intent(in), dimension(0:3,npdg) :: p
+CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in) :: npdg
+CF2PY real(8), intent(out) :: ANS
+
+  integer pdgs(*)
+  integer npdg, nhel
+  double precision p(*)
+  double precision ANS
+        """
+         
+        allids = self.prefix_info.keys()
+        min_nexternal = min([len(ids) for ids in allids])
+        max_nexternal = max([len(ids) for ids in allids])
+
+        info = []
+        for key, (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s' % (tag, key, prefix))
+            
+        template = template % '\n'.join(info)
+
+        text = []
+        for n_ext in range(min_nexternal, max_nexternal+1):
+            current = [ids for ids in allids if len(ids)==n_ext]
+            if not current:
+                continue
+            if min_nexternal != max_nexternal:
+                if n_ext == min_nexternal:
+                    text.append('       if (npdg.eq.%i)then' % n_ext)
+                else:
+                    text.append('       else if (npdg.eq.%i)then' % n_ext)
+            for ii,pdgs in enumerate(current):
+                condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
+                if ii==0:
+                    text.append( ' if(%s) then ! %i' % (condition, i))
+                else:
+                    text.append( ' else if(%s) then ! %i' % (condition,i))
+                text.append(' call %ssmatrixhel(p, nhel, ans)' % self.prefix_info[pdgs][0])
+            text.append(' endif')
+        #close the function
+        if min_nexternal != max_nexternal:
+            text.append('endif')
+        text.append('return')
+        text.append('end')
+    
+        text = template + '\n'.join(text)
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
+        fsock.writelines(text)
+        fsock.close()
+            
+            
+    def write_f2py_makefile(self):
+        """ """
+        # Add file in SubProcesses
+        shutil.copy(pjoin(self.mgme_dir, 'madgraph', 'iolibs', 'template_files', 'makefile_sa_f2py'), 
+                    pjoin(self.dir_path, 'SubProcesses', 'makefile'))
 
     def create_MA5_cards(self,*args,**opts):
         """ Overload the function of the mother so as to bypass this in StandAlone."""
@@ -2006,13 +2084,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if self.opt['sa_symmetry']:
             # avoid symmetric output
             for i,proc in enumerate(matrix_element.get('processes')):
-                        
-                initial = []    #filled in the next line
-                final = [l.get('id') for l in proc.get('legs')\
-                      if l.get('state') or initial.append(l.get('id'))]
-                decay_finals = proc.get_final_ids_after_decay()
-                decay_finals.sort()
-                tag = (tuple(initial), tuple(decay_finals))
+                   
+                tag = proc.get_tag()     
                 legs = proc.get('legs')[:]
                 leg0 = proc.get('legs')[0]
                 leg1 = proc.get('legs')[1]
@@ -2053,10 +2126,24 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             filename = pjoin(dirpath, 'matrix_prod.f')
         else:
             filename = pjoin(dirpath, 'matrix.f')
+            
+        proc_prefix = ''
+        if 'prefix' in self.cmd_options:
+            if self.cmd_options['prefix'] == 'int':
+                proc_prefix = 'M%s_' % number
+            elif self.cmd_options['prefix'] == 'proc':
+                proc_prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
+            else:
+                raise Exception, '--prefix options supports only \'int\' and \'proc\''
+            for proc in matrix_element.get('processes'):
+                ids = [l.get('id') for l in proc.get('legs_with_decays')]
+                self.prefix_info[tuple(ids)] = [proc_prefix, proc.get_tag()] 
+                
         calls = self.write_matrix_element_v4(
             writers.FortranWriter(filename),
             matrix_element,
-            fortran_model)
+            fortran_model,
+            proc_prefix=proc_prefix)
 
         if self.opt['export_format'] == 'standalone_msP':
             filename =  pjoin(dirpath,'configs_production.inc')
@@ -2103,11 +2190,18 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                      matrix_element.get('processes')[0].nice_string())
         plot.draw()
 
-        linkfiles = ['check_sa.f', 'coupl.inc', 'makefile']
+        linkfiles = ['check_sa.f', 'coupl.inc']
+
+        if proc_prefix:
+            text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
+            new_text, n  = re.subn('smatrix', '%ssmatrix' % proc_prefix, text, flags=re.I)
+            with open(pjoin(dirpath, 'check_sa.f'),'w') as f:
+                f.write(new_text)
+            linkfiles.pop(0)
 
         for file in linkfiles:
             ln('../%s' % file, cwd=dirpath)
-
+        ln('../makefileP', name='makefile', cwd=dirpath)
         # Return to original PWD
         #os.chdir(cwd)
 
@@ -2153,7 +2247,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             
         if not self.opt.has_key('sa_symmetry'):
             self.opt['sa_symmetry']=False
-
 
 
         # The proc_id is for MadEvent grouping which is never used in SA.
@@ -6422,14 +6515,15 @@ class UFO_model_to_mg4(object):
                                       rule_card_path=rule_card, 
                                       mssm_convert=True)
         
-def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True):
+def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True, cmd_options={}):
     """ Determine which Export_v4 class is required. cmd is the command 
         interface containing all potential usefull information.
         The output_type argument specifies from which context the output
         is called. It is 'madloop' for MadLoop5, 'amcatnlo' for FKS5 output
         and 'default' for tree-level outputs."""
 
-    opt = cmd.options
+    opt = dict(cmd.options)
+    opt['output_options'] = cmd_options
 
     # ==========================================================================
     # First check whether Ninja must be installed.

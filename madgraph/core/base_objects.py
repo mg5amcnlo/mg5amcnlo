@@ -2945,8 +2945,10 @@ class Process(PhysicsObject):
                 if order not in self['sqorders_types']:
                     # Then assign its type to the default '='
                     self['sqorders_types'][order]='='
-
+                    
         return super(Process, self).get(name) # call the mother routine
+
+    
 
     def get_sorted_keys(self):
         """Return process property names as a nicely sorted list."""
@@ -3431,6 +3433,18 @@ class Process(PhysicsObject):
         self['legs_with_decays'] = LegList(legs)
 
         return self['legs_with_decays']
+    
+    def get_tag(self):
+        """return the tag for standalone call"""
+        
+        initial = []    #filled in the next line
+        final = [l.get('id') for l in self.get('legs')\
+              if l.get('state') or initial.append(l.get('id'))]
+        decay_finals = self.get_final_ids_after_decay()
+        decay_finals.sort()
+        tag = (tuple(initial), tuple(decay_finals))
+        return tag
+        
 
     def list_for_sort(self):
         """Output a list that can be compared to other processes as:

@@ -2512,12 +2512,13 @@ class UFOModelConverterPythia8(UFOModelConverterCPP):
          
         return OneProcessExporterPythia8.read_template_file(*args, **opts)
 
-def ExportCPPFactory(cmd, group_subprocesses=False):
+def ExportCPPFactory(cmd, group_subprocesses=False, cmd_options={}):
     """ Determine which Export class is required. cmd is the command 
         interface containing all potential usefull information.
     """
 
-    opt = cmd.options
+    opt = dict(cmd.options)
+    opt['output_options'] = cmd_options
     cformat = cmd._export_format
     
     if cformat == 'pythia8':
