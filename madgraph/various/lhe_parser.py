@@ -2166,15 +2166,14 @@ class NLO_PARTIALWEIGHT(object):
 
     class BasicEvent(list):
         
-        real_type = (1,11)
-        
-        def __init__(self, momenta, wgts, event):
+        def __init__(self, momenta, wgts, event, real_type=(1,11)):
             list.__init__(self, momenta)
             
             assert self
             self.wgts = wgts
             self.pdgs = list(wgts[0].pdgs)
             self.event = event
+            self.real_type = real_type
             
             if wgts[0].momenta_config == wgts[0].born_related:
                 # need to remove one momenta.
@@ -2343,7 +2342,6 @@ class NLO_PARTIALWEIGHT(object):
     def __init__(self, input, event, real_type=(1,11)):
         
         self.real_type = real_type
-        self.BasicEvent.real_type = real_type
         self.event = event
         if isinstance(input, str):
             self.parse(input)
@@ -2412,7 +2410,7 @@ class NLO_PARTIALWEIGHT(object):
         for key in range(1, nb_event+1): 
             if key in get_weights_for_momenta:
                 wgt = get_weights_for_momenta[key]
-                evt = self.BasicEvent(momenta[:size_momenta], get_weights_for_momenta[key], self.event) 
+                evt = self.BasicEvent(momenta[:size_momenta], get_weights_for_momenta[key], self.event, self.real_type) 
                 self.cevents.append(evt)
             momenta = momenta[size_momenta:]
            

@@ -1876,7 +1876,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
                 mycluster.wait(self.me_dir,update_status)
                 devnull.close()
-                
+                logger.info("Collect and combine the various output file.")
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):

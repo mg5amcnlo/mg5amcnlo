@@ -1573,6 +1573,8 @@ class PY8Card(ConfigFile):
     def userSet(self, name, value, **opts):
         """Set an attribute of this card, following a user_request"""
         self.__setitem__(name, value, change_userdefine=True, **opts)
+        if name.lower() in self.system_set:
+            self.system_set.remove(name.lower())
 
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
@@ -1951,20 +1953,14 @@ class PY8Card(ConfigFile):
             
             # Read parameter. The case of a parameter not defined in the card is
             # handled directly in ConfigFile.
-            lname = param.lower()
-            current_type = type(self[lname])
-            if current_type is list:
-                current_type = type(self[lname][0])
-            if lname not in self or \
-                         self.format_variable(value, current_type,
-                                                       name=param)!=self[lname]:
-                # Use the appropriate authority to set the new/changed variable
-                if setter == 'user':
-                    self.userSet(param,value)
-                elif setter == 'system':
-                    self.systemSet(param,value)
-                else:
-                    self.defaultSet(param,value)
+
+            # Use the appropriate authority to set the new/changed variable
+            if setter == 'user':
+                self.userSet(param,value)
+            elif setter == 'system':
+                self.systemSet(param,value)
+            else:
+                self.defaultSet(param,value)
 
             # proceed to next line
             last_pos = finput.tell()
@@ -2150,7 +2146,7 @@ class RunCard(ConfigFile):
                     if name in self.list_parameter:
                         value = ', '.join([str(v) for v in value])
                     if python_template:
-                        text += line % {nline[1].strip():value}
+                        text += line % {nline[1].strip():value, name:value}
                     else:
                         if not comment or comment[-1]!='\n':
                             endline = '\n'
