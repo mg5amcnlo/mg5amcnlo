@@ -1,4 +1,4 @@
-      Subroutine Initialise(path)
+      Subroutine %(prefix_routine)sInitialise(path)
 
       CHARACTER(128) path
 CF2PY intent(in)::path
@@ -12,7 +12,7 @@ C
       return 
       end
 
-      SUBROUTINE GET_ME(P, ALPHAS, SCALE2, NHEL , ANS,RETURNCODE)
+      SUBROUTINE %(prefix_routine)sGET_ME(P, ALPHAS, SCALE2, NHEL , ANS,RETURNCODE)
       IMPLICIT NONE
 C     
 C     CONSTANTS  

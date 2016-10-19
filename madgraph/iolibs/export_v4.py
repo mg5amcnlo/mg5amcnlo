@@ -1986,7 +1986,6 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
             self.write_pdf_opendata()
             
         
-        
         if self.prefix_info:
             self.write_f2py_splitter()
             self.write_f2py_makefile()
@@ -1996,19 +1995,34 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         """write a function to call the correct matrix element"""
         
         template = """
-%s
-  subroutine smatrixhel(pdgs, npdg, p, nhel, ANS)
+%(python_information)s
+  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, nhel, ANS)
   IMPLICIT NONE
 
 CF2PY real(8), intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
 CF2PY integer, intent(in) :: npdg
 CF2PY real(8), intent(out) :: ANS
-
+CF2PY double precision, intent(in) :: ALPHAS
   integer pdgs(*)
   integer npdg, nhel
   double precision p(*)
-  double precision ANS
+  double precision ANS, ALPHAS, PI
+
+%(smatrixhel)s
+
+      return
+      end
+  
+      SUBROUTINE INITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.
+      IMPLICIT NONE
+      CHARACTER*180 PATH
+CF2PY INTENT(IN) :: PATH
+      CALL SETPARA(PATH)  !first call to setup the paramaters
+      RETURN
+      END
+  
         """
          
         allids = self.prefix_info.keys()
@@ -2019,7 +2033,6 @@ CF2PY real(8), intent(out) :: ANS
         for key, (prefix, tag) in self.prefix_info.items():
             info.append('#PY %s : %s # %s' % (tag, key, prefix))
             
-        template = template % '\n'.join(info)
 
         text = []
         for n_ext in range(min_nexternal, max_nexternal+1):
@@ -2042,10 +2055,10 @@ CF2PY real(8), intent(out) :: ANS
         #close the function
         if min_nexternal != max_nexternal:
             text.append('endif')
-        text.append('return')
-        text.append('end')
+
     
-        text = template + '\n'.join(text)
+        text = template %{'python_information':'\n'.join(info), 
+                          'smatrixhel': '\n'.join(text)}
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
@@ -6572,9 +6585,10 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'SubProc_prefix':'P',
       'compute_color_flows':cmd.options['loop_color_flows'],
       'mode': 'reweight' if cmd._export_format == "standalone_rw" else '',
-      'cluster_local_path': cmd.options['cluster_local_path']
+      'cluster_local_path': cmd.options['cluster_local_path'],
+      'output_options': cmd_options
       }
-
+    misc.sprint(MadLoop_SA_options)
 
     if output_type.startswith('madloop'):        
         import madgraph.loop.loop_exporters as loop_exporters

@@ -68,6 +68,9 @@ OLP_PROCESS= MadLoopParamReader.o MadLoopCommons.o \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/COLLIER_interface.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/compute_color_flows.f))
 
+WRAPPER = \
+ $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/f2py_wrapper.f))
+
 $(PROG): check_sa.o $(PROCESS) makefile $(LIBS)
 	$(FC) $(FFLAGS) -o $(PROG) check_sa.o $(PROCESS) $(LINKLIBS)
 
@@ -110,6 +113,10 @@ endif
 matrix$(MENUM)py.so: ../$(OLP)_static f2py_wrapper.f 
 	touch __init__.py
 	$(F2PY) $(MADLOOP_LIB) -m matrix$(MENUM)py -c f2py_wrapper.f --fcompiler=$(FC)   -L../../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS) $(STDLIB)
+
+allmatrix$(MENUM)py.so: $(OLP)_static all_matrix.f $(LIBS) $(WRAPPER)
+	touch __init__.py
+	$(F2PY) $(MADLOOP_LIB) $(WRAPPER) -m allmatrix$(MENUM)py -c all_matrix.f --fcompiler=$(FC)   -L../lib/ -ldhelas -lmodel $(LINK_LOOP_LIBS) $(STDLIB)
 
 clean:
 	@rm -f *.o *.so *.$(libext) *.$(dylibext)

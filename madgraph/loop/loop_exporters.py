@@ -94,7 +94,7 @@ class LoopExporterFortran(object):
                         'samurai':'msamurai.mod',
                         'collier': 'collier.mod'}
 
-    def __init__(self, dir_path = "", opt=None, cmd_options={}):
+    def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopExporterFortran with directory information on where
         to find all the loop-related source files, like CutTools"""
 
@@ -110,7 +110,7 @@ class LoopExporterFortran(object):
         self.dependencies = self.opt['output_dependencies']
         self.compute_color_flows = self.opt['compute_color_flows']
 
-        super(LoopExporterFortran,self).__init__(dir_path, self.opt, cmd_options=cmd_options)        
+        super(LoopExporterFortran,self).__init__(dir_path, self.opt)        
 
 
     def link_CutTools(self, targetPath):
@@ -242,6 +242,93 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
 
         self.loop_additional_template_setup()
     
+    def write_f2py_makefile(self):
+        return
+    
+    def write_f2py_splitter(self):
+        """write a function to call the correct matrix element"""
+        
+        template = """
+%(python_information)s
+
+      SUBROUTINE INITIALISE(PATH)
+C     ROUTINE FOR F2PY to read the benchmark point.
+      IMPLICIT NONE
+      CHARACTER*180 PATH
+CF2PY INTENT(IN) :: PATH
+      CALL SETPARA(PATH)  !first call to setup the paramaters
+      RETURN
+      END
+
+  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
+  IMPLICIT NONE
+
+CF2PY real(8), intent(in), dimension(0:3,npdg) :: p
+CF2PY integer, intent(in), dimension(npdg) :: pdgs
+CF2PY integer, intent(in) :: npdg
+CF2PY real(8), intent(out) :: ANS
+CF2PY integer, intent(out) :: RETURNCODE
+CF2PY double precision, intent(in) :: ALPHAS
+CF2PY double precision, intent(in) :: SCALES2
+
+  integer pdgs(*)
+  integer npdg, nhel, RETURNCODE
+  double precision p(*)
+  double precision ANS, ALPHAS, PI,SCALES2
+  
+      INCLUDE 'coupl.inc'
+
+      PI = 3.141592653589793D0
+      G = 2* DSQRT(ALPHAS*PI)
+      CALL UPDATE_AS_PARAM()
+
+%(smatrixhel)s
+
+      return
+      end
+  
+        """
+         
+        allids = self.prefix_info.keys()
+        min_nexternal = min([len(ids) for ids in allids])
+        max_nexternal = max([len(ids) for ids in allids])
+
+        info = []
+        for key, (prefix, tag) in self.prefix_info.items():
+            info.append('#PY %s : %s # %s' % (tag, key, prefix))
+            
+
+        text = []
+        for n_ext in range(min_nexternal, max_nexternal+1):
+            current = [ids for ids in allids if len(ids)==n_ext]
+            if not current:
+                continue
+            if min_nexternal != max_nexternal:
+                if n_ext == min_nexternal:
+                    text.append('       if (npdg.eq.%i)then' % n_ext)
+                else:
+                    text.append('       else if (npdg.eq.%i)then' % n_ext)
+            for ii,pdgs in enumerate(current):
+                condition = '.and.'.join(['%i.eq.pdgs(%i)' %(pdg, i+1) for i, pdg in enumerate(pdgs)])
+                if ii==0:
+                    text.append( ' if(%s) then ! %i' % (condition, i))
+                else:
+                    text.append( ' else if(%s) then ! %i' % (condition,i))
+                text.append(' call ML5_%s_get_me(p, ALPHAS, SCALES2, NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
+            text.append(' endif')
+        #close the function
+        if min_nexternal != max_nexternal:
+            text.append('endif')
+
+    
+        text = template %{'python_information':'\n'.join(info), 
+                          'smatrixhel': '\n'.join(text)}
+        fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
+        fsock.writelines(text)
+        fsock.close()
+        
+    
+    
     def loop_additional_template_setup(self, copy_Source_makefile = True):
         """ Perform additional actions specific for this class when setting
         up the template with the copy_template function."""
@@ -270,7 +357,7 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
         # We might need to give a different name to the MadLoop makefile\
         shutil.copy(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'),
                 pjoin(self.dir_path, 'SubProcesses',self.madloop_makefile_name))
-
+        misc.sprint(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'))
         # Write SubProcesses/MadLoop_makefile_definitions with dummy variables
         # for the non-optimized output
         link_tir_libs=[]
@@ -1046,8 +1133,16 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         function is used when called from the command interface """
         
         self.unique_id +=1
+        prefix = self.unique_id
+        #if 'prefix' in self.cmd_options and self.cmd_options['prefix'] == 'proc':
+        #        prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
+                
+        for proc in matrix_element.get('processes'):
+                ids = [l.get('id') for l in proc.get('legs_with_decays')]
+                self.prefix_info[tuple(ids)] = [prefix-1, proc.get_tag()] 
+        
         return self.generate_loop_subprocess(matrix_element,fortran_model,
-                                                            unique_id=self.unique_id)
+                                                            unique_id=prefix)
 
     def write_check_sa(self, writer, matrix_element):
         """Writes out the steering code check_sa. In the optimized output mode,
@@ -1071,9 +1166,16 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         # We can always write the f2py wrapper if present (in loop optimized mode, it is)
         if not os.path.isfile(pjoin(self.template_dir,'check_py.f.inc')):
             return
+        
         file = open(os.path.join(self.template_dir,\
                                       'check_py.f.inc')).read()
-        file=file%replace_dict
+
+        misc.sprint(self.cmd_options)
+        if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
+            replace_dict['prefix_routine'] = replace_dict['proc_prefix']
+        else:
+            replace_dict['prefix_routine'] = ''
+        file=file%replace_dict        
         new_path = writer.name.replace('check_sa.f', 'f2py_wrapper.f')
         new_writer = writer.__class__(new_path, 'w')
         new_writer.writelines(file)
@@ -1609,12 +1711,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
     # using a standalone verison independent of gosam_contrib
     all_tir=['pjfry','iregi','ninja','golem','samurai','collier']
     
-    def __init__(self, dir_path = "", opt=None, cmd_options={}):
+    def __init__(self, dir_path = "", opt=None):
         """Initiate the LoopProcessOptimizedExporterFortranSA with directory 
         information on where to find all the loop-related source files, 
         like CutTools and TIR"""
 
-        super(LoopProcessOptimizedExporterFortranSA,self).__init__(dir_path, opt, cmd_options=cmd_options)
+        super(LoopProcessOptimizedExporterFortranSA,self).__init__(dir_path, opt)
 
         # TIR available ones
         self.tir_available_dict={'pjfry':True,'iregi':True,'golem':True,
