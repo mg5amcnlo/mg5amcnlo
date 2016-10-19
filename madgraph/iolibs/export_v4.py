@@ -2023,6 +2023,17 @@ CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters
       RETURN
       END
+
+    subroutine get_pdg_order(OUT)
+  IMPLICIT NONE
+CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)  
+  
+  INTEGER OUT(%(nb_me)i,%(maxpart)i), PDGS(%(nb_me)i,%(maxpart)i)
+  DATA PDGS/ %(pdgs)s /
+  OUT=PDGS
+  RETURN
+  END 
+ 
   
         """
          
@@ -2057,9 +2068,14 @@ CF2PY INTENT(IN) :: PATH
         if min_nexternal != max_nexternal:
             text.append('endif')
 
+        formatting = {'python_information':'\n'.join(info), 
+                          'smatrixhel': '\n'.join(text),
+                          'maxpart': max_nexternal,
+                          'nb_me': len(allids),
+                          'pdgs': ','.join(str(pdg[i]) if i<len(pdg) else '0' 
+                                             for i in range(max_nexternal) for pdg in allids)}
     
-        text = template %{'python_information':'\n'.join(info), 
-                          'smatrixhel': '\n'.join(text)}
+        text = template % formatting
         fsock = writers.FortranWriter(pjoin(self.dir_path, 'SubProcesses', 'all_matrix.f'),'w')
         fsock.writelines(text)
         fsock.close()
