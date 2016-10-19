@@ -1996,7 +1996,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         
         template = """
 %(python_information)s
-  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, nhel, ANS)
+  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALE2, nhel, ANS)
   IMPLICIT NONE
 
 CF2PY real(8), intent(in), dimension(0:3,npdg) :: p
@@ -2004,10 +2004,11 @@ CF2PY integer, intent(in), dimension(npdg) :: pdgs
 CF2PY integer, intent(in) :: npdg
 CF2PY real(8), intent(out) :: ANS
 CF2PY double precision, intent(in) :: ALPHAS
+CF2PY double precision, intent(in) :: SCALE2
   integer pdgs(*)
   integer npdg, nhel
   double precision p(*)
-  double precision ANS, ALPHAS, PI
+  double precision ANS, ALPHAS, PI,SCALE2
 
 %(smatrixhel)s
 

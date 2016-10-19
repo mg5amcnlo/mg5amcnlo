@@ -260,14 +260,13 @@ CF2PY INTENT(IN) :: PATH
       RETURN
       END
 
-  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
+  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS)
   IMPLICIT NONE
 
 CF2PY real(8), intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
 CF2PY integer, intent(in) :: npdg
 CF2PY real(8), intent(out) :: ANS
-CF2PY integer, intent(out) :: RETURNCODE
 CF2PY double precision, intent(in) :: ALPHAS
 CF2PY double precision, intent(in) :: SCALES2
 
