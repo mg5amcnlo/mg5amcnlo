@@ -1508,7 +1508,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 args[0] = self.run_name
             else:
                 raise self.InvalidCmd, 'no default run. Please specify the run_name'
-                
+        
+        if args[0] != self.run_name:
+            self.set_run_name(args[0])
+          
         # always pass to a path + get the event size
         result_file= sys.stdout
         if not os.path.sep in args[0]:
@@ -1637,8 +1640,16 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     self.update_status((idle, run, finish, 'running systematics'), level=None,
                                        force=False, starttime=starttime)
 
-            self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
-            
+            try:
+                self.cluster.wait(os.path.dirname(output), update_status, update_first=update_status)
+            except Exception:
+                self.cluster.remove()
+                old_run_mode = self.options['run_mode']
+                self.options['run_mode'] =0
+                try:
+                    out = self.do_systematics(line)
+                finally:
+                    self.options['run_mode']  =  old_run_mode
             #collect the data
             all_cross = []
             for i in range(nb_submit):
@@ -1868,7 +1879,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 mycluster.wait(self.me_dir,update_status)
                 misc.sprint('WAIT IS OVER')
                 devnull.close()
-                
+                logger.info("Collect and combine the various output file.")
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
                 misc.sprint(nb_event, [cross_sections[key] for key in cross_sections if isinstance(key, str) and key.startswith('rwgt')])
@@ -3977,7 +3988,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.param_card_default = default_param
         
         try:
-            self.run_card = banner_mod.RunCard(self.paths['run'])
+            self.run_card = banner_mod.RunCard(self.paths['run'], consistency='warning')
         except IOError:
             self.run_card = {}
         try:

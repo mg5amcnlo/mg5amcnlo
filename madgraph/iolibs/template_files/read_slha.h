@@ -1,5 +1,5 @@
 #ifndef READ_SLHA_H
-#define REAH_SLHA_H
+#define READ_SLHA_H
 
 #include <map>
 #include <string>
