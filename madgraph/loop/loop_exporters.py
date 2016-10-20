@@ -298,7 +298,7 @@ CF2PY double precision, intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
 CF2PY integer, intent(in) :: npdg
 CF2PY double precision, intent(out) :: ANS
-CF2PY double precision, intent(out) :: RETURNCODE
+CF2PY integer, intent(out) :: RETURNCODE
 CF2PY double precision, intent(in) :: ALPHAS
 CF2PY double precision, intent(in) :: SCALES2
 
