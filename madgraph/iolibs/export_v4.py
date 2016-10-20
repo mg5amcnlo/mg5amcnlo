@@ -1989,7 +1989,8 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if self.prefix_info:
             self.write_f2py_splitter()
             self.write_f2py_makefile()
-            self.write_f2py_check_sa()
+            self.write_f2py_check_sa(matrix_elements,
+                            pjoin(self.dir_path,'SubProcesses','check_sa.py'))
             
             
     def write_f2py_splitter(self):
@@ -2081,7 +2082,11 @@ CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)
         fsock.writelines(text)
         fsock.close()
             
-            
+    def write_f2py_check_sa(self, matrix_element, writer):
+        """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
+        # To be implemented. It is just an example file, i.e. not crucial.
+        return
+    
     def write_f2py_makefile(self):
         """ """
         # Add file in SubProcesses
