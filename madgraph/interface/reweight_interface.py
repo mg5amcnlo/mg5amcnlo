@@ -1608,7 +1608,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 misc.sprint((onedir,tag))
                 self.f2pylib[(onedir,tag)] = mymod
                 if hasattr(mymod, 'set_madloop_path'):
-                    mymod.set_madloop_path(pjoin(path_me, 'MadLoop5_resources'))
+                    mymod.set_madloop_path(pjoin(path_me,'SubProcesses','MadLoop5_resources'))
              
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
