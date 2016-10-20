@@ -1385,10 +1385,10 @@ class ReweightInterface(extended_cmd.Cmd):
                          pjoin(path_me, data['paths'][0], 'Cards', 'MadLoopParams.dat'), 
                          commentdefault=False)
             
-            if self.multicore == 'create':
-                print "compile OLP", data['paths'][0]
-                misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][0],'SubProcesses'),
-                             nb_core=self.mother.options['nb_core'])
+            #if self.multicore == 'create':
+            #    print "compile OLP", data['paths'][0]
+            #    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][0],'SubProcesses'),
+            #                 nb_core=self.mother.options['nb_core'])
         
         if os.path.exists(pjoin(path_me, data['paths'][1], 'Cards', 'MadLoopParams.dat')):
             if self.multicore == 'create':
@@ -1576,10 +1576,10 @@ class ReweightInterface(extended_cmd.Cmd):
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
             os.environ['MENUM'] = '2'
-            misc.compile(['allmatrix2py.so', '-j', str(nb_core)], cwd=pdir)
+            misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
             if not (self.second_model or self.second_process):
                 os.environ['MENUM'] = '3'
-                misc.compile(['allmatrix3py.so','-j', str(nb_core)], cwd=pdir)
+                misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
 
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
