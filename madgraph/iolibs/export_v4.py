@@ -2222,7 +2222,7 @@ CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)
 
         linkfiles = ['check_sa.f', 'coupl.inc']
 
-        if proc_prefix:
+        if proc_prefix and os.path.exists(pjoin(dirpath, '..', 'check_sa.f')):
             text = open(pjoin(dirpath, '..', 'check_sa.f')).read()
             new_text, n  = re.subn('smatrix', '%ssmatrix' % proc_prefix, text, flags=re.I)
             with open(pjoin(dirpath, 'check_sa.f'),'w') as f:

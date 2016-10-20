@@ -260,13 +260,14 @@ CF2PY INTENT(IN) :: PATH
       RETURN
       END
 
-  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS)
+  subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
   IMPLICIT NONE
 
 CF2PY real(8), intent(in), dimension(0:3,npdg) :: p
 CF2PY integer, intent(in), dimension(npdg) :: pdgs
 CF2PY integer, intent(in) :: npdg
 CF2PY real(8), intent(out) :: ANS
+CF2PY real(8), intent(out) :: RETURNCODE
 CF2PY double precision, intent(in) :: ALPHAS
 CF2PY double precision, intent(in) :: SCALES2
 
@@ -322,7 +323,7 @@ CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)
                     text.append( ' if(%s) then ! %i' % (condition, i))
                 else:
                     text.append( ' else if(%s) then ! %i' % (condition,i))
-                text.append(' call ML5_%s_get_me(p, ALPHAS, SCALES2, NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
+                text.append(' call %sget_me(p, ALPHAS, SCALES2, NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
@@ -934,6 +935,11 @@ CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)
         dict['proc_prefix'] = self.get_ME_identifier(matrix_element,
                        group_number = group_number, group_elem_number = proc_id)
 
+        if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
+            for proc in matrix_element.get('processes'):
+                ids = [l.get('id') for l in proc.get('legs_with_decays')]
+                self.prefix_info[tuple(ids)] = [dict['proc_prefix'], proc.get_tag()]
+
         # The proc_id is used for MadEvent grouping, so none of our concern here
         # and it is simply set to an empty string.        
         dict['proc_id'] = ''
@@ -1148,16 +1154,8 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         function is used when called from the command interface """
         
         self.unique_id +=1
-        prefix = self.unique_id
-        #if 'prefix' in self.cmd_options and self.cmd_options['prefix'] == 'proc':
-        #        prefix = matrix_element.get('processes')[0].shell_string().split('_',1)[1]
-                
-        for proc in matrix_element.get('processes'):
-                ids = [l.get('id') for l in proc.get('legs_with_decays')]
-                self.prefix_info[tuple(ids)] = [prefix-1, proc.get_tag()] 
-        
         return self.generate_loop_subprocess(matrix_element,fortran_model,
-                                                            unique_id=prefix)
+                                                            unique_id=self.unique_id)
 
     def write_check_sa(self, writer, matrix_element):
         """Writes out the steering code check_sa. In the optimized output mode,

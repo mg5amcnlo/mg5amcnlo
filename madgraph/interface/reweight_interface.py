@@ -66,6 +66,7 @@ class ReweightInterface(extended_cmd.Cmd):
     
     prompt = 'Reweight>'
     debug_output = 'Reweight_debug'
+    rwgt_dir_possibility = ['rw_me','rw_me_second','rw_mevirt','rw_mevirt_second']
     
     @misc.mute_logger()
     def __init__(self, event_path=None, allow_madspin=False, mother=None, *completekey, **stdin):
@@ -89,6 +90,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         self.events_file = None
         self.processes = {}
+        self.f2pylib = {}
         self.second_model = None
         self.second_process = None
         self.mg5cmd = master_interface.MasterCmd()
@@ -424,7 +426,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 
-        if not self.has_standalone_dir:                
+        if not self.has_standalone_dir:                           
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
                 self.load_from_pickle()
                 if not self.rwgt_dir:
@@ -438,11 +440,17 @@ class ReweightInterface(extended_cmd.Cmd):
                     self.rwgt_dir = self.me_dir
                 self.load_from_pickle(keep_name=True)
             else:
-                self.create_standalone_directory()  
+                self.create_standalone_directory()
+                self.compile()  
                 if self.multicore == 'create':
+                    self.load_module()
                     if not self.rwgt_dir:
                         self.rwgt_dir = self.me_dir
                     self.save_to_pickle()      
+        self.load_module()
+                    
+        type_rwgt = self.get_weight_names()
+        param_card_iterator, tag_name, output2 = self.handle_param_card(model_line, args, type_rwgt)
         
         if self.rwgt_dir:
             path_me =self.rwgt_dir
@@ -453,150 +461,8 @@ class ReweightInterface(extended_cmd.Cmd):
             rw_dir = pjoin(path_me, 'rw_me_second')
         else:
             rw_dir = pjoin(path_me, 'rw_me')
-
-        if not '--keep_card' in args:
-            ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
-            ff.write(self.banner['slha'])
-            ff.close()
-            if self.has_nlo and self.rwgt_mode != "LO":
-                rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
-                files.ln(ff.name, starting_dir=pjoin(rwdir_virt, 'Cards')) 
-            ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
-            ff.write(self.banner['slha'])
-            ff.close()      
-            if self.has_nlo and self.rwgt_mode != "LO":
-                files.ln(ff.name, starting_dir=pjoin(path_me, 'rw_mevirt', 'Cards'))
-            cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
-                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
-            self.stored_line = None
         
-        # get the names of type of reweighting requested
-        type_rwgt = self.get_weight_names()
-
-        # check for potential scan in the new card 
-        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
-        pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
-        param_card_iterator = []
-        if pattern_scan.search(new_card):
-            try:
-                import internal.extended_cmd as extended_internal
-                Shell_internal = extended_internal.CmdShell
-            except:
-                Shell_internal = None
-            import madgraph.interface.extended_cmd as extended_cmd
-            if not isinstance(self.mother, (extended_cmd.CmdShell, Shell_internal)): 
-                raise Exception, "scan are not allowed on the Web"
-            # at least one scan parameter found. create an iterator to go trough the cards
-            main_card = check_param_card.ParamCardIterator(new_card)
-            if self.options['rwgt_name']:
-                self.options['rwgt_name'] = '%s_0' % self.options['rwgt_name']
-
-            param_card_iterator = main_card
-            first_card = param_card_iterator.next(autostart=True)
-            new_card = first_card.write()
-            first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))                
-        # check if "Auto" is present for a width parameter
-        if "auto" in new_card.lower():            
-            self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
-            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
-
-
-        # Find new tag in the banner and add information if needed
-        if 'initrwgt' in self.banner:
-            if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
-                blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
-                before, content, after = blockpat.split(self.banner['initrwgt'])
-                header_rwgt_other = before + after
-                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
-                mg_rwgt_info = pattern.findall(content)
-                
-                maxid = 0
-                for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
-                    if i:
-                        if int(i) > maxid:
-                            maxid = int(i)
-                        mg_rwgt_info[k] = (i, nlotype, diff) # remove the pointless fulltag tag
-                    else:
-                        mg_rwgt_info[k] = (fulltag, nlotype, diff) # remove the pointless id tag
-                         
-                maxid += 1
-                rewgtid = maxid
-                if self.options['rwgt_name']:
-                    #ensure that the entry is not already define if so overwrites it
-                    for (i, nlotype, diff) in mg_rwgt_info[:]:
-                        for flag in type_rwgt:
-                            if 'rwgt_%s' % i == '%s%s' %(self.options['rwgt_name'],flag) or \
-                                i == '%s%s' % (self.options['rwgt_name'], flag):
-                                    logger.warning("tag %s%s already defines, will replace it", self.options['rwgt_name'],flag)
-                                    mg_rwgt_info.remove((i, nlotype, diff))
-                                                
-            else:
-                header_rwgt_other = self.banner['initrwgt'] 
-                mg_rwgt_info = []
-                rewgtid = 1
-        else:
-            self.banner['initrwgt']  = ''
-            header_rwgt_other = ''
-            mg_rwgt_info = []
-            rewgtid = 1
-
-        # add the reweighting in the banner information:
-        #starts by computing the difference in the cards.
-        s_orig = self.banner['slha']
-        s_new = new_card
         
-        #define tag for the run
-        if self.options['rwgt_name']:
-            tag = self.options['rwgt_name']
-        else:
-            tag = str(rewgtid)
-        
-        if not self.second_model:
-            old_param = check_param_card.ParamCard(s_orig.splitlines())
-            new_param =  check_param_card.ParamCard(s_new.splitlines())
-            card_diff = old_param.create_diff(new_param)
-            if card_diff == '' and not self.second_process:
-                if not __debug__:
-                    logger.warning(' REWEIGHTING: original card and new card are identical. Bypass this run')
-                    return
-                else:
-                    logger.warning(' REWEIGHTING: original card and new card are identical. Run it due to debug mode')
-                #raise self.InvalidCmd, 'original card and new card are identical'
-            try:
-                if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
-                    logger.warning("We found different value of alpha_s. Note that the value of alpha_s used is the one associate with the event and not the one from the cards.")
-            except Exception, error:
-                logger.debug("error in check of alphas: %s" % str(error))
-                pass #this is a security                
-            if not self.second_process:
-                for name in type_rwgt:
-                    mg_rwgt_info.append((tag, name, card_diff))
-            else:
-                str_proc = "\n change process  ".join([""]+self.second_process)
-                for name in type_rwgt:
-                    mg_rwgt_info.append((tag, name, str_proc + '\n'+ card_diff))
-        else:
-            str_info = "change model %s" % self.second_model
-            if self.second_process:
-                str_info += "\n change process  ".join([""]+self.second_process)
-            card_diff = str_info
-            str_info += '\n' + s_new
-            for name in type_rwgt:
-                mg_rwgt_info.append((tag, name, str_info))
-        # re-create the banner.
-        self.banner['initrwgt'] = header_rwgt_other
-        self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
-        for tag, rwgttype, diff in mg_rwgt_info:
-            if tag.isdigit():
-                self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
-                                       (tag, rwgttype, diff)
-            else:
-                self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
-                                       (tag, rwgttype, diff)
-        self.banner['initrwgt'] += '\n</weightgroup>\n'
-        self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
-
-
         start = time.time()
         cross, ratio, ratio_square,error = {},{},{}, {}
         for name in type_rwgt + ['orig']:
@@ -614,42 +480,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 #write the banner to the output file
                 self.banner.write(output[name], close_tag=False)
         
-        logger.info('starts to compute weight for events with the following modification to the param_card:')
-        logger.info(card_diff.replace('\n','\nKEEP:'))
-        # prepare the output file for the weight plot
-        if self.mother:
-            out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
-            output2 = open(out_path, 'w')
-            lha_strategy = self.banner.get_lha_strategy() 
-            self.banner.set_lha_strategy(4*lha_strategy/abs(lha_strategy)) 
-            self.banner.write(output2, close_tag=False)
-            self.banner.set_lha_strategy(lha_strategy)
-            new_banner = banner.Banner(self.banner)
-            if not hasattr(self, 'run_card'):
-                self.run_card = new_banner.charge_card('run_card')
-            self.run_card['run_tag'] = 'reweight_%s' % rewgtid
-            new_banner['slha'] = s_new   
-            del new_banner['initrwgt']
-            assert 'initrwgt' in self.banner 
-            ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
-                          (self.mother.run_name, self.run_card['run_tag'])),'w') 
-            new_banner.write(ff)
-            ff.close()
+
         
-        # Loop over all events
-        if self.options['rwgt_name']:
-            tag_name = self.options['rwgt_name']
-        else:
-            tag_name = 'rwgt_%s' % rewgtid
                 
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
             self.lhe_input = lhe_parser.EventFile(self.lhe_input.name)
-
-#        Multicore option not really stable -> not use it
-        nb_core = 1
-#        if nb_core >1:
-#            multicore = cluster.MultiCore(nb_core)
 
         self.lhe_input.seek(0)
         for event_nb,event in enumerate(self.lhe_input):
@@ -659,56 +495,47 @@ class ReweightInterface(extended_cmd.Cmd):
                     logger.info('Event nb %s %s' % (event_nb, running_time))
             if (event_nb==10001): logger.info('reducing number of print status. Next status update in 10000 events')
 
-            if nb_core > 1:
-                #        Multicore option not really stable -> not use it
-                while 1:
-                    if multicore.queue.qsize() < 100 * nb_core:
-                        multicore.submit(self.write_reweighted_event, argument=[event, tag_name])
-                        break
-                    #else:
-                    #    time.sleep(0.001)
-                continue
-            else:
-                weight = self.calculate_weight(event)
-                if not isinstance(weight, dict):
-                    weight = {'':weight}
+
+            weight = self.calculate_weight(event)
+            if not isinstance(weight, dict):
+                weight = {'':weight}
+            
+            for name in weight:
+                cross[name] += weight[name]
+                ratio[name] += weight[name]/event.wgt
+                ratio_square[name] += (weight[name]/event.wgt)**2
                 
+            # ensure to have a consistent order of the weights. new one are put 
+            # at the back, remove old position if already defines
+            for tag in type_rwgt:
+                try:
+                    event.reweight_order.remove('%s%s'  % (tag_name,tag))
+                except ValueError:
+                    continue
+            
+            event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
+            if self.output_type == "default":
                 for name in weight:
-                    cross[name] += weight[name]
-                    ratio[name] += weight[name]/event.wgt
-                    ratio_square[name] += (weight[name]/event.wgt)**2
-                    
-                # ensure to have a consistent order of the weights. new one are put 
-                # at the back, remove old position if already defines
-                for tag in type_rwgt:
-                    try:
-                        event.reweight_order.remove('%s%s'  % (tag_name,tag))
-                    except ValueError:
-                        continue
-                
-                event.reweight_order += ['%s%s' % (tag_name,name) for name in type_rwgt]  
-                if self.output_type == "default":
-                    for name in weight:
-                        if 'orig' in name:
-                            continue             
-                        event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
-                        #write this event with weight
-                    output.write(str(event))
-                    if self.mother:
-                        event.wgt = weight[type_rwgt[0]]
-                        event.reweight_data = {}
+                    if 'orig' in name:
+                        continue             
+                    event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
+                    #write this event with weight
+                output.write(str(event))
+                if self.mother:
+                    event.wgt = weight[type_rwgt[0]]
+                    event.reweight_data = {}
+                    output2.write(str(event))
+            else:
+                for i,name in enumerate(weight):
+                    event.wgt = weight[name]
+                    event.reweight_data = {}
+                    if self.mother and len(weight)==1:
                         output2.write(str(event))
-                else:
-                    for i,name in enumerate(weight):
-                        event.wgt = weight[name]
-                        event.reweight_data = {}
-                        if self.mother and len(weight)==1:
-                            output2.write(str(event))
-                        elif self.mother and i == 0:
-                            output[name].write(str(event))
-                            output2.write(str(event))
-                        else:
-                            output[name].write(str(event))
+                    elif self.mother and i == 0:
+                        output[name].write(str(event))
+                        output2.write(str(event))
+                    else:
+                        output[name].write(str(event))
                 
         # check normalisation of the events:
         if 'event_norm' in self.run_card:
@@ -824,6 +651,204 @@ class ReweightInterface(extended_cmd.Cmd):
         
         self.options['rwgt_name'] = None
     
+    def handle_param_card(self, model_line, args, type_rwgt):
+        
+        if self.rwgt_dir:
+            path_me =self.rwgt_dir
+        else:
+            path_me = self.me_dir 
+            
+        if self.second_model or self.second_process:
+            rw_dir = pjoin(path_me, 'rw_me_second')
+        else:
+            rw_dir = pjoin(path_me, 'rw_me')
+        
+        
+        if not '--keep_card' in args:
+            ff = open(pjoin(rw_dir,'Cards', 'param_card.dat'), 'w')
+            ff.write(self.banner['slha'])
+            ff.close()
+            if self.has_nlo and self.rwgt_mode != "LO":
+                rwdir_virt = rw_dir.replace('rw_me', 'rw_mevirt')
+                files.ln(ff.name, starting_dir=pjoin(rwdir_virt, 'Cards')) 
+            ff = open(pjoin(path_me, 'rw_me','Cards', 'param_card_orig.dat'), 'w')
+            ff.write(self.banner['slha'])
+            ff.close()      
+            if self.has_nlo and self.rwgt_mode != "LO":
+                files.ln(ff.name, starting_dir=pjoin(path_me, 'rw_mevirt', 'Cards'))
+            cmd = common_run_interface.CommonRunCmd.ask_edit_card_static(cards=['param_card.dat'],
+                                   ask=self.ask, pwd=rw_dir, first_cmd=self.stored_line)
+            self.stored_line = None
+        
+        # get the names of type of reweighting requested
+        #type_rwgt = self.get_weight_names()
+
+        # check for potential scan in the new card 
+        new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
+        pattern_scan = re.compile(r'''^[\s\d]*scan''', re.I+re.M) 
+        param_card_iterator = []
+        if pattern_scan.search(new_card):
+            try:
+                import internal.extended_cmd as extended_internal
+                Shell_internal = extended_internal.CmdShell
+            except:
+                Shell_internal = None
+            import madgraph.interface.extended_cmd as extended_cmd
+            if not isinstance(self.mother, (extended_cmd.CmdShell, Shell_internal)): 
+                raise Exception, "scan are not allowed on the Web"
+            # at least one scan parameter found. create an iterator to go trough the cards
+            main_card = check_param_card.ParamCardIterator(new_card)
+            if self.options['rwgt_name']:
+                self.options['rwgt_name'] = '%s_0' % self.options['rwgt_name']
+
+            param_card_iterator = main_card
+            first_card = param_card_iterator.next(autostart=True)
+            new_card = first_card.write()
+            first_card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))  
+                          
+        # check if "Auto" is present for a width parameter
+        if "auto" in new_card.lower():            
+            self.mother.check_param_card(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+            new_card = open(pjoin(rw_dir, 'Cards', 'param_card.dat')).read()
+
+
+        # Find new tag in the banner and add information if needed
+        if 'initrwgt' in self.banner:
+            if 'name=\'mg_reweighting\'' in self.banner['initrwgt']:
+                blockpat = re.compile(r'''<weightgroup name=\'mg_reweighting\'\s*>(?P<text>.*?)</weightgroup>''', re.I+re.M+re.S)
+                before, content, after = blockpat.split(self.banner['initrwgt'])
+                header_rwgt_other = before + after
+                pattern = re.compile('<weight id=\'(?:rwgt_(?P<id>\d+)|(?P<id2>[_\w]+))(?P<rwgttype>\s*|_\w+)\'>(?P<info>.*?)</weight>', re.S+re.I+re.M)
+                mg_rwgt_info = pattern.findall(content)
+                
+                maxid = 0
+                for k,(i, fulltag, nlotype, diff) in enumerate(mg_rwgt_info):
+                    if i:
+                        if int(i) > maxid:
+                            maxid = int(i)
+                        mg_rwgt_info[k] = (i, nlotype, diff) # remove the pointless fulltag tag
+                    else:
+                        mg_rwgt_info[k] = (fulltag, nlotype, diff) # remove the pointless id tag
+                         
+                maxid += 1
+                rewgtid = maxid
+                if self.options['rwgt_name']:
+                    #ensure that the entry is not already define if so overwrites it
+                    for (i, nlotype, diff) in mg_rwgt_info[:]:
+                        for flag in type_rwgt:
+                            if 'rwgt_%s' % i == '%s%s' %(self.options['rwgt_name'],flag) or \
+                                i == '%s%s' % (self.options['rwgt_name'], flag):
+                                    logger.warning("tag %s%s already defines, will replace it", self.options['rwgt_name'],flag)
+                                    mg_rwgt_info.remove((i, nlotype, diff))
+                                                
+            else:
+                header_rwgt_other = self.banner['initrwgt'] 
+                mg_rwgt_info = []
+                rewgtid = 1
+        else:
+            self.banner['initrwgt']  = ''
+            header_rwgt_other = ''
+            mg_rwgt_info = []
+            rewgtid = 1
+
+        # add the reweighting in the banner information:
+        #starts by computing the difference in the cards.
+        s_orig = self.banner['slha']
+        s_new = new_card
+        
+        #define tag for the run
+        if self.options['rwgt_name']:
+            tag = self.options['rwgt_name']
+        else:
+            tag = str(rewgtid)
+        
+        if not self.second_model:
+            old_param = check_param_card.ParamCard(s_orig.splitlines())
+            new_param =  check_param_card.ParamCard(s_new.splitlines())
+            card_diff = old_param.create_diff(new_param)
+            if card_diff == '' and not self.second_process:
+                    logger.warning(' REWEIGHTING: original card and new card are identical.')
+#                    return
+#                else:
+#                    logger.warning(' REWEIGHTING: original card and new card are identical. Run it due to debug mode')
+                #raise self.InvalidCmd, 'original card and new card are identical'
+            try:
+                if old_param['sminputs'].get(3)- new_param['sminputs'].get(3) > 1e-3 * new_param['sminputs'].get(3):
+                    logger.warning("We found different value of alpha_s. Note that the value of alpha_s used is the one associate with the event and not the one from the cards.")
+            except Exception, error:
+                logger.debug("error in check of alphas: %s" % str(error))
+                pass #this is a security                
+            if not self.second_process:
+                for name in type_rwgt:
+                    mg_rwgt_info.append((tag, name, card_diff))
+            else:
+                str_proc = "\n change process  ".join([""]+self.second_process)
+                for name in type_rwgt:
+                    mg_rwgt_info.append((tag, name, str_proc + '\n'+ card_diff))
+        else:
+            str_info = "change model %s" % self.second_model
+            if self.second_process:
+                str_info += "\n change process  ".join([""]+self.second_process)
+            card_diff = str_info
+            str_info += '\n' + s_new
+            for name in type_rwgt:
+                mg_rwgt_info.append((tag, name, str_info))
+        # re-create the banner.
+        self.banner['initrwgt'] = header_rwgt_other
+        self.banner['initrwgt'] += '\n<weightgroup name=\'mg_reweighting\'>\n'
+        for tag, rwgttype, diff in mg_rwgt_info:
+            if tag.isdigit():
+                self.banner['initrwgt'] += '<weight id=\'rwgt_%s%s\'>%s</weight>\n' % \
+                                       (tag, rwgttype, diff)
+            else:
+                self.banner['initrwgt'] += '<weight id=\'%s%s\'>%s</weight>\n' % \
+                                       (tag, rwgttype, diff)
+        self.banner['initrwgt'] += '\n</weightgroup>\n'
+        self.banner['initrwgt'] = self.banner['initrwgt'].replace('\n\n', '\n')
+
+
+        logger.info('starts to compute weight for events with the following modification to the param_card:')
+        logger.info(card_diff.replace('\n','\nKEEP:'))
+        # prepare the output file for the weight plot
+        if self.mother:
+            out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
+            output2 = open(out_path, 'w')
+            lha_strategy = self.banner.get_lha_strategy() 
+            self.banner.set_lha_strategy(4*lha_strategy/abs(lha_strategy)) 
+            self.banner.write(output2, close_tag=False)
+            self.banner.set_lha_strategy(lha_strategy)
+            new_banner = banner.Banner(self.banner)
+            if not hasattr(self, 'run_card'):
+                self.run_card = new_banner.charge_card('run_card')
+            self.run_card['run_tag'] = 'reweight_%s' % rewgtid
+            new_banner['slha'] = s_new   
+            del new_banner['initrwgt']
+            assert 'initrwgt' in self.banner 
+            ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
+                          (self.mother.run_name, self.run_card['run_tag'])),'w') 
+            new_banner.write(ff)
+            ff.close()
+
+        # Loop over all events
+        if self.options['rwgt_name']:
+            tag_name = self.options['rwgt_name']
+        else:
+            tag_name = 'rwgt_%s' % rewgtid
+
+
+        #initialise module.
+        for (path,tag), module in self.f2pylib.items():
+            Pdir = pjoin(self.rwgt_dir, path,'SubProcesses')
+            with misc.chdir(Pdir):
+#            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                if 'second' in path or tag == 3:
+                    module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                else:
+                    module.initialise(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'))
+
+        return param_card_iterator, tag_name, output2
+    
+        
     def do_set(self, line):
         "Not in help"
         
@@ -877,19 +902,17 @@ class ReweightInterface(extended_cmd.Cmd):
     def do_compute_widths(self, line):
         return self.mother.do_compute_widths(line)
     
-    def calculate_weight(self, event, space=None):
+    def calculate_weight(self, event):
         """space defines where to find the calculator (in multicore)"""
         
         if self.has_nlo and self.rwgt_mode != "LO":
-            return self.calculate_nlo_weight(event, space)
+            return self.calculate_nlo_weight(event)
         
-        if not space: 
-            space = self
         event.parse_reweight()                    
            
         # LO reweighting    
-        w_orig = self.calculate_matrix_element(event, 0, space)
-        w_new =  self.calculate_matrix_element(event, 1, space)
+        w_orig = self.calculate_matrix_element(event, 0)
+        w_new =  self.calculate_matrix_element(event, 1)
         
         if w_orig == 0:
             tag, order = event.get_tag_and_order()
@@ -1041,7 +1064,7 @@ class ReweightInterface(extended_cmd.Cmd):
             open(pjoin(Pdir, 'matrix%spy.so' % tag),'w').write(open(pjoin(Pdir, 'matrix2py.so')
                                         ).read().replace('matrix2py', 'matrix%spy' % tag))
     
-    def calculate_matrix_element(self, event, hypp_id, space, scale2=0):
+    def calculate_matrix_element(self, event, hypp_id, scale2=0):
         """routine to return the matrix element"""
         
         if self.has_nlo:
@@ -1050,133 +1073,26 @@ class ReweightInterface(extended_cmd.Cmd):
             nb_retry, sleep = 5, 20 
         
         tag, order = event.get_tag_and_order()
-        if isinstance(hypp_id, str) and hypp_id.startswith('V'):
-            tag = (tag,'V')
-            hypp_id = int(hypp_id[1:])
-            base = "rw_mevirt"
-        else:
-            base = "rw_me"
+        #if isinstance(hypp_id, str) and hypp_id.startswith('V'):
+        #    tag = (tag,'V')
+        #    hypp_id = int(hypp_id[1:])
+        #    base = "rw_mevirt"
+        #else:
+        #    base = "rw_me"
         
         if (not self.second_model and not self.second_process) or hypp_id==0:
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
         else:
             orig_order, Pdir, hel_dict = self.id_to_path_second[tag] 
             
-
-        run_id = (tag, hypp_id)
-
-        assert space == self
-        start = False
-        if run_id in space.calculator:
-            external = space.calculator[run_id]
-            #    mod = space.calculator[(run_id,'module')]
-            #    #with misc.chdir(Pdir):
-            #    #    if hypp_id==0:
-            #    #        mod.initialise('param_card_orig.dat')
-            #    #    else:
-            #    #        mod.initialise('param_card.dat')
-        elif (not self.second_model and not self.second_process) or hypp_id==0:
-            # create the executable for this param_card  
-            subdir = pjoin(self.me_dir, base, 'SubProcesses')
-            if self.me_dir not in sys.path:
-                sys.path.insert(0,self.me_dir)
-            if self.rwgt_dir and self.rwgt_dir not in sys.path:
-                sys.path.insert(0,self.rwgt_dir)
-            Pname = os.path.basename(Pdir)
-            if hypp_id == 0:
-                if (Pdir, 0) not in dir_to_f2py_free_mod:
-                    metag = 1
-                    dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
-                else:
-                    metag, old_module = dir_to_f2py_free_mod[(Pdir,0)]
-                    if old_module != nb_f2py_module:
-                        metag += 1
-                        dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
-                os.environ['MENUM'] = '2'
-                if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
-                    misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix2py.so'], cwd=Pdir)                
-                self.rename_f2py_lib(Pdir, 2*metag)
-                try:
-                    mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
-                except:
-                    import platform
-                    if platform.system() == 'Darwin':
-                        os.system('install_name_tool -change libMadLoop.dylib %s/libMadLoop.dylib matrix%spy.so' % (Pdir,2*metag))
-                        mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
-                    else:
-                        misc.sprint("fail compilation")
-                        raise
-                S = mymod.SubProcesses
-                P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % (2*metag))
-                with misc.chdir(Pdir):
-                    with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                        mymod.initialise('param_card_orig.dat')
-                 
-                     
-            if hypp_id == 1:
-                #incorrect line
-                metag = dir_to_f2py_free_mod[(Pdir,0)][0]
-                newtag = 2*metag+1
-                self.rename_f2py_lib(Pdir, newtag)
-                try:
-                    mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, newtag), globals(), locals(), [],-1)
-                except Exception, error:
-                    newtag  = "L%s" % newtag
-                    os.environ['MENUM'] = newtag
-                    misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix%spy.so' % newtag], cwd=Pdir)
-                    mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, newtag), globals(), locals(), [],-1)
-                 
-                S = mymod.SubProcesses
-                P = getattr(S, Pname)
-                mymod = getattr(P, 'matrix%spy' % newtag)
-                with misc.chdir(Pdir):
-                    with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                        mymod.initialise('param_card.dat') 
-                     
-            space.calculator[run_id] = mymod.get_me
-            space.calculator[(run_id,'module')] = mymod
-            external = space.calculator[run_id]                      
+        base = os.path.basename(os.path.dirname(os.path.dirname(Pdir)))
+        if '_second' in base:
+            moduletag = (base, 2)
         else:
-            subdir = pjoin(self.me_dir,'%s_second' % base, 'SubProcesses')
-            if self.me_dir not in sys.path:
-                sys.path.append(self.me_dir)
- 
-            assert hypp_id == 1
-            Pname = os.path.basename(Pdir)
-            os.environ['MENUM'] = '2'
-            if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
-                misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
-            if (Pdir, 1) not in dir_to_f2py_free_mod:
-                metag = 1
-                dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
-            else:
-                metag, old_module = dir_to_f2py_free_mod[(Pdir,1)]
-                if old_module != nb_f2py_module:
-                    metag += 1
-                    dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
-            self.rename_f2py_lib(Pdir, metag)
-            try:
-                mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))
-            except ImportError:
-                metag = "L%s" % metag
-                os.environ['MENUM'] = str(metag)
-                misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
-                mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))
-                     
-            reload(mymod)
-            S = mymod.SubProcesses
-            P = getattr(S, Pname)
-            mymod = getattr(P, 'matrix%spy' % metag)
-            with misc.chdir(Pdir):   
-                with misc.stdchannel_redirected(sys.stdout, os.devnull):   
-                    mymod.initialise('param_card.dat')              
-            space.calculator[run_id] = mymod.get_me
-            space.calculator[(run_id,'module')] = mymod
-            external = space.calculator[run_id]                
+            moduletag = (base, 2+hypp_id)
         
+        module = self.f2pylib[moduletag]
 
-        
         p = event.get_momenta(orig_order)
         # add helicity information
         
@@ -1188,26 +1104,23 @@ class ReweightInterface(extended_cmd.Cmd):
                 pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
                 for i,thisp in enumerate(p):
                     p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
-                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
-
-                
+                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0                 
         else:
-            nhel = 0
+            nhel = -1
 
         p = self.invert_momenta(p)
+        pdg = list(orig_order[0])+list(orig_order[1])
 
         with misc.chdir(Pdir):
-            with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                if 'V' in tag or \
-                   (hypp_id ==1  and self.second_process and any('sqrvirt' in l for l in self.second_process)):
-                    me_value = external(p,event.aqcd, math.sqrt(scale2), nhel)
-                else:
-                    try:
-                        me_value = external(p,event.aqcd, nhel)
-                    except TypeError:
-                        me_value = external(p,event.aqcd, math.sqrt(scale2), nhel)                    
-
-        # for NLO we have also the stability status code
+#            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_value = module.smatrixhel(pdg,p, event.aqcd, math.sqrt(scale2), nhel)
+        
+        if me_value ==0:
+            misc.sprint(pdg)
+            misc.sprint(p)
+            raise Exception
+                                
+        # for loop we have also the stability status code
         if isinstance(me_value, tuple):
             me_value, code = me_value
             #if code points unstability -> returns 0
@@ -1410,7 +1323,7 @@ class ReweightInterface(extended_cmd.Cmd):
         except Exception, error:
             raise
         
-        commandline = 'output standalone_rw %s' % pjoin(path_me,data['paths'][0])
+        commandline = 'output standalone_rw %s --prefix=int' % pjoin(path_me,data['paths'][0])
         mgcmd.exec_cmd(commandline, precmd=True)        
         logger.info('Done %.4g' % (time.time()-start))
         self.has_standalone_dir = True
@@ -1502,7 +1415,7 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
-            commandline = 'output standalone_rw %s -f' % pjoin(path_me, data['paths'][1])
+            commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
             mgcmd.exec_cmd(commandline, precmd=True) 
             
             #put back golem to original value
@@ -1594,7 +1507,7 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline = commandline.replace('add process', 'generate',1)
             logger.info(commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
-            commandline = 'output standalone_rw %s -f' % pjoin(path_me, data['paths'][1])
+            commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
             mgcmd.exec_cmd(commandline, precmd=True)    
             #put back golem to original value
             mgcmd.options['golem'] = old_options['golem']
@@ -1643,7 +1556,56 @@ class ReweightInterface(extended_cmd.Cmd):
             
         
         
+    def compile(self):
+        """compile the code"""
+        
+        if self.multicore=='wait':
+            return
+        
+        if not self.rwgt_dir:
+            path_me = self.me_dir
+        else:
+            path_me = self.rwgt_dir
+        misc.sprint(path_me)
+        for onedir in self.rwgt_dir_possibility:
+            if not os.path.isdir(pjoin(path_me,onedir)):
+                continue
+            misc.sprint(onedir)
+            pdir = pjoin(path_me, onedir, 'SubProcesses')
+            nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
+            os.environ['MENUM'] = '2'
+            misc.compile(['allmatrix2py.so', '-j', str(nb_core)], cwd=pdir)
+            if not (self.second_model or self.second_process):
+                os.environ['MENUM'] = '3'
+                misc.compile(['allmatrix3py.so','-j', str(nb_core)], cwd=pdir)
 
+    def load_module(self, metag=1):
+        """load the various module and load the associate information"""
+        
+        misc.sprint('loading module')
+        
+        if not self.rwgt_dir:
+            path_me = self.me_dir
+        else:
+            path_me = self.rwgt_dir        
+        
+        for onedir in self.rwgt_dir_possibility:
+            if not os.path.isdir(pjoin(path_me,onedir)):
+                continue 
+            pdir = pjoin(path_me, onedir, 'SubProcesses')
+            for tag in [2*metag,2*metag+1]:
+                with misc.TMP_variable(sys, 'path', [pjoin(path_me)]+sys.path):
+                    mymod = __import__('%s.SubProcesses.allmatrix%spy' % (onedir, tag), globals(), locals(), [],-1)
+                    reload(mymod)
+                    S = mymod.SubProcesses
+                    mymod = getattr(S, 'allmatrix%spy' % tag)
+                    misc.sprint(mymod.get_pdg_order())
+                if (self.second_model or self.second_process):
+                    break
+                # Param card not available -> no initialisation
+                misc.sprint((onedir,tag))
+                self.f2pylib[(onedir,tag)] = mymod
+             
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
         

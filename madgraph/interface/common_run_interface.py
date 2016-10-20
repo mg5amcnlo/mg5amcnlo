@@ -1819,6 +1819,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 ##########    END SINGLE CORE HANDLING #############
             else:
                 ##########    START MULTI-CORE HANDLING #############
+                misc.sprint(self.options['nb_core'])
                 if not isinstance(self.cluster, cluster.MultiCore):
                     mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
                 else:
@@ -1836,7 +1837,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 if 'nevt_job' in self.run_card and self.run_card['nevt_job'] !=-1:
                     nevt_job = self.run_card['nevt_job']
                 else:
-                    nevt_job = max(5000, self.run_card['nevents']/50)
+                    nevt_job = max(2500, self.run_card['nevents']/self.options['nb_core'])
                 logger.info("split the event file in bunch of %s events" % nevt_job)
                 nb_file = lhe_parser.EventFile(new_args[0]).split(nevt_job)
                 starttime = time.time()
@@ -1859,15 +1860,18 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                             stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight.log'),'w')
                         new_command.append('--multicore=create')
                     else:
-                        stdout = devnull
+                        stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%i.log' % i),'w')
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
                     mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
+                misc.sprint('pass in WAIT')
                 mycluster.wait(self.me_dir,update_status)
+                misc.sprint('WAIT IS OVER')
                 devnull.close()
                 
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
+                misc.sprint(nb_event, [cross_sections[key] for key in cross_sections if isinstance(key, str) and key.startswith('rwgt')])
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
                     for f in all_lhe:
                         if os.path.exists('%s_%s_debug.log' % (f, self.run_tag)):
