@@ -1989,6 +1989,7 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
         if self.prefix_info:
             self.write_f2py_splitter()
             self.write_f2py_makefile()
+            self.write_f2py_check_sa()
             
             
     def write_f2py_splitter(self):

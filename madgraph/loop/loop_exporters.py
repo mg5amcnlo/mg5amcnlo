@@ -245,6 +245,30 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
     def write_f2py_makefile(self):
         return
     
+    def write_f2py_check_sa(self):
+        """ Write the general check_sa.py in SubProcesses that calls all processes successively."""
+ 
+        return
+        # Work in Progress   
+#        file = open(os.path.join(self.template_dir,\
+#                                       'check_sa_all.py.inc')).read()
+                                       
+        # For now just put in an empty PS point but in the future, maybe generate
+        # a valid one already here by default
+#        curr_proc = matrix_element.get('processes')[0]
+#        random_PSpoint_python_formatted = \
+#"""# Specify your chosen PS point below. If you leave it filled with None, then the script will attempt to read it from the file PS.input.
+#p= [[None,]*4]*%d"""%len(curr_proc.get('legs'))
+#
+#        process_definition_string = curr_proc.nice_string().replace('Process:','')
+#        file=file.format(random_PSpoint_python_formatted,process_definition_string)
+#        new_path = writer.name.replace('check_sa.f', 'check_sa.py')
+#        new_writer = open(new_path, 'w')
+#        new_writer.writelines(file)
+        # Make it executable
+#        os.chmod(new_path, os.stat(new_path).st_mode | stat.S_IEXEC)
+#        pjoin(self.template_dir,'loop_num.inc')
+    
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
         
@@ -254,10 +278,17 @@ class LoopProcessExporterFortranSA(LoopExporterFortran,
       SUBROUTINE INITIALISE(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.
       IMPLICIT NONE
-      CHARACTER*180 PATH
+      CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH
       CALL SETPARA(PATH)  !first call to setup the paramaters
       RETURN
+      END
+
+      SUBROUTINE SET_MADLOOP_PATH(PATH)
+C     Routine to set the path of the folder 'MadLoop5_resources' to MadLoop
+        CHARACTER(512) PATH
+CF2PY intent(in)::path
+        CALL SETMADLOOPPATH(PATH)
       END
 
   subroutine smatrixhel(pdgs, npdg, p, ALPHAS, SCALES2, nhel, ANS, RETURNCODE)
