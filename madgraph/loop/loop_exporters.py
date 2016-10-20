@@ -306,12 +306,6 @@ CF2PY double precision, intent(in) :: SCALES2
   integer npdg, nhel, RETURNCODE
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALES2
-  
-      INCLUDE 'coupl.inc'
-
-      PI = 3.141592653589793D0
-      G = 2* DSQRT(ALPHAS*PI)
-      CALL UPDATE_AS_PARAM()
 
 %(smatrixhel)s
 

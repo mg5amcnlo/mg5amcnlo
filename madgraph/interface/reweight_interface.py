@@ -179,7 +179,7 @@ class ReweightInterface(extended_cmd.Cmd):
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
         if '[' in process:
-            if not self.banner.get_detail('run_card', 'store_rwgt_info'):
+            if isinstance(self.banner.run_card, banner.RunCardNLO  ) and not self.banner.get_detail('run_card', 'store_rwgt_info'):
                 logger.warning("The information to perform a proper NLO reweighting is not present in the event file.")
                 logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
@@ -1112,13 +1112,8 @@ class ReweightInterface(extended_cmd.Cmd):
         pdg = list(orig_order[0])+list(orig_order[1])
 
         with misc.chdir(Pdir):
-#            with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                me_value = module.smatrixhel(pdg,p, event.aqcd, math.sqrt(scale2), nhel)
-        
-        if me_value ==0:
-            misc.sprint(pdg)
-            misc.sprint(p)
-            raise Exception
+            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                me_value = module.smatrixhel(pdg,p, event.aqcd, scale2, nhel)
                                 
         # for loop we have also the stability status code
         if isinstance(me_value, tuple):
@@ -1605,6 +1600,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 # Param card not available -> no initialisation
                 misc.sprint((onedir,tag))
                 self.f2pylib[(onedir,tag)] = mymod
+                if hasattr(mymod, 'set_madloop_path'):
+                    mymod.set_madloop_path(pjoin(path_me, 'MadLoop5_resources'))
              
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
