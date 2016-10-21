@@ -49,7 +49,8 @@ except:
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
-sys.path.insert(0, os.path.join(root_path,'bin'))
+if __name__ == '__main__':
+    sys.path.insert(0, os.path.join(root_path,'bin'))
 
 # usefull shortcut
 pjoin = os.path.join
@@ -59,9 +60,7 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     import madgraph
-
-    
-except ImportError: 
+except ImportError,error: 
     # import from madevent directory
     MADEVENT = True
     import internal.extended_cmd as cmd
@@ -6583,9 +6582,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line = MadEventCmd(force_run=True)
+                cmd_line = MadEventCmd(os.path.dirname(root_path),force_run=True)
             else:
-                cmd_line = MadEventCmdShell(force_run=True)
+                cmd_line = MadEventCmdShell(os.path.dirname(root_path),force_run=True)
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:
                     print parser_error
