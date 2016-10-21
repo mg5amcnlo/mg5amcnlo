@@ -159,7 +159,10 @@ c helicity stuff
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
 
-c      integer icomp
+      logical new_point
+      common /c_new_point/new_point
+
+c     integer icomp
 c
 c     DATA
 c
@@ -342,6 +345,7 @@ c x_to_f_arg subroutine
       do jj=1,ndim
          x(jj)=ran2()
       enddo
+      new_point=.true.
       call generate_momenta(ndim,iconfig,wgt,x,p)
       calculatedBorn=.false.
       do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
@@ -349,6 +353,7 @@ c x_to_f_arg subroutine
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          calculatedBorn=.false.
@@ -388,12 +393,14 @@ c x_to_f_arg subroutine
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          call generate_momenta(ndim,iconfig,wgt,x,p)
          do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
             wgt=1d0
             do jj=1,ndim
                x(jj)=ran2()
             enddo
+            new_point=.true.
             call generate_momenta(ndim,iconfig,wgt,x,p)
             ntry=ntry+1
          enddo
@@ -535,12 +542,14 @@ c in genps_fks_test.f
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          call generate_momenta(ndim,iconfig,wgt,x,p)
          do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
             wgt=1d0
             do jj=1,ndim
                x(jj)=ran2()
             enddo
+            new_point=.true.
             call generate_momenta(ndim,iconfig,wgt,x,p)
             ntry=ntry+1
          enddo

@@ -6,6 +6,8 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
        OM: add the possibility to automatically missing parameter in a param_card
            with command "update missing" at the time of the card edition. Usefull for 
            some SUSY card where some block entry are sometimes missing.
+       RF: Some refactoring of the NLO phase-space generation,
+           including some small improvements in efficiency.
 
 2.5.0 (xx/xx/xx)
      FUNCTIONALITY
