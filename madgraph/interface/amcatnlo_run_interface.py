@@ -2938,8 +2938,9 @@ RESTART = %(mint_mode)s
                 raise aMCatNLOError('Some paths are missing in the configuration file.\n' + \
                         ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
 
-        if shower == 'HERWIGPP' and self.options['hepmc_path'] != self.options['hwpp_path']:
+        if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
+            self.shower_card['extrapaths'] += ' %s' % pjoin(self.options['hepmc_path'], 'lib')
 
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
