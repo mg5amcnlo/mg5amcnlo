@@ -2938,7 +2938,7 @@ RESTART = %(mint_mode)s
                 raise aMCatNLOError('Some paths are missing in the configuration file.\n' + \
                         ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
 
-        if shower == 'HERWIGPP' and self.options['hepmc_path'] != 'BOOT':
+        if shower == 'HERWIGPP' and self.options['hepmc_path'] != self.options['hwpp_path']:
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
 
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
@@ -3581,9 +3581,9 @@ RESTART = %(mint_mode)s
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
         if self.options['hwpp_path']:
             content+='HWPPPATH=%s\n' % self.options['hwpp_path']
-        if self.options['thepeg_path'] and self.options['thepeg_path'] != 'BOOT':
+        if self.options['thepeg_path'] and self.options['thepeg_path'] != self.options['hwpp_path']:
             content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
-        if self.options['hepmc_path'] and self.options['hepmc_path'] != 'BOOT':
+        if self.options['hepmc_path'] and self.options['hepmc_path'] != self.options['hwpp_path']:
             content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')

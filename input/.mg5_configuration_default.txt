@@ -73,7 +73,8 @@
 #!  define the path to the herwig++, thepeg and hepmc directories.
 #!  paths can be absolute or relative from mg5 directory
 #!  WARNING: if Herwig7 has been installed with the bootstrap script,
-#!  then please set thepeg_path = BOOT, and hepmc_path = BOOT
+#!  then please set thepeg_path and hepmc_path to the same value as
+#!  hwpp_path
 # hwpp_path = 
 # thepeg_path = 
 # hepmc_path = 
