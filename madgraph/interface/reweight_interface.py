@@ -838,13 +838,16 @@ class ReweightInterface(extended_cmd.Cmd):
 
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
-            Pdir = pjoin(self.rwgt_dir, path,'SubProcesses')
-            with misc.chdir(Pdir):
+#            misc.sprint(self.rwgt_dir, path)
+#            Pdir = pjoin(self.rwgt_dir, path,'SubProcesses')
+            with misc.chdir(rw_dir):
 #            with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 if 'second' in path or tag == 3:
                     module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 else:
                     module.initialise(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'))
+                if hasattr(module, 'set_madloop_path'):
+                    module.set_madloop_path(pjoin(rw_dir,'SubProcesses','MadLoop5_resources'))
 
         return param_card_iterator, tag_name, output2
     
@@ -1393,6 +1396,9 @@ class ReweightInterface(extended_cmd.Cmd):
         if os.path.exists(pjoin(path_me, data['paths'][1], 'Cards', 'MadLoopParams.dat')):
             if self.multicore == 'create':
                 print "compile OLP", data['paths'][1]
+                # It is potentially unsafe to use several cores, We limit ourself to one for now
+                # n_cores = self.mother.options['nb_core']
+                n_cores = 1
                 misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
                              nb_core=self.mother.options['nb_core'])
                 
