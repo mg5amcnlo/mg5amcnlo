@@ -68,6 +68,9 @@ OLP_PROCESS= MadLoopParamReader.o MadLoopCommons.o \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/COLLIER_interface.f)) \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/compute_color_flows.f))
 
+POLYNOMIAL = $(patsubst $(DOTF),$(DOTO),$(wildcard polynomial.f))
+OLP_POLYNOMIAL = $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/polynomial.f))
+
 WRAPPER = \
  $(patsubst $(DOTF),$(DOTO),$(wildcard $(LOOP_PREFIX)*/f2py_wrapper.f))
 
@@ -87,7 +90,7 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst $(DOTF),$(
 %olynomial.o : %olynomial.f
 	$(FC) $(patsubst -O%,, $(subst -fbounds-check,,$(FFLAGS))) $(POLYNOMIAL_OPTIMIZATION) $(POLYNOMIAL_BOUNDS_CHECK) -c $< -o $@ $(LOOP_INCLUDE)
 
-$(DOTO) : $(DOTF)
+$(DOTO) : $(DOTF) $(POLYNOMIAL) $(OLP_POLYNOMIAL)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)
 
 $(OLP): $(OLP_PROCESS) $(LIBS)
