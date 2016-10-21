@@ -68,10 +68,12 @@
 #!     MG5_aMC> install mg5amc_py8_interface
 # mg5amc_py8_interface_path = ./HEPTools/MG5aMC_PY8_interface 
 
-#! Herwig++ paths
+#! Herwig++/Herwig7 paths
 #!  specify here the paths also to HepMC ant ThePEG
 #!  define the path to the herwig++, thepeg and hepmc directories.
 #!  paths can be absolute or relative from mg5 directory
+#!  WARNING: if Herwig7 has been installed with the bootstrap script,
+#!  then please set thepeg_path = BOOT, and hepmc_path = BOOT
 # hwpp_path = 
 # thepeg_path = 
 # hepmc_path = 
