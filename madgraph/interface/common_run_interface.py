@@ -5085,12 +5085,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if extralibs:
                     self.do_set('shower_card extralibs %s ' % ' '.join(extralibs))
                 else:
-                    self.do_set('shower_card extralibs \'\' ')
+                    self.do_set('shower_card extralibs None ')
             if modify_extrapaths:
                 if extrapaths:
                     self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
                 else:
-                    self.do_set('shower_card extrapaths \'\' ')    
+                    self.do_set('shower_card extrapaths None ')    
     
     def reask(self, *args, **opt):
         
