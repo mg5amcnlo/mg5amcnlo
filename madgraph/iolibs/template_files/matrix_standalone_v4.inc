@@ -208,7 +208,7 @@ C ----------
 %(amp2_lines)s
       END
 
-      SUBROUTINE %(proc_prefix)sGET_ME(P, ALPHAS, NHEL ,ANS)
+      SUBROUTINE %(proc_prefix)sGET_value(P, ALPHAS, NHEL ,ANS)
       IMPLICIT NONE   
 C
 C CONSTANT
@@ -241,10 +241,10 @@ C     the include file with the values of the parameters and masses
       return 
       end
 
-      SUBROUTINE %(proc_prefix)sINITIALISE(PATH)
+      SUBROUTINE %(proc_prefix)sINITIALISEMODEL(PATH)
 C     ROUTINE FOR F2PY to read the benchmark point.    
       IMPLICIT NONE   
-      CHARACTER*180 PATH
+      CHARACTER*512 PATH
 CF2PY INTENT(IN) :: PATH 
       call setpara(PATH)  !first call to setup the paramaters    
       return 

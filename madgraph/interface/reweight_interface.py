@@ -480,8 +480,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 #write the banner to the output file
                 self.banner.write(output[name], close_tag=False)
         
-
-        
                 
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'y'
         if self.lhe_input.closed:
@@ -838,16 +836,12 @@ class ReweightInterface(extended_cmd.Cmd):
 
         #initialise module.
         for (path,tag), module in self.f2pylib.items():
-#            misc.sprint(self.rwgt_dir, path)
-#            Pdir = pjoin(self.rwgt_dir, path,'SubProcesses')
             with misc.chdir(rw_dir):
 #            with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 if 'second' in path or tag == 3:
                     module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 else:
                     module.initialise(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'))
-                if hasattr(module, 'set_madloop_path'):
-                    module.set_madloop_path(pjoin(rw_dir,'SubProcesses','MadLoop5_resources'))
 
         return param_card_iterator, tag_name, output2
     
@@ -1574,11 +1568,9 @@ class ReweightInterface(extended_cmd.Cmd):
             path_me = self.me_dir
         else:
             path_me = self.rwgt_dir
-        misc.sprint(path_me)
         for onedir in self.rwgt_dir_possibility:
             if not os.path.isdir(pjoin(path_me,onedir)):
                 continue
-            misc.sprint(onedir)
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
             os.environ['MENUM'] = '2'
@@ -1590,7 +1582,6 @@ class ReweightInterface(extended_cmd.Cmd):
     def load_module(self, metag=1):
         """load the various module and load the associate information"""
         
-        misc.sprint('loading module')
         
         if not self.rwgt_dir:
             path_me = self.me_dir
@@ -1607,14 +1598,12 @@ class ReweightInterface(extended_cmd.Cmd):
                     reload(mymod)
                     S = mymod.SubProcesses
                     mymod = getattr(S, 'allmatrix%spy' % tag)
-                    misc.sprint(mymod.get_pdg_order())
                 if (self.second_model or self.second_process):
                     break
                 # Param card not available -> no initialisation
-                misc.sprint((onedir,tag))
                 self.f2pylib[(onedir,tag)] = mymod
                 if hasattr(mymod, 'set_madloop_path'):
-                    mymod.set_madloop_path(pjoin(path_me,'SubProcesses','MadLoop5_resources'))
+                    mymod.set_madloop_path(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources'))
              
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""
