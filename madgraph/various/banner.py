@@ -1283,7 +1283,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('has_loops', False)
         self.add_param('bias_module','None')
         self.add_param('max_n_matched_jets', 0)
-        self.add_param('colored_pdgs', [1,2,3,4,5])        
+        self.add_param('colored_pdgs', [1,2,3,4,5])
+        self.add_param('complex_mass_scheme', False)        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 

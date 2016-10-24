@@ -854,11 +854,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         if self.options['mg5_path']:
             sys.path.append(self.options['mg5_path'])
             import models.import_ufo as import_ufo
+            complexmass = self.proc_characteristics['complex_mass_scheme']
             with misc.MuteLogger(['madgraph.model'],[50]):
-                out= import_ufo.import_model(pjoin(self.me_dir,'bin','internal','ufomodel'))
+                out= import_ufo.import_model(pjoin(self.me_dir,'bin','internal','ufomodel'),
+                                             complex_mass_scheme=complexmass)
             return out
-        elif self.mother:
-            return self.mother._curr_model
+        #elif self.mother:
+        #    misc.sprint('Hum this is dangerous....')
+        #    return self.mother._curr_model
         else:
             return None
 
@@ -2991,22 +2994,27 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
-                for plug in os.listdir(pjoin(mg5dir, 'PLUGIN')):
-                    if os.path.exists(pjoin(mg5dir, 'PLUGIN', plug, '__init__.py')):
-                        try:
-                            __import__('PLUGIN.%s' % plug)
-                        except Exception, error:
-                            logger.critical('plugin directory %s fail to be loaded. Please check it', plug)
+                for plugpath in self.plugin_path: 
+                    plugindirname = os.path.basename(plugpath)
+                    for plug in os.listdir(plugpath):
+                        if os.path.exists(pjoin(plugpath, plug, '__init__.py')):   
+                            try:
+                                __import__('%s.%s' % (plugindirname,plug))
+                            except Exception:
+                                logger.critical('plugin directory %s/%s fail to be loaded. Please check it', plugindirname, plug)
+                                continue
+                            plugin = sys.modules['%s.%s' % (plugindirname,plug)]  
+                            if not hasattr(plugin, 'new_cluster'):
+                                continue
+                            if not misc.is_plugin_supported(plugin):
+                                continue              
+                            if cluster_name in plugin.new_cluster:
+                                logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
+                                self.cluster = plugin.new_cluster[cluster_name](**opt)
+                                break
+                        else:
                             continue
-                        plugin = sys.modules['PLUGIN.%s' % plug]  
-                        if not hasattr(plugin, 'new_cluster'):
-                            continue
-                        if not misc.is_plugin_supported(plugin):
-                            continue              
-                        if cluster_name in plugin.new_cluster:
-                            logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
-                            self.cluster = plugin.new_cluster[cluster_name](**opt)
-                            break
+                        break
                 else:
                     raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
                 
@@ -5194,6 +5202,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
            usefull in presence of scan.
            return if the param_card was updated or not
         """
+        logger.info('Update the dependent parameter of the param_card.dat')
         modify = True
         class TimeOutError(Exception): 
             pass
@@ -5214,7 +5223,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                            'This might create trouble for external program (like MadSpin/shower/...)\n'+\
                            'The update can be forced without timer by typing \'update dependent\' at the time of the card edition')
             modify =False
-        except Exception:
+        except Exception,error:
+            misc.sprint(error)
             logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
             signal.alarm(0)
         else:

@@ -859,7 +859,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
            
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
- 
+
+    plugin_path = [pjoin(MG5DIR, 'PLUGIN')]
+    if 'PYTHONPATH' in os.environ:
+        for PluginCandidate in os.environ['PYTHONPATH'].split(':'):
+            for onedir in os.listdir(PluginCandidate):
+                if onedir == 'MG5aMC_PLUGIN':
+                    plugin_path.append(pjoin(PluginCandidate, 'MGaMC_PLUGIN'))
+                    break
+            else:
+                continue
+            break
     
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
