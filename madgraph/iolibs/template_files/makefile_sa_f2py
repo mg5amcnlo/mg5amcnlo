@@ -14,7 +14,7 @@ endif
 
 
 allmatrix$(MENUM)py.so: $(LIBDIR)/$(LIBRARY)  all_matrix.o
-	$(F2PY) $(LINKLIBS) -lmatrix  -c all_matrix.f  -m allmatrix$(MENUM)py
+	$(F2PY) $(LINKLIBS) -lmatrix  -c all_matrix.f */matrix.f -m allmatrix$(MENUM)py
 
 
 

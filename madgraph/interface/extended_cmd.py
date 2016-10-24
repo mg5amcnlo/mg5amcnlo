@@ -859,8 +859,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
            
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
- 
-    
+     
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
         

@@ -66,6 +66,8 @@ C
 C LOCAL VARIABLES 
 C  
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
+C  put in common block to expose this variable to python interface
+      COMMON/%(proc_prefix)sPROCESS_NHEL/NHEL 
       REAL*8 T
       REAL*8 %(proc_prefix)sMATRIX
       INTEGER IHEL,IDEN, I, J

@@ -200,6 +200,7 @@ class ReweightInterface(extended_cmd.Cmd):
             raise Exception, msg
         process, option = mg_interface.MadGraphCmd.split_process_line(process)
         self.proc_option = option
+        self.is_decay = len(process.split('>',1)[0].split()) == 1 
         
         logger.info("process: %s" % process)
         logger.info("options: %s" % option)
@@ -431,23 +432,28 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.load_from_pickle()
                 if not self.rwgt_dir:
                     self.me_dir = self.rwgt_dir
+                self.load_module()
             elif self.multicore == 'wait':
+                i=0
                 while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
-                    time.sleep(60)
+                    time.sleep(10+i)
+                    i+=5
                     print 'wait for pickle'                  
                 print "loading from pickle"
                 if not self.rwgt_dir:
                     self.rwgt_dir = self.me_dir
                 self.load_from_pickle(keep_name=True)
+                self.load_module()
             else:
                 self.create_standalone_directory()
-                self.compile()  
+                self.compile()
+                self.load_module()  
                 if self.multicore == 'create':
                     self.load_module()
                     if not self.rwgt_dir:
                         self.rwgt_dir = self.me_dir
                     self.save_to_pickle()      
-        self.load_module()
+        
                     
         type_rwgt = self.get_weight_names()
         param_card_iterator, tag_name, output2 = self.handle_param_card(model_line, args, type_rwgt)
@@ -1082,7 +1088,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             orig_order, Pdir, hel_dict = self.id_to_path_second[tag] 
             
-        base = os.path.basename(os.path.dirname(os.path.dirname(Pdir)))
+        base = os.path.basename(os.path.dirname(Pdir))
         if '_second' in base:
             moduletag = (base, 2)
         else:
@@ -1600,10 +1606,64 @@ class ReweightInterface(extended_cmd.Cmd):
                     mymod = getattr(S, 'allmatrix%spy' % tag)
                 if (self.second_model or self.second_process):
                     break
+                
                 # Param card not available -> no initialisation
                 self.f2pylib[(onedir,tag)] = mymod
                 if hasattr(mymod, 'set_madloop_path'):
                     mymod.set_madloop_path(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources'))
+                
+                data = self.id_to_path
+                if '_second' in onedir:
+                    data = self.id_to_path_second
+                
+                # get all the information
+                all_pdgs = mymod.get_pdg_order()
+                all_prefix = [''.join(j).strip().lower() for j in mymod.get_prefix()]
+                prefix_set = set(all_prefix)
+                misc.sprint(all_pdgs, prefix_set)
+                
+
+                hel_dict={}
+                for prefix in prefix_set:
+                    if not hasattr(mymod,'%sprocess_nhel' % prefix):
+                        continue
+                    nhel = getattr(mymod, '%sprocess_nhel' % prefix).nhel
+                    hel_dict[prefix] = {}
+                    for i, onehel in enumerate(zip(*nhel)):
+                        hel_dict[prefix][tuple(onehel)] = i+1
+                
+                for i,pdg in enumerate(all_pdgs):
+                    if self.is_decay:
+                        incoming = pdg[0]
+                        outgoing = pdg[1:]
+                    else:
+                        incoming = pdg[0:2]
+                        outgoing = pdg[2:]
+                    order = (list(incoming), list(outgoing))
+                    misc.sprint(order)
+                    incoming.sort()
+                    outgoing.sort()
+                    misc.sprint(order)
+                    tag = (tuple(incoming), tuple(outgoing))
+                    prefix = all_prefix[i]
+                    hel = hel_dict[prefix]
+                    #if tag in data:
+                    #    raise Exception
+                    old1, old2, old3 = data[tag]
+                    for j in range(2):
+                        for k in range(len(order[j])):
+                            misc.sprint(j,k, old1[j][k], order[j][k])
+                            assert old1[j][k]==order[j][k]
+                    
+#                    assert all(old1[i][j]==order[i][j] for j in range(len(order[i])) for i  in range(2))
+                    print 'chek3'
+                    misc.sprint(hel.keys())
+                    misc.sprint(old3.keys())
+                    for key in hel:
+                        misc.sprint(key, hel[key], old3[key])
+                        assert hel[key] == old3[key]
+                    data[tag] = order, pdir, hel
+             
              
     def load_model(self, name, use_mg_default, complex_mass=False):
         """load the model"""

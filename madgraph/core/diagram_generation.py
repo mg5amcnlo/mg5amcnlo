@@ -895,7 +895,10 @@ class Amplitude(base_objects.PhysicsObject):
             try:
                 from PLUGIN.user_filter import remove_diag
             except ImportError:
-                raise MadGraph5Error, 'user filter required to be defined in PLUGIN/user_filter.py with the function remove_diag(ONEDIAG) which returns True if the daigram has to be removed'
+                try:
+                    from MG5aMC_PLUGIN.user_filter import remove_diag
+                except ImportError:    
+                    raise MadGraph5Error, 'user filter required to be defined in PLUGIN/user_filter.py with the function remove_diag(ONEDIAG) which returns True if the daigram has to be removed'
         else:
             #example and simple tests
             def remove_diag(diag):
