@@ -2134,11 +2134,14 @@ RESTART = %(mint_mode)s
                 self.cluster = cluster.from_name[cluster_name](**self.options)
             except KeyError:
                 if aMCatNLO and ('mg5_path' not in self.options or not self.options['mg5_path']):
-                    raise self.InvalidCmd('%s not native cluster type and not MG5aMC found to check for plugin' % cluster_name)
+                    if not self.plugin_path:
+                        raise self.InvalidCmd('%s not native cluster type and no plugin directory available.' % cluster_name)
                 elif aMCatNLO:
                     mg5dir = self.options['mg5_path']
                     if mg5dir not in sys.path:
                         sys.path.append(mg5dir)
+                    if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
+                        self.plugin_path.append(pjoin(mg5dir))
                 else:
                     mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
