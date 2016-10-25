@@ -859,7 +859,17 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
            
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
- 
+
+    plugin_path = [pjoin(MG5DIR, 'PLUGIN')]
+    if 'PYTHONPATH' in os.environ:
+        for PluginCandidate in os.environ['PYTHONPATH'].split(':'):
+            for onedir in os.listdir(PluginCandidate):
+                if onedir == 'MG5aMC_PLUGIN':
+                    plugin_path.append(pjoin(PluginCandidate, 'MGaMC_PLUGIN'))
+                    break
+            else:
+                continue
+            break
     
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
@@ -1157,7 +1167,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             # Comment or empty line, pass to the next one
             return self.check_answer_in_input_file(question_instance, default, path)
         options = question_instance.allow_arg
-        if line in options:
+        if line in options or line.lower() in options:
             return line
         elif hasattr(question_instance, 'do_%s' % line.split()[0]):
             #This is a command line, exec it and check next line

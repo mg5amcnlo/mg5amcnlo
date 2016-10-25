@@ -195,6 +195,7 @@ c Write the accumulated results to a file
             endif
          enddo
       endif
+      write (34,*) " "
       close(34)
       return                
       end

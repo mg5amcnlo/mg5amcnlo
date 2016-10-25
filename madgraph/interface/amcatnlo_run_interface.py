@@ -2143,22 +2143,24 @@ RESTART = %(mint_mode)s
                     mg5dir = MG5DIR
                 # Check if a plugin define this type of cluster
                 # check for PLUGIN format
-                for plug in os.listdir(pjoin(mg5dir, 'PLUGIN')):
-                    if os.path.exists(pjoin(mg5dir, 'PLUGIN', plug, '__init__.py')):
-                        try:
-                            __import__('PLUGIN.%s' % plug)
-                        except Exception, error:
-                            logger.critical('plugin directory %s fail to be loaded. Please check it', plug)
-                            continue
-                        plugin = sys.modules['PLUGIN.%s' % plug]  
-                        if not hasattr(plugin, 'new_cluster'):
-                            continue
-                        if not misc.is_plugin_supported(plugin):
-                            continue              
-                        if cluster_name in plugin.new_cluster:
-                            logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
-                            self.cluster = plugin.new_cluster[cluster_name](**self.options)
-                            break
+                for plugpath in self.plugin_path: 
+                    plugindirname = os.path.basename(plugpath)
+                    for plug in os.listdir(plugpath):
+                        if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
+                            try:
+                                __import__('%s.%s' % (plugindirname, plug))
+                            except Exception, error:
+                                logger.critical('plugin directory %s/%s fail to be loaded. Please check it',plugindirname, plug)
+                                continue
+                            plugin = sys.modules['%s.%s' % (plugindirname,plug)]  
+                            if not hasattr(plugin, 'new_cluster'):
+                                continue
+                            if not misc.is_plugin_supported(plugin):
+                                continue              
+                            if cluster_name in plugin.new_cluster:
+                                logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
+                                self.cluster = plugin.new_cluster[cluster_name](**self.options)
+                                break
         
         if self.cluster_mode == 2:
             try:
@@ -3312,7 +3314,7 @@ RESTART = %(mint_mode)s
                        'delphes':['delphes'],
                        'madanalysis5_hadron':['madanalysis5_hadron'],
                        'plot':[]}
-
+        
         if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
@@ -3346,6 +3348,8 @@ RESTART = %(mint_mode)s
         new_tag = False
         # First call for this run -> set the banner
         self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
+        if 'mgruncard' in self.banner:
+            self.run_card = self.banner.charge_card('run_card')
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True

@@ -1,7 +1,15 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-	   VH: Parallelization of PY8 at LO
 
+2.5.1 (xx/xx/xx)
+       VH: Parallelization of PY8 at LO
+       OM: add the possibility to automatically missing parameter in a param_card
+           with command "update missing" at the time of the card edition. Usefull for 
+           some SUSY card where some block entry are sometimes missing.
+       RF: Some refactoring of the NLO phase-space generation,
+           including some small improvements in efficiency.
+       PT+MZ: New interface for Herwig7.
+              Fixed a bug in the Herwig7/Herwig++ counterterm (relevant to 2 -> n, n>2)
 
 2.5.0 (xx/xx/xx)
      FUNCTIONALITY

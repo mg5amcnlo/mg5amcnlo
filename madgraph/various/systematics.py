@@ -97,11 +97,11 @@ class Systematics(object):
         if isinstance(self.banner.run_card, banner_mod.RunCardLO):
             self.is_lo = True
             if not self.banner.run_card['use_syst']:
-                raise SystematicsError, 'The events was not generated with use_syst=True. Can not evaluate systematics error on this event.'
+                raise SystematicsError, 'The events have not been generated with use_syst=True. Cannot evaluate systematics error on these events.'
         else:
             self.is_lo = False
             if not self.banner.run_card['store_rwgt_info']:
-                raise SystematicsError, 'The events was not generated with store_rwgt_info=True. Can not evaluate systematics error on this event.'
+                raise SystematicsError, 'The events have not been generated with store_rwgt_info=True. Cannot evaluate systematics error on these events.'
 
         # MUR/MUF/ALPS PARSING
         if isinstance(mur, str):
@@ -163,7 +163,7 @@ class Systematics(object):
                         try:
                             self.pdf.append(lhapdf.mkPDF(int(name)+int(arg)))
                         except:
-                            raise Exception, 'invididual error set need to called with name not with lhapdfID'
+                            raise Exception, 'Individual error sets need to be called with LHAPDF NAME not with LHAGLUE NUMBER'
                     else:
                         self.pdf.append(lhapdf.mkPDF(name, int(arg)))
                 else:
@@ -203,7 +203,7 @@ class Systematics(object):
                 cmass = 1.4
             bmass = param_card.get_value('mass', 5, 4.7)
             if bmass == 0:
-                cmass = 4.7
+                bmass = 4.7
             self.alpsrunner = Alphas_Runner(asmz, nloop, zmass, cmass, bmass)
         
 
@@ -227,10 +227,10 @@ class Systematics(object):
                 break
             if self.is_lo:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 2500 ==0:
-                    self.log( '# currently at event %s [ellapsed time: %.2g s]' % (nb_event, time.time()-start_time))
+                    self.log( '# currently at event %s [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
             else:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 1000 ==0:
-                    self.log( '# currently at event %i [ellapsed time: %.2g s]' % (nb_event, time.time()-start_time))
+                    self.log( '# currently at event %i [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))
                     
             self.new_event() #re-init the caching of alphas/pdf
             if self.is_lo:
@@ -482,7 +482,7 @@ class Systematics(object):
         
         if 'initrwgt' in self.banner:
             pattern = re.compile('<weight id=(?:\'|\")([_\w]+)(?:\'|\")', re.S+re.I+re.M)
-            return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt'])])+1
+            return  max([int(wid) for wid in  pattern.findall(self.banner['initrwgt']) if wid.isdigit()])+1
         else:
             return 1
         
@@ -618,7 +618,7 @@ class Systematics(object):
         """return the new weight for NLO event --with weight information-- """
         
         wgt = 0 
-        nloinfo = event.parse_nlo_weight()
+        nloinfo = event.parse_nlo_weight(real_type=(1,11,12,13))
         for cevent in nloinfo.cevents:
             if dyn == 1: 
                 mur2 = cevent.get_et_scale(1.)**2
@@ -633,6 +633,9 @@ class Systematics(object):
             muf2 = mur2
             
             for onewgt in cevent.wgts:
+                if not __debug__ and (dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf):
+                    wgt += onewgt.ref_wgt 
+                
                 if dyn == -1:
                     mur2 = onewgt.scales2[1]
                     muf2 = onewgt.scales2[2]
@@ -673,6 +676,7 @@ class Systematics(object):
                         misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
                         misc.sprint(onewgt)
                         misc.sprint(cevent)
+                        misc.sprint(mur2,muf2)
                         raise Exception, 'not enough agreement between stored value and computed one'
                 
                 

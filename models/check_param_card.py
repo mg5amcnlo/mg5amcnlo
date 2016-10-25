@@ -351,9 +351,6 @@ class ParamCard(dict):
                 cur_block = Block('decay_table_%s' % id)
                 self['decay'].decay_table[id] = cur_block
             
-            
-
-            
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
                 param.load_decay(line)
@@ -368,6 +365,13 @@ class ParamCard(dict):
                 cur_block.append(param)
                   
         return self
+    
+    def __setitem__(self, name, value):
+        
+        return dict.__setitem__(self, name.lower(), value)
+    
+    def __getitem__(self, name):
+        return dict.__getitem__(self,name.lower())
     
     def analyze_param_card(self):
         """ Analyzes the comment of the parameter in the param_card and returns
@@ -441,7 +445,7 @@ class ParamCard(dict):
             parameters = model.set_parameters_and_couplings(self)
         else:
             parameters = model.set_parameters_and_couplings(self)
-            
+
             
         for particle in model.get('particles'):
             if particle.get('goldstone') or particle.get('ghost'):
@@ -865,7 +869,7 @@ class ParamCardIterator(ParamCard):
         for key in keys:
             for param, values in all_iterators[key]:
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
-        
+
         # do the loop
         lengths = [range(len(all_iterators[key][0][1])) for key in keys]
         for positions in itertools.product(*lengths):

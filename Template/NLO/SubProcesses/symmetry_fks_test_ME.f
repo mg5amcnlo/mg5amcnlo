@@ -139,6 +139,8 @@ c helicity stuff
       LOGICAL  IS_A_PH(NEXTERNAL)
       COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       
+      logical new_point
+      common /c_new_point/new_point
 c      integer icomp
 c
 c     DATA
@@ -289,6 +291,7 @@ c x_to_f_arg subroutine
       do jj=1,ndim
          x(jj)=ran2()
       enddo
+      new_point=.true.
       call generate_momenta(ndim,iconfig,wgt,x,p)
       calculatedBorn=.false.
       do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
@@ -296,6 +299,7 @@ c x_to_f_arg subroutine
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          calculatedBorn=.false.
@@ -334,12 +338,14 @@ c x_to_f_arg subroutine
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          call generate_momenta(ndim,iconfig,wgt,x,p)
          do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
             wgt=1d0
             do jj=1,ndim
                x(jj)=ran2()
             enddo
+            new_point=.true.
             call generate_momenta(ndim,iconfig,wgt,x,p)
             ntry=ntry+1
          enddo
@@ -460,12 +466,14 @@ c in genps_fks_test.f
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          call generate_momenta(ndim,iconfig,wgt,x,p)
          do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
             wgt=1d0
             do jj=1,ndim
                x(jj)=ran2()
             enddo
+            new_point=.true.
             call generate_momenta(ndim,iconfig,wgt,x,p)
             ntry=ntry+1
          enddo

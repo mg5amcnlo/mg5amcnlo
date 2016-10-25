@@ -1322,6 +1322,7 @@ def sprint(*args, **opt):
     else:
         intro = ''
     
+    
     if not use_print:
         log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
                    ' \033[1;30m[%s at line %s]\033[0m' % (os.path.basename(filename), lineno))

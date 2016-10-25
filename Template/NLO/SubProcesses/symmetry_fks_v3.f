@@ -125,6 +125,8 @@ c helicity stuff
       logical nbody
       common/cnbody/nbody
 
+      logical new_point
+      common /c_new_point/new_point
 c-----
 c  Begin Code
 c-----
@@ -210,12 +212,14 @@ c Set-up helicities
       do j=1,ndim
          x(j)=ran2()
       enddo
+      new_point=.true.
       call generate_momenta(ndim,iconfig,wgt,x,p)
       do while ((.not.passcuts(p,rwgt) .or. wgt.lt.0 .or. p(0,1).le.0d0
      &           .or. p_born(0,1).le.0d0) .and. ntry.lt.10000)
          do j=1,ndim
             x(j)=ran2()
          enddo
+         new_point=.true.
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          ntry=ntry+1

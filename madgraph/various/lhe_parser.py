@@ -1163,7 +1163,7 @@ class Event(list):
             self.tag = self.tag[:start] + self.tag[stop+7:]
         return self.reweight_data
     
-    def parse_nlo_weight(self):
+    def parse_nlo_weight(self, real_type=(1,11)):
         """ """
         if hasattr(self, 'nloweight'):
             return self.nloweight
@@ -1172,7 +1172,7 @@ class Event(list):
         if start != -1 != stop :
         
             text = self.tag[start+8:stop]
-            self.nloweight = NLO_PARTIALWEIGHT(text, self)
+            self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type)
         return self.nloweight
         
     def parse_lo_weight(self):
@@ -2042,9 +2042,10 @@ class FourMomentum(object):
 
 class OneNLOWeight(object):
         
-    def __init__(self, input):
+    def __init__(self, input, real_type=(1,11)):
         """ """
 
+        self.real_type = real_type
         if isinstance(input, str):
             self.parse(input)
         
@@ -2155,7 +2156,7 @@ class OneNLOWeight(object):
         self.ref_wgt = float(data[flag+14])
 
         #check the momenta configuration linked to the event
-        if self.type in [1,11]:
+        if self.type in self.real_type:
             self.momenta_config = self.real_related
         else:
             self.momenta_config = self.born_related
@@ -2165,13 +2166,14 @@ class NLO_PARTIALWEIGHT(object):
 
     class BasicEvent(list):
         
-        def __init__(self, momenta, wgts, event):
+        def __init__(self, momenta, wgts, event, real_type=(1,11)):
             list.__init__(self, momenta)
             
             assert self
             self.wgts = wgts
             self.pdgs = list(wgts[0].pdgs)
             self.event = event
+            self.real_type = real_type
             
             if wgts[0].momenta_config == wgts[0].born_related:
                 # need to remove one momenta.
@@ -2189,8 +2191,8 @@ class NLO_PARTIALWEIGHT(object):
                 self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
                 self.pdgs.pop(ind2)                 
                 # DO NOT update the pdgs of the partial weight!
-            elif any(w.type in [1,11] for w in wgts):
-                if any(w.type not in [1,11] for w in wgts):
+            elif any(w.type in self.real_type for w in wgts):
+                if any(w.type not in self.real_type for w in wgts):
                     raise Exception
                 # check if this is too soft/colinear if so use the born
                 ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
@@ -2233,6 +2235,8 @@ class NLO_PARTIALWEIGHT(object):
                     if ptot.mass_sqr > 1e-16:
                         misc.sprint(ptot, ptot.mass_sqr)
 #                            raise Exception
+            else:
+                raise Exception
  
         def get_pdg_code(self):
             return self.pdgs
@@ -2335,8 +2339,9 @@ class NLO_PARTIALWEIGHT(object):
     
         
             
-    def __init__(self, input, event):
+    def __init__(self, input, event, real_type=(1,11)):
         
+        self.real_type = real_type
         self.event = event
         if isinstance(input, str):
             self.parse(input)
@@ -2382,7 +2387,7 @@ class NLO_PARTIALWEIGHT(object):
                 p = FourMomentum(data)
                 momenta.append(p)
             elif len(data)>0:
-                wgt = OneNLOWeight(line)
+                wgt = OneNLOWeight(line, real_type=self.real_type)
                 wgts.append(wgt)
         
         assert len(wgts) == int(nb_wgt)
@@ -2405,7 +2410,7 @@ class NLO_PARTIALWEIGHT(object):
         for key in range(1, nb_event+1): 
             if key in get_weights_for_momenta:
                 wgt = get_weights_for_momenta[key]
-                evt = self.BasicEvent(momenta[:size_momenta], get_weights_for_momenta[key], self.event) 
+                evt = self.BasicEvent(momenta[:size_momenta], get_weights_for_momenta[key], self.event, self.real_type) 
                 self.cevents.append(evt)
             momenta = momenta[size_momenta:]
            

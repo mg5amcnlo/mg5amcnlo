@@ -246,8 +246,7 @@ class Banner(dict):
             self.add(pjoin(medir,'Cards', 'proc_card_mg5.dat'))
         else:
             self.add(pjoin(medir,'Cards', 'proc_card.dat'))
-    
-    
+        
     def change_seed(self, seed):
         """Change the seed value in the banner"""
         #      0       = iseed
@@ -550,7 +549,9 @@ class Banner(dict):
             self.charge_card(attr_tag) 
 
         card = getattr(self, attr_tag)
-        if len(arg) == 1:
+        if len(arg) == 0:
+            return card
+        elif len(arg) == 1:
             if tag == 'mg5proccard':
                 try:
                     return card.get(arg[0])
@@ -682,10 +683,24 @@ def recover_banner(results_object, level, run=None, tag=None):
     banner_path = pjoin(path,'Events',run,'%s_%s_banner.txt' % (run, tag))
     
     if not os.path.exists(banner_path):
-         if level != "parton" and tag != _tag:
+        if level != "parton" and tag != _tag:
             return recover_banner(results_object, level, _run, results_object[_run].tags[0])
-         # security if the banner was remove (or program canceled before created it)
-         return Banner()  
+        elif level == 'parton':
+            paths = [pjoin(path,'Events',run, 'unweighted_events.lhe.gz'),
+                     pjoin(path,'Events',run, 'unweighted_events.lhe'),
+                     pjoin(path,'Events',run, 'events.lhe.gz'),
+                     pjoin(path,'Events',run, 'events.lhe')]
+            for p in paths:
+                if os.path.exists(p):
+                    if MADEVENT:
+                        import internal.lhe_parser as lhe_parser
+                    else:
+                        import madgraph.various.lhe_parser as lhe_parser
+                    lhe = lhe_parser.EventFile(p)
+                    return Banner(lhe.banner)
+
+        # security if the banner was remove (or program canceled before created it)
+        return Banner()  
     banner = Banner(banner_path)
     
     
@@ -994,13 +1009,12 @@ class ConfigFile(dict):
                 self.auto_set.remove(lower_name)
             
         # 2. Find the type of the attribute that we want
-        if name in self.list_parameter:
-            if isinstance(dict.__getitem__(self,name), list):
-                targettype = type(dict.__getitem__(self,name)[0])
+        if lower_name in self.list_parameter:
+            if isinstance(self[name], list):
+                targettype = type(self[name][0])
             else:
                 #should not happen but better save than sorry
                 targettype = type(dict.__getitem__(self,name)) 
-                
             if isinstance(value, str):
                 # split for each comma/space
                 value = value.strip()
@@ -1209,6 +1223,7 @@ class ConfigFile(dict):
                             else:
                                 v /=  float(split[2*i+2])
                     except:
+                        v=0
                         raise Exception, "%s can not be mapped to a float" % value
                     finally:
                         value = v
@@ -1268,7 +1283,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('has_loops', False)
         self.add_param('bias_module','None')
         self.add_param('max_n_matched_jets', 0)
-        self.add_param('colored_pdgs', [1,2,3,4,5])        
+        self.add_param('colored_pdgs', [1,2,3,4,5])
+        self.add_param('complex_mass_scheme', False)        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1558,6 +1574,8 @@ class PY8Card(ConfigFile):
     def userSet(self, name, value, **opts):
         """Set an attribute of this card, following a user_request"""
         self.__setitem__(name, value, change_userdefine=True, **opts)
+        if name.lower() in self.system_set:
+            self.system_set.remove(name.lower())
 
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
@@ -1936,17 +1954,14 @@ class PY8Card(ConfigFile):
             
             # Read parameter. The case of a parameter not defined in the card is
             # handled directly in ConfigFile.
-            lname = param.lower()
-            if lname not in self or \
-                         self.format_variable(value, type(self[lname]),
-                                                       name=param)!=self[lname]:
-                # Use the appropriate authority to set the new/changed variable
-                if setter == 'user':
-                    self.userSet(param,value)
-                elif setter == 'system':
-                    self.systemSet(param,value)
-                else:
-                    self.defaultSet(param,value)
+
+            # Use the appropriate authority to set the new/changed variable
+            if setter == 'user':
+                self.userSet(param,value)
+            elif setter == 'system':
+                self.systemSet(param,value)
+            else:
+                self.defaultSet(param,value)
 
             # proceed to next line
             last_pos = finput.tell()
@@ -2092,7 +2107,14 @@ class RunCard(ConfigFile):
                 self.set( name, value, user=True)
         # parameter not set in the run_card can be set to compatiblity value
         if consistency:
-            self.check_validity()
+                try:
+                    self.check_validity()
+                except InvalidRunCard, error:
+                    if consistency == 'warning':
+                        logger.warning(str(error))
+                    else:
+                        raise
+                    
                 
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -2125,7 +2147,7 @@ class RunCard(ConfigFile):
                     if name in self.list_parameter:
                         value = ', '.join([str(v) for v in value])
                     if python_template:
-                        text += line % {name:value}
+                        text += line % {nline[1].strip():value, name:value}
                     else:
                         if not comment or comment[-1]!='\n':
                             endline = '\n'
@@ -2245,6 +2267,7 @@ class RunCard(ConfigFile):
         for name, value in self.system_default.items():
                 self.set(name, value, changeifuserset=False)
 
+    default_include_file = 'run_card.inc'
 
     def write_include_file(self, output_dir):
         """Write the various include file in output_dir.
@@ -2256,7 +2279,7 @@ class RunCard(ConfigFile):
         
         for incname in self.includepath:
             if incname is True:
-                pathinc = 'run_card.inc'
+                pathinc = self.default_include_file
             else:
                 pathinc = incname
                 
