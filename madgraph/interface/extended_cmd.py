@@ -863,7 +863,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     plugin_path = [pjoin(MG5DIR, 'PLUGIN')]
     if 'PYTHONPATH' in os.environ:
         for PluginCandidate in os.environ['PYTHONPATH'].split(':'):
-            for onedir in os.listdir(PluginCandidate):
+            try:
+                dirlist = os.listdir(PluginCandidate)
+            except OSError:
+                continue
+            for onedir in dirlist:
                 if onedir == 'MG5aMC_PLUGIN':
                     plugin_path.append(pjoin(PluginCandidate, 'MGaMC_PLUGIN'))
                     break
