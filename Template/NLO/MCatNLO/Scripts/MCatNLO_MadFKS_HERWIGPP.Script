@@ -518,10 +518,18 @@ then
 cat <<EOF >> ./$ifile
 set /Herwig/Shower/PartnerFinder:PartnerMethod Random
 set /Herwig/Shower/PartnerFinder:ScaleChoice Partner
-set /Herwig/Shower/Evolver:Interactions QCDOnly
-set /Herwig/Shower/Evolver:SoftCorrelations No
-set /Herwig/Shower/Evolver:SpinCorrelations Yes
 set /Herwig/Shower/GtoQQbarSplitFn:AngularOrdered Yes
+
+#set /Herwig/Shower/Evolver:Interactions QCDOnly
+#set /Herwig/Shower/Evolver:SoftCorrelations No
+#set /Herwig/Shower/Evolver:SpinCorrelations Yes
+
+set /Herwig/Shower/Evolver:SpinCorrelations No
+set /Herwig/Shower/KinematicsReconstructor:FinalStateReconOption Default
+set /Herwig/Shower/KinematicsReconstructor:InitialStateReconOption Rapidity
+set /Herwig/Shower/ShowerHandler:MaxPtIsMuF Yes
+set /Herwig/Shower/ShowerHandler:RestrictPhasespace On
+
 EOF
 fi
 
