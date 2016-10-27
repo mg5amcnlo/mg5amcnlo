@@ -8,6 +8,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
            some SUSY card where some block entry are sometimes missing.
        RF: Some refactoring of the NLO phase-space generation,
            including some small improvements in efficiency.
+       PT+MZ: New interface for Herwig7.
+              Fixed a bug in the Herwig7/Herwig++ counterterm (relevant to 2 -> n, n>2:
+              in particular, the bug affected the dead zone for final-final colour connection
+              in processes with more than two particles in the Born final state)
 
 2.5.0 (xx/xx/xx)
      FUNCTIONALITY
