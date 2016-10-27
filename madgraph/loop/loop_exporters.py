@@ -307,9 +307,20 @@ CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)
   OUT=PDGS
   RETURN
   END
+  
+  subroutine get_prefix(PREFIX)
+  IMPLICIT NONE
+CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
+  character*20 PREFIX(%(nb_me)i),PREF(%(nb_me)i)
+  DATA PREF / '%(prefix)s'/
+  PREFIX = PREF
+  RETURN
+  END 
+  
         """
          
         allids = self.prefix_info.keys()
+        allprefix = [self.prefix_info[key][0] for key in allids]
         min_nexternal = min([len(ids) for ids in allids])
         max_nexternal = max([len(ids) for ids in allids])
 
@@ -346,7 +357,9 @@ CF2PY INTEGER, intent(out) :: OUT(%(nb_me)i,%(maxpart)i)
                           'nb_me': len(allids),
                           'pdgs': ','.join([str(pdg[i]) if i<len(pdg) else '0' 
                                              for i in range(max_nexternal) \
-                                             for pdg in allids])}
+                                             for pdg in allids]),
+                      'prefix':'\',\''.join(allprefix)
+                      }
     
     
         text = template % formatting

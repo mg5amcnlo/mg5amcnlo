@@ -841,14 +841,21 @@ class ReweightInterface(extended_cmd.Cmd):
 
 
         #initialise module.
+        
         for (path,tag), module in self.f2pylib.items():
-            with misc.chdir(rw_dir):
+            with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
 #            with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                
                 if 'second' in path or tag == 3:
+#                    misc.sprint(pjoin(rw_dir, 'Cards', 'param_card.dat'), path, tag, id(module), module, os.getcwd())
                     module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+#                    misc.sprint("second times for 3/second")
+#                    module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 else:
+#                    misc.sprint(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'), path, tag, id(module), module, os.getcwd())
                     module.initialise(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'))
-
+#                    misc.sprint("second times")
+#                    module.initialise(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'))
         return param_card_iterator, tag_name, output2
     
         
@@ -935,14 +942,11 @@ class ReweightInterface(extended_cmd.Cmd):
 
         return {'orig': event.wgt, '': w_new/w_orig*event.wgt}
      
-    def calculate_nlo_weight(self, event, space=None):
+    def calculate_nlo_weight(self, event):
 
 
         type_nlo = self.get_weight_names()
         final_weight = {'orig': event.wgt}
-        
-        if not space: 
-            space = self #for multicore: not use so far
             
         event.parse_reweight()
         event.parse_nlo_weight() 
@@ -966,14 +970,14 @@ class ReweightInterface(extended_cmd.Cmd):
             if '_nlo' in type_nlo and any(c in all_ctype for c in [2,14,15]):
                 need_V =True
                 
-            w_orig = self.calculate_matrix_element(cevent, 0, space)
-            w_new =  self.calculate_matrix_element(cevent, 1, space)
+            w_orig = self.calculate_matrix_element(cevent, 0)
+            w_new =  self.calculate_matrix_element(cevent, 1)
             ratio_T = w_new/w_orig
             if need_V:
                 scale2 = cevent.wgts[0].scales2[0]
                 #for scale2 in set(c.scales2[1] for c in cevent.wgts): 
-                w_origV = self.calculate_matrix_element(cevent, 'V0', space, scale2=scale2)
-                w_newV =  self.calculate_matrix_element(cevent, 'V1', space, scale2=scale2)                    
+                w_origV = self.calculate_matrix_element(cevent, 'V0', scale2=scale2)
+                w_newV =  self.calculate_matrix_element(cevent, 'V1', scale2=scale2)                    
                 ratio_BV = (w_newV + w_new) / (w_origV + w_orig)
                 ratio_V = w_newV/w_origV
             else:
@@ -1040,8 +1044,8 @@ class ReweightInterface(extended_cmd.Cmd):
             final_weight['_tree'] = new_out/orig_wgt*event.wgt            
              
         if '_lo' in type_nlo:
-            w_orig = self.calculate_matrix_element(event, 0, space)
-            w_new =  self.calculate_matrix_element(event, 1, space)            
+            w_orig = self.calculate_matrix_element(event, 0)
+            w_new =  self.calculate_matrix_element(event, 1)            
             final_weight['_lo'] = w_new/w_orig*event.wgt
             
         return final_weight 
@@ -1076,9 +1080,9 @@ class ReweightInterface(extended_cmd.Cmd):
             nb_retry, sleep = 5, 20 
         
         tag, order = event.get_tag_and_order()
-        #if isinstance(hypp_id, str) and hypp_id.startswith('V'):
-        #    tag = (tag,'V')
-        #    hypp_id = int(hypp_id[1:])
+        if isinstance(hypp_id, str) and hypp_id.startswith('V'):
+            tag = (tag,'V')
+            hypp_id = int(hypp_id[1:])
         #    base = "rw_mevirt"
         #else:
         #    base = "rw_me"
@@ -1618,19 +1622,29 @@ class ReweightInterface(extended_cmd.Cmd):
                 
                 # get all the information
                 all_pdgs = mymod.get_pdg_order()
+                all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
                 all_prefix = [''.join(j).strip().lower() for j in mymod.get_prefix()]
                 prefix_set = set(all_prefix)
-                misc.sprint(all_pdgs, prefix_set)
-                
+
 
                 hel_dict={}
                 for prefix in prefix_set:
-                    if not hasattr(mymod,'%sprocess_nhel' % prefix):
+                    if hasattr(mymod,'%sprocess_nhel' % prefix):
+                        nhel = getattr(mymod, '%sprocess_nhel' % prefix).nhel    
+                        hel_dict[prefix] = {}
+                        for i, onehel in enumerate(zip(*nhel)):
+                            hel_dict[prefix][tuple(onehel)] = i+1
+                    elif hasattr(mymod, 'set_madloop_path') and \
+                         os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)):
+                        hel_dict[prefix] = {}
+                        for i,line in enumerate(open(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix))):
+                            onehel = [int(h) for h in line.split()]
+                            hel_dict[prefix][tuple(onehel)] = i+1
+                    else:
+                        misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix ))
+                        misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)))
                         continue
-                    nhel = getattr(mymod, '%sprocess_nhel' % prefix).nhel
-                    hel_dict[prefix] = {}
-                    for i, onehel in enumerate(zip(*nhel)):
-                        hel_dict[prefix][tuple(onehel)] = i+1
+
                 
                 for i,pdg in enumerate(all_pdgs):
                     if self.is_decay:
@@ -1640,27 +1654,25 @@ class ReweightInterface(extended_cmd.Cmd):
                         incoming = pdg[0:2]
                         outgoing = pdg[2:]
                     order = (list(incoming), list(outgoing))
-                    misc.sprint(order)
                     incoming.sort()
                     outgoing.sort()
-                    misc.sprint(order)
                     tag = (tuple(incoming), tuple(outgoing))
+                    if 'virt' in onedir:
+                        tag = (tag, 'V')
                     prefix = all_prefix[i]
                     hel = hel_dict[prefix]
-                    #if tag in data:
-                    #    raise Exception
+                    if tag not in data:
+                        misc.sprint(tag, onedir)
+                        misc.sprint(data.keys())
+                        raise Exception
+                    
                     old1, old2, old3 = data[tag]
                     for j in range(2):
                         for k in range(len(order[j])):
-                            misc.sprint(j,k, old1[j][k], order[j][k])
                             assert old1[j][k]==order[j][k]
                     
 #                    assert all(old1[i][j]==order[i][j] for j in range(len(order[i])) for i  in range(2))
-                    print 'chek3'
-                    misc.sprint(hel.keys())
-                    misc.sprint(old3.keys())
                     for key in hel:
-                        misc.sprint(key, hel[key], old3[key])
                         assert hel[key] == old3[key]
                     data[tag] = order, pdir, hel
              
