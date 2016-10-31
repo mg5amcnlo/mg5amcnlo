@@ -93,6 +93,7 @@ class ReweightInterface(extended_cmd.Cmd):
         self.f2pylib = {}
         self.second_model = None
         self.second_process = None
+        self.dedicated_path = {}
         self.mg5cmd = master_interface.MasterCmd()
         if mother:
             self.mg5cmd.options.update(mother.options)
@@ -342,6 +343,8 @@ class ReweightInterface(extended_cmd.Cmd):
                 self.second_process.append(" ".join(args[1:-1]))
             else:
                 self.second_process = [" ".join(args[1:])]
+        elif args[0] in ['virtual_path', 'tree_path']:
+            self.dedicated_path[args[0]] = args[1]
         elif args[0] == "output":
             if args[1] in ['default', '2.0', 'unweight']:
                 self.output_type = args[1]
@@ -463,7 +466,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.me_dir 
             
-        if self.second_model or self.second_process:
+        if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_second')
         else:
             rw_dir = pjoin(path_me, 'rw_me')
@@ -662,7 +665,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.me_dir 
             
-        if self.second_model or self.second_process:
+        if self.second_model or self.second_process or self.dedicated_path:
             rw_dir = pjoin(path_me, 'rw_me_second')
         else:
             rw_dir = pjoin(path_me, 'rw_me')
@@ -766,7 +769,7 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             tag = str(rewgtid)
         
-        if not self.second_model:
+        if not self.second_model and not self.dedicated_path:
             old_param = check_param_card.ParamCard(s_orig.splitlines())
             new_param =  check_param_card.ParamCard(s_new.splitlines())
             card_diff = old_param.create_diff(new_param)
@@ -790,9 +793,15 @@ class ReweightInterface(extended_cmd.Cmd):
                 for name in type_rwgt:
                     mg_rwgt_info.append((tag, name, str_proc + '\n'+ card_diff))
         else:
-            str_info = "change model %s" % self.second_model
+            if self.second_model:
+                str_info = "change model %s" % self.second_model
+            else:
+                str_info =''
             if self.second_process:
                 str_info += "\n change process  ".join([""]+self.second_process)
+            if self.dedicated_path:
+                for k,v in self.dedicated_path.items():
+                    str_info += "\n change %s %s" % (k,v)
             card_diff = str_info
             str_info += '\n' + s_new
             for name in type_rwgt:
@@ -845,17 +854,10 @@ class ReweightInterface(extended_cmd.Cmd):
         for (path,tag), module in self.f2pylib.items():
             with misc.chdir(pjoin(os.path.dirname(rw_dir), path)):
 #            with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                
                 if 'second' in path or tag == 3:
-#                    misc.sprint(pjoin(rw_dir, 'Cards', 'param_card.dat'), path, tag, id(module), module, os.getcwd())
                     module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
-#                    misc.sprint("second times for 3/second")
-#                    module.initialise(pjoin(rw_dir, 'Cards', 'param_card.dat'))
                 else:
-#                    misc.sprint(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'), path, tag, id(module), module, os.getcwd())
-                    module.initialise(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'))
-#                    misc.sprint("second times")
-#                    module.initialise(pjoin(rw_dir, 'Cards', 'param_card_orig.dat'))
+                    module.initialise(pjoin(path_me, 'rw_me', 'Cards', 'param_card_orig.dat'))
         return param_card_iterator, tag_name, output2
     
         
@@ -1087,7 +1089,7 @@ class ReweightInterface(extended_cmd.Cmd):
         #else:
         #    base = "rw_me"
         
-        if (not self.second_model and not self.second_process) or hypp_id==0:
+        if (not self.second_model and not self.second_process and not self.dedicated_path) or hypp_id==0:
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
         else:
             orig_order, Pdir, hel_dict = self.id_to_path_second[tag] 
@@ -1188,103 +1190,11 @@ class ReweightInterface(extended_cmd.Cmd):
         
 
     @misc.mute_logger()
-    def create_standalone_directory(self, second=False):
+    def create_standalone_tree_directory(self, data ,second=False):
         """generate the various directory for the weight evaluation"""
-                
-        data={}
-        if not second:
-            data['paths'] = ['rw_me', 'rw_mevirt']
-            # model
-            info = self.banner.get('proc_card', 'full_model_line')
-            if '-modelname' in info:
-                data['mg_names'] = False
-            else:
-                data['mg_names'] = True
-            data['model_name'] = self.banner.get('proc_card', 'model')
-            #processes
-            data['processes'] = [line[9:].strip() for line in self.banner.proc_card
-                     if line.startswith('generate')]
-            data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
-                      if re.search('^\s*add\s+process', line)]  
-            #object_collector
-            self.id_to_path = {}
-            data['id2path'] = self.id_to_path
-        else:
-            data['paths'] = ['rw_me_second', 'rw_mevirt_second']
-            # model
-            if self.second_model:
-                data['mg_names'] = True
-                if ' ' in self.second_model:
-                    args = self.second_model.split()
-                    if '--modelname' in args:
-                        data['mg_names'] = False
-                    data['model_name'] = args[0]
-                else:
-                    data['model_name'] = self.second_model
-            else:
-                data['model_name'] = None
-            #processes
-            if self.second_process:
-                data['processes'] = self.second_process
-            else:
-                data['processes'] = [line[9:].strip() for line in self.banner.proc_card
-                                 if line.startswith('generate')]
-                data['processes'] += [' '.join(line.split()[2:]) 
-                                      for line in self.banner.proc_card
-                                      if re.search('^\s*add\s+process', line)]
-            #object_collector
-            self.id_to_path_second = {}   
-            data['id2path'] = self.id_to_path_second 
         
-        # 0. clean previous run ------------------------------------------------
-        if not self.rwgt_dir:
-            path_me = self.me_dir
-        else:
-            path_me = self.rwgt_dir
-        try:
-            shutil.rmtree(pjoin(path_me,data['paths'][0]))
-        except Exception: 
-            pass
-        try:
-            shutil.rmtree(pjoin(path_me, data['paths'][1]))
-        except Exception: 
-            pass
-
-        # 1. prepare the interface----------------------------------------------
-        mgcmd = self.mg5cmd
-        complex_mass = False   
-        has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-        for line in self.banner.proc_card:
-            if line.startswith('set'):
-                mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
-                if has_cms.search(line):
-                    complex_mass = True
-            elif line.startswith('define'):
-                try:
-                    mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
-                except Exception:
-                    pass 
-                          
-        # 1. Load model---------------------------------------------------------  
-        if  not data['model_name'] and not second:
-            raise self.InvalidCmd('Only UFO model can be loaded in this module.')
-        elif data['model_name']:
-            self.load_model(data['model_name'], data['mg_names'], complex_mass)
-            modelpath = self.model.get('modelpath')
-            if os.path.basename(modelpath) != mgcmd._curr_model['name']:
-                name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
-                if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
-                    modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
-                
-            commandline="import model %s " % modelpath
-            if not data['mg_names']:
-                commandline += ' -modelname '
-            mgcmd.exec_cmd(commandline)
-            
-            #multiparticles
-            for name, content in self.banner.get('proc_card', 'multiparticles'):
-                mgcmd.exec_cmd("define %s = %s" % (name, content))
-        
+        mgcmd = self.mg5cmd         
+        path_me = data['path'] 
         # 2. compute the production matrix element -----------------------------
         has_nlo = False  
         mgcmd.exec_cmd("set group_subprocesses False")
@@ -1339,47 +1249,49 @@ class ReweightInterface(extended_cmd.Cmd):
         
 
         # 3. Store id to directory information ---------------------------------
-        matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
-        
-        to_check = [] # list of tag that do not have a Pdir at creation time.
-        for me in matrix_elements:
-            for proc in me.get('processes'):
-                initial = []    #filled in the next line
-                final = [l.get('id') for l in proc.get('legs')\
-                      if l.get('state') or initial.append(l.get('id'))]
-                order = (initial, final)
-                tag = proc.get_initial_final_ids()
-                decay_finals = proc.get_final_ids_after_decay()
-
-                if tag[1] != decay_finals:
-                    order = (initial, list(decay_finals))
-                    decay_finals.sort()
-                    tag = (tag[0], tuple(decay_finals))
-                Pdir = pjoin(path_me, data['paths'][0], 'SubProcesses', 
-                                  'P%s' % me.get('processes')[0].shell_string())
-
-                if not os.path.exists(Pdir):
-                    to_check.append(tag)
-                    continue                        
-                if tag in data['id2path']:
-                    if not Pdir == data['id2path'][tag][1]:
-                        misc.sprint(tag, Pdir, data['id2path'][tag][1])
-                        raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
-                    else:
-                        continue
-                # build the helicity dictionary
-                hel_nb = 0
-                hel_dict = {9:0} # unknown helicity -> use full ME
-                for helicities in me.get_helicity_matrix():
-                    hel_nb +=1 #fortran starts at 1
-                    hel_dict[tuple(helicities)] = hel_nb
-
-                data['id2path'][tag] = [order, Pdir, hel_dict]        
- 
-        for tag in to_check:
-            if tag not in self.id_to_path:
-                logger.warning("no valid path for %s" % (tag,))
-                #raise self.InvalidCmd, "no valid path for %s" % (tag,)
+        if False:
+            # keep this for debugging
+            matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()
+            
+            to_check = [] # list of tag that do not have a Pdir at creation time.
+            for me in matrix_elements:
+                for proc in me.get('processes'):
+                    initial = []    #filled in the next line
+                    final = [l.get('id') for l in proc.get('legs')\
+                          if l.get('state') or initial.append(l.get('id'))]
+                    order = (initial, final)
+                    tag = proc.get_initial_final_ids()
+                    decay_finals = proc.get_final_ids_after_decay()
+    
+                    if tag[1] != decay_finals:
+                        order = (initial, list(decay_finals))
+                        decay_finals.sort()
+                        tag = (tag[0], tuple(decay_finals))
+                    Pdir = pjoin(path_me, data['paths'][0], 'SubProcesses', 
+                                      'P%s' % me.get('processes')[0].shell_string())
+    
+                    if not os.path.exists(Pdir):
+                        to_check.append(tag)
+                        continue                        
+                    if tag in data['id2path']:
+                        if not Pdir == data['id2path'][tag][1]:
+                            misc.sprint(tag, Pdir, data['id2path'][tag][1])
+                            raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
+                        else:
+                            continue
+                    # build the helicity dictionary
+                    hel_nb = 0
+                    hel_dict = {9:0} # unknown helicity -> use full ME
+                    for helicities in me.get_helicity_matrix():
+                        hel_nb +=1 #fortran starts at 1
+                        hel_dict[tuple(helicities)] = hel_nb
+    
+                    data['id2path'][tag] = [order, Pdir, hel_dict]        
+     
+            for tag in to_check:
+                if tag not in self.id_to_path:
+                    logger.warning("no valid path for %s" % (tag,))
+                    #raise self.InvalidCmd, "no valid path for %s" % (tag,)
         
         # 4. Check MadLoopParam for Loop induced
         if os.path.exists(pjoin(path_me, data['paths'][0], 'Cards', 'MadLoopParams.dat')):
@@ -1406,55 +1318,63 @@ class ReweightInterface(extended_cmd.Cmd):
                 misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
                              nb_core=self.mother.options['nb_core'])
                 
-        
-        # 5. create the virtual for NLO reweighting  ---------------------------
-        if has_nlo and 'NLO' in self.rwgt_mode:
-            # Do not pass here for LO/NLO_tree
-            start = time.time()
-            commandline=''
-            for proc in data['processes']:
-                if '[' not in proc:
-                    pass
-                else:
-                    proc = proc.replace('[', '[ virt=')
-                    commandline += "add process %s ;" % proc
-            # deactivate golem since it creates troubles
-            old_options = dict(mgcmd.options)
-            if mgcmd.options['golem'] or mgcmd.options['pjfry']:
-                logger.info(" When doing NLO reweighting, MG5aMC cannot use the loop reduction algorithms Golem and/or PJFry++")
-            mgcmd.options['golem'] = None            
-            mgcmd.options['pjfry'] = None 
-            commandline = commandline.replace('add process', 'generate',1)
-            logger.info(commandline)
-            mgcmd.exec_cmd(commandline, precmd=True)
-            commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
-            mgcmd.exec_cmd(commandline, precmd=True) 
-            
-            #put back golem to original value
-            mgcmd.options['golem'] = old_options['golem']
-            mgcmd.options['pjfry'] = old_options['pjfry']
-            # update make_opts
-            m_opts = {}
-            if mgcmd.options['lhapdf']:
-                #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
-                #        stdout = subprocess.PIPE).stdout.read().strip()[0]
-                m_opts['lhapdf'] = True
-                m_opts['f2pymode'] = True
-                m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
-                m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                       
+        return has_nlo
+
+                
+    @misc.mute_logger()
+    def create_standalone_virt_directory(self, data ,second=False):
+        """generate the various directory for the weight evaluation"""
+                
+        mgcmd = self.mg5cmd
+        path_me = data['path'] 
+        # Do not pass here for LO/NLO_tree
+        start = time.time()
+        commandline=''
+        for proc in data['processes']:
+            if '[' not in proc:
+                pass
             else:
-                raise Exception, "NLO reweighting requires LHAPDF to work correctly"
- 
-            path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
-            common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
-            logger.info('Done %.4g' % (time.time()-start))
+                proc = proc.replace('[', '[ virt=')
+                commandline += "add process %s ;" % proc
+        # deactivate golem since it creates troubles
+        old_options = dict(mgcmd.options)
+        if mgcmd.options['golem'] or mgcmd.options['pjfry']:
+            logger.info(" When doing NLO reweighting, MG5aMC cannot use the loop reduction algorithms Golem and/or PJFry++")
+        mgcmd.options['golem'] = None            
+        mgcmd.options['pjfry'] = None 
+        commandline = commandline.replace('add process', 'generate',1)
+        logger.info(commandline)
+        mgcmd.exec_cmd(commandline, precmd=True)
+        commandline = 'output standalone_rw %s --prefix=int -f' % pjoin(path_me, data['paths'][1])
+        mgcmd.exec_cmd(commandline, precmd=True) 
+        
+        #put back golem to original value
+        mgcmd.options['golem'] = old_options['golem']
+        mgcmd.options['pjfry'] = old_options['pjfry']
+        # update make_opts
+        m_opts = {}
+        if mgcmd.options['lhapdf']:
+            #lhapdfversion = subprocess.Popen([mgcmd.options['lhapdf'], '--version'], 
+            #        stdout = subprocess.PIPE).stdout.read().strip()[0]
+            m_opts['lhapdf'] = True
+            m_opts['f2pymode'] = True
+            m_opts['lhapdfversion'] = 5 # 6 always fail on my computer since 5 is compatible but slower always use 5
+            m_opts['llhapdf'] = self.mother.get_lhapdf_libdir()                       
+        else:
+            raise Exception, "NLO reweighting requires LHAPDF to work correctly"
+
+        path = pjoin(path_me,data['paths'][1], 'Source', 'make_opts')             
+        common_run_interface.CommonRunCmd.update_make_opts_full(path, m_opts)      
+        logger.info('Done %.4g' % (time.time()-start))
 
 
-            # Download LHAPDF SET
-            common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
-                mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
-            
-            # now store the id information             
+        # Download LHAPDF SET
+        common_run_interface.CommonRunCmd.install_lhapdf_pdfset_static(\
+            mgcmd.options['lhapdf'], None, self.banner.run_card.get_lhapdf_id())
+        
+        # now store the id information             
+        if False:
+            # keep it for debugging purposes
             matrix_elements = mgcmd._curr_matrix_elements.get_matrix_elements()            
             for me in matrix_elements:
                 for proc in me.get('processes'):
@@ -1485,21 +1405,137 @@ class ReweightInterface(extended_cmd.Cmd):
                         hel_nb +=1 #fortran starts at 1
                         hel_dict[tuple(helicities)] = hel_nb
     
-                    data['id2path'][(tag,'V')] = [order, Pdir, hel_dict] 
+                    data['id2path'][(tag,'V')] = [order, Pdir, hel_dict]
+
+
+    @misc.mute_logger()
+    def create_standalone_directory(self, second=False):
+        """generate the various directory for the weight evaluation"""
                 
-            #compile the module to combine the weight
-            misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
-            #link it 
-            if path_me not in sys.path:
-                sys.path.insert(0, os.path.realpath(path_me))
-            with misc.chdir(pjoin(path_me)):
-                mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
-                mymod =  mymod.Source.rwgt2py
-                with misc.stdchannel_redirected(sys.stdout, os.devnull):
-                    mymod.initialise([self.banner.run_card['lpp1'], 
-                                  self.banner.run_card['lpp2']],
-                                 self.banner.run_card.get_lhapdf_id())
-                self.combine_wgt = mymod.get_wgt
+        data={}
+        if not second:
+            data['paths'] = ['rw_me', 'rw_mevirt']
+            # model
+            info = self.banner.get('proc_card', 'full_model_line')
+            if '-modelname' in info:
+                data['mg_names'] = False
+            else:
+                data['mg_names'] = True
+            data['model_name'] = self.banner.get('proc_card', 'model')
+            #processes
+            data['processes'] = [line[9:].strip() for line in self.banner.proc_card
+                     if line.startswith('generate')]
+            data['processes'] += [' '.join(line.split()[2:]) for line in self.banner.proc_card
+                      if re.search('^\s*add\s+process', line)]  
+            #object_collector
+            #self.id_to_path = {}
+            #data['id2path'] = self.id_to_path
+        else:
+            data['paths'] = ['rw_me_second', 'rw_mevirt_second']
+            # model
+            if self.second_model:
+                data['mg_names'] = True
+                if ' ' in self.second_model:
+                    args = self.second_model.split()
+                    if '--modelname' in args:
+                        data['mg_names'] = False
+                    data['model_name'] = args[0]
+                else:
+                    data['model_name'] = self.second_model
+            else:
+                data['model_name'] = None
+            #processes
+            if self.second_process:
+                data['processes'] = self.second_process
+            else:
+                data['processes'] = [line[9:].strip() for line in self.banner.proc_card
+                                 if line.startswith('generate')]
+                data['processes'] += [' '.join(line.split()[2:]) 
+                                      for line in self.banner.proc_card
+                                      if re.search('^\s*add\s+process', line)]
+            #object_collector
+            #self.id_to_path_second = {}   
+            #data['id2path'] = self.id_to_path_second 
+        
+        # 0. clean previous run ------------------------------------------------
+        if not self.rwgt_dir:
+            path_me = self.me_dir
+        else:
+            path_me = self.rwgt_dir
+        data['path'] = path_me
+        try:
+            shutil.rmtree(pjoin(path_me,data['paths'][0]))
+        except Exception: 
+            pass
+        try:
+            shutil.rmtree(pjoin(path_me, data['paths'][1]))
+        except Exception: 
+            pass
+
+        # 1. prepare the interface----------------------------------------------
+        mgcmd = self.mg5cmd
+        complex_mass = False   
+        has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
+        for line in self.banner.proc_card:
+            if line.startswith('set'):
+                mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                if has_cms.search(line):
+                    complex_mass = True
+            elif line.startswith('define'):
+                try:
+                    mgcmd.exec_cmd(line, printcmd=False, precmd=False, postcmd=False)
+                except Exception:
+                    pass 
+                          
+        # 1. Load model---------------------------------------------------------  
+        if  not data['model_name'] and not second:
+            raise self.InvalidCmd('Only UFO model can be loaded in this module.')
+        elif data['model_name']:
+            self.load_model(data['model_name'], data['mg_names'], complex_mass)
+            modelpath = self.model.get('modelpath')
+            if os.path.basename(modelpath) != mgcmd._curr_model['name']:
+                name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
+                if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
+                    modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
+                
+            commandline="import model %s " % modelpath
+            if not data['mg_names']:
+                commandline += ' -modelname '
+            mgcmd.exec_cmd(commandline)
+            
+            #multiparticles
+            for name, content in self.banner.get('proc_card', 'multiparticles'):
+                mgcmd.exec_cmd("define %s = %s" % (name, content))
+        
+        if  second and 'tree_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['tree_path'], path_me,name=data['paths'][0])
+            if 'virtual_path' in self.dedicated_path:
+                has_nlo=True
+            else:
+                has_nlo=False
+        else:
+            has_nlo = self.create_standalone_tree_directory(data, second)
+        
+        # 5. create the virtual for NLO reweighting  ---------------------------
+        if second and 'virtual_path' in self.dedicated_path:
+            files.ln(self.dedicated_path['virtual_path'], path_me, name=data['paths'][1])
+        elif has_nlo and 'NLO' in self.rwgt_mode:
+            self.create_standalone_virt_directory(data, second)
+            
+            if not second:
+                #compile the module to combine the weight
+                misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
+                #link it 
+                if path_me not in sys.path:
+                    sys.path.insert(0, os.path.realpath(path_me))
+                with misc.chdir(pjoin(path_me)):
+                    mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
+                    mymod =  mymod.Source.rwgt2py
+                    with misc.stdchannel_redirected(sys.stdout, os.devnull):
+                        mymod.initialise([self.banner.run_card['lpp1'], 
+                                      self.banner.run_card['lpp2']],
+                                     self.banner.run_card.get_lhapdf_id())
+                    self.combine_wgt = mymod.get_wgt
 
             if self.multicore == 'create':
                 print "compile OLP", data['paths'][1]
@@ -1560,7 +1596,7 @@ class ReweightInterface(extended_cmd.Cmd):
             
              
         # 6. If we need a new model/process-------------------------------------
-        if (self.second_model or self.second_process) and not second:
+        if (self.second_model or self.second_process or self.dedicated_path) and not second :
             self.create_standalone_directory(second=True)    
 
         if not second:
@@ -1585,7 +1621,7 @@ class ReweightInterface(extended_cmd.Cmd):
             nb_core = self.mother.options['nb_core'] if self.mother.options['run_mode'] !=0 else 1
             os.environ['MENUM'] = '2'
             misc.compile(['allmatrix2py.so'], cwd=pdir, nb_core=nb_core)
-            if not (self.second_model or self.second_process):
+            if not (self.second_model or self.second_process or self.dedicated_path):
                 os.environ['MENUM'] = '3'
                 misc.compile(['allmatrix3py.so'], cwd=pdir, nb_core=nb_core)
 
@@ -1598,8 +1634,10 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             path_me = self.rwgt_dir        
         
+        self.id_to_path = {}
+        self.id_to_path_second = {}
         for onedir in self.rwgt_dir_possibility:
-            if not os.path.isdir(pjoin(path_me,onedir)):
+            if not os.path.exists(pjoin(path_me,onedir)):
                 continue 
             pdir = pjoin(path_me, onedir, 'SubProcesses')
             for tag in [2*metag,2*metag+1]:
@@ -1608,73 +1646,66 @@ class ReweightInterface(extended_cmd.Cmd):
                     reload(mymod)
                     S = mymod.SubProcesses
                     mymod = getattr(S, 'allmatrix%spy' % tag)
-                if (self.second_model or self.second_process):
-                    break
                 
                 # Param card not available -> no initialisation
                 self.f2pylib[(onedir,tag)] = mymod
                 if hasattr(mymod, 'set_madloop_path'):
                     mymod.set_madloop_path(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources'))
+                if (self.second_model or self.second_process or self.dedicated_path):
+                    break
+
+            data = self.id_to_path
+            if '_second' in onedir:
+                data = self.id_to_path_second
                 
-                data = self.id_to_path
-                if '_second' in onedir:
-                    data = self.id_to_path_second
-                
-                # get all the information
-                all_pdgs = mymod.get_pdg_order()
-                all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
-                all_prefix = [''.join(j).strip().lower() for j in mymod.get_prefix()]
-                prefix_set = set(all_prefix)
+            # get all the information
+            all_pdgs = mymod.get_pdg_order()
+            all_pdgs = [[pdg for pdg in pdgs if pdg!=0] for pdgs in  mymod.get_pdg_order()]
+            all_prefix = [''.join(j).strip().lower() for j in mymod.get_prefix()]
+            prefix_set = set(all_prefix)
 
 
-                hel_dict={}
-                for prefix in prefix_set:
-                    if hasattr(mymod,'%sprocess_nhel' % prefix):
-                        nhel = getattr(mymod, '%sprocess_nhel' % prefix).nhel    
-                        hel_dict[prefix] = {}
-                        for i, onehel in enumerate(zip(*nhel)):
-                            hel_dict[prefix][tuple(onehel)] = i+1
-                    elif hasattr(mymod, 'set_madloop_path') and \
-                         os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)):
-                        hel_dict[prefix] = {}
-                        for i,line in enumerate(open(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix))):
-                            onehel = [int(h) for h in line.split()]
-                            hel_dict[prefix][tuple(onehel)] = i+1
-                    else:
-                        misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix ))
-                        misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)))
-                        continue
+            hel_dict={}
+            for prefix in prefix_set:
+                if hasattr(mymod,'%sprocess_nhel' % prefix):
+                    nhel = getattr(mymod, '%sprocess_nhel' % prefix).nhel    
+                    hel_dict[prefix] = {}
+                    for i, onehel in enumerate(zip(*nhel)):
+                        hel_dict[prefix][tuple(onehel)] = i+1
+                elif hasattr(mymod, 'set_madloop_path') and \
+                     os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)):
+                    hel_dict[prefix] = {}
+                    for i,line in enumerate(open(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix))):
+                        onehel = [int(h) for h in line.split()]
+                        hel_dict[prefix][tuple(onehel)] = i+1
+                else:
+                    misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix ))
+                    misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)))
+                    continue
 
+            for i,pdg in enumerate(all_pdgs):
+                if self.is_decay:
+                    incoming = pdg[0]
+                    outgoing = pdg[1:]
+                else:
+                    incoming = pdg[0:2]
+                    outgoing = pdg[2:]
+                order = (list(incoming), list(outgoing))
+                incoming.sort()
+                outgoing.sort()
+                tag = (tuple(incoming), tuple(outgoing))
+                if 'virt' in onedir:
+                    tag = (tag, 'V')
+                prefix = all_prefix[i]
+                hel = hel_dict[prefix]
+                if tag in data:
+                    misc.sprint(onedir)
+                    misc.sprint(tag, onedir)
+                    misc.sprint(data[tag][:-1])
+                    misc.sprint(order, pdir,)
+                    raise Exception
                 
-                for i,pdg in enumerate(all_pdgs):
-                    if self.is_decay:
-                        incoming = pdg[0]
-                        outgoing = pdg[1:]
-                    else:
-                        incoming = pdg[0:2]
-                        outgoing = pdg[2:]
-                    order = (list(incoming), list(outgoing))
-                    incoming.sort()
-                    outgoing.sort()
-                    tag = (tuple(incoming), tuple(outgoing))
-                    if 'virt' in onedir:
-                        tag = (tag, 'V')
-                    prefix = all_prefix[i]
-                    hel = hel_dict[prefix]
-                    if tag not in data:
-                        misc.sprint(tag, onedir)
-                        misc.sprint(data.keys())
-                        raise Exception
-                    
-                    old1, old2, old3 = data[tag]
-                    for j in range(2):
-                        for k in range(len(order[j])):
-                            assert old1[j][k]==order[j][k]
-                    
-#                    assert all(old1[i][j]==order[i][j] for j in range(len(order[i])) for i  in range(2))
-                    for key in hel:
-                        assert hel[key] == old3[key]
-                    data[tag] = order, pdir, hel
+                data[tag] = order, pdir, hel
              
              
     def load_model(self, name, use_mg_default, complex_mass=False):

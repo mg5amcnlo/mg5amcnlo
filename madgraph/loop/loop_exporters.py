@@ -397,7 +397,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         # We might need to give a different name to the MadLoop makefile\
         shutil.copy(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'),
                 pjoin(self.dir_path, 'SubProcesses',self.madloop_makefile_name))
-        misc.sprint(pjoin(self.loop_dir,'StandAlone','SubProcesses','makefile'))
+
         # Write SubProcesses/MadLoop_makefile_definitions with dummy variables
         # for the non-optimized output
         link_tir_libs=[]
@@ -1207,7 +1207,6 @@ PARAMETER(MAX_SPIN_EXTERNAL_PARTICLE=%(max_spin_external_particle)d)
         file = open(os.path.join(self.template_dir,\
                                       'check_py.f.inc')).read()
 
-        misc.sprint(self.cmd_options)
         if 'prefix' in self.cmd_options and self.cmd_options['prefix'] in ['int','proc']:
             replace_dict['prefix_routine'] = replace_dict['proc_prefix']
         else:

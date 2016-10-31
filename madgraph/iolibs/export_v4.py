@@ -6622,7 +6622,6 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
       'cluster_local_path': cmd.options['cluster_local_path'],
       'output_options': cmd_options
       }
-    misc.sprint(MadLoop_SA_options)
 
     if output_type.startswith('madloop'):        
         import madgraph.loop.loop_exporters as loop_exporters

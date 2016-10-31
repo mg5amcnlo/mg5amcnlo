@@ -7257,7 +7257,6 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             flaglist.append('store_model')
         
         line_options = dict(arg[2:].split('=') for arg in args if arg.startswith('--') and '=' in arg)
-        misc.sprint(line)
         main_file_name = ""
         try:
             main_file_name = args[args.index('-name') + 1]
