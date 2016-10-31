@@ -1254,7 +1254,7 @@ class Model(PhysicsObject):
             if isinstance(id, int):
                 try:
                     return self.get("particle_dict")[id]
-                except Exception,error:
+                except Exception, error:
                     return None
             else:
                 if not hasattr(self, 'name2part'):
@@ -1270,7 +1270,8 @@ class Model(PhysicsObject):
         self.name2part = {}
         for part in self.get("particle_dict").values():
             self.name2part[part.get('name')] = part
-
+            self.name2part[part.get('antiname')] = part
+            
     def get_lorentz(self, name):
         """return the lorentz object from the associate name"""
         if hasattr(self, 'lorentz_name2obj'):
