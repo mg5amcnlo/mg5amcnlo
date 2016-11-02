@@ -3900,9 +3900,13 @@ You can follow PY8 run with the following command (in a separate terminal):
                 self.cluster = None
                 logger.info('Follow Pythia8 shower by running the '+
                     'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
-        
-                ret_code = self.cluster.launch_and_wait(wrapper_path, 
+
+                if self.options['run_mode']==2 and self.options['nb_core']>1:    
+                    ret_code = self.cluster.launch_and_wait(wrapper_path, 
                         argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
+                                      cwd=pjoin(self.me_dir,'Events',self.run_name))
+                else:
+                    ret_code = misc.call(wrapper_path, stdout=open(pythia_log,'w'), stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
                 if ret_code != 0:
                     raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\

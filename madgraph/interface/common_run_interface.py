@@ -952,6 +952,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madspin_card.dat [MS]
            transfer_card.dat [MW]
            madweight_card.dat [MW]
+           madanalysis5_hadron_card.dat
+           madanalysis5_parton_card.dat
            
            Please update the unit-test: test_card_type_recognition when adding
            cards.
@@ -986,18 +988,34 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     'madspin',
                     'transfer_card\.dat',
                     'set',
-                    'main:numberofevents'   # pythia8  
+                    'main:numberofevents',   # pythia8,
+                    '@MG5aMC skip_analysis',              #MA5 --both--
+                    '@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
+                    '@MG5aMC\s*reconstruction_name', # MA5 hadronique
+                    '@MG5aMC' # MA5 hadronique
                     ]
         
         
         text = re.findall('(%s)' % '|'.join(to_search), fulltext, re.I)
         text = [t.lower() for t in text]
+        misc.sprint(text)
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
         elif 'particlepropagator' in text or 'executionpath' in text or 'treewriter' in text:
             return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
+        elif '@mg5amc' in text:
+            ma5_flag = [f[7:].strip() for f in text if f.startswith('@mg5amc')]
+            if any(f.startswith('reconstruction_name') for f in ma5_flag):
+                return 'madanalysis5_hadron_card.dat'
+            ma5_flag = [f.split('*.')[1] for f in ma5_flag if '*.' in f]
+            if any(f.startswith('lhe') for f in ma5_flag):
+                return 'madanalysis5_parton_card.dat'
+            if any(f.startswith(('hepmc','hep','stdhep','lhco')) for f in ma5_flag):
+                return 'madanalysis5_hadron_card.dat'            
+            else:
+                return 'unknown'
         elif '#trigger card' in text:
             return 'delphes_trigger.dat'
         elif 'parameter set name' in text:
