@@ -2789,6 +2789,20 @@ class RunCardLO(RunCard):
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
                 
+        # For interference module, the systematics are wrong.
+        # automatically set use_syst=F and set systematics_program=none
+        no_systematics = False
+        for proc in proc_def:
+            for oneproc in proc:
+                if '^2' in oneproc.nice_string():
+                    no_systematics = True
+                    break
+            else:
+                continue
+            break
+        if no_systematics:
+            self['use_syst'] = False
+            self['systematics_program'] = 'none'
             
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 

@@ -5254,7 +5254,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                            'The update can be forced without timer by typing \'update dependent\' at the time of the card edition')
             modify =False
         except Exception,error:
-            misc.sprint(error)
+            logger.debug(str(error))
             logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
             signal.alarm(0)
         else:
