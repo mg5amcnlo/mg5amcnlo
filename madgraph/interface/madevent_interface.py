@@ -3946,13 +3946,13 @@ You can follow PY8 run with the following command (in a separate terminal):
                 if self.options['cluster_temp_path'] is None:
                     exe_cmd = \
 """#!%s
-./%s >& PY8_log.txt
+./%s PY8Card.dat >& PY8_log.txt
 """
                 else:
                     exe_cmd = \
 """#!%s
 ln -s ./events_$1.lhe.gz ./events.lhe.gz
-./%s >& PY8_log.txt
+./%s PY8Card_$1.dat >& PY8_log.txt
 mkdir split_$1
 if [ -f ./events.hepmc ];
 then
@@ -3972,7 +3972,7 @@ then
 fi
 tar -czf split_$1.tar.gz split_$1
 """
-                exe_cmd = exe_cmd%(shell_exe,' '.join([os.path.basename(pythia_main),'PY8Card.dat']))
+                exe_cmd = exe_cmd%(shell_exe,os.path.basename(pythia_main))
                 wrapper.write(exe_cmd)
                 wrapper.close()
                 # Set it as executable
@@ -3987,6 +3987,9 @@ tar -czf split_$1.tar.gz split_$1
                 logger.info('Splitting .lhe event file for PY8 parallelization...')    
                 n_splits = lhe_file.split(partition=partition, cwd=parallelization_dir, zip=True)                
                 
+                if n_splits!=len(partition):
+                    raise MadGraph5Error('Error during lhe file splitting. Expected %d files but obtained %d.'
+                                                                            %(len(partition),n_splits))
                 # Distribute the split events
                 split_files    = []
                 split_dirs     = []
@@ -3999,8 +4002,18 @@ tar -czf split_$1.tar.gz split_$1
                 
                 logger.info('Submitting Pythia8 jobs...')
                 for i, split_file in enumerate(split_files):
+                    # We must write a PY8Card tailored for each split so as to correct the normalization
+                    # HEPMCoutput:scaling of each weight since the lhe showered will not longer contain the
+                    # same original number of events
+                    split_PY8_Card = banner_mod.PY8Card(pjoin(parallelization_dir,'PY8Card.dat'))
+                    split_PY8_Card.systemSet('HEPMCoutput:scaling',split_PY8_Card['HEPMCoutput:scaling']*
+                                                                    (float(partition[i])/float(n_events)))
+                    # Add_missing set to False so as to be sure not to add any additional parameter w.r.t
+                    # the ones in the original PY8 param_card copied.
+                    split_PY8_Card.write(pjoin(parallelization_dir,'PY8Card_%d.dat'%i),
+                                         pjoin(parallelization_dir,'PY8Card.dat'), add_missing=False)
                     in_files = [pjoin(parallelization_dir,os.path.basename(pythia_main)),
-                                pjoin(parallelization_dir,'PY8Card.dat'), 
+                                pjoin(parallelization_dir,'PY8Card_%d.dat'%i), 
                                 pjoin(parallelization_dir,split_file)]
                     if self.options['cluster_temp_path'] is None:
                         out_files = []
@@ -4008,8 +4021,11 @@ tar -czf split_$1.tar.gz split_$1
                         selected_cwd = pjoin(parallelization_dir,'split_%d'%i)
                         for in_file in in_files+[pjoin(parallelization_dir,'run_PY8.sh')]:
                             # Make sure to rename the split_file link from events_<x>.lhe.gz to events.lhe.gz
+                            # and similarly for PY8Card
                             if os.path.basename(in_file)==split_file:
                                 ln(in_file,selected_cwd,name='events.lhe.gz')
+                            elif os.path.basename(in_file).startswith('PY8Card'):
+                                ln(in_file,selected_cwd,name='PY8Card.dat')                                
                             else:
                                 ln(in_file,selected_cwd)                                
                         in_files  = []

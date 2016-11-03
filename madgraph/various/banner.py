@@ -1658,14 +1658,16 @@ class PY8Card(ConfigFile):
             
 
     def write(self, output_file, template, read_subrun=False, 
-                           print_only_visible=False, direct_pythia_input=False):
+                    print_only_visible=False, direct_pythia_input=False, add_missing=True):
         """ Write the card to output_file using a specific template.
         > 'print_only_visible' specifies whether or not the hidden parameters
             should be written out if they are in the hidden_params_to_always_write
             list and system_set.
         > If 'direct_pythia_input' is true, then visible parameters which are not
           in the self.visible_params_to_always_write list and are not user_set
-          or system_set are commented."""
+          or system_set are commented.
+        > If 'add_missing' is False then parameters that should be written_out but are absent
+        from the template will not be written out."""
 
         # First list the visible parameters
         visible_param = [p for p in self if p.lower() not in self.hidden_param
@@ -1835,6 +1837,11 @@ class PY8Card(ConfigFile):
             # Proceed to next line
             last_pos = tmpl.tell()
             line     = tmpl.readline()
+        
+        # If add_missing is False, make sure to empty the list of remaining parameters
+        if not add_missing:
+            visible_param = []
+            hidden_output_param = []
         
         # Now output the missing parameters. Warn about visible ones.
         if len(visible_param)>0 and not template is None:
