@@ -998,7 +998,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         
         text = re.findall('(%s)' % '|'.join(to_search), fulltext, re.I)
         text = [t.lower() for t in text]
-        misc.sprint(text)
         if '<mgversion>' in text or '<mg5proccard>' in text:
             return 'banner'
         elif 'particlepropagator' in text or 'executionpath' in text or 'treewriter' in text:
@@ -1506,7 +1505,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             #special options
             --from_card=
         """
-    
+        
         lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
         if not lhapdf:
             logger.info('can not run systematics since can not link python to lhapdf')
@@ -5078,6 +5077,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
+        
+        # if external computation for the systematics are asked then switch 
+        #automatically the book-keeping of the weight for NLO
+        if 'run' in self.allow_arg and \
+                    self.run_card['systematics_program'] == 'systematics' and \
+                    isinstance(self.run_card,banner_mod.RunCardNLO) and \
+                    not self.run_card['store_rwgt_info']:
+            logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
+            self.do_set('run_card store_rwgt_info True')
         
         # @LO if PY6 shower => event_norm on sum
         if 'pythia_card.dat' in self.cards:

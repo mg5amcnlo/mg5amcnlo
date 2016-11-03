@@ -1020,7 +1020,25 @@ class ConfigFile(dict):
                 value = value.strip()
                 if value.startswith('[') and value.endswith(']'):
                     value = value[1:-1]
-                value = filter(None, re.split(r'(?:(?<!\\)\s)|,', value, re.VERBOSE)) 
+                #do not perform split within a " or ' block  
+                data = re.split(r"((?<![\\])['\"])((?:.(?!(?<![\\])\1))*.?)\1", str(value))
+                new_value = []
+                i = 0
+                while len(data) > i:
+                    current = filter(None, re.split(r'(?:(?<!\\)\s)|,', data[i], re.VERBOSE))
+                    i+=1
+                    if len(data) > i+1:
+                        if current:
+                            current[-1] += '{0}{1}{0}'.format(data[i], data[i+1])
+                        else:
+                            current = ['{0}{1}{0}'.format(data[i], data[i+1])]
+                        i+=2
+                    new_value += current
+ 
+                            
+                            
+                value = new_value                           
+                
             elif not hasattr(value, '__iter__'):
                 value = [value]
             elif isinstance(value, dict):
@@ -2118,10 +2136,9 @@ class RunCard(ConfigFile):
                 raise Exception, "No such file %s" % finput
         
         for line in finput:
-            
             line = line.split('#')[0]
             line = line.split('!')[0]
-            line = line.split('=',1)
+            line = line.rsplit('=',1)
             if len(line) != 2:
                 continue
             value, name = line
@@ -2573,6 +2590,9 @@ class RunCardLO(RunCard):
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
+        self.add_param('systematics_program', 'auto', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
+        self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
+        
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
         self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "auto", include=False)
@@ -3272,6 +3292,9 @@ class RunCardNLO(RunCard):
         self.add_param('pdf_set_min', 244601, hidden=True)
         self.add_param('pdf_set_max', 244700, hidden=True)
         self.add_param('store_rwgt_info', False)
+        self.add_param('systematics_program', 'none', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics')
+        self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
+             
         #merging
         self.add_param('ickkw', 0)
         self.add_param('bwcutoff', 15.0)
@@ -3393,7 +3416,6 @@ class RunCardNLO(RunCard):
         if len(self['reweight_scale']) == 1 and len(self['dynamical_scale_choice']) != 1:
             self['reweight_scale']=self['reweight_scale']*len(self['dynamical_scale_choice']) 
             logger.warning("Setting 'reweight_scale' for all 'dynamical_scale_choice' to %s" % self['reweight_pdf'][0])
-
 
         # Check that there are no identical elements in lhaid or dynamical_scale_choice
         if len(self['lhaid']) != len(set(self['lhaid'])):

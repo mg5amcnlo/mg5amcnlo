@@ -2100,10 +2100,27 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.print_results_in_shell(self.results.current)
 
                 if self.run_card['use_syst']:
-                    scdir = self.options['syscalc_path']
-                    if not scdir or not os.path.exists(scdir):
-                        self.exec_cmd('systematics %s --from_card' % self.run_name, postcmd=False,printcmd=False)    
+                    if self.run_card['systematics_program'] == 'auto':                        
+                        scdir = self.options['syscalc_path']
+                        if not scdir or not os.path.exists(scdir):
+                            to_use = 'systematics'
+                        else:
+                            to_use = 'syscalc'
+                    elif self.run_card['systematics_program'].lower() in ['systematics','syscalc', 'none']:
+                        to_use = self.run_card['systematics_program']
                     else:
+                        logger.critical('Unvalid options for systematics_program: bypass computation of systematics variations.')
+                        to_use = 'none'
+                        
+                    if to_use == 'systematics':
+                        if self.run_card['systematics_arguments'] != ['']:
+                            self.exec_cmd('systematics %s %s ' % (self.run_name,
+                                          ' '.join(self.run_card['systematics_arguments'])),                  
+                                          postcmd=False, printcmd=False)
+                        else:
+                            self.exec_cmd('systematics %s --from_card' % self.run_name,
+                                           postcmd=False,printcmd=False)    
+                    elif to_use == 'syscalc':
                         self.run_syscalc('parton')
                 
                     

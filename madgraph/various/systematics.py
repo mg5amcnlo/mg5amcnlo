@@ -706,6 +706,9 @@ def call_systematics(args, result=sys.stdout, running=True,
         if '=' in arg:
             key,values= arg.split('=')
             key = key.replace('-','')
+            values = values.strip()
+            if values[0] in ["'",'"'] and values[-1]==values[0]:
+                values = values[1:-1]
             values = values.split(',')
             if key == 'together':
                 if key in opts:

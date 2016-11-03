@@ -1215,6 +1215,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if not mode in ['LO', 'NLO']:
             assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
+            
+            if self.run_card['systematics_program'] == 'systematics':
+                self.exec_cmd('systematics %s %s ' % (self.run_name, ' '.join(self.run_card['systematics_arguments'])))
+            
             self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')

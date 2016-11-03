@@ -874,7 +874,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 continue
             for onedir in dirlist:
                 if onedir == 'MG5aMC_PLUGIN':
-                    plugin_path.append(pjoin(PluginCandidate, 'MGaMC_PLUGIN'))
+                    plugin_path.append(pjoin(PluginCandidate, 'MG5aMC_PLUGIN'))
                     break
             else:
                 continue
