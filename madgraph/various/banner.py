@@ -1437,6 +1437,9 @@ class PY8Card(ConfigFile):
         self.add_param("Beams:frameType", 4,
             hidden=True,
             comment='Tell Pythia8 that an LHEF input is used.')
+        self.add_param("HEPMCoutput:scaling", 1.0e9,
+            hidden=True,
+            comment='1.0 corresponds to HEPMC weight given in [mb]. We choose here the [pb] normalization.')
         self.add_param("Check:epTolErr", 1e-2,
             hidden=True,
             comment='Be more forgiving with momentum mismatches.')
@@ -1521,6 +1524,8 @@ class PY8Card(ConfigFile):
         self.hidden_param = []
         self.hidden_params_to_always_write = set()
         self.visible_params_to_always_write = set()
+        # List of parameters that should never be written out given the current context.
+        self.params_to_never_write = set()
         
         # Parameters which have been set by the system (i.e. MG5 itself during
         # the regular course of the shower interface)
@@ -1577,6 +1582,11 @@ class PY8Card(ConfigFile):
         if name.lower() in self.system_set:
             self.system_set.remove(name.lower())
 
+    def vetoParamWriteOut(self, name):
+        """ Forbid the writeout of a specific parameter of this card when the 
+        "write" function will be invoked."""
+        self.params_to_never_write.add(name.lower())
+    
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
         request and only if not already user_set."""
@@ -1659,7 +1669,10 @@ class PY8Card(ConfigFile):
 
         # First list the visible parameters
         visible_param = [p for p in self if p.lower() not in self.hidden_param
-                                                  or p.lower() in self.user_set]        
+                                                  or p.lower() in self.user_set]
+        # Filter against list of parameters vetoed for write-out
+        visible_param = [p for p in visible_param if p.lower() not in self.params_to_never_write]
+        
         # Now the hidden param which must be written out
         if print_only_visible:
             hidden_output_param = []
@@ -1668,6 +1681,8 @@ class PY8Card(ConfigFile):
               not p.lower() in self.user_set and
               (p.lower() in self.hidden_params_to_always_write or 
                                                   p.lower() in self.system_set)]
+        # Filter against list of parameters vetoed for write-out
+        hidden_output_param = [p for p in hidden_output_param if p not in self.params_to_never_write]
         
         if print_only_visible:
             subruns = []
@@ -1789,7 +1804,11 @@ class PY8Card(ConfigFile):
                 hidden_output_param.pop(hidden_output_param.index(param))
             else:
                 # Just copy parameters which don't need to be specified
-                output.write(line)
+                if param.lower() not in self.params_to_never_write:
+                    output.write(line)
+                else:
+                    output.write('! The following parameter was forced to be commented out by MG5aMC.\n')
+                    output.write('! %s'%line)
                 # Proceed to next line
                 last_pos = tmpl.tell()
                 line     = tmpl.readline()

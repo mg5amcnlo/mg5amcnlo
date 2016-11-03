@@ -3625,8 +3625,7 @@ already exists and is not a fifo file."""%fifo_path)
             if not hasattr(self,'proc_characteristic'):
                 self.proc_characteristic = self.get_characteristics()
             nJetMax = self.proc_characteristic['max_n_matched_jets']
-            if PY8_Card['JetMatching:nJetMax'.lower()] == -1 and\
-                         'JetMatching:nJetMax'.lower() not in PY8_Card.user_set:
+            if PY8_Card['JetMatching:nJetMax'.lower()] == -1:
                 logger.info("No user-defined value for Pythia8 parameter "+
             "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
@@ -3685,12 +3684,10 @@ already exists and is not a fifo file."""%fifo_path)
             if not hasattr(self,'proc_characteristic'):
                 self.proc_characteristic = self.get_characteristics()
             nJetMax = self.proc_characteristic['max_n_matched_jets']
-            if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
-                             'Merging:nJetMax'.lower() not in PY8_Card.user_set:
+            if PY8_Card['Merging:nJetMax'.lower()] == -1:
                 logger.info("No user-defined value for Pythia8 parameter "+
                 "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
-                
             if PY8_Card['SysCalc:tmsList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
@@ -3712,6 +3709,11 @@ already exists and is not a fifo file."""%fifo_path)
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
         'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
+        else:
+            # Here, the run is therefore not a merged-type of run. We must therefore make sure *not*
+            # to specify the "Merging:Process' as this makes older versions of the driver crash if 
+            # there is no merging in place
+            PY8_Card.vetoParamWriteOut('Merging:Process')
 
         return HepMC_event_output
 
