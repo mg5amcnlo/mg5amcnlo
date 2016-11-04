@@ -19,7 +19,6 @@ except:
     import internal.file_writers as file_writers
     import internal.misc as misc
 
-import StringIO
     
 class InvalidParamCard(Exception):
     """ a class for invalid param_card """
@@ -351,9 +350,6 @@ class ParamCard(dict):
                 cur_block = Block('decay_table_%s' % id)
                 self['decay'].decay_table[id] = cur_block
             
-            
-
-            
             if cur_block.name.startswith('decay_table'):
                 param = Parameter()
                 param.load_decay(line)
@@ -368,6 +364,13 @@ class ParamCard(dict):
                 cur_block.append(param)
                   
         return self
+    
+    def __setitem__(self, name, value):
+        
+        return dict.__setitem__(self, name.lower(), value)
+    
+    def __getitem__(self, name):
+        return dict.__getitem__(self,name.lower())
     
     def analyze_param_card(self):
         """ Analyzes the comment of the parameter in the param_card and returns
@@ -441,7 +444,7 @@ class ParamCard(dict):
             parameters = model.set_parameters_and_couplings(self)
         else:
             parameters = model.set_parameters_and_couplings(self)
-            
+
             
         for particle in model.get('particles'):
             if particle.get('goldstone') or particle.get('ghost'):
@@ -865,7 +868,7 @@ class ParamCardIterator(ParamCard):
         for key in keys:
             for param, values in all_iterators[key]:
                 self.param_order.append("%s#%s" % (param.lhablock, '_'.join(`i` for i in param.lhacode)))
-        
+
         # do the loop
         lengths = [range(len(all_iterators[key][0][1])) for key in keys]
         for positions in itertools.product(*lengths):
@@ -897,10 +900,13 @@ class ParamCardIterator(ParamCard):
             self.cross.append({'bench' : self.itertag, 'run_name': run_name, 'cross(pb)':cross})
         
 
-    def write_summary(self, path, order=None):
+    def write_summary(self, path, order=None, lastline=False, nbcol=20):
         """ """
         
-        ff = open(path, 'w')        
+        if path:
+            ff = open(path, 'w')
+        else:
+            ff = StringIO.StringIO()        
         if order:
             keys = order
         else:
@@ -909,13 +915,19 @@ class ParamCardIterator(ParamCard):
             keys.remove('run_name')
             keys.sort()
 
-        formatting = "#%s%s%s\n" %('%-19s ', '%-20s '* len(self.param_order),
-                                             '%-20s '* len(keys))
+        formatting = "#%s%s%s\n" %('%%-%is ' % (nbcol-1), ('%%-%is ' % (nbcol))* len(self.param_order),
+                                             ('%%-%is ' % (nbcol))* len(keys))
         # header
-        ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
-        formatting = "%s%s%s\n" %('%-20s ', '%-20s '* len(self.param_order),
-                                             '%-20s '* len(keys))
-        for info in self.cross:
+        if not lastline:
+            ff.write(formatting % tuple(['run_name'] + self.param_order + keys))
+        formatting = "%s%s%s\n" %('%%-%is ' % (nbcol), ('%%-%ie ' % (nbcol))* len(self.param_order),
+                                             ('%%-%ie ' % (nbcol))* len(keys))
+        
+        if not lastline:
+            to_print = self.cross
+        else:
+            to_print = self.cross[-1:]
+        for info in to_print:
             name = info['run_name']
             bench = info['bench']
             data = []
@@ -924,7 +936,10 @@ class ParamCardIterator(ParamCard):
                 
             ff.write(formatting % tuple([name] + bench + data))
                 
-            
+        if not path:
+            return ff.getvalue()
+        
+         
     def get_next_name(self, run_name):
         """returns a smart name for the next run"""
     

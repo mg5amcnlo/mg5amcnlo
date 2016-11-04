@@ -49,7 +49,6 @@ sys.path.append(os.path.join(root_path, os.path.pardir, 'Template', 'bin', 'inte
 import check_param_card 
 
 pjoin = os.path.join
-logger = logging.getLogger("madgraph.model")
 
 # Suffixes to employ for the various poles of CTparameters
 pole_dict = {-2:'2EPS',-1:'1EPS',0:'FIN'}
@@ -176,7 +175,8 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
             keep_external=True            
         else:
             keep_external=False
-        logger.info('Detect SLHA2 format. keeping restricted parameter in the param_card')
+        if keep_external:
+            logger.info('Detect SLHA2 format. keeping restricted parameter in the param_card')
         model.restrict_model(restrict_file, rm_parameter=not decay,
            keep_external=keep_external, complex_mass_scheme=complex_mass_scheme)
         model.path = model_path

@@ -74,6 +74,7 @@ C
 C     
 C     FUNCTIONS
 C     
+      LOGICAL IS_HEL_SELECTED
       INTEGER ML5SOINDEX_FOR_BORN_AMP
       INTEGER ML5SOINDEX_FOR_LOOP_AMP
       INTEGER ML5SQSOINDEX
@@ -154,6 +155,13 @@ C
 
       INTEGER LIBINDEX
       COMMON/I_LIB/LIBINDEX
+
+C     This array specify potential special requirements on the
+C      helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such
+C      requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/BEAM_POL/POLARIZATIONS
 
 C     ----------
 C     BEGIN CODE
@@ -246,6 +254,13 @@ C     AS A SAFETY MEASURE WE FIRST COPY HERE THE PS POINT
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
      $.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H)
      $   .NE.0)))) THEN
+
+C         Handle the possible requirement of specific polarizations
+          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
+     $0,0).EQ.0.AND.(.NOT.IS_HEL_SELECTED(H))) THEN
+            CYCLE
+          ENDIF
+
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO

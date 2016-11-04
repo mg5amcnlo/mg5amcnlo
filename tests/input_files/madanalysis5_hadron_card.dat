@@ -1,0 +1,90 @@
+# Uncomment the line below to skip this analysis altogether
+# @MG5aMC skip_analysis
+
+@MG5aMC stdout_lvl=INFO
+
+# Recasting functionalities based on DelphesMA5tune turned off. Please type
+#       install madanalysis5 --update --with_delphesMA5tune
+# in the MG5 interpereter to turn them on.
+
+@MG5aMC inputs = *.hepmc, *.hep, *.stdhep, *.lhco, *.fifo
+
+# Reconstruction using FastJet
+@MG5aMC reconstruction_name = BasicReco
+@MG5aMC reco_output = lhe
+# Multiparticle definition
+define invisible = 12 14 16 -12 -14 -16
+set main.fastsim.package = fastjet
+set main.fastsim.algorithm = antikt
+set main.fastsim.radius = 0.4
+set main.fastsim.ptmin = 5.0
+# b-tagging
+set main.fastsim.bjet_id.matching_dr = 0.4
+set main.fastsim.bjet_id.efficiency = 1.0
+set main.fastsim.bjet_id.misid_cjet = 0.0
+set main.fastsim.bjet_id.misid_ljet = 0.0
+# tau-tagging
+set main.fastsim.tau_id.efficiency = 1.0
+set main.fastsim.tau_id.misid_ljet = 0.0
+
+# Reconstruction using Delphes
+@MG5aMC reconstruction_name = CMSReco
+@MG5aMC reco_output = root
+set main.fastsim.package  = delphes
+set main.fastsim.detector = cms-ma5tune
+
+# Analysis using both reco
+@MG5aMC analysis_name = analysis2
+# Uncomment the next line to bypass this analysis
+# @MG5aMC skip_analysis
+@MG5aMC set_reconstructions = ['BasicReco', 'CMSReco']
+
+# plot tunning: dsigma/sigma is plotted.
+set main.stacking_method = normalize2one
+
+# object definition
+define e = e+ e-
+define mu = mu+ mu-
+select (j)  PT > 20
+select (b)  PT > 20
+select (e)  PT > 10
+select (mu) PT > 10
+select (j)  ABSETA < 2.5
+select (b)  ABSETA < 2.5
+select (e)  ABSETA < 2.5
+select (mu) ABSETA < 2.5
+# Basic plots
+plot MET 40 0 500
+plot THT 40 0 500
+# basic properties of the non-b-tagged jets
+plot PT(j[1]) 40 0 500 [logY]
+plot ETA(j[1]) 40 -10 10 [logY]
+plot MT_MET(j[1]) 40 0 500 [logY]
+plot PT(j[2]) 40 0 500 [logY]
+plot ETA(j[2]) 40 -10 10 [logY]
+plot MT_MET(j[2]) 40 0 500 [logY]
+# basic properties of the leptons
+# basic properties of the photons
+# Invariant-mass distributions
+plot M(j[1] j[2]) 40 0  500 [logY]
+# Angular distance distributions
+plot DELTAR(j[1],j[2]) 40 0 10 [logY]
+
+# Recasting
+@MG5aMC recasting_commands
+set main.recast = on
+set main.recast.store_root = False
+@MG5aMC recasting_card
+# Uncomment the analyses to run
+# Delphes cards must be located in the PAD(ForMA5tune) directory
+# Switches must be on or off
+# AnalysisName               PADType    Switch     DelphesCard
+# atlas_1605_03814              v1.2        on    delphes_card_ATLAS_1604_07773.tcl                  # ATLAS - 13 TeV - multijet (2-6 jets) + met
+# ATLAS_1604_07773              v1.2        on    delphes_card_ATLAS_1604_07773.tcl                  # ATLAS - 13 TeV - monojet
+# ATLAS_EXOT_2014_06            v1.2        on    delphes_card_atlas_sus_2013_05_pad.tcl             # ATLAS - 8 TeV - monophoton
+# cms_exo_12_047                v1.2        on    delphes_card_cms_b2g_12_012.tcl                    # CMS   - 8 TeV - monophoton
+# cms_exo_12_048                v1.2        on    delphes_card_cms_b2g_12_012.tcl                    # CMS   - 8 TeV - monojet
+# cms_b2g_14_004                v1.2        on    delphes_card_cms_b2g_14_004.tcl                    # CMS   - 8 TeV - Dark matter production with a ttbar pair
+# cms_b2g_12_022                v1.2        on    delphes_card_cms_b2g_14_004.tcl                    # CMS   - 8 TeV - Monotop search
+# CMS_B2G_12_012                v1.2        on    delphes_card_cms_b2g_12_012.tcl                    # CMS   - 8 TeV - T5/3 partners in the SSDL channel
+# 

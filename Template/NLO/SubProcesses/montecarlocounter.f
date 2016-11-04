@@ -21,7 +21,7 @@ c is the number of color flows at Born level
       integer nglu,nsngl
       logical isspecial,isspecial0
       common/cisspecial/isspecial
-
+      logical spec_case
       ipartners(0)=0
       do i=1,nexternal-1
          colorflow(i,0)=0
@@ -132,14 +132,16 @@ c Therefore, ipartners(k0)=j
                         write(*,*)i,j,l,k0,ipartners(k0)
                         stop
                      endif
+                     spec_case=l.eq.2 .and. colorflow(k0,0).ge.1 .and.
+     &                    colorflow(k0,colorflow(k0,0)).eq.i 
+                     if (.not.spec_case)then
 c Increase by one the number of colour flows in which the father is
 c (anti)colour-connected with its k0^th partner (according to the
 c list defined by ipartners)
-                     colorflow(k0,0)=colorflow(k0,0)+1
+                        colorflow(k0,0)=colorflow(k0,0)+1
 c Store the label of the colour flow thus found
-                     colorflow(k0,colorflow(k0,0))=i
-                     if (l.eq.2 .and. colorflow(k0,0).gt.1 .and.
-     &                    colorflow(k0,colorflow(k0,0)-1).eq.i )then
+                        colorflow(k0,colorflow(k0,0))=i
+                     elseif (spec_case)then
 c Special case: father and ipartners(k0) are both gluons, connected
 c by colour AND anticolour: the number of colour flows was overcounted
 c by one unit, so decrease it
@@ -150,7 +152,7 @@ c by one unit, so decrease it
                             write(*,*)i,j,l,k0,i1(1),i1(2)
                             stop
                          endif
-                         colorflow(k0,0)=colorflow(k0,0)-1
+                         colorflow(k0,colorflow(k0,0))=i
                          isspecial0=.true.
                      endif
                   endif
@@ -2660,13 +2662,13 @@ c
       double precision z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,scalemax,wcc
       logical lzone
 
-      double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,
+      double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,Q2,
      &lambda,dot,e0sq,beta,dum,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3
       external dot
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      double precision pip(0:3),pifat(0:3)
+      double precision pip(0:3),pifat(0:3),psum(0:3)
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -2704,6 +2706,7 @@ c Definition and initialisation of variables
       do i=0,3
          pifat(i)=p_born(i,ifat)
          pip(i)  =p_born(i,ip)
+         psum(i) =pifat(i)+pip(i) 
       enddo
       max_scale=scalemax
       xmp2=dot(pip,pip)
@@ -2713,7 +2716,8 @@ c Definition and initialisation of variables
       xmm2=xm12*(4-ileg)
       xmr2=xm22*(4-ileg)-xm12*(3-ileg)
       ww=w1*(4-ileg)-w2*(3-ileg)
-      lambda=sqrt((s+xmm2-xmp2)**2-4*s*xmm2)
+      Q2=dot(psum,psum)
+      lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
       beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
       wcc=1d0
       ycc=1-parp67*x/(1-x)**2/2
@@ -2740,7 +2744,7 @@ c
          if(ileg.le.2)upscale2=2*e0sq
          if(ileg.gt.2)then
             upscale2=2*e0sq+xmm2
-            if(ip.gt.2)upscale2=(s+xmm2-xmp2+lambda)/2
+            if(ip.gt.2)upscale2=(Q2+xmm2-xmp2+lambda)/2
          endif
          if(xi.lt.upscale2)lzone=.true.
 c
