@@ -3904,8 +3904,16 @@ You can follow PY8 run with the following command (in a separate terminal):
                 lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
                 lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
                                                     self.run_name,PY8_Card.subruns[0]['Beams:LHEF']))
-                n_events = len(lhe_file)
-    
+                n_available_events = len(lhe_file)
+                if PY8_Card['Main:numberOfEvents']==-1:
+                    n_events = n_available_events
+                else:
+                    n_events = PY8_Card['Main:numberOfEvents']
+                    if n_events > n_available_events:
+                        raise self.InvalidCmd, 'You specified more events (%d) in the PY8 parameter'%n_events+\
+                            "'Main:numberOfEvents' than the total number of events available (%d)"%n_available_events+\
+                            ' in the event file:\n %s'%pjoin(self.me_dir,'Events',self.run_name,PY8_Card.subruns[0]['Beams:LHEF'])
+
                 # Implement a security to insure a minimum numbe of events per job
                 if self.options['run_mode']==2:
                     min_n_events_per_job = 100
@@ -3952,7 +3960,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                     ParallelPY8Card['HEPMCoutput:file']='events.hepmc'
                 else:
                     ParallelPY8Card['HEPMCoutput:file']='/dev/null'
-                    
+
                 ParallelPY8Card.subruns[0].systemSet('Beams:LHEF','events.lhe.gz')
                 ParallelPY8Card.write(pjoin(parallelization_dir,'PY8Card.dat'),
                                       pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
@@ -3997,9 +4005,15 @@ tar -czf split_$1.tar.gz split_$1
                 os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
                 
                 # Split the .lhe event file, create event partition
-                partition=[n_events//n_cores]*n_cores
-                for i in range(n_events%n_cores):
+                partition=[n_available_events//n_cores]*n_cores
+                for i in range(n_available_events%n_cores):
                     partition[i] += 1
+                
+                # Splitting according to the total number of events requested by the user
+                # Will be used to determine the number of events to indicate in the PY8 split cards.
+                partition_for_PY8=[n_events//n_cores]*n_cores
+                for i in range(n_events%n_cores):
+                    partition_for_PY8[i] += 1
                 
                 logger.info('Splitting .lhe event file for PY8 parallelization...')    
                 n_splits = lhe_file.split(partition=partition, cwd=parallelization_dir, zip=True)                
@@ -4023,8 +4037,10 @@ tar -czf split_$1.tar.gz split_$1
                     # HEPMCoutput:scaling of each weight since the lhe showered will not longer contain the
                     # same original number of events
                     split_PY8_Card = banner_mod.PY8Card(pjoin(parallelization_dir,'PY8Card.dat'))
+                    # Make sure to sure the number of split_events determined during the splitting.
+                    split_PY8_Card.systemSet('Main:numberOfEvents',partition_for_PY8[i])
                     split_PY8_Card.systemSet('HEPMCoutput:scaling',split_PY8_Card['HEPMCoutput:scaling']*
-                                                                    (float(partition[i])/float(n_events)))
+                                                             (float(partition_for_PY8[i])/float(n_events)))
                     # Add_missing set to False so as to be sure not to add any additional parameter w.r.t
                     # the ones in the original PY8 param_card copied.
                     split_PY8_Card.write(pjoin(parallelization_dir,'PY8Card_%d.dat'%i),

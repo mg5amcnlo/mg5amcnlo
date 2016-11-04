@@ -528,7 +528,7 @@ class EventFile(object):
                 nb_file +=1
                 # If end of partition then finish writing events here.
                 if not partition is None and (nb_file+1>len(partition)):
-                    return nb_file+1
+                    return nb_file
                 if zip:
                     current = EventFile(pjoin(cwd,'%s_%s.lhe.gz' % (self.name, nb_file)),'w')
                 else:
