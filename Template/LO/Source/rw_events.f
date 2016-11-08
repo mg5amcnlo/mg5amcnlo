@@ -278,7 +278,6 @@ c      aqcd = g*g/4d0/pi
 
       write(lun,'(a)') '<event>'
       write(lun,'(i2,i4,e16.7e3,3e15.7)') nexternal,ievent,wgt,scale,aqed,aqcd
-      write(*,'(i2,i4,e15.7e3,3e15.7)') nexternal,ievent,wgt,scale,aqed,aqcd
       do i=1,nexternal
          write(lun,51) ic(1,i),ic(6,i),(ic(j,i),j=2,5),
      $     (p(j,i),j=1,3),p(0,i),p(4,i),0.,real(ic(7,i))
