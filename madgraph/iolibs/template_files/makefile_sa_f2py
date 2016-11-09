@@ -18,6 +18,6 @@ allmatrix$(MENUM)py.so: $(LIBDIR)/$(LIBRARY)  all_matrix.o
 
 
 
-$(LIBDIR)/$(LIBRARY): */matrix.o  all_matrix.o
+$(LIBDIR)/$(LIBRARY): $(patsubst %.f,%.o,$(wildcard */matrix.f))  all_matrix.o
 	$(call CREATELIB, $@, $^)  
 
