@@ -1673,14 +1673,14 @@ class ReweightInterface(extended_cmd.Cmd):
                     for i, onehel in enumerate(zip(*nhel)):
                         hel_dict[prefix][tuple(onehel)] = i+1
                 elif hasattr(mymod, 'set_madloop_path') and \
-                     os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)):
+                     os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())):
                     hel_dict[prefix] = {}
-                    for i,line in enumerate(open(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix))):
+                    for i,line in enumerate(open(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper()))):
                         onehel = [int(h) for h in line.split()]
                         hel_dict[prefix][tuple(onehel)] = i+1
                 else:
-                    misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix ))
-                    misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix)))
+                    misc.sprint(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper() ))
+                    misc.sprint(os.path.exists(pjoin(path_me,onedir,'SubProcesses','MadLoop5_resources', '%sHelConfigs.dat' % prefix.upper())))
                     continue
 
             for i,pdg in enumerate(all_pdgs):
