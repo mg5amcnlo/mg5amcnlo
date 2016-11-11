@@ -22,7 +22,7 @@ if [[ "$NFILE" != "" ]]; then
         if [ -f ../config.sh ] ; then cp ../config.sh . ; fi
     else
         if [ $SHOWER == "HERWIGPP" ] ; then
-            cp ../Herwig++ ../HepMCFortran.so .
+            cp ../Herwig* ../HepMCFortran.so .
         fi
         cp ../MCATNLO_$SHOWER\_EXE ../MCATNLO_$SHOWER\_input .
     fi

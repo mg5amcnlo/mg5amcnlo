@@ -5692,7 +5692,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             path = {}
     
             data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'http://madgraph.hep.uiuc.edu/package_info.dat']
+                         'http://madgraph.physics.illinois.edu/package_info.dat']
 
             r = random.randint(0,1)
             r = [r, (1-r)]

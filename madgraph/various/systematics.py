@@ -189,7 +189,20 @@ class Systematics(object):
         
         # For e+/e- type of collision initialise the running of alps
         if self.b1 == 0 == self.b2:
-            from models.model_reader import Alphas_Runner
+            try:
+                from models.model_reader import Alphas_Runner
+            except ImportError:
+                root_path = pjoin(root, os.pardir, os.pardir)
+                try:
+                    import internal.madevent_interface as me_int
+                    cmd = me_int.MadEventCmd(root_path,force_run=True)
+                except ImportError:
+                    import internal.amcnlo_run_interface as me_int
+                    cmd = me_int.Cmd(root_path,force_run=True)                
+                if 'mg5_path' in cmd.options and cmd.options['mg5_path']:
+                    sys.path.append(cmd.options['mg5_path'])
+                from models.model_reader import Alphas_Runner
+                
             if not hasattr(self.banner, 'param_card'):
                 param_card = self.banner.charge_card('param_card')
             else:
@@ -693,6 +706,9 @@ def call_systematics(args, result=sys.stdout, running=True,
         if '=' in arg:
             key,values= arg.split('=')
             key = key.replace('-','')
+            values = values.strip()
+            if values[0] in ["'",'"'] and values[-1]==values[0]:
+                values = values[1:-1]
             values = values.split(',')
             if key == 'together':
                 if key in opts:
@@ -711,7 +727,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                 else:
                     opts[key] = values
         else:
-            raise SystematicsError, "unknow argument", arg
+            raise SystematicsError, "unknow argument %s" % arg
 
     #load run_card and extract parameter if needed.
     if 'from_card' in opts:

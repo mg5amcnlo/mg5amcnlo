@@ -2100,10 +2100,27 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.print_results_in_shell(self.results.current)
 
                 if self.run_card['use_syst']:
-                    scdir = self.options['syscalc_path']
-                    if not scdir or not os.path.exists(scdir):
-                        self.exec_cmd('systematics %s --from_card' % self.run_name, postcmd=False,printcmd=False)    
+                    if self.run_card['systematics_program'] == 'auto':                        
+                        scdir = self.options['syscalc_path']
+                        if not scdir or not os.path.exists(scdir):
+                            to_use = 'systematics'
+                        else:
+                            to_use = 'syscalc'
+                    elif self.run_card['systematics_program'].lower() in ['systematics','syscalc', 'none']:
+                        to_use = self.run_card['systematics_program']
                     else:
+                        logger.critical('Unvalid options for systematics_program: bypass computation of systematics variations.')
+                        to_use = 'none'
+                        
+                    if to_use == 'systematics':
+                        if self.run_card['systematics_arguments'] != ['']:
+                            self.exec_cmd('systematics %s %s ' % (self.run_name,
+                                          ' '.join(self.run_card['systematics_arguments'])),                  
+                                          postcmd=False, printcmd=False)
+                        else:
+                            self.exec_cmd('systematics %s --from_card' % self.run_name,
+                                           postcmd=False,printcmd=False)    
+                    elif to_use == 'syscalc':
                         self.run_syscalc('parton')
                 
                     
@@ -2752,7 +2769,7 @@ Beware that this can be dangerous for local multicore runs.""")
     """You chose to set the preferred reduction technique in MadLoop to be OPP (see parameter MLReductionLib).
     Beware that this can bring significant slowdown; the optimal choice --when not MC over helicity-- being to first start with TIR reduction.""")
                 # We do not include GOLEM for now since it cannot recycle TIR coefs yet.
-                self.MadLoopparam.set('MLReductionLib','7|6|1', ifnotdefault=False)
+                self.MadLoopparam.set('MLReductionLib','7|6|1', changeifuserset=False)
             else:
                 if 'MLReductionLib' in self.MadLoopparam.user_set and \
                     not (self.MadLoopparam.get('MLReductionLib').startswith('1') or
@@ -3625,8 +3642,7 @@ already exists and is not a fifo file."""%fifo_path)
             if not hasattr(self,'proc_characteristic'):
                 self.proc_characteristic = self.get_characteristics()
             nJetMax = self.proc_characteristic['max_n_matched_jets']
-            if PY8_Card['JetMatching:nJetMax'.lower()] == -1 and\
-                         'JetMatching:nJetMax'.lower() not in PY8_Card.user_set:
+            if PY8_Card['JetMatching:nJetMax'.lower()] == -1:
                 logger.info("No user-defined value for Pythia8 parameter "+
             "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
@@ -3685,12 +3701,10 @@ already exists and is not a fifo file."""%fifo_path)
             if not hasattr(self,'proc_characteristic'):
                 self.proc_characteristic = self.get_characteristics()
             nJetMax = self.proc_characteristic['max_n_matched_jets']
-            if PY8_Card['Merging:nJetMax'.lower()] == -1 and\
-                             'Merging:nJetMax'.lower() not in PY8_Card.user_set:
+            if PY8_Card['Merging:nJetMax'.lower()] == -1:
                 logger.info("No user-defined value for Pythia8 parameter "+
                 "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
                 PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
-                
             if PY8_Card['SysCalc:tmsList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
@@ -3712,6 +3726,11 @@ already exists and is not a fifo file."""%fifo_path)
         "'sys_matchscale' in the run_card) is less than %f, "%self.run_card[CKKW_cut]+
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
         'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
+        else:
+            # Here, the run is therefore not a merged-type of run. We must therefore make sure *not*
+            # to specify the "Merging:Process' as this makes older versions of the driver crash if 
+            # there is no merging in place
+            PY8_Card.vetoParamWriteOut('Merging:Process')
 
         return HepMC_event_output
 
@@ -3885,8 +3904,16 @@ You can follow PY8 run with the following command (in a separate terminal):
                 lhe_file_name = os.path.basename(PY8_Card.subruns[0]['Beams:LHEF'])
                 lhe_file = lhe_parser.EventFile(pjoin(self.me_dir,'Events',
                                                     self.run_name,PY8_Card.subruns[0]['Beams:LHEF']))
-                n_events = len(lhe_file)
-    
+                n_available_events = len(lhe_file)
+                if PY8_Card['Main:numberOfEvents']==-1:
+                    n_events = n_available_events
+                else:
+                    n_events = PY8_Card['Main:numberOfEvents']
+                    if n_events > n_available_events:
+                        raise self.InvalidCmd, 'You specified more events (%d) in the PY8 parameter'%n_events+\
+                            "'Main:numberOfEvents' than the total number of events available (%d)"%n_available_events+\
+                            ' in the event file:\n %s'%pjoin(self.me_dir,'Events',self.run_name,PY8_Card.subruns[0]['Beams:LHEF'])
+
                 # Implement a security to insure a minimum numbe of events per job
                 if self.options['run_mode']==2:
                     min_n_events_per_job = 100
@@ -3900,9 +3927,13 @@ You can follow PY8 run with the following command (in a separate terminal):
                 self.cluster = None
                 logger.info('Follow Pythia8 shower by running the '+
                     'following command (in a separate terminal):\n    tail -f %s'%pythia_log)
-        
-                ret_code = self.cluster.launch_and_wait(wrapper_path, 
+
+                if self.options['run_mode']==2 and self.options['nb_core']>1:    
+                    ret_code = self.cluster.launch_and_wait(wrapper_path, 
                         argument= [], stdout= pythia_log, stderr=subprocess.STDOUT,
+                                      cwd=pjoin(self.me_dir,'Events',self.run_name))
+                else:
+                    ret_code = misc.call(wrapper_path, stdout=open(pythia_log,'w'), stderr=subprocess.STDOUT,
                                       cwd=pjoin(self.me_dir,'Events',self.run_name))
                 if ret_code != 0:
                     raise self.InvalidCmd, 'Pythia8 shower interrupted with return'+\
@@ -3929,7 +3960,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                     ParallelPY8Card['HEPMCoutput:file']='events.hepmc'
                 else:
                     ParallelPY8Card['HEPMCoutput:file']='/dev/null'
-                    
+
                 ParallelPY8Card.subruns[0].systemSet('Beams:LHEF','events.lhe.gz')
                 ParallelPY8Card.write(pjoin(parallelization_dir,'PY8Card.dat'),
                                       pjoin(self.me_dir,'Cards','pythia8_card_default.dat'),
@@ -3940,13 +3971,13 @@ You can follow PY8 run with the following command (in a separate terminal):
                 if self.options['cluster_temp_path'] is None:
                     exe_cmd = \
 """#!%s
-./%s >& PY8_log.txt
+./%s PY8Card.dat >& PY8_log.txt
 """
                 else:
                     exe_cmd = \
 """#!%s
 ln -s ./events_$1.lhe.gz ./events.lhe.gz
-./%s >& PY8_log.txt
+./%s PY8Card_$1.dat >& PY8_log.txt
 mkdir split_$1
 if [ -f ./events.hepmc ];
 then
@@ -3966,7 +3997,7 @@ then
 fi
 tar -czf split_$1.tar.gz split_$1
 """
-                exe_cmd = exe_cmd%(shell_exe,' '.join([os.path.basename(pythia_main),'PY8Card.dat']))
+                exe_cmd = exe_cmd%(shell_exe,os.path.basename(pythia_main))
                 wrapper.write(exe_cmd)
                 wrapper.close()
                 # Set it as executable
@@ -3974,13 +4005,22 @@ tar -czf split_$1.tar.gz split_$1
                 os.chmod(wrapper_path, st.st_mode | stat.S_IEXEC)
                 
                 # Split the .lhe event file, create event partition
-                partition=[n_events//n_cores]*n_cores
-                for i in range(n_events%n_cores):
+                partition=[n_available_events//n_cores]*n_cores
+                for i in range(n_available_events%n_cores):
                     partition[i] += 1
+                
+                # Splitting according to the total number of events requested by the user
+                # Will be used to determine the number of events to indicate in the PY8 split cards.
+                partition_for_PY8=[n_events//n_cores]*n_cores
+                for i in range(n_events%n_cores):
+                    partition_for_PY8[i] += 1
                 
                 logger.info('Splitting .lhe event file for PY8 parallelization...')    
                 n_splits = lhe_file.split(partition=partition, cwd=parallelization_dir, zip=True)                
                 
+                if n_splits!=len(partition):
+                    raise MadGraph5Error('Error during lhe file splitting. Expected %d files but obtained %d.'
+                                                                            %(len(partition),n_splits))
                 # Distribute the split events
                 split_files    = []
                 split_dirs     = []
@@ -3993,8 +4033,20 @@ tar -czf split_$1.tar.gz split_$1
                 
                 logger.info('Submitting Pythia8 jobs...')
                 for i, split_file in enumerate(split_files):
+                    # We must write a PY8Card tailored for each split so as to correct the normalization
+                    # HEPMCoutput:scaling of each weight since the lhe showered will not longer contain the
+                    # same original number of events
+                    split_PY8_Card = banner_mod.PY8Card(pjoin(parallelization_dir,'PY8Card.dat'))
+                    # Make sure to sure the number of split_events determined during the splitting.
+                    split_PY8_Card.systemSet('Main:numberOfEvents',partition_for_PY8[i])
+                    split_PY8_Card.systemSet('HEPMCoutput:scaling',split_PY8_Card['HEPMCoutput:scaling']*
+                                                             (float(partition_for_PY8[i])/float(n_events)))
+                    # Add_missing set to False so as to be sure not to add any additional parameter w.r.t
+                    # the ones in the original PY8 param_card copied.
+                    split_PY8_Card.write(pjoin(parallelization_dir,'PY8Card_%d.dat'%i),
+                                         pjoin(parallelization_dir,'PY8Card.dat'), add_missing=False)
                     in_files = [pjoin(parallelization_dir,os.path.basename(pythia_main)),
-                                pjoin(parallelization_dir,'PY8Card.dat'), 
+                                pjoin(parallelization_dir,'PY8Card_%d.dat'%i), 
                                 pjoin(parallelization_dir,split_file)]
                     if self.options['cluster_temp_path'] is None:
                         out_files = []
@@ -4002,8 +4054,11 @@ tar -czf split_$1.tar.gz split_$1
                         selected_cwd = pjoin(parallelization_dir,'split_%d'%i)
                         for in_file in in_files+[pjoin(parallelization_dir,'run_PY8.sh')]:
                             # Make sure to rename the split_file link from events_<x>.lhe.gz to events.lhe.gz
+                            # and similarly for PY8Card
                             if os.path.basename(in_file)==split_file:
                                 ln(in_file,selected_cwd,name='events.lhe.gz')
+                            elif os.path.basename(in_file).startswith('PY8Card'):
+                                ln(in_file,selected_cwd,name='PY8Card.dat')                                
                             else:
                                 ln(in_file,selected_cwd)                                
                         in_files  = []

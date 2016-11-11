@@ -1215,6 +1215,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if not mode in ['LO', 'NLO']:
             assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
+            
+            if self.run_card['systematics_program'] == 'systematics':
+                self.exec_cmd('systematics %s %s ' % (self.run_name, ' '.join(self.run_card['systematics_arguments'])))
+            
             self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
@@ -2945,6 +2949,7 @@ RESTART = %(mint_mode)s
 
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
+            self.shower_card['extrapaths'] += ' %s' % pjoin(self.options['hepmc_path'], 'lib')
 
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
@@ -3036,7 +3041,10 @@ RESTART = %(mint_mode)s
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
-                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
+                    files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
+                    files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
@@ -3529,7 +3537,8 @@ RESTART = %(mint_mode)s
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm').lower()
         # check if need to link lhapdf
         if int(self.shower_card['pdfcode']) > 1 or \
-            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
+            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1) or \
+            shower=='HERWIGPP' : 
             # Use LHAPDF (should be correctly installed, because
             # either events were already generated with them, or the
             # user explicitly gives an LHAPDF number in the
@@ -3539,7 +3548,10 @@ RESTART = %(mint_mode)s
                                           stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            if self.shower_card['pdfcode']==1:
+            if self.shower_card['pdfcode']==0:
+                lhaid_list = ''
+                content += ''
+            elif self.shower_card['pdfcode']==1:
                 lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
                 content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
             else:
@@ -3581,9 +3593,9 @@ RESTART = %(mint_mode)s
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
         if self.options['hwpp_path']:
             content+='HWPPPATH=%s\n' % self.options['hwpp_path']
-        if self.options['thepeg_path']:
+        if self.options['thepeg_path'] and self.options['thepeg_path'] != self.options['hwpp_path']:
             content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
-        if self.options['hepmc_path']:
+        if self.options['hepmc_path'] and self.options['hepmc_path'] != self.options['hwpp_path']:
             content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
@@ -3965,7 +3977,10 @@ RESTART = %(mint_mode)s
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
             if shower == 'HERWIGPP':
-                input_files.append(pjoin(cwd, 'Herwig++'))
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
+                    input_files.append(pjoin(cwd, 'Herwig++'))
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
+                    input_files.append(pjoin(cwd, 'Herwig'))
                 input_files.append(pjoin(cwd, 'HepMCFortran.so'))
             if len(args) == 3:
                 if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')):

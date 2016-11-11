@@ -500,6 +500,8 @@ class MG5Runner(MadEventRunner):
 #        v5_string += "set xqcut 0\n"
         v5_string += "set auto_ptj_mjj True\n"
         v5_string += "set cut_decays True\n"
+        v5_string += "set ickkw 0\n"
+        v5_string += "set xqcut 0\n"
         v5_string += "survey run_01; refine 0.01; refine 0.01\n" 
         #v5_string += "print_results\n"
         return v5_string

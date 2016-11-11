@@ -952,6 +952,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
            madspin_card.dat [MS]
            transfer_card.dat [MW]
            madweight_card.dat [MW]
+           madanalysis5_hadron_card.dat
+           madanalysis5_parton_card.dat
            
            Please update the unit-test: test_card_type_recognition when adding
            cards.
@@ -986,7 +988,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     'madspin',
                     'transfer_card\.dat',
                     'set',
-                    'main:numberofevents'   # pythia8  
+                    'main:numberofevents',   # pythia8,
+                    '@MG5aMC skip_analysis',              #MA5 --both--
+                    '@MG5aMC\s*inputs\s*=\s*\*\.(?:hepmc|lhe)', #MA5 --both--
+                    '@MG5aMC\s*reconstruction_name', # MA5 hadronique
+                    '@MG5aMC' # MA5 hadronique
                     ]
         
         
@@ -998,6 +1004,17 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return 'delphes_card.dat'
         elif 'cen_max_tracker' in text:
             return 'delphes_card.dat'
+        elif '@mg5amc' in text:
+            ma5_flag = [f[7:].strip() for f in text if f.startswith('@mg5amc')]
+            if any(f.startswith('reconstruction_name') for f in ma5_flag):
+                return 'madanalysis5_hadron_card.dat'
+            ma5_flag = [f.split('*.')[1] for f in ma5_flag if '*.' in f]
+            if any(f.startswith('lhe') for f in ma5_flag):
+                return 'madanalysis5_parton_card.dat'
+            if any(f.startswith(('hepmc','hep','stdhep','lhco')) for f in ma5_flag):
+                return 'madanalysis5_hadron_card.dat'            
+            else:
+                return 'unknown'
         elif '#trigger card' in text:
             return 'delphes_trigger.dat'
         elif 'parameter set name' in text:
@@ -1488,7 +1505,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             #special options
             --from_card=
         """
-    
+        
         lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
         if not lhapdf:
             logger.info('can not run systematics since can not link python to lhapdf')
@@ -5061,6 +5078,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     logger.info('NLO reweighting is on ON. Automatically set store_rwgt_info to True', '$MG:color:BLACK' )
                     self.do_set('run_card store_rwgt_info True')
         
+        # if external computation for the systematics are asked then switch 
+        #automatically the book-keeping of the weight for NLO
+        if 'run' in self.allow_arg and \
+                    self.run_card['systematics_program'] == 'systematics' and \
+                    isinstance(self.run_card,banner_mod.RunCardNLO) and \
+                    not self.run_card['store_rwgt_info']:
+            logger.warning('To be able to run systematics program, we set store_rwgt_info to True')
+            self.do_set('run_card store_rwgt_info True')
+        
         # @LO if PY6 shower => event_norm on sum
         if 'pythia_card.dat' in self.cards:
             if self.run_card['event_norm'] != 'sum':
@@ -5125,12 +5151,12 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if extralibs:
                     self.do_set('shower_card extralibs %s ' % ' '.join(extralibs))
                 else:
-                    self.do_set('shower_card extralibs \'\' ')
+                    self.do_set('shower_card extralibs None ')
             if modify_extrapaths:
                 if extrapaths:
                     self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
                 else:
-                    self.do_set('shower_card extrapaths \'\' ')    
+                    self.do_set('shower_card extrapaths None ')    
     
     def reask(self, *args, **opt):
         
@@ -5228,7 +5254,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                            'The update can be forced without timer by typing \'update dependent\' at the time of the card edition')
             modify =False
         except Exception,error:
-            misc.sprint(error)
+            logger.debug(str(error))
             logger.warning('Failed to update dependent parameter. This might create trouble for external program (like MadSpin/shower/...)')
             signal.alarm(0)
         else:
