@@ -1554,7 +1554,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 raise self.InvalidCmd, 'Invalid run name. Please retry'
         elif self.options['nb_core'] != 1:
-            lhe = lhe_parser.EventFile(args)
+            lhe = lhe_parser.EventFile(args[0])
             nb_event = len(lhe)
             lhe.close()
 

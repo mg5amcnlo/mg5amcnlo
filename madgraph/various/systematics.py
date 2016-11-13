@@ -594,8 +594,9 @@ class Systematics(object):
                 mur = event.get_sqrts_scale(1.)
             muf1 = mur
             muf2 = mur
-            loinfo['pdf_q1'][-1] = mur
-            loinfo['pdf_q2'][-1] = mur
+            loinfo = dict(loinfo)
+            loinfo['pdf_q1'] = loinfo['pdf_q1'] [:-1] + [mur]
+            loinfo['pdf_q2'] = loinfo['pdf_q2'] [:-1] + [mur]
             
         
         
@@ -685,7 +686,7 @@ class Systematics(object):
                 wgt += tmp
                 
                 if __debug__ and dyn== -1 and Dmur==1 and Dmuf==1 and pdf==self.orig_pdf:
-                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=4):
+                    if not misc.equal(tmp, onewgt.ref_wgt, sig_fig=2):
                         misc.sprint(tmp, onewgt.ref_wgt, (tmp-onewgt.ref_wgt)/tmp)
                         misc.sprint(onewgt)
                         misc.sprint(cevent)

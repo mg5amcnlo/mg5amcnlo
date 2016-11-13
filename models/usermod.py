@@ -30,6 +30,7 @@ import madgraph.various.misc as misc
 import models as ufomodels
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card
+from madgraph import MG5DIR
 
 pjoin =os.path.join
 logger = logging.getLogger('madgraph.model')
@@ -897,6 +898,16 @@ from object_library import all_propagators, Propagator
                             else:
                                 first =False
                             old_part = p
+                    if not old_part:
+                    # last possibility is that the model do not follow MG5 convention
+                    # but that "old" does
+                        defaultname = base_objects.Model.load_default_name() # id->name
+                        for pdg, value in defaultname.items():
+                            if value == old:
+                                old_part = self.particle_dict[pdg]
+                                identify_particles[new] = old_part.name
+                                break
+                    
                 # end for the case security
                 identify_pid[new_part.pdg_code] = old_part.pdg_code   
                 if new_part is None:
