@@ -156,7 +156,7 @@ c
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       double precision taumin(fks_configs),taumin_s(fks_configs)
-     &     ,taumin_j(fks_configs),stot,xk(-nexternal:0)
+     &     ,taumin_j(fks_configs),stot,xk(nexternal)
       save  taumin,taumin_s,taumin_j,stot
       integer i,j,k,d1,d2,iFKS,nt
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
