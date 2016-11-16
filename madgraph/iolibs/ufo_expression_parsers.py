@@ -540,7 +540,18 @@ class UFOExpressionParserCPP(UFOExpressionParser):
             p1 = p[1][1:-1]
         if p[3][0] == '(' and p[3][-1] == ')':
             p3 = p[3][1:-1]
-        p[0] = 'pow(' + p1 + ',' + p3 + ')'        
+        if float(p3) == 2:
+            p[0] = '((' + p1 + ')*(' + p1 + '))'
+        elif float(p3) == 3:
+            p[0] = '((' + p1 + ')*(' + p1 + ')*(' + p1 + '))'
+        elif float(p3) == 4:
+            p[0] = '((' + p1 + ')*(' + p1 + ')*(' + p1 + ')*(' + p1 + '))'
+        elif float(p3) == 0.5 or p3 == '0.5' or p3 == '1./2' or p3 == '1/2.' or p3 == '1./2.':
+            p[0] = 'sqrt(' + p1 + ')'
+        elif float(p3) == 1./3 or p3 == '1./3' or p3 == '1/3.' or p3 == '1./3.':
+            p[0] = 'cbrt(' + p1 + ')'
+        else:
+            p[0] = 'pow(' + p1 + ',' + p3 + ')'        
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"

@@ -22,6 +22,61 @@ C     ----------
       CALL ML5_0_SLOOPMATRIX(P,ANS)
       END
 
+      LOGICAL FUNCTION ML5_0_IS_HEL_SELECTED(HELID)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=16)
+C     
+C     ARGUMENTS
+C     
+      INTEGER HELID
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL FOUNDIT
+C     
+C     GLOBALS
+C     
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      COMMON/ML5_0_HELCONFIGS/HELC
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      ML5_0_IS_HEL_SELECTED = .TRUE.
+      IF (POLARIZATIONS(0,0).EQ.-1) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).EQ.-1) THEN
+          CYCLE
+        ENDIF
+        FOUNDIT = .FALSE.
+        DO J=1,POLARIZATIONS(I,0)
+          IF (HELC(I,HELID).EQ.POLARIZATIONS(I,J)) THEN
+            FOUNDIT = .TRUE.
+            EXIT
+          ENDIF
+        ENDDO
+        IF(.NOT.FOUNDIT) THEN
+          ML5_0_IS_HEL_SELECTED = .FALSE.
+          RETURN
+        ENDIF
+      ENDDO
+      RETURN
+
+      END
+
       LOGICAL FUNCTION ML5_0_ISZERO(TOTEST, REFERENCE_VALUE, AMPLN)
       IMPLICIT NONE
 C     
@@ -73,7 +128,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > t t~ QED=0 QCD<=2 [ virt = QCD ]
+C     Process: g g > t t~ QCD<=2 QED=0 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -96,6 +151,8 @@ C
       PARAMETER (NLOOPAMPS=129, NCTAMPS=85)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
+      INTEGER NINITIAL
+      PARAMETER (NINITIAL=2)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NCOMB
@@ -188,6 +245,9 @@ C      DIFFERENT EVALUATION METHODS IN ORDER TO ASSESS STABILITY.
       DATA IDEN/256/
       INTEGER HELAVGFACTOR
       DATA HELAVGFACTOR/4/
+C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
+      INTEGER BEAMS_HELAVGFACTOR(2)
+      DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
       LOGICAL DONEHELDOUBLECHECK
       DATA DONEHELDOUBLECHECK/.FALSE./
       INTEGER NEPS
@@ -204,6 +264,7 @@ C
 C     FUNCTIONS
 C     
       LOGICAL ML5_0_ISZERO
+      LOGICAL ML5_0_IS_HEL_SELECTED
 C     
 C     GLOBAL VARIABLES
 C     
@@ -322,6 +383,13 @@ C      spin-2 particles are external
       LOGICAL WARNED_LORENTZ_STAB_TEST_OFF
       DATA WARNED_LORENTZ_STAB_TEST_OFF/.FALSE./
       INTEGER NROTATIONS_DP_BU,NROTATIONS_QP_BU
+
+C     This array specify potential special requirements on the
+C      helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such
+C      requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
 
 C     ----------
 C     BEGIN CODE
@@ -634,6 +702,13 @@ C     We chose to use the born evaluation for the reference
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(
      $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+
+C         Handle the possible requirement of specific polarizations
+          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
+     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+            CYCLE
+          ENDIF
+
           IF (VALIDH.EQ.-1) VALIDH=H
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
@@ -1190,6 +1265,13 @@ C          loop-induced processes).
         ANS(K)=ANS(K)/DBLE(IDEN)
         IF (USERHEL.NE.-1) THEN
           ANS(K)=ANS(K)*HELAVGFACTOR
+        ELSE
+          DO J=1,NINITIAL
+            IF (POLARIZATIONS(J,0).NE.-1) THEN
+              ANS(K)=ANS(K)*BEAMS_HELAVGFACTOR(J)
+              ANS(K)=ANS(K)/POLARIZATIONS(J,0)
+            ENDIF
+          ENDDO
         ENDIF
       ENDDO
 
@@ -1527,6 +1609,120 @@ C
       INTEGER NSQSO
 
       NSQSO=NSQUAREDSO
+
+      END
+
+      SUBROUTINE ML5_0_SET_LEG_POLARIZATION(LEG_ID, LEG_POLARIZATION)
+      IMPLICIT NONE
+C     
+C     ARGUMENTS
+C     
+      INTEGER LEG_ID
+      INTEGER LEG_POLARIZATION
+C     
+C     LOCALS
+C     
+      INTEGER I
+      INTEGER LEG_POLARIZATIONS(0:5)
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IF (LEG_POLARIZATION.EQ.-10000) THEN
+        LEG_POLARIZATIONS(0)=-1
+        DO I=1,5
+          LEG_POLARIZATIONS(I)=-10000
+        ENDDO
+      ELSE
+        LEG_POLARIZATIONS(0)=1
+        LEG_POLARIZATIONS(1)=LEG_POLARIZATION
+        DO I=2,5
+          LEG_POLARIZATIONS(I)=-10000
+        ENDDO
+      ENDIF
+      CALL ML5_0_SET_LEG_POLARIZATIONS(LEG_ID,LEG_POLARIZATIONS)
+
+      END
+
+      SUBROUTINE ML5_0_SET_LEG_POLARIZATIONS(LEG_ID, LEG_POLARIZATIONS)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=4)
+      INTEGER NPOLENTRIES
+      PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=16)
+C     
+C     ARGUMENTS
+C     
+      INTEGER LEG_ID
+      INTEGER LEG_POLARIZATIONS(0:5)
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL ALL_SUMMED_OVER
+C     
+C     GLOBALS
+C     
+C     Entry 0 of the first dimension is all -1 if there is no
+C      polarization requirement.
+C     Then for each leg with ID legID, it is either summed over if
+C     POLARIZATIONS(legID,0) is -1, or the list of helicity considered
+C      for that
+C     leg is POLARIZATIONS(legID,1: POLARIZATIONS(legID,0)   ).
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
+
+      INTEGER BORN_POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BORN_BEAM_POL/BORN_POLARIZATIONS
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      IF (LEG_POLARIZATIONS(0).EQ.-1) THEN
+        DO I=0,5
+          POLARIZATIONS(LEG_ID,I)=-1
+        ENDDO
+      ELSE
+        DO I=0,LEG_POLARIZATIONS(0)
+          POLARIZATIONS(LEG_ID,I)=LEG_POLARIZATIONS(I)
+        ENDDO
+        DO I=LEG_POLARIZATIONS(0)+1,5
+          POLARIZATIONS(LEG_ID,I)=-10000
+        ENDDO
+      ENDIF
+
+      ALL_SUMMED_OVER = .TRUE.
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).NE.-1) THEN
+          ALL_SUMMED_OVER = .FALSE.
+          EXIT
+        ENDIF
+      ENDDO
+      IF (ALL_SUMMED_OVER) THEN
+        DO I=0,5
+          POLARIZATIONS(0,I)=-1
+        ENDDO
+      ELSE
+        DO I=0,5
+          POLARIZATIONS(0,I)=0
+        ENDDO
+      ENDIF
+
+      DO I=0,NEXTERNAL
+        DO J=0,5
+          BORN_POLARIZATIONS(I,J) = POLARIZATIONS(I,J)
+        ENDDO
+      ENDDO
+
+
+      RETURN
 
       END
 

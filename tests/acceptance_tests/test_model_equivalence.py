@@ -139,7 +139,7 @@ class CompareMG4WithUFOModel(unittest.TestCase):
         """Test the UFO and MG4 MSSM model correspond to the same model """
         
         # import UFO model
-        mssm_path = import_ufo.find_ufo_path('mssm')
+        mssm_path = import_ufo.find_ufo_path('MSSM_SLHA2')
         ufo_model = import_ufo.import_model(mssm_path)
         #converter = import_ufo.UFOMG5Converter(model)
         #ufo_model = converter.load_model()
@@ -225,7 +225,8 @@ class CompareMG4WithUFOModel(unittest.TestCase):
                 if mg4_part.get('mass') == 'ZERO':
                     if ufo_part.get('propagator') == 0:
                         continue
-            
+            if mg4_part['name'] == 'h1' and name in ['name','antiname']:
+                continue
             self.assertEqual(mg4_part.get(name), ufo_part.get(name), 
                     'fail for particle %s different property for %s, %s != %s' %
                     (mg4_part['name'], name, mg4_part.get(name), \

@@ -212,7 +212,8 @@ c           Here we set if the BW is "on-shell" for LesHouches
 c
             onshell = (abs(xmass - prmass(i,iconfig)) .lt.
      $           bwcutoff*prwidth(i,iconfig).and.
-     $           prwidth(i,iconfig)/prmass(i,iconfig).lt.0.1d0)
+     $           (prwidth(i,iconfig)/prmass(i,iconfig).lt.0.1d0.or.
+     $            gForceBW(i,iconfig).eq.1))
             if(onshell)then
 c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
               if(gForceBW(i,iconfig).eq.2) then
@@ -606,7 +607,7 @@ c     tjs  4/29/2008 use analytic transform for s-hat
 c-----------------------
          if (swidth(i) .eq. 0d0) then
             if (xo.lt.smin/stot)then
-                xo = -1d0*smin/stot
+                xo = 1d0*smin/stot
             endif
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole

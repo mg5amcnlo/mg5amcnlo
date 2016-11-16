@@ -362,6 +362,20 @@ C        ARGUMENTS
         
         return '\n'.join(lines)
     
+    def get_COLLIER_mapping(self):
+        """ Returns a list of tuples of the form:
+          [ (COLLIER_ind0, COLLIER_ind1, COLLIER_ind2, COLLIER_ind3), ]
+          where the position in the list is the coef_ID in MadLoop ordering.
+        """        
+        res = []
+        for coef_pos in range(0,get_number_of_coefs_for_rank(self.pq.rank)):
+            indices_list = self.pq.get_coef_at_position(coef_pos)
+            res.append((indices_list.count(0),
+                        indices_list.count(1),
+                        indices_list.count(2),
+                        indices_list.count(3)))
+        return res
+    
     def write_golem95_mapping(self):
         """ Returns a fortran subroutine which fills in the array of tensorial
         coefficients following golem95 standards using MadLoop coefficients."""
@@ -891,6 +905,14 @@ class FromGolem95FortranCodeGenerator():
 if __name__ == '__main__':
     """I test here the write_golem95_mapping function"""
     
+    P=Polynomial(7)
+    print "Coef (6,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0])
+    print "Coef (1,1,2,2) is at pos %s"%P.get_coef_position([0,1,2,2,3,3])
+    print "Coef (7,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0,0])
+    print "Coef (1,2,2,2) is at pos %s"%P.get_coef_position([0,1,1,2,2,3,3])
+    
+    sys.exit(0)
+
     max_rank=6
     FPR=FortranPolynomialRoutines(max_rank)
     print "Output of write_golem95_mapping function for max_rank=%d:\n\n"%max_rank

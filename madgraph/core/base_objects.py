@@ -1041,6 +1041,8 @@ class InteractionList(PhysicsObjectList):
 class Model(PhysicsObject):
     """A class to store all the model information."""
     
+    mg5_name = False #store if particle name follow mg5 convention
+    
     def default_setup(self):
 
         self['name'] = ""
@@ -1064,6 +1066,7 @@ class Model(PhysicsObject):
         self['case_sensitive'] = True
         # attribute which might be define if needed
         #self['name2pdg'] = {'name': pdg}
+        
         
 
     def filter(self, name, value):
@@ -1162,6 +1165,7 @@ class Model(PhysicsObject):
         if name == 'modelpath':
             modeldir = self.get('version_tag').rsplit('##',1)[0]
             if os.path.exists(modeldir):
+                modeldir = os.path.expanduser(modeldir)
                 return modeldir
             else:
                 raise Exception, "path %s not valid anymore." % modeldir
@@ -1177,6 +1181,7 @@ class Model(PhysicsObject):
                 raise Exception, "path %s not valid anymore" % modeldir
             modeldir = os.path.dirname(modeldir)
             modeldir = pjoin(modeldir, modelname)
+            modeldir = os.path.expanduser(modeldir)
             return modeldir
         elif name == 'restrict_name':
             modeldir = self.get('version_tag').rsplit('##',1)[0]
@@ -1269,7 +1274,7 @@ class Model(PhysicsObject):
             if isinstance(id, int):
                 try:
                     return self.get("particle_dict")[id]
-                except Exception,error:
+                except Exception, error:
                     return None
             else:
                 if not hasattr(self, 'name2part'):
@@ -1285,9 +1290,8 @@ class Model(PhysicsObject):
         self.name2part = {}
         for part in self.get("particle_dict").values():
             self.name2part[part.get('name')] = part
-        
+            self.name2part[part.get('antiname')] = part
             
-
     def get_lorentz(self, name):
         """return the lorentz object from the associate name"""
         if hasattr(self, 'lorentz_name2obj'):
@@ -1457,7 +1461,9 @@ class Model(PhysicsObject):
     def pass_particles_name_in_mg_default(self):
         """Change the name of the particles such that all SM and MSSM particles
         follows the MG convention"""
-
+        
+        self.mg5_name = True
+        
         # Check that default name/antiname is not already use 
         def check_name_free(self, name):
             """ check if name is not use for a particle in the model if it is 
@@ -1608,15 +1614,20 @@ class Model(PhysicsObject):
         return [c for c in range(1, len(self.get('particles')) + 1) if \
                 c not in self.get('particle_dict').keys()][0]
                 
-    def write_param_card(self):
+
+    def write_param_card(self, filepath=None):
         """Write out the param_card, and return as string."""
         
         import models.write_param_card as writer
-        out = StringIO.StringIO() # it's suppose to be written in a file
-        param = writer.ParamCardWriter(self)
-        param.define_output_file(out)
-        param.write_card()
-        return out.getvalue()
+        if not filepath:
+            out = StringIO.StringIO() # it's suppose to be written in a file
+        else:
+            out = filepath
+        param = writer.ParamCardWriter(self, filepath=out)
+        if not filepath:
+            return out.getvalue()
+        else:
+            return param
         
     @ staticmethod
     def load_default_name():
@@ -3015,7 +3026,7 @@ class Process(PhysicsObject):
         # Add orders
         if self['orders']:
             to_add = []
-            for key in self['orders']:
+            for key in sorted(self['orders'].keys()):
                 if not print_weighted and key == 'WEIGHTED':
                     continue
                 value = int(self['orders'][key])
@@ -3038,9 +3049,9 @@ class Process(PhysicsObject):
                 mystr = mystr + " ".join(to_add) + ' '
 
         if self['constrained_orders']:
-            mystr = mystr + " ".join('%s%s%d' % (key, type, value) for 
-                                     (key,(value,type)) 
-                                         in self['constrained_orders'].items())  + ' '
+            mystr = mystr + " ".join('%s%s%d' % (key, 
+              self['constrained_orders'][key][1], self['constrained_orders'][key][0]) 
+                    for key in sorted(self['constrained_orders'].keys()))  + ' '
 
         # Add perturbation_couplings
         if self['perturbation_couplings']:
@@ -3057,7 +3068,7 @@ class Process(PhysicsObject):
         # Add squared orders
         if self['squared_orders']:
             to_add = []
-            for key in self['squared_orders'].keys():
+            for key in sorted(self['squared_orders'].keys()):
                 if not print_weighted and key == 'WEIGHTED':
                     continue
                 if key in self['constrained_orders']:

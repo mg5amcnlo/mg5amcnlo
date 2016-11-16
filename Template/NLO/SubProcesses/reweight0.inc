@@ -75,7 +75,7 @@ c
 c New format to allow for multiple PDF sets and scales (both functional form
 c and normal)
       integer    maxPDFsets,   maxdynscales
-      parameter (maxPDFsets=10,maxdynscales=10)
+      parameter (maxPDFsets=25,maxdynscales=10)
       integer lhaPDFid(0:maxPDFsets),nmemPDF(maxPDFsets)
      $     ,dyn_scale(0:maxdynscales)
       logical lscalevar(maxdynscales),lpdfvar(maxPDFsets)

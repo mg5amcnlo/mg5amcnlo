@@ -87,7 +87,7 @@ else:
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
     import madgraph.various.histograms as histograms
-    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error
+    from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
 
 class aMCatNLOError(Exception):
     pass
@@ -120,7 +120,8 @@ def compile_dir(*arguments):
             input = pjoin(me_dir, '%s_input.txt' % test)
             #this can be improved/better written to handle the output
             misc.call(['./%s' % (test)], cwd=this_dir, 
-                    stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'))
+                    stdin = open(input), stdout=open(pjoin(this_dir, '%s.log' % test), 'w'),
+                    close_fds=True)
             if test == 'check_poles' and os.path.exists(pjoin(this_dir,'MadLoop5_resources')) :
                 tf=tarfile.open(pjoin(this_dir,'MadLoop5_resources.tar.gz'),'w:gz',
                                                                  dereference=True)
@@ -132,7 +133,8 @@ def compile_dir(*arguments):
             open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
             misc.call(['./gensym'],cwd= this_dir,
                      stdin=open(pjoin(this_dir, 'gensym_input.txt')),
-                     stdout=open(pjoin(this_dir, 'gensym.log'), 'w')) 
+                     stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
+                     close_fds=True) 
             #compile madevent_mintMC/mintFO
             misc.compile([exe], cwd=this_dir, job_specs = False)
         if mode in ['aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']:
@@ -516,7 +518,8 @@ class CheckValidForCmd(object):
                 input_file = filenames[0]
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
+                                                    argument=['-c', input_file],
+                                                    close_fds=True)
         else:
             if tag: 
                 self.run_card['run_tag'] = tag
@@ -576,7 +579,8 @@ class CheckValidForCmd(object):
                 input_file = filenames[0]
                 output_file = pjoin(self.me_dir, 'Events', 'pythia_events.hep')
                 lock = cluster.asyncrone_launch('gunzip',stdout=open(output_file,'w'), 
-                                                    argument=['-c', input_file])
+                                                    argument=['-c', input_file],
+                                                    close_fds=True)
         else:
             if tag:
                 self.run_card['run_tag'] = tag
@@ -770,7 +774,7 @@ class CompleteForCmd(CheckValidForCmd):
                 opts += opt._long_opts + opt._short_opts
             return self.list_completion(text, opts, line)
            
-    def complete_banner_run(self, text, line, begidx, endidx):
+    def complete_banner_run(self, text, line, begidx, endidx, formatting=True):
        "Complete the banner run command"
        try:
   
@@ -808,7 +812,7 @@ class CompleteForCmd(CheckValidForCmd):
         run_list = [n.rsplit('/',2)[1] for n in run_list]
         possibilites['RUN Name'] = self.list_completion(text, run_list)
         
-        return self.deal_multiple_categories(possibilites)
+        return self.deal_multiple_categories(possibilites, formatting)
     
         
        except Exception, error:
@@ -1211,6 +1215,10 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
         if not mode in ['LO', 'NLO']:
             assert evt_file == pjoin(self.me_dir,'Events', self.run_name, 'events.lhe'), '%s != %s' %(evt_file, pjoin(self.me_dir,'Events', self.run_name, 'events.lhe.gz'))
+            
+            if self.run_card['systematics_program'] == 'systematics':
+                self.exec_cmd('systematics %s %s ' % (self.run_name, ' '.join(self.run_card['systematics_arguments'])))
+            
             self.exec_cmd('reweight -from_cards', postcmd=False)
             self.exec_cmd('decay_events -from_cards', postcmd=False)
             evt_file = pjoin(self.me_dir,'Events', self.run_name, 'events.lhe')
@@ -1218,6 +1226,8 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
         if not mode in ['LO', 'NLO', 'noshower', 'noshowerLO'] \
                                                       and not options['parton']:
             self.run_mcatnlo(evt_file, options)
+            self.exec_cmd('madanalysis5_hadron --no_default', postcmd=False, printcmd=False)
+
         elif mode == 'noshower':
             logger.warning("""You have chosen not to run a parton shower. NLO events without showering are NOT physical.
 Please, shower the Les Houches events before using them for physics analyses.""")
@@ -1243,6 +1253,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             with misc.TMP_variable(self, 'allow_notification_center', False):
                 for i,card in enumerate(param_card_iterator):
                     card.write(pjoin(self.me_dir,'Cards','param_card.dat'))
+                    self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat'), dependent=True)
                     if not options['force']:
                         options['force'] = True
                     if options['run_name']:
@@ -1330,8 +1341,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             event_norm=self.run_card['event_norm']
             nevents=self.run_card['nevents']
             return self.reweight_and_collect_events(options, mode, nevents, event_norm)
-
-        devnull = os.open(os.devnull, os.O_RDWR) 
 
         if mode in ['LO', 'NLO']:
             # this is for fixed order runs
@@ -1585,7 +1594,7 @@ RESTART = %(mint_mode)s
 """-1 12      ! points, iterations
 %(accuracy)s       ! desired fractional accuracy
 1 -0.1     ! alpha, beta for Gsoft
--1 -0.1    ! alpha, beta for Gazi
+ 1 -0.1    ! alpha, beta for Gazi
 1          ! Suppress amplitude (0 no, 1 yes)?
 1          ! Exact helicity sum (0 yes, n = number/event)?
 %(channel)s          ! Enter Configuration Number:
@@ -1963,7 +1972,8 @@ RESTART = %(mint_mode)s
 
     def combine_plots_FO(self,folder_name,jobs):
         """combines the plots and puts then in the Events/run* directory"""
-        devnull = os.open(os.devnull, os.O_RDWR) 
+        devnull = open(os.devnull, 'w') 
+        
         if self.analyse_card['fo_analysis_format'].lower() == 'topdrawer':
             misc.call(['./combine_plots_FO.sh'] + folder_name, \
                       stdout=devnull, 
@@ -1994,7 +2004,6 @@ RESTART = %(mint_mode)s
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
-
 
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
@@ -2158,7 +2167,41 @@ RESTART = %(mint_mode)s
         """setup the number of cores for multicore, and the cluster-type for cluster runs"""
         if self.cluster_mode == 1:
             cluster_name = self.options['cluster_type']
-            self.cluster = cluster.from_name[cluster_name](**self.options)
+            try:
+                self.cluster = cluster.from_name[cluster_name](**self.options)
+            except KeyError:
+                if aMCatNLO and ('mg5_path' not in self.options or not self.options['mg5_path']):
+                    if not self.plugin_path:
+                        raise self.InvalidCmd('%s not native cluster type and no plugin directory available.' % cluster_name)
+                elif aMCatNLO:
+                    mg5dir = self.options['mg5_path']
+                    if mg5dir not in sys.path:
+                        sys.path.append(mg5dir)
+                    if pjoin(mg5dir, 'PLUGIN') not in self.plugin_path:
+                        self.plugin_path.append(pjoin(mg5dir))
+                else:
+                    mg5dir = MG5DIR
+                # Check if a plugin define this type of cluster
+                # check for PLUGIN format
+                for plugpath in self.plugin_path: 
+                    plugindirname = os.path.basename(plugpath)
+                    for plug in os.listdir(plugpath):
+                        if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
+                            try:
+                                __import__('%s.%s' % (plugindirname, plug))
+                            except Exception, error:
+                                logger.critical('plugin directory %s/%s fail to be loaded. Please check it',plugindirname, plug)
+                                continue
+                            plugin = sys.modules['%s.%s' % (plugindirname,plug)]  
+                            if not hasattr(plugin, 'new_cluster'):
+                                continue
+                            if not misc.is_plugin_supported(plugin):
+                                continue              
+                            if cluster_name in plugin.new_cluster:
+                                logger.info("cluster handling will be done with PLUGIN: %s" % plug,'$MG:color:BLACK')
+                                self.cluster = plugin.new_cluster[cluster_name](**self.options)
+                                break
+        
         if self.cluster_mode == 2:
             try:
                 import multiprocessing
@@ -2267,8 +2310,11 @@ RESTART = %(mint_mode)s
         else:
             message = '\n   --------------------------------------------------------------'
             message = message + \
-                      '\n      ' + status[2] + proc_info + \
-                      '\n      Number of events generated: %s' % self.run_card['nevents'] +\
+                      '\n      ' + status[2] + proc_info 
+            if mode not in ['LO', 'NLO']:
+                message = message + \
+                      '\n      Number of events generated: %s' % self.run_card['nevents'] 
+            message = message + \
                       '\n      %(xsec_string)s: %(xsect)8.3e +- %(errt)6.1e %(unit)s' % \
                       self.cross_sect_dict
             message = message + \
@@ -2429,6 +2475,7 @@ RESTART = %(mint_mode)s
                               4 : 'Golem95',
                               5 : 'Samurai',
                               6 : 'Ninja (double precision)',
+                              7 : 'COLLIER',
                               8 : 'Ninja (quadruple precision)',
                               9 : 'CutTools (quadruple precision)'}
         RetUnit_finder =re.compile(
@@ -2917,8 +2964,8 @@ RESTART = %(mint_mode)s
                     fjwrapper_lines[fjwrapper_lines.index(line)] = include_line
                 if '//NAMESPACE_FJ' in line:
                     fjwrapper_lines[fjwrapper_lines.index(line)] = namespace_line
-            open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w').write(\
-                    '\n'.join(fjwrapper_lines) + '\n')
+            with open(pjoin(self.me_dir, 'MCatNLO', 'srcCommon', 'myfastjetfortran.cc'), 'w') as fsock:
+                fsock.write('\n'.join(fjwrapper_lines) + '\n')
 
         extrapaths = self.shower_card['extrapaths'].split()
 
@@ -2935,6 +2982,7 @@ RESTART = %(mint_mode)s
 
         if shower == 'HERWIGPP':
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
+            self.shower_card['extrapaths'] += ' %s' % pjoin(self.options['hepmc_path'], 'lib')
 
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
@@ -2959,18 +3007,19 @@ RESTART = %(mint_mode)s
 
         
         # libdl may be needded for pythia 82xx
-        if shower == 'PYTHIA8' and not \
-           os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')) and \
-           'dl' not in self.shower_card['extralibs'].split():
-            # 'dl' has to be linked with the extralibs
-            self.shower_card['extralibs'] += ' dl'
-            logger.warning("'dl' was added to extralibs from the shower_card.dat.\n" + \
-                          "It is needed for the correct running of PY8.2xx.\n" + \
-                          "If this library cannot be found on your system, a crash will occur.")
+        #if shower == 'PYTHIA8' and not \
+        #   os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')) and \
+        #   'dl' not in self.shower_card['extralibs'].split():
+        #    # 'dl' has to be linked with the extralibs
+        #    self.shower_card['extralibs'] += ' dl'
+        #    logger.warning("'dl' was added to extralibs from the shower_card.dat.\n" + \
+        #                  "It is needed for the correct running of PY8.2xx.\n" + \
+        #                  "If this library cannot be found on your system, a crash will occur.")
 
         misc.call(['./MCatNLO_MadFKS.inputs'], stdout=open(mcatnlo_log, 'w'),
                     stderr=open(mcatnlo_log, 'w'), 
-                    cwd=pjoin(self.me_dir, 'MCatNLO'))
+                    cwd=pjoin(self.me_dir, 'MCatNLO'),
+                    close_fds=True)
 
         exe = 'MCATNLO_%s_EXE' % shower
         if not os.path.exists(pjoin(self.me_dir, 'MCatNLO', exe)) and \
@@ -3025,7 +3074,10 @@ RESTART = %(mint_mode)s
         #link the hwpp exe in the rundir
         if shower == 'HERWIGPP':
             try:
-                files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
+                    files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++'), rundir)
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
+                    files.ln(pjoin(self.options['hwpp_path'], 'bin', 'Herwig'), rundir)
             except Exception:
                 raise aMCatNLOError('The Herwig++ path set in the configuration file is not valid.')
 
@@ -3047,8 +3099,8 @@ RESTART = %(mint_mode)s
                 out_id = 'TOP'
 
         # write the executable
-        open(pjoin(rundir, 'shower.sh'), 'w').write(\
-                open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
+        with open(pjoin(rundir, 'shower.sh'), 'w') as fsock:
+            fsock.write(open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
                 % {'extralibs': ':'.join(extrapaths)})
         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
 
@@ -3292,21 +3344,17 @@ RESTART = %(mint_mode)s
 
         self.update_status('Run complete', level='shower', update_results=True)
 
-
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False):
         """define the run name, the run_tag, the banner and the results."""
         
         # when are we force to change the tag new_run:previous run requiring changes
-        upgrade_tag = {'parton': ['parton','pythia','pgs','delphes','shower'],
-                       'pythia': ['pythia','pgs','delphes'],
-                       'shower': ['shower'],
-                       'pgs': ['pgs'],
+        upgrade_tag = {'parton': ['parton','delphes','shower','madanalysis5_hadron'],
+                       'shower': ['shower','delphes','madanalysis5_hadron'],
                        'delphes':['delphes'],
+                       'madanalysis5_hadron':['madanalysis5_hadron'],
                        'plot':[]}
         
-        
-
         if name == self.run_name:        
             if reload_card:
                 run_card = pjoin(self.me_dir, 'Cards','run_card.dat')
@@ -3340,6 +3388,8 @@ RESTART = %(mint_mode)s
         new_tag = False
         # First call for this run -> set the banner
         self.banner = banner_mod.recover_banner(self.results, level, self.run_name, tag)
+        if 'mgruncard' in self.banner:
+            self.run_card = self.banner.charge_card('run_card')
         if tag:
             self.run_card['run_tag'] = tag
             new_tag = True
@@ -3520,7 +3570,8 @@ RESTART = %(mint_mode)s
         content += 'EVENT_NORM=%s\n' % self.banner.get_detail('run_card', 'event_norm').lower()
         # check if need to link lhapdf
         if int(self.shower_card['pdfcode']) > 1 or \
-            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1): 
+            (pdlabel=='lhapdf' and int(self.shower_card['pdfcode'])==1) or \
+            shower=='HERWIGPP' : 
             # Use LHAPDF (should be correctly installed, because
             # either events were already generated with them, or the
             # user explicitly gives an LHAPDF number in the
@@ -3530,7 +3581,10 @@ RESTART = %(mint_mode)s
                                           stdout = subprocess.PIPE).stdout.read().strip()
             content += 'LHAPDFPATH=%s\n' % lhapdfpath
             pdfsetsdir = self.get_lhapdf_pdfsetsdir()
-            if self.shower_card['pdfcode']==1:
+            if self.shower_card['pdfcode']==0:
+                lhaid_list = ''
+                content += ''
+            elif self.shower_card['pdfcode']==1:
                 lhaid_list = [max([init_dict['pdfsup1'],init_dict['pdfsup2']])]
                 content += 'PDFCODE=%s\n' % max([init_dict['pdfsup1'],init_dict['pdfsup2']])
             else:
@@ -3572,9 +3626,9 @@ RESTART = %(mint_mode)s
             content+='PY8PATH=%s\n' % self.options['pythia8_path']
         if self.options['hwpp_path']:
             content+='HWPPPATH=%s\n' % self.options['hwpp_path']
-        if self.options['thepeg_path']:
+        if self.options['thepeg_path'] and self.options['thepeg_path'] != self.options['hwpp_path']:
             content+='THEPEGPATH=%s\n' % self.options['thepeg_path']
-        if self.options['hepmc_path']:
+        if self.options['hepmc_path'] and self.options['hepmc_path'] != self.options['hwpp_path']:
             content+='HEPMCPATH=%s\n' % self.options['hepmc_path']
         
         output = open(pjoin(self.me_dir, 'MCatNLO', 'banner.dat'), 'w')
@@ -3653,20 +3707,20 @@ RESTART = %(mint_mode)s
             with open(pjoin(self.me_dir, 'SubProcesses', path, 'scale_pdf_dependence.dat'),'r') as f:
                 data_line=f.readline()
                 if "scale variations:" in data_line:
-                    for i,scale in enumerate(self.run_card['dynamical_scale_choice']):
+                    for j,scale in enumerate(self.run_card['dynamical_scale_choice']):
                         data_line = f.readline().split()
                         scales_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
-                            scales[i] = [a + b for a, b in zip(scales[i], scales_this)]
+                            scales[j] = [a + b for a, b in zip(scales[j], scales_this)]
                         except IndexError:
                             scales+=[scales_this]
                     data_line=f.readline()
                 if "pdf variations:" in data_line:
-                    for i,pdf in enumerate(self.run_card['lhaid']):
+                    for j,pdf in enumerate(self.run_card['lhaid']):
                         data_line = f.readline().split()
                         pdfs_this = [float(val)*evt_wghts[i] for val in f.readline().replace("D", "E").split()]
                         try:
-                            pdfs[i] = [a + b for a, b in zip(pdfs[i], pdfs_this)]
+                            pdfs[j] = [a + b for a, b in zip(pdfs[j], pdfs_this)]
                         except IndexError:
                             pdfs+=[pdfs_this]
 
@@ -3956,7 +4010,10 @@ RESTART = %(mint_mode)s
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_EXE' % shower))
                 input_files.append(pjoin(cwd, 'MCATNLO_%s_input' % shower))
             if shower == 'HERWIGPP':
-                input_files.append(pjoin(cwd, 'Herwig++'))
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig++')):
+                    input_files.append(pjoin(cwd, 'Herwig++'))
+                if os.path.exists(pjoin(self.options['hwpp_path'], 'bin', 'Herwig')):
+                    input_files.append(pjoin(cwd, 'Herwig'))
                 input_files.append(pjoin(cwd, 'HepMCFortran.so'))
             if len(args) == 3:
                 if os.path.exists(pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')):
@@ -4127,7 +4184,8 @@ RESTART = %(mint_mode)s
             exe = 'madevent_mintMC'
             tests = ['test_ME', 'test_MC']
             # write an analyse_opts with a dummy analysis so that compilation goes through
-            open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w').write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
+            with open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w') as fsock:
+                fsock.write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
 
         #directory where to compile exe
         p_dirs = [d for d in \
@@ -4191,7 +4249,8 @@ RESTART = %(mint_mode)s
                 if line.strip().startswith('APPLLIBS=$'):
                     line=appllibs
                 text_out.append(line)
-            open(pjoin(self.me_dir,'Source','make_opts'),'w').writelines(text_out)
+            with open(pjoin(self.me_dir,'Source','make_opts'),'w') as fsock:
+                fsock.writelines(text_out)
         else:
             self.make_opts_var['applgrid'] = ""
 
@@ -4450,10 +4509,10 @@ RESTART = %(mint_mode)s
             options['reweightonly'] = False
         
         
-        void = 'NOT INSTALLED'
-        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight']
+        void = 'Not installed'
+        switch_order = ['order', 'fixed_order', 'shower','madspin', 'reweight','madanalysis5']
         switch_default = {'order': 'NLO', 'fixed_order': 'OFF', 'shower': void,
-                  'madspin': void,'reweight':'OFF'}
+                  'madspin': void,'reweight':'OFF','madanalysis5':void}
         if not switch:
             switch = switch_default
         else:
@@ -4465,18 +4524,26 @@ RESTART = %(mint_mode)s
                                 'fixed_order': default_switch,
                                 'shower': default_switch,
                                 'madspin': default_switch,
-                                'reweight': default_switch}
+                                'reweight': default_switch,
+                                'madanalysis5':['OFF','HADRON']}
+
+        if not os.path.exists(pjoin(self.me_dir, 'Cards', 
+                                       'madanalysis5_hadron_card_default.dat')):
+            allowed_switch_value['madanalysis5']=[]
 
         description = {'order':  'Perturbative order of the calculation:',
                        'fixed_order': 'Fixed order (no event generation and no MC@[N]LO matching):',
                        'shower': 'Shower the generated events:',
                        'madspin': 'Decay particles with the MadSpin module:',
-                       'reweight': 'Add weights to the events based on changing model parameters:'}
+                       'reweight': 'Add weights to the events based on changing model parameters:',
+                       'madanalysis5':'Run MadAnalysis5 on the events generated:'}
 
         force_switch = {('shower', 'ON'): {'fixed_order': 'OFF'},
                        ('madspin', 'ON'): {'fixed_order':'OFF'},
                        ('reweight', 'ON'): {'fixed_order':'OFF'},
-                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF'}
+                       ('fixed_order', 'ON'): {'shower': 'OFF', 'madspin': 'OFF', 'reweight':'OFF','madanalysis5':'OFF'},
+                       ('madanalysis5','HADRON'): {'shower': 'ON','fixed_order':'OFF'},
+                       ('shower','OFF'): {'madanalysis5': 'OFF'},   
                        }
         special_values = ['LO', 'NLO', 'aMC@NLO', 'aMC@LO', 'noshower', 'noshowerLO']
 
@@ -4487,10 +4554,12 @@ RESTART = %(mint_mode)s
             switch['shower'] = 'Not available for decay'
             switch['madspin'] = 'Not available for decay'
             switch['reweight'] = 'Not available for decay'
+            switch['madanalysis5'] = 'Not available for decay'
             allowed_switch_value['fixed_order'] = ['ON']
             allowed_switch_value['shower'] = ['OFF']
             allowed_switch_value['madspin'] = ['OFF']
             allowed_switch_value['reweight'] = ['OFF']
+            allowed_switch_value['madanalysis5'] = ['OFF']
             available_mode = ['0','1']
             special_values = ['LO', 'NLO']
         else: 
@@ -4507,7 +4576,13 @@ RESTART = %(mint_mode)s
             if os.path.exists(pjoin(self.me_dir, 'Cards', 'shower_card.dat')):
                 switch['shower'] = 'ON'
             else:
-                switch['shower'] = 'OFF' 
+                switch['shower'] = 'OFF'
+            if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card_default.dat')):
+                available_mode.append('6')
+                if os.path.exists(pjoin(self.me_dir, 'Cards', 'madanalysis5_hadron_card.dat')):
+                    switch['madanalysis5'] = 'HADRON'
+                else:
+                    switch['madanalysis5'] = 'OFF'                
                 
         if (not aMCatNLO or self.options['mg5_path']) and '3' in available_mode:
             available_mode.append('4')
@@ -4539,7 +4614,7 @@ RESTART = %(mint_mode)s
         alias = {}
         for id, key in enumerate(switch_order):
             if switch[key] != void and switch[key] in allowed_switch_value[key] and \
-                len(allowed_switch_value[key]) >1:
+                                              len(allowed_switch_value[key])>1:
                 answers += ['%s=%s' % (key, s) for s in allowed_switch_value[key]]
                 #allow lower case for on/off
                 alias.update(dict(('%s=%s' % (key, s.lower()), '%s=%s' % (key, s))
@@ -4657,6 +4732,8 @@ Please, shower the Les Houches events before using them for physics analyses."""
                 cards.append('madspin_card.dat')
             if switch['reweight'] == 'ON':
                 cards.append('reweight_card.dat')
+            if switch['madanalysis5'] == 'HADRON':
+                cards.append('madanalysis5_hadron_card.dat')                
         if 'aMC@' in mode:
             cards.append('shower_card.dat')
         if mode == 'onlyshower':
@@ -4922,9 +4999,9 @@ if '__main__' == __name__:
             if '--web' in args:
                 i = args.index('--web') 
                 args.pop(i)                                                                                                                                                                     
-                cmd_line =  aMCatNLOCmd(force_run=True)
+                cmd_line =  aMCatNLOCmd(me_dir=os.path.dirname(root_path),force_run=True)
             else:
-                cmd_line =  aMCatNLOCmdShell(force_run=True)
+                cmd_line =  aMCatNLOCmdShell(me_dir=os.path.dirname(root_path),force_run=True)
 
             if not hasattr(cmd_line, 'do_%s' % args[0]):
                 if parser_error:

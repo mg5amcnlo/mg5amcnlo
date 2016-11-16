@@ -13,7 +13,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
 """Module for the handling of histograms, including Monte-Carlo error per bin
 and scale/PDF uncertainties."""
 
@@ -179,11 +178,11 @@ class Bin(object):
         
         self.n_entries += 1
         
-        if 'stat_error' not in weights:
-            self.wgts['stat_error'] = self.wgts['central']/math.sqrt(float(self.n_entries))
-        else:
-            self.wgts['stat_error'] = math.sqrt( self.wgts['stat_error']**2 + 
-                                                      weights['stat_error']**2 )
+        #if 'stat_error' not in weights and 'central' in w:
+        #    self.wgts['stat_error'] = self.wgts['central']/math.sqrt(float(self.n_entries))
+        #else:
+        #    self.wgts['stat_error'] = math.sqrt( self.wgts['stat_error']**2 + 
+        #                                              weights['stat_error']**2 )
 
     def nice_string(self, order=None, short=True):
         """ Nice representation of this Bin. 
@@ -252,7 +251,7 @@ class BinList(histograms_PhysicsObjectList):
             while current < bin_range[1]:
                 self.append(Bin(boundaries =
                             (current, min(current+bin_range[2],bin_range[1])),
-                            wgts = dict((wgt,0.0) for wgt in weight_labels)))
+                            wgts = dict((wgt,0.0) for wgt in self.weight_labels)))
                 current += bin_range[2]
         else:
             super(BinList, self).__init__(list)
@@ -681,7 +680,7 @@ class HwU(Histogram):
     
     
     def __init__(self, file_path=None, weight_header=None,
-                            raw_labels=False, consider_reweights='ALL', **opts):
+                raw_labels=False, consider_reweights='ALL', selected_central_weight=None, **opts):
         """ Read one plot from a file_path or a stream. Notice that this
         constructor only reads one, and the first one, of the plots specified.
         If file_path was a path in argument, it would then close the opened stream.
@@ -711,7 +710,9 @@ class HwU(Histogram):
             weight_header = HwU.parse_weight_header(stream, raw_labels=raw_labels)
 
         if not self.parse_one_histo_from_stream(stream, weight_header,
-                  consider_reweights=consider_reweights, raw_labels=raw_labels):
+                  consider_reweights=consider_reweights, 
+                  selected_central_weight=selected_central_weight,
+                  raw_labels=raw_labels):
             # Indicate that the initialization of the histogram was unsuccessful
             # by setting the BinList property to None.
             super(Histogram,self).__setattr__('bins',None)
@@ -734,6 +735,24 @@ class HwU(Histogram):
         else:
             return [b.wgts[name] for b in self.bins]
     
+    def add_line(self, names):
+        """add a column to the HwU. name can be a list"""
+        
+        if isinstance(names, str):
+            names = [names]
+        else:
+            names = list(names)
+        #check if all the entry are new 
+        for name in names[:]:
+            if name in self.bins[0].wgts:
+                logger.warning("name: %s is already defines in HwU.")
+                names.remove(name)
+        #
+        for name in names:
+            self.bins.weight_labels.append(name)
+            for bin in self.bins:
+                bin.wgts[name] = 0
+            
     def get_uncertainty_band(self, selector, mode=0):
         """return two list of entry one with the minimum and one with the maximum value.
            selector can be:
@@ -799,7 +818,7 @@ class HwU(Histogram):
                 data = [values[s][i] for s in xrange(len(values))]
                 sdata = sum(data)
                 sdata2 = sum(x**2 for x in data)
-                pdf_stdev = math.sqrt(sdata2 -sdata**2/float(len(values)-2))
+                pdf_stdev = math.sqrt(max(sdata2 -sdata**2/float(len(values)-2),0.0))
                 min_value.append(sdata - pdf_stdev)
                 max_value.append(sdata + pdf_stdev)                 
 
@@ -847,7 +866,10 @@ class HwU(Histogram):
     def get_formatted_header(self):
         """ Return a HwU formatted header for the weight label definition."""
 
-        res = '##& xmin & xmax & central value & dy & '
+        res = '##& xmin & xmax & '
+        
+        if 'central' in self.bins.weight_labels:
+            res += 'central value & dy & '
         
         others = []
         for label in self.bins.weight_labels:
@@ -882,8 +904,11 @@ class HwU(Histogram):
         res.append('<histogram> %s "%s"'%(len(self.bins),
                                      self.get_HwU_histogram_name(format='HwU')))
         for bin in self.bins:
-            res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)+
+            if 'central' in bin.wgts:
+                res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)+
                                   [bin.wgts['central'],bin.wgts['stat_error']]))
+            else:
+                res.append(' '.join('%+16.7e'%wgt for wgt in list(bin.boundaries)))
             res[-1] += ' '.join('%+16.7e'%bin.wgts[key] for key in 
                 self.bins.weight_labels if key not in ['central','stat_error'])
         res.append('<\histogram>')
@@ -1068,7 +1093,7 @@ class HwU(Histogram):
             return ' '.join(res)
         
     def parse_one_histo_from_stream(self, stream, all_weight_header,
-                                    consider_reweights='ALL', raw_labels=False):
+                consider_reweights='ALL', raw_labels=False, selected_central_weight=None):
         """ Reads *one* histogram from a stream, with the mandatory specification
         of the ordered list of weight names. Return True or False depending
         on whether the starting definition of a new plot could be found in this
@@ -1112,10 +1137,14 @@ class HwU(Histogram):
                 if j == len(all_weight_header):
                     raise HwU.ParseError, "There is more bin weights"+\
                               " specified than expected (%i)"%len(weight_header)
+                if selected_central_weight == all_weight_header[j]:
+                    bin_weights['central'] = float(weight.group('weight'))
                 if all_weight_header[j] == 'boundary_xmin':
                     boundaries[0] = float(weight.group('weight'))
                 elif all_weight_header[j] == 'boundary_xmax':
-                    boundaries[1] = float(weight.group('weight'))                            
+                    boundaries[1] = float(weight.group('weight'))
+                elif all_weight_header[j] == 'central' and not selected_central_weight is None:
+                    continue                      
                 elif all_weight_header[j] in weight_header:
                     bin_weights[all_weight_header[j]] = \
                                            float(weight.group('weight'))
@@ -1440,6 +1469,14 @@ class HwU(Histogram):
         # of the two new weight label added.
         return (position,labels)
     
+    def select_central_weight(self, selected_label):
+        """ Select a specific merging scale for the central value of this Histogram. """
+        if selected_label not in self.bins.weight_labels:
+            raise MadGraph5Error, "Selected weight label '%s' could not be found in this HwU."%selected_label
+        
+        for bin in self.bins:
+            bin.wgts['central']=bin.wgts[selected_label]                    
+    
     def rebin(self, n_rebin):
         """ Rebin the x-axis so as to merge n_rebin consecutive bins into a 
         single one. """
@@ -1603,7 +1640,7 @@ class HwUList(histograms_PhysicsObjectList):
 
     def __init__(self, file_path, weight_header=None, run_id=None,
             merging_scale=None, accepted_types_order=[], consider_reweights='ALL',
-                                                     raw_labels=False, **opts):
+                                                         raw_labels=False, **opts):
         """ Read one plot from a file_path or a stream. 
         This constructor reads all plots specified in target file.
         File_path can be a path or a stream in the argument.
@@ -1631,7 +1668,7 @@ class HwUList(histograms_PhysicsObjectList):
             self.parse_histos_from_PY8_XML_stream(stream, run_id, 
                     merging_scale, accepted_types_order,
                     consider_reweights=consider_reweights,
-                    raw_labels=raw_labels)    
+                    raw_labels=raw_labels)  
         except XMLParsingError:
             # Rewinding the stream
             stream.seek(0)
@@ -1639,19 +1676,34 @@ class HwUList(histograms_PhysicsObjectList):
             if not weight_header:
                 weight_header = HwU.parse_weight_header(stream,raw_labels=raw_labels)
         
+            # Select a specific merging scale if asked for:
+            selected_label = None
+            if not merging_scale is None: 
+                for label in weight_header:
+                    if HwU.get_HwU_wgt_label_type(label)=='merging_scale':
+                        if float(label[1])==merging_scale:
+                            selected_label = label
+                            break
+                if selected_label is None:
+                    raise MadGraph5Error, "No weight could be found in the input HwU "+\
+                      "for the selected merging scale '%4.2f'."%merging_scale
+
             new_histo = HwU(stream, weight_header,raw_labels=raw_labels,
-                                          consider_reweights=consider_reweights)
+                            consider_reweights=consider_reweights,
+                            selected_central_weight=selected_label)
+#            new_histo.select_central_weight(selected_label)           
             while not new_histo.bins is None:
                 if accepted_types_order==[] or \
                                          new_histo.type in accepted_types_order:
                     self.append(new_histo)
                 new_histo = HwU(stream, weight_header, raw_labels=raw_labels,
-                                          consider_reweights=consider_reweights)
-
-            if not run_id is None:
-                logger.info("The run_id '%s' was specified, but "%run_id+
-                            "format of the HwU plot source is the MG5aMC"+
-                            " so that the run_id information is ignored.")
+                                consider_reweights=consider_reweights,
+                                selected_central_weight=selected_label)
+                
+        #    if not run_id is None:
+        #        logger.debug("The run_id '%s' was specified, but "%run_id+
+        #                    "format of the HwU plot source is the MG5aMC"+
+        #                    " so that the run_id information is ignored.")
 
         # Order the histograms according to their type.
         titles_order = [h.title for h in self]
@@ -2000,7 +2052,8 @@ class HwUList(histograms_PhysicsObjectList):
                 if histogram.getAttribute("weight")!='all':
                     continue
                 new_histo = HwU()
-                hist_name = str(histogram.getAttribute('name'))
+                hist_name = '%s %s'%(str(histogram.getAttribute('name')),
+                                            str(histogram.getAttribute('unit')))
                 # prepend the jet multiplicity to the histogram name
                 new_histo.process_histogram_name('%s |JETSAMPLE@%d'%(hist_name,multiplicity))
                 # We do not want to include auxiliary diagrams which would be
@@ -2047,19 +2100,20 @@ class HwUList(histograms_PhysicsObjectList):
             
                     new_histo.bins.append(Bin(tuple(boundaries), bin_weights))
 
-#                     if bin_weights['central']!=0.0:
-#                           print '---------'
-#                           print 'multiplicity =',multiplicity
-#                           print 'central =', bin_weights['central']
-#                           print 'PDF     = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,int)]
-#                           print 'PDF min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,int)),max(bin_weights[key] for key in bin_weights if isinstance(key,int))
-#                           print 'scale   = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,tuple)]
-#                           print 'scale min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,tuple)),max(bin_weights[key] for key in bin_weights if isinstance(key,tuple))
-#                           print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if isinstance(key,float)] 
-#                           print 'merging min/max =',min(bin_weights[key] for key in bin_weights if isinstance(key,float)),max(bin_weights[key] for key in bin_weights if isinstance(key,float))
-#                           print 'alpsfact = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'] 
-#                           print 'alpsfact min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact')
-#                           print '---------'
+#                    if bin_weights['central']!=0.0:
+#                          print '---------'
+#                          print 'multiplicity =',multiplicity
+#                          print 'central =', bin_weights['central']
+#                          print 'PDF     = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='pdf']
+#                          print 'PDF min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='pdf'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='pdf')
+#                          print 'scale   = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='scale']
+#                          print 'scale min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='scale'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='scale')
+#                          print 'merging = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='merging_scale'] 
+#                          print 'merging min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='merging_scale'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='merging_scale')
+#                          print 'alpsfact = ', [(key,bin_weights[key]) for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'] 
+#                          print 'alpsfact min/max =',min(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact'),max(bin_weights[key] for key in bin_weights if HwU.get_HwU_wgt_label_type(key)=='alpsfact')
+#                          print '---------'
+#                          stop
 
                 # Finally remove auxiliary weights
                 if not raw_labels:
@@ -2087,7 +2141,8 @@ class HwUList(histograms_PhysicsObjectList):
                              " is not yet supported. Supported formats are %s."\
                                                  %HwU.output_formats_implemented
 
-        if isinstance(path, str) and '.' not in os.path.basename(path):
+        if isinstance(path, str) and not any(ext in os.path.basename(path) \
+                                   for ext in ['.Hwu','.ps','.gnuplot','.pdf']):
             output_base_name = os.path.basename(path)
             HwU_stream       = open(path+'.HwU','w')
         else:
@@ -2833,14 +2888,13 @@ plot \\"""
                         uncertainty_plot_lines[-1]['alpsfact'] = \
         ["sqrt(-1) ls %d title '%s'"%(color_index+40,'%s, alpsfact variation'%title)]
 
-#             plot_lines.append(
+#            plot_lines.append(
 # "'%s' index %d using (($1+$2)/2):3 ls %d title '%s'"\
 # %(HwU_name,block_position+i,color_index, major_title))
-#             if 'statistical' in uncertainties:
-#                 plot_lines.append(
+#            if 'statistical' in uncertainties:
+#                plot_lines.append(
 # "'%s' index %d using (($1+$2)/2):3:4 w yerrorbar ls %d title ''"\
 # %(HwU_name,block_position+i,color_index))
-
             plot_lines.extend(
                 get_main_central_plot_lines(HwU_name, block_position+i,
                       color_index, major_title, 'statistical' in uncertainties))
@@ -3224,6 +3278,114 @@ plot \\"""
 
         # Return the starting data_block position for the next histogram group
         return block_position+len(self)
+    
+################################################################################
+## matplotlib related function
+################################################################################
+def plot_ratio_from_HWU(path, ax, hwu_variable, hwu_numerator, hwu_denominator, *args, **opts):
+    """INPUT:
+       - path can be a path to HwU or an HwUList instance
+       - ax is the matplotlib frame where to do the plot
+       - hwu_variable is the histograms to consider
+       - hwu_numerator is the numerator of the ratio plot
+       - hwu_denominator is the denominator of the ratio plot
+       OUTPUT:
+       - adding the curves to the plot
+       - return the HwUList
+    """
+
+    if isinstance(path, str):
+        hwu = HwUList(path, raw_labels=True)
+    else:
+        hwu = path
+
+    if 'hwu_denominator_path' in opts:
+        print 'found second hwu'
+        if isinstance(opts['hwu_denominator_path'],str):
+            hwu2 = HwUList(path, raw_labels=True)
+        else:
+            hwu2 = opts['hwu_denominator_path']
+        del opts['hwu_denominator_path']
+    else:
+        hwu2 = hwu
+
+
+    select_hist = hwu.get(hwu_variable)
+    select_hist2 = hwu2.get(hwu_variable)
+    bins = select_hist.get('bins')
+    num = select_hist.get(hwu_numerator)
+    denom = select_hist2.get(hwu_denominator)
+    ratio = [num[i]/denom[i] if denom[i] else 1 for i in xrange(len(bins))]
+    if 'drawstyle' not in opts:
+        opts['drawstyle'] = 'steps'
+    ax.plot(bins, ratio, *args, **opts)
+    return hwu
+
+def plot_from_HWU(path, ax, hwu_variable, hwu_central, *args, **opts):
+    """INPUT:
+       - path can be a path to HwU or an HwUList instance
+       - ax is the matplotlib frame where to do the plot
+       - hwu_variable is the histograms to consider
+       - hwu_central is the central curve to consider
+       - hwu_error is the error band to consider (optional: Default is no band)
+       - hwu_error_mode is how to compute the error band (optional)
+       OUTPUT:
+       - adding the curves to the plot
+       - return the HwUList
+       - return the line associated to the central (can be used to get the color)
+    """
+
+#   Handle optional parameter
+    if 'hwu_error' in opts:
+        hwu_error = opts['hwu_error']
+        del opts['hwu_error']
+    else:
+        hwu_error = None
+
+    if 'hwu_error_mode' in opts:
+        hwu_error_mode = opts['hwu_error_mode']
+        del opts['hwu_error_mode']
+    else:
+        hwu_error_mode = None
+
+    if 'hwu_mult' in opts:
+        hwu_mult = opts['hwu_mult']
+        del opts['hwu_mult']
+    else:
+        hwu_mult = 1
+
+    if isinstance(path, str):
+        hwu = HwUList(path, raw_labels=True)
+    else:
+        hwu = path
+
+
+    select_hist = hwu.get(hwu_variable)
+    bins = select_hist.get('bins')
+    central_value = select_hist.get(hwu_central)
+    if hwu_mult != 1:
+       central_value = [hwu_mult*b for b in central_value]
+    if 'drawstyle' not in opts:
+        opts['drawstyle'] = 'steps'
+    H, = ax.plot(bins, central_value, *args, **opts)
+
+    # Add error band
+    if hwu_error:
+        if not 'hwu_error_mode' in opts:
+            opts['hwu_error_mode']=None
+        h_min, h_max = select_hist.get_uncertainty_band(hwu_error, mode=hwu_error_mode)
+        if hwu_mult != 1:
+            h_min = [hwu_mult*b for b in h_min] 
+            h_max = [hwu_mult*b for b in h_max] 
+        fill_between_steps(bins, h_min, h_max, ax=ax, facecolor=H.get_color(),
+                           alpha=0.5, edgecolor=H.get_color())
+
+    return hwu, H
+
+
+
+
+
 
 if __name__ == "__main__":
     main_doc = \
@@ -3277,7 +3439,8 @@ if __name__ == "__main__":
                       '--assign_types','--multiply','--no_suffix', '--out', '--jet_samples', 
                       '--no_scale','--no_pdf','--no_stat','--no_merging','--no_alpsfact',
                       '--only_scale','--only_pdf','--only_stat','--only_merging','--only_alpsfact',
-                      '--variations','--band','--central_only', '--lhapdf-config','--titles']
+                      '--variations','--band','--central_only', '--lhapdf-config','--titles',
+                      '--keep_all_weights']
     n_ratios   = -1
     uncertainties = ['scale','pdf','statistical','merging_scale','alpsfact']
     # The list of type of uncertainties for which to use bands. None is a 'smart' default
@@ -3547,11 +3710,11 @@ def fill_between_steps(x, y1, y2=0, h_align='right', ax=None, **kwargs):
         yy2 = []; [(yy2.append(d),yy2.append(d)) for d in y2]
     else:
         yy2=y2
-
+    if len(yy2) != len(yy1):
+        yy2 = []; [(yy2.append(d),yy2.append(d)) for d in y2]
+        
     # now to the plotting part:
     ax.fill_between(xx, yy1, y2=yy2, **kwargs)
 
     return ax
 ######## end routine from https://gist.github.com/thriveth/835256
-
-

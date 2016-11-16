@@ -138,7 +138,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
         if exporter_name == 'default':
             self.loop_exporters[exporter_name] = loop_exporters.\
                               LoopProcessExporterFortranSA(
-                              _mgme_file_path, _proc_file_path,
+                            _proc_file_path,
                               {'clean':False, 'complex_mass':False, 
                                'export_format':'madloop','mp':True,
                                'loop_dir':_loop_file_path,
@@ -150,7 +150,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
         elif exporter_name == 'optimized':
             self.loop_exporters[exporter_name] = loop_exporters.\
                               LoopProcessOptimizedExporterFortranSA(\
-                              _mgme_file_path, _proc_file_path,
+                              _proc_file_path,
                               {'clean':False, 'complex_mass':False, 
                                'export_format':'madloop','mp':True,
                                'loop_dir':_loop_file_path,
@@ -228,7 +228,7 @@ class IOTestMadLoopSquaredOrdersExport(IOTests.IOTestManager):
        if not hasattr(self, 'exporter'):
            self.exporter = loop_exporters.\
                                   LoopProcessOptimizedExporterFortranSA(\
-                                  _mgme_file_path, _proc_file_path,
+                                  _proc_file_path,
                                   {'clean':False, 'complex_mass':False, 
                                    'export_format':'madloop','mp':True,
                                    'loop_dir':_loop_file_path,

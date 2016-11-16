@@ -66,6 +66,10 @@ c     to "setrun")
                call initpdfsetbynamem(nn,lhaPDFsetname(nn))
                if (lpdfvar(nn)) then
                   call numberPDFm(nn,nmemPDF(nn))
+                  if (nmemPDF(nn).eq.1) then
+                     nmemPDF(nn)=0
+                     lpdfvar(nn)=.false.
+                  endif
                else
                   nmemPDF(nn)=0
                endif
@@ -191,6 +195,7 @@ c Write the accumulated results to a file
             endif
          enddo
       endif
+      write (34,*) " "
       close(34)
       return                
       end

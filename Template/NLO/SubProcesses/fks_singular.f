@@ -2707,7 +2707,8 @@ c iproc_picked:
      &              trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &              //trim(adjustl(procid))
 
-               write (str_temp,'(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
+               write (str_temp,
+     &                    '(i2,6(1x,d14.8),6(1x,i2),1x,i8,1x,d18.12)')
      &              QCDpower(ict),
      &              (bjx(j,ict),j=1,2),
      &              (scales2(j,ict),j=1,3),

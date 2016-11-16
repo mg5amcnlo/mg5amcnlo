@@ -121,7 +121,6 @@ class MadEventComparator(me_comparator.MEComparator):
                            runner in self.me_runners]) + \
                   self._fixed_string_length("Relative diff.", col_size) + \
                   "Result"
-
         for prop in self.results[0]:
             loc_results = []
             succeed = True
@@ -142,6 +141,9 @@ class MadEventComparator(me_comparator.MEComparator):
             else:
                 # check the type (integer/float/string)
                 type = detect_type(loc_results[0])
+                if type == 'int':
+                    if any(detect_type(loc)=='float' for loc in loc_results):
+                        type = 'float'
                 if type == 'float':
                     if max(loc_results) == 0.0 and min(loc_results) == 0.0:
                         res_str += self._fixed_string_length("0", col_size)
@@ -493,10 +495,13 @@ class MG5Runner(MadEventRunner):
         v5_string += "launch -i --multicore\n"
         v5_string += " set automatic_html_opening False\n"
         v5_string += "edit_cards\n"
-        v5_string += "set ickkw 0\n"
+#        v5_string += "set ickkw 0\n"
         v5_string += "set LHC 13\n"
-        v5_string += "set xqcut 0\n"
+#        v5_string += "set xqcut 0\n"
+        v5_string += "set auto_ptj_mjj True\n"
         v5_string += "set cut_decays True\n"
+        v5_string += "set ickkw 0\n"
+        v5_string += "set xqcut 0\n"
         v5_string += "survey run_01; refine 0.01; refine 0.01\n" 
         #v5_string += "print_results\n"
         return v5_string
@@ -522,17 +527,36 @@ class MG5Runner(MadEventRunner):
         for key,value in numsubProc.items():
             output['number_of_P'+key]=str(value)
 
-        #Part 2: cross section                                                                                                                                   
+        #Part 2: cross section
         for name in SubProc:
             if os.path.exists(dir_name+'/SubProcesses/'+name+'/run_01_results.dat'):
                 filepath = dir_name+'/SubProcesses/'+name+'/run_01_results.dat'
             else:
                 filepath = dir_name+'/SubProcesses/'+name+'/results.dat'
+            if not os.path.exists(filepath):
+                break
+
             for line in file(filepath):
                 splitline=line.split()
                 #if len(splitline)==8:
                 output['cross_'+name]=splitline[0]
                 print "found %s %s" % (splitline[0], splitline[1])
+        else:
+            return output   
+        
+        filepath = dir_name+'/HTML/run_01/results.html'
+        text = open(filepath).read()    
+        
+        #id="#P1_qq_ll" href=#P1_qq_ll onClick="check_link('#P1_qq_ll','#P1_qq_ll','#P1_qq_ll')"> 842.9
+        info = re.findall('id="\#(?P<a1>\w*)" href=\#(?P=a1) onClick="check_link\(\'\#(?P=a1)\',\'\#(?P=a1)\',\'\#(?P=a1)\'\)">\s* ([\d.e+-]*)', text)
+        for name,value in info:
+            output['cross_'+name] = value
+
+            
+            
+            
+
+        
         return output
 
 class MG5OldRunner(MG5Runner):

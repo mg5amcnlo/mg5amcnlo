@@ -82,16 +82,18 @@ class ReweightInterface(extended_cmd.Cmd):
         self.model = None
         self.has_standalone_dir = False
         self.mother= mother # calling interface
-            
+        self.multicore=False
         
         self.options = {'curr_dir': os.path.realpath(os.getcwd()),
                         'rwgt_name':None}
-        
+
         self.events_file = None
         self.processes = {}
         self.second_model = None
         self.second_process = None
         self.mg5cmd = master_interface.MasterCmd()
+        if mother:
+            self.mg5cmd.options.update(mother.options)
         self.seed = None
         self.output_type = "default"
         self.helicity_reweighting = True
@@ -174,12 +176,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
-        if '[' in process:
+        if '[' in process and isinstance(self.banner.get('run_card'), banner.RunCardNLO):
             if not self.banner.get_detail('run_card', 'store_rwgt_info'):
                 logger.warning("The information to perform a proper NLO reweighting is not present in the event file.")
                 logger.warning("       We will perform a LO reweighting instead. This does not guarantee NLO precision.")
                 self.rwgt_mode = 'LO'
-            
+
             if 'OLP' in self.mother.options:
                 if self.mother.options['OLP'].lower() != 'madloop':
                     logger.warning("Accurate NLO mode only works for OLP=MadLoop not for OLP=%s. An approximate (LO) reweighting will be performed instead")
@@ -201,7 +203,7 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info("options: %s" % option)
 
 
-    def get_LO_definition_from_NLO(self, proc):
+    def get_LO_definition_from_NLO(self, proc, real_only=False):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
@@ -212,7 +214,10 @@ class ReweightInterface(extended_cmd.Cmd):
             #NO NLO tag => nothing to do actually return input
             return proc
         elif not order.startswith(('virt','loonly','noborn')):
-            # OK this a standard NLO process
+            # OK this a standard NLO process            
+            if real_only:
+                commandline= '' 
+            
             if '=' in order:
                 # get the type NLO QCD/QED/...
                 order = order.split('=',1)[1]
@@ -358,6 +363,10 @@ class ReweightInterface(extended_cmd.Cmd):
             self.rwgt_dir = args[1]
             if not os.path.exists(self.rwgt_dir):
                 os.mkdir(self.rwgt_dir)
+        elif args[0] == 'multicore':
+            pass 
+            # this line is meant to be parsed by common_run_interface and change the way this class is called.
+            #It has no direct impact on this class.
         else:
             logger.critical("unknown option! %s.  Discard line." % args[0])
         
@@ -415,12 +424,25 @@ class ReweightInterface(extended_cmd.Cmd):
 
         model_line = self.banner.get('proc_card', 'full_model_line')
 
-        if not self.has_standalone_dir:
+        if not self.has_standalone_dir:                
             if self.rwgt_dir and os.path.exists(pjoin(self.rwgt_dir,'rw_me','rwgt.pkl')):
                 self.load_from_pickle()
-                self.me_dir = self.rwgt_dir
+                if not self.rwgt_dir:
+                    self.me_dir = self.rwgt_dir
+            elif self.multicore == 'wait':
+                while not os.path.exists(pjoin(self.me_dir,'rw_me','rwgt.pkl')):
+                    time.sleep(60)
+                    print 'wait for pickle'                  
+                print "loading from pickle"
+                if not self.rwgt_dir:
+                    self.rwgt_dir = self.me_dir
+                self.load_from_pickle(keep_name=True)
             else:
-                self.create_standalone_directory()        
+                self.create_standalone_directory()  
+                if self.multicore == 'create':
+                    if not self.rwgt_dir:
+                        self.rwgt_dir = self.me_dir
+                    self.save_to_pickle()      
         
         if self.rwgt_dir:
             path_me =self.rwgt_dir
@@ -501,7 +523,6 @@ class ReweightInterface(extended_cmd.Cmd):
                 rewgtid = maxid
                 if self.options['rwgt_name']:
                     #ensure that the entry is not already define if so overwrites it
-                    misc.sprint(mg_rwgt_info)
                     for (i, nlotype, diff) in mg_rwgt_info[:]:
                         for flag in type_rwgt:
                             if 'rwgt_%s' % i == '%s%s' %(self.options['rwgt_name'],flag) or \
@@ -694,7 +715,6 @@ class ReweightInterface(extended_cmd.Cmd):
             if self.run_card['event_norm'] == 'average':
                 for key, value in cross.items():
                     cross[key] = value / (event_nb+1)
-
                 
         running_time = misc.format_timer(time.time()-start)
         logger.info('All event done  (nb_event: %s) %s' % (event_nb+1, running_time))        
@@ -779,10 +799,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 results.current.parton.append('lhe')       
             logger.info('Event %s is now created with new central weight' % output2.name)
         
-        for name in cross:
-            if name == 'orig':
-                continue
-            logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
+        if self.multicore != 'create':
+            for name in cross:
+                if name == 'orig':
+                    continue
+                logger.info('new cross-section is %s: %g pb (indicative error: %g pb)' %\
                         ('(%s)' %name if name else '',cross[name], error[name]))
             
         self.terminate_fortran_executables(new_card_only=True)
@@ -793,7 +814,6 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 self.all_cross_section[(tag_name,name)] = (cross[name], error[name])
         
-
         # perform the scanning
         if param_card_iterator:
             for i,card in enumerate(param_card_iterator):
@@ -854,6 +874,9 @@ class ReweightInterface(extended_cmd.Cmd):
         
         return 0
     
+    def do_compute_widths(self, line):
+        return self.mother.do_compute_widths(line)
+    
     def calculate_weight(self, event, space=None):
         """space defines where to find the calculator (in multicore)"""
         
@@ -873,6 +896,15 @@ class ReweightInterface(extended_cmd.Cmd):
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
             misc.sprint(w_orig, w_new)
             misc.sprint(event)
+            misc.sprint(self.invert_momenta(event.get_momenta(orig_order)))
+            misc.sprint(event.get_momenta(orig_order))
+            misc.sprint(event.aqcd)
+            hel_order = event.get_helicity(orig_order)
+            if self.helicity_reweighting and 9 not in hel_order:
+                nhel = hel_dict[tuple(hel_order)]
+            else:
+                nhel = 0
+            misc.sprint(nhel, Pdir, hel_dict)                        
             raise Exception, "Invalid matrix element for original computation (weight=0)"
 
         return {'orig': event.wgt, '': w_new/w_orig*event.wgt}
@@ -1012,6 +1044,11 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_matrix_element(self, event, hypp_id, space, scale2=0):
         """routine to return the matrix element"""
         
+        if self.has_nlo:
+            nb_retry, sleep = 10, 60 
+        else:
+            nb_retry, sleep = 5, 20 
+        
         tag, order = event.get_tag_and_order()
         if isinstance(hypp_id, str) and hypp_id.startswith('V'):
             tag = (tag,'V')
@@ -1057,7 +1094,7 @@ class ReweightInterface(extended_cmd.Cmd):
                         dir_to_f2py_free_mod[(Pdir,0)] = (metag, nb_f2py_module)
                 os.environ['MENUM'] = '2'
                 if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
-                    misc.compile(['matrix2py.so'], cwd=Pdir)                
+                    misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix2py.so'], cwd=Pdir)                
                 self.rename_f2py_lib(Pdir, 2*metag)
                 try:
                     mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, 2*metag), globals(), locals(), [],-1)
@@ -1085,10 +1122,9 @@ class ReweightInterface(extended_cmd.Cmd):
                 try:
                     mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, newtag), globals(), locals(), [],-1)
                 except Exception, error:
-                    os.remove(pjoin(Pdir, 'matrix%spy.so' % newtag))
                     newtag  = "L%s" % newtag
                     os.environ['MENUM'] = newtag
-                    misc.compile(['matrix%spy.so' % newtag], cwd=Pdir)
+                    misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix%spy.so' % newtag], cwd=Pdir)
                     mymod = __import__('%s.SubProcesses.%s.matrix%spy' % (base, Pname, newtag), globals(), locals(), [],-1)
                  
                 S = mymod.SubProcesses
@@ -1110,7 +1146,7 @@ class ReweightInterface(extended_cmd.Cmd):
             Pname = os.path.basename(Pdir)
             os.environ['MENUM'] = '2'
             if not self.rwgt_dir or not os.path.exists(pjoin(Pdir, 'matrix2py.so')):
-                misc.compile(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
+                misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix2py.so'], cwd=pjoin(subdir, Pdir))
             if (Pdir, 1) not in dir_to_f2py_free_mod:
                 metag = 1
                 dir_to_f2py_free_mod[(Pdir,1)] = (metag, nb_f2py_module)
@@ -1123,10 +1159,9 @@ class ReweightInterface(extended_cmd.Cmd):
             try:
                 mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))
             except ImportError:
-                os.remove(pjoin(Pdir, 'matrix%spy.so' % metag ))
                 metag = "L%s" % metag
                 os.environ['MENUM'] = str(metag)
-                misc.compile(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
+                misc.multiple_try(nb_retry,sleep)(misc.compile)(['matrix%spy.so' % metag], cwd=pjoin(subdir, Pdir))
                 mymod = __import__("%s_second.SubProcesses.%s.matrix%spy" % (base, Pname, metag))
                      
             reload(mymod)
@@ -1140,16 +1175,26 @@ class ReweightInterface(extended_cmd.Cmd):
             space.calculator[(run_id,'module')] = mymod
             external = space.calculator[run_id]                
         
-        p = self.invert_momenta(event.get_momenta(orig_order))
-        
 
+        
+        p = event.get_momenta(orig_order)
         # add helicity information
         
         hel_order = event.get_helicity(orig_order)
         if self.helicity_reweighting and 9 not in hel_order:
             nhel = hel_dict[tuple(hel_order)]
+            if event[1].status == -1: #check if this is a 2 >N processes
+                # need to pass to the rest-frame
+                pboost = lhe_parser.FourMomentum(p[0]) + lhe_parser.FourMomentum(p[1])
+                for i,thisp in enumerate(p):
+                    p[i] = lhe_parser.FourMomentum(thisp).zboost(pboost).get_tuple()
+                assert p[0][1] == p[0][2] == 0 == p[1][2] == p[1][2] == 0 
+
+                
         else:
             nhel = 0
+
+        p = self.invert_momenta(p)
 
         with misc.chdir(Pdir):
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
@@ -1193,21 +1238,24 @@ class ReweightInterface(extended_cmd.Cmd):
                 split = line.split()
                 if len(split) == 4:
                     cross, error = float(split[0]), float(split[1])
-        if 'orig' not in self.all_cross_section:
-            logger.info('Original cross-section: %s +- %s pb' % (cross, error))
-        else: 
-            logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
-        logger.info('Computed cross-section:')
-        keys = self.all_cross_section.keys()
-        keys.sort()
-        for key in keys:
-            if key == 'orig':
-                continue
-            logger.info('%s : %s +- %s pb' % (key[0] if not key[1] else '%s%s' % key,
-                self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
+                    
+        if not self.multicore == 'create':
+            # No print of results for the multicore mode for the one printed on screen
+            if 'orig' not in self.all_cross_section:
+                logger.info('Original cross-section: %s +- %s pb' % (cross, error))
+            else: 
+                logger.info('Original cross-section: %s +- %s pb (cross-section from sum of weights: %s)' % (cross, error, self.all_cross_section['orig'][0]))
+            logger.info('Computed cross-section:')
+            keys = self.all_cross_section.keys()
+            keys.sort()
+            for key in keys:
+                if key == 'orig':
+                    continue
+                logger.info('%s : %s +- %s pb' % (key[0] if not key[1] else '%s%s' % key,
+                    self.all_cross_section[key][0],self.all_cross_section[key][1] ))  
         self.terminate_fortran_executables()
     
-        if self.rwgt_dir:
+        if self.rwgt_dir and self.multicore == False:
             self.save_to_pickle()
         
         with misc.stdchannel_redirected(sys.stdout, os.devnull):
@@ -1227,7 +1275,7 @@ class ReweightInterface(extended_cmd.Cmd):
     @misc.mute_logger()
     def create_standalone_directory(self, second=False):
         """generate the various directory for the weight evaluation"""
-        
+                
         data={}
         if not second:
             data['paths'] = ['rw_me', 'rw_mevirt']
@@ -1332,12 +1380,18 @@ class ReweightInterface(extended_cmd.Cmd):
             logger.info('generating the square matrix element for reweighting (second model and/or processes)')
         start = time.time()
         commandline=''
-        for proc in data['processes']:
+        for i,proc in enumerate(data['processes']):
             if '[' not in proc:
                 commandline += "add process %s ;" % proc
             else:
                 has_nlo = True
-                commandline += self.get_LO_definition_from_NLO(proc)
+                if self.banner.get('run_card','ickkw') == 3:
+                    if len(proc) == min([len(p.strip()) for p in data['processes']]):
+                        commandline += self.get_LO_definition_from_NLO(proc)
+                    else:
+                        commandline += self.get_LO_definition_from_NLO(proc, real_only=True)
+                else:
+                    commandline += self.get_LO_definition_from_NLO(proc)
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
@@ -1348,7 +1402,14 @@ class ReweightInterface(extended_cmd.Cmd):
             for proc in data['processes']:
                 if '[' not in proc:
                     raise
-                commandline += "add process %s ;" % proc
+                # pass to virtsq=
+                base, post = proc.split('[',1)
+                nlo_order, post = post.split(']',1)
+                if '=' not in nlo_order:
+                    nlo_order = 'virt=%s' % nlo_order
+                elif 'noborn' in nlo_order:
+                    nlo_order = nlo_order.replace('noborn', 'virt')
+                commandline += "add process %s [%s] %s;" % (base,nlo_order,post)
             commandline = commandline.replace('add process', 'generate',1)
             logger.info("RETRY with %s", commandline)
             mgcmd.exec_cmd(commandline, precmd=True)
@@ -1416,6 +1477,18 @@ class ReweightInterface(extended_cmd.Cmd):
                          pjoin(path_me, data['paths'][0], 'Cards', 'MadLoopParams.dat'), 
                          commentdefault=False)
             
+            if self.multicore == 'create':
+                print "compile OLP", data['paths'][0]
+                misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][0],'SubProcesses'),
+                             nb_core=self.mother.options['nb_core'])
+        
+        if os.path.exists(pjoin(path_me, data['paths'][1], 'Cards', 'MadLoopParams.dat')):
+            if self.multicore == 'create':
+                print "compile OLP", data['paths'][1]
+                misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                             nb_core=self.mother.options['nb_core'])
+                
+        
         # 5. create the virtual for NLO reweighting  ---------------------------
         if has_nlo and 'NLO' in self.rwgt_mode:
             # Do not pass here for LO/NLO_tree
@@ -1499,9 +1572,9 @@ class ReweightInterface(extended_cmd.Cmd):
             #compile the module to combine the weight
             misc.compile(cwd=pjoin(path_me, data['paths'][1], 'Source'))
             #link it 
+            if path_me not in sys.path:
+                sys.path.insert(0, os.path.realpath(path_me))
             with misc.chdir(pjoin(path_me)):
-                if path_me not in sys.path:
-                    sys.path.insert(0, path_me)
                 mymod = __import__('%s.Source.rwgt2py' % data['paths'][1], globals(), locals(), [],-1)
                 mymod =  mymod.Source.rwgt2py
                 with misc.stdchannel_redirected(sys.stdout, os.devnull):
@@ -1509,6 +1582,11 @@ class ReweightInterface(extended_cmd.Cmd):
                                   self.banner.run_card['lpp2']],
                                  self.banner.run_card.get_lhapdf_id())
                 self.combine_wgt = mymod.get_wgt
+
+            if self.multicore == 'create':
+                print "compile OLP", data['paths'][1]
+                misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                             nb_core=self.mother.options['nb_core'])
                 
         elif has_nlo and not second and self.rwgt_mode == ['NLO_tree']:
             # We do not have any virtual reweighting to do but we still have to
@@ -1612,18 +1690,22 @@ class ReweightInterface(extended_cmd.Cmd):
         to_save['rwgt_dir'] = self.rwgt_dir
         to_save['has_nlo'] = self.has_nlo
         to_save['rwgt_mode'] = self.rwgt_mode
+        to_save['rwgt_name'] = self.options['rwgt_name']
 
         name = pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl')
         save_load_object.save_to_file(name, to_save)
 
-    def load_from_pickle(self):
+
+    def load_from_pickle(self, keep_name=False):
         import madgraph.iolibs.save_load_object as save_load_object
         
         obj = save_load_object.load_from_file( pjoin(self.rwgt_dir, 'rw_me', 'rwgt.pkl'))
         
         self.has_standalone_dir = True
         self.options = {'curr_dir': os.path.realpath(os.getcwd()),
-                        'rewgt_name': None}
+                        'rwgt_name': None}
+        if keep_name:
+            self.options['rwgt_name'] = obj['rwgt_name']
         
         old_rwgt = obj['rwgt_dir']
            
@@ -1647,10 +1729,14 @@ class ReweightInterface(extended_cmd.Cmd):
         if not self.rwgt_mode:
             self.rwgt_mode = obj['rwgt_mode']
             logger.info("mode set to %s" % self.rwgt_mode)
-        if self.has_nlo:
+        if self.has_nlo and 'NLO' in self.rwgt_mode:
             path = pjoin(obj['rwgt_dir'], 'rw_mevirt','Source')
             sys.path.insert(0, path)
-            mymod = __import__('rwgt2py', globals(), locals())
+            try:
+                mymod = __import__('rwgt2py', globals(), locals())
+            except ImportError:
+                misc.compile(['rwgt2py.so'], cwd=path)
+                mymod = __import__('rwgt2py', globals(), locals())
             with misc.stdchannel_redirected(sys.stdout, os.devnull):
                 mymod.initialise([self.banner.run_card['lpp1'], 
                               self.banner.run_card['lpp2']],

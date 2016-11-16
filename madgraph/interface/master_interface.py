@@ -80,6 +80,9 @@ class Switcher(object):
     def debug_link_to_command(self):
         """redefine all the command to call directly the appropriate child"""
         
+        if hasattr(self, 'plugin') and self.plugin:
+            return True
+        
         correct = True
         # function which should be self.cmd dependent but which doesn't start
         # by do_xxxx, help_xxx, check_xxxx or complete_xxx 
@@ -114,7 +117,7 @@ class Switcher(object):
         # in the Switcher or in one of the MasterClass
         define = {}
         for mother in MasterCmd.__mro__:
-            if mother.__name__ in ['Cmd', 'BasicCmd', 'ExtendedCmd']:
+            if mother.__name__ in ['OriginalCmd', 'BasicCmd', 'CmdExtended', 'Cmd']:
                 continue
             
             
@@ -134,9 +137,8 @@ class Switcher(object):
         # Do the same for the WEb MasterClass
         define = {}
         for mother in MasterCmdWeb.__mro__:
-            if mother.__name__ in ['Cmd', 'BasicCmd', 'ExtendedCmd']:
+            if mother.__name__ in ['OriginalCmd', 'BasicCmd', 'CmdExtended', 'Cmd']:
                 continue
-            
             for data in mother.__dict__:
                 #check if  define in Switcher
                 if data in Switcher.__dict__ or data.startswith('__'):
@@ -170,7 +172,8 @@ class Switcher(object):
         # option, specified in the line with format [ option = loop_orders ] or
         # [ loop_orders ] which implicitly select the 'all' option.
         loopRE = re.compile(r"^(.*)(?P<loop>\[(\s*(?P<option>\w+)\s*=)?(?P<orders>.+)?\])(.*)$")
-        res=loopRE.search(line)
+        # Make sure that the content of options following '--' are not considered.
+        res=loopRE.search(line.split('--')[0])
         if res:
             orders=res.group('orders').split() if res.group('orders') else []
             if res.group('option') and len(res.group('option').split())==1:

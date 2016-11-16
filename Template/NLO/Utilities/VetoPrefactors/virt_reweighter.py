@@ -103,7 +103,7 @@ def setup_channel(channelPath):
         checkerFile.close()                
     # Append the compilation of the StabilityCheckDriver to the makefile
         with open (pjoin(channelPath,'makefile'),'a') as makefile:
-            makefile.write("\nStabilityCheckDriver:  StabilityCheckDriver.o $(PROCESS)\n\t$(FC) $(FFLAGS) -o StabilityCheckDriver StabilityCheckDriver.o $(PROCESS) $(LINKLIBS)")
+            makefile.write("\nStabilityCheckDriver:  StabilityCheckDriver.o $(PROCESS)\n\t$(FC) $(FFLAGS) -o StabilityCheckDriver StabilityCheckDriver.o $(PROCESS) $(LINKLIBS) $(STDLIB)")
     try:
         misc.compile(arg=['StabilityCheckDriver'], \
                      cwd=channelPath, mode='fortran', job_specs = False)
@@ -183,7 +183,7 @@ outputEvtFile.write(evtFile.banner)
 
 # List the channel present in the process output
 channel_list = [ os.path.basename(chan) for chan in \
-                 misc.glob('P*', pjoin(proc_path, 'SubProcesses'))) ]
+                 misc.glob('P*', pjoin(proc_path, 'SubProcesses')) ]
 
 # Now scan over events
 # For each encountered channel, store the corresponding process runner

@@ -4,6 +4,7 @@ import pydoc
 import os
 import unittest
 import sys
+import shutil
 import re
 #Look for MG5/MG4 path
 _mg5_path = os.sep.join(os.path.realpath(__file__).split(os.sep)[:-3])
@@ -67,16 +68,10 @@ class ML5MSSMQCDTest(unittest.TestCase):
     test_model_name = 'loop_MSSM-parallel_test'
 
     def setUp(self):
-        """ Here we just copy the hidden restrict_card to a regular one.
-        And we don't bother making it hidden again after the test."""
-        cp(os.path.join(_mg5_path,'models','loop_MSSM',
-                        '.restrict_parallel_test.dat'),
-           os.path.join(_mg5_path,'models','loop_MSSM',
-                        'restrict_parallel_test.dat'))
-        cp(os.path.join(_mg5_path,'models','loop_MSSM',
-                        '.restrict_parallel_test_gogo.dat'),
-           os.path.join(_mg5_path,'models','loop_MSSM',
-                        'restrict_parallel_test_gogo.dat'))
+        """ Copy the model form the test input_files to the default directory."""
+        if not os.path.exists(os.path.join(_mg5_path,'models','loop_MSSM')):
+            shutil.copytree(os.path.join(_mg5_path,'tests','input_files','loop_MSSM'),
+                        os.path.join(_mg5_path,'models','loop_MSSM'))
 
     # The tests below probe one quite long process at a time individually, so
     # one can better manage them.

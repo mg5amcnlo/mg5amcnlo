@@ -175,7 +175,7 @@ class MadLoopLauncher(ExtLauncher):
                                os.path.join(self.card_dir, 'MadLoopParams.dat'))   
                 # Unless user asked for it, don't doublecheck the helicity filter.
                 MadLoopparam.set('DoubleCheckHelicityFilter', False, 
-                                                             ifnotdefault=False)
+                                                             changeifuserset=False)
                 MadLoopparam.write(os.path.join(self.card_dir,os.path.pardir, 
                                            'SubProcesses', 'MadLoopParams.dat'))
 
@@ -669,7 +669,7 @@ see arXiv:1402.1178.'''
         try:
             os.remove('ME5_debug')
         except:
-           pass
+            pass
 
         launch.run_cmd(command)
         launch.run_cmd('quit')
@@ -766,7 +766,6 @@ class Pythia8Launcher(ExtLauncher):
 
         # Make pythia8
         print "Running make for pythia8 directory"
-        misc.compile(cwd=os.path.join(self.running_dir, os.path.pardir), mode='cpp')
         if self.model_dir:
             print "Running make in %s" % self.model_dir
             misc.compile(cwd=self.model_dir, mode='cpp')

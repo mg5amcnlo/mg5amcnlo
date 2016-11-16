@@ -53,7 +53,7 @@ class DecayComparator(object):
         self.model = model
         self.cmd = cmd_interface.MasterCmd()
         self.cmd.exec_cmd('set automatic_html_opening False')
-        self.cmd.exec_cmd('import model %s --modelname' % model)
+        self.cmd.exec_cmd('import model %s --modelname' % model, precmd=True)
         self.cmd._curr_model = import_ufo.import_model(model, decay=True)
         
         self.particles_id = dict([(p.get('name'), p.get('pdg_code'))
@@ -77,6 +77,8 @@ class DecayComparator(object):
         if os.path.exists(card1):
             card1 = card_reader.ParamCard(card1)
             width1 = card1['decay'].get((pid,)).value
+        elif isinstance(card1,card_reader.ParamCard(card1)):
+            width1 = card1['decay'].get((pid,)).value
         else:
             width1 = 0
 
@@ -90,17 +92,20 @@ class DecayComparator(object):
         
         if width1 == width2 == 0:
             return 'True'
-        if (width1 - width2) / (width1 + width2) > 1e-4:
-            text = error_text(card1, card2, pid, name1, name2)
-            return text + '\n%s has not the same total width: ratio of %s' % \
-                (pid, (width1 - width2) / (width1 + width2))
+        #if (width1 - width2) / (width1 + width2) > 1e-4:
+        #    text = error_text(card1, card2, pid, name1, name2)
+        #    return text + '\n%s has not the same total width: ratio of %s' % \
+        #        (pid, (width1 - width2) / (width1 + width2))
         
         info_partial1 = {}
         for partial_width in card1['decay'].decay_table[pid]:
             lha_code = list(partial_width.lhacode)
             lha_code.sort()
             lha_code = tuple(lha_code)
-            info_partial1[lha_code] = partial_width.value
+            if partial_width.value*width1 < 0.1:
+                continue
+            info_partial1[lha_code] = partial_width.value*width1
+            
             
         for partial_width in card2['decay'].decay_table[pid]:
             lha_code = list(partial_width.lhacode)
@@ -110,12 +115,14 @@ class DecayComparator(object):
                 value1 = info_partial1[lha_code]
             except:
                 value1 = 0
-            value2 = partial_width.value
+            value2 = partial_width.value*width2
+            if value2 < 0.1:
+                value2 = 0
             if value1 == value2 == 0:
                 continue
             elif value1 == 0 and value2/width2 < 1e-6:
                 continue
-            elif abs(value1 - value2) / (value1 + value2) > 1e-3 and \
+            elif abs(value1 - value2) / (value1 + value2) > 1e-2 and \
                 value2 / width2 > 1e-5:
                 text = error_text(card1, card2, pid, name1, name2)
                 return text + '\n%s has not the same partial width for %s: ratio of %s' % \
@@ -258,11 +265,14 @@ class DecayComparator(object):
         if self.cmd._curr_amps: 
             self.cmd.exec_cmd('output %s -f' % dir_name)
             
-            
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                      '%s/Cards/run_card.dat' % dir_name, log=True)
             self.cmd.exec_cmd("set automatic_html_opening False --no-save")
-            self.cmd.exec_cmd('launch -f')
+            me_cmd = me_interface.MadEventCmd(dir_name)
+            #self.cmd.define_child_cmd_interface(me_cmd, False)
+            me_cmd.exec_cmd('calculate_decay_widths -f',precmd=True)
+            me_cmd.do_quit('')
+            #self.cmd.exec_cmd('compute_widths -f')
         stop_mg5 = time.time()
         print 'MG5 Running time: %s s ' % (stop_mg5 -start1)
                 
@@ -276,8 +286,10 @@ class DecayComparator(object):
             self.cmd.exec_cmd('output %s_dec -f' % dir_name)
             files.cp(pjoin(_file_path, 'input_files/run_card_decay.dat'),
                      '%s_dec/Cards/run_card.dat' % dir_name, log=True)
-            print "279 launch"
-            self.cmd.exec_cmd('launch -f')
+            me_cmd = me_interface.MadEventCmd(dir_name+'_dec')
+            #self.cmd.define_child_cmd_interface(me_cmd, False)
+            me_cmd.exec_cmd('calculate_decay_widths -f',precmd=True)
+            me_cmd.do_quit('')            
         stop_mg5 = time.time()
         print 'DECAY Running time: %s s ' % (stop_mg5 -start4)
         

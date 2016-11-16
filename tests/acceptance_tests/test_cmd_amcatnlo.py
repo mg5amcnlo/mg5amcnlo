@@ -70,6 +70,7 @@ class MECmdShell(IOTests.IOTestManager):
             self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
             
         self.path = pjoin(self.tmpdir,'MGProcess')
+        
     def tearDown(self):
         if not self.debugging:
             shutil.rmtree(self.tmpdir)
@@ -178,71 +179,6 @@ class MECmdShell(IOTests.IOTestManager):
         #self.assertEqual(info_html_target, info_html_this)
         open(pjoin(self.IOpath, "info.html"),"w").write(info_html_this)
 
-    def test_check_ppzjj(self):
-        """test that p p > z j j is correctly output without raising errors"""
-        
-        cmd = os.getcwd()
-        self.generate(['p p > z p p [real=QCD]'], 'sm', multiparticles=['p = g u'])
-        self.assertEqual(cmd, os.getcwd())
-        self.do('compile -f')
-        self.do('quit')
-
-        pdirs = [dir for dir in \
-                open('%s/SubProcesses/subproc.mg' % self.path).read().split('\n') if dir]
-
-        for pdir in pdirs:
-            exe = os.path.join('%s/SubProcesses' % self.path, pdir, 'madevent_mintMC')
-            self.assertTrue(os.path.exists(exe))
-
-
-    def test_check_eejjj_lo_lhapdf(self):
-        """test that e+ e- > j j j with pdlabel='lhapdf' runs ignoring the lhapdf setting
-        """
-        
-        cmd = os.getcwd()
-        self.generate(['e+ e- > p p p [real=QCD]'], 'sm' )
-        self.assertEqual(cmd, os.getcwd())
-
-        card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        # this check that the value of lpp/beam are change automatically
-        self.assertTrue('0   = lpp1' in card)
-        self.assertTrue('500.0   = ebeam' in card)
-        # pass to the object
-        card = banner.RunCardNLO(card)
-        card['pdlabel'] = "lhapdf"
-        self.assertEqual(card['lpp1'], 0)
-        self.assertEqual(card['lpp2'], 0)
-        self.assertEqual(card['ebeam1'], 500)
-        self.assertEqual(card['ebeam2'], 500)
-        card.write('%s/Cards/run_card.dat' % self.path)
-        
-
-        self.do('calculate_xsect -f LO')
-        self.do('quit')
-
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
-
-        # check the result
-        res = open('%s/Events/run_01_LO/res_1.txt' % self.path).read()
-
-        pat = re.compile('''\s*(\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\d+\.\d+e[+-]\d+)\%\)
-        \s*(\-?\d+\.\d+e[+-]\d+) \+\- (\d+\.\d+e[+-]\d+)  \((\-?\d+\.\d+e[+-]\d+)\%\)''')
-
-        match = re.search(pat, res)
-        res_dict = {'xseca' : float(match.groups()[0]),
-                    'erra' : float(match.groups()[1]),
-                    'xsect' : float(match.groups()[3]),
-                    'errt' : float(match.groups()[4])}
-
-        self.assertEqual(res_dict['xseca'], res_dict['xsect'])
-        self.assertTrue(math.fabs(res_dict['xseca']-3.811e-1) < 0.01)
-
 
     def test_raise_invalid_path_hwpp(self):
         """test that an exception is raised when trying to shower with hwpp without
@@ -318,53 +254,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
 
 
-    def test_split_evt_gen_zeroev(self):
-        """test that the event generation splitting works when some channels have zero events"""
-        cmd = os.getcwd()
-        self.generate(['p p > e+ e- [real=QCD] '], 'sm')
-        card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '-1 = nevt_job' in card)
-        self.assertTrue( '10000 = nevents' in card)
-        self.assertTrue( '-1.0 = req_acc' in card)
-        card = card.replace(' -1 = nevt_job', '1 = nevt_job')
-        card = card.replace('10000 = nevents', '6 = nevents')
-        card = card.replace(' -1 = req_acc', '0.1 = req_acc')
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-        self.cmd_line.exec_cmd('set  cluster_temp_path /tmp/')
-        self.do('generate_events -pf')
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
-
-
-    def test_check_ppwy(self):
-        """test that the p p > w y (spin 2 graviton) process works with loops. This
-        is needed in order to test the correct wavefunction size setting for spin2
-        particles"""
-        cmd = os.getcwd()
-        self.generate(['p p > w+ y [QCD] '], 'tests/loop_smgrav')
-        card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '10000 = nevents' in card)
-        card = card.replace('10000 = nevents', '100 = nevents')
-        open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
-        os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat'% (self.path, self.path))
-        self.do('generate_events -pf')
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
-
 
     def generate_production(self):
         """production"""
@@ -400,27 +289,7 @@ class MECmdShell(IOTests.IOTestManager):
         open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
 
 
-    @set_global()
-    def test_ppgogo_amcatnlo(self):
-        """tests if the p p > go go (in the mssm) process works"""
-        self.generate(['p p > go go [real=QCD]'], 'mssm')
-
-        card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '10000 = nevents' in card)
-        card = card.replace('10000 = nevents', '100 = nevents')
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-
-        self.do('launch aMC@NLO -fp')
-
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
+ 
 
 
     def test_amcantlo_script(self):
@@ -455,201 +324,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_02/alllogs_2.html' % self.path))
-
-
-
-    def test_launch_amcatnlo_name(self):
-        """tests if the p p > e+ ve process works specifying the run name.
-        """
-        self.generate(['p p > e+ ve [QCD]'], 'sm')
-
-        self.do('launch aMC@NLO -fp -n myrun')
-
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/myrun/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/myrun_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/alllogs_2.html' % self.path))
-
-
-    @set_global()
-    def test_ppgogo_nlo(self):
-        """tests if the p p > go go (in the mssm) process works at fixed order"""
-        self.generate(['p p > go go [real=QCD]'], 'mssm')
-
-        card = open('%s/Cards/run_card_default.dat' % self.path).read()
-        self.assertTrue( '10000  = npoints_FO' in card)
-        card = card.replace('10000  = npoints_FO', '100  = npoints_FO')
-        self.assertTrue( '5000   = npoints_FO_grid' in card)
-        card = card.replace('5000   = npoints_FO_grid', '100  = npoints_FO_grid')
-        self.assertTrue( '0.01   = req_acc_FO' in card)
-        card = card.replace('0.01   = req_acc_FO', '-1   = req_acc_FO')
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card)
-
-        self.do('launch NLO -f')
-        # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-
-
-    def test_calculate_xsect_script(self):
-        """test if the calculate_xsect script in the bin directory
-        works fine"""
-        
-        self.generate_production()
-        misc.call([pjoin('.','bin','calculate_xsect'), '-f'], cwd='%s' % self.path,
-                stdout = open(os.devnull, 'w'))
-
-        # test the plot file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/MADatNLO.HwU' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        
-
-    def test_generate_events_shower_scripts(self):
-        """test if the generate_events and successively the shower script in 
-        the bin directory works fine.
-        Also check the splitting of the shower for bot hep and top output"""
-
-        self.generate_production()
-        # to check that the cleaning of files work well
-        os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
-        self.do('quit')
-        self.cmd_line.run_cmd('generate_events -f')
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
-        # test the hep event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_0.hep.gz' % self.path))
-        misc.call([pjoin('.','bin','shower'), 'run_01', '-f'], cwd='%s' % self.path,
-                stdout = open(os.devnull, 'w'))
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_1.hep.gz' % self.path))
-        # sanity check on the size
-        self.assertTrue(os.path.getsize('%s/Events/run_01/events_HERWIG6_0.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.getsize('%s/Events/run_01/events_HERWIG6_1.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
-
-        #splitting of the shower
-        # 1) hep output
-        shower_card = open('%s/Cards/shower_card.dat' % self.path).read()
-        shower_card = shower_card.replace('nsplit_jobs  = 1', 'nsplit_jobs  = 4')
-        open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
-        self.cmd_line.run_cmd('shower run_01 -f')
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__1.hep.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__2.hep.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__3.hep.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_2__4.hep.gz' % self.path))
-
-        # 2) top output
-        shower_card = shower_card.replace('EXTRALIBS    = stdhep Fmcfio', 'EXTRALIBS    =')  
-        shower_card = shower_card.replace('ANALYSE      =', 'ANALYSE      = mcatnlo_hwan_pp_lvl.o mcatnlo_hbook_gfortran8.o')  
-        open('%s/Cards/shower_card.dat' % self.path, 'w').write(shower_card)
-        self.cmd_line.run_cmd('shower run_01 -f')
-        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path))
-        self.assertFalse(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__1.top' % self.path))
-        misc.call(['tar', '-xzpvf', '%s/Events/run_01/plot_HERWIG6_1_0.tar.gz' % self.path],
-                  cwd='%s/Events/run_01/'% self.path,
-                  stdout = open(os.devnull, 'w'))
-        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__1.top' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__2.top' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__3.top' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/plot_HERWIG6_1_0__4.top' % self.path))
-
-
-    def test_generate_events_name(self):
-        """test if the generate_events and successively the shower script in 
-        the bin directory works fine"""
-        
-        self.generate_production()
-        # to check that the cleaning of files work well
-        os.system('touch %s/SubProcesses/P0_udx_epve/GF1' % self.path)
-        self.do('quit')
-        misc.call([pjoin('.','bin','generate_events'), '-fp', '-n myrun'], cwd='%s' % self.path,
-                stdout = open(os.devnull, 'w'))
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/myrun/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/myrun_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/myrun/alllogs_2.html' % self.path))
-
-
-    def test_generate_events_lo_hwpp_set(self):
-        """test the param_card created is correct"""
-        
-        self.generate_production()
-        cmd = """generate_events aMC@LO -p
-                 set parton_shower herwigpp
-                 set nevents 100
-                 """
-        open('/tmp/mg5_cmd','w').write(cmd)
-        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
-        self.cmd_line.import_command_file('/tmp/mg5_cmd')
-        #self.do('import command %s/mg5_cmd')
-        #self.do('generate_events LO -f')        
-        
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_2.html' % self.path))
-    
-
-    def test_generate_events_lo_hw6_set(self):
-        """test the param_card created is correct"""
-        
-        self.generate_production()
-        cmd = """generate_events aMC@LO
-                 set parton_shower herwig6
-                 set nevents 100
-                 """
-        open('/tmp/mg5_cmd','w').write(cmd)
-        self.cmd_line.import_command_file('/tmp/mg5_cmd')
-        #self.do('import command %s/mg5_cmd')
-        #self.do('generate_events LO -f')        
-        
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/run_01_LO_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/alllogs_2.html' % self.path))
-
-        self.assertTrue(os.path.exists('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path))
-        # sanity check on the size
-        self.assertTrue(os.path.getsize('%s/Events/run_01_LO/events_HERWIG6_0.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path))
-
 
 
     def test_generate_events_lo_hw6_stdhep(self):
@@ -707,62 +381,6 @@ class MECmdShell(IOTests.IOTestManager):
                         os.path.getsize('%s/Events/run_01_LO/events.lhe.gz' % self.path))
 
 
-    def test_generate_events_nlo_py6pt_stdhep(self):
-        """check that py6pt event generation works in this case"""
-        
-        self.generate_production()
-
-        #change to py6
-        card = open('%s/Cards/run_card.dat' % self.path).read()
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       
-        self.do('generate_events -f')        
-        
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
-        # test the hep event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6PT_0.hep.gz' % self.path))
-        # sanity check on the size
-        self.assertTrue(os.path.getsize('%s/Events/run_01/events_PYTHIA6PT_0.hep.gz' % self.path) > \
-                        os.path.getsize('%s/Events/run_01/events.lhe.gz' % self.path))
-
-
-    def test_check_generate_events_nlo_py6pt_fsr(self):
-        """check that py6pt event generation stops in this case (because of fsr)"""
-        
-        cmd = os.getcwd()
-        self.generate(['e+ e- > t t~ [real=QCD]'], 'sm')
-        #change to py6
-        card = open('%s/Cards/run_card.dat' % self.path).read()
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6PT'))       
-        #self.do('generate_events -f')        
-        self.assertRaises(NLOCmd.aMCatNLOError, self.do, 'generate_events -f')
-
-        
-    def test_generate_events_nlo_hw6_stdhep(self):
-        """test the param_card created is correct"""
-        
-        self.generate_production()
-        self.do('generate_events aMC@NLO -f')
-        
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
-        # test the hep event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_HERWIG6_0.hep.gz' % self.path))
-
 
     def test_generate_events_nlo_hw6_split(self):
         """test the param_card created is correct"""
@@ -784,30 +402,6 @@ class MECmdShell(IOTests.IOTestManager):
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
         self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
-        
-
-    def test_generate_events_nlo_py6_stdhep(self):
-        """test the param_card created is correct"""
-        
-        self.generate_production()
-        #change to py6
-        card = open('%s/Cards/run_card.dat' % self.path).read()
-        open('%s/Cards/run_card.dat' % self.path, 'w').write(card.replace('HERWIG6', 'PYTHIA6Q'))
-        
-        self.do('generate_events aMC@NLO -f')        
-        
-        # test the lhe event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events.lhe.gz' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/run_01_tag_1_banner.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_0.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/res_1.txt' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_0.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_1.html' % self.path))
-        self.assertTrue(os.path.exists('%s/Events/run_01/alllogs_2.html' % self.path))
-        # test the hep event file exists
-        self.assertTrue(os.path.exists('%s/Events/run_01/events_PYTHIA6Q_0.hep.gz' % self.path))
-        
         
 
     def test_calculate_xsect_nlo(self):
@@ -869,6 +463,8 @@ class MECmdShell(IOTests.IOTestManager):
 
         stdout.close()
         text = open('%s/test.log' % self.tmpdir,'r').read()
+        if logging.getLogger('madgraph').level <= 20:
+            print text
         data = text.split('\n')
         for i,line in enumerate(data):
             if 'Summary:' in line:
@@ -887,32 +483,6 @@ class MECmdShell(IOTests.IOTestManager):
         #      Number of events generated: 10000        
         self.assertTrue('Number of events generated: 100' in data[i+3])
 
-
-    def test_jet_veto_xsec(self):
-        """tests the jet-veto cross section at NNLL+NLO"""
-        self.generate_production()
-        cmd = """generate_events NLO
-                 set ickkw -1
-                 set ptj 10
-                 """
-        open('/tmp/mg5_cmd','w').write(cmd)
-        self.assertFalse(self.cmd_line.options['automatic_html_opening'])
-        self.cmd_line.import_command_file('/tmp/mg5_cmd')
-        self.assertTrue(os.path.exists('%s/Events/run_01/summary.txt' % self.path))
-        text=open('%s/Events/run_01/summary.txt' % self.path,'r').read()
-        data=text.split('\n')
-        for i,line in enumerate(data):
-            if 'Process' in line:
-                break
-        #      Run at p-p collider (6500 + 6500 GeV)
-        self.assertTrue('Run at p-p collider (6500.0 + 6500.0 GeV)' in data[i+1])
-        cross_section = data[i+3]
-        cross_section = float(cross_section.split(':')[1].split('+-')[0])
-        try:
-            # By default run to 1% precision: set delta=120 for ~2sigma effect.
-            self.assertAlmostEqual(5933.0, cross_section,delta=120)
-        except TypeError:
-            self.assertTrue(cross_section < 4151. and cross_section > 4151.)
 
     def load_result(self, run_name):
         

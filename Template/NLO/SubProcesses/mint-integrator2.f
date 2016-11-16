@@ -98,6 +98,8 @@ c others: same as 1 (for now)
       logical even,double_events,bad_iteration
       double precision average_virtual(0:n_ave_virt),virtual_fraction
       common/c_avg_virt/average_virtual,virtual_fraction
+      logical new_point
+      common /c_new_point/ new_point
 c APPLgrid switch
       integer iappl
       common /for_applgrid/ iappl
@@ -235,6 +237,7 @@ c Reset the accumulated results for grid updating
 c Loop over PS points
  2    kpoint_iter=kpoint_iter+1
       do kpoint=1,ncalls
+         new_point=.true.
 c find random x, and its random cell
          do kdim=1,ndim
             kfold(kdim)=1
@@ -256,7 +259,7 @@ c if(even), we should compute the ncell and the rand from the ran3()
          ifirst=0
  1       continue
          vol=1
-c compute jacobian ('vol') for the PS point
+c c convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
          do kdim=1,ndim
             nintcurr=nint_used/ifold(kdim)
             icell(kdim)=ncell(kdim)+(kfold(kdim)-1)*nintcurr
@@ -384,7 +387,8 @@ C and save files/grids as any other run
       endif
 c Goto beginning of loop over PS points until enough points have found
 c that pass cuts.
-      if (non_zero_point(1).lt.ncalls .and. double_events) goto 2
+      if (non_zero_point(1).lt.int(0.99*ncalls)
+     &                        .and. double_events) goto 2
 
 c Iteration done. Update the accumulated results and print them to the
 c screen
@@ -685,36 +689,54 @@ c Do next iteration
       include "mint.inc"
       integer  ninter,nhits(nintervals)
       real * 8 xacc(0:nintervals),xgrid(0:nintervals)
-      real * 8 xn(nintervals),r,tiny,xl,xu,nl,nu
+      real * 8 xn(nintervals),r,tiny,xl,xu,nl,nu,sum
       parameter ( tiny=1d-8 )
       integer kint,jint
-c Use the same smoothing as in VEGAS uses for the grids (i.e. use the
-c average of the central and the two neighbouring grid points):
-      xl=xacc(1)
-      xu=xacc(2)
-      xacc(1)=(xl+xu)/2d0
-      nl=nhits(1)
-      nu=nhits(2)
-      nhits(1)=nint((nl+nu)/2d0)
-      do kint=2,ninter-1
-         xacc(kint)=xl+xu
-         xl=xu
-         xu=xacc(kint+1)
-         xacc(kint)=(xacc(kint)+xu)/3d0
-         nhits(kint)=nl+nu
-         nl=nu
-         nu=nhits(kint+1)
-         nhits(kint)=nint((nhits(kint)+nu)/3d0)
+c Use the same smoothing as in VEGAS uses for the grids, i.e. use the
+c average of the central and the two neighbouring grid points: (Only do
+c this if we are already at the maximum intervals, because the doubling
+c of the grids also includes a smoothing).
+      if (ninter.eq.nintervals) then
+         xl=xacc(1)
+         xu=xacc(2)
+         xacc(1)=(xl+xu)/2d0
+         nl=nhits(1)
+         nu=nhits(2)
+         nhits(1)=nint((nl+nu)/2d0)
+         do kint=2,ninter-1
+            xacc(kint)=xl+xu
+            xl=xu
+            xu=xacc(kint+1)
+            xacc(kint)=(xacc(kint)+xu)/3d0
+            nhits(kint)=nl+nu
+            nl=nu
+            nu=nhits(kint+1)
+            nhits(kint)=nint((nhits(kint)+nu)/3d0)
+         enddo
+         xacc(ninter)=(xu+xl)/2d0
+         nhits(ninter)=nint((nu+nl)/2d0)
+      endif
+c
+      sum=0d0
+      do kint=1,ninter
+         if (nhits(kint).ne.0) then
+            xacc(kint)=abs(xacc(kint))/nhits(kint)
+            sum=sum+xacc(kint)
+         endif
       enddo
-      xacc(ninter)=(xu+xl)/2d0
-      nhits(ninter)=nint((nu+nl)/2d0)
 c
       do kint=1,ninter
 c xacc (xerr) already contains a factor equal to the interval size
 c Thus the integral of rho is performed by summing up
          if(nhits(kint).ne.0) then
-            xacc(kint)= xacc(kint-1)
-     #           + abs(xacc(kint))/nhits(kint)
+c     take logarithm to help convergence (taken from LO dsample.f)
+            if (xacc(kint).ne.sum) then
+               xacc(kint)=((xacc(kint)/sum-1d0)/
+     &                        log(xacc(kint)/sum))**1.5
+            else
+               xacc(kint)=1d0
+            endif
+            xacc(kint)= xacc(kint-1) + abs(xacc(kint))
          else
             xacc(kint)=xacc(kint-1)
          endif
@@ -831,6 +853,8 @@ c imode=3 store generation efficiency in x(1)
       common/c_avg_virt/average_virtual,virtual_fraction
       save icalls,mcalls,icalls_virt,mcalls_virt,xmmm,icalls_nz
      $     ,icalls_virt_nz
+      logical new_point
+      common /c_new_point/ new_point
       if(imode.eq.0) then
          do kdim=1,ndim
             nintcurr=nintervals/ifold(kdim)
@@ -884,6 +908,7 @@ c imode=3 store generation efficiency in x(1)
          stop
       endif
  10   continue
+      new_point=.true.
       if (vn.eq.1) then
          icalls_virt=icalls_virt+1
       elseif(vn.eq.2 .or. vn.eq.3) then

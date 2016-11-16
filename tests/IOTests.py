@@ -154,11 +154,12 @@ class IOTest(object):
         hel_amp=loop_helas_objects.LoopHelasMatrixElement(\
                                         myloopamp,optimized_output=isOptimized)
 
-        self.exporter.copy_v4template(model.get('name'))
-        self.exporter.generate_loop_subprocess(hel_amp, self.helasModel)
+        self.exporter.copy_template(model)
+        self.exporter.generate_loop_subprocess(hel_amp, self.helasModel, unique_id=1)
+        
         wanted_lorentz = hel_amp.get_used_lorentz()
         wanted_couplings = list(set(sum(hel_amp.get_used_couplings(),[])))
-        self.exporter.convert_model_to_mg4(model,wanted_lorentz,wanted_couplings)
+        self.exporter.convert_model(model,wanted_lorentz,wanted_couplings)
             
         proc_name='P'+hel_amp.get('processes')[0].shell_string()
         return pjoin(self.outputPath,'SubProcesses',proc_name)
@@ -171,6 +172,37 @@ class IOTest(object):
         else:
             if path.isdir(self.outputPath):
                 shutil.rmtree(self.outputPath)
+                
+    @staticmethod
+    def remove_f77_function_from_file(path, function=[]):
+        """remove a subroutine/function of a file. (usefull to restric the IOTest)"""
+        
+        if not isinstance(function, list):
+            function= [function.lower()]
+        else:
+            function = [fct.lower() for fct in function]
+        new_text = []
+        subroutine_pattern = re.compile(r'''^      \s*(?:SUBROUTINE|[\w\*\(\)]+\s+FUNCTION)\s+([\w_]*)\(''', re.I+re.M)
+        skip = False
+        one_mod= False
+        for line in open(path):
+            fctname = subroutine_pattern.findall(line)
+            if fctname:
+                if fctname[0].lower() in function:
+                    skip=True
+                    one_mod=True
+                    continue
+                else:
+                    skip = False
+            if not skip:
+                new_text.append(line)
+        
+        if one_mod:
+                open(path,'w').writelines(new_text)
+        return one_mod 
+                
+            
+            
 
 # The decorator below allows for easily creating a new CustomIOTest by just
 # wrapping a test function whose name starts with testIO which generates files

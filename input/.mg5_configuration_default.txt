@@ -56,15 +56,25 @@
 # timeout = 60
 
 #! Pythia8 path.
-#!  Defines the path to the main pythia8 directory (i.e. that containing
-#!  the pythia8 configure script) .
+#!  Defines the path to the pythia8 installation directory (i.e. the
+#!  on containing the lib, bin and include directories) .
 #!  If using a relative path, that starts from the mg5 directory
-# pythia8_path =
+# pythia8_path = ./HEPTools/pythia8
 
-#! Herwig++ paths
+#! MG5aMC_PY8_interface path
+#!  Defines the path of the C++ driver file that is used by MG5_aMC to
+#!  steer the Pythia8 shower.
+#!  Can be installed directly from within MG5_aMC with the following command:
+#!     MG5_aMC> install mg5amc_py8_interface
+# mg5amc_py8_interface_path = ./HEPTools/MG5aMC_PY8_interface 
+
+#! Herwig++/Herwig7 paths
 #!  specify here the paths also to HepMC ant ThePEG
 #!  define the path to the herwig++, thepeg and hepmc directories.
 #!  paths can be absolute or relative from mg5 directory
+#!  WARNING: if Herwig7 has been installed with the bootstrap script,
+#!  then please set thepeg_path and hepmc_path to the same value as
+#!  hwpp_path
 # hwpp_path = 
 # thepeg_path = 
 # hepmc_path = 
@@ -132,9 +142,13 @@
 #!  relative path start from main directory
 # delphes_path = ./Delphes
 
-#! MadAnalysis Package [For Drawing output]
+#! MadAnalysis4 fortran-based package [for basic analysis]
 #!  relative path start from main directory
 # madanalysis_path = ./MadAnalysis
+
+#! MadAnalysis5 python-based Package [For advanced analysis]
+#!  relative path start from main directory
+# madanalysis5_path = ./HEPTools/madanalysis5/madanalysis5
 
 #! ExRootAnalysis Package
 #!  relative path start from main directory
@@ -180,11 +194,16 @@
 #! if samurai=/PATH/TO/samurai/lib: use that specific installation path for samurai
 # samurai = None
 
-#! Set the samurai directory containing ninja's library
-#! if auto: try to find it automatically on the system (default)
+#! Set the Ninja directory containing ninja's library
 #! if '' or None: disabling ninja 
 #! if ninja=/PATH/TO/ninja/lib: use that specific installation path for ninja 
 # ninja = ./HEPTools/lib
+
+#! Set the COLLIER directory containing COLLIER's library
+#! if '' or None: disabling COLLIER 
+#! if ninja=/PATH/TO/ninja/lib: use that specific installation path for COLLIER
+# Note that it is necessary that you have generated a static library for COLLIER
+# collier = ./HEPTools/lib 
 
 #! Set how MadLoop dependencies (such as CutTools) should be handled
 #!  > external : ML5 places a link to the MG5_aMC-wide libraries

@@ -496,7 +496,7 @@ class Amplitude(base_objects.PhysicsObject):
         
         return self.get('process').get('perturbation_couplings')
 
-    def generate_diagrams(self, returndiag=False):
+    def generate_diagrams(self, returndiag=False, diagram_filter=False):
         """Generate diagrams. Algorithm:
 
         1. Define interaction dictionaries:
@@ -792,6 +792,9 @@ class Amplitude(base_objects.PhysicsObject):
         if not returndiag and len(res)>0:
             res = self.apply_squared_order_constraints(res)
 
+        if diagram_filter:
+            res = self.apply_user_filter(res)
+
         # Replace final id=0 vertex if necessary
         if not process.get('is_decay_chain'):
             for diagram in res:
@@ -883,6 +886,41 @@ class Amplitude(base_objects.PhysicsObject):
                                    ' can be specified, not %s.'%str(neg_orders))
 
         return res
+
+    def apply_user_filter(self, diag_list):
+        """Applies the user specified squared order constraints on the diagram
+        list in argument."""
+
+        if True:
+            try:
+                from PLUGIN.user_filter import remove_diag
+            except ImportError:
+                raise MadGraph5Error, 'user filter required to be defined in PLUGIN/user_filter.py with the function remove_diag(ONEDIAG) which returns True if the daigram has to be removed'
+        else:
+            #example and simple tests
+            def remove_diag(diag):
+                for vertex in diag['vertices']: #last 
+                    if vertex['id'] == 0: #special final vertex
+                        continue 
+                    if vertex['legs'][-1]['number'] < 3: #this means T-channel
+                        if abs(vertex['legs'][-1]['id']) <6:
+                            return True
+                return False                
+
+        res = diag_list.__class__()                
+        nb_removed = 0 
+        for diag in diag_list:
+            if remove_diag(diag):
+                nb_removed +=1
+            else:
+                res.append(diag)
+
+        if nb_removed:
+            logger.warning('Diagram filter is ON and removed %s diagrams for this subprocess.' % nb_removed)
+            
+        return res
+
+
 
     def create_diagram(self, vertexlist):
         """ Return a Diagram created from the vertex list. This function can be
@@ -1526,7 +1564,7 @@ class MultiProcess(base_objects.PhysicsObject):
         
     def __init__(self, argument=None, collect_mirror_procs = False,
                  ignore_six_quark_processes = [], optimize=False,
-                 loop_filter=None):
+                 loop_filter=None, diagram_filter=None):
         """Allow initialization with ProcessDefinition or
         ProcessDefinitionList
         optimize allows to use param_card information. (usefull for 1-.N)"""
@@ -1548,6 +1586,7 @@ class MultiProcess(base_objects.PhysicsObject):
         self['ignore_six_quark_processes'] = ignore_six_quark_processes
         self['use_numerical'] = optimize
         self['loop_filter'] = loop_filter
+        self['diagram_filter'] = diagram_filter # only True/False so far
         
         if isinstance(argument, base_objects.ProcessDefinition) or \
                isinstance(argument, base_objects.ProcessDefinitionList):
@@ -1598,7 +1637,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                        self.get('collect_mirror_procs'),
                                        self.get('ignore_six_quark_processes'),
                                        self['use_numerical'],
-                                       loop_filter=self['loop_filter']))
+                                       loop_filter=self['loop_filter'],
+                                       diagram_filter=self['diagram_filter']))
 
         return MultiProcess.__bases__[0].get(self, name) # call the mother routine
 
@@ -1612,7 +1652,8 @@ class MultiProcess(base_objects.PhysicsObject):
                                   collect_mirror_procs = False,
                                   ignore_six_quark_processes = [],
                                   use_numerical=False,
-                                  loop_filter=None):
+                                  loop_filter=None,
+                                  diagram_filter=False):
         """Generate amplitudes in a semi-efficient way.
         Make use of crossing symmetry for processes that fail diagram
         generation, but not for processes that succeed diagram
@@ -1684,6 +1725,7 @@ class MultiProcess(base_objects.PhysicsObject):
                 sorted_legs = sorted([(l,i+1) for (i,l) in \
                                    enumerate(legs.get_outgoing_id_list(model))])
                 permutation = [l[1] for l in sorted_legs]
+                
                 sorted_legs = array.array('i', [l[0] for l in sorted_legs])
 
                 # Check for six-quark processes
@@ -1771,7 +1813,7 @@ class MultiProcess(base_objects.PhysicsObject):
                                                         loop_filter=loop_filter)
 
                 try:
-                    result = amplitude.generate_diagrams()
+                    result = amplitude.generate_diagrams(diagram_filter=diagram_filter)
                 except InvalidCmd as error:
                     failed_procs.append(sorted_legs)
                 else:

@@ -55,7 +55,7 @@ endif
 
 UNAME := $(shell uname -s)
 ifeq ($(origin LDFLAGS), undefined)
-     LDFLAGS=$(STDLIB)
+     LDFLAGS=$(STDLIB) $(MACFLAG)
 endif
 # Options: dynamic, lhapdf
 
@@ -92,7 +92,7 @@ endif
 ifneq ($(lhapdf),)
   CXXFLAGS += $(shell $(lhapdf) --cppflags)
   alfas_functions=alfas_functions_lhapdf
-  llhapdf+=-lLHAPDF 
+  llhapdf = $(shell $(lhapdf) --libs)
   reweight_xsec_events_pdf_dummy=
 else
   alfas_functions=alfas_functions

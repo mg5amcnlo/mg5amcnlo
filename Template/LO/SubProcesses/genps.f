@@ -216,9 +216,9 @@ c        Set stot
             if(ebeam(1).lt.m1) ebeam(1)=m1
             if(ebeam(2).lt.m2) ebeam(2)=m2
             pi1(0)=ebeam(1)
-            pi1(3)=sqrt(ebeam(1)**2-m1**2)
+            pi1(3)=sqrt(max(ebeam(1)**2-m1**2, 0d0))
             pi2(0)=ebeam(2)
-            pi2(3)=-sqrt(ebeam(2)**2-m2**2)
+            pi2(3)=-sqrt(max(ebeam(2)**2-m2**2, 0d0))
             stot=m1**2+m2**2+2*(pi1(0)*pi2(0)-pi1(3)*pi2(3))
          endif
          write(*,'(x,a,f13.2)') 'Set CM energy to ',sqrt(stot)
@@ -1159,7 +1159,7 @@ C     &     X(1),TAU,SJACOBI)
 
 C     IF THERE IS NO S CHANNEL POLE USE BELOW:
 
-      TAUMIN = SMIN/S
+      TAUMIN = 0d0 !SMIN/S !keep scale fix
       TAUMAX = 1D0
       TAU    = (TAUMAX-TAUMIN)*X(1)+TAUMIN
       SJACOBI=  sjacobi*(TAUMAX-TAUMIN)

@@ -39,7 +39,7 @@ class IOTest_Histogram(IOTests.IOTestManager):
           import os,sys;
           sys.path=%s;
           _file_path = '%s';
-          _HwU_source = os.path.join(_file_path,os.pardir,'input_files','MADatNLO.HwU')
+          _HwU_source = os.path.join(_file_path,'input_files','MADatNLO.HwU')
           pjoin = os.path.join
 
           import madgraph.various.histograms as histograms;
@@ -47,6 +47,5 @@ class IOTest_Histogram(IOTests.IOTestManager):
           histo_list.output(pjoin('%s','HistoOut'), format = 'gnuplot');
         ''' % (sys.path, _file_path, self.IOpath)
 
-        import os
         os.system('echo "%s" | python' % line) 
 

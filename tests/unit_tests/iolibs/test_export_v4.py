@@ -2002,10 +2002,13 @@ C     Number of configs
     def test_replace_make_opt_f_compiler(self):
         """check that the compiler in the Template is the default one for release"""
 
+#        if os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
+        LO_text = open(pjoin(MG5DIR, 'Template','LO','Source','make_opts')).read()
+        self.assertTrue('F2PY=$(DEFAULT_F2PY_COMPILER)' in LO_text)
+        self.assertTrue('FC=$(DEFAULT_F_COMPILER)' in LO_text)
         if os.path.exists(pjoin(MG5DIR, 'bin', 'create_release.py')):
-            LO_text = open(pjoin(MG5DIR, 'Template','LO','Source','make_opts')).read()
-            self.assertTrue('F2PY=f2py' in LO_text)
-            self.assertTrue('FC=gfortran' in LO_text)
+            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in LO_text)
+            self.assertTrue('DEFAULT_F_COMPILER=gfortran' in LO_text)            
 #            NLO_text = open(pjoin(MG5DIR, 'Template','NLO','Source','make_opts.inc')).read()
 #            self.assertTrue('DEFAULT_F2PY_COMPILER=f2py' in NLO_text)
 #            self.assertTrue('FC=gfortran' in NLO_text)            
@@ -6632,8 +6635,6 @@ CALL IOVXXX(W(1,12),W(1,13),W(1,2),GAL,AMP(8))""".split('\n'))
 
         exporter = export_v4.ProcessExporterFortranME()
 
-        #exporter.generate_subprocess_directory_v4_standalone(me,
-        #                                                      myfortranmodel)
 
         goal = """16 82 [0, 0, 0]
 16 83 [0, 1, 0]

@@ -490,6 +490,7 @@ class TestCmdMatchBox(IOTests.IOTestManager):
         misc.deactivate_dependence('samurai', cmd = self.interface, log='stdout')        
         misc.activate_dependence('golem', cmd = self.interface, log='stdout')
         misc.activate_dependence('ninja', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
+        misc.activate_dependence('collier', cmd = self.interface, log='stdout',MG5dir=MG5DIR)
 
     @IOTests.createIOTest()
     def testIO_MatchBoxOutput(self):
@@ -533,3 +534,14 @@ class IOTestMadLoopOutputFromInterface(IOTests.IOTestManager):
 
         run_cmd('generate g g > t t~ [virt=QCD]')
         interface.onecmd('output %s -f' % str(pjoin(self.IOpath,'ggttx_IOTest')))
+
+        #remove some function from some file:
+        IOTests.IOTest.remove_f77_function_from_file(
+                    pjoin(self.IOpath,'ggttx_IOTest', 'SubProcesses','MadLoopCommons.f'),
+                    'PRINT_MADLOOP_BANNER')
+        
+
+
+
+
+

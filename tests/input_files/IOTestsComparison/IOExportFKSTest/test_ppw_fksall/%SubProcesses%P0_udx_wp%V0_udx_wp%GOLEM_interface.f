@@ -9,8 +9,8 @@ C     The Golem95 version should be higher than 1.3.0.
 C     It supports RANK = NLOOPLINE + 1 tensor integrals when 1 <
 C      NLOOPLINE < 6.
 C     
-C     Process: u d~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
-C     Process: c s~ > w+ WEIGHTED<=2 QED<=1 [ all = QCD ]
+C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
 C     
 C     
 C     MODULES
@@ -108,8 +108,9 @@ C
       COMMON/LOOP/ID,SQSOINDEX,R
 
       LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+     $ ,COLLIERINIT
       COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT,GOLEMINIT,SAMURAIINIT
-     $ ,NINJAINIT
+     $ ,NINJAINIT,COLLIERINIT
 
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=1)

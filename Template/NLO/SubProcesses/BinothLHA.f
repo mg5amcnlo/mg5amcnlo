@@ -112,6 +112,8 @@ c Make sure that whenever in the initialisation phase, MadLoop calls
 c itself again to perform stability check to make sure no unstable EPS
 c splips unnoticed.
          CALL FORCE_STABILITY_CHECK(.TRUE.)
+         CALL COLLIER_COMPUTE_UV_POLES(.FALSE.)
+         CALL COLLIER_COMPUTE_IR_POLES(.FALSE.)
          firsttime_run = .false.
       endif
       firsttime=firsttime.or.force_polecheck
@@ -157,6 +159,7 @@ C          different coupling combinations
 c Just set the accuracy found to a positive value as it is not specified
 c once the initial pole check is performed.
          if (mc_hel.eq.0) then
+
             call sloopmatrix_thres(p,virt_wgts,tolerance,accuracies
      $           ,ret_code)
             do i = 1, nsqso
@@ -248,7 +251,7 @@ c MadLoop initialization PS points.
       cpol=.false.
       ret_code_common=ret_code
       if ((firsttime .or. mc_hel.eq.0) .and. mod(ret_code,100)/10.ne.3
-     $     .and. mod(ret_code,100)/10.ne.4) then 
+     $     .and. mod(ret_code,100)/10.ne.4) then
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
          ! loop over the full result and each of the amp_split
          ! contribution
@@ -282,11 +285,12 @@ c MadLoop initialization PS points.
           PoleDiff(1)=dabs(single - madfks_single)
           PoleDiff(2)=dabs(double - madfks_double)
           if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
-            cpol = .not. (((PoleDiff(1)+PoleDiff(2))/
+            cpol = .not.((((PoleDiff(1)+PoleDiff(2))/
      $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           tolerance*10d0)
+     $           tolerance*10d0).or.(mod(ret_code,10).eq.7))
           else
-            cpol = .not.(PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
+            cpol = .not.((PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0).or.
+     $                   (mod(ret_code,10).eq.7))
           endif
           if (tolerance.lt.0.0d0) then
             cpol = .false.

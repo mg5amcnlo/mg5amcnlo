@@ -44,6 +44,7 @@ import math
 import madgraph.core.drawing as draw
 import madgraph.core.base_objects as base_objects
 import madgraph.loop.loop_base_objects as loop_objects
+import madgraph.various.misc as misc
 import logging
 
 logger = logging.getLogger('madgraph.drawing_eps')
@@ -541,6 +542,7 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 
         is_tadpole = line.begin.pos_x==line.end.pos_x and \
                                                 line.begin.pos_y==line.end.pos_y
+                                                
         if is_tadpole:
             # Obtain the direction of the propagator supporting the tadpole
             direction = None
@@ -550,7 +552,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
                     continue
                 norm = math.sqrt(new_direction[0]**2+new_direction[1]**2)
                 new_direction = (new_direction[0]/norm, new_direction[1]/norm)
-
                 if not direction:
                     direction = new_direction
                 else:
@@ -559,7 +560,6 @@ class EpsDiagramDrawer(draw.DiagramDrawer):
 #                        logger.error('The case of a five-point vertex'+
 #                                          'yielding a tadpole is not supported')            
                         pass           
-            
             # Compute the orthogonal the
             orthogonal = (-direction[1],direction[0])
 

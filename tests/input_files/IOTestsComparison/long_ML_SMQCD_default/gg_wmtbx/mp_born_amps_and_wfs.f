@@ -7,7 +7,7 @@ C
 C     Computes all the AMP and WFS in quadruple precision for the 
 C     phase space point P(0:3,NEXTERNAL)
 C     
-C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QCD<=2 QED<=1 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -38,7 +38,10 @@ C
       INTEGER I,J,H
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       DATA IC/NEXTERNAL*1/
-
+C     
+C     FUNCTIONS
+C     
+      LOGICAL ML5_0_IS_HEL_SELECTED
 C     
 C     GLOBAL VARIABLES
 C     
@@ -79,6 +82,13 @@ C
       LOGICAL MP_DONE_ONCE
       COMMON/ML5_0_MP_DONE_ONCE/MP_DONE_ONCE
 
+C     This array specify potential special requirements on the
+C      helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such
+C      requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BEAM_POL/POLARIZATIONS
+
 C     ----------
 C     BEGIN CODE
 C     ---------
@@ -94,6 +104,11 @@ C     But it is really not time consuming and I would rather be safe.
       DO H=1,NCOMB
         IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.((CHECKPHASE.OR.
      $.NOT.HELDOUBLECHECKED).OR.GOODHEL(H)))) THEN
+C         Handle the possible requirement of specific polarizations
+          IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(
+     $0,0).EQ.0.AND.(.NOT.ML5_0_IS_HEL_SELECTED(H))) THEN
+            CYCLE
+          ENDIF
           DO I=1,NEXTERNAL
             NHEL(I)=HELC(I,H)
           ENDDO
