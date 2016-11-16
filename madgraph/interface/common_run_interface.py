@@ -5280,6 +5280,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         def check_block(self, blockname):
             add_entry = 0
+            if blockname.lower() not in self.param_card_default:
+                logger.info('unknow block %s: block will be ignored', blockname)
+                return add_entry
             block = self.param_card_default[blockname]
             for key in block.keys():
                 if key not in input_in_block:
@@ -5291,6 +5294,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     add_entry += 1
             if add_entry:
                 text.append('\n')
+            if add_entry:
+                logger.info("Adding %s parameter(s) to block %s", add_entry, blockname)
             return add_entry
         
         # Add to the current param_card all the missing input at default value
@@ -5344,7 +5349,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 continue
 
             if block not in defined_blocks:
-                add_entry += len(self.param_card_default[block])
+                nb_entry = len(self.param_card_default[block])
+                logger.info("Block %s was missing. Adding the %s associated parameter(s)", block,nb_entry)
+                add_entry += nb_entry
                 text.append(str(self.param_card_default[block])) 
             
         # special check for the decay
