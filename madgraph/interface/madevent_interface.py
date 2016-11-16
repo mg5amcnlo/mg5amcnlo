@@ -6477,7 +6477,7 @@ class MadLoopInitializer(object):
             interface.do_treatcards('all --no_MadLoopInit')
         
         # First make sure that IREGI and CUTTOOLS are compiled if needed
-        if os.path.exists(pjoin(proc_dir,'Source','CUTTOOLS')):
+        if os.path.exists(pjoin(proc_dir,'Source','CutTools')):
             misc.compile(arg=['libcuttools'],cwd=pjoin(proc_dir,'Source'))
         if os.path.exists(pjoin(proc_dir,'Source','IREGI')):
             misc.compile(arg=['libiregi'],cwd=pjoin(proc_dir,'Source'))
