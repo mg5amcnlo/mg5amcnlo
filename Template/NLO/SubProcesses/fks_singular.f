@@ -2499,7 +2499,8 @@ c on the imode we should or should not include the virtual corrections.
       include 'nexternal.inc'
       include 'c_weight.inc'
       include 'mint.inc'
-      integer i,j,ict
+      include 'orders.inc'
+      integer i,j,ict,iamp,ithree,isix
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
      $     ,n1body_wgt,tmp_wgt,max_weight
       double precision           virt_wgt_mint(0:n_ave_virt),
@@ -2574,10 +2575,24 @@ c n1body_wgt is used for the importance sampling over FKS directories
       endif
       f(1)=sigint_ABS
       f(2)=sigint
-      f(3)=virt_wgt_mint(0)
       f(4)=virtual_over_born
-      f(5)=abs(virt_wgt_mint(0))
-      f(6)=born_wgt_mint(0)
+      do iamp=0,amp_split_size
+         if (iamp.eq.0) then
+            f(3)=0d0
+            f(6)=0d0
+            f(5)=0d0
+            do i=1,amp_split_size
+               f(3)=f(3)+virt_wgt_mint(i)
+               f(6)=f(6)+born_wgt_mint(i)
+               f(5)=f(5)+abs(virt_wgt_mint(i))
+            enddo
+         else
+            ithree=2*iamp+5
+            isix=2*iamp+6
+            f(ithree)=virt_wgt_mint(iamp)
+            f(isix)=born_wgt_mint(iamp)
+         endif
+      enddo
       return
       end
 
@@ -5854,15 +5869,14 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             do iamp=1,amp_split_size
                amp_split_virt(iamp)=amp_split_finite_ML(iamp)
             enddo
-
             tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
               virt_wgt=virt_wgt-average_virtual(0)*born_wgt
               do iamp=1,amp_split_size
-                if (amp_split_virt(iamp).eq.0d0) cycle
-                amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $            average_virtual(iamp)*amp_split_born_for_virt(iamp)
+                 if (amp_split_virt(iamp).eq.0d0) cycle
+                 amp_split_virt(iamp)=amp_split_virt(iamp)-
+     $               average_virtual(iamp)*amp_split_born_for_virt(iamp)
               enddo
             endif
             if (abrv.ne.'virt') then
