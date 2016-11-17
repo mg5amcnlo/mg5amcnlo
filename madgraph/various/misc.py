@@ -991,15 +991,25 @@ class TMP_variable(object):
     """
 
     def __init__(self, cls, attribute, value):
-        
-        self.old_value = getattr(cls, attribute)
+
         self.cls = cls
-        self.attribute = attribute
-        setattr(self.cls, self.attribute, value)
+        self.attribute = attribute        
+        if isinstance(attribute, list):
+            self.old_value = []
+            for key, onevalue in zip(attribute, value):
+                self.old_value.append(getattr(cls, key))
+                setattr(self.cls, key, onevalue)
+        else:
+            self.old_value = getattr(cls, attribute)
+            setattr(self.cls, self.attribute, value)
     
     def __exit__(self, ctype, value, traceback ):
-
-        setattr(self.cls, self.attribute, self.old_value)
+        
+        if isinstance(self.attribute, list):
+            for key, old_value in zip(self.attribute, self.old_value):
+                setattr(self.cls, key, old_value)
+        else:
+            setattr(self.cls, self.attribute, self.old_value)
         
     def __enter__(self):
         return self.old_value 
