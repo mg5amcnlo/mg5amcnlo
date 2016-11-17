@@ -120,13 +120,13 @@ class Parameter (object):
         
         if format == 'float':
             if self.lhablock == 'decay' and not isinstance(self.value,basestring):
-                return 'DECAY %s %.{}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+                return 'DECAY %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
             elif self.lhablock == 'decay':
                 return 'DECAY %s Auto # %s' % (' '.join([str(d) for d in self.lhacode]), self.comment)
             elif self.lhablock and self.lhablock.startswith('qnumbers'):
                 return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
             else:
-                return '      %s %.{}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
+                return '      %s %.{0}e # %s'.format(precision) % (' '.join([str(d) for d in self.lhacode]), self.value, self.comment)
         elif format == 'int':
             return '      %s %i # %s' % (' '.join([str(d) for d in self.lhacode]), int(self.value), self.comment)
         elif format == 'str':
