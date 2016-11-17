@@ -435,7 +435,7 @@ class ParamCard(dict):
         
         # apply all the basic restriction rule
         if restrict_rule:
-            restrict_rule.check_param_card(self, modify=True, log=loglevel)
+            _, modify = restrict_rule.check_param_card(self, modify=True, log=loglevel)
         
         import models.model_reader as model_reader
         import madgraph.core.base_objects as base_objects
@@ -449,7 +449,6 @@ class ParamCard(dict):
         for particle in model.get('particles'):
             if particle.get('goldstone') or particle.get('ghost'):
                 continue
-
             mass = model.get_parameter(particle.get('mass'))
             lhacode = abs(particle.get_pdg_code())
 
@@ -481,6 +480,7 @@ class ParamCard(dict):
                     model_value = model_value.real
                 if not misc.equal(model_value, param_value, 4):
                     modify = True
+                    misc.sprint(modify)
                     if loglevel == 20:
                         logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
                     else:
@@ -488,6 +488,7 @@ class ParamCard(dict):
                     #logger.debug('was %s', param_value)
                 if model_value != param_value:   
                     self.get('decay').get(abs(particle.get_pdg_code())).value = model_value
+        misc.sprint(modify)
         return modify
 
 
@@ -1140,7 +1141,9 @@ class ParamCardRule(object):
     
     def check_param_card(self, path, modify=False, write_missing=False, log=False):
         """Check that the restriction card are applied"""
-            
+        
+        is_modified = False
+        
         if isinstance(path,str):    
             card = self.read_param_card(path)
         else:
@@ -1169,6 +1172,7 @@ class ParamCardRule(object):
                         param = card[block].get(id) 
                         param.value = 0.0
                         param.comment += ' fixed by the model'
+                        is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         (block, id, 0.0), '$MG:color:BLACK')                            
@@ -1199,6 +1203,7 @@ class ParamCardRule(object):
                         param = card[block].get(id) 
                         param.value = 1.0
                         param.comment += ' fixed by the model'
+                        is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
                                         (block, id, 1.0), '$MG:color:BLACK')                            
@@ -1210,6 +1215,7 @@ class ParamCardRule(object):
         # check identical
         for block, id1, id2, comment in self.identical:
             if block not in card:
+                is_modified = True
                 logger.warning('''Param card is not complete: Block %s is simply missing.
                 We will use model default for all missing value! Please cross-check that
                 this correspond to your expectation.''' % block)
@@ -1234,6 +1240,7 @@ class ParamCardRule(object):
                         param = card[block].get(id1) 
                         param.value = value2
                         param.comment += ' must be identical to %s' % id2
+                        is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to parameter with id %s',
                                         block, id1, value2, id2, '$MG:color:BLACK')
@@ -1262,6 +1269,7 @@ class ParamCardRule(object):
                         param = card[block].get(id1) 
                         param.value = -value2
                         param.comment += ' must be opposite to %s' % id2
+                        is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to the opposite of the parameter with id %s',
                                         block, id1, -value2, id2, '$MG:color:BLACK')
@@ -1269,7 +1277,7 @@ class ParamCardRule(object):
                             logger.log(log,'For model consistency, update %s with id %s to value %s since it should be equal to the opposite of the parameter with id %s',
                                         block, id1, -value2, id2)
 
-        return card
+        return card, is_modified
                         
 
 def convert_to_slha1(path, outputpath=None ):
@@ -1651,8 +1659,9 @@ def make_valid_param_card(path, restrictpath, outputpath=None):
     try :
         cardrule.check_param_card(path, modify=False)
     except InvalidParamCard:
-        new_data = cardrule.check_param_card(path, modify=True, write_missing=True)
-        cardrule.write_param_card(outputpath, new_data)
+        new_data, was_modified = cardrule.check_param_card(path, modify=True, write_missing=True)
+        if was_modified:
+            cardrule.write_param_card(outputpath, new_data)
     else:
         if path != outputpath:
             shutil.copy(path, outputpath)
