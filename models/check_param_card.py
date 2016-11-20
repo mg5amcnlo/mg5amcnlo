@@ -488,7 +488,7 @@ class ParamCard(dict):
                     #logger.debug('was %s', param_value)
                 if model_value != param_value:   
                     self.get('decay').get(abs(particle.get_pdg_code())).value = model_value
-        misc.sprint(modify)
+
         return modify
 
 
