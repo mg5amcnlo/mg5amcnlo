@@ -1590,9 +1590,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             
             # Check that all pdfset are correctly installed
             if 'sys_pdf' in self.run_card:
-                sys_pdf = self.run_card['sys_pdf'].split('&&')
-                lhaid += [l.split()[0] for l in sys_pdf]
-
+                if '&&' in self.run_card['sys_pdf']:
+                    line = ' '.join(self.run_card['sys_pdf'])
+                    sys_pdf = line.split('&&')
+                    lhaid += [l.split()[0] for l in sys_pdf]
+                else:
+                    lhaid += [l for l in self.run_card['sys_pdf'].split() if not l.isdigit() or int(l) > 500]
+                    
         else:
             #check that all p
             pdf = [a[6:] for a in opts if a.startswith('--pdf=')]
@@ -4749,6 +4753,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     val = val.split('#')[0]
                 else:
                     val = args[start+1]
+                misc.sprint(args, val)
                 self.setR(args[start], val)
             self.run_card.write(self.paths['run'], self.paths['run_default'])
             

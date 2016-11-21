@@ -757,7 +757,19 @@ def call_systematics(args, result=sys.stdout, running=True,
             else:
                 opts['alps'] = [1.0]
             opts['together'] = [('mur','muf','alps','dyn')]
-            pdfs =  card['sys_pdf'].split('&&')
+            if '&&' in card['sys_pdf']:
+                pdfs =  card['sys_pdf'].split('&&')
+            else:
+                data = to_syscalc['sys_pdf'].split()
+                new = []
+                for d in data:
+                    if not d.isdigit():
+                        new.append(d)
+                    elif int(d) > 500:
+                        new.append(d)
+                    else:
+                        new[-1] = '%s %s' % (new[-1], d)
+
             opts['dyn'] = [-1,1,2,3,4]
             opts['pdf'] = []
             for pdf in pdfs:
