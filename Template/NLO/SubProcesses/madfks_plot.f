@@ -265,7 +265,7 @@ c Boost the momenta to the lab frame:
       chybst=cosh(ybst_til_tolab)
       shybst=sinh(ybst_til_tolab)
       chybstmo=chybst-1.d0
-      do i=3,nexternal
+      do i=nincoming+1,nexternal
          call boostwdir2(chybst,shybst,chybstmo,xd,pp(0,i),pplab(0,i))
       enddo
 c Fill the arrays (momenta, status and PDG):
