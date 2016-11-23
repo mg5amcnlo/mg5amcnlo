@@ -211,7 +211,9 @@ c
 c           Here we set if the BW is "on-shell" for LesHouches
 c
             onshell = (abs(xmass - prmass(i,iconfig)) .lt.
-     $           bwcutoff*prwidth(i,iconfig))
+     $           bwcutoff*prwidth(i,iconfig).and.
+     $           (prwidth(i,iconfig)/prmass(i,iconfig).lt.0.1d0.or.
+     $            gForceBW(i,iconfig).eq.1))
             if(onshell)then
 c     Remove on-shell forbidden s-channels (gForceBW=2) (JA 2/10/11)
               if(gForceBW(i,iconfig).eq.2) then
@@ -327,6 +329,9 @@ c
 c
 c     Global
 c
+      double precision Smin
+      common/to_smin/ Smin
+
       integer iforest(2,-max_branch:-1,lmaxconfigs)
       common/to_forest/ iforest
 
@@ -590,34 +595,7 @@ c     Set minimum based on: 1) required energy 2) resonances 3) 1/10000 of sqrt(
          i = max(1,3*(nexternal-2) - 4 + 1)
          xo = max(min(etot**2/stot, 1d0-1d-8),1d0/stot)
 c        Take into account special cuts
-         xo = max(xo, xptj*dabs(xptj)/stot)
-         xo = max(xo, xptb*dabs(xptb)/stot)
-         xo = max(xo, xpta*dabs(xpta)/stot)
-         xo = max(xo, xptl*dabs(xptl)/stot)
-         xo = max(xo, xmtc*dabs(xmtc)/stot)
-         xo = max(xo, htjmin**2/stot)
-         xo = max(xo, ptj1min**2/stot)
-         xo = max(xo, (2*ptj2min)**2/stot)
-         xo = max(xo, (3*ptj3min)**2/stot)
-         xo = max(xo, (4*ptj4min)**2/stot)
-         xo = max(xo, ht2min**2/stot)
-         xo = max(xo, ht3min**2/stot)
-         xo = max(xo, ht4min**2/stot)
-         xo = max(xo, misset**2/stot)
-         xo = max(xo, ptllmin**2/stot)
-         xo = max(xo, ptl1min**2/stot)
-         xo = max(xo, (2*ptl2min)**2/stot)
-         xo = max(xo, (3*ptl3min)**2/stot)
-         xo = max(xo, (4*ptl4min)**2/stot)
-         xo = max(xo, mmnl**2/stot)
-         if (mmjj.ne.0d0) then
-            njet = 0
-            do k=nincoming+1,nexternal
-               if (is_a_j(k)) njet = njet + 1
-            enddo
-            xo = max(xo, njet*(njet -1)/2d0*mmjj**2/stot)
-         endif
-
+c        already done in smin
 c     Include mass scale from BWs
          xo = max(xo, spmass**2/stot)
          if (swidth(i).eq.0.and.xo.eq.1d0/stot) then
@@ -628,9 +606,12 @@ c-----------------------
 c     tjs  4/29/2008 use analytic transform for s-hat
 c-----------------------
          if (swidth(i) .eq. 0d0) then
+            if (xo.lt.smin/stot)then
+                xo = 1d0*smin/stot
+            endif
             swidth(i) = xo
             spole(i)= -2.0d0    ! 1/s pole
-            write(*,*) "Transforming s_hat 1/s ",i,xo
+            write(*,*) "Transforming s_hat 1/s ",i,xo, smin, stot
          else
             write(*,*) "Transforming s_hat BW ",spole(i),swidth(i)
          endif

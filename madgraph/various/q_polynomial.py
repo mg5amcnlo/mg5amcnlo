@@ -118,11 +118,23 @@ class Polynomial_naive_ordering(object):
 class PolynomialRoutines(object):
     """ The mother class to output the polynomial subroutines """
     
-    def __init__(self, max_rank, coef_format='complex*16', sub_prefix='' 
-                                                                ,line_split=30):
+    def __init__(self, max_rank, updater_max_rank=None, 
+                        coef_format='complex*16', sub_prefix='',
+                        proc_prefix='',mp_prefix='',
+                        line_split=30):
 
         self.coef_format=coef_format
         self.sub_prefix=sub_prefix
+        self.proc_prefix=proc_prefix
+        self.mp_prefix=mp_prefix
+        if updater_max_rank is None:
+            self.updater_max_rank = max_rank
+        else:
+            if updater_max_rank > max_rank:
+                raise PolynomialError, "The updater max rank must be at most"+\
+                                                " equal to the overall max rank"
+            else:
+                self.updater_max_rank = updater_max_rank            
         if coef_format=='complex*16':
             self.rzero='0.0d0'
             self.czero='(0.0d0,0.0d0)'
@@ -138,9 +150,69 @@ class PolynomialRoutines(object):
                             "The rank of a q-polynomial should be 0 or positive"
         self.max_rank=max_rank
         self.pq=Polynomial(max_rank)
+        
+        # A useful replacement dictionary
+        self.rep_dict = {'sub_prefix':self.sub_prefix,
+                         'proc_prefix':self.proc_prefix,
+                         'mp_prefix':self.mp_prefix,
+                         'coef_format':self.coef_format}
 
 class FortranPolynomialRoutines(PolynomialRoutines):
     """ A daughter class to output the subroutine in the fortran format"""
+    
+    def write_polynomial_constant_module(self):
+        """ Writes a fortran90 module that defined polynomial constants objects."""
+        
+        # Start with the polynomial constants module header
+        polynomial_constant_lines = []
+        polynomial_constant_lines.append(
+"""MODULE %sPOLYNOMIAL_CONSTANTS
+implicit none
+include 'coef_specs.inc'
+include 'loop_max_coefs.inc'
+"""%self.sub_prefix)   
+        # Add the N coef for rank
+        polynomial_constant_lines.append(
+'C Map associating a rank to each coefficient position')
+        polynomial_constant_lines.append(
+                                     'INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)')
+        for rank in range(self.max_rank+1):
+            start = get_number_of_coefs_for_rank(rank-1)
+            end   = get_number_of_coefs_for_rank(rank)-1
+            polynomial_constant_lines.append(
+'DATA COEFTORANK_MAP(%(start)d:%(end)d)/%(n_entries)d*%(rank)d/'%
+{'start': start,'end': end,'n_entries': end-start+1,'rank': rank})
+        
+        polynomial_constant_lines.append(
+'\nC Map defining the number of coefficients for a symmetric tensor of a given rank')
+        polynomial_constant_lines.append(
+"""INTEGER NCOEF_R(0:%(max_rank)d)
+DATA NCOEF_R/%(ranks)s/"""%{'max_rank':self.max_rank,'ranks':','.join([
+      str(get_number_of_coefs_for_rank(r)) for r in range(0,self.max_rank+1)])})
+        polynomial_constant_lines.append(
+'\nC Map defining the coef position resulting from the multiplication of two lower rank coefs.')
+        mult_matrix = [[
+          self.pq.get_coef_position(self.pq.get_coef_at_position(coef_a)+
+                                    self.pq.get_coef_at_position(coef_b))
+            for coef_b in range(0,get_number_of_coefs_for_rank(self.updater_max_rank))]
+              for coef_a in range(0,get_number_of_coefs_for_rank(self.max_rank))]
+
+        polynomial_constant_lines.append(
+'INTEGER COMB_COEF_POS(0:LOOPMAXCOEFS-1,0:%(max_updater_rank)d)'\
+%{'max_updater_rank':(get_number_of_coefs_for_rank(self.updater_max_rank)-1)})
+
+        for j, line in enumerate(mult_matrix):
+            chunk_size = 20
+            for k in xrange(0, len(line), chunk_size):
+                polynomial_constant_lines.append(
+                "DATA COMB_COEF_POS(%3r,%3r:%3r) /%s/" % \
+                (j, k, min(k + chunk_size, len(line))-1,
+                    ','.join(["%3r" % i for i in line[k:k + chunk_size]])))
+
+        polynomial_constant_lines.append(
+                            "\nEND MODULE %sPOLYNOMIAL_CONSTANTS\n"%self.sub_prefix)
+        
+        return '\n'.join(polynomial_constant_lines)
     
     
     def write_pjfry_mapping(self):
@@ -290,6 +362,20 @@ C        ARGUMENTS
         
         return '\n'.join(lines)
     
+    def get_COLLIER_mapping(self):
+        """ Returns a list of tuples of the form:
+          [ (COLLIER_ind0, COLLIER_ind1, COLLIER_ind2, COLLIER_ind3), ]
+          where the position in the list is the coef_ID in MadLoop ordering.
+        """        
+        res = []
+        for coef_pos in range(0,get_number_of_coefs_for_rank(self.pq.rank)):
+            indices_list = self.pq.get_coef_at_position(coef_pos)
+            res.append((indices_list.count(0),
+                        indices_list.count(1),
+                        indices_list.count(2),
+                        indices_list.count(3)))
+        return res
+    
     def write_golem95_mapping(self):
         """ Returns a fortran subroutine which fills in the array of tensorial
         coefficients following golem95 standards using MadLoop coefficients."""
@@ -383,8 +469,87 @@ C        ARGUMENTS
             subroutines.append('\n'.join(lines+['end']))
             
         return '\n\n'.join(subroutines)
-    
-    def write_wl_updater(self,r_1,r_2):
+
+    def write_compact_wl_updater(self,r_1,r_2,loop_over_vertex_coefs_first=True):
+        """ Give out the subroutine to update a polynomial of rank r_1 with
+        one of rank r_2 """
+        
+        # The update is basically given by 
+        # OUT(j,coef,i) = A(k,*,i) x B(j,*,k)
+        # with k a summed index and the 'x' operation is equivalent to 
+        # putting together two regular polynomial in q with scalar coefficients
+        # The complexity of this subroutine is therefore 
+        # MAXLWFSIZE**3 * NCoef(r_1) * NCoef(r_2)
+        # Which is for example 22'400 when updating a rank 4 loop wavefunction
+        # with a rank 1 updater.
+        # The situation is slightly improved by a smarter handling of the 
+        # coefficients equal to zero
+        
+        lines=[]
+        
+        # Start by writing out the header:
+        lines.append(
+          """SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
+  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+  implicit none
+  INTEGER I,J,K,L,M
+  %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+  INTEGER NEW_POSITION
+  %(coef_format)s UPDATER_COEF
+"""%{'sub_prefix':self.sub_prefix,'proc_prefix':self.proc_prefix,
+                           'r_1':r_1,'r_2':r_2,'coef_format':self.coef_format})
+        
+        # Start the loop on the elements i,j of the vector OUT(i,coef,j)
+        lines.append("C Welcome to the computational heart of MadLoop...")
+        if loop_over_vertex_coefs_first:
+            lines.append("OUT(:,:,:)=%s"%self.czero)
+            lines.append(
+    """DO J=1,OUT_SIZE
+      DO M=0,%d
+        DO K=1,IN_SIZE
+          UPDATER_COEF = B(J,M,K)
+          IF (UPDATER_COEF.EQ.%s) CYCLE
+          DO L=0,%d
+            NEW_POSITION = COMB_COEF_POS(L,M)
+            DO I=1,LCUT_SIZE
+              OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + A(K,L,I)*UPDATER_COEF
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    """%(get_number_of_coefs_for_rank(r_2)-1,
+         self.czero,
+         get_number_of_coefs_for_rank(r_1)-1))
+        else:
+            lines.append("OUT(:,:,:)=%s"%self.czero)
+            lines.append(
+    """DO I=1,LCUT_SIZE
+      DO L=0,%d
+        DO K=1,IN_SIZE
+          UPDATER_COEF = A(K,L,I)
+          IF (UPDATER_COEF.EQ.%s) CYCLE
+          DO M=0,%d
+            NEW_POSITION = COMB_COEF_POS(L,M)
+            DO J=1,OUT_SIZE
+              OUT(J,NEW_POSITION,I)=OUT(J,NEW_POSITION,I) + UPDATER_COEF*B(J,M,K)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+    ENDDO
+    """%(get_number_of_coefs_for_rank(r_1)-1,
+         self.czero,
+         get_number_of_coefs_for_rank(r_2)-1))            
+        
+        lines.append("END")
+        # return the subroutine
+        return '\n'.join(lines)
+
+    def write_expanded_wl_updater(self,r_1,r_2):
         """ Give out the subroutine to update a polynomial of rank r_1 with
         one of rank r_2 """
         
@@ -402,15 +567,14 @@ C        ARGUMENTS
         # Start by writing out the header:
         lines.append(
           """SUBROUTINE %(sub_prefix)sUPDATE_WL_%(r_1)d_%(r_2)d(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE,OUT)
-                        include 'coef_specs.inc'
-                        include 'loop_max_coefs.inc'
-                        INTEGER I,J,K
-                        %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
-                        %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
-                        """%{'sub_prefix':self.sub_prefix,'r_1':r_1,'r_2':r_2,
-                                                'coef_format':self.coef_format})
+  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS
+  INTEGER I,J,K
+  %(coef_format)s A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
+  %(coef_format)s OUT(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  INTEGER LCUT_SIZE,IN_SIZE,OUT_SIZE
+"""%{'sub_prefix':self.sub_prefix,'proc_prefix':self.proc_prefix,
+                            'r_1':r_1,'r_2':r_2,'coef_format':self.coef_format})
         
         # Start the loop on the elements i,j of the vector OUT(i,coef,j)
         lines.append("DO I=1,LCUT_SIZE")
@@ -460,14 +624,12 @@ C        ARGUMENTS
         
         # Start by writing out the header:
         lines.append("""SUBROUTINE %(sub_prefix)sEVAL_POLY(C,R,Q,OUT)
-                        include 'coef_specs.inc'
-                        include 'loop_max_coefs.inc'
+                        USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
                         %(coef_format)s C(0:LOOPMAXCOEFS-1)
                         INTEGER R
                         %(coef_format)s Q(0:3)
                         %(coef_format)s OUT                                                 
-                        """%{'sub_prefix':self.sub_prefix,
-                             'coef_format':self.coef_format})
+                        """%self.rep_dict)
         
         # Start by the trivial coefficient of order 0.
         lines.append("OUT=C(0)")
@@ -497,28 +659,20 @@ C        ARGUMENTS
         lines=[]
         
         # Start by writing out the header:
-        lines.append("""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
-                        include 'coef_specs.inc'
-                        include 'loop_max_coefs.inc'
-                        INTEGER I,J
-                        %(coef_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
-                        INTEGER R,LCUT_SIZE
-                        %(coef_format)s CONST
-                        %(coef_format)s OUT(0:LOOPMAXCOEFS-1)
-                        """%{'sub_prefix':self.sub_prefix,
-                             'coef_format':self.coef_format})
-
-        # Add an array specifying how many coefs there are for given ranks
-        lines.append("""INTEGER NCOEF_R(0:%(max_rank)d)
-                        DATA NCOEF_R/%(ranks)s/
-                        """%{'max_rank':self.max_rank,'ranks':','.join([
-                            str(get_number_of_coefs_for_rank(r)) for r in
-                                                    range(0,self.max_rank+1)])})                     
+        lines.append(
+"""SUBROUTINE %(sub_prefix)sMERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
+  USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+  INTEGER I,J
+  %(coef_format)s WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
+  INTEGER R,LCUT_SIZE
+  %(coef_format)s CONST
+  %(coef_format)s OUT(0:LOOPMAXCOEFS-1)
+"""%self.rep_dict)                    
      
         # Now scan them all progressively
         lines.append("DO I=1,LCUT_SIZE")
         lines.append("  DO J=0,NCOEF_R(R)-1")
-        lines.append("    OUT(J)=OUT(J)+WL(I,J,I)*CONST")               
+        lines.append("      OUT(J)=OUT(J)+WL(I,J,I)*CONST")               
         lines.append("  ENDDO")
         lines.append("ENDDO")
         lines.append("END")
@@ -533,21 +687,12 @@ C        ARGUMENTS
         
         # Start by writing out the header:
         lines.append("""SUBROUTINE %(sub_prefix)sADD_COEFS(A,RA,B,RB)
-                        include 'coef_specs.inc'
-                        include 'loop_max_coefs.inc'
+                        USE %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
                         INTEGER I
                         %(coef_format)s A(0:LOOPMAXCOEFS-1),B(0:LOOPMAXCOEFS-1)
                         INTEGER RA,RB
-                        """%{'sub_prefix':self.sub_prefix,
-                             'coef_format':self.coef_format})
+                        """%self.rep_dict) 
 
-        # Add an array specifying how many coefs there are for given ranks
-        lines.append("""INTEGER NCOEF_R(0:%(max_rank)d)
-                        DATA NCOEF_R/%(ranks)s/
-                        """%{'max_rank':self.max_rank,'ranks':','.join([
-                            str(get_number_of_coefs_for_rank(r)) for r in
-                                                    range(0,self.max_rank+1)])})                     
-     
         # Now scan them all progressively
         lines.append("DO I=0,NCOEF_R(RB)-1")
         lines.append("  A(I)=A(I)+B(I)")               
@@ -760,6 +905,14 @@ class FromGolem95FortranCodeGenerator():
 if __name__ == '__main__':
     """I test here the write_golem95_mapping function"""
     
+    P=Polynomial(7)
+    print "Coef (6,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0])
+    print "Coef (1,1,2,2) is at pos %s"%P.get_coef_position([0,1,2,2,3,3])
+    print "Coef (7,0,0,0) is at pos %s"%P.get_coef_position([0,0,0,0,0,0,0])
+    print "Coef (1,2,2,2) is at pos %s"%P.get_coef_position([0,1,1,2,2,3,3])
+    
+    sys.exit(0)
+
     max_rank=6
     FPR=FortranPolynomialRoutines(max_rank)
     print "Output of write_golem95_mapping function for max_rank=%d:\n\n"%max_rank

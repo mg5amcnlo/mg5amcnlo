@@ -48,7 +48,10 @@ C
         INTEGER JC(NEXTERNAL),II
         REAL*8 HWGT, XTOT, XTRY, XREJ, XR, YFRAC(0:NCOMB)
         INTEGER NGOOD(2), IGOOD(NCOMB,2)
-	INTEGER JHEL(2), J, JJ
+        INTEGER JHEL(2), J, JJ
+        INTEGER THIS_NTRY(2)
+        SAVE THIS_NTRY
+        DATA THIS_NTRY /0,0/
 C       This is just to temporarily store the reference grid for helicity of the DiscreteSampler so as to obtain its number of entries with ref_helicity_grid%%n_tot_entries
 	    type(SampledDimension) ref_helicity_grid
 C  
@@ -85,6 +88,7 @@ C ----------
 C BEGIN CODE
 C ----------
     NTRY(IMIRROR)=NTRY(IMIRROR)+1
+    THIS_NTRY(IMIRROR) = THIS_NTRY(IMIRROR)+1 
     DO I=1,NEXTERNAL
        JC(I) = +1
     ENDDO
@@ -108,7 +112,7 @@ C ----------
 !   If HEL_PICKED==-1, this means that calls to other matrix<i> where in initialization mode as well for the helicity.
     IF ((ISHEL(IMIRROR).EQ.0.and.ISUM_HEL.eq.0).or.(DS_get_dim_status('Helicity').eq.0).or.(HEL_PICKED.eq.-1)) THEN
       DO I=1,NCOMB
-         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0)) THEN
+         IF (GOODHEL(I,IMIRROR) .OR. NTRY(IMIRROR).LE.MAXTRIES.or.(ISUM_HEL.NE.0).or.THIS_NTRY(IMIRROR).le.2) THEN
             T=MATRIX%(proc_id)s(P ,NHEL(1,I),JC(1))
             DO JJ=1,nincoming
                IF(POL(JJ).NE.1d0.AND.NHEL(JJ,I).EQ.INT(SIGN(1d0,POL(JJ)))) THEN
@@ -142,13 +146,13 @@ C ----------
           endif
 	  ELSE
         JHEL(IMIRROR) = 1
-        IF(NTRY(IMIRROR).LE.MAXTRIES)THEN
+        IF(NTRY(IMIRROR).LE.MAXTRIES.or.THIS_NTRY(IMIRROR).le.2)THEN
            DO I=1,NCOMB
               IF (.NOT.GOODHEL(I,IMIRROR) .AND. (DABS(TS(I)).GT.ANS*LIMHEL/NCOMB)) THEN
                  GOODHEL(I,IMIRROR)=.TRUE.
                  NGOOD(IMIRROR) = NGOOD(IMIRROR) +1
                  IGOOD(NGOOD(IMIRROR),IMIRROR) = I
-                 PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR)
+                 PRINT *,'Added good helicity ',I,TS(I)*NCOMB/ANS,' in event ',NTRY(IMIRROR), 'local:',THIS_NTRY(IMIRROR)
               ENDIF
            ENDDO
 		endif

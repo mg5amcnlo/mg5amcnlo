@@ -47,3 +47,7 @@ c     Parameter for string buffer length for systematics variations info
 c     Parameter for string buffer length for clustering info
         integer clus_bufflen
         parameter (clus_bufflen=43)
+
+c     Parameter specifying the maximum number of characters in the lhe record of a single event.
+        integer maxEventLength
+	    parameter (maxEventLength=s_bufflen+(clus_bufflen+200)*max_particles)

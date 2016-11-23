@@ -177,6 +177,7 @@ class FortranWriter(FileWriter):
                      '^type(?!\s*\()\s*.+\s*$': ('^endtype', 2),
                      '^do(?!\s+\d+)\s+': ('^enddo\s*$', 2),
                      '^subroutine': ('^end\s*$', 0),
+                     '^module': ('^end\s*$', 0),
                      'function': ('^end\s*$', 0)}
     single_indents = {'^else\s*$':-2,
                       '^else\s*if.+then\s*$':-2}
@@ -185,14 +186,14 @@ class FortranWriter(FileWriter):
     comment_char = 'c'
     downcase = False
     line_length = 71
-    max_split = 10
+    max_split = 20
     split_characters = "+-*/,) "
     comment_split_characters = " "
 
     # Private variables
     __indent = 0
     __keyword_list = []
-    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py)", re.IGNORECASE)
+    __comment_pattern = re.compile(r"^(\s*#|c$|(c\s+([^=]|$))|cf2py|c\-\-|c\*\*)", re.IGNORECASE)
 
     def write_line(self, line):
         """Write a fortran line, with correct indent and line splits"""
@@ -301,7 +302,8 @@ class FortranWriter(FileWriter):
 
         if line.startswith('F2PY'):
             return ["C%s\n" % line.strip()]
-        
+        elif line.startswith(('C','c')):
+            return ['%s\n' % line] 
 
         res_lines = []
 
@@ -332,20 +334,46 @@ class FortranWriter(FileWriter):
         res_lines = [line]
 
         while len(res_lines[-1]) > self.line_length:
-            split_at = self.line_length
+            split_at = 0
             for character in split_characters:
                 index = res_lines[-1][(self.line_length - self.max_split): \
                                       self.line_length].rfind(character)
                 if index >= 0:
-                    split_at = self.line_length - self.max_split + index
-                    break
+                    split_at_tmp = self.line_length - self.max_split + index
+                    if split_at_tmp > split_at:
+                        split_at = split_at_tmp
+            if split_at == 0:
+                split_at = self.line_length
+                
             newline = res_lines[-1][split_at:]
             nquotes = self.count_number_of_quotes(newline)
-            res_lines.append(line_start + 
-              ('//\''+res_lines[-1][(split_at-1):] if nquotes%2==1 else 
-               ''+res_lines[-1][split_at:]))
-            res_lines[-2] = (res_lines[-2][:(split_at-1)]+'\'' if nquotes%2==1 \
-                                                  else res_lines[-2][:split_at])
+#            res_lines.append(line_start + 
+#              ('//\''+res_lines[-1][(split_at-1):] if nquotes%2==1 else 
+#               ''+res_lines[-1][split_at:]) 
+            offset = 0   
+            if nquotes%2==1:
+                if res_lines[-1][(split_at-1)] == '\'':
+                    offset = 1
+                    nquotes -=1
+                    res_lines.append(line_start +(res_lines[-1][(split_at-offset):]))
+                else:
+                    res_lines.append(line_start +('//\''+res_lines[-1][(split_at-offset):]))
+
+            elif res_lines[-1][(split_at)] in self.split_characters:
+                if res_lines[-1][(split_at)] in ')':
+#                    print "offset put in place"
+                    offset = -1
+#                else:
+#                    print "offset not put in place"
+                res_lines.append(line_start +res_lines[-1][(split_at-offset):])
+            elif line_start.startswith(('c','C')) or res_lines[-1][(split_at)] in split_characters:
+                res_lines.append(line_start +res_lines[-1][(split_at):])
+            else:
+                l_start = line_start.rstrip()
+                res_lines.append(l_start +res_lines[-1][(split_at):])
+
+            res_lines[-2] = (res_lines[-2][:(split_at-offset)]+'\'' if nquotes%2==1 \
+                                                  else res_lines[-2][:split_at-offset])
         return res_lines
     
     def count_number_of_quotes(self, line):

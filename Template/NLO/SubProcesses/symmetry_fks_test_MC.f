@@ -13,6 +13,7 @@ c
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
+      include 'cuts.inc'
       
       double precision ZERO,one
       parameter       (ZERO = 0d0)
@@ -146,6 +147,18 @@ c helicity stuff
       integer fks_conf_number,fks_loop_min,fks_loop_max,fks_loop
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
+
+C split orders stuff
+      include 'orders.inc'
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
+      integer iamp
+      integer orders(nsplitorders)
+      double precision fxl_split(amp_split_size)
+      double precision limit_split(15,amp_split_size), wlimit_split(15,amp_split_size)
+      LOGICAL  IS_A_J(NEXTERNAL),IS_A_LP(NEXTERNAL),IS_A_LM(NEXTERNAL)
+      LOGICAL  IS_A_PH(NEXTERNAL)
+      COMMON /TO_SPECISA/IS_A_J,IS_A_LP,IS_A_LM,IS_A_PH
       
       character*10 MonteCarlo
       common/cMonteCarloType/MonteCarlo
@@ -156,7 +169,10 @@ c helicity stuff
       common /cshowerscale2/shower_S_scale,shower_H_scale,ref_H_scale
      &     ,pt_hardness
 
-c      integer icomp
+      logical new_point
+      common /c_new_point/new_point
+
+c     integer icomp
 c
 c     DATA
 c
@@ -222,8 +238,14 @@ c When doing hadron-hadron collision reduce the effect collision energy.
 c Note that tests are always performed at fixed energy with Bjorken x=1.
       totmass = 0.0d0
       include 'pmass.inc' ! make sure to set the masses after the model has been included
-      do i=1,nexternal
-        totmass = totmass + pmass(i)
+      do i=nincoming+1,nexternal
+         if (is_a_j(i) .and. i.ne.nexternal) then
+            totmass = totmass + max(ptj,pmass(i))
+         elseif ((is_a_lp(i).or.is_a_lm(i)) .and. i.ne.nexternal) then
+            totmass = totmass + max(mll/2d0,mll_sf/2d0,ptl,pmass(i))
+         else
+            totmass = totmass + pmass(i)
+         endif
       enddo
       if (lpp(1).ne.0) ebeam(1)=max(ebeam(1)/20d0,totmass)
       if (lpp(2).ne.0) ebeam(2)=max(ebeam(2)/20d0,totmass)
@@ -296,8 +318,6 @@ c x_to_f_arg subroutine
 
       do iconfig=bs_min,bs_max       ! Born configurations
 
-      call setcuts
-      call setfksfactor(iconfig)
       call set_mc_matrices
 
       wgt=1d0
@@ -309,6 +329,7 @@ c x_to_f_arg subroutine
       do jj=1,ndim
          x(jj)=ran2()
       enddo
+      new_point=.true.
       call generate_momenta(ndim,iconfig,wgt,x,p)
       calculatedBorn=.false.
       do while (( wgt.lt.0 .or. p(0,1).le.0d0 .or. p_born(0,1).le.0d0
@@ -316,6 +337,7 @@ c x_to_f_arg subroutine
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          calculatedBorn=.false.
@@ -340,9 +362,17 @@ c x_to_f_arg subroutine
       softtest=.true.
       colltest=.false.
       nerr=0
-      imax=10
+      imax=14
       do j=1,nsofttests
          call get_helicity(i_fks,j_fks)
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = 0d0
+           do i = 1,imax
+             limit_split(i,iamp) = 0d0
+             wlimit_split(i,iamp) = 0d0
+           enddo
+         enddo
+
          if(nsofttests.le.10)then
            write (*,*) ' '
            write (*,*) ' '
@@ -355,12 +385,14 @@ c x_to_f_arg subroutine
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          call generate_momenta(ndim,iconfig,wgt,x,p)
          do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
             wgt=1d0
             do jj=1,ndim
                x(jj)=ran2()
             enddo
+            new_point=.true.
             call generate_momenta(ndim,iconfig,wgt,x,p)
             ntry=ntry+1
          enddo
@@ -371,7 +403,6 @@ c configurations close to the soft-collinear limit
          wgt=1d0
          call generate_momenta(ndim,iconfig,wgt,x,p)
          calculatedBorn=.false.
-
          call set_cms_stuff(0)
          calculatedBorn=.false.
 
@@ -380,8 +411,16 @@ c Initialise shower_S_scale to a large value, not to get spurious dead zones
 
          if(ilim.eq.0)then
            call xmcsubt_wrap(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl)
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split_mc(iamp)*jac_cnt(0)
+           enddo
          else
            call sreal(p1_cnt(0,1,0),zero,y_ij_fks_ev,fxl) 
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split(iamp)*jac_cnt(0)
+           enddo
          endif
          fxl=fxl*jac_cnt(0)
 
@@ -396,6 +435,11 @@ c because otherwise fresh random will be used...
          call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
          limit(1)=fx*wgt
          wlimit(1)=wgt
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+           limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+           wlimit_split(1,iamp) = wgt
+         enddo
 
          do k=1,nexternal
             do l=0,3
@@ -417,6 +461,11 @@ c because otherwise fresh random will be used...
             call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             limit(i)=fx*wgt
             wlimit(i)=wgt
+            ! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+              limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+              wlimit_split(i,iamp) = wgt
+            enddo
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
@@ -432,6 +481,25 @@ c because otherwise fresh random will be used...
            do i=1,imax
               call xprintout(6,limit(i),fxl)
            enddo
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               write(*,*) '   Split-order', iamp
+               call amp_split_pos_to_orders(iamp,orders)
+               do i = 1, nsplitorders
+                  write(*,*) '      ',ordernames(i), ':', orders(i)
+               enddo
+               do i=1,imax
+                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+               enddo
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               write(*,*) 'RETURN CODE', iret
+             endif
+           enddo
+           
 c
            write(80,*)'  '
            write(80,*)'****************************'
@@ -451,6 +519,16 @@ c
            call checkres(limit,fxl,wlimit,jac_cnt(0),xp,lxp,
      &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
            nerr=nerr+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(0),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               nerr=nerr+iret
+             endif
+           enddo
         endif
 
       enddo
@@ -487,9 +565,16 @@ c in genps_fks_test.f
       rotategranny=.false.
 
       nerr=0
-      imax=10
+      imax=14
       do j=1,ncolltests
          call get_helicity(i_fks,j_fks)
+         do iamp=1,amp_split_size
+           fxl_split(iamp) = 0d0
+           do i = 1,imax
+             limit_split(i,iamp) = 0d0
+             wlimit_split(i,iamp) = 0d0
+           enddo
+         enddo
 
          if(ncolltests.le.10)then
             write (*,*) ' '
@@ -503,12 +588,14 @@ c in genps_fks_test.f
          do jj=1,ndim
             x(jj)=ran2()
          enddo
+         new_point=.true.
          call generate_momenta(ndim,iconfig,wgt,x,p)
          do while (( wgt.lt.0 .or. p(0,1).le.0d0) .and. ntry.lt.1000)
             wgt=1d0
             do jj=1,ndim
                x(jj)=ran2()
             enddo
+            new_point=.true.
             call generate_momenta(ndim,iconfig,wgt,x,p)
             ntry=ntry+1
          enddo
@@ -517,14 +604,28 @@ c in genps_fks_test.f
          call set_cms_stuff(1)
          if(ilim.eq.0)then
            call xmcsubt_wrap(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl)
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split_mc(iamp)*jac_cnt(1)
+           enddo
          else
            call sreal(p1_cnt(0,1,1),xi_i_fks_cnt(1),one,fxl) 
+           ! keep track of the separate splitorders
+           do iamp=1,amp_split_size
+             fxl_split(iamp) = amp_split(iamp)*jac_cnt(1)
+           enddo
          endif
          fxl=fxl*jac_cnt(1)
+
          call set_cms_stuff(-100)
          call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
          limit(1)=fx*wgt
          wlimit(1)=wgt
+         ! keep track of the separate splitorders
+         do iamp=1,amp_split_size
+              limit_split(1,iamp) = amp_split_mc(iamp)*wgt
+              wlimit_split(1,iamp) = wgt
+         enddo
 
          do k=1,nexternal
             do l=0,3
@@ -546,6 +647,11 @@ c in genps_fks_test.f
             call xmcsubt_wrap(p,xi_i_fks_ev,y_ij_fks_ev,fx)
             limit(i)=fx*wgt
             wlimit(i)=wgt
+            ! keep track of the separate splitorders
+            do iamp=1,amp_split_size
+              limit_split(i,iamp) = amp_split_mc(iamp)*wgt
+              wlimit_split(i,iamp) = wgt
+            enddo
             do k=1,nexternal
                do l=0,3
                   xp(i,l,k)=p(l,k)
@@ -560,6 +666,24 @@ c in genps_fks_test.f
             do i=1,imax
                call xprintout(6,limit(i),fxl)
             enddo
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               write(*,*) '   Split-order', iamp
+               call amp_split_pos_to_orders(iamp,orders)
+               do i = 1, nsplitorders
+                  write(*,*) '      ',ordernames(i), ':', orders(i)
+               enddo
+               do i=1,imax
+                  call xprintout(6,limit_split(i,iamp),fxl_split(iamp))
+               enddo
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               write(*,*) 'RETURN CODE', iret
+             endif
+           enddo
 c
             write(80,*)'  '
             write(80,*)'****************************'
@@ -579,6 +703,16 @@ c
             call checkres(limit,fxl,wlimit,jac_cnt(1),xp,lxp,
      &                    iflag,imax,j,nexternal,i_fks,j_fks,iret)
             nerr=nerr+iret
+           ! check the contributions coming from each splitorders
+           ! only look at the non vanishing ones
+           do iamp=1, amp_split_size
+             if (limit_split(1,iamp).ne.0d0.or.fxl_split(iamp).ne.0d0) then
+               call checkres(limit_split(1,iamp),fxl_split(iamp),
+     &                   wlimit_split(1,iamp),jac_cnt(1),xp,lxp,
+     &                   iflag,imax,j,nexternal,i_fks,j_fks,iret)
+               nerr=nerr+iret
+             endif
+           enddo
          endif
       enddo
       if(ncolltests.gt.10)then

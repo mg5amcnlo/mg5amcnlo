@@ -138,6 +138,42 @@ c      write(*,*) 'storing Events'
       nw = 0
       maxwgt = 0d0
       end
+C**************************************************************************
+C      HELPING ROUTINE FOR PERFORMING THE Z BOOST OF THE EVENTS
+C**************************************************************************
+      double precision function get_betaz(pin,pout)
+C     compute the boost for the requested transformation
+      implicit none
+      double precision pin(0:3), pout(0:3)
+      double precision denom
+
+      denom = pin(0)*pout(0) - pin(3)*pout(3)
+      if (denom.ne.0d0) then
+         get_betaz = (pin(3) * pout(0) - pout(3) * pin(0)) / denom
+      else if (pin(0).eq.pin(3)) then
+         get_betaz = (pin(0)**2 - pout(0)**2)/(pin(0)**2 + pout(0)**2)
+      else if (pin(0).eq.abs(pin(3))) then
+         get_betaz = (pout(0)**2 - pin(0)**2)/(pin(0)**2 + pout(0)**2)
+      else
+         get_betaz = 0d0
+      endif
+      return
+      end
+
+      subroutine zboost_with_beta(pin, beta, pout)
+c     apply the boost
+      implicit none
+      double precision pin(0:3), pout(0:3)
+      double precision beta, gamma
+
+      gamma = 1d0/DSQRT(1-beta**2)
+      pout(0) = gamma * pin(0) - gamma * beta * pin(3)
+      pout(1) = pin(1)
+      pout(2) = pin(2)
+      pout(3) = - gamma * beta * pin(0) + gamma * pin(3)
+      return
+      end
+
 
       SUBROUTINE unwgt(px,wgt,numproc)
 C**************************************************************************
@@ -204,9 +240,9 @@ c           Set sign of uwgt to sign of wgt
 c            call write_event(p,uwgt)
 c            write(29,'(2e15.5)') matrix,wgt
 c $B$ S-COMMENT_C $B$
-            call write_leshouche(p,uwgt,numproc)
+            call write_leshouche(p,uwgt,numproc,.True.)
          elseif (xwgt .gt. 0d0 .and. nw .lt. 5) then
-            call write_leshouche(p,wgt/twgt*1d-6,numproc)
+            call write_leshouche(p,wgt/twgt*1d-6,numproc,.True.)
 c $E$ S-COMMENT_C $E$
          endif
          maxwgt=max(maxwgt,xwgt)
@@ -304,7 +340,8 @@ c     Determine minimum target weight given truncation parameter
 c
       xsum = 0d0
       i = nw
-      do while (xsum-dabs(swgt(i))*(nw-i) .lt. xtot*trunc_max .and. i .gt. 2)
+      do while (xsum-dabs(swgt(i))*(nw-i) .lt. xtot*trunc_max
+     $ .and. i .gt. 2)
          xsum = xsum + dabs(swgt(i))
          i = i-1
       enddo
@@ -405,7 +442,7 @@ c      endif
 c      close(lun)
       end
 
-      SUBROUTINE write_leshouche(p,wgt,numproc)
+      SUBROUTINE write_leshouche(p,wgt,numproc,do_write_events)
 C**************************************************************************
 C     Writes out information for event
 C**************************************************************************
@@ -428,34 +465,32 @@ c     Arguments
 c
       double precision p(0:3,nexternal),wgt
       integer numproc
+      logical do_write_events
 c
 c     Local
 c
       integer i,j,k,iini,ifin
       double precision sum_wgt,sum_wgt2, xtarget,targetamp(maxflow)
-      integer ip, np, ic, nc, jpart(7,-nexternal+3:2*nexternal-3)
+      integer ip, np, ic, nc
       integer ida(2),ito(-nexternal+3:nexternal),ns,nres,ires,icloop
       integer iseed
-      double precision pboost(0:3),pb(0:4,-nexternal+3:2*nexternal-3),eta
+      double precision pboost(0:3)
+      double precision beta, get_betaz
+      double precision ebi(0:3), ebo(0:3)
       double precision ptcltmp(nexternal), pdum(0:3)
 
       integer idup(nexternal,maxproc,maxsproc)
       integer mothup(2,nexternal)
       integer icolup(2,nexternal,maxflow,maxsproc)
 
-      integer isym(nexternal,99), nsym, jsym
+      integer nsym
 
-      double precision sscale,aaqcd,aaqed
-      integer ievent,npart
+      integer ievent
       logical flip
 
       real ran1
       external ran1
 
-      character*1000 buff
-      character*(s_bufflen) s_buff(7)
-      integer nclus
-      character*(clus_bufflen) buffclus(nexternal)
       character*40 cfmt
 C     
 C     GLOBAL
@@ -476,9 +511,6 @@ C
       integer           mincfig, maxcfig
       common/to_configs/mincfig, maxcfig
 
-      integer ngroup
-      common/to_group/ngroup
-
       double precision stot,m1,m2
       common/to_stot/stot,m1,m2
 c
@@ -495,17 +527,24 @@ c      common/to_colstats/ncols,ncolflow,ncolalt,ic
 c      data ncolflow/maxamps*0/
 c      data ncolalt/maxamps*0/
 
-      include 'symswap.inc'
       include 'coupl.inc'
+
+      include 'lhe_event_infos.inc'
+      data AlreadySetInBiasModule/.False./
+
+      include 'symswap.inc'
 C-----
 C  BEGIN CODE
 C-----
       
-      if (nw .ge. maxevents) return
+      if ((nw .ge. maxevents).and.do_write_events) return
 
-c     Store weight for event
-      nw = nw+1
-      swgt(nw)=wgt
+C     if all the necessary inputs to write the events have already been
+C     computed in the bias module, then directly jump to write_events
+      if (AlreadySetInBiasModule) then
+        goto 1123
+      endif
+
 c
 c     In case of identical particles symmetry, choose assignment
 c
@@ -562,37 +601,46 @@ c
       pboost(2)=0d0
       pboost(3)=0d0
       if (nincoming.eq.2) then
-         if (xbk(1) .gt. 0d0 .and. xbk(1) .lt. 1d0 .and.
-     $       xbk(2) .gt. 0d0 .and. xbk(2) .lt. 1d0) then
-            eta = sqrt(xbk(1)*ebeam(1)/
-     $                 (xbk(2)*ebeam(2)))
-            pboost(0)=p(0,1)*(eta + 1d0/eta)
-            pboost(3)=p(0,1)*(eta - 1d0/eta)
-         else if (xbk(1) .gt. 0d0 .and. xbk(1) .lt. 1d0 .and.
-     $       xbk(2) .eq. 1d0) then
-            pboost(0)=xbk(1)*ebeam(1)+ebeam(2)
-            pboost(3)=xbk(1)*ebeam(1)-
-     $           sqrt(ebeam(2)**2-m2**2)
-         else if (xbk(1) .eq. 1d0 .and.
-     $       xbk(2) .gt. 0d0 .and. xbk(2) .lt. 1d0) then
-            pboost(0)=ebeam(1)+xbk(2)*ebeam(2)
-            pboost(3)=sqrt(ebeam(1)**2-m1**2)-
-     $           xbk(2)*ebeam(2)
-         else if (xbk(1) .eq. 1d0 .and. xbk(2) .eq. 1d0) then
-            pboost(0)=ebeam(1)+ebeam(2)
-            pboost(3)=sqrt(ebeam(1)**2-m1**2)-
-     $           sqrt(ebeam(2)**2-m2**2)
+         if (xbk(1) .gt. 0d0 .and. xbk(1) .le. 1d0 .and.
+     $       xbk(2) .gt. 0d0 .and. xbk(2) .le. 1d0) then
+            if(xbk(1).eq.1d0.or.pmass(1).eq.0d0) then
+               ! construct the beam momenta in each frame and compute the related (z)boost
+               ebi(0) = p(0,1)/xbk(1) ! this assumes that particle 1 is massless or mass equal to beam
+               ebi(1) = 0
+               ebi(2) = 0
+               ebi(3) = DSQRT(ebi(0)**2-m1**2)
+               ebo(0) = ebeam(1)
+               ebo(1) = 0
+               ebo(2) = 0
+               ebo(3) = DSQRT(ebo(0)**2-m1**2)
+               beta = get_betaz(ebi, ebo)
+            else
+               ebi(0) = p(0,2)/xbk(2) ! this assumes that particle 2 is massless or mass equal to beam
+               ebi(1) = 0
+               ebi(2) = 0
+               ebi(3) = -1d0*DSQRT(ebi(0)**2-m2**2)
+               ebo(0) = ebeam(2)
+               ebo(1) = 0
+               ebo(2) = 0
+               ebo(3) = -1d0*DSQRT(ebo(0)**2-m2**2)
+               beta = get_betaz(ebi, ebo)
+               ! wrong boost if both parton are massive!
+            endif
          else
             write(*,*) 'Warning bad x1 or x2 in write_leshouche',
      $           xbk(1),xbk(2)
          endif
+         do j=1,nexternal
+            call zboost_with_beta(p(0,j),beta,pb(0,isym(j,jsym)))
+            pb(4,isym(j,jsym))=pmass(j)
+         enddo
+      else
+         do j=1,nexternal
+            call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
+            ! Add mass information in pb(4)
+            pb(4,isym(j,jsym))=pmass(j)
+         enddo
       endif
-      do j=1,nexternal
-         call boostx(p(0,j),pboost,pb(0,isym(j,jsym)))
-c      Add mass information in pb(4)
-         pb(4,isym(j,jsym))=pmass(j)
-      enddo
-
 c
 c     Add info on resonant mothers
 c
@@ -694,6 +742,19 @@ c     Write out buffers for clustering info
          enddo
          write(buffclus(nexternal),'(a)')'</clustering>'
       endif
+
+C     If the arguments of write_event have already been set in the
+C     bias module, then the beginning of the routine will directly
+C     jump here.
+
+ 1123 continue
+      if (.not.do_write_events) then
+        return
+      endif
+
+c     Store weight for event
+      nw = nw+1
+      swgt(nw)=wgt
 
       call write_event(lun,pb(0,1),wgt,npart,jpart(1,1),ngroup,
      &   sscale,aaqcd,aaqed,buff,use_syst,s_buff,nclus,buffclus)

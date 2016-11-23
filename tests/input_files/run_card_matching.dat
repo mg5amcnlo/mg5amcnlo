@@ -234,9 +234,9 @@
 #  will be use by SysCalc (if install)
 #**************************************                                     
 #
-0.5 = sys_scalefact  # Central scale factors
-0.5 = sys_alpsfact  # \alpha_s emission scale factors
+0.5 1 2= sys_scalefact  # Central scale factors
+1= sys_alpsfact  # \alpha_s emission scale factors
 30 = sys_matchscale # variation of merging scale
 # PDF sets and number of members (0 or none for all members).
-CT10nlo.LHgrid 1 = sys_pdf # matching scales
+CT10nlo 1 = sys_pdf # matching scales
 # MSTW2008nlo68cl.LHgrid 1  = sys_pdf

@@ -6,7 +6,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and CutTools.
 C     
-C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QCD<=2 QED<=1 [ virt = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -152,9 +152,9 @@ C     CALL CTSINIT(THRS,LOOPLIB)
 
       END
 
-      SUBROUTINE ML5_0_LOOP_3_3( LID, W1, W2, W3, M1,MP_M1, M2,MP_M2
-     $ , M3,MP_M3, C1,MP_C1, C2,MP_C2, C3,MP_C3,  RANK, LSYMFACT
-     $ , LMULTIPLIER, AMPLN, RES, STABLE)
+      SUBROUTINE ML5_0_LOOP_3_3( LID, W1, W2, W3, M1,MP_M1, M2,MP_M2,
+     $  M3,MP_M3, C1,MP_C1, C2,MP_C2, C3,MP_C3,  RANK, LSYMFACT,
+     $  LMULTIPLIER, AMPLN, RES, STABLE)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
@@ -255,8 +255,8 @@ C     ----------
       END
 
       SUBROUTINE ML5_0_LOOP_2_2( LID, W1, W2, M1,MP_M1, M2,MP_M2, C1
-     $ ,MP_C1, C2,MP_C2,  RANK, LSYMFACT, LMULTIPLIER, AMPLN, RES
-     $ , STABLE)
+     $ ,MP_C1, C2,MP_C2,  RANK, LSYMFACT, LMULTIPLIER, AMPLN, RES,
+     $  STABLE)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
@@ -452,9 +452,9 @@ C     ----------
 
       END
 
-      SUBROUTINE ML5_0_LOOP_2_3_2( LID, P1, P2, W1, W2, W3, M1,MP_M1
-     $ , M2,MP_M2, C1,MP_C1, C2,MP_C2,  RANK, LSYMFACT, LMULTIPLIER
-     $ , AMPLN, RES, STABLE)
+      SUBROUTINE ML5_0_LOOP_2_3_2( LID, P1, P2, W1, W2, W3, M1,MP_M1,
+     $  M2,MP_M2, C1,MP_C1, C2,MP_C2,  RANK, LSYMFACT, LMULTIPLIER,
+     $  AMPLN, RES, STABLE)
 
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)

@@ -64,7 +64,7 @@ import math
 from madgraph import MG5DIR, MadGraph5Error
 import madgraph.various.misc as misc
 #import time
-import tests.parallel_tests.test_aloha as test_aloha
+
 
 class MadSpinError(MadGraph5Error):
     pass
@@ -1224,6 +1224,7 @@ class AllMatrixElement(dict):
                                   'P%s' % me.get('processes')[0].shell_string())
             topo['decays'] = []
             topo['total_br'] = 0 
+            topo['Pid'] = proc.get('id')
         
             if skip:
                 self.add_me_symmetric(skip, topo)
@@ -1636,7 +1637,7 @@ class width_estimate(object):
                 (' '.join([str(i) for i in opts['particles']]),
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
-        cmd.exec_cmd('import model %s' % model.get('name'))
+        cmd.exec_cmd('import model %s' % model.get('modelpath+restriction'))
 #        cmd._curr_model = model
 #        cmd._curr_fortran_model = helas_call_writers.FortranUFOHelasCallWriter(model)
         cmd.exec_cmd(line)
@@ -2115,7 +2116,8 @@ class decay_all_events(object):
         # launch the decay and reweighting
         self.mscmd.update_status('MadSpin: Decaying Events')
         efficiency = self.decaying_events(self.inverted_decay_mapping)
-        if  efficiency != 1:
+        self.efficiency = efficiency
+        if  efficiency != 1 and any(v==-1 for v in self.br_per_id.values()):
             # need to change the banner information [nb_event/cross section]
             files.cp(self.outputfile.name, '%s_tmp' % self.outputfile.name)
             self.outputfile = open(self.outputfile.name, 'w')
@@ -2612,8 +2614,8 @@ class decay_all_events(object):
         return decay_mapping
     
 
-    #@misc.mute_logger()
-    @test_aloha.set_global()
+    @misc.mute_logger()
+    @misc.set_global()
     def generate_all_matrix_element(self):
         """generate the full series of matrix element needed by Madspin.
         i.e. the undecayed and the decay one. And associate those to the 
@@ -2651,13 +2653,12 @@ class decay_all_events(object):
                       if re.search('^\s*add\s+process', line)]
         
         mgcmd = self.mgcmd
-        modelpath = self.model.get('modelpath')
-        if os.path.basename(modelpath) != mgcmd._curr_model['name']:
-            name, restrict = mgcmd._curr_model['name'].rsplit('-',1)
-            if os.path.exists(pjoin(os.path.dirname(modelpath),name, 'restrict_%s.dat' % restrict)):
-                modelpath = pjoin(os.path.dirname(modelpath), mgcmd._curr_model['name'])
+        modelpath = self.model.get('modelpath+restriction')
+
+        commandline="import model %s" % modelpath
+        if not self.model.mg5_name:
+            commandline += ' --modelname'
             
-        commandline="import model %s " % modelpath
         mgcmd.exec_cmd(commandline)
         # Handle the multiparticle of the banner        
         #for name, definition in self.mscmd.multiparticles:
@@ -2685,13 +2686,17 @@ class decay_all_events(object):
                 proc_nb = '@ %i' % proc_nb 
             else:
                 proc_nb = ''
+                        
+            if ',' in proc:
+                raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
+                        '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
             
             if ',' in proc:
                 raise MadSpinError, 'MadSpin can not decay event which comes from a decay chain.'+\
                         '\n  The full decay chain should either be handle by MadGraph or by Masdspin.'
             
             if '[' not in proc:
-                commandline+="add process %s  --no_warning=duplicate;" % proc
+                commandline+="add process %s %s  --no_warning=duplicate;" % (proc, proc_nb)
             else:
                 process, order, final = re.split('\[\s*(.*)\s*\]', proc)
                 commandline+="add process %s %s --no_warning=duplicate;" % (process, proc_nb)
@@ -2723,6 +2728,7 @@ class decay_all_events(object):
                         commandline +='add process %s pert_%s  %s --no_warning=duplicate;' % (process,order, proc_nb)                                       
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)
+        
         mgcmd.exec_cmd(commandline, precmd=True)
         commandline = 'output standalone_msP %s %s' % \
         (pjoin(path_me,'production_me'), ' '.join(self.list_branches.keys()))        
@@ -3110,7 +3116,7 @@ class decay_all_events(object):
 
         
         probe_weight = []
-        
+       
 
         starttime = time.time()
         ev = -1
@@ -3148,6 +3154,7 @@ class decay_all_events(object):
             atleastonedecay=False
             for decay in self.all_ME[production_tag]['decays']:
                 tag = decay['decay_tag']
+
                 if decay_mapping and not tag in decay_mapping:
                     continue
                 if not tag:
@@ -3161,10 +3168,11 @@ class decay_all_events(object):
                 else:
                     max_decay[tag] = weight
                     #print weight, max_decay[name]
-                    #raise Exception   
+                    #raise Exception 
+                      
             if not atleastonedecay:
                 # NO decay [one possibility is all decay are identical to their particle]
-                logger.info('No independent decay for one type of final states -> skip those events')
+                logger.info('No independent decay for one type of final states -> skip those events for the maximum weight computation')
                 nb_decay[decaying] = numberev
                 ev += numberev -1
                 continue
@@ -3236,14 +3244,16 @@ class decay_all_events(object):
                         logger.debug('Decay channel %s :Using maximum weight %s (BR: %s)' % \
                                     (','.join(associated_decay), max_weight, br/nb_finals)) 
 
-        if __debug__: 
+#        if __debug__: 
         # check that all decay have a max_weight and fix it if not the case.
-            for prod in self.all_ME.values():
-                for dec in prod['decays']:
-                    if dec['decay_tag']:                                                
-                        assert 'max_weight' in dec and dec['max_weight'] ,\
-                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
-                                                  os.path.basename(prod['path']))
+        for prod in self.all_ME.values():
+            for dec in prod['decays']:
+                if dec['decay_tag'] and not 'max_weight' in dec:
+                    dec['max_weight'] = 0. 
+
+#                        assert 'max_weight' in dec and dec['max_weight'] ,\
+#                                  'fail for %s (%s)' % (str(dec['decay_tag']), \
+#                                                  os.path.basename(prod['path']))
         self.evtfile.seek(0)
         return
 
@@ -3293,7 +3303,7 @@ class decay_all_events(object):
 
         return max_weight
         
-    def loadfortran(self, mode, path, stdin_text):
+    def loadfortran(self, mode, path, stdin_text, first=True):
         """ call the fortran executable """
 
         tmpdir = ''
@@ -3310,8 +3320,18 @@ class decay_all_events(object):
             self.calculator[('full',path,)] = external 
             self.calculator_nbcall[('full',path)] = 1 
 
-        external.stdin.write(stdin_text)
-        
+        try:
+            external.stdin.write(stdin_text)
+        except IOError:
+            if not first:
+                raise
+            try:
+                external.terminate()
+            except:
+                pass
+            del self.calculator[('full',path,)]
+            return self.loadfortran(mode, path, stdin_text, first=False)
+
         if mode == 'maxweight':
             maxweight=float(external.stdout.readline())
             output = maxweight
@@ -3862,16 +3882,24 @@ class decay_all_events(object):
         ms_banner = ""
         cross_section = True # tell if possible to write the cross-section in advance
         total_br = []
+        self.br_per_id = {}
         for production in self.all_ME.values():
             one_br = 0
+            partial_br = 0
             for decay in production['decays']:
                 if not decay['decay_tag']:
                     cross_section = False
                     one_br += decay['br']
                     continue
+                partial_br += decay['br']
                 ms_banner += "# %s\n" % ','.join(decay['decay_tag']).replace('\n',' ')
                 ms_banner += "# BR: %s\n# max_weight: %s\n" % (decay['br'], decay['max_weight'])
                 one_br += decay['br']
+            
+            if production['Pid'] not in self.br_per_id:
+                self.br_per_id[production['Pid']] = partial_br
+            elif self.br_per_id[production['Pid']] != partial_br:
+                self.br_per_id[production['Pid']] = -1
             total_br.append(one_br)
         
         if __debug__:
@@ -3879,7 +3907,6 @@ class decay_all_events(object):
                 assert production['total_br'] - min(total_br) < 1e-4
         
         self.branching_ratio = max(total_br) * eff
-
         #self.banner['madspin'] += ms_banner
         # Update cross-section in the banner
         if 'mggenerationinfo' in self.banner:
@@ -3910,18 +3937,36 @@ class decay_all_events(object):
                     mg_info[i] = '%s : %s' % (info, value * self.branching_ratio)
                 self.banner['mggenerationinfo'] = '\n'.join(mg_info)
                 
-            
-        
-        if 'init' in self.banner:
+        self.cross = 0
+        self.error = 0
+        if 'init' in self.banner and (eff!=1 or not any(v==-1 for v in self.br_per_id.values())):
             new_init =''
+            curr_proc = 0
+            has_missing=False
             for line in self.banner['init'].split('\n'):
                 if len(line.split()) != 4:
                     new_init += '%s\n' % line
                 else:
+                    curr_proc += 1 
                     data = [float(nb) for nb in line.split()]
-                    data[:3] = [ data[i] * self.branching_ratio for i  in range(3)]
+                    id = int(data[-1])
+                    if id in self.br_per_id and not any(v==-1 for v in self.br_per_id.values()):
+                        data[:3] = [data[i] * self.br_per_id[id] for i  in range(3)]
+                    else:
+                        data[:3] = [ data[i] * self.branching_ratio for i  in range(3)]
+                        has_missing=True
                     new_init += ' %.12E %.12E %.12E %i\n' % tuple(data)
+                    cross, error = [float(d) for d in data[:2]]
+                    self.cross += cross
+                    self.error += error**2
+                    
+                    
             self.banner['init'] = new_init
+            self.error = math.sqrt(self.error)
+            if has_missing and curr_proc not in [0,1]:
+                logger.warning('''The partial cross section for each subprocess can not be determine. due
+    Reason: multiple final state in the same subprocess (and the presence of multiple BR)
+    Consequence: the <init> information of the lhe will therefore be incorrect. Please correct it if needed.''')
         self.banner.write(self.outputfile, close_tag=False)        
         
     def terminate_fortran_executables(self, path_to_decay=0 ):

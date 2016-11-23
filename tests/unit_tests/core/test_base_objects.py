@@ -50,8 +50,7 @@ class ParticleTest(unittest.TestCase):
                       'type': '',
                       'counterterm':{('QCD',((1,2),(3,4))):{0:'GC_0',-1:'GC_1'}},
                       'propagator':'',
-                      'self_antipart':False,
-                      'goldstone': False}
+                      'self_antipart':False}
 
         self.mypart = base_objects.Particle(self.mydict)
 
@@ -138,10 +137,7 @@ class ParticleTest(unittest.TestCase):
                         'wrong_list':[1, 'a', 'true', None]},
                        {'prop':'self_antipart',
                         'right_list':[True, False],
-                        'wrong_list':[1, 'a', 'true', None]},
-                       {'prop': 'goldstone',
-                        'right_list': [True, False],
-                        'wrong_list': [1, 'a', 'true', None]}
+                        'wrong_list':[1, 'a', 'true', None]}
                        ]
 
         temp_part = self.mypart
@@ -1628,7 +1624,7 @@ class ProcessTest(unittest.TestCase):
     def test_nice_string(self):
         """Test Process nice_string representation"""
 
-        goal_str = "Process: c c > c c c QED<=1 QCD<=5 @1"
+        goal_str = "Process: c c > c c c QCD<=5 QED<=1 @1"
 
         self.assertEqual(goal_str, self.myprocess.nice_string())
 

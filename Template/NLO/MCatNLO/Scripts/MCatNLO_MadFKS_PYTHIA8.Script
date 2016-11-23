@@ -479,6 +479,7 @@ TimeShower:limitPTmaxGlobal = on   ! Limits pT < min(SCALUP,mDipole/2).
 TimeShower:QEDshowerByQ = on      ! Prevent quarks from radiating photons
 TimeShower:QEDshowerByL = on      ! Prevent leptons from radiating photons
 TimeShower:QEDshowerByGamma = on  ! Prevent photons from branching
+
 TimeShower:MEcorrections = off     ! No Matrix-element corrections
 TimeShower:alphaSuseCMW = false    ! Use the CMW prescription in FSR
 TimeShower:weightGluonToQuark = 1  ! Use normal Altarelli-Parisi kernels for g -> q qbar

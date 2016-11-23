@@ -562,16 +562,20 @@ c         \sqrt(s), partonic energy
           tmp=dsqrt(2d0*dot(pp(0,1),pp(0,2)))
           temp_scale_id='\sqrt(s), partonic energy'
       elseif(dynamical_scale_choice.eq.0) then
+c         fixed scale
+          tmp=muR_ref_fixed
+          temp_scale_id='fixed scale'
+      elseif(dynamical_scale_choice.eq.10) then
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: ENTER YOUR CODE HERE                                 cc
 cc      to use this code you must set                                            cc
-cc                 dynamical_scale_choice = 0                                    cc
+cc                 dynamical_scale_choice = 10                                   cc
 cc      in the run_card (run_card.dat)                                           cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
          write(*,*) "User-defined scale not set"
          stop 1
          temp_scale_id='User-defined dynamical scale' ! use a meaningful string
-         tmp = 0
+         tmp = 0d0
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 cc      USER-DEFINED SCALE: END OF USER CODE                                     cc
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

@@ -32,6 +32,8 @@ C
       integer amp_orders(nsplitorders)
       double precision ans_max, tiny
       parameter (tiny = 1d-12)
+      double precision       wgt_ME_born,wgt_ME_real
+      common /c_wgt_ME_tree/ wgt_ME_born,wgt_ME_real
 C
 C     FUNCTIONS
 C
@@ -86,6 +88,8 @@ enddo
 
 C avoid fake non-zeros
 if (dabs(ans_summed).lt.tiny*ans_max) ans_summed=0d0
+
+wgt_ME_real = ans_summed
 
 END
 

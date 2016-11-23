@@ -130,10 +130,10 @@ class gensym(object):
             logger.info('    %s ' % subdir)
             
             # clean previous run
-            for match in glob.glob(pjoin(Pdir, '*ajob*')):
+            for match in misc.glob('*ajob*', Pdir):
                 if os.path.basename(match)[:4] in ['ajob', 'wait', 'run.', 'done']:
                     os.remove(match)
-            for match in glob.glob(pjoin(Pdir, 'G*')):
+            for match in misc.glob('G*', Pdir):
                 if os.path.exists(pjoin(match,'results.dat')):
                     os.remove(pjoin(match, 'results.dat')) 
                 if os.path.exists(pjoin(match, 'ftn25')):
@@ -918,8 +918,7 @@ class gen_ximprove_v4(gen_ximprove):
 
     def reset_multijob(self):
 
-        for path in glob.glob(pjoin(self.me_dir, 'SubProcesses', '*', 
-                                                           '*','multijob.dat')):
+        for path in misc.glob(pjoin('*', '*','multijob.dat'), pjoin(self.me_dir, 'SubProcesses')):
             open(path,'w').write('0\n')
             
     def write_multijob(self, Channel, nb_split):
@@ -1101,6 +1100,7 @@ class gen_ximprove_v4(gen_ximprove):
                     break
                 info = jobs[j]
                 info['script_name'] = 'ajob%i' % script_number
+                info['keeplog'] = 'false'
                 if "base_directory" not in info:
                     info["base_directory"] = "./"
                 fsock.write(template_text % info)

@@ -9,7 +9,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and CutTools.
 C     
-C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QCD<=2 QED<=1 [ virt = QCD ]
 C     
 C     
 C     CONSTANTS 
@@ -26,7 +26,8 @@ C     ARGUMENTS
 C     
       INTEGER NLOOPLINE, RANK
       REAL*8 PL(0:3,NLOOPLINE)
-      REAL*8 PCT(0:3,0:NLOOPLINE-1)
+      REAL*8 PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      REAL*8 REF_P
       COMPLEX*16 M2L(NLOOPLINE)
       COMPLEX*16 M2LCT(0:NLOOPLINE-1)
       COMPLEX*16 RES(3)
@@ -37,8 +38,9 @@ C
       COMPLEX*16 R1, ACC
       INTEGER I, J, K
       LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
+     $ ,COLLIERINIT
       COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT
-     $ ,NINJAINIT
+     $ ,NINJAINIT,COLLIERINIT
 C     
 C     EXTERNAL FUNCTIONS
 C     
@@ -75,6 +77,7 @@ C     CONVERT THE MASSES TO BE COMPLEX
 
 C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
+        ABSPCT(I)=0.D0
         DO J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         ENDDO
@@ -82,21 +85,26 @@ C     CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       DO I=0,3
         DO J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         ENDDO
       ENDDO
-      IF (CHECKPCONSERVATION) THEN
-        IF (PCT(0,0).GT.1.D-6) THEN
-          WRITE(*,*) 'energy is not conserved ',PCT(0,0)
-          STOP 'energy is not conserved'
-        ELSEIF (PCT(1,0).GT.1.D-6) THEN
-          WRITE(*,*) 'px is not conserved ',PCT(1,0)
-          STOP 'px is not conserved'
-        ELSEIF (PCT(2,0).GT.1.D-6) THEN
-          WRITE(*,*) 'py is not conserved ',PCT(2,0)
-          STOP 'py is not conserved'
-        ELSEIF (PCT(3,0).GT.1.D-6) THEN
-          WRITE(*,*) 'pz is not conserved ',PCT(3,0)
-          STOP 'pz is not conserved'
+      REF_P = MAX(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+      DO I=0,3
+        ABSPCT(I) = MAX(REF_P*1E-6, ABSPCT(I))
+      ENDDO
+      IF (CHECKPCONSERVATION.AND.REF_P.GT.1D-8) THEN
+        IF ((PCT(0,0)/ABSPCT(0)).GT.1.D-6) THEN
+          WRITE(*,*) 'energy is not conserved (flag:CT95)',PCT(0,0)
+          STOP 'energy is not conserved (flag:CT95)'
+        ELSEIF ((PCT(1,0)/ABSPCT(1)).GT.1.D-6) THEN
+          WRITE(*,*) 'px is not conserved (flag:CT95)',PCT(1,0)
+          STOP 'px is not conserved (flag:CT95)'
+        ELSEIF ((PCT(2,0)/ABSPCT(2)).GT.1.D-6) THEN
+          WRITE(*,*) 'py is not conserved (flag:CT95)',PCT(2,0)
+          STOP 'py is not conserved (flag:CT95)'
+        ELSEIF ((PCT(3,0)/ABSPCT(3)).GT.1.D-6) THEN
+          WRITE(*,*) 'pz is not conserved (flag:CT95)',PCT(3,0)
+          STOP 'pz is not conserved (flag:CT95)'
         ENDIF
       ENDIF
       DO I=0,3
@@ -196,8 +204,8 @@ C     ----------
             DIFFSQ = (DCMPLX(P_LOOP(I,0),0.0D0)-DCMPLX(P_LOOP(J,0)
      $       ,0.0D0))**2
             DO K=1,3
-              DIFFSQ = DIFFSQ - (DCMPLX(P_LOOP(I,K),0.0D0)-DCMPLX(P_LOO
-     $         P(J,K),0.0D0))**2
+              DIFFSQ = DIFFSQ - (DCMPLX(P_LOOP(I,K),0.0D0)
+     $         -DCMPLX(P_LOOP(J,K),0.0D0))**2
             ENDDO
 C           Default value of the kinematic matrix
             S_MAT(I,J)=DIFFSQ-M2L(I)-M2L(J)
@@ -219,8 +227,8 @@ C           massless onshellness.
 C           Here, we chose to base the threshold only on the energy
 C            component
             DO K=0,0
-              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I
-     $         ,K)) + ABS(P_LOOP(J,K))
+              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I,K))
+     $          + ABS(P_LOOP(J,K))
             ENDDO
             REF_NORMALIZATION = (REF_NORMALIZATION/2.0D0)**2
             IF(REF_NORMALIZATION.NE.0.0D0)THEN
@@ -273,8 +281,8 @@ C     ----------
           IF(I.EQ.J)THEN
             S_MAT(I,J)=-(M2L(I)+M2L(J))
           ELSE
-            DIFFSQ = (CMPLX(P_LOOP(I,0),0.0E0_16,KIND=16)-CMPLX(P_LOOP(
-     $       J,0),0.0E0_16,KIND=16))**2
+            DIFFSQ = (CMPLX(P_LOOP(I,0),0.0E0_16,KIND=16)
+     $       -CMPLX(P_LOOP(J,0),0.0E0_16,KIND=16))**2
             DO K=1,3
               DIFFSQ = DIFFSQ - (CMPLX(P_LOOP(I,K),0.0E0_16,KIND=16)
      $         -CMPLX(P_LOOP(J,K),0.0E0_16,KIND=16))**2
@@ -299,8 +307,8 @@ C           massless onshellness.
 C           Here, we chose to base the threshold only on the energy
 C            component
             DO K=0,0
-              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I
-     $         ,K)) + ABS(P_LOOP(J,K))
+              REF_NORMALIZATION = REF_NORMALIZATION + ABS(P_LOOP(I,K))
+     $          + ABS(P_LOOP(J,K))
             ENDDO
             REF_NORMALIZATION = (REF_NORMALIZATION/2.0E0_16)**2
             IF(REF_NORMALIZATION.NE.0.0E0_16)THEN
@@ -317,8 +325,8 @@ C            component
 
 
 
-      SUBROUTINE ML5_0_LOOP_5(W1, W2, W3, W4, W5, M1, M2, M3, M4, M5
-     $ ,  RANK, SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_5(W1, W2, W3, W4, W5, M1, M2, M3, M4, M5, 
+     $  RANK, SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER    NLOOPLINE
@@ -388,7 +396,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -439,13 +447,13 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSE
 C         Tensor Integral Reduction is used 
           CALL ML5_0_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -526,7 +534,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -576,13 +584,13 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSE
 C         Tensor Integral Reduction is used 
           CALL ML5_0_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -592,8 +600,8 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE ML5_0_LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK
-     $ , SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_4(W1, W2, W3, W4, M1, M2, M3, M4,  RANK,
+     $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER    NLOOPLINE
@@ -663,7 +671,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -712,13 +720,13 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSE
 C         Tensor Integral Reduction is used 
           CALL ML5_0_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -728,8 +736,8 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE ML5_0_LOOP_2_3(P1, P2, W1, W2, W3, M1, M2,  RANK
-     $ , SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_2_3(P1, P2, W1, W2, W3, M1, M2,  RANK,
+     $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER    NLOOPLINE
@@ -799,7 +807,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -843,13 +851,13 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSE
 C         Tensor Integral Reduction is used 
           CALL ML5_0_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -859,8 +867,8 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE ML5_0_LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX
-     $ , LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_2(W1, W2, M1, M2,  RANK, SQUAREDSOINDEX,
+     $  LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER    NLOOPLINE
@@ -930,7 +938,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         M2L(1)=M2**2
@@ -975,13 +983,13 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSE
 C         Tensor Integral Reduction is used 
           CALL ML5_0_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -1062,7 +1070,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -1109,13 +1117,13 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSE
 C         Tensor Integral Reduction is used 
           CALL ML5_0_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)
@@ -1125,8 +1133,8 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE ML5_0_LOOP_3(W1, W2, W3, M1, M2, M3,  RANK, SQUAREDSOI
-     $ NDEX, LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_3(W1, W2, W3, M1, M2, M3,  RANK,
+     $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
       INTEGER    NLOOPLINE
@@ -1196,7 +1204,7 @@ C     Determine it uses qp or not
       DOING_QP = (CTMODE.GE.4)
 
       IF (CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.GOODAMP(SQUAREDSOIND
-     $ EX,LOOPNUM)) THEN
+     $EX,LOOPNUM)) THEN
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
@@ -1243,13 +1251,13 @@ C       Choose the correct loop library
      $   ,ID,DOING_QP,I_LIB)
         IF(MLREDUCTIONLIB(I_LIB).EQ.1)THEN
 C         CutTools is used
-          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1,SQUAREDSOIN
-     $     DEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
+          CALL ML5_0_CTLOOP(NLOOPLINE,PL,M2L,RANK,LOOPRES(1
+     $     ,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX,LOOPNUM))
         ELSE
 C         Tensor Integral Reduction is used 
           CALL ML5_0_TIRLOOP(SQUAREDSOINDEX,LOOPNUM,I_LIB,NLOOPLINE,PL
-     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM),S(SQUAREDSOINDEX
-     $     ,LOOPNUM))
+     $     ,M2L,RANK,LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)
+     $     ,S(SQUAREDSOINDEX,LOOPNUM))
         ENDIF
       ELSE
         LOOPRES(1,SQUAREDSOINDEX,LOOPNUM)=(0.0D0,0.0D0)

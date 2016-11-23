@@ -58,7 +58,9 @@ class TestFKSQED(unittest.TestCase):
             leglist.append(MG.MultiLeg({'ids': [2], 'state': True}))
             leglist.append(MG.MultiLeg({'ids': [-2], 'state': True}))
 
-            procdef_dict = {'legs': leglist, 'orders':{'QCD':2, 'QED':2},
+            procdef_dict = {'legs': leglist, 
+                           'orders':{},
+                           'squared_orders':{'QCD':4, 'QED':2},
                            'model': self.mymodel,
                            'id': 1,
                            'NLO_mode': 'real',
@@ -69,7 +71,7 @@ class TestFKSQED(unittest.TestCase):
                            'perturbation_couplings':['QED'],
                            'decay_chains': MG.ProcessList(),
                            'overall_orders': {},
-                           'born_orders':{'QCD':2, 'QED':2}}
+                           'born_orders':{'QCD':2, 'QED':0}}
 
             TestFKSQED.fksmultiproc_qqqq = \
                     fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
@@ -81,7 +83,8 @@ class TestFKSQED(unittest.TestCase):
             j = MG.MultiLeg({'ids': multi_ids, 'state': True})
             leglist = MG.MultiLegList([p, p, j, j])
 
-            procdef_dict = {'legs': leglist, 'orders':{'QCD':2, 'QED':1},
+            procdef_dict = {'legs': leglist, 
+                           'orders':{},
                            'model': self.mymodel,
                            'id': 1,
                            'NLO_mode': 'real',
@@ -109,11 +112,11 @@ class TestFKSQED(unittest.TestCase):
         # check correct number of diagrams at born (4)
         # 3 s channels (a, z, g)
         # 1 t channel (w)
-        self.assertEqual(len(fksproc.born_amp_list[0]['diagrams']), 4)
+        self.assertEqual(len(fksproc.born_amp['diagrams']), 4)
         # check correct colors and charges
-        self.assertEqual(fksproc.get_colors(), [[3,-3,3,-3]])
-        self.assertEqual(len(fksproc.get_charges()[0]), 4)
-        for q1, q2 in zip(fksproc.get_charges()[0],[-1./3., 1./3., 2./3., -2./3.]):
+        self.assertEqual(fksproc.get_colors(), [3,-3,3,-3])
+        self.assertEqual(len(fksproc.get_charges()), 4)
+        for q1, q2 in zip(fksproc.get_charges(),[-1./3., 1./3., 2./3., -2./3.]):
             self.assertAlmostEqual(q1, q2)
         # check real emissions:
         # from the first and second leg, one can have the final and initial
@@ -167,9 +170,7 @@ class TestFKSQED(unittest.TestCase):
         self.assertEqual(len(helasmultiproc['matrix_elements']), 1)
         # this subprocess should have only one born
         helasproc = helasmultiproc['matrix_elements'][0]
-        self.assertEqual(len(helasproc.born_me_list), 1)
-        self.assertEqual(len(helasproc.color_links), 1)
         # there should be 6 color_links
-        self.assertEqual(len(helasproc.color_links[0]), 6)
+        self.assertEqual(len(helasproc.color_links), 6)
 
 

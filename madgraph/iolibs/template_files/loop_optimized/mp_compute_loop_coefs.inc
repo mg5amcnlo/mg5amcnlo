@@ -8,6 +8,10 @@ c and external lines W(0:6,NEXTERNAL)
 C 
 %(process_lines)s
 C  
+C Modules
+C
+      use %(proc_prefix)sPOLYNOMIAL_CONSTANTS      
+C
       IMPLICIT NONE
 C  
 C CONSTANTS
@@ -28,14 +32,14 @@ C
       PARAMETER (NEXTERNAL=%(nexternal)d)
       INTEGER    NWAVEFUNCS,NLOOPWAVEFUNCS
       PARAMETER (NWAVEFUNCS=%(nwavefuncs)d,NLOOPWAVEFUNCS=%(nloopwavefuncs)d)
-      include 'loop_max_coefs.inc'
-      include 'coef_specs.inc'
 	  INTEGER    NCOMB
       PARAMETER (NCOMB=%(ncomb)d)
 	  %(real_mp_format)s    ZERO
       PARAMETER (ZERO=0E0_16)
       %(complex_mp_format)s IMAG1
       PARAMETER (IMAG1=(0e0_16,1e0_16))
+      %(complex_mp_format)s DP_IMAG1
+      PARAMETER (DP_IMAG1=(0d0,1d0))
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
 	  PARAMETER (NSO=%(nSO)d, NSQUAREDSO=%(nSquaredSO)d, NAMPSO=%(nAmpSO)d)
@@ -60,9 +64,14 @@ C
       INTEGER I,J,K,H,HEL_MULT,ITEMP
 ## if(not AmplitudeReduction){
 	  %(real_mp_format)s TEMP2
+	  %(real_dp_format)s DP_TEMP2	  
 ## }else{
 	  %(real_mp_format)s TEMP2(3)
+	  %(real_dp_format)s DP_TEMP2(3)	  
 ## }
+      %(complex_mp_format)s CTEMP
+      %(complex_dp_format)s DP_CTEMP
+
       INTEGER NHEL(NEXTERNAL), IC(NEXTERNAL)
       %(real_mp_format)s MP_P(0:3,NEXTERNAL)
 	  %(real_dp_format)s P(0:3,NEXTERNAL)
@@ -74,9 +83,11 @@ C
 ## }
 	  %(complex_mp_format)s COEFS(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
       %(complex_mp_format)s CFTOT
+      %(complex_dp_format)s DP_CFTOT	  
 C
 C FUNCTIONS
 C
+      LOGICAL %(proc_prefix)sIS_HEL_SELECTED
       INTEGER %(proc_prefix)sML5SOINDEX_FOR_BORN_AMP
 	  INTEGER %(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP
 	  INTEGER %(proc_prefix)sML5SQSOINDEX
@@ -183,6 +194,11 @@ C This flag is used to prevent the re-computation of the OpenLoop coefficients w
       INTEGER LIBINDEX
       COMMON/%(proc_prefix)sI_LIB/LIBINDEX
 
+C     This array specify potential special requirements on the helicities to
+C     consider. POLARIZATIONS(0,0) is -1 if there is not such requirement.
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/%(proc_prefix)sBEAM_POL/POLARIZATIONS
+
 C ----------
 C BEGIN CODE
 C ----------
@@ -206,8 +222,12 @@ DO I=1,NEXTERNAL
 ENDDO
 
 DO I=0,3
-  PL(I,0)=(ZERO,ZERO)
+  PL(I,0)=CMPLX(ZERO,ZERO,KIND=16)
+  IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
+    DP_PL(I,0)=DCMPLX(0.0d0,0.0d0)
+  ENDIF
 ENDDO
+
 ## if(AmplitudeReduction){
 IF (.NOT.SKIP_LOOPNUM_COEFS_CONSTRUCTION) THEN
 ## }
@@ -277,13 +297,25 @@ ENDDO
 DPW_COPIED = .False.
 DO H=1,NCOMB
   IF ((HELPICKED.EQ.H).OR.((HELPICKED.EQ.-1).AND.(CHECKPHASE.OR.(.NOT.HELDOUBLECHECKED).OR.(GOODHEL(H).GT.-HELOFFSET.AND.GOODHEL(H).NE.0)))) THEN
+
+C  Handle the possible requirement of specific polarizations
+  IF ((.NOT.CHECKPHASE).AND.HELDOUBLECHECKED.AND.POLARIZATIONS(0,0).eq.0.AND.(.NOT.%(proc_prefix)sIS_HEL_SELECTED(H))) THEN
+    CYCLE
+  ENDIF
+
   DO I=1,NEXTERNAL
     NHEL(I)=HELC(I,H)
   ENDDO
 
-  MP_UVCT_REQ_SO_DONE=.FALSE.
-  MP_CT_REQ_SO_DONE=.FALSE.
-  MP_LOOP_REQ_SO_DONE=.FALSE.  
+  IF (COMPUTE_INTEGRAND_IN_QP) THEN  
+    MP_UVCT_REQ_SO_DONE=.FALSE.
+    MP_CT_REQ_SO_DONE=.FALSE.
+    MP_LOOP_REQ_SO_DONE=.FALSE.  
+  ELSE
+    UVCT_REQ_SO_DONE=.FALSE.
+    CT_REQ_SO_DONE=.FALSE.
+    LOOP_REQ_SO_DONE=.FALSE.
+  ENDIF
 
   IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1) THEN
     HEL_MULT=GOODHEL(H)
@@ -320,8 +352,10 @@ ENDDO
 
   IF (COMPUTE_INTEGRAND_IN_QP) THEN
     %(mp_born_ct_helas_calls)s
+    CONTINUE
   ELSE
     %(born_ct_helas_calls)s
+    CONTINUE
   ENDIF
 
 2000 CONTINUE
@@ -329,8 +363,10 @@ ENDDO
 
   IF (COMPUTE_INTEGRAND_IN_QP) THEN
     %(mp_uvct_helas_calls)s
+    CONTINUE
   ELSE
-    %(uvct_helas_calls)s    
+    %(uvct_helas_calls)s   
+    CONTINUE
   ENDIF
 
   IF (.NOT.COMPUTE_INTEGRAND_IN_QP) THEN
@@ -356,20 +392,44 @@ C   Copy back to the quantities computed in DP in the QP containers (but only th
   MP_UVCT_REQ_SO_DONE=.TRUE.
 
 ## if(not AmplitudeReduction) { 
-  DO I=1,NCTAMPS
-    DO J=1,NBORNAMPS
+  IF (COMPUTE_INTEGRAND_IN_QP) THEN
+
+  DO J=1,NBORNAMPS
+    CTEMP = HEL_MULT*2.0e0_16*CONJG(AMP(J))
+	DO I=1,NCTAMPS	
 	  CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16),0.0e0_16,KIND=16)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
 	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
         DO K=1,3
-          TEMP2 = HEL_MULT*2.0e0_16*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
+          TEMP2 = REAL(CFTOT*AMPL(K,I)*CTEMP,KIND=16)
           ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2
           ANS(K,0)=ANS(K,0)+TEMP2
         ENDDO
       ENDIF
     ENDDO
   ENDDO
+
+  ELSE
+
+  DO J=1,NBORNAMPS  
+    DP_CTEMP = HEL_MULT*2.0d0*DCONJG(DP_AMP(J)) 
+    DO I=1,NCTAMPS
+	  DP_CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=8),0.0d0,KIND=8)
+      IF(CF_D(I,J).LT.0) DP_CFTOT=DP_CFTOT*DP_IMAG1
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+	  IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
+        DO K=1,3
+          DP_TEMP2 = REAL(DP_CFTOT*DP_AMPL(K,I)*DP_CTEMP,KIND=8)
+          ANSDP(K,ITEMP)=ANSDP(K,ITEMP)+DP_TEMP2
+          ANSDP(K,0)=ANSDP(K,0)+DP_TEMP2
+        ENDDO
+      ENDIF
+    ENDDO
+  ENDDO
+
+  ENDIF
+
 ## }
 
   IF (COMPUTE_INTEGRAND_IN_QP) THEN
@@ -458,12 +518,15 @@ C precision variable) to the AMPL multiple precision array.
 ## } else {
     DO J=1,NLOOPAMPS
 ## }
+
+      IF (COMPUTE_INTEGRAND_IN_QP) THEN
+
 	  CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=16),0.0e0_16,KIND=16)
       IF(CF_D(I,J).LT.0) CFTOT=CFTOT*IMAG1
 ## if(not LoopInduced) {
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
       DO K=1,3
-        TEMP2(K) = 2.0d0*HEL_MULT*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
+        TEMP2(K) = 2.0e0_16*HEL_MULT*REAL(CFTOT*AMPL(K,I)*CONJG(AMP(J)),KIND=16)
       ENDDO
 ## } else {
       ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
@@ -473,18 +536,48 @@ C It is however a good cross-check.
       TEMP2(2) = HEL_MULT*REAL(CFTOT*(AMPL(2,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(2,J))),KIND=16)
       TEMP2(3) = HEL_MULT*REAL(CFTOT*(AMPL(3,I)*CONJG(AMPL(1,J)) + AMPL(1,I)*CONJG(AMPL(3,J))+AMPL(2,I)*CONJG(AMPL(2,J))),KIND=16)
 ## }
+
+      ELSE
+
+	  DP_CFTOT=CMPLX(CF_N(I,J)/REAL(ABS(CF_D(I,J)),KIND=8),0.0d0,KIND=8)
+      IF(CF_D(I,J).LT.0) DP_CFTOT=DP_CFTOT*DP_IMAG1
+## if(not LoopInduced) {
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_BORN_AMP(J))
+      DO K=1,3
+        DP_TEMP2(K) = 2.0d0*HEL_MULT*REAL(DP_CFTOT*DP_AMPL(K,I)*CONJG(DP_AMP(J)),KIND=8)
+      ENDDO
+## } else {
+      ITEMP = %(proc_prefix)sML5SQSOINDEX(%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(I),%(proc_prefix)sML5SOINDEX_FOR_LOOP_AMP(J))
+      DP_TEMP2(1) = HEL_MULT*REAL(DP_CFTOT*DP_AMPL(1,I)*DCONJG(DP_AMPL(1,J)),KIND=8)
+C Computing the quantities below is not strictly necessary since the result should be finite
+C It is however a good cross-check.
+      DP_TEMP2(2) = HEL_MULT*REAL(DP_CFTOT*(DP_AMPL(2,I)*DCONJG(DP_AMPL(1,J)) + DP_AMPL(1,I)*DCONJG(DP_AMPL(2,J))),KIND=8)
+      DP_TEMP2(3) = HEL_MULT*REAL(DP_CFTOT*(DP_AMPL(3,I)*DCONJG(DP_AMPL(1,J)) + DP_AMPL(1,I)*DCONJG(DP_AMPL(3,J))+DP_AMPL(2,I)*DCONJG(DP_AMPL(2,J))),KIND=8)
+## }
+
+	  ENDIF
+
 C To mimic the structure of the non loop-induced processes, we add here the squared counterterm contribution directly the result ANS and put the loop contributions in the LOOPRES array which will be added to ANS later
       IF (I.LE.NCTAMPS) THEN
         IF (.NOT.FILTER_SO.OR.SQSO_TARGET.EQ.ITEMP) THEN
           DO K=1,3
-            ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2(K)
-            ANS(K,0)=ANS(K,0)+TEMP2(K)
+            IF (COMPUTE_INTEGRAND_IN_QP) THEN
+              ANS(K,ITEMP)=ANS(K,ITEMP)+TEMP2(K)
+              ANS(K,0)=ANS(K,0)+TEMP2(K)
+			ELSE
+              ANSDP(K,ITEMP)=ANSDP(K,ITEMP)+DP_TEMP2(K)
+              ANSDP(K,0)=ANSDP(K,0)+DP_TEMP2(K)
+			ENDIF
           ENDDO
         ENDIF
       ELSE
         DO K=1,3
 C This LOOPRES array entries will be added to the main result ANS(*,*) later in the loop_matrix.f file. It is in double precision however, so the cast of the temporary variable TEMP2 is necessary.
-          LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+DBLE(TEMP2(K))
+          IF (COMPUTE_INTEGRAND_IN_QP) THEN
+            LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+DBLE(TEMP2(K))
+		  ELSE
+            LOOPRES(K,ITEMP,I-NCTAMPS)=LOOPRES(K,ITEMP,I-NCTAMPS)+DP_TEMP2(K)		  
+		  ENDIF
 C During the evaluation of the AMPL, we had stored the stability in S(1,*) so we now copy over this flag to the relevant contributing Squared orders.
           S(ITEMP,I-NCTAMPS)=S(1,I-NCTAMPS)
         ENDDO
@@ -502,7 +595,7 @@ C During the evaluation of the AMPL, we had stored the stability in S(1,*) so we
 
 ## if(ComputeColorFlows){
 C We should compute the color flow either if it contributes to the final result (i.e. not used just for the filtering), or if the computation is only done from the color flows
-IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.(H.EQ.USERHEL.OR.USERHEL.EQ.-1)) THEN
+IF (((.NOT.DIRECT_ME_COMPUTATION).AND.ME_COMPUTATION_FROM_JAMP).OR.((H.EQ.USERHEL.OR.USERHEL.EQ.-1).and.(POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_HEL_SELECTED(H)))) THEN
 C The cumulative quantities must only be computed if that helicity contributes according to user request (second argument of the subroutine below).
   CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS(HEL_MULT)  
   IF(ME_COMPUTATION_FROM_JAMP) THEN
@@ -511,12 +604,16 @@ C The cumulative quantities must only be computed if that helicity contributes a
 C     If the computation from the color flow is the only form of computation, we directly update the answer.
       DO K=1,3
         DO I=0,NSQUAREDSO
-          ANS(K,I)=ANS(K,I)+REAL(BUFFRES(K,I),KIND=16)
+          IF (COMPUTE_INTEGRAND_IN_QP) THEN		
+            ANS(K,I)=ANS(K,I)+REAL(BUFFRES(K,I),KIND=16)
+		  ELSE
+            ANSDP(K,I)=ANSDP(K,I)+BUFFRES(K,I)
+		  ENDIF
         ENDDO
       ENDDO
 C     In this case, we temporarily store the compute Born ME in RES_FROM_JAMP(0,I), which will be used to set ANS(0,I) just after the call to this subroutine in loop_matrix.f
       DO I=0,NSQUAREDSO
-        RES_FROM_JAMP(0,I)=RES_FROM_JAMP(0,I)+REAL(BUFFRES(0,I),KIND=16)
+        RES_FROM_JAMP(0,I)=RES_FROM_JAMP(0,I)+BUFFRES(0,I)
       ENDDO
 C   When setting up the loop filter, it is important to set the quantitied LOOPRES.
 C   Notice that you may have a more powerful filter with the direct computation mode because it can filter vanishing loop contributions for a particular squared split order only
@@ -531,15 +628,21 @@ C   In principle it is no longer necessary to compute the quantity below once th
       ENDDO
 C   The if statement below is not strictly necessary but makes it clear when it is executed.
     ELSEIF(H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-C     If both computational method is used, then we must just update RES_FROM_JAMP
-      DO K=0,3
-        DO I=0,NSQUAREDSO
-          RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)+BUFFRES(K,I)
+C     Make sure that that no polarization constraint filters out this helicity
+      IF (POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_HEL_SELECTED(H)) THEN
+C       If both computational method is used, then we must just update RES_FROM_JAMP
+        DO K=0,3
+          DO I=0,NSQUAREDSO
+            RES_FROM_JAMP(K,I)=RES_FROM_JAMP(K,I)+BUFFRES(K,I)
+          ENDDO
         ENDDO
-      ENDDO
+      ENDIF
     ENDIF 
     IF (H.EQ.USERHEL.OR.USERHEL.EQ.-1) THEN
-	  CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+C     Make sure that that no polarization constraint filters out this helicity
+      IF (POLARIZATIONS(0,0).eq.-1.or.%(proc_prefix)sIS_HEL_SELECTED(H)) THEN
+	    CALL %(proc_prefix)sCOMPUTE_COLOR_FLOWS_DERIVED_QUANTITIES(HEL_MULT)
+	  ENDIF
 	ENDIF
   ENDIF
 ENDIF
@@ -548,11 +651,15 @@ ENDIF
   ENDIF
 ENDDO
 
-DO I=1,3
-  DO J=0,NSQUAREDSO
-    ANSDP(I,J)=REAL(ANS(I,J),KIND=8)
+
+C If we were not computing the integrand in QP, then we were already updating ANSDP all along, so that fetching it here from the QP ANS(:,:) should not be done.
+IF (COMPUTE_INTEGRAND_IN_QP) THEN
+  DO I=1,3
+    DO J=0,NSQUAREDSO
+      ANSDP(I,J)=REAL(ANS(I,J),KIND=8)
+    ENDDO
   ENDDO
-ENDDO
+ENDIF
 
 ## if(not AmplitudeReduction) {
 %(mp_coef_merging)s

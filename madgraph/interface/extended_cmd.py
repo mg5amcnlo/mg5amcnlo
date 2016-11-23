@@ -15,7 +15,6 @@
 """  A file containing different extension of the cmd basic python library"""
 
 
-import cmd
 import logging
 import os
 import pydoc
@@ -44,6 +43,7 @@ except ImportError, error:
         import internal.misc as misc
     except:
         raise error
+    
     MADEVENT = True
 
 
@@ -68,21 +68,397 @@ def debug(debug_only=True):
                 return
         return deco_f
     return deco_debug
-            
+
+import string
+
+# The following is copy from the standard cmd routine but pass in new class type
+__all__ = ["Cmd"]
+PROMPT = '(Cmd) '
+IDENTCHARS = string.ascii_letters + string.digits + '_'            
+class OriginalCmd(object):
+    """A simple framework for writing line-oriented command interpreters.
+
+    These are often useful for test harnesses, administrative tools, and
+    prototypes that will later be wrapped in a more sophisticated interface.
+
+    A Cmd instance or subclass instance is a line-oriented interpreter
+    framework.  There is no good reason to instantiate Cmd itself; rather,
+    it's useful as a superclass of an interpreter class you define yourself
+    in order to inherit Cmd's methods and encapsulate action methods.
+
+    """
+    prompt = PROMPT
+    identchars = IDENTCHARS
+    ruler = '='
+    lastcmd = ''
+    intro = None
+    doc_leader = ""
+    doc_header = "Documented commands (type help <topic>):"
+    misc_header = "Miscellaneous help topics:"
+    undoc_header = "Undocumented commands:"
+    nohelp = "*** No help on %s"
+    use_rawinput = 1
+
+    def __init__(self, completekey='tab', stdin=None, stdout=None,**opt):
+        """Instantiate a line-oriented interpreter framework.
+
+        The optional argument 'completekey' is the readline name of a
+        completion key; it defaults to the Tab key. If completekey is
+        not None and the readline module is available, command completion
+        is done automatically. The optional arguments stdin and stdout
+        specify alternate input and output file objects; if not specified,
+        sys.stdin and sys.stdout are used.
+
+        """
+        import sys
+        if stdin is not None:
+            self.stdin = stdin
+        else:
+            self.stdin = sys.stdin
+        if stdout is not None:
+            self.stdout = stdout
+        else:
+            self.stdout = sys.stdout
+        self.cmdqueue = []
+        self.completekey = completekey
+        self.cmd_options = opt
+
+    def cmdloop(self, intro=None):
+        """Repeatedly issue a prompt, accept input, parse an initial prefix
+        off the received input, and dispatch to action methods, passing them
+        the remainder of the line as argument.
+
+        """
+
+        self.preloop()
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                self.old_completer = readline.get_completer()
+                readline.set_completer(self.complete)
+                readline.parse_and_bind(self.completekey+": complete")
+            except ImportError:
+                pass
+        try:
+            if intro is not None:
+                self.intro = intro
+            if self.intro:
+                self.stdout.write(str(self.intro)+"\n")
+            stop = None
+            while not stop:
+                if self.cmdqueue:
+                    line = self.cmdqueue.pop(0)
+                else:
+                    if self.use_rawinput:
+                        try:
+                            line = raw_input(self.prompt)
+                        except EOFError:
+                            line = 'EOF'
+                    else:
+                        self.stdout.write(self.prompt)
+                        self.stdout.flush()
+                        line = self.stdin.readline()
+                        if not len(line):
+                            line = 'EOF'
+                        else:
+                            line = line.rstrip('\r\n')
+                line = self.precmd(line)
+                stop = self.onecmd(line)
+                stop = self.postcmd(stop, line)
+            self.postloop()
+        finally:
+            if self.use_rawinput and self.completekey:
+                try:
+                    import readline
+                    readline.set_completer(self.old_completer)
+                except ImportError:
+                    pass
+
+
+    def precmd(self, line):
+        """Hook method executed just before the command line is
+        interpreted, but after the input prompt is generated and issued.
+
+        """
+        return line
+
+    def postcmd(self, stop, line):
+        """Hook method executed just after a command dispatch is finished."""
+        return stop
+
+    def preloop(self):
+        """Hook method executed once when the cmdloop() method is called."""
+        pass
+
+    def postloop(self):
+        """Hook method executed once when the cmdloop() method is about to
+        return.
+
+        """
+        pass
+
+    def parseline(self, line):
+        """Parse the line into a command name and a string containing
+        the arguments.  Returns a tuple containing (command, args, line).
+        'command' and 'args' may be None if the line couldn't be parsed.
+        """
+        line = line.strip()
+        if not line:
+            return None, None, line
+        elif line[0] == '?':
+            line = 'help ' + line[1:]
+        elif line[0] == '!':
+            if hasattr(self, 'do_shell'):
+                line = 'shell ' + line[1:]
+            else:
+                return None, None, line
+        i, n = 0, len(line)
+        while i < n and line[i] in self.identchars: i = i+1
+        cmd, arg = line[:i], line[i:].strip()
+        return cmd, arg, line
+
+    def onecmd(self, line):
+        """Interpret the argument as though it had been typed in response
+        to the prompt.
+
+        This may be overridden, but should not normally need to be;
+        see the precmd() and postcmd() methods for useful execution hooks.
+        The return value is a flag indicating whether interpretation of
+        commands by the interpreter should stop.
+
+        """
+        cmd, arg, line = self.parseline(line)
+        if not line:
+            return self.emptyline()
+        if cmd is None:
+            return self.default(line)
+        self.lastcmd = line
+        if cmd == '':
+            return self.default(line)
+        else:
+            try:
+                func = getattr(self, 'do_' + cmd)
+            except AttributeError:
+                return self.default(line)
+            return func(arg)
+
+    def emptyline(self):
+        """Called when an empty line is entered in response to the prompt.
+
+        If this method is not overridden, it repeats the last nonempty
+        command entered.
+
+        """
+        if self.lastcmd:
+            return self.onecmd(self.lastcmd)
+
+    def default(self, line):
+        """Called on an input line when the command prefix is not recognized.
+
+        If this method is not overridden, it prints an error message and
+        returns.
+
+        """
+        self.stdout.write('*** Unknown syntax: %s\n'%line)
+
+    def completedefault(self, *ignored):
+        """Method called to complete an input line when no command-specific
+        complete_*() method is available.
+
+        By default, it returns an empty list.
+
+        """
+        return []
+
+    def completenames(self, text, *ignored):
+        dotext = 'do_'+text
+        
+        done = set() # store the command already handle
+        
+        return [a[3:] for a in self.get_names() 
+                if a.startswith(dotext) and a not in done and not done.add(a)]
+
+    def complete(self, text, state):
+        """Return the next possible completion for 'text'.
+
+        If a command has not been entered, then complete against command list.
+        Otherwise try to call complete_<command> to get list of completions.
+        """
+        if state == 0:
+            import readline
+            origline = readline.get_line_buffer()
+            line = origline.lstrip()
+            stripped = len(origline) - len(line)
+            begidx = readline.get_begidx() - stripped
+            endidx = readline.get_endidx() - stripped
+            if begidx>0:
+                cmd, args, foo = self.parseline(line)
+                if cmd == '':
+                    compfunc = self.completedefault
+                else:
+                    try:
+                        compfunc = getattr(self, 'complete_' + cmd)
+                    except AttributeError:
+                        compfunc = self.completedefault
+            else:
+                compfunc = self.completenames
+            self.completion_matches = compfunc(text, line, begidx, endidx)
+        try:
+            return self.completion_matches[state]
+        except IndexError:
+            return None
+
+    def get_names(self):
+        # Inheritance says we have to look in class and
+        # base classes; order is not important.
+        names = []
+        classes = [self.__class__]
+        while classes:
+            aclass = classes.pop(0)
+            if aclass.__bases__:
+                classes = classes + list(aclass.__bases__)
+            names = names + dir(aclass)
+        return names
+
+    def complete_help(self, *args):
+        return self.completenames(*args)
+
+    def do_help(self, arg):
+        if arg:
+            # XXX check arg syntax
+            try:
+                func = getattr(self, 'help_' + arg)
+            except AttributeError:
+                try:
+                    doc=getattr(self, 'do_' + arg).__doc__
+                    if doc:
+                        self.stdout.write("%s\n"%str(doc))
+                        return
+                except AttributeError:
+                    pass
+                self.stdout.write("%s\n"%str(self.nohelp % (arg,)))
+                return
+            func()
+        else:
+            names = self.get_names()
+            cmds_doc = []
+            cmds_undoc = []
+            help = {}
+            for name in names:
+                if name[:5] == 'help_':
+                    help[name[5:]]=1
+            names.sort()
+            # There can be duplicates if routines overridden
+            prevname = ''
+            for name in names:
+                if name[:3] == 'do_':
+                    if name == prevname:
+                        continue
+                    prevname = name
+                    cmd=name[3:]
+                    if cmd in help:
+                        cmds_doc.append(cmd)
+                        del help[cmd]
+                    elif getattr(self, name).__doc__:
+                        cmds_doc.append(cmd)
+                    else:
+                        cmds_undoc.append(cmd)
+            self.stdout.write("%s\n"%str(self.doc_leader))
+            self.print_topics(self.doc_header,   cmds_doc,   15,80)
+            self.print_topics(self.misc_header,  help.keys(),15,80)
+            self.print_topics(self.undoc_header, cmds_undoc, 15,80)
+
+    def print_topics(self, header, cmds, cmdlen, maxcol):
+        if cmds:
+            self.stdout.write("%s\n"%str(header))
+            if self.ruler:
+                self.stdout.write("%s\n"%str(self.ruler * len(header)))
+            self.columnize(cmds, maxcol-1)
+            self.stdout.write("\n")
+
+    def columnize(self, list, displaywidth=80):
+        """Display a list of strings as a compact set of columns.
+
+        Each column is only as wide as necessary.
+        Columns are separated by two spaces (one was not legible enough).
+        """
+        if not list:
+            self.stdout.write("<empty>\n")
+            return
+        nonstrings = [i for i in range(len(list))
+                        if not isinstance(list[i], str)]
+        if nonstrings:
+            raise TypeError, ("list[i] not a string for i in %s" %
+                              ", ".join(map(str, nonstrings)))
+        size = len(list)
+        if size == 1:
+            self.stdout.write('%s\n'%str(list[0]))
+            return
+        # Try every row count from 1 upwards
+        for nrows in range(1, len(list)):
+            ncols = (size+nrows-1) // nrows
+            colwidths = []
+            totwidth = -2
+            for col in range(ncols):
+                colwidth = 0
+                for row in range(nrows):
+                    i = row + nrows*col
+                    if i >= size:
+                        break
+                    x = list[i]
+                    colwidth = max(colwidth, len(x))
+                colwidths.append(colwidth)
+                totwidth += colwidth + 2
+                if totwidth > displaywidth:
+                    break
+            if totwidth <= displaywidth:
+                break
+        else:
+            nrows = len(list)
+            ncols = 1
+            colwidths = [0]
+        for row in range(nrows):
+            texts = []
+            for col in range(ncols):
+                i = row + nrows*col
+                if i >= size:
+                    x = ""
+                else:
+                    x = list[i]
+                texts.append(x)
+            while texts and not texts[-1]:
+                del texts[-1]
+            for col in range(len(texts)):
+                texts[col] = texts[col].ljust(colwidths[col])
+            self.stdout.write("%s\n"%str("  ".join(texts)))    
+    
+    
+
 
 #===============================================================================
 # CmdExtended
 #===============================================================================
-class BasicCmd(cmd.Cmd):
+class BasicCmd(OriginalCmd):
     """Simple extension for the readline"""
 
-    def preloop(self):
+    def set_readline_completion_display_matches_hook(self):
+        """ This has been refactorized here so that it can be called when another
+        program called by MG5 (such as MadAnalysis5) changes this attribute of readline"""
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
+        else:
+            readline.set_completion_display_matches_hook()
 
-    def deal_multiple_categories(self, dico, forceCategory=False):
+    def preloop(self):
+        self.set_readline_completion_display_matches_hook()
+        super(BasicCmd, self).preloop()
+
+    def deal_multiple_categories(self, dico, formatting=True, forceCategory=False):
         """convert the multiple category in a formatted list understand by our
         specific readline parser"""
+
+        if not formatting:
+            return dico
 
         if 'libedit' in readline.__doc__:
             # No parser in this case, just send all the valid options
@@ -194,7 +570,6 @@ class BasicCmd(cmd.Cmd):
          If a command has not been entered, then complete against command list.
          Otherwise try to call complete_<command> to get list of completions.
         """
-        
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
@@ -218,13 +593,12 @@ class BasicCmd(cmd.Cmd):
                     try:
                         compfunc = getattr(self, 'complete_' + cmd)
                     except AttributeError, error:
-                        misc.sprint(error)
                         compfunc = self.completedefault
                     except Exception, error:
                         misc.sprint(error)
             else:
                 compfunc = self.completenames
-                
+
             # correct wrong splittion with '\ '
             if line and begidx > 2 and line[begidx-2:begidx] == '\ ':
                 Ntext = line.split(os.path.sep)[-1]
@@ -234,18 +608,19 @@ class BasicCmd(cmd.Cmd):
                 data = compfunc(Ntext.replace('\ ', ' '), line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]                
-            # correct wrong splitting with '-'
-            elif line and line[begidx-1] == '-':
+            # correct wrong splitting with '-'/"="
+            elif line and line[begidx-1] in ['-',"=",':']:
              try:    
+                sep = line[begidx-1]
                 Ntext = line.split()[-1]
-                self.completion_prefix = Ntext.rsplit('-',1)[0] +'-'
+                self.completion_prefix = Ntext.rsplit(sep,1)[0] + sep
                 to_rm = len(self.completion_prefix)
                 Nbegidx = len(line.rsplit(None, 1)[0])
                 data = compfunc(Ntext, line, Nbegidx, endidx)
                 self.completion_matches = [p[to_rm:] for p in data 
                                               if len(p)>to_rm]
              except Exception, error:
-                 print error
+                 print error                
             else:
                 self.completion_prefix = ''
                 self.completion_matches = compfunc(text, line, begidx, endidx)
@@ -316,7 +691,7 @@ class BasicCmd(cmd.Cmd):
             prefix += os.path.sep
 
         if only_dirs:
-            completion = [prefix + f
+            completion = [prefix + f + os.path.sep
                           for f in os.listdir(base_dir)
                           if f.startswith(text) and \
                           os.path.isdir(os.path.join(base_dir, f)) and \
@@ -485,7 +860,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
            
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
- 
+
+
+    if MADEVENT:
+        plugin_path = []
+    else:
+        plugin_path = [pjoin(MG5DIR, 'PLUGIN')]
+    if 'PYTHONPATH' in os.environ:
+        for PluginCandidate in os.environ['PYTHONPATH'].split(':'):
+            try:
+                dirlist = os.listdir(PluginCandidate)
+            except OSError:
+                continue
+            for onedir in dirlist:
+                if onedir == 'MG5aMC_PLUGIN':
+                    plugin_path.append(pjoin(PluginCandidate, 'MG5aMC_PLUGIN'))
+                    break
+            else:
+                continue
+            break
     
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
@@ -493,7 +886,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         self.log = True
         self.history = []
         self.save_line = '' # for line splitting
-        cmd.Cmd.__init__(self, *arg, **opt)
+        super(Cmd, self).__init__(*arg, **opt)
         self.__initpos = os.path.abspath(os.getcwd())
         self.child = None # sub CMD interface call from this one
         self.mother = None #This CMD interface was called from another one
@@ -573,16 +966,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         if not line:
             return line
-        line = line.lstrip()
 
         # Check if we are continuing a line:
         if self.save_line:
             line = self.save_line + line 
             self.save_line = ''
-        
+            
+        line = line.lstrip()        
         # Check if the line is complete
         if line.endswith('\\'):
-            self.save_line = line[:-1] + ' '
+            self.save_line = line[:-1] 
             return '' # do nothing   
                 
         # Remove comment
@@ -657,7 +1050,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         else:
             path_msg = []
             
-        if timeout:
+        if timeout is True:
             try:
                 timeout = self.options['timeout']
             except Exception:
@@ -692,8 +1085,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                                                    mother_interface=self, **opt)
         
         if first_cmd:
-            question_instance.onecmd(first_cmd)
-        
+            if isinstance(first_cmd, str):
+                question_instance.onecmd(first_cmd)
+            else:
+                for line in first_cmd:
+                    question_instance.onecmd(line)
         if not self.haspiping:
             if hasattr(obj, "haspiping"):
                 obj.haspiping = self.haspiping
@@ -706,20 +1102,24 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if answer in alias:
                 answer = alias[answer]
             if ask_class:
-                answer = question_instance.default(answer)
+                line=answer
+                answer = question_instance.default(line)
+                question_instance.postcmd(answer, line)
+                return question_instance.answer 
+            if hasattr(question_instance, 'check_answer_consistency'):
+                question_instance.check_answer_consistency()
             return answer
         
         question = question_instance.question
         value =   Cmd.timed_input(question, default, timeout=timeout,
                                  fct=question_instance, fct_timeout=fct_timeout)
-
-
         
         try:
             if value in alias:
                 value = alias[value]
         except TypeError:
             pass
+
         if value == default and ask_class:
             value = question_instance.default(default)
         return value
@@ -765,10 +1165,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                     self.store_line(line)
                     return None # print the question and use the pipe
                 logger.info(question_instance.question)
-                logger.warning('The answer to the previous question is not set in your input file')
-                logger.warning('Use %s value' % default)
+                logger.info('The answer to the previous question is not set in your input file', '$MG:color:BLACK')
+                logger.info('Use %s value' % default, '$MG:color:BLACK')
                 return str(default)
-        
+            
         line = line.replace('\n','').strip()
         if '#' in line: 
             line = line.split('#')[0]
@@ -776,7 +1176,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             # Comment or empty line, pass to the next one
             return self.check_answer_in_input_file(question_instance, default, path)
         options = question_instance.allow_arg
-        if line in options:
+        if line in options or line.lower() in options:
             return line
         elif hasattr(question_instance, 'do_%s' % line.split()[0]):
             #This is a command line, exec it and check next line
@@ -788,6 +1188,10 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             line = os.path.expanduser(os.path.expandvars(line))
             if os.path.isfile(line):
                 return line
+        elif hasattr(question_instance, 'casesensitive') and not question_instance.casesensitive:
+            for entry in question_instance.allow_arg:
+                if line.lower() == entry.lower():
+                    return entry
         elif any(line.lower()==opt.lower() for opt in options): 
             possibility = [opt for opt in options if line.lower()==opt.lower()]
             if len (possibility)==1:
@@ -836,12 +1240,14 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if os.path.exists(self.debug_output):
             os.remove(self.debug_output)
         try:
-            cmd.Cmd.onecmd(self, 'history %s' % self.debug_output.replace(' ', '\ '))
+            super(Cmd,self).onecmd('history %s' % self.debug_output.replace(' ', '\ '))
         except Exception, error:
-           logger.error(error)
+            logger.error(error)
 
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
+        if hasattr(error, 'filename'):
+            debug_file.write("Related File: %s\n" % error.filename)
         # Create a nice error output
         if self.history and line == self.history[-1]:
             error_text = 'Command \"%s\" interrupted with error:\n' % line
@@ -883,7 +1289,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             return self.child.nice_user_error(error, line)
         # Make sure that we are at the initial position
         os.chdir(self.__initpos)
-        if line == self.history[-1]:
+        if not self.history or line == self.history[-1]:
             error_text = 'Command \"%s\" interrupted with error:\n' % line
         else:
             error_text = 'Command \"%s\" interrupted in sub-command:\n' %line
@@ -909,7 +1315,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             error_text = 'Error detected in sub-command %s\n' % self.history[-1]
         error_text += 'write debug file %s \n' % self.debug_output
         self.log = False
-        cmd.Cmd.onecmd(self, 'history %s' % self.debug_output)
+        super(Cmd,self).onecmd('history %s' % self.debug_output)
         debug_file = open(self.debug_output, 'a')
         traceback.print_exc(file=debug_file)
         error_text += self.config_debug % {'debug' :self.debug_output}
@@ -1013,17 +1419,18 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         pass # dummy function
             
     def exec_cmd(self, line, errorhandling=False, printcmd=True, 
-                                     precmd=False, postcmd=True, **opt):
+                                     precmd=False, postcmd=True,
+                                     child=True, **opt):
         """for third party call, call the line with pre and postfix treatment
         without global error handling """
 
+
         if printcmd and not line.startswith('#'):
             logger.info(line)
-        if self.child:
+        if self.child and child:
             current_interface = self.child
         else:
             current_interface = self
-        
         if precmd:
             line = current_interface.precmd(line)
         if errorhandling:
@@ -1056,11 +1463,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if self.history and self.history[-1] == line:        
             self.history.pop()
-        
-
-
-
-     
+             
     # Write the list of command line use in this session
     def do_history(self, line):
         """write in a file the suite of command that was used"""
@@ -1176,6 +1579,16 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
     def postloop(self):
         """ """
         
+        if self.use_rawinput and self.completekey:
+            try:
+                import readline
+                readline.set_completer(self.old_completer)
+                del self.old_completer
+            except ImportError:
+                pass
+            except AttributeError:
+                pass
+        
         args = self.split_arg(self.lastcmd)
         if args and args[0] in ['quit','exit']:
             if 'all' in args:
@@ -1183,6 +1596,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             if len(args) >1 and args[1].isdigit():
                 if args[1] not in  ['0', '1']:
                     return True
+                                
         return False
         
     #===============================================================================
@@ -1253,7 +1667,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 
         # if they are an argument use the default help
         if line:
-            return cmd.Cmd.do_help(self, line)
+            return super(Cmd, self).do_help(line)
         
         
         names = self.get_names()
@@ -1397,7 +1811,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             Cmd.check_save(self, args)
             
         # find base file for the configuration
-        if'HOME' in os.environ and os.environ['HOME']  and \
+        if 'HOME' in os.environ and os.environ['HOME']  and \
         os.path.exists(pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')):
             base = pjoin(os.environ['HOME'], '.mg5', 'mg5_configuration.txt')
             if hasattr(self, 'me_dir'):
@@ -1433,6 +1847,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         logger.info('save configuration file to %s' % filepath)
         to_write = to_keep.keys()
         text = ""
+        has_mg5_path = False
         # Use local configuration => Need to update the path
         for line in file(basefile):
             if '=' in line:
@@ -1454,6 +1869,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             else:
                 text += line
                 continue
+            if key == 'mg5_path':
+                has_mg5_path = True
             try:
                 to_write.remove(key)
             except Exception:
@@ -1464,11 +1881,12 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
+            
         for key in to_write:
             if key in to_keep:
                 text += '%s = %s \n' % (key, to_keep[key])
         
-        if not MADEVENT:
+        if not MADEVENT and not has_mg5_path:
             text += """\n# MG5 MAIN DIRECTORY\n"""
             text += "mg5_path = %s\n" % MG5DIR         
         
@@ -1521,12 +1939,16 @@ class CmdShell(Cmd):
 class SmartQuestion(BasicCmd):
     """ a class for answering a question with the path autocompletion"""
 
+    allowpath = False
     def preloop(self):
         """Initializing before starting the main loop"""
         self.prompt = '>'
         self.value = None
         BasicCmd.preloop(self)
         
+    @property
+    def answer(self):
+        return self.value
 
     def __init__(self, question, allow_arg=[], default=None, 
                                             mother_interface=None, *arg, **opt):
@@ -1536,7 +1958,16 @@ class SmartQuestion(BasicCmd):
         self.history_header = ''
         self.default_value = str(default)
         self.mother_interface = mother_interface
-        cmd.Cmd.__init__(self, *arg, **opt)
+
+        if 'case' in opt:
+            self.casesensitive = opt['case']
+            del opt['case']
+        elif 'casesensitive' in opt:
+            self.casesensitive = opt['casesensitive']
+            del opt['casesensitive']            
+        else:
+            self.casesensistive = True
+        super(SmartQuestion, self).__init__(*arg, **opt)
 
     def __call__(self, question, reprint_opt=True, **opts):
         
@@ -1563,6 +1994,8 @@ class SmartQuestion(BasicCmd):
             return self.deal_multiple_categories(out)
         except Exception, error:
             print error
+    
+    completedefault = completenames
 
     def get_names(self):
         # This method used to pull in base class attributes
@@ -1599,6 +2032,8 @@ class SmartQuestion(BasicCmd):
                 return func(arg, **opt)        
         except Exception as error:
             logger.warning(error)  
+            if __debug__:
+                raise
             
     def reask(self, reprint_opt=True):
         pat = re.compile('\[(\d*)s to answer\]')
@@ -1615,7 +2050,44 @@ class SmartQuestion(BasicCmd):
             if not prev_timer:
                 self.question = pat.sub('',self.question)
             print self.question
+            
+        if self.mother_interface:
+            answer = self.mother_interface.check_answer_in_input_file(self, 'EOF', 
+                                                                path=self.allowpath)
+            if answer:
+                stop = self.default(answer)
+                self.postcmd(stop, answer)
+                return False
+            
         return False
+    
+    def do_help(self, line):
+        
+        text=line
+        out ={}
+        out['Options'] = Cmd.list_completion(text, self.allow_arg)
+        out['command'] = BasicCmd.completenames(self, text)
+        
+        if not text:
+            if out['Options']:
+                logger.info( "Here is the list of all valid options:", '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['Options']))
+            if out['command']: 
+                logger.info( "Here is the list of command available:", '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['command']))
+        else:
+            if out['Options']:
+                logger.info( "Here is the list of all valid options starting with \'%s\'" % text, '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['Options']))
+            if out['command']: 
+                logger.info( "Here is the list of command available starting with \'%s\':" % text, '$MG:color:BLACK')
+                logger.info( "  "+  "\n  ".join(out['command']))
+            elif not  out['Options']:
+                logger.info( "No possibility starting with \'%s\'" % text, '$MG:color:BLACK')           
+        logger.info( "You can type help XXX, to see all command starting with XXX", '$MG:color:BLACK')
+    def complete_help(self, text, line, begidx, endidx):
+        """ """
+        return self.completenames(text, line)
         
     def default(self, line):
         """Default action if line is not recognized"""
@@ -1633,7 +2105,7 @@ class SmartQuestion(BasicCmd):
 
 
     def postcmd(self, stop, line):
-        
+
         try:    
             if self.value in self.allow_arg:
                 return True
@@ -1646,6 +2118,14 @@ class SmartQuestion(BasicCmd):
                 return self.reask()
             elif len(self.allow_arg)==0:
                 return True
+            elif not self.casesensitive:
+                for ans in self.allow_arg:
+                    if ans.lower() == self.value.lower():
+                        self.value = ans
+                        return True
+                        break
+                else:
+                    raise Exception
             else: 
                 raise Exception
         except Exception,error:
@@ -1660,8 +2140,8 @@ class SmartQuestion(BasicCmd):
                 return True
                 
     def cmdloop(self, intro=None):
-        cmd.Cmd.cmdloop(self, intro)
-        return self.value
+        super(SmartQuestion,self).cmdloop(intro)
+        return self.answer
     
 # a function helper
 def smart_input(input_text, allow_arg=[], default=None):
@@ -1676,8 +2156,9 @@ class OneLinePathCompletion(SmartQuestion):
     """ a class for answering a question with the path autocompletion"""
     
     completion_prefix=''
+    allowpath=True
 
-    def completenames(self, text, line, begidx, endidx):
+    def completenames(self, text, line, begidx, endidx, formatting=True):
         prev_timer = signal.alarm(0) # avoid timer if any
         if prev_timer:
             nb_back = len(line)
@@ -1691,7 +2172,7 @@ class OneLinePathCompletion(SmartQuestion):
             out[' Path from ./'] = Cmd.path_completion(text, only_dirs = False)
             out[' Recognized command'] = BasicCmd.completenames(self, text)
             
-            return self.deal_multiple_categories(out)
+            return self.deal_multiple_categories(out, formatting)
         except Exception, error:
             print error
             
@@ -1743,8 +2224,9 @@ class OneLinePathCompletion(SmartQuestion):
                           % ','.join(self.allow_arg)
             print 'please retry'
             reprint_opt = False 
-            
-        return self.reask(reprint_opt)
+
+        if line != 'EOF':
+            return self.reask(reprint_opt)
 
             
 # a function helper

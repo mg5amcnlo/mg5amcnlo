@@ -74,11 +74,13 @@ C
       double precision ptlepton(nexternal)
       double precision temp
 
-C VARIABLES TO SPECIFY JETS
+C     VARIABLES TO SPECIFY JETS
       DOUBLE PRECISION PJET(NEXTERNAL,0:3)
       DOUBLE PRECISION PTMIN
       DOUBLE PRECISION PT1,PT2
-      INTEGER K,J1,J2
+
+C     INTEGERS FOR COUNTING.
+      INTEGER K,L,J1,J2
 
 C VARIABLES FOR KT CUT
       DOUBLE PRECISION PTNOW,COSTH,PABS1,PABS2
@@ -119,6 +121,33 @@ C
       logical  do_cuts(nexternal)
       COMMON /TO_SPECISA/IS_A_J,IS_A_A,IS_A_L,IS_A_B,IS_A_NU,IS_HEAVY,
      . IS_A_ONIUM, do_cuts
+
+C
+C     MERGING SCALE CUT
+C
+C     Retrieve which external particles undergo the ktdurham and ptlund cuts.
+      LOGICAL  is_pdg_for_merging_cut(NEXTERNAL)
+      logical from_decay(-(nexternal+3):nexternal)
+      COMMON /TO_MERGE_CUTS/is_pdg_for_merging_cut, from_decay
+
+C
+C     ADDITIONAL VARIABLES FOR PTLUND CUT
+C
+      INTEGER NMASSLESS
+      DOUBLE PRECISION PINC(NINCOMING,0:3)
+      DOUBLE PRECISION PRADTEMP(0:3), PRECTEMP(0:3), PEMTTEMP(0:3)
+      DOUBLE PRECISION PTMINSAVE, RHOPYTHIA
+      EXTERNAL RHOPYTHIA
+C
+C     FLAVOUR INFORMATION NECESSARY TO RECONSTRUCT PTLUND
+C
+      INTEGER JETFLAVOUR(NEXTERNAL), INCFLAVOUR(NINCOMING)
+      include 'maxamps.inc'
+      integer idup(nexternal,maxproc,maxsproc)
+      integer mothup(2,nexternal)
+      integer icolup(2,nexternal,maxflow,maxsproc)
+      include 'leshouche.inc'
+
 C
 C     Keep track of whether cuts already calculated for this event
 C
@@ -151,6 +180,7 @@ C     Sort array of results: ismode>0 for real, isway=0 for ascending order
       parameter (izero=0)
 
       include 'coupl.inc'
+
 C
 C
 c
@@ -508,26 +538,38 @@ c- fill ptjet with the pt's of the jets.
 C----------------------------------------------------------------------------
 C     DURHAM_KT CUT
 C----------------------------------------------------------------------------
-      IF(NJETS.GT.0 .AND.KT_DURHAM.GT.0D0) THEN
-C RESET JET MOMENTA
-      njets=0
-      DO I=1,NEXTERNAL
-        DO J=0,3
-          PJET(I,J) = 0E0
+
+      IF ( KT_DURHAM .GT. 0D0) THEN
+
+C       RESET JET MOMENTA
+        njets=0
+        DO I=1,NEXTERNAL
+          DO J=0,3
+            PJET(I,J) = 0D0
+          ENDDO
         ENDDO
-      ENDDO
 
-      do i=nincoming+1,nexternal
-         if(is_a_j(i).and.do_cuts(i)) then
-           njets=njets+1
-           DO J=0,3
-             PJET(NJETS,J) = P(J,I)
-           ENDDO
-         endif
-      enddo
+        do i=nincoming+1,nexternal
+           if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) ) then
+             njets=njets+1
+             DO J=0,3
+               PJET(NJETS,J) = P(J,I)
+             ENDDO
+           endif
+        enddo
 
-C DURHAM KT SEPARATION CUT
+C       COUNT NUMBER OF MASSLESS OUTGOING PARTICLES, SINCE WE DO NOT WANT
+C       TO APPLY A CUT FOR JUST A SINGLE MASSIVE PARTICLE IN THE FINAL STATE.
+        NMASSLESS = 0
+        DO I=NINCOMING+1,NEXTERNAL
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and.
+     &                        is_a_j(i).or.is_a_b(i)) then
+            NMASSLESS = NMASSLESS + 1
+          ENDIF
+        ENDDO
 
+C       DURHAM KT SEPARATION CUT
+        IF(NJETS.GT.0 .AND. NMASSLESS .GT. 0) THEN
 
         PTMIN = EBEAM(1) + EBEAM(2)
 
@@ -572,15 +614,202 @@ C             HADRONIC KT, FASTJET DEFINITION
 
         ENDDO ! LOOP OVER NJET
 
-C CHECK COMPATIBILITY WITH CUT
+C       CHECK COMPATIBILITY WITH CUT
         IF( (PTMIN .LT. KT_DURHAM)) THEN
           PASSCUTS = .FALSE.
           RETURN
         ENDIF
-      ENDIF ! IF NJETS.GT. 0 .AND. DO_KT_DURHAM
+
+        ENDIF ! IF NJETS.GT. 0
+
+      ENDIF ! KT_DURHAM .GT. 0D0
+
+C----------------------------------------------------------------------------
+C     PTLUND CUT
+C----------------------------------------------------------------------------
+
+      IF(PT_LUND .GT. 0D0 ) THEN
+
+C       Reset jet momenta
+        NJETS=0
+        DO I=1,NEXTERNAL
+          JETFLAVOUR(I) = 0
+          DO J=0,3
+            PJET(I,J) = 0D0
+          ENDDO
+        ENDDO
+
+C       Fill incoming particle momenta
+        DO I=1,NINCOMING
+          INCFLAVOUR(I) = IDUP(I,1,1)
+          DO J=0,3
+            PINC(I,J) = P(J,I)
+          ENDDO
+        ENDDO
+
+C       Fill final jet momenta
+        DO I=NINCOMING+1,NEXTERNAL
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) ) then
+            NJETS=NJETS+1
+            JETFLAVOUR(NJETS) = IDUP(I,1,1)
+            DO J=0,3
+              PJET(NJETS,J) = P(J,I)
+            ENDDO
+          ENDIF
+        ENDDO
+
+C       PROCESS WITH EXACTLY TWO MASSLESS OUTGOING PARTICLES IS SPECIAL
+C       BECAUSE AN ENERGY-SHARING VARIABLE LIKE "Z" DOES NOT MAKE SENSE.
+C       IN THIS CASE, ONLY APPLY MINIMAL pT W.R.T BEAM CUT.
+C       THIS CUT WILL ONLY APPLY TO THE TWO-MASSLESS PARTICLE STATE.
+        NMASSLESS = 0
+        DO I=NINCOMING+1,NEXTERNAL
+          if(is_pdg_for_merging_cut(i) .and. .not. from_decay(I) .and. 
+     &                          is_a_j(i).or.is_a_b(i)) THEN
+            NMASSLESS = NMASSLESS + 1
+          ENDIF
+        ENDDO
+        IF (NMASSLESS .EQ. 2 .AND. NJETS .EQ. 2 .AND.
+     &                                     NEXTERNAL-NINCOMING .EQ. 2) THEN
+          PTMINSAVE = EBEAM(1) + EBEAM(2)
+          DO I=NINCOMING+1,NEXTERNAL
+            if( .not. from_decay(I) ) then  
+              PTMINSAVE = MIN(PTMINSAVE, PT(p(0,i)))
+            ENDIF
+          ENDDO
+C         CHECK COMPATIBILITY WITH CUT
+          IF ( ((LPP(1).NE.0) .OR. (LPP(2).NE.0)) .AND.
+     &                                         PTMINSAVE .LT. PT_LUND) THEN
+            PASSCUTS = .FALSE.
+            RETURN
+          ENDIF
+C         RESET NJETS TO AVOID FURTHER MERGING SCALE CUT.
+          NJETS=0
+        ENDIF
+
+C       PYTHIA PT SEPARATION CUT
+        IF(NJETS.GT.0 .AND. NMASSLESS .GT. 0) THEN
+
+        PTMINSAVE = EBEAM(1) + EBEAM(2)
+
+        DO I=1,NJETS
+
+          PTMIN = EBEAM(1) + EBEAM(2)
+          PTMINSAVE = MIN(PTMIN,PTMINSAVE)
+
+C         Compute pythia ISR separation between i-jet and incoming.
+C         Only SM-like emissions off the beam are possible.
+          IF ( ( (LPP(1).NE.0) .OR. (LPP(2).NE.0)) .AND. 
+     &                               ABS(JETFLAVOUR(I)) .LT. 30 ) THEN
+C           Check separation to first incoming particle
+            DO L=0,3
+              PRADTEMP(L) = PINC(1,L)
+              PEMTTEMP(L) = PJET(I,L)
+              PRECTEMP(L) = PINC(2,L)
+            ENDDO
+            PT1 = RHOPYTHIA(PRADTEMP, PEMTTEMP, PRECTEMP, INCFLAVOUR(1),
+     &                                            JETFLAVOUR(I), -1, -1)
+            PTMIN = MIN( PTMIN, PT1 )
+C           Check separation to second incoming particle
+            DO L=0,3
+              PRADTEMP(L) = PINC(2,L)
+              PEMTTEMP(L) = PJET(I,L)
+              PRECTEMP(L) = PINC(1,L)
+            ENDDO
+            PT2 = RHOPYTHIA(PRADTEMP, PEMTTEMP, PRECTEMP, INCFLAVOUR(2),
+     &                                            JETFLAVOUR(I), -1, -1)
+            PTMIN = MIN( PTMIN, PT2 )
+          ENDIF
+
+C         Compute pythia FSR separation between two jets,
+C         without any knowledge of colour connections
+          DO J=1,NJETS
+            DO K=1,NJETS
+              IF ( I .NE. J .AND. I .NE. K .AND. J .NE. K ) THEN
+
+C               Check separation between final partons i and j, with k as spectator
+                DO L=0,3
+                  PRADTEMP(L) = PJET(J,L)
+                  PEMTTEMP(L) = PJET(I,L)
+                  PRECTEMP(L) = PJET(K,L)
+                ENDDO
+
+                TEMP = RHOPYTHIA( PRADTEMP, PEMTTEMP, PRECTEMP,
+     &                               JETFLAVOUR(J), JETFLAVOUR(I), 1, 1)
+C               Only SM-like emissions off the beam are possible, no additional
+C               BSM particles will be produced as as shower emissions.
+                IF ( ABS(JETFLAVOUR(I)) .LT. 30 ) THEN
+                  PTMIN = MIN(PTMIN, TEMP);
+                ENDIF
+
+                TEMP = RHOPYTHIA( PEMTTEMP, PRADTEMP, PRECTEMP,
+     &                               JETFLAVOUR(I), JETFLAVOUR(J), 1, 1)
+C               Only SM-like emissions off the beam are possible, no additional
+C               BSM particles will be produced as as shower emissions.
+                IF ( ABS(JETFLAVOUR(J)) .LT. 30 ) THEN
+                  PTMIN = MIN(PTMIN, TEMP);
+                ENDIF
+
+              ENDIF
+
+            ENDDO ! LOOP OVER NJET
+          ENDDO ! LOOP OVER NJET
+
+C         Compute pythia FSR separation between two jets, with initial spectator
+          IF ( (LPP(1).NE.0) .OR. (LPP(2).NE.0)) THEN
+            DO J=1,NJETS
+
+C             BSM particles can only be radiators, and will not be produced
+C             as shower emissions.
+              IF ( ABS(JETFLAVOUR(I)) .GT. 1000000 ) THEN
+                EXIT
+              ENDIF
+
+C             Allow both initial partons as recoiler
+              IF ( I .NE. J ) THEN
+
+C               Check with first initial as recoiler
+                DO L=0,3
+                  PRADTEMP(L) = PJET(J,L)
+                  PEMTTEMP(L) = PJET(I,L)
+                  PRECTEMP(L) = PINC(1,L)
+                ENDDO
+                TEMP = RHOPYTHIA( PRADTEMP, PEMTTEMP, PRECTEMP, 
+     &                             JETFLAVOUR(J), JETFLAVOUR(I), 1, -1);
+                IF ( LPP(1) .NE. 0 ) THEN
+                  PTMIN = MIN(PTMIN, TEMP);
+                ENDIF
+                DO L=0,3
+                  PRADTEMP(L) = PJET(J,L)
+                  PEMTTEMP(L) = PJET(I,L)
+                  PRECTEMP(L) = PINC(2,L)
+                ENDDO
+                TEMP = RHOPYTHIA( PRADTEMP, PEMTTEMP, PRECTEMP,
+     &                             JETFLAVOUR(J), JETFLAVOUR(I), 1, -1);
+                IF ( LPP(2) .NE. 0 ) THEN
+                  PTMIN = MIN(PTMIN, TEMP);
+                ENDIF
+              ENDIF
+            ENDDO ! LOOP OVER NJET
+          ENDIF
+
+          PTMINSAVE = MIN(PTMIN,PTMINSAVE)
+
+        ENDDO ! LOOP OVER NJET
+
+C       CHECK COMPATIBILITY WITH CUT
+        IF (PTMINSAVE .LT. PT_LUND) THEN
+          PASSCUTS = .FALSE.
+          RETURN
+        ENDIF
+ 
+        ENDIF ! IF NJETS.GT. 0 
+
+      ENDIF ! PT_LUND .GT. 0D0 
 
 C----------------------------------------------------------------------------
 C----------------------------------------------------------------------------
+
 
 
 
@@ -1295,6 +1524,208 @@ C     ICMPCH=+1 IF HEX VALUES OF IC1 IS GREATER THAN IC2
       RETURN
       END
 
+c************************************************************************
+c     Returns pTLund (i.e. the Pythia8 evolution variable) between two 
+c     particles with momenta prad and pemt with momentum prec as spectator
+c************************************************************************
+
+      DOUBLE PRECISION FUNCTION RHOPYTHIA(PRAD, PEMT, PREC, FLAVRAD,
+     &                                        FLAVEMT, RADTYPE, RECTYPE)
+
+       IMPLICIT NONE
+c
+c     Arguments
+c
+      DOUBLE PRECISION PRAD(0:3),PEMT(0:3), PREC(0:3)
+      INTEGER FLAVRAD, FLAVEMT, RADTYPE,RECTYPE
+c
+c     Local
+c
+      DOUBLE PRECISION Q(0:3),SUM(0:3), qBR(0:3), qAR(0:3)
+      DOUBLE PRECISION Q2, m2Rad, m2Emt, m2Dip, qBR2, qAR2, x1, x2, z
+      DOUBLE PRECISION m2RadAft, m2EmtAft, m2Rec, m2RadBef, m2ar, rescale
+      DOUBLE PRECISION TEMP, lambda13, k1, k3, m2Final
+      DOUBLE PRECISION m0u, m0d, m0c, m0s, m0t, m0b, m0w, m0z, m0x
+      DOUBLE PRECISION PRECAFT(0:3)
+      INTEGER emtsign
+      INTEGER idRadBef
+      LOGICAL allowed
+
+c-----
+c  Begin Code
+c-----
+
+C     Set masses. Currently no way of getting those?
+      m0u = 0.0
+      m0d = 0.0
+      m0c = 1.5
+      m0s = 0.0
+      m0t = 172.5
+      m0w = 80.4
+      m0z = 91.188
+      m0x = 400.0
+
+C     Store recoiler momentum (since FI splittings require recoiler
+C     rescaling)
+      PRECAFT(0) = PREC(0)
+      PRECAFT(1) = PREC(1)
+      PRECAFT(2) = PREC(2)
+      PRECAFT(3) = PREC(3)
+C     Get sign of emitted momentum
+      emtsign = 1
+      if(radtype .eq. -1) emtsign = -1
+
+C     Get virtuality
+      Q(0) = pRad(0) + emtsign*pEmt(0)
+      Q(1) = pRad(1) + emtsign*pEmt(1)
+      Q(2) = pRad(2) + emtsign*pEmt(2)
+      Q(3) = pRad(3) + emtsign*pEmt(3)
+      Q2   = emtsign * ( Q(0)**2 - Q(1)**2 - Q(2)**2 - Q(3)**2 );
+
+C     Reset allowed
+      allowed = .true.
+
+C     Splitting not possible for negative virtuality.
+      if ( Q2 .lt. 0.0 ) allowed = .false.
+
+C     Try to reconstruct flavour of radiator before emission.
+      idRadBef = 0
+C     gluon radiation: idBef = idAft
+      if (abs(flavEmt) .eq. 21 .or. abs(flavEmt) .eq. 22 ) idRadBef=flavRad
+C     final state gluon splitting: idBef = 21
+      if (radtype .eq.  1 .and. flavEmt .eq. -flavRad) idRadBef=21
+C     final state quark -> gluon conversion
+      if (radtype .eq.  1 .and. abs(flavEmt) .lt. 10 .and. flavRad .eq. 21) idRadBef=flavEmt
+C     initial state gluon splitting: idBef = -idEmt
+      if (radtype .eq. -1 .and. abs(flavEmt) .lt. 10 .and. flavRad .eq. 21) idRadBef=-flavEmt
+C     initial state gluon -> quark conversion
+      if (radtype .eq. -1 .and. abs(flavEmt) .lt. 10 .and. flavRad .eq. flavEmt) idRadBef=21
+C     W-boson radiation
+      if (flavEmt .eq.  24) idRadBef = flavRad+1
+      if (flavEmt .eq. -24) idRadBef = flavRad-1
+
+C     Set particle masses.
+      m2RadAft = 0.0
+      m2EmtAft = 0.0
+      m2Rec    = 0.0
+      m2RadBef = 0.0
+
+      m2RadAft = pRad(0)*pRad(0)-pRad(1)*pRad(1)-pRad(2)*pRad(2)-pRad(3)*pRad(3)
+      m2EmtAft = pEmt(0)*pEmt(0)-pEmt(1)*pEmt(1)-pEmt(2)*pEmt(2)-pEmt(3)*pEmt(3)
+      m2Rec    = pRec(0)*pRec(0)-pRec(1)*pRec(1)-pRec(2)*pRec(2)-pRec(3)*pRec(3)
+
+      if (m2RadAft .lt. 1d-4) m2RadAft = 0.0
+      if (m2EmtAft .lt. 1d-4) m2EmtAft = 0.0
+      if (m2Rec    .lt. 1d-4) m2Rec    = 0.0
+
+      if (abs(flavRad) .ne. 21 .and. abs(flavRad) .ne. 22 .and.
+     &    abs(flavEmt) .ne. 24 .and.
+     &    abs(flavRad) .ne. abs(flavEmt)) then
+        m2RadBef = m2RadAft
+      else if (abs(flavEmt) .eq. 24) then
+        if (idRadBef .ne. 0) then
+          if( abs(idRadBef) .eq. 4 ) m2RadBef       = m0c**2
+          if( abs(idRadBef) .eq. 5 ) m2RadBef       = m0b**2
+          if( abs(idRadBef) .eq. 6 ) m2RadBef       = m0t**2
+          if( abs(idRadBef) .eq. 9000001 ) m2RadBef = m0x**2
+        endif
+      else if (radtype .eq. -1) then
+        if (abs(flavRad) .eq. 21 .and. abs(flavEmt) .eq. 21) m2RadBef = m2EmtAft
+      endif
+
+C     Calculate dipole mass for final-state radiation.
+      m2Final = 0.0
+      m2Final = m2Final + (pRad(0) + pRec(0) + pEmt(0))**2
+      m2Final = m2Final - (pRad(1) + pRec(1) + pEmt(1))**2
+      m2Final = m2Final - (pRad(2) + pRec(2) + pEmt(2))**2
+      m2Final = m2Final - (pRad(3) + pRec(3) + pEmt(3))**2
+
+C     Final state splitting not possible for negative dipole mass.
+      if ( radtype .eq. 1 .and. m2Final .lt. 0.0 ) allowed = .false.
+
+C     Rescale recoiler for final-intial splittings.
+      rescale = 1.0
+      if (radtype .eq. 1 .and. rectype .eq. -1) then
+        m2ar = m2Final - 2.0*Q2 + 2.0*m2RadBef
+        rescale = (1.0 - (Q2 - m2RadBef) / (m2ar-m2RadBef))
+     &           /(1.0 + (Q2 - m2RadBef) / (m2ar-m2RadBef))
+        pRecAft(0) = pRecAft(0)*rescale
+        pRecAft(1) = pRecAft(1)*rescale
+        pRecAft(2) = pRecAft(2)*rescale
+        pRecAft(3) = pRecAft(3)*rescale
+      endif
+
+C     Final-initial splitting not possible for negative rescaling.
+      if ( rescale .lt. 0.0 ) allowed = .false.
+
+C     Construct dipole momentum for FSR.
+      sum(0) = pRad(0) + pRecAft(0) + pEmt(0)
+      sum(1) = pRad(1) + pRecAft(1) + pEmt(1)
+      sum(2) = pRad(2) + pRecAft(2) + pEmt(2)
+      sum(3) = pRad(3) + pRecAft(3) + pEmt(3)
+      m2Dip = sum(0)**2 - sum(1)**2 - sum(2)**2 - sum(3)**2
+
+C     Construct 2->3 variables for FSR
+      x1     = 2. * ( sum(0)*pRad(0) - sum(1)*pRad(1)
+     &             -  sum(2)*pRad(2) - sum(3)*pRad(3) ) / m2Dip
+      x2     = 2. * ( sum(0)*pRecAft(0) - sum(1)*pRecAft(1)
+     &             -  sum(2)*pRecAft(2) - sum(3)*pRecAft(3) ) / m2Dip
+
+C     Final state splitting not possible for ill-defined
+C     3-body-variables.
+      if ( radtype .eq. 1 .and. x1 .lt. 0.0 ) allowed = .false.
+      if ( radtype .eq. 1 .and. x1 .gt. 1.0 ) allowed = .false.
+      if ( radtype .eq. 1 .and. x2 .lt. 0.0 ) allowed = .false.
+      if ( radtype .eq. 1 .and. x2 .gt. 1.0 ) allowed = .false.
+
+C     Auxiliary variables for massive FSR
+      lambda13 = DSQRT( (Q2 - m2RadAft - m2EmtAft )**2 - 4.0 * m2RadAft*m2EmtAft)
+      k1 = ( Q2 - lambda13 + (m2EmtAft - m2RadAft ) ) / ( 2.0 * Q2)
+      k3 = ( Q2 - lambda13 - (m2EmtAft - m2RadAft ) ) / ( 2.0 * Q2)
+
+C     Construct momenta of dipole before/after splitting for ISR
+      qBR(0) = pRad(0) + pRec(0) - pEmt(0)
+      qBR(1) = pRad(1) + pRec(1) - pEmt(1)
+      qBR(2) = pRad(2) + pRec(2) - pEmt(2)
+      qBR(3) = pRad(3) + pRec(3) - pEmt(3)
+      qBR2   = qBR(0)**2 - qBR(1)**2 - qBR(2)**2 - qBR(3)**2
+
+      qAR(0) = pRad(0) + pRec(0)
+      qAR(1) = pRad(1) + pRec(1)
+      qAR(2) = pRad(2) + pRec(2)
+      qAR(3) = pRad(3) + pRec(3)
+      qAR2   = qAR(0)**2 - qAR(1)**2 - qAR(2)**2 - qAR(3)**2
+
+C     Calculate z of splitting, different for FSR and ISR
+      z = 1.0 / (1.0 - k1 -k3) * ( x1 / (2.0-x2) - k3)
+      if(radtype .eq. -1 ) z = qBR2 / qAR2;
+
+C     Splitting not possible for ill-defined energy sharing.
+      if ( z .lt. 0.0 .or. z .gt. 1.0 ) allowed = .false.
+
+C     pT^2 = separation * virtuality (corrected with mass for FSR)
+      if (radtype .eq.  1) temp = z*(1-z)*(Q2 - m2RadBef)
+      if (radtype .eq. -1) temp = (1-z)*Q2
+
+C     Check threshold in ISR
+      if (radtype .ne. 1) then
+        if ((abs(flavRad) .eq. 4 .or. abs(flavEmt) .eq. 4)
+     &    .and. dsqrt(temp) .le. 2.0*m0c**2 ) temp = (1.-z)*(Q2+m0c**2)
+        if ((abs(flavRad) .eq. 5 .or. abs(flavEmt) .eq. 5)
+     &    .and. dsqrt(temp) .le. 2.0*m0b**2 ) temp = (1.-z)*(Q2+m0b**2)
+      endif
+
+C     Kinematically impossible splittings should not be included in the
+C     pT definition!
+      if( .not. allowed) temp = 1d15
+
+      if(temp .lt. 0.0) temp = 0.0
+
+C     Return pT
+      rhoPythia = dsqrt(temp);
+
+      RETURN
+      END
 
       logical function cut_bw(p)
       include 'madweight_param.inc'

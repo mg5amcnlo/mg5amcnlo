@@ -42,7 +42,7 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QCD<=2 QED<=1 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -50,6 +50,10 @@ C     CONSTANTS
 C     
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=5)
+      INTEGER    NINITIAL
+      PARAMETER (NINITIAL=2)
+      INTEGER NPOLENTRIES
+      PARAMETER (NPOLENTRIES=(NEXTERNAL+1)*6)
       INTEGER                 NCOMB
       PARAMETER (             NCOMB=48)
       INTEGER HELAVGFACTOR
@@ -66,7 +70,10 @@ C
       INTEGER NHEL(NEXTERNAL,NCOMB),NTRY
       REAL*8 T
       REAL*8 ML5_0_MATRIX
-      INTEGER IHEL,IDEN, I
+      INTEGER IHEL,IDEN, I, J
+C     For a 1>N process, them BEAMTWO_HELAVGFACTOR would be set to 1.
+      INTEGER BEAMS_HELAVGFACTOR(2)
+      DATA (BEAMS_HELAVGFACTOR(I),I=1,2)/2,2/
       INTEGER JC(NEXTERNAL)
       LOGICAL GOODHEL(NCOMB)
       DATA NTRY/0/
@@ -128,6 +135,15 @@ C
       DATA (NHEL(I,  47),I=1,5) / 1, 1,-1, 1, 1/
       DATA (NHEL(I,  48),I=1,5) / 1, 1,-1, 1,-1/
       DATA IDEN/256/
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      DATA ((POLARIZATIONS(I,J),I=0,NEXTERNAL),J=0,5)/NPOLENTRIES*-1/
+      COMMON/ML5_0_BORN_BEAM_POL/POLARIZATIONS
+C     
+C     FUNCTIONS
+C     
+      LOGICAL ML5_0_IS_BORN_HEL_SELECTED
+
 C     ----------
 C     BEGIN CODE
 C     ----------
@@ -156,8 +172,15 @@ C      only three external particles.
       DO IHEL=1,NCOMB
         IF (USERHEL.EQ.-1.OR.USERHEL.EQ.IHEL) THEN
           IF (GOODHEL(IHEL) .OR. NTRY .LT. 20.OR.USERHEL.NE.-1) THEN
+            IF(NTRY.GE.2.AND.POLARIZATIONS(0,0).NE.
+     $       -1.AND.(.NOT.ML5_0_IS_BORN_HEL_SELECTED(IHEL))) THEN
+              CYCLE
+            ENDIF
             T=ML5_0_MATRIX(P ,NHEL(1,IHEL),JC(1))
-            ANS=ANS+T
+            IF(POLARIZATIONS(0,0).EQ.-1.OR.ML5_0_IS_BORN_HEL_SELECTED(I
+     $HEL)) THEN
+              ANS=ANS+T
+            ENDIF
             IF (T .NE. 0D0 .AND. .NOT.    GOODHEL(IHEL)) THEN
               GOODHEL(IHEL)=.TRUE.
             ENDIF
@@ -167,6 +190,13 @@ C      only three external particles.
       ANS=ANS/DBLE(IDEN)
       IF(USERHEL.NE.-1) THEN
         ANS=ANS*HELAVGFACTOR
+      ELSE
+        DO J=1,NINITIAL
+          IF (POLARIZATIONS(J,0).NE.-1) THEN
+            ANS=ANS*BEAMS_HELAVGFACTOR(J)
+            ANS=ANS/POLARIZATIONS(J,0)
+          ENDIF
+        ENDDO
       ENDIF
       END
 
@@ -180,7 +210,7 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: g g > w- t b~ QED<=1 QCD<=2 [ virt = QCD ]
+C     Process: g g > w- t b~ QCD<=2 QED<=1 [ virt = QCD ]
 C     
       IMPLICIT NONE
 C     
@@ -312,4 +342,58 @@ CF2PY INTENT(IN) :: PATH
       RETURN
       END
 
+      LOGICAL FUNCTION ML5_0_IS_BORN_HEL_SELECTED(HELID)
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+      INTEGER    NEXTERNAL
+      PARAMETER (NEXTERNAL=5)
+      INTEGER    NCOMB
+      PARAMETER (NCOMB=48)
+C     
+C     ARGUMENTS
+C     
+      INTEGER HELID
+C     
+C     LOCALS
+C     
+      INTEGER I,J
+      LOGICAL FOUNDIT
+C     
+C     GLOBALS
+C     
+      INTEGER HELC(NEXTERNAL,NCOMB)
+      COMMON/ML5_0_BORN_HEL_CONFIGS/HELC
+
+      INTEGER POLARIZATIONS(0:NEXTERNAL,0:5)
+      COMMON/ML5_0_BORN_BEAM_POL/POLARIZATIONS
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+      ML5_0_IS_BORN_HEL_SELECTED = .TRUE.
+      IF (POLARIZATIONS(0,0).EQ.-1) THEN
+        RETURN
+      ENDIF
+
+      DO I=1,NEXTERNAL
+        IF (POLARIZATIONS(I,0).EQ.-1) THEN
+          CYCLE
+        ENDIF
+        FOUNDIT = .FALSE.
+        DO J=1,POLARIZATIONS(I,0)
+          IF (HELC(I,HELID).EQ.POLARIZATIONS(I,J)) THEN
+            FOUNDIT = .TRUE.
+            EXIT
+          ENDIF
+        ENDDO
+        IF(.NOT.FOUNDIT) THEN
+          ML5_0_IS_BORN_HEL_SELECTED = .FALSE.
+          RETURN
+        ENDIF
+      ENDDO
+
+      RETURN
+      END
 

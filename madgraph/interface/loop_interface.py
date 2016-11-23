@@ -25,7 +25,9 @@ import re
 import madgraph
 from madgraph import MG4DIR, MG5DIR, MadGraph5Error
 import madgraph.interface.madgraph_interface as mg_interface
+import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.launch_ext_program as launch_ext
+import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.core.base_objects as base_objects
 import madgraph.core.diagram_generation as diagram_generation
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
@@ -286,6 +288,11 @@ class CommonLoopInterface(mg_interface.MadGraphCmd):
         if isinstance(coupling_type,str):
             coupling_type = [coupling_type,]
 
+##        if coupling_type!= ['QCD'] and loop_type not in ['virtual','noborn']:
+##            c = ' '.join(coupling_type)
+##            raise self.InvalidCmd, 'MG5aMC can only handle QCD at NLO accuracy.\n We can however compute loop with [virt=%s].\n We can also compute cross-section for loop-induced processes with [noborn=%s]' % (c,c)
+        
+
         if not isinstance(self._curr_model,loop_base_objects.LoopModel) or \
            self._curr_model['perturbation_couplings']==[] or \
            any((coupl not in self._curr_model['perturbation_couplings']) \
@@ -459,11 +466,11 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                      noclean, output_type=output_type, group_subprocesses=False)
 
         if self._export_format in ['standalone', 'matchbox']:
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+            self._curr_exporter.copy_template(self._curr_model)
 
         if self._export_format == "standalone_rw":
             self._export_format = "standalone"
-            self._curr_exporter.copy_v4template(modelname=self._curr_model.get('name'))
+            self._curr_exporter.copy_template(self._curr_model)
             self._export_format = "standalone_rw"
 
         # Reset _done_export, since we have new directory
@@ -484,11 +491,104 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
         # Put aloha back in its original mode.
         aloha.mp_precision = aloha_original_quad_mode
 
-    # Export a matrix element
+
+    def install_reduction_library(self):
+        """Code to install the reduction library if needed"""
+        
+        opt = self.options
+        
+        # Check if first time:
+        if (opt['ninja'] is None) or (os.path.isfile(pjoin(MG5DIR, opt['ninja'],'libninja.a'))): 
+            return
+        
+        logger.info("First output using loop matrix-elements has been detected. Now asking for loop reduction:", '$MG:color:BLACK')
+        to_install = self.ask('install', '0',  ask_class=AskLoopInstaller, timeout=300, 
+                              path_msg=' ')
+        
+
+        for key, value in to_install.items():
+            if key in ['cuttools', 'iregi']:
+                if os.path.sep not in value:
+                    continue
+                import madgraph.iolibs.files as files
+                if key == 'cuttools':
+                    if os.path.exists(pjoin(value, 'includects')):
+                        path = pjoin(value, 'includects')
+                    elif os.path.exists(pjoin(value, 'CutTools','includects')):
+                        path = pjoin(value, 'CutTools', 'includects')
+                    elif os.path.exists(pjoin(value, 'vendor','CutTools','includects')):
+                        path = pjoin(value, 'vendor','CutTools', 'includects')
+                    else:
+                        logger.warning('invalid path for cuttools import')
+                        continue
+                    
+                    target = pjoin(MG5DIR,'vendor','CutTools','includects')
+                    if not os.path.exists(target):
+                        os.mkdir(target)
+                    files.cp(pjoin(path,'libcts.a'), target)
+                    files.cp(pjoin(path,'mpmodule.mod'), target, log=True)
+                    if os.path.exists(pjoin(path,'compiler_version.log')):
+                        files.cp(pjoin(path,'compiler_version.log'), target)
+
+                if key == 'iregi':
+                    if os.path.exists(pjoin(value, 'src','IREGI4ML5_interface.f90')):
+                        path = pjoin(value, 'src')
+                    elif os.path.exists(pjoin(value, 'IREGI','src','IREGI4ML5_interface.f90')):
+                        path = pjoin(value, 'IREGI', 'src')
+                    elif os.path.exists(pjoin(value, 'vendor','IREGI','src','IREGI4ML5_interface.f90')):
+                        path = pjoin(value, 'vendor', 'IREGI', 'src')
+                    else:
+                        logger.warning('invalid path for IREGI import')
+                        continue    
+                                         
+                    target = pjoin(MG5DIR,'vendor','IREGI','src')
+                    files.cp(pjoin(path,'libiregi.a'), target, log=True)
+            elif value == 'local':
+                ## LOCAL INSTALLATION OF NINJA/COLLIER
+                    logger.info(
+"""MG5aMC will now install the loop reduction tool '%(p)s' from the local offline installer.
+Use the command 'install $(p)s' if you want to update to the latest online version.
+This installation can take some time but only needs to be performed once.""" %{'p': key},'$MG:color:GREEN')
+                    additional_options = ['--ninja_tarball=%s'%pjoin(MG5DIR,'vendor','%s.tar.gz' % key)]
+                    if key == 'ninja':
+                        additional_options.append('--oneloop_tarball=%s'%pjoin(MG5DIR,'vendor','oneloop.tar.gz'))
+                    
+                    try:
+                        self.do_install(key,paths={'HEPToolsInstaller':
+                                pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz')},
+                        additional_options=additional_options)
+                    except self.InvalidCmd:
+                            logger.warning(
+"""The offline installation of %(p)s was unsuccessful, and MG5aMC disabled it.
+In the future, if you want to reactivate Ninja, you can do so by re-attempting
+its online installation with the command 'install %(p)s' or install it on your
+own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key})
+                            self.exec_cmd("set %s ''" % key)
+                            self.exec_cmd('save options')
+            
+            # ONLINE INSTALLATION
+            elif value == 'install':
+                prog = {'pjfry': 'PJFry', 'golem': 'Golem95'}
+                if key in prog:
+                    self.exec_cmd('install %s' % prog[key])
+                else:
+                    self.exec_cmd('install %s' % key)
+            # Not install
+            elif value == 'off':
+                self.exec_cmd("set %s ''" % key)
+                self.exec_cmd('save options %s' % key)
+            else:
+                self.exec_cmd("set %s %s" % (key,value))
+                self.exec_cmd('save options %s' % key)                
+        
+        
     
+    # Export a matrix element
     def ML5export(self, nojpeg = False, main_file_name = ""):
         """Export a generated amplitude to file"""
 
+        if not self._curr_helas_model:
+            self._curr_helas_model = helas_call_writers.FortranUFOHelasCallWriter(self._curr_model)
         def generate_matrix_elements(self):
             """Helper function to generate the matrix elements before exporting"""
 
@@ -532,30 +632,22 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 
         # Fortran MadGraph5_aMC@NLO Standalone
         if self._export_format in self.supported_ML_format:
-            for me in matrix_elements:
+            for unique_id, me in enumerate(matrix_elements):
                 calls = calls + \
-                        self._curr_exporter.generate_subprocess_directory_v4(\
-                            me, self._curr_fortran_model)
+                        self._curr_exporter.generate_subprocess_directory(\
+                            me, self._curr_helas_model)
             # If all ME's do not share the same maximum loop vertex rank and the
             # same loop maximum wavefunction size, we need to set the maximum
-            # in coef_specs.inc of the HELAS Source and warn the user that this
-            # might be a problem
+            # in coef_specs.inc of the HELAS Source. The SubProcesses/P* directory
+            # all link this file, so it should be properly propagated
             if self.options['loop_optimized_output'] and len(matrix_elements)>1:
                 max_lwfspins = [m.get_max_loop_particle_spin() for m in \
                                                                 matrix_elements]
-                try:
-                    max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
+                max_loop_vert_ranks = [me.get_max_loop_vertex_rank() for me in \
                                                                 matrix_elements]
-                except MadGraph5Error:
-                    pass
-                else:
-                    if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
-                        self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
+                if len(set(max_lwfspins))>1 or len(set(max_loop_vert_ranks))>1:
+                    self._curr_exporter.fix_coef_specs(max(max_lwfspins),\
                                                        max(max_loop_vert_ranks))
-                        logger.warning('ML5 has just output processes which do not'+\
-                      ' share the same maximum loop wavefunction size or the '+\
-                      ' same maximum loop vertex rank. This is potentially '+\
-                      ' dangerous. Please prefer to output them separately.')
 
         # Just the matrix.f files
         if self._export_format == 'matrix':
@@ -568,7 +660,7 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                     logger.info("Creating new file %s" % filename)
                 calls = calls + self._curr_exporter.write_matrix_element_v4(\
                     writers.FortranWriter(filename),\
-                    me, self._curr_fortran_model)
+                    me, self._curr_helas_model)
                 
         cpu_time2 = time.time() - cpu_time1
 
@@ -611,21 +703,22 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
                 del self.previous_lorentz
                 del self.previous_couplings
             
-            self._curr_exporter.convert_model_to_mg4(self._curr_model,
+            self._curr_exporter.convert_model(self._curr_model,
                                            wanted_lorentz,
                                            wanted_couplings)
-            
-        compiler = {'fortran': self.options['fortran_compiler'],
-                    'f2py': self.options['f2py_compiler'],
-                    'cpp': self.options['cpp_compiler']}
         
         if self._export_format in self.supported_ML_format:
-            self._curr_exporter.finalize_v4_directory( \
+            flags = []
+            if nojpeg:
+                flags.append('nojpeg')
+            if online:
+                flags.append('online')
+                
+            self._curr_exporter.finalize( \
                                            self._curr_matrix_elements,
                                            self.history,
-                                           not nojpeg,
-                                           online,
-                                           compiler)
+                                           self.options,
+                                           flags)
 
         if self._export_format in self.supported_ML_format:
             logger.info('Output to directory ' + self._export_dir + ' done.')
@@ -715,7 +808,10 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             for arg in args:
                 if arg.startswith('--loop_filter='):
                     loop_filter = arg[14:]
+                if not isinstance(self, extended_cmd.CmdShell):
+                    raise InvalidCmd, "loop_filter is not allowed in web mode"
             args = [a for a in args if not a.startswith('--loop_filter=')]
+
             # Rejoin line
             line = ' '.join(args[1:])
             
@@ -728,6 +824,22 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
             
         # Extract process from process definition
         myprocdef = self.extract_process(line)
+        # hack for multiprocess:
+        if myprocdef.has_multiparticle_label():
+            # split it in a loop
+            succes, failed = 0, 0
+            for base_proc in myprocdef:
+                try:
+                    self.exec_cmd("add process %s" % base_proc.nice_string(prefix=False, print_weighted=True))
+                    succes += 1
+                except Exception:
+                    failed +=1
+            logger.info("%s/%s processes succeeded" % (succes, failed+succes))
+            if succes == 0:
+                raise
+            else:
+                return
+             
              
         # If it is a process for MadLoop standalone, make sure it has a 
         # unique ID. It is important for building a BLHA library which
@@ -772,3 +884,224 @@ class LoopInterface(CheckLoop, CompleteLoop, HelpLoop, CommonLoopInterface):
 class LoopInterfaceWeb(mg_interface.CheckValidForCmdWeb, LoopInterface):
     pass
 
+
+class AskLoopInstaller(cmd.OneLinePathCompletion):
+    
+    local_installer = ['ninja', 'collier']
+    required = ['cuttools', 'iregi']
+    order = ['cuttools', 'iregi', 'ninja', 'collier', 'golem', 'pjfry']
+    
+    @property
+    def answer(self):
+        return self.code
+    
+    
+    def __init__(self, question, *args, **opts):
+
+        import urllib2
+        try:
+            response=urllib2.urlopen('http://madgraph.phys.ucl.ac.be/F1.html', timeout=3)
+            self.online=True
+        except urllib2.URLError as err: 
+            self.online=False        
+        
+        self.code = {'ninja': 'install',
+                     'collier': 'install',
+                     'golem': 'off',
+                     'pjfry':'off',
+                     'cuttools': 'required',
+                     'iregi': 'required'}
+        if not self.online:
+            self.code['ninja'] = 'local'
+            self.code['collier'] = 'local'
+            self.code['pjfry'] = 'fail'
+            self.code['golem'] = 'fail'
+        if not misc.which('cmake'):
+            self.code['collier'] = 'off'
+        
+        #check if some partial installation is already done.  
+        if 'mother_interface' in opts:
+            mother = opts['mother_interface']
+            if  'heptools_install_dir' in mother.options:
+                install_dir1 = mother.options['heptools_install_dir'] 
+                install_dir2 = mother.options['heptools_install_dir']
+                if os.path.exists(pjoin(install_dir1, 'CutTools')):
+                    self.code['cuttools'] =  mother.options['heptools_install_dir']           
+                if os.path.exists(pjoin(install_dir1, 'IREGI')):
+                    self.code['iregi'] =  mother.options['heptools_install_dir']
+            else:
+                install_dir1 = pjoin(MG5DIR, 'HEPTools')
+                install_dir2 = MG5DIR     
+            if os.path.exists(pjoin(install_dir1, 'collier')):
+                self.code['collier'] =  pjoin(install_dir1, 'collier')
+            if os.path.exists(pjoin(install_dir2, 'PJFry','bin','qd-config')):
+                self.code['collier'] =  pjoin(install_dir2, 'PJFry')
+            if os.path.exists(pjoin(install_dir2, 'golem95')):
+                self.code['collier'] =  pjoin(install_dir2, 'golem95')
+        
+        # 1. create the question
+        question, allowed_answer = self.create_question(first=True)
+        
+        opts['allow_arg'] = allowed_answer
+        
+        cmd.OneLinePathCompletion.__init__(self, question, *args, **opts)
+        
+
+    def create_question(self, first = False):
+        """ """
+
+        question = "For loop computations, MadLoop requires dedicated tools to"+\
+        " perform the reduction of loop Feynman diagrams using OPP-based and/or TIR approaches.\n"+\
+        "\nWhich one do you want to install? (this needs to be done only once)\n"
+        
+        allowed_answer = set(['0','done'])
+        
+        descript =  {'cuttools': ['cuttools','(OPP)','[0711.3596]'],
+                     'iregi': ['iregi','(TIR)','[1405.0301]'],
+                     'ninja': ['ninja','(OPP)','[1403.1229]'],
+                     'pjfry': ['pjfry','(TIR)','[1112.0500]'],
+                     'golem': ['golem','(TIR)','[0807.0605]'],
+                     'collier': ['collier','(TIR)','[1604.06792]']} 
+
+        
+        status = {'off': '%(start_red)sdo not install%(stop)s',
+                  'install': '%(start_green)swill be installed %(stop)s',
+                  'local': '%(start_green)swill be installed %(stop)s(offline installation from local repository)',
+                  'fail': 'not available without internet connection',
+                  'required': 'will be installed (required)'}
+        
+        for i,key in enumerate(self.order,1):
+            if os.path.sep not in self.code[key]:
+                question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s%s\n' % \
+                   tuple([i,]+descript[key]+[status[self.code[key]],]+\
+                     ['(recommended)' if key in ['ninja','collier'] and self.code[key] in ['install'] else ''])
+            else:
+                question += '%s. %%(start_blue)s%-9s %-5s %-13s%%(stop)s : %s\n' % tuple([i,]+descript[key]+[self.code[key],])
+            if key in self.required:
+                continue
+            allowed_answer.update([str(i), key])
+            if key in self.local_installer:
+                allowed_answer.update(['key=local','key=off'])
+            if self.online:
+                allowed_answer.update(['key=on','key=install', 'key=off'])
+                
+        question += "You can:\n -> hit 'enter' to proceed\n -> type a number to cycle its options\n -> enter the following command:\n"+\
+          '    %(start_blue)s{tool_name}%(stop)s [%(start_blue)sinstall%(stop)s|%(start_blue)snoinstall%(stop)s|'+\
+          '%(start_blue)s{prefixed_installation_path}%(stop)s]\n'
+        if first:
+            question += '\n%(start_bold)s%(start_red)sIf you are unsure about what this question means, just type enter to proceed. %(stop)s'
+
+        question = question % {'start_green' : '\033[92m',
+                               'start_red' : '\033[91m',
+                               'start_blue' : '\033[34m',
+     'stop':  '\033[0m',
+     'start_bold':'\033[1m', 
+     }
+        return question, allowed_answer
+        
+    def default(self, line):
+        """Default action if line is not recognized"""
+        
+        line = line.strip()
+        args = line.split()
+
+        if line in ['0', 'done','','EOF']:
+            self.value = 'done'
+            return self.answer
+        self.value = 'repeat'        
+        if args:
+            if len(args) ==1 and '=' in args[0]:
+                args = args[0].split('=')
+            args[0] = args[0].lower()
+            if len(args) == 1:
+                # loop over the possibility
+                if args[0].isdigit():
+                    if len(self.order) < int(args[0]):
+                        logger.warning('Invalid integer %s. Please Retry' % args[0])
+                        return 
+                    args[0] = self.order[int(args[0])-1]
+                key = args[0]
+                if key in self.code:
+                    if self.code[key] in ['off']:
+                        if self.online:
+                            self.code[key] = 'install'
+                        elif key in self.local_installer:
+                            self.code[key] = 'local'
+                    elif self.code[key] == 'install':
+                        if key in self.local_installer:
+                            self.code[key] = 'local'
+                        else:
+                            self.code[key] = 'off'
+                    elif self.code[key] == 'local':
+                        self.code[key] = 'off'
+                else: 
+                    logger.warning('Unknown entry \'%s\'. Please retry' % key)
+                    return 
+            elif len(args) == 2:
+                key = args[0]
+                if key not in self.code:
+                    logger.warning('unknown %s type of entry. Bypass command.')
+                    return                     
+                if os.path.sep not in args[1]:
+                    value = args[1].lower()
+                    if value in ['off', 'not','noinstall']:
+                        self.code[key] = 'off'
+                    elif value in ['on', 'install']:
+                        if self.online:
+                            self.code[key] = 'install'
+                        elif key in self.local_installer:
+                            self.code[key] = 'local'
+                        else:
+                            logger.warning('offline installer not available for %s', key)
+                            self.code[key] = 'off'
+                    elif value in ['local']:
+                        if key in self.local_installer:
+                            self.code[key] = 'local'
+                        else:
+                            logger.warning('offline installer not available for %s', key)
+                            self.code[key] = 'off'
+                else:
+                    self.code[key] = args[1]
+            else:
+                self.value = 0
+        self.question,self.allow_arg = self.create_question()
+        return self.answer
+
+    def apply_name(self, name, line):
+
+        if line.startswith('='):
+            line = line[1:]
+        return self.default('%s %s' % (name,line))
+
+
+    do_ninja = lambda self,line : self.apply_name('ninja', line)
+    do_pjfry = lambda self,line : self.apply_name('pjfry', line)
+    do_collier = lambda self,line : self.apply_name('collier', line)
+    do_golem = lambda self,line : self.apply_name('golem', line)
+    do_cuttools = lambda self,line : self.apply_name('cuttools', line)
+    do_iregi =  lambda self,line : self.apply_name('iregi', line)
+    
+ 
+    def complete_prog(self, text, line, begidx, endidx, formatting=True):
+        
+        if os.path.sep in line:
+            args = line[0:begidx].split()
+            if args[-1].endswith(os.path.sep):
+                return self.path_completion(text,
+                                        pjoin(*[a for a in args if a.endswith(os.path.sep)]),
+                                        only_dirs = True)
+            else:
+                return self.path_completion(text, '.', only_dirs = True)
+        else:
+            return self.list_completion(text, ['install', 'noinstall', 'local'], line)
+    
+    complete_ninja = complete_prog 
+    complete_pjfry = complete_prog
+    complete_collier = complete_prog
+    complete_golem = complete_prog
+    complete_cuttools = complete_prog
+    complete_iregi = complete_prog
+    
+    
+               
+   

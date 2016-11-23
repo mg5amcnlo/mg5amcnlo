@@ -30,6 +30,84 @@
 
       END
 
+
+      SUBROUTINE INITCOLLIER()
+C     
+C     INITIALISATION OF COLLIER
+C     
+C     
+C     MODULE
+C     
+      USE COLLIER
+C     
+C     CONSTANTS
+C     
+      CHARACTER(LEN=*) NO_FOLDER
+      PARAMETER (NO_FOLDER='')
+      CHARACTER(LEN=*) FOLDEROUTPUT
+      PARAMETER (FOLDEROUTPUT='COLLIER_output')
+
+C     Force COLLIER to completely reset from scratch
+      LOGICAL NORESET
+      PARAMETER (NORESET=.FALSE.)
+C     
+C     LOCAL VARIABLES 
+C     
+      INTEGER N_CACHES
+C     
+C     GLOBAL VARIABLES 
+C     
+      INCLUDE 'MadLoopParams.inc'
+C     Now obtain the overall maximum rank, maximum external lines
+C     and maximal number of processes.
+      INCLUDE 'global_specs.inc'
+
+C     ----------
+C     BEGIN CODE
+C     ----------
+
+C     Initialize Collier
+      IF (.NOT.COLLIERCANOUTPUT) THEN
+        CALL INIT_CLL(MAXNEXTERNAL,OVERALLMAXRANK,NO_FOLDER,NORESET)
+      ELSE
+        CALL INIT_CLL(MAXNEXTERNAL,OVERALLMAXRANK,FOLDEROUTPUT,NORESET)
+      ENDIF
+
+C     Set target accuracy, be conservative w.r.t user request
+C     Keep in mind that COLLIER has been optimized for 1d-8.
+      IF (COLLIERREQUIREDACCURACY.EQ.-1.0D0) THEN
+        CALL SETREQACC_CLL(MLSTABTHRES*1.0D-3)
+      ELSE
+        CALL SETREQACC_CLL(COLLIERREQUIREDACCURACY)
+      ENDIF
+
+C     Set COLLIER mode
+      CALL SETMODE_CLL(COLLIERMODE)
+
+C     Set the global cache strategy
+C     If we use the caches for the poles as well, then it is a total of
+C     4 caches per process.
+      IF (COLLIERUSECACHEFORPOLES) THEN
+        N_CACHES =4*NPROCS
+      ELSE
+        N_CACHES =NPROCS
+      ENDIF
+      IF (COLLIERGLOBALCACHE.EQ.-1) THEN
+        CALL INITCACHESYSTEM_CLL(N_CACHES,MAXNEXTERNAL)
+      ELSEIF(COLLIERGLOBALCACHE.GT.0) THEN
+        CALL INITCACHESYSTEM_CLL(N_CACHES,COLLIERGLOBALCACHE)
+      ENDIF
+
+C     Make sure to start by first switching off all cache
+      IF (COLLIERGLOBALCACHE.NE.0) THEN
+        CALL SWITCHOFFCACHESYSTEM_CLL()
+      ENDIF
+
+C     Specify below your other custom COLLIER parameter settings 
+C     [user_specific_COLLIER_settings]
+
+      END
+
       SUBROUTINE SET_FORBID_HEL_DOUBLECHECK(ONOFF)
 C     
 C     Give the possibility to overwrite the value of MadLoopParams.dat
@@ -68,10 +146,12 @@ C     ----------
       COMMON/ML_INIT/ML_INIT
 
       LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
-      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT/.TRUE.
-     $ ,.TRUE.,.TRUE.,.TRUE.,.TRUE./
+     $ ,COLLIERINIT
+      DATA CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
+     $ /.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE.,.TRUE./
       COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
-     $ , NINJAINIT
+     $ , NINJAINIT, COLLIERINIT
+
 
       CHARACTER(512) MLPATH
       DATA MLPATH/'[[NA]]'/
@@ -110,14 +190,14 @@ C         Try to automatically find the path
           CLOSE(1)
 C         We could not automatically find the auxiliary files
           WRITE(*,*) '==='
-          WRITE(*,*) 'ERROR: MadLoop5 could not automatically find th'
-     $     //'e file MadLoopParams.dat.'
+          WRITE(*,*) 'ERROR: MadLoop5 could not automatically find the'
+     $     //' file MadLoopParams.dat.'
           WRITE(*,*) '==='
-          WRITE(*,*) '(Try using <CALL setMadLoopPath(/my/pat'
-     $     //'h)> (before your first call to MadLoop) in order to se'
-     $     //'t the directory where this file is located as well as'
-     $     //'  other auxiliary files, such as <xxx>_ColorNumFactors.d'
-     $     //'at, <xxx>_ColorDenomFactors.dat, etc..)'
+          WRITE(*,*) '(Try using <CALL setMadLoopPath(/my/path)>'
+     $     //' (before your first call to MadLoop) in order to set the'
+     $     //' directory where this file is located as well as  other'
+     $     //' auxiliary files, such as <xxx>_ColorNumFactors.dat,'
+     $     //' <xxx>_ColorDenomFactors.dat, etc..)'
           STOP
  10       CONTINUE
           CLOSE(1)
@@ -143,8 +223,8 @@ C     Check that the FilePath set is correct
  3    CONTINUE
       CLOSE(1)
       WRITE(*,*) '==='
-      WRITE(*,*) 'ERROR: The MadLoop5 auxiliary files could not b'
-     $ //'e found in ',MLPATH
+      WRITE(*,*) 'ERROR: The MadLoop5 auxiliary files could not be'
+     $ //' found in ',MLPATH
       WRITE(*,*) '==='
       STOP
  11   CONTINUE
@@ -171,6 +251,8 @@ C     U == 5
 C     Stable with Samurai.
 C     U == 6
 C     Stable with Ninja in double precision.
+C     U == 7
+C     Stable with COLLIER.
 C     U == 8
 C     Stable with Ninja in quadruple precision.
 C     U == 9
@@ -209,11 +291,11 @@ C
           STOP 'Only CutTools and Ninja can use quardruple precision'
         ENDIF
       ENDIF
-      IF(MLRED.GE.1.AND.MLRED.LE.6)THEN
+      IF(MLRED.GE.1.AND.MLRED.LE.7)THEN
         SET_RET_CODE_U=MLRED
       ELSE
-        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai an'
-     $   //'d Ninja are available'
+        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai, Ninja'
+     $   //' and COLLIER are available'
       ENDIF
       END
 
@@ -244,8 +326,8 @@ C     BEGIN CODE
 C     ----------
       IF(LIBNUM.EQ.1)THEN
 C       CutTools
-        CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,HAS_HEFT_VERTE
-     $   X,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
+        CALL DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS
+     $   ,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
       ELSEIF(LIBNUM.EQ.2)THEN
 C       PJFry++
         CALL DETECT_PJFRY(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
@@ -261,15 +343,18 @@ C       Samurai
       ELSEIF(LIBNUM.EQ.6)THEN
 C       Ninja 
         CALL DETECT_NINJA(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+      ELSEIF(LIBNUM.EQ.7)THEN
+C       Collier 
+        CALL DETECT_COLLIER(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
       ELSE
-        STOP 'ONLY CUTTOOLS,PJFry++,IREGI,Golem95 and Samurai ar'
-     $   //'e available'
+        STOP 'Only CutTools, PJFry++, IREGI, Golem95, Samurai, Ninja'
+     $   //' and COLLIER are available'
       ENDIF
       RETURN
       END
 
-      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS,HAS_HEFT_V
-     $ ERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
+      SUBROUTINE DETECT_CUTTOOLS(NLOOPLINE,RANK,COMPLEX_MASS
+     $ ,HAS_HEFT_VERTEX,MAX_SPIN_CONNECTED_TO_LOOP,LPASS)
 C     
 C     DETECT whether CUTTOOLS CAN BE USED OR NOT
 C     
@@ -377,6 +462,53 @@ C     It can easily be increased if necessary.
       RETURN
       END
 
+      SUBROUTINE DETECT_COLLIER(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
+C     
+C     Detect whether Collier can be used or not
+C     
+      USE COLLIER
+      IMPLICIT NONE
+C     
+C     CONSTANTS
+C     
+C     
+C     ARGUMENTS
+C     
+      INTEGER NLOOPLINE,RANK
+      LOGICAL COMPLEX_MASS,LPASS
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER CURRENT_COLLIERMODE
+C     
+C     GLOBAL VARIABLES
+C     
+      LOGICAL CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+     $ ,COLLIERINIT
+      COMMON/REDUCTIONCODEINIT/CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT
+     $ , NINJAINIT, COLLIERINIT
+      INCLUDE 'MadLoopParams.inc'
+C     ----------
+C     BEGIN CODE
+C     ----------
+      IF (.NOT.COLLIERINIT) THEN
+        CALL GETMODE_CLL(CURRENT_COLLIERMODE)
+      ELSE
+        CURRENT_COLLIERMODE = COLLIERMODE
+      ENDIF
+      LPASS=.TRUE.
+      IF (CURRENT_COLLIERMODE.NE.1) THEN
+C       The DD branch is used and it has limitations
+        IF((NLOOPLINE.GT.6).OR.(RANK.GT.NLOOPLINE)) THEN
+          LPASS=.FALSE.
+        ENDIF
+      ELSE
+C       Limitations of the COLI branch are academic.
+        LPASS=.TRUE.
+      ENDIF
+      RETURN
+      END
+
       SUBROUTINE DETECT_PJFRY(NLOOPLINE,RANK,COMPLEX_MASS,LPASS)
 C     
 C     DETECT whether PJFRY++ CAN BE USED OR NOT
@@ -401,7 +533,7 @@ C     BEGIN CODE
 C     ----------
       LPASS=.TRUE.
       IF(NLOOPLINE.LT.RANK.OR.RANK.GT.5.OR.NLOOPLINE.GT.5.OR.COMPLEX_MA
-     $ SS.OR.NLOOPLINE.EQ.1) THEN
+     $SS.OR.NLOOPLINE.EQ.1) THEN
         LPASS=.FALSE.
       ENDIF
       RETURN
@@ -558,69 +690,5 @@ C     arrays since these are not the most optimized sorting algorithms.
                 MEDIAN = TEMP(N/2+1)
                 END IF
                 END FUNCTION  MEDIAN
-
-
-                SUBROUTINE PRINT_MADLOOP_BANNER()
-
-                WRITE(*,*) ' ========================================='
-     $           //'================================================= '
-                WRITE(*,*) '{                                        '
-     $           //'                                                '
-     $           //'  }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'                '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                    ,,                           '
-     $           //'                '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'`7MMM.    '
-     $           //' ,MMF'//CHAR(39)//'             `7MM  `7MMF'/
-     $           /CHAR(39)//'                                   '/
-     $           /CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  MMMb  '
-     $           //'  dPMM                 MM    MM                  '
-     $           //'                   '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M YM  '
-     $           //' ,M MM   ,6'//CHAR(34)//'Yb.   ,M'//CHAR(34)//''/
-     $           /CHAR(34)//'bMM    MM         ,pW'//CHAR(34)/
-     $           /'Wq.   ,pW'//CHAR(34)//'Wq.`7MMpdMAo. '//CHAR(27)/
-     $           /'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  Mb  M'/
-     $           /CHAR(39)//' MM  8)   MM ,AP    MM    MM        6W'/
-     $           /CHAR(39)//'   `Wb 6W'//CHAR(39)//'   `Wb MM   `Wb '/
-     $           /CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  YM.P'/
-     $           /CHAR(39)//'  MM   ,pm9MM 8MI    MM    MM     '
-     $           //' , 8M     M8 8M     M8 MM    M8 '//CHAR(27)//'[0m'
-     $           //'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'  M  `YM'/
-     $           /CHAR(39)//'   MM  8M   MM `Mb    MM    MM    '
-     $           //' ,M YA.   ,A9 YA.   ,A9 MM   ,AP '//CHAR(27)/
-     $           /'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'.JML. `'/
-     $           /CHAR(39)//'  .JMML.`Moo9^Yo.`Wbmd'//CHAR(34)/
-     $           /'MML..JMMmmmmMMM  `Ybmd9'//CHAR(39)//'   `Ybmd9'/
-     $           /CHAR(39)//'  MMbmmd'//CHAR(39)//'  '//CHAR(27)/
-     $           /'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'       MM       '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'     .JMML.     '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//CHAR(27)/
-     $           /'[0m'//'v%(version)s (%(date)s), Ref: arXiv:1103.0621v'
-     $           //'2, arXiv:1405.0301'//CHAR(27)//'[32m'//'         '
-     $           //'       '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{       '//CHAR(27)//'[32m'//'           '
-     $           //'                                                 '
-     $           //'                '//CHAR(27)//'[0m'//'       }'
-                WRITE(*,*) '{                                        '
-     $           //'                                                '
-     $           //'  }'
-                WRITE(*,*) ' ========================================='
-     $           //'================================================= '
-
-                END
 
 

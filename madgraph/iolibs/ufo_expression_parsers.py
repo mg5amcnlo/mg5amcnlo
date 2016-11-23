@@ -63,7 +63,7 @@ class UFOExpressionParser(object):
 
     # List of tokens and literals
     tokens = (
-        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC', 'TAN',
+        'LOGICAL','LOGICALCOMB','POWER', 'CSC', 'SEC', 'ACSC', 'ASEC', 'TAN', 'ATAN',
         'SQRT', 'CONJ', 'RE', 'RE2', 'IM', 'PI', 'COMPLEX', 'FUNCTION', 'IF','ELSE',
         'VARIABLE', 'NUMBER','COND','REGLOG', 'REGLOGP', 'REGLOGM','RECMS','ARG'
         )
@@ -82,6 +82,9 @@ class UFOExpressionParser(object):
         return t
     def t_TAN(self, t):
         r'(?<!\w)tan(?=\()|(?<!\w)cmath.tan(?=\()'
+        return t    
+    def t_ATAN(self, t):
+        r'(?<!\w)atan(?=\()|(?<!\w)cmath.atan(?=\()'
         return t    
     def t_ASEC(self, t):
         r'(?<!\w)asec(?=\()'
@@ -335,12 +338,14 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                       | REGLOG group
                       | REGLOGP group
                       | REGLOGM group
-                      | TAN group'''
+                      | TAN group
+                      | ATAN group'''
 
         if p[1] == 'csc': p[0] = '1d0/sin' + p[2]
         elif p[1] == 'sec': p[0] = '1d0/cos' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] in ['atan', 'cmath.atan'] : p[0] = 'atan(dble' + p[2]+')'
         elif p[1] in ['tan', 'cmath.tan'] : p[0] = 'tan(dble' + p[2]+')'
         elif p[1] == 're': p[0] = 'dble' + p[2]
         elif p[1] == 'im': p[0] = 'dimag' + p[2]
@@ -440,12 +445,14 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
                       | REGLOG group
                       | REGLOGP group
                       | REGLOGM group
-                      | TAN group'''
+                      | TAN group
+                      | ATAN group'''
         
         if p[1] == 'csc': p[0] = '1e0_16/cos' + p[2]
         elif p[1] == 'sec': p[0] = '1e0_16/sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1e0_16/' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1e0_16/' + p[2] + ')'
+        elif p[1] in ['atan', 'cmath.atan'] : p[0] = 'atan(real' + p[2]+')'
         elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan(real' + p[2]+')'
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
@@ -533,7 +540,18 @@ class UFOExpressionParserCPP(UFOExpressionParser):
             p1 = p[1][1:-1]
         if p[3][0] == '(' and p[3][-1] == ')':
             p3 = p[3][1:-1]
-        p[0] = 'pow(' + p1 + ',' + p3 + ')'        
+        if float(p3) == 2:
+            p[0] = '((' + p1 + ')*(' + p1 + '))'
+        elif float(p3) == 3:
+            p[0] = '((' + p1 + ')*(' + p1 + ')*(' + p1 + '))'
+        elif float(p3) == 4:
+            p[0] = '((' + p1 + ')*(' + p1 + ')*(' + p1 + ')*(' + p1 + '))'
+        elif float(p3) == 0.5 or p3 == '0.5' or p3 == '1./2' or p3 == '1/2.' or p3 == '1./2.':
+            p[0] = 'sqrt(' + p1 + ')'
+        elif float(p3) == 1./3 or p3 == '1./3' or p3 == '1/3.' or p3 == '1./3.':
+            p[0] = 'cbrt(' + p1 + ')'
+        else:
+            p[0] = 'pow(' + p1 + ',' + p3 + ')'        
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
@@ -545,6 +563,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
                       | ACSC group
                       | ASEC group
                       | TAN group
+                      | ATAN group
                       | RE group
                       | IM group
                       | ARG group
@@ -557,6 +576,7 @@ class UFOExpressionParserCPP(UFOExpressionParser):
         elif p[1] == 'sec': p[0] = '1./sin' + p[2]
         elif p[1] == 'acsc': p[0] = 'asin(1./' + p[2] + ')'
         elif p[1] == 'asec': p[0] = 'acos(1./' + p[2] + ')'
+        elif p[1] in ['atan', 'cmath.atan']: p[0] = 'atan' +p[2]
         elif p[1] in ['tan', 'cmath.tan']: p[0] = 'tan' +p[2]
         elif p[1] == 're': p[0] = 'real' + p[2]
         elif p[1] == 'im': p[0] = 'imag' + p[2]
@@ -703,6 +723,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
                       | ARG group
                       | SQRT group
                       | TAN group
+                      | ATAN group
                       | CONJ group
                       | REGLOG group
                       | REGLOGP group
@@ -712,6 +733,7 @@ class UFOExpressionParserPythonIF(UFOExpressionParser):
         elif p[1] == 'acsc': p[0] = 'acsc' + p[2]
         elif p[1] == 'asec': p[0] = 'asec' + p[2]
         elif p[1] in ['tan','cmath.tan']: p[0] = 'tan' + p[2]
+        elif p[1] in ['atan','cmath.atan']: p[0] = 'atan' + p[2]
         elif p[1] == 're': p[0] = 're' + p[2]
         elif p[1] == 'im': p[0] = 'im' + p[2]
         elif p[1] == 'arg': p[0] = 'arg' + p[2]

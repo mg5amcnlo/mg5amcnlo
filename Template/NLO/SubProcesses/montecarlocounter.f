@@ -23,7 +23,7 @@ c is the number of color flows at Born level
       integer nglu,nsngl
       logical isspecial,isspecial0
       common/cisspecial/isspecial
-
+      logical spec_case
       ipartners(0)=0
       do i=1,nexternal-1
          colorflow(i,0)=0
@@ -134,14 +134,16 @@ c Therefore, ipartners(k0)=j
                         write(*,*)i,j,l,k0,ipartners(k0)
                         stop
                      endif
+                     spec_case=l.eq.2 .and. colorflow(k0,0).ge.1 .and.
+     &                    colorflow(k0,colorflow(k0,0)).eq.i 
+                     if (.not.spec_case)then
 c Increase by one the number of colour flows in which the father is
 c (anti)colour-connected with its k0^th partner (according to the
 c list defined by ipartners)
-                     colorflow(k0,0)=colorflow(k0,0)+1
+                        colorflow(k0,0)=colorflow(k0,0)+1
 c Store the label of the colour flow thus found
-                     colorflow(k0,colorflow(k0,0))=i
-                     if (l.eq.2 .and. colorflow(k0,0).gt.1 .and.
-     &                    colorflow(k0,colorflow(k0,0)-1).eq.i )then
+                        colorflow(k0,colorflow(k0,0))=i
+                     elseif (spec_case)then
 c Special case: father and ipartners(k0) are both gluons, connected
 c by colour AND anticolour: the number of colour flows was overcounted
 c by one unit, so decrease it
@@ -152,7 +154,7 @@ c by one unit, so decrease it
                             write(*,*)i,j,l,k0,i1(1),i1(2)
                             stop
                          endif
-                         colorflow(k0,0)=colorflow(k0,0)-1
+                         colorflow(k0,colorflow(k0,0))=i
                          isspecial0=.true.
                      endif
                   endif
@@ -269,13 +271,28 @@ c
       integer nofpartners
       logical lzone(nexternal),flagmc
 
+      ! amp split stuff
+      include 'orders.inc'
+      integer iamp
+      double precision amp_split_mc(amp_split_size)
+      common /to_amp_split_mc/amp_split_mc
+      double precision amp_split_gfunc(amp_split_size)
+      common /to_amp_split_gfunc/amp_split_gfunc
+
+
 c True MC subtraction term
+      ! this fills the amp_split_mc
+      ! no need to set them to zero before the call, they are
+      ! reset inside xmcsubt
       call xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      #                   xmc,nofpartners,lzone,flagmc,z,xmcxsec)
 c G-function matrix element, to recover the real soft limit
       call xmcsubtME(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,xrealme)
-
+      
       wgt=xmc+xrealme
+      do iamp=1, amp_split_size
+        amp_split_mc(iamp) = amp_split_mc(iamp) + amp_split_gfunc(iamp)
+      enddo
 
       return
       end
@@ -318,22 +335,49 @@ c Particle types (=colour) of i_fks, j_fks and fks_mother
       double precision pmass(nexternal)
       logical is_aorg(nexternal)
       common /c_is_aorg/is_aorg
+
+      ! amp split stuff
+      include 'orders.inc'
+      integer iamp
+      double precision amp_split_gfunc(amp_split_size)
+      common /to_amp_split_gfunc/amp_split_gfunc
+      double precision amp_split_s(amp_split_size), 
+     $                 amp_split_c(amp_split_size), 
+     $                 amp_split_sc(amp_split_size)
+
       include "pmass.inc"
 c
+      wgt=0d0
+      do iamp=1, amp_split_size
+        amp_split_gfunc(iamp) = 0d0
+      enddo
+      ! this contribution is needed only for i_fks being a gluon/photon
+      ! (soft limit)
       if (is_aorg(i_fks))then
 c i_fks is gluon/photon
          call set_cms_stuff(izero)
          call sreal(p1_cnt(0,1,0),zero,y_ij_fks,wgts)
+         do iamp=1, amp_split_size
+           amp_split_s(iamp) = amp_split(iamp)
+         enddo
          call set_cms_stuff(ione)
          call sreal(p1_cnt(0,1,1),xi_i_fks,one,wgtc)
+         do iamp=1, amp_split_size
+           amp_split_c(iamp) = amp_split(iamp)
+         enddo
          call set_cms_stuff(itwo)
          call sreal(p1_cnt(0,1,2),zero,one,wgtsc)
+         do iamp=1, amp_split_size
+           amp_split_sc(iamp) = amp_split(iamp)
+         enddo
          wgt=wgts+(1-gfactcl)*(wgtc-wgtsc)
          wgt=wgt*(1-gfactsf)
-      elseif (abs(i_type).eq.3.or.ch_i.ne.0d0)then
-c i_fks is (anti-)quark/lepton
-         wgt=0d0
-      else
+         do iamp = 1, amp_split_size
+           amp_split_gfunc(iamp) = amp_split_s(iamp)+(1-gfactcl)*(amp_split_c(iamp)-amp_split_sc(iamp))
+           amp_split_gfunc(iamp) = amp_split_gfunc(iamp)*(1-gfactsf)
+         enddo
+      elseif (abs(i_type).ne.3.and.ch_i.eq.0d0)then
+         ! we should never get here
          write(*,*) 'FATAL ERROR #1 in xmcsubtME',i_type,i_fks
          stop
       endif
@@ -504,17 +548,13 @@ c Initialise
       enddo
       do iamp = 1, amp_split_size
         amp_split_mc(iamp)=0d0
-        do i = 1,nsplitorders
-          amp_split_bornred(iamp,i)=0d0
-          amp_split_bornredtilde(iamp,i)=0d0
-        enddo
       enddo
       kn       = veckn_ev
       knbar    = veckbarn_ev
       kn0      = xp0jfks
       nofpartners = ipartners(0)
-      tiny = 1d-4
-      if (softtest.or.colltest)tiny = 1d-6
+      tiny = 1d-6
+      if (softtest.or.colltest)tiny = 1d-12
 c Logical variables to control the IR limits:
 c one can remove any reference to xi_i_fks
       limit = 1-y_ij_fks.lt.tiny .and. xi_i_fks.ge.tiny
@@ -653,6 +693,11 @@ c g->gg, go->gog (icode=1)
                           Q(i)=Q(i)/(1-z(npartner))
                           xkernazi(i)=prefact*xfact*xjac(npartner)*Q(i)/xi(npartner)
                         enddo
+                        if (xkern(2).ne.0d0 .or.xkernazi(2).ne.0d0) then
+                            write(*,*) 'ERROR#1, g->gg splitting QED'
+     %                        //'contributions should be 0', xkern, xkernazi
+                            stop
+                        endif
                      endif
 c
                   elseif(ileg.eq.3)then
@@ -691,6 +736,11 @@ c
                           Q(i)=Q(i)/(1-z(npartner))
                           xkernazi(i)=prefact*xfact*xjac(npartner)*Q(i)/xi(npartner)
                         enddo
+                        if (xkern(2).ne.0d0 .or.xkernazi(2).ne.0d0) then
+                            write(*,*) 'ERROR#1, g->gg splitting QED'
+     %                        //'contributions should be 0', xkern, xkernazi
+                            stop
+                        endif
                      endif
                   endif
                elseif(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
@@ -720,7 +770,6 @@ c
      &                        ( (s-xm12)**2*(s*x-xm12) )
                         xkern(2)=xkern(1) * dble(gal(1))**2 / g**2 *
      &                                      ch_i**2 * abs(i_type) / vtf
-                        if(abs(i_type).eq.1)xkern(2)=xkern(2)/vca
                         xkernazi(1)=(g**2/N_p)*(16*vtf*s*(1-x)**2)/((s-xm12)**2)
                         xkernazi(2)=xkernazi(1) * dble(gal(1))**2 / g**2 *
      &                              ch_i**2 * abs(i_type) / vtf
@@ -746,7 +795,7 @@ c
                endif
             elseif( (ileg.ge.3 .and. (abs(m_type).eq.3.or.(m_type.eq.1.and.dabs(ch_m).gt.tiny))) .or.
      &              (ileg.le.2 .and. (abs(j_type).eq.3.or.(j_type.eq.1.and.dabs(ch_j).gt.tiny))) )then
-               if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(dabs(ch_i)-1d0).lt.tiny))then
+               if(abs(i_type).eq.3.or.(i_type.eq.1.and.dabs(ch_i).gt.tiny))then
 c q->gq, q->aq, e->ae (icode=3)
                   if(ileg.le.2)then
                      N_p=2
@@ -830,7 +879,7 @@ c
                            if(shower_mc.ne.'HERWIGPP')
      &                     call AP_reduced(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
                            if(shower_mc.eq.'HERWIGPP')
-     &                     call AP_reduced_massive(j_type,i_type,one,ch_j,ch_i,z(npartner),
+     &                     call AP_reduced_massive(j_type,i_type,ch_j,ch_i,one,z(npartner),
      &                                                           xi(npartner),xm12,ap)
                         else
                            call AP_reduced_SUSY(j_type,i_type,ch_j,ch_i,one,z(npartner),ap)
@@ -904,6 +953,13 @@ c Dead zone
            endif
         endif
 
+        do iamp = 1, amp_split_size
+          do i = 1,nsplitorders
+            amp_split_bornred(iamp,i)=0d0
+            amp_split_bornredtilde(iamp,i)=0d0
+          enddo
+        enddo
+
         do i=1,2
            xkern(i)=xkern(i)*gfactsf*wcc
            xkernazi(i)=xkernazi(i)*gfactazi*gfactsf*wcc
@@ -925,18 +981,18 @@ c check the lines below
         do iord = 1, nsplitorders
            if (.not.split_type(iord).or.(iord.ne.qed_pos.and.iord.ne.qcd_pos)) cycle
            if (iord.eq.qcd_pos) then
-             xmcxsec(npartner) = xmcxsec(npartner)+
+             xmcxsec(npartner) =
      &          xkern(1)*born_red(iord)+xkernazi(1)*born_red_tilde(iord)
              do iamp=1,amp_split_size
-               amp_split_xmcxsec(iamp,npartner) = amp_split_xmcxsec(iamp,npartner) +
+               amp_split_xmcxsec(iamp,npartner) =
      &            xkern(1)*amp_split_bornred(iamp,iord) + 
      &            xkernazi(1)*amp_split_bornredtilde(iamp,iord)
              enddo
            else if(iord.eq.qed_pos) then
-             xmcxsec(npartner) = xmcxsec(npartner)+
+             xmcxsec(npartner) =
      &          xkern(2)*born_red(iord)+xkernazi(2)*born_red_tilde(iord)
              do iamp=1,amp_split_size
-               amp_split_xmcxsec(iamp,npartner) = amp_split_xmcxsec(iamp,npartner) +
+               amp_split_xmcxsec(iamp,npartner) =
      &            xkern(2)*amp_split_bornred(iamp,iord) + 
      &            xkernazi(2)*amp_split_bornredtilde(iamp,iord)
              enddo
@@ -1043,6 +1099,8 @@ c the same method
 
       double precision zero
       parameter (zero=0.d0)
+      double complex czero
+      parameter (czero=dcmplx(0d0,0d0))
       double precision p_born_rot(0:3,nexternal-1)
 
       integer imother_fks,ileg
@@ -1067,7 +1125,7 @@ c the same method
       integer i
 
       double precision vtiny,pi(0:3),pj(0:3),cphi_mother,sphi_mother
-      parameter (vtiny=1d-8)
+      parameter (vtiny=1d-12)
       double complex ximag
       parameter (ximag=(0.d0,1.d0))
 
@@ -1083,13 +1141,16 @@ c the same method
 
       logical calculatedBorn
       common/ccalculatedBorn/calculatedBorn
+      double precision iden_comp
+      common /c_iden_comp/iden_comp
 
 c Particle types (=color) of i_fks, j_fks and fks_mother
       integer i_type,j_type,m_type
       double precision ch_i,ch_j,ch_m
       common/cparticle_types/i_type,j_type,m_type,ch_i,ch_j,ch_m
 
-      double precision born(nsplitorders), borntilde(nsplitorders)
+      double precision born(nsplitorders)
+      double complex borntilde(nsplitorders)
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       complex*16 ans_cnt(2, nsplitorders), wgt1(2)
@@ -1099,8 +1160,8 @@ c Particle types (=color) of i_fks, j_fks and fks_mother
       common /c_extra_cnt/iextra_cnt, isplitorder_born, isplitorder_cnt
 
       integer iamp
-      double precision amp_split_born(amp_split_size,nsplitorders), 
-     $                 amp_split_borntilde(amp_split_size,nsplitorders)
+      double precision amp_split_born(amp_split_size,nsplitorders) 
+      double complex amp_split_borntilde(amp_split_size,nsplitorders)
       double precision amp_split_bornbars(amp_split_size,max_bcol,nsplitorders),
      $                 amp_split_bornbarstilde(amp_split_size,max_bcol,nsplitorders)
       common /to_amp_split_bornbars/amp_split_bornbars,
@@ -1111,6 +1172,7 @@ c
 C BORN/BORNTILDE
 
 C check if momenta have to be rotated
+
       if ((ileg.eq.1.or.ileg.eq.2).and.(j_fks.eq.2 .and. nexternal-1.ne.3)) then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
 c general rotation is needed.
@@ -1129,10 +1191,7 @@ c might flip when rotating the momenta.
         calculatedBorn=.false.
       else
         call sborn(p_born,wgt_born)
-        calculatedborn=.false.
-        call sborn(p_born,wgt_born)
         if (iextra_cnt.gt.0) call extra_cnt(p_born, iextra_cnt, ans_extra_cnt)
-        calculatedborn=.false.
       endif
 
       do iord = 1, nsplitorders
@@ -1157,76 +1216,73 @@ C check if any extra_cnt is needed
            wgt1(1) = ans_cnt(1,iord)
            wgt1(2) = ans_cnt(2,iord)
         endif
-        if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) wgt1(2)=0d0
-        born(iord)=dble(wgt1(1))
-        borntilde(iord)=dble(wgt1(2))
+        if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) wgt1(2) = czero
+        born(iord) = dble(wgt1(1))
+        borntilde(iord) = wgt1(2)
         do iamp=1, amp_split_size
           amp_split_born(iamp,iord) = dble(amp_split_cnt(iamp,1,iord))
-          amp_split_borntilde(iamp,iord) = dble(amp_split_cnt(iamp,2,iord))
+          if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) then
+            amp_split_borntilde(iamp,iord) = czero
+          else
+            amp_split_borntilde(iamp,iord) = amp_split_cnt(iamp,2,iord)
+          endif
         enddo
       enddo
 
 c BORN TILDE
       if(ileg.eq.1.or.ileg.eq.2)then
-         if (abs(m_type).eq.3.or.dabs(ch_m).gt.0d0) then
-            do iord=1, nsplitorders
-               borntilde(iord)=0d0
-               do iamp=1, amp_split_size
-                 amp_split_borntilde(iamp,iord) = 0d0
-               enddo
-            enddo
-         else
 c Insert <ij>/[ij] which is not included by sborn()
-            if (1d0-y_ij_fks.lt.vtiny)then
-               azifact=xij_aor
-            else
-               do i=0,3
-                  pi(i)=p_i_fks_ev(i)
-                  pj(i)=p(i,j_fks)
-               enddo
-               if(j_fks.eq.2)then
+        if (1d0-y_ij_fks.lt.vtiny)then
+           azifact=xij_aor
+        else
+           do i=0,3
+              pi(i)=p_i_fks_ev(i)
+              pj(i)=p(i,j_fks)
+           enddo
+           if(j_fks.eq.2)then
 c Rotation according to innerpin.m. Use rotate_invar() if a more 
 c general rotation is needed
-                  pi(1)=-pi(1)
-                  pi(3)=-pi(3)
-                  pj(1)=-pj(1)
-                  pj(3)=-pj(3)
-               endif
-               CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
-               CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
-               CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
-               CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
-               Wij_angle=(0d0,0d0)
-               Wij_recta=(0d0,0d0)
-               do i=1,4
-                  Wij_angle = Wij_angle + W1(i)*W2(i)
-                  Wij_recta = Wij_recta + W3(i)*W4(i)
-               enddo
-               azifact=Wij_angle/Wij_recta
-            endif
+              pi(1)=-pi(1)
+              pi(3)=-pi(3)
+              pj(1)=-pj(1)
+              pj(3)=-pj(3)
+           endif
+           CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
+           CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
+           CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
+           CALL OXXXSO(pj ,ZERO ,+1,+1,W4)        
+           Wij_angle=(0d0,0d0)
+           Wij_recta=(0d0,0d0)
+           do i=1,4
+              Wij_angle = Wij_angle + W1(i)*W2(i)
+              Wij_recta = Wij_recta + W3(i)*W4(i)
+           enddo
+           azifact=Wij_angle/Wij_recta
+        endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
-            if(j_fks.eq.2)then
-               cphi_mother=-1.d0
-               sphi_mother=0.d0
-            else
-               cphi_mother=1.d0
-               sphi_mother=0.d0
-            endif
-            do iord=1, nsplitorders
-               borntilde(iord) = -(cphi_mother+ximag*sphi_mother)**2 *
+        if(j_fks.eq.2)then
+           cphi_mother=-1.d0
+           sphi_mother=0.d0
+        else
+           cphi_mother=1.d0
+           sphi_mother=0.d0
+        endif
+        do iord=1, nsplitorders
+           borntilde(iord) = -(cphi_mother+ximag*sphi_mother)**2 *
      #                borntilde(iord) * dconjg(azifact)
-               do iamp=1, amp_split_size
-                 amp_split_borntilde(iamp,iord) = -(cphi_mother+ximag*sphi_mother)**2 *
+           do iamp=1, amp_split_size
+             amp_split_borntilde(iamp,iord) = -(cphi_mother+ximag*sphi_mother)**2 *
      #                amp_split_borntilde(iamp,iord) * dconjg(azifact)
-               enddo
-            enddo
-         endif
+           enddo
+        enddo
       elseif(ileg.eq.3.or.ileg.eq.4)then
-         if(abs(j_type).eq.3.and.(i_type.eq.8.or.i_type.eq.1).and.ch_i.eq.0d0)then
+         if((abs(j_type).eq.3.or.ch_j.ne.0d0).and.
+     &     (i_type.eq.8.or.i_type.eq.1).and.
+     &     ch_i.eq.0d0)then
             do iord=1, nsplitorders
-               borntilde(iord)=0d0
+               borntilde(iord)=czero
                do iamp=1, amp_split_size
-                 amp_split_borntilde(iamp,iord) = 0d0
+                 amp_split_borntilde(iamp,iord) = czero
                enddo
             enddo
          elseif((m_type.eq.8.or.m_type.eq.1).and.ch_m.eq.0d0)then
@@ -1283,7 +1339,6 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
 
 CMZ! this has to be all changed according to the correct jamps
 
-
 c born is the total born amplitude squared
       sumborn=0.d0
       do i=1,max_bcol
@@ -1296,10 +1351,10 @@ c BARRED AMPLITUDES
       do i=1,max_bcol
         do iord=1,nsplitorders
           if (sumborn.ne.0d0) then
-            bornbars(i,iord)=jamp2(i)/sumborn * born(iord)
+            bornbars(i,iord)=jamp2(i)/sumborn * born(iord) *iden_comp
             do iamp=1,amp_split_size
               amp_split_bornbars(iamp,i,iord)=jamp2(i)/sumborn * 
-     &                                      amp_split_born(iamp,iord)
+     &                              amp_split_born(iamp,iord) *iden_comp
             enddo
           elseif (born(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
             bornbars(i,iord)=0d0
@@ -1311,10 +1366,10 @@ c BARRED AMPLITUDES
             stop
           endif
           if (sumborn.ne.0d0) then
-            bornbarstilde(i,iord)=jamp2(i)/sumborn * borntilde(iord)
+            bornbarstilde(i,iord)=jamp2(i)/sumborn * dble(borntilde(iord)) *iden_comp
             do iamp=1,amp_split_size
               amp_split_bornbarstilde(iamp,i,iord)=jamp2(i)/sumborn * 
-     &                              amp_split_borntilde(iamp,iord)
+     &                      dble(amp_split_borntilde(iamp,iord)) *iden_comp
             enddo
           elseif (borntilde(iord).eq.0d0 .or. jamp2(i).eq.0d0) then
             bornbarstilde(i,iord)=0d0
@@ -2820,13 +2875,13 @@ c
       double precision z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,scalemax,wcc
       logical lzone
 
-      double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,
+      double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,Q2,
      &lambda,dot,e0sq,beta,dum,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3
       external dot
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      double precision pip(0:3),pifat(0:3)
+      double precision pip(0:3),pifat(0:3),psum(0:3)
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -2864,6 +2919,7 @@ c Definition and initialisation of variables
       do i=0,3
          pifat(i)=p_born(i,ifat)
          pip(i)  =p_born(i,ip)
+         psum(i) =pifat(i)+pip(i) 
       enddo
       max_scale=scalemax
       xmp2=dot(pip,pip)
@@ -2873,7 +2929,8 @@ c Definition and initialisation of variables
       xmm2=xm12*(4-ileg)
       xmr2=xm22*(4-ileg)-xm12*(3-ileg)
       ww=w1*(4-ileg)-w2*(3-ileg)
-      lambda=sqrt((s+xmm2-xmp2)**2-4*s*xmm2)
+      Q2=dot(psum,psum)
+      lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
       beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
       wcc=1d0
       ycc=1-parp67*x/(1-x)**2/2
@@ -2900,7 +2957,7 @@ c
          if(ileg.le.2)upscale2=2*e0sq
          if(ileg.gt.2)then
             upscale2=2*e0sq+xmm2
-            if(ip.gt.2)upscale2=(s+xmm2-xmp2+lambda)/2
+            if(ip.gt.2)upscale2=(Q2+xmm2-xmp2+lambda)/2
          endif
          if(xi.lt.upscale2)lzone=.true.
 c

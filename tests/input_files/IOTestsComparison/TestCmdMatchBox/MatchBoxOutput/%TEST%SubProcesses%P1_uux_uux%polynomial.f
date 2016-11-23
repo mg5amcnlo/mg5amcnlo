@@ -1,8 +1,47 @@
+      MODULE MG5_1_POLYNOMIAL_CONSTANTS
+      IMPLICIT NONE
+      INCLUDE 'coef_specs.inc'
+      INCLUDE 'loop_max_coefs.inc'
+
+C     Map associating a rank to each coefficient position
+      INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)
+      DATA COEFTORANK_MAP(0:0)/1*0/
+      DATA COEFTORANK_MAP(1:4)/4*1/
+      DATA COEFTORANK_MAP(5:14)/10*2/
+
+C     Map defining the number of coefficients for a symmetric tensor
+C      of a given rank
+      INTEGER NCOEF_R(0:2)
+      DATA NCOEF_R/1,5,15/
+
+C     Map defining the coef position resulting from the multiplication
+C      of two lower rank coefs.
+      INTEGER COMB_COEF_POS(0:LOOPMAXCOEFS-1,0:4)
+      DATA COMB_COEF_POS(  0,  0:  4) /  0,  1,  2,  3,  4/
+      DATA COMB_COEF_POS(  1,  0:  4) /  1,  5,  6,  8, 11/
+      DATA COMB_COEF_POS(  2,  0:  4) /  2,  6,  7,  9, 12/
+      DATA COMB_COEF_POS(  3,  0:  4) /  3,  8,  9, 10, 13/
+      DATA COMB_COEF_POS(  4,  0:  4) /  4, 11, 12, 13, 14/
+      DATA COMB_COEF_POS(  5,  0:  4) /  5, 15, 16, 19, 25/
+      DATA COMB_COEF_POS(  6,  0:  4) /  6, 16, 17, 20, 26/
+      DATA COMB_COEF_POS(  7,  0:  4) /  7, 17, 18, 21, 27/
+      DATA COMB_COEF_POS(  8,  0:  4) /  8, 19, 20, 22, 28/
+      DATA COMB_COEF_POS(  9,  0:  4) /  9, 20, 21, 23, 29/
+      DATA COMB_COEF_POS( 10,  0:  4) / 10, 22, 23, 24, 30/
+      DATA COMB_COEF_POS( 11,  0:  4) / 11, 25, 26, 28, 31/
+      DATA COMB_COEF_POS( 12,  0:  4) / 12, 26, 27, 29, 32/
+      DATA COMB_COEF_POS( 13,  0:  4) / 13, 28, 29, 30, 33/
+      DATA COMB_COEF_POS( 14,  0:  4) / 14, 31, 32, 33, 34/
+
+      END MODULE MG5_1_POLYNOMIAL_CONSTANTS
+
+
 C     THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
 C     MULTIPLY BY THE BORN
 
       SUBROUTINE MG5_1_CREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE
      $ ,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER,COLOR_ID,HELCONFIG)
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       IMPLICIT NONE
 C     
 C     CONSTANTS 
@@ -15,8 +54,6 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
       COMPLEX*16 CMPLX_ZERO
       PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=76)
       INTEGER    NLOOPGROUPS
@@ -42,7 +79,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER MG5_1_ML5SOINDEX_FOR_BORN_AMP, MG5_1_ML5SOINDEX_FOR_LOOP_
-     $ AMP, MG5_1_ML5SQSOINDEX
+     $AMP, MG5_1_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -77,19 +114,19 @@ C
      $   ,KIND=8)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(MG5_1_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(MG5_1_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL MG5_1_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,MG5_1_ML5SQSOINDEX(I,MG5_1_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
@@ -99,17 +136,12 @@ C
 C     Just a handy subroutine to modify the coefficients for the
 C     tranformation q_loop -> -q_loop
 C     It is only used for the NINJA interface
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       IMPLICIT NONE
 
-      INCLUDE 'loop_max_coefs.inc'
       INTEGER I, NCOEFS
 
       COMPLEX*16 POLYNOMIAL(0:NCOEFS-1)
-
-      INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)
-      DATA (COEFTORANK_MAP(I),I=0,0)/1*0/
-      DATA (COEFTORANK_MAP(I),I=1,4)/4*1/
-      DATA (COEFTORANK_MAP(I),I=5,14)/10*2/
 
       DO I=0,NCOEFS-1
         IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
@@ -119,12 +151,16 @@ C     It is only used for the NINJA interface
 
       END
 
+C     Now the routines to update the wavefunctions
+
+
 
 C     THE SUBROUTINE TO CREATE THE COEFFICIENTS FROM LAST LOOP WF AND 
 C     MULTIPLY BY THE BORN
 
       SUBROUTINE MP_MG5_1_CREATE_LOOP_COEFS(LOOP_WF,RANK,LCUT_SIZE
      $ ,LOOP_GROUP_NUMBER,SYMFACT,MULTIPLIER,COLOR_ID,HELCONFIG)
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       IMPLICIT NONE
 C     
 C     CONSTANTS 
@@ -137,8 +173,6 @@ C
       PARAMETER (IMAG1=(ZERO,ONE))
       COMPLEX*32 CMPLX_ZERO
       PARAMETER (CMPLX_ZERO=(ZERO,ZERO))
-      INCLUDE 'loop_max_coefs.inc'
-      INCLUDE 'coef_specs.inc'
       INTEGER    NCOLORROWS
       PARAMETER (NCOLORROWS=76)
       INTEGER    NLOOPGROUPS
@@ -164,7 +198,7 @@ C
 C     FUNCTIONS
 C     
       INTEGER MG5_1_ML5SOINDEX_FOR_BORN_AMP, MG5_1_ML5SOINDEX_FOR_LOOP_
-     $ AMP, MG5_1_ML5SQSOINDEX
+     $AMP, MG5_1_ML5SQSOINDEX
 C     
 C     GLOBAL VARIABLES
 C     
@@ -199,19 +233,19 @@ C
      $   ,KIND=16)
         IF(CF_D(COLOR_ID,I).LT.0) CFTOT=CFTOT*IMAG1
         CONST(MG5_1_ML5SOINDEX_FOR_BORN_AMP(I))=CONST(MG5_1_ML5SOINDEX_
-     $   FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
+     $FOR_BORN_AMP(I))+CFTOT*CONJG(AMP(I))
       ENDDO
 
       DO I=1,NAMPSO
         IF (CONST(I).NE.CMPLX_ZERO) THEN
           CONST(I)=(CONST(I)*MULTIPLIER)/SYMFACT
-          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.
-     $     -1) THEN
+          IF (.NOT.CHECKPHASE.AND.HELDOUBLECHECKED.AND.HELPICKED.EQ.-1)
+     $      THEN
             CONST(I)=CONST(I)*GOODHEL(HELCONFIG)
           ENDIF
           CALL MP_MG5_1_MERGE_WL(LOOP_WF,RANK,LCUT_SIZE,CONST(I)
      $     ,LOOPCOEFS(0,MG5_1_ML5SQSOINDEX(I,MG5_1_ML5SOINDEX_FOR_LOOP_
-     $     AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
+     $AMP(COLOR_ID)),LOOP_GROUP_NUMBER))
         ENDIF
       ENDDO
 
@@ -222,17 +256,12 @@ C
 C     Just a handy subroutine to modify the coefficients for the
 C     tranformation q_loop -> -q_loop
 C     It is only used for the NINJA interface
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       IMPLICIT NONE
 
-      INCLUDE 'loop_max_coefs.inc'
       INTEGER I, NCOEFS
 
       COMPLEX*32 POLYNOMIAL(0:NCOEFS-1)
-
-      INTEGER COEFTORANK_MAP(0:LOOPMAXCOEFS-1)
-      DATA (COEFTORANK_MAP(I),I=0,0)/1*0/
-      DATA (COEFTORANK_MAP(I),I=1,4)/4*1/
-      DATA (COEFTORANK_MAP(I),I=5,14)/10*2/
 
       DO I=0,NCOEFS-1
         IF (MOD(COEFTORANK_MAP(I),2).EQ.1) THEN
@@ -242,10 +271,12 @@ C     It is only used for the NINJA interface
 
       END
 
+C     Now the routines to update the wavefunctions
+
+
 
       SUBROUTINE MG5_1_EVAL_POLY(C,R,Q,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       COMPLEX*16 C(0:LOOPMAXCOEFS-1)
       INTEGER R
       COMPLEX*16 Q(0:3)
@@ -257,14 +288,13 @@ C     It is only used for the NINJA interface
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 
       SUBROUTINE MP_MG5_1_EVAL_POLY(C,R,Q,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       COMPLEX*32 C(0:LOOPMAXCOEFS-1)
       INTEGER R
       COMPLEX*32 Q(0:3)
@@ -276,20 +306,16 @@ C     It is only used for the NINJA interface
       ENDIF
       IF (R.GE.2) THEN
         OUT=OUT+C(5)*Q(0)*Q(0)+C(6)*Q(0)*Q(1)+C(7)*Q(1)*Q(1)+C(8)*Q(0)
-     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)
-     $   +C(12)*Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
+     $   *Q(2)+C(9)*Q(1)*Q(2)+C(10)*Q(2)*Q(2)+C(11)*Q(0)*Q(3)+C(12)
+     $   *Q(1)*Q(3)+C(13)*Q(2)*Q(3)+C(14)*Q(3)*Q(3)
       ENDIF
       END
 
       SUBROUTINE MG5_1_ADD_COEFS(A,RA,B,RB)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I
       COMPLEX*16 A(0:LOOPMAXCOEFS-1),B(0:LOOPMAXCOEFS-1)
       INTEGER RA,RB
-
-      INTEGER NCOEF_R(0:2)
-      DATA NCOEF_R/1,5,15/
 
       DO I=0,NCOEF_R(RB)-1
         A(I)=A(I)+B(I)
@@ -297,14 +323,10 @@ C     It is only used for the NINJA interface
       END
 
       SUBROUTINE MP_MG5_1_ADD_COEFS(A,RA,B,RB)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I
       COMPLEX*32 A(0:LOOPMAXCOEFS-1),B(0:LOOPMAXCOEFS-1)
       INTEGER RA,RB
-
-      INTEGER NCOEF_R(0:2)
-      DATA NCOEF_R/1,5,15/
 
       DO I=0,NCOEF_R(RB)-1
         A(I)=A(I)+B(I)
@@ -312,16 +334,12 @@ C     It is only used for the NINJA interface
       END
 
       SUBROUTINE MG5_1_MERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J
       COMPLEX*16 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       INTEGER R,LCUT_SIZE
       COMPLEX*16 CONST
       COMPLEX*16 OUT(0:LOOPMAXCOEFS-1)
-
-      INTEGER NCOEF_R(0:2)
-      DATA NCOEF_R/1,5,15/
 
       DO I=1,LCUT_SIZE
         DO J=0,NCOEF_R(R)-1
@@ -331,16 +349,12 @@ C     It is only used for the NINJA interface
       END
 
       SUBROUTINE MP_MG5_1_MERGE_WL(WL,R,LCUT_SIZE,CONST,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J
       COMPLEX*32 WL(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       INTEGER R,LCUT_SIZE
       COMPLEX*32 CONST
       COMPLEX*32 OUT(0:LOOPMAXCOEFS-1)
-
-      INTEGER NCOEF_R(0:2)
-      DATA NCOEF_R/1,5,15/
 
       DO I=1,LCUT_SIZE
         DO J=0,NCOEF_R(R)-1
@@ -351,8 +365,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MG5_1_UPDATE_WL_0_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -377,8 +390,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MP_MG5_1_UPDATE_WL_0_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -403,8 +415,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MG5_1_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -439,8 +450,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MP_MG5_1_UPDATE_WL_2_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -475,8 +485,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MG5_1_UPDATE_WL_1_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -501,8 +510,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MP_MG5_1_UPDATE_WL_1_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -527,8 +535,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MG5_1_UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -549,8 +556,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MP_MG5_1_UPDATE_WL_0_0(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -571,8 +577,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MG5_1_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*16 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*16 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)
@@ -607,8 +612,7 @@ C     It is only used for the NINJA interface
 
       SUBROUTINE MP_MG5_1_UPDATE_WL_1_1(A,LCUT_SIZE,B,IN_SIZE,OUT_SIZE
      $ ,OUT)
-      INCLUDE 'coef_specs.inc'
-      INCLUDE 'loop_max_coefs.inc'
+      USE MG5_1_POLYNOMIAL_CONSTANTS
       INTEGER I,J,K
       COMPLEX*32 A(MAXLWFSIZE,0:LOOPMAXCOEFS-1,MAXLWFSIZE)
       COMPLEX*32 B(MAXLWFSIZE,0:VERTEXMAXCOEFS-1,MAXLWFSIZE)

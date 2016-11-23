@@ -24,7 +24,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       CALL COUP1()
 C     
-C     couplings needed to be evaluated points by points
+couplings needed to be evaluated points by points
 C     
       CALL COUP2()
       CALL MP_COUP2()
@@ -48,7 +48,7 @@ C
 
 
 C     
-C     couplings needed to be evaluated points by points
+couplings needed to be evaluated points by points
 C     
       CALL COUP2()
 
@@ -65,7 +65,7 @@ C
       INCLUDE 'input.inc'
       INCLUDE 'coupl.inc'
 
-      MU_R = MU_R2
+      IF (MU_R2.GT.0D0) MU_R = MU_R2
       G = SQRT(4.0D0*PI*AS2)
       AS = AS2
 
@@ -94,7 +94,7 @@ C
 
 
 C     
-C     couplings needed to be evaluated points by points
+couplings needed to be evaluated points by points
 C     
       CALL MP_COUP2()
 

@@ -157,9 +157,9 @@ c
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       double precision taumin(fks_configs),taumin_s(fks_configs)
-     &     ,taumin_j(fks_configs),stot
+     &     ,taumin_j(fks_configs),stot,xk(-nexternal:0)
       save  taumin,taumin_s,taumin_j,stot
-      integer i,j,k,d1,d2,iFKS
+      integer i,j,k,d1,d2,iFKS,nt
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
       double precision xw(-nexternal:nexternal),xw1,xw2,xwi
       integer tsign,j_fks
@@ -183,7 +183,7 @@ c BW stuff
      &     cBW_width(-1:1,-nexternal:-1)
       common/c_conflictingBW/cBW_mass,cBW_width,cBW_level_max,cBW
      $     ,cBW_level
-      double precision s_mass(-nexternal:-1)
+      double precision s_mass(-nexternal:nexternal)
      $     ,s_mass_FKS(fks_configs,-nexternal:nexternal)
       save s_mass_FKS
       common/to_phase_space_s_channel/s_mass
@@ -361,9 +361,10 @@ c
 c Also find the minimum lower bound if all internal s-channel particles
 c were on-shell
             tsign=-1
+            nt=0
             do i=-1,-(nexternal-3),-1 ! All propagators
                if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) tsign=1
-               if (tsign.eq.-1) then ! Only s-channels
+               if (tsign.eq.-1) then ! s-channels
                   d1=itree(1,i)
                   d2=itree(2,i)
 c If daughter is a jet, we should treat the ptj as a mass. Except if
@@ -390,11 +391,23 @@ c Add the new mass to the bound. To avoid double counting, we should
 c subtract the daughters, because they are already included above or in
 c the previous iteration of the loop
                   taumin_s(iFKS)=taumin_s(iFKS)+xm(i)-xm1-xm2
-               else
-                  xm(i)=0d0
+               else             ! t-channels
+                  if (i.eq.-(nexternal-3)) then
+                     xm(i)=0d0
+                     cycle
+                  endif
+                  nt=nt+1
+                  d1=itree(2,i) ! only use 2nd daughter (which is the outgoing one)
+                  xm1=xm(d1)
+                  if (nt.gt.1) xm1=max(xm1,xk(nt-1))
+                  xk(nt)=xm1
+                  j=i-1         ! this is the closest to p2
+                  d2=itree(2,j)
+                  xm2=xm(d2)
+                  xm(i)=min(xm1,xm2)
                endif
             enddo
-
+      
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the "minimal" s-channel invariant masses
             do i=nincoming+1,nexternal-1
@@ -404,7 +417,6 @@ c Determine the "minimal" s-channel invariant masses
                if ( itree(1,i) .eq. 1 .or. itree(1,i) .eq. 2 ) exit ! only s-channels
                s_mass_FKS(iFKS,i)=xm(i)**2
             enddo
-
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Determine the conflicting Breit-Wigner's. Note that xm(i) contains the
 c mass of the BW
@@ -443,7 +455,7 @@ c     Conflicting Breit-Wigner
                      cBW_FKS_level_max(iFKS)=max(cBW_FKS_level_max(iFKS)
      $                    ,cBW_FKS_level(iFKS,i))
 c     Set here the mass (and width) of the alternative mass; it's the
-c     sum of daughter masses. (3rd argument is '1', because this
+c     sum of daughter masses. (2nd argument is '1', because this
 c     alternative mass is LARGER than the resonance mass).
                      cBW_FKS_mass(iFKS,1,i)=xm(i)
                      cBW_FKS_width(iFKS,1,i)=xw(i)
@@ -547,11 +559,68 @@ c
             cBW_mass(j,i)=cBW_FKS_mass(nFKSprocess,j,i)
             cBW_width(j,i)=cBW_FKS_width(nFKSprocess,j,i)
          enddo
+      enddo
+      do i=-nexternal,nexternal
          s_mass(i)=s_mass_FKS(nFKSprocess,i)
       enddo
       cBW_level_max=cBW_FKS_level_max(nFKSprocess)
-         
       return
       end
 
 
+      subroutine sChan_order(ns_channel,order)
+      implicit none
+      include 'nexternal.inc'
+      include 'maxparticles.inc'
+      include 'maxconfigs.inc'
+      include 'mint.inc'
+      double precision pmass(-nexternal:0,lmaxconfigs)
+      double precision pwidth(-nexternal:0,lmaxconfigs)
+      integer pow(-nexternal:0,lmaxconfigs)
+      integer itree(2,-max_branch:-1),iconfig
+      common /to_itree/itree,iconfig
+      logical new_point
+      common /c_new_point/new_point
+      double precision ran2,rnd
+      integer i,j,order(-nexternal:0),ipos,ns_channel,npos
+     $     ,pos(nexternal),ord(-nexternal:0)
+      logical done(-nexternal:nexternal)
+      external ran2
+      save ord
+      if (.not. new_point) then
+         do j=-1,-ns_channel,-1
+            order(j)=ord(j)
+         enddo
+         return
+      endif
+      do i=-ns_channel,0
+         done(i)=.false.
+      enddo
+      do i=1,nexternal
+         done(i)=.true.
+      enddo
+      do j=-1,-ns_channel,-1
+         npos=0
+         do i=-1,-ns_channel,-1
+            if((.not. done(i)) .and.
+     &           done(itree(1,i))  .and. done(itree(2,i))) then
+               npos=npos+1
+               pos(npos)=i
+            endif
+         enddo
+         if (npos.gt.1) then
+            rnd=ran2()
+            ipos=min(int(rnd*npos)+1,npos)
+            ord(j)=pos(ipos)
+            done(pos(ipos))=.true.
+         elseif (npos.eq.1) then
+            ord(j)=pos(npos)
+            done(pos(npos))=.true.
+         else
+            write (*,*) 'ERROR in sChan_order',npos
+         endif
+         order(j)=ord(j)
+      enddo
+      new_point=.false.
+      return
+      end

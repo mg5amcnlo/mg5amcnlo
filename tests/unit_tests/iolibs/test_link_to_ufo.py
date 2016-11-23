@@ -132,7 +132,7 @@ class TestUFOExpressionParsers(unittest.TestCase):
         expr = '(ee**2*IMAG/(2.*sw**2) * (cmath.sin(cmath.sqrt(2)*ee)**2/3.))'
         converted = ufo_to_pythia8.parse(expr)
         self.assertEqual(converted, 
-        '(pow(ee,2.)*IMAG/(2.*pow(sw,2.))*(pow(sin(sqrt(2.)*ee),2.)/3.))')
+        '(((ee)*(ee))*IMAG/(2.*((sw)*(sw)))*(((sin(sqrt(2.)*ee))*(sin(sqrt(2.)*ee)))/3.))')
     
     def test_convert_number_to_cpp(self):
         """ test it can convert number in C++ string"""

@@ -187,7 +187,6 @@ class ML5Test(unittest.TestCase):
         MLCard = banner_mod.MadLoopParam(os.path.join(_mg5_path,'Template','loop_material',
                                                  'StandAlone','Cards','MadLoopParams.dat'))
         MLredstr=MLCard['MLReductionLib'][0:1]
-
         if MLredstr=="1":
             # Create a MERunner object for MadLoop 5 default
             ML5_default = loop_me_comparator.LoopMG5Runner()
@@ -198,7 +197,7 @@ class ML5Test(unittest.TestCase):
         
         # Remove the default ML5 comparator if using TIR
         to_compare_with = copy.copy(compare_with)
-        if MLredstr=="1":
+        if MLredstr != '1':
             try:
                 to_compare_with.pop(to_compare_with.index('ML5_def'))
             except ValueError:

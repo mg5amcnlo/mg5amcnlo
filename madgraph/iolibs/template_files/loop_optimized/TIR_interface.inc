@@ -31,7 +31,8 @@ C
       INTEGER I_SQSO,I_LOOPGROUP,I_LIB
       INTEGER NLOOPLINE, RANK
       %(real_dp_format)s PL(0:3,NLOOPLINE)
-      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1)
+      %(real_dp_format)s PCT(0:3,0:NLOOPLINE-1),ABSPCT(0:3)
+      %(real_dp_format)s REF_P
       %(real_dp_format)s PDEN(0:3,NLOOPLINE-1)
       %(mass_dp_format)s M2L(NLOOPLINE)
       %(complex_dp_format)s M2LCT(0:NLOOPLINE-1)	  
@@ -42,14 +43,14 @@ C LOCAL VARIABLES
 C
 	  INTEGER I, J, K
 	  INTEGER NLOOPCOEFS
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT,COLLIERINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
 
 c This variable will be used to detect changes in the TIR library used so as to force the reset of the TIR filter.
 	  INTEGER LAST_LIB_USED
 	  DATA LAST_LIB_USED/-1/
 
-       %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3)
+       %(complex_dp_format)s TIRCOEFS(0:LOOPMAXCOEFS-1,3),TIRCOEFSERRORS(0:LOOPMAXCOEFS-1,3)
        %(complex_dp_format)s PJCOEFS(0:LOOPMAXCOEFS-1,3)
 ## if(TIRCaching){
        integer TIR_CACHE_INDEX 
@@ -71,9 +72,13 @@ C
 	  %(real_dp_format)s LSCALE
       common/%(proc_prefix)sCT/LSCALE,CTMODE
 
-C     The variables below are just for monitoring purposes. 
+## if(not AmplitudeReduction) {
       INTEGER ID,SQSOINDEX,R
-      COMMON/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+	  common/%(proc_prefix)sLOOP/ID,SQSOINDEX,R
+## }else{
+      INTEGER ID,R
+	  common/%(proc_prefix)sLOOP/ID,R
+## }
 
 c The argument ILIB is the TIR library to be used for that specific library.
       INTEGER LIBINDEX
@@ -137,6 +142,7 @@ C  CONVERT THE MASSES TO BE COMPLEX
 
 C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
+        ABSPCT(I) = 0.D0
         do J=0,(NLOOPLINE-1)
           PCT(I,J)=0.D0
         enddo
@@ -144,21 +150,27 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       do I=0,3
         do J=1,NLOOPLINE
           PCT(I,0)=PCT(I,0)+PL(I,J)
+          ABSPCT(I)=ABSPCT(I)+ABS(PL(I,J))
         enddo
       enddo
-      if (checkPConservation) then
-        if (PCT(0,0).gt.1.d-6) then
-          write(*,*) 'energy is not conserved ',PCT(0,0)
-          stop 'energy is not conserved'
-        elseif (PCT(1,0).gt.1.d-6) then
-         write(*,*) 'px is not conserved ',PCT(1,0)
-         stop 'px is not conserved'
-        elseif (PCT(2,0).gt.1.d-6) then
-         write(*,*) 'py is not conserved ',PCT(2,0)
-         stop 'py is not conserved'
-        elseif (PCT(3,0).gt.1.d-6) then
-         write(*,*) 'pz is not conserved ',PCT(3,0)
-         stop 'pz is not conserved'
+      ref_p = max(ABSPCT(0), ABSPCT(1),ABSPCT(2),ABSPCT(3))
+       do I=0,3
+           ABSPCT(I) = MAX(ref_p*1e-6, ABSPCT(I))
+       enddo
+
+      if (checkPConservation.and.ref_p.gt.1d-8) then
+        if ((PCT(0,0)/ABSPCT(0)).gt.1.d-6) then
+          write(*,*) 'energy is not conserved (flag: TIR)',PCT(0,0)
+          stop 'energy is not conserved (flag: TIR)'
+        elseif ((PCT(1,0)/ABSPCT(1)).gt.1.d-6) then
+         write(*,*) 'px is not conserved (flag: TIR)',PCT(1,0)
+         stop 'px is not conserved (flag: TIR)'
+        elseif ((PCT(2,0)/ABSPCT(2)).gt.1.d-6) then
+         write(*,*) 'py is not conserved (flag: TIR)',PCT(2,0)
+         stop 'py is not conserved (flag: TIR)'
+        elseif ((PCT(3,0)/ABSPCT(3)).gt.1.d-6) then
+         write(*,*) 'pz is not conserved (flag: TIR)',PCT(3,0)
+         stop 'pz is not conserved (flag: TIR)'
         endif
       endif
       do I=0,3
@@ -170,9 +182,9 @@ C  CONVERT THE MOMENTA FLOWING IN THE LOOP LINES TO CT CONVENTIONS
       enddo
 
       do I=0,3
-      	 do J=1,(NLOOPLINE-1)
-	    PDEN(I,J)=PCT(I,J)
-	 enddo
+        do J=1,(NLOOPLINE-1)
+	      PDEN(I,J)=PCT(I,J)
+	    enddo
       enddo
 C NUMBER OF INDEPEDENT LOOPCOEFS FOR RANK=RANK
       NLOOPCOEFS=0
@@ -210,6 +222,23 @@ C     CONVERT TO MADLOOP CONVENTION
       CALL %(proc_prefix)sCONVERT_IREGI_COEFFS(RANK,PJCOEFS,TIRCOEFS)  
 ## } else {
       WRITE(*,*) 'ERROR:: IREGI is not interfaced.'
+      STOP
+## }
+      CASE(7)
+C     COLLIER
+## if(collier_available){
+      CALL %(proc_prefix)sCOLLIERLOOP(CTMODE,NLOOPLINE,RANK,PL,PDEN,M2L,TIRCOEFS,TIRCOEFSERRORS)
+C     Shift the TIR coefficients by the corresponding COLLIER error if in CTMODE 2.
+	  if (COLLIERUseInternalStabilityTest.and.CTMODE.eq.2) THEN
+C       We add here the numerical inaccuracies linearly to be conservative 
+	    DO I=1,3
+      	  DO J=0,NLOOPCOEFS-1
+		    TIRCOEFS(J,I)=TIRCOEFS(J,I)+TIRCOEFSERRORS(J,I)
+		  ENDDO
+		ENDDO
+	  ENDIF
+## } else {
+      WRITE(*,*) 'ERROR:: COLLIER is not interfaced.'
       STOP
 ## }
       END SELECT
@@ -254,6 +283,8 @@ C     IF(MLReductionLib(I_LIB).EQ.2) THEN
 C       WRITE(*,*) 'PJFry: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ELSEIF(MLReductionLib(I_LIB).EQ.3) THEN
 C       WRITE(*,*) 'Iregi: Loop ID',ID,' =',RES(1),RES(2),RES(3)
+C     ELSEIF(MLReductionLib(I_LIB).EQ.7) THEN
+C       WRITE(*,*) 'COLLIER: Loop ID',ID,' =',RES(1),RES(2),RES(3)
 C     ENDIF
       END
 
@@ -377,8 +408,8 @@ C
 C GLOBAL VARIABLES 
 C
 	  include 'MadLoopParams.inc'
-	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT
-	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT
+	  LOGICAL CTINIT, TIRINIT, GOLEMINIT, SAMURAIINIT, NINJAINIT,COLLIERINIT
+	  COMMON/REDUCTIONCODEINIT/CTINIT,TIRINIT,GOLEMINIT,SAMURAIINIT,NINJAINIT,COLLIERINIT
 	  
 C ----------
 C BEGIN CODE
@@ -420,7 +451,7 @@ C
 C CONSTANTS
 C
             INTEGER NLOOPLIB
-			PARAMETER (NLOOPLIB=4)
+			PARAMETER (NLOOPLIB=7)
 			INTEGER QP_NLOOPLIB
 ## if(ninja_supports_quad_prec) {
       		PARAMETER (QP_NLOOPLIB=2)
@@ -471,8 +502,8 @@ C  QP EVALUATION, ONLY CUTTOOLS
 		      ENDIF
 		   ENDDO
 		   IF(J_LIB.EQ.0)THEN
-                      SELECT_LIBINDEX=SELECT_LIBINDEX+1		
-                      IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLReductionLib(SELECT_LIBINDEX).EQ.0)SELECT_LIBINDEX=1
+              SELECT_LIBINDEX=SELECT_LIBINDEX+1		
+              IF(SELECT_LIBINDEX.GT.NLOOPLIB.OR.MLReductionLib(SELECT_LIBINDEX).EQ.0)SELECT_LIBINDEX=1
 		   ENDIF
 		ENDDO
 		I=J_LIB

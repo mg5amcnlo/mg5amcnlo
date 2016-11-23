@@ -618,6 +618,8 @@ class MultiCore(Cluster):
                     if isinstance(exe,str):
                         if os.path.exists(exe) and not exe.startswith('/'):
                             exe = './' + exe
+                        if isinstance(opt['stdout'],str):
+                            opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
                         proc = misc.Popen([exe] + arg,  **opt)
@@ -673,7 +675,6 @@ class MultiCore(Cluster):
         
         tag = (prog, tuple(argument), cwd, nb_submit)
         if isinstance(prog, str):
-            
     
             opt = {'cwd': cwd, 
                    'stdout':stdout,
@@ -805,6 +806,7 @@ class MultiCore(Cluster):
                 elif isinstance(self.fail_msg, str):
                     raise Exception, self.fail_msg
                 else:
+                    misc.sprint(self.fail_msg)
                     raise self.fail_msg[0], self.fail_msg[1], self.fail_msg[2]
             # reset variable for next submission
             try:
@@ -2126,3 +2128,5 @@ from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster,
              'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster, 
              'htcaas':HTCaaSCluster, 'htcaas2':HTCaaS2Cluster}
 
+onecore=MultiCore(1) # create a thread to run simple bash job without having to
+                     #fork the main process
