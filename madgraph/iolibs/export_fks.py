@@ -783,6 +783,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         
         self.proc_characteristic['grouped_matrix'] = False
+        self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
         self.create_proc_charac()
 
         self.create_run_card(matrix_elements.get_processes(), history)

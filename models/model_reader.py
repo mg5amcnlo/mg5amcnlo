@@ -94,7 +94,6 @@ class ModelReader(loop_base_objects.LoopModel):
             key = [k for k in param_card.keys() if not k.startswith('qnumbers ')
                                             and not k.startswith('decay_table')
                                             and 'info' not in k]
-            param_key = [k for k in parameter_dict.keys() if 'info' not in k]
             
             if set(key) != set(parameter_dict.keys()):
                 # the two card are different. check if this critical
