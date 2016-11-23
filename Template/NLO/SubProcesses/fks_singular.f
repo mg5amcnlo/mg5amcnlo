@@ -7098,7 +7098,7 @@ c j_fks needs to be final state to have non-trivial grandmother
 c determine if grandmother is an s-channel particle. If so, set igranny
 c and iaunt.
          imother=min(i_fks,j_fks)
-         do i=-1,-(nexternal-4),-1
+         do i=-1,-(nexternal-(2+nincoming)),-1
             if (iforest(1,i,iconfig).eq.1 .or.
      &              iforest(1,i,iconfig).eq.2) then
 c no more s-channels, so exit the do-loop and set igranny=0
@@ -7122,7 +7122,7 @@ c making sure that it's massive and has a non-zero width. In the special
 c case that the grandmother is the s-hat propagator (which means that
 c the process has no t-channels), set granny_is_res to false.
          if (igranny_fks(nFKSprocess).ne.0 .and.
-     $        igranny_fks(nFKSprocess).ne.-(nexternal-4)) then
+     $        igranny_fks(nFKSprocess).ne.-(nexternal-(2+nincoming))) then
             if (pmass(igranny_fks(nFKSprocess),iconfig).ne.0d0 .and.
      $           pwidth(igranny_fks(nFKSprocess),iconfig).gt.0d0) then
                granny_is_res_fks(nFKSprocess)=.true.

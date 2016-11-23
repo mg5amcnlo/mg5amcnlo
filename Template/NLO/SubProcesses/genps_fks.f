@@ -947,8 +947,6 @@ c
             enddo
          enddo
       endif
-         
-
 c
 c
 c Here we start with the FKS Stuff
@@ -2623,7 +2621,7 @@ c
       do i=nexternal-1,-ns_channel,-1
          if (i.gt.0) then
             min_m(i)=m(i)
-            totalmass=totalmass+m(i)
+            if (i.gt.nincoming) totalmass=totalmass+m(i)
          elseif (i.lt.0) then
 c     "Bare" integration ranges. 'max_m' will be updated below as soon
 c     as invariant mass of mother has been generated.
