@@ -1554,7 +1554,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             else:
                 raise self.InvalidCmd, 'Invalid run name. Please retry'
         elif self.options['nb_core'] != 1:
-            lhe = lhe_parser.EventFile(args)
+            lhe = lhe_parser.EventFile(args[0])
             nb_event = len(lhe)
             lhe.close()
 
@@ -1590,9 +1590,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             
             # Check that all pdfset are correctly installed
             if 'sys_pdf' in self.run_card:
-                sys_pdf = self.run_card['sys_pdf'].split('&&')
-                lhaid += [l.split()[0] for l in sys_pdf]
-
+                if '&&' in self.run_card['sys_pdf']:
+                    line = ' '.join(self.run_card['sys_pdf'])
+                    sys_pdf = line.split('&&')
+                    lhaid += [l.split()[0] for l in sys_pdf]
+                else:
+                    lhaid += [l for l in self.run_card['sys_pdf'].split() if not l.isdigit() or int(l) > 500]
+                    
         else:
             #check that all p
             pdf = [a[6:] for a in opts if a.startswith('--pdf=')]
@@ -4749,6 +4753,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     val = val.split('#')[0]
                 else:
                     val = args[start+1]
+                misc.sprint(args, val)
                 self.setR(args[start], val)
             self.run_card.write(self.paths['run'], self.paths['run_default'])
             
@@ -5280,6 +5285,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         def check_block(self, blockname):
             add_entry = 0
+            if blockname.lower() not in self.param_card_default:
+                logger.info('unknow block %s: block will be ignored', blockname)
+                return add_entry
             block = self.param_card_default[blockname]
             for key in block.keys():
                 if key not in input_in_block:
@@ -5291,6 +5299,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     add_entry += 1
             if add_entry:
                 text.append('\n')
+            if add_entry:
+                logger.info("Adding %s parameter(s) to block %s", add_entry, blockname)
             return add_entry
         
         # Add to the current param_card all the missing input at default value
@@ -5344,7 +5354,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 continue
 
             if block not in defined_blocks:
-                add_entry += len(self.param_card_default[block])
+                nb_entry = len(self.param_card_default[block])
+                logger.info("Block %s was missing. Adding the %s associated parameter(s)", block,nb_entry)
+                add_entry += nb_entry
                 text.append(str(self.param_card_default[block])) 
             
         # special check for the decay

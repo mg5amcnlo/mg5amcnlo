@@ -5485,8 +5485,12 @@ tar -czf split_$1.tar.gz split_$1
     
         # Check that all pdfset are correctly installed
         lhaid = [self.run_card.get_lhapdf_id()]
-        sys_pdf = self.run_card['sys_pdf'].split('&&')
-        lhaid += [l.split()[0] for l in sys_pdf]
+        if '&&' in self.run_card['sys_pdf']:
+            line = ' '.join(self.run_card['sys_pdf'])
+            sys_pdf = line.split('&&')
+            lhaid += [l.split()[0] for l in sys_pdf]
+        else:
+            lhaid += [l for l in self.run_card['sys_pdf'].split() if not l.isdigit() or int(l) > 500]
         try:
             pdfsets_dir = self.get_lhapdf_pdfsetsdir()
         except Exception, error:
@@ -5497,17 +5501,34 @@ tar -czf split_$1.tar.gz split_$1
         # Copy all the relevant PDF sets
         [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
         
-        
+        to_syscalc={'sys_scalefact': self.run_card['sys_scalefact'],
+                    'sys_alpsfact': self.run_card['sys_alpsfact'],
+                    'sys_matchscale': self.run_card['sys_matchscale'],
+                    'sys_scalecorrelation': self.run_card['sys_scalecorrelation'],
+                    'sys_pdf': self.run_card['sys_pdf']}
         
         tag = self.run_card['run_tag']  
         card = pjoin(self.me_dir, 'bin','internal', 'syscalc_card.dat')
         template = open(pjoin(self.me_dir, 'bin','internal', 'syscalc_template.dat')).read()
-        self.run_card['sys_pdf'] = self.run_card['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
         
-        if self.run_card['sys_pdf'].lower() in ['', 'f', 'false', 'none', '.false.']:
-            self.run_card['sys_pdf'] = ''
-        if self.run_card['sys_alpsfact'].lower() in ['', 'f', 'false', 'none','.false.']:
-            self.run_card['sys_alpsfact'] = ''
+        if '&&' in to_syscalc['sys_pdf']:
+            to_syscalc['sys_pdf'] = to_syscalc['sys_pdf'].split('#',1)[0].replace('&&',' \n ')
+        else:
+            data = to_syscalc['sys_pdf'].split()
+            new = []
+            for d in data:
+                if not d.isdigit():
+                    new.append(d)
+                elif int(d) > 500:
+                    new.append(d)
+                else:
+                    new[-1] += ' %s' % d
+            to_syscalc['sys_pdf'] = '\n'.join(new)  
+        
+        if to_syscalc['sys_pdf'].lower() in ['', 'f', 'false', 'none', '.false.']:
+            to_syscalc['sys_pdf'] = ''
+        if to_syscalc['sys_alpsfact'].lower() in ['', 'f', 'false', 'none','.false.']:
+            to_syscalc['sys_alpsfact'] = ''
 
 
 
@@ -6477,7 +6498,7 @@ class MadLoopInitializer(object):
             interface.do_treatcards('all --no_MadLoopInit')
         
         # First make sure that IREGI and CUTTOOLS are compiled if needed
-        if os.path.exists(pjoin(proc_dir,'Source','CUTTOOLS')):
+        if os.path.exists(pjoin(proc_dir,'Source','CutTools')):
             misc.compile(arg=['libcuttools'],cwd=pjoin(proc_dir,'Source'))
         if os.path.exists(pjoin(proc_dir,'Source','IREGI')):
             misc.compile(arg=['libiregi'],cwd=pjoin(proc_dir,'Source'))

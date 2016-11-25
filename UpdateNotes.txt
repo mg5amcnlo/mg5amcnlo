@@ -20,7 +20,7 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
        VH: Fix various bug in the HepMc handling related to PY8 (LO generation)
        OM: allow install maddm functionality (install ./bin/maddm executable)
 
-2.5.0 (28/08/16)
+2.5.0 (08/09/16)
      FUNCTIONALITY
        VH+OM: Adding an official interface to Pythia8 (parton shower) at Leading-Order
 	        More information at https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOPY8Merging	   

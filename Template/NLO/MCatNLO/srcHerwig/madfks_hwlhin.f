@@ -74,22 +74,27 @@ c Avoids rounding problems for zero-mass particles
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(jwgtinfo.eq.9)then
-          if (nwgt.gt.1) then
+        if(abs(jwgtinfo).eq.9.and.nwgt.gt.1)then
+           do while(index(string,'</event>').eq.0.and.
+     &           index(string,'<rwgt>').eq.0)
              read(iunit,'(a)')string ! <rwgt>
+          enddo
+          if(index(string,'</event>').eq.0)then
              wgtref=XWGTUP/MQQ
              do iww=2,nwgt      ! start at 2, because 'central value' is not part of the extra weights
                 call read_rwgt_line_wgt(iunit,ww(iww))
              enddo
              read(iunit,'(a)')string ! </rwgt>
+             write(*,*) string
           endif
+           do while(index(string,'</event>').eq.0)
+             read(iunit,'(a)')string ! <rwgt>
+          enddo
         else
           do while(index(string,'</event>').eq.0)
              read(iunit,'(a)')string
           enddo
-          backspace(iunit)
         endif
-        read(iunit,'(a)')string
       else
         string=buff(1:len_trim(buff))
         buff_tlh=' '

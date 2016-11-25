@@ -104,6 +104,9 @@ C     Make sure to start by first switching off all cache
         call SwitchOffCacheSystem_cll()
       ENDIF
 
+C     Make sure no COLLIER error can interrupt the code
+	  call SwitchOffErrStop_cll()
+
 C     Specify below your other custom COLLIER parameter settings 
 C     [user_specific_COLLIER_settings]
 	  
