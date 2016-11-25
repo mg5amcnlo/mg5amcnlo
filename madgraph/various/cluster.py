@@ -832,27 +832,6 @@ class MultiCore(Cluster):
             # else return orignal error
             raise 
 
-class MPIscheduler(Cluster):
-    
-    def __init__(self, *args, **opts):
-        
-        self.all_jobs_submitted=[]
-        super(MPIscheduler, self).__init__(*args, **opts)
-    
-    def submit(self, prog, argument=[], cwd=None, stdout=None, stderr=None, log=None,
-               required_output=[], nb_submit=0):
-        
-        self.all_jobs_submitted.append((prog, argument, cwd, stdout, stderr, log, required_output, nb_submit))
-        return
-    
-    def wait(self, me_dir, fct, minimal_job=0, update_first=None):
-            
-        print self.all_jobs_submitted
-        raise Exception    
-        
-        
-
-
 class CondorCluster(Cluster):
     """Basic class for dealing with cluster submission"""
     
@@ -2147,8 +2126,7 @@ class HTCaaS2Cluster(Cluster):
 
 from_name = {'condor':CondorCluster, 'pbs': PBSCluster, 'sge': SGECluster, 
              'lsf': LSFCluster, 'ge':GECluster, 'slurm': SLURMCluster, 
-             'htcaas':HTCaaSCluster, 'htcaas2':HTCaaS2Cluster,
-             'mpi': MPIscheduler}
+             'htcaas':HTCaaSCluster, 'htcaas2':HTCaaS2Cluster}
 
 onecore=MultiCore(1) # create a thread to run simple bash job without having to
                      #fork the main process
