@@ -1534,7 +1534,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
           
         # always pass to a path + get the event size
         result_file= sys.stdout
-        if not os.path.sep in args[0]:
+        if not os.path.isfile(args[0]) and not os.path.sep in args[0]:
             path = [pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe.gz'),
                     pjoin(self.me_dir, 'Events', args[0], 'unweighted_events.lhe'),
                     pjoin(self.me_dir, 'Events', args[0], 'events.lhe.gz'),

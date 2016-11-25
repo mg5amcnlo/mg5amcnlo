@@ -1,5 +1,7 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.5.2(/ /)
+      OM: improve systematics (thanks to Philipp Pigard)
 
 2.5.1 (04/11/16)
        PT+MZ: New interface for Herwig7.

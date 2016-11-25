@@ -366,7 +366,15 @@ class Systematics(object):
         for lhapdfid,values in pdfs.items():
             if lhapdfid == self.orig_pdf.lhapdfID:
                 continue
+            if len(values) == 1 :
+                continue
             pdfset = self.pdfsets[lhapdfid]
+
+            if pdfset.errorType == 'unknown' :
+                # Don't know how to determine uncertainty for 'unknown' errorType :
+                # File "lhapdf.pyx", line 329, in lhapdf.PDFSet.uncertainty (lhapdf.cpp:6621)
+                # RuntimeError: "ErrorType: unknown" not supported by LHAPDF::PDFSet::uncertainty.
+                continue
             pdferr =  pdfset.uncertainty(values)
             resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
 
@@ -794,7 +802,18 @@ def call_systematics(args, result=sys.stdout, running=True,
     return obj
 
 if __name__ == "__main__":
-    call_systematics(sys.argv[1:])
+    sys_args = sys.argv[1:]
+    for i, arg in enumerate(sys_args) :
+        if arg.startswith('--lhapdf-config=') :
+            lhapdf = misc.import_python_lhapdf(arg[len('--lhapdf-config='):])
+            del sys_args[i]
+            break
+
+    if 'lhapdf' not in globals() or not lhapdf:
+            sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf-config=')
+    call_systematics(sys_args)
+    
+
    
    
         
