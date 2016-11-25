@@ -595,7 +595,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                        'cluster_type': 'condor',
                        'cluster_status_update': (600, 30),
                        'cluster_nb_retry':1,
-                       'cluster_local_path': "/cvmfs/cp3.uclouvain.be/madgraph/",
+                       'cluster_local_path': None,
                        'cluster_retry_wait':300}
 
     options_madgraph= {'stdout_level':None}
@@ -4753,7 +4753,6 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                     val = val.split('#')[0]
                 else:
                     val = args[start+1]
-                misc.sprint(args, val)
                 self.setR(args[start], val)
             self.run_card.write(self.paths['run'], self.paths['run_default'])
             
