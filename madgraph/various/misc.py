@@ -45,7 +45,6 @@ else:
     import madgraph.iolibs.files as files
     MADEVENT = False
 
-
     
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
