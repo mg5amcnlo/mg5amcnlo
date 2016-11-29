@@ -1,5 +1,5 @@
-FILES = Cards HTML SubProcesses bin lib Source Events index.html README README.lhapdf \
-           TemplateVersion.txt MGMEVersion.txt
+FILES = Cards HTML SubProcesses bin lib Source Events FixedOrderAnalysis MCatNLO \
+	   index.html README README.lhapdf TemplateVersion.txt MGMEVersion.txt
   
 amcatnlo.tar.gz: amcatnlo.tar
 	rm -f amcatnlo.tar.gz
