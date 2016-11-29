@@ -668,6 +668,7 @@ def collect_result(cmd, folder_names):
 
     run = cmd.results.current['run_name']
     all = Combine_results(run)
+
     
     for Pdir in open(pjoin(cmd.me_dir, 'SubProcesses','subproc.mg')):
         Pdir = Pdir.strip()
@@ -695,15 +696,20 @@ def collect_result(cmd, folder_names):
                         else:
                             dir = folder.replace('*', '_G' + name)
                         P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
+
         except IOError:
             continue
         P_comb.compute_values()
         all.append(P_comb)
     all.compute_values()
+
+
+
     return all
 
 
 def make_all_html_results(cmd, folder_names = []):
+
     """ folder_names has been added for the amcatnlo runs """
     run = cmd.results.current['run_name']
     if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
@@ -712,7 +718,6 @@ def make_all_html_results(cmd, folder_names = []):
     unit = cmd.results.unit
     P_text = ""      
     Presults = collect_result(cmd, folder_names=folder_names)
-            
     
     for P_comb in Presults:
         P_text += P_comb.get_html(run, unit, cmd.me_dir) 
@@ -720,15 +725,15 @@ def make_all_html_results(cmd, folder_names = []):
         if cmd.proc_characteristics['ninitial'] == 1:
             P_comb.write_results_dat(pjoin(cmd.me_dir, 'SubProcesses', P_comb.name,
                                            '%s_results.dat' % run))
-
     
     Presults.write_results_dat(pjoin(cmd.me_dir,'SubProcesses', 'results.dat'))   
     
     fsock = open(pjoin(cmd.me_dir, 'HTML', run, 'results.html'),'w')
     fsock.write(results_header)
     fsock.write('%s <dl>' % Presults.get_html(run, unit, cmd.me_dir))
-    fsock.write('%s </dl></body>' % P_text)         
-    
-    return Presults.xsec, Presults.xerru   
+    fsock.write('%s </dl></body>' % P_text)
+
+    return Presults.xsec, Presults.xerru
+
             
 
