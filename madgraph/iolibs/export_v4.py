@@ -636,9 +636,17 @@ param_card.inc: MODEL/MG5_param.dat\n\t../bin/madevent treatcards param\n'''
         else:
             model_line='''$(LIBDIR)libmodel.$(libext): MODEL param_card.inc\n\tcd MODEL; make    
 param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
-        text = open(path).read() % {'libraries': set_of_lib, 'model':model_line} 
-        writer.write(text)
         
+        replace_dict= {'libraries': set_of_lib, 
+                       'model':model_line,
+                       'additional_dsample': ''} 
+        
+        if writer:
+            text = open(path).read() % replace_dict
+            writer.write(text)
+        else:
+            return replace_dict
+         
         return True
 
     #===========================================================================

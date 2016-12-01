@@ -11,7 +11,7 @@ include make_opts
 # Source files
 
 PROCESS= hfill.o matrix.o myamp.o 
-DSAMPLE = dsample.o ranmar.o DiscreteSampler.o StringCast.o
+DSAMPLE = dsample.o ranmar.o DiscreteSampler.o StringCast.o %(additional_dsample)s
 HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
 GENERIC = $(alfas_functions).o transpole.o invarients.o hfill.o pawgraphs.o ran1.o \
           rw_events.o rw_routines.o kin_functions.o open_file.o basecode.o setrun.o \
