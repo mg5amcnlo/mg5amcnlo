@@ -512,9 +512,9 @@ c
       integer id, nf, nl
       if (abs(id).le.nf) then
           is_light_charged_fermion = .true.
-      elseif (abs(id).eq.11.and.nl.ge.1.or.
-     $         abs(id).eq.13.and.nl.ge.2.or.
-     $         abs(id).eq.15.and.nl.ge.3) then
+      elseif ((abs(id).eq.11.and.nl.ge.1).or.
+     $        (abs(id).eq.13.and.nl.ge.2).or.
+     $        (abs(id).eq.15.and.nl.ge.3)) then
           is_light_charged_fermion = .true.
       else
           is_light_charged_fermion = .false.
