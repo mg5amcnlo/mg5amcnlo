@@ -790,7 +790,7 @@ def call_systematics(args, result=sys.stdout, running=True,
                     elif int(d) > 500:
                         pdfs.append(d)
                     else:
-                        pdfs[-1] = '%s %s' % (new[-1], d)
+                        pdfs[-1] = '%s %s' % (pdfs[-1], d)
 
             opts['dyn'] = [-1,1,2,3,4]
             opts['pdf'] = []
