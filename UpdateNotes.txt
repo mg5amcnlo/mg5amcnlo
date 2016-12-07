@@ -1,7 +1,12 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
-2.5.2(/ /)
+2.5.2(05/07/16)
       OM: improve systematics (thanks to Philipp Pigard)
+      OM: change the default configuration parameter cluster_local_path to None
+      OM: change the syscalc syntax for the pdf to avoid using & since this is not xml compliant
+      OM: avoid to bias module to include trivial weight in gridpack mode
+      OM: Fix a bug making 2.5.1 not compatible with python2.6
+      OM: Improve "add missing" command if a full block is missing
 
 2.5.1 (04/11/16)
        PT+MZ: New interface for Herwig7.
