@@ -110,7 +110,7 @@ class gensym(object):
         self.combining_job_for_Pdir = lambda x: self.combining_job
         self.lastoffset = {}
     
-    def launch(self):
+    def launch(self, to_submit=True):
         """ """
         
         self.subproc = [l.strip() for l in open(pjoin(self.me_dir,'SubProcesses', 
@@ -172,7 +172,8 @@ class gensym(object):
                         job_list[Pdir].append(s)        
                 
             self.cmd.compile(['madevent'], cwd=Pdir)
-            self.submit_to_cluster(job_list)
+            if to_submit:
+                self.submit_to_cluster(job_list)
         return job_list, P_zero_result
             
             

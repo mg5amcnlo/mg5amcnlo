@@ -2893,7 +2893,7 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         
         jobs, P_zero_result = ajobcreator.launch()
-        
+        misc.sprint(jobs)
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
