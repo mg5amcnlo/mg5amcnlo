@@ -624,7 +624,10 @@ class Systematics(object):
         
         # MUR part
         if self.b1 == 0 == self.b2:
-            wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
+            if loinfo['n_qcd'] != 0:
+                wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
+            else:
+                wgt = 1.0
         else:
             wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
