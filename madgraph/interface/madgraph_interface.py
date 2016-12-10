@@ -2449,6 +2449,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
+        misc.sprint([text,line,begidx, endidx])
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -2864,6 +2865,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                              mgme_dir)
                 self._mgme_dir = MG4DIR
 
+        # check that make_opts exists
+        make_opts = pjoin(MG5DIR, 'Template','LO','Source','make_opts')
+        make_opts_source = pjoin(MG5DIR, 'Template','LO','Source','.make_opts')
+        if not os.path.exists(make_opts):
+            shutil.copy(make_opts_source, make_opts)
+        elif  os.path.getmtime(make_opts) <  os.path.getmtime(make_opts_source):
+            shutil.copy(make_opts_source, make_opts)
+            
         # Variables to store state information
         self._multiparticles = {}
         self.options = {}
@@ -6409,6 +6418,12 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             subprocess.call([os.path.join('tests','test_manager.py')],
                                                                   cwd=MG5DIR)            
             print 'new version installed, please relaunch mg5'
+            try:
+                os.remove(pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+                shutil.copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
+                            pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+            except:
+                pass
             sys.exit(0)
         elif answer == 'n':
             # prevent for a future check

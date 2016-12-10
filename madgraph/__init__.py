@@ -37,3 +37,14 @@ if ' ' in MG5DIR:
 MG4DIR = MG5DIR
 ReadWrite = os.access(MG5DIR, os.W_OK) # W_OK is for writing
 
+if ReadWrite:
+    # Temporary fix for problem with auto-update
+    try:
+        tmp_path = pjoin(MG5DIR, 'Template','LO','Source','make_opts')
+        #1480375724 is 29/11/16
+        if os.path.exists(tmp_path) and os.path.getmtime(tmp_path) < 1480375724:
+            os.remove(tmp_path)
+            shutil.copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
+                    pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+    except Exception,error:
+        pass

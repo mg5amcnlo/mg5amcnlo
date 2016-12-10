@@ -54,8 +54,8 @@ $(LIBDIR)libbias.$(libext): BIAS/dummy
 
 $(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o 
 	$(FC) $(LDFLAGS) -o $@ $^
-$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc
-			 $(FC) $(LDFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf) $(LDFLAGS)
+$(BINDIR)combine_events: $(COMBINE) $(LIBDIR)libmodel.$(libext) $(LIBDIR)libpdf.$(libext) run_card.inc $(LIBDIR)libbias.$(libext)
+			 $(FC) $(LDFLAGS) -o $@ $(COMBINE) -L$(LIBDIR) -lmodel -lpdf $(llhapdf) $(LDFLAGS) -lbias
 $(BINDIR)gensudgrid: $(GENSUDGRID) $(LIBDIR)libpdf.$(libext) $(LIBDIR)libcernlib.$(libext)
 	$(FC) $(LDFLAGS) -o $@ $(GENSUDGRID) -L$(LIBDIR) -lmodel -lpdf -lcernlib $(llhapdf) $(LDFLAGS)
 
