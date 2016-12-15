@@ -1013,7 +1013,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 wgts[key] *= self.branching_ratio
             # all particle have been decay if needed
             output_lhe.write(str(event))
-        output_lhe.write('</LesHouchesEvent>\n')        
+        output_lhe.write('</LesHouchesEvents>\n')        
                     
     
     def load_model(self, name, use_mg_default, complex_mass=False):
