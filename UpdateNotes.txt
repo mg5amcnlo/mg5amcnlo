@@ -9,6 +9,9 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: avoid to bias module to include trivial weight in gridpack mode
       OM: Fix a bug making 2.5.1 not compatible with python2.6
       OM: Improve "add missing" command if a full block is missing
+      PT: Modified the default shower starting scale in montecarlocounter.f.
+          The new reference scale from which the dampening profile is computed is sum_i mt_i/2, i
+          being Born level final-state momenta. 
 
 2.5.1 (04/11/16)
        PT+MZ: New interface for Herwig7.
