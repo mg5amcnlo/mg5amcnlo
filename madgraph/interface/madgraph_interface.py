@@ -6501,18 +6501,18 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path',
                        'mg5amc_py8_interface_path','madanalysis5_path']:
                 if self.options[key] in ['None', None]:
-                    self.options[key] = None
+                    self.options[key] = None 
                     continue
                 path = self.options[key]
                 #this is for pythia8
                 if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia8', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(path, 'include', 'Pythia8', 'Pythia.h')):
+                    if not os.path.isfile(pjoin(path,  'include', 'Pythia8', 'Pythia.h')):
                         self.options['pythia8_path'] = None
                     else:
                         continue
                 #this is for mg5amc_py8_interface_path
                 if key == 'mg5amc_py8_interface_path' and not os.path.isfile(pjoin(MG5DIR, path, 'MG5aMC_PY8_interface')):
-                    if not os.path.isfile(pjoin(path, 'MG5aMC_PY8_interface')):
+                    if not os.path.isfile(pjoin(path, 'M G5aMC_PY8_interface')):
                         self.options['mg5amc_py8_interface_path'] = None
                     else:
                         continue
@@ -6535,8 +6535,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     else:
                         continue
                 # this is for hepmc
-                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HEPEVT_Wrapper.h')):
-                    if not os.path.isfile(pjoin(path, 'include', 'HEPEVT_Wrapper.h')):
+                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HepMC', 'HEPEVT_Wrapper.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'HepMC', 'HEPEVT_Wrapper.h')):
                         self.options['hepmc_path'] = None
                     else:
                         continue
