@@ -629,6 +629,8 @@ c     gluon
                   endif
                enddo
             endif
+c     try to find the process that has the j_fks initial state if
+c     current j_fks is initial state (and similar for final state j_fks)
             if (nFKSprocessBorn(iFKS).eq.0) then
                do iiFKS=1,fks_configs
                   if ( need_color_links_D(iiFKS) .or.
@@ -642,6 +644,15 @@ c     gluon
                         nFKSprocessBorn(iFKS)=iiFKS
                         exit
                      endif
+                  endif
+               enddo
+            endif
+c     If still not found, just pick any one that has a soft singularity
+            if (nFKSprocessBorn(iFKS).eq.0) then
+               do iiFKS=1,fks_configs
+                  if ( need_color_links_D(iiFKS) .or.
+     &                 need_charge_links_D(iiFKS) ) then
+                     nFKSprocessBorn(iFKS)=iiFKS
                   endif
                enddo
             endif
