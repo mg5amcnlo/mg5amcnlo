@@ -7016,7 +7016,6 @@ c Check to see if this channel needs to be included in the multi-channeling
          firsttime=.false.
       endif
 
-      call set_granny(nFKSprocess,iconfig)
       return
 
  99   continue
@@ -7028,7 +7027,7 @@ c Check to see if this channel needs to be included in the multi-channeling
       goto 12
       end
 
-      subroutine set_granny(nFKSprocess,iconfig)
+      subroutine set_granny(nFKSprocess,iconfig,mass_min)
 c This determines of the grandmother of the FKS pair is a resonance. If
 c so, set granny_is_res=.true. and also set to which internal propagator
 c the grandmother corresponds (igranny) as well as the aunt (iaunt).
@@ -7040,6 +7039,7 @@ c parametrisation.
       include 'nFKSconfigs.inc'
 c arguments
       integer nFKSprocess,iconfig
+      double precision mass_min(-nexternal:nexternal)
 c common block that is filled by this subroutine
       logical granny_is_res
       integer igranny,iaunt
@@ -7125,7 +7125,16 @@ c the process has no t-channels), set granny_is_res to false.
      $        igranny_fks(nFKSprocess).ne.-(nexternal-(2+nincoming))) then
             if (pmass(igranny_fks(nFKSprocess),iconfig).ne.0d0 .and.
      $           pwidth(igranny_fks(nFKSprocess),iconfig).gt.0d0) then
-               granny_is_res_fks(nFKSprocess)=.true.
+               ! also check if the sum of all the masses of all final
+               ! state particles originating from the granny is smaller
+               ! than the mass of the granny. Otherwise it will never be
+               ! on-shell, and we don't need the special mapping.
+               if (pmass(igranny_fks(nFKSprocess),iconfig) .gt.
+     $              mass_min(igranny_fks(nFKSprocess))) then
+                  granny_is_res_fks(nFKSprocess)=.true.
+               else
+                  granny_is_res_fks(nFKSprocess)=.false.
+               endif
             else
                granny_is_res_fks(nFKSprocess)=.false.
             endif

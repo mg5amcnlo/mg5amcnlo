@@ -564,6 +564,7 @@ c
          s_mass(i)=s_mass_FKS(nFKSprocess,i)
       enddo
       cBW_level_max=cBW_FKS_level_max(nFKSprocess)
+      call set_granny(nFKSprocess,iconfig,mass_min)
       return
       end
 
