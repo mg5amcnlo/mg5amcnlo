@@ -3370,6 +3370,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_decay_events(args)
         # args now alway content the path to the valid files
         madspin_cmd = interface_madspin.MadSpinInterface(args[0])
+        # pass current options to the interface
+        madspin_cmd.mg5cmd.options.update(self.options)
+        madspin_cmd.cluster = self.cluster
+        
         madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt)
 
         path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')

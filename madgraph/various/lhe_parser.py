@@ -1243,10 +1243,11 @@ class Event(list):
             pattern = re.compile("pt_clust_(\d*)=\"([\de+-.]*)\"")
             for id,value in pattern.findall(content):
                 tmp[int(id)] = float(value)
-                
-            for i in range(1, len(tmp)+1):
-                self.matched_scale_data.append(tmp[i])
- 
+            for i in range(1, len(self)+1):
+                if i in tmp:
+                    self.matched_scale_data.append(tmp[i])
+                else:
+                    self.matched_scale_data.append(-1)
         return self.matched_scale_data
             
     def parse_syscalc_info(self):
@@ -1300,7 +1301,8 @@ class Event(list):
         old_scales = list(self.parse_matching_scale())
         if old_scales:
             jet_position = sum(1 for i in range(position) if self[i].status==1)
-            self.matched_scale_data.pop(jet_position)
+            initial_pos = sum(1 for i in range(position) if self[i].status==-1)
+            self.matched_scale_data.pop(initial_pos+jet_position)
         # add the particle with only handling the 4-momenta/mother
         # color information will be corrected later.
         for particle in decay_event[1:]:
@@ -1309,7 +1311,7 @@ class Event(list):
             new_particle.event_id = len(self)
             self.append(new_particle)
             if old_scales:
-                self.matched_scale_data.append(old_scales[jet_position])
+                self.matched_scale_data.append(old_scales[initial_pos+jet_position])
             # compute and assign the new four_momenta
             new_momentum = this_4mom.boost(FourMomentum(new_particle))
             new_particle.set_momentum(new_momentum)
@@ -1699,10 +1701,12 @@ class Event(list):
             
         tag_str = self.tag
         if self.matched_scale_data:
-            tag_str = "<scales %s></scales>%s" % (
-                                    ' '.join(['pt_clust_%i=\"%s\"' % (i,v)
-                                   for i,v in enumerate(self.matched_scale_data)]),
-                                                  self.tag)
+            tmp_scale = ' '.join(['pt_clust_%i=\"%s\"' % (i+1,v)
+                                   for i,v in enumerate(self.matched_scale_data)
+                                              if v!=-1])
+            if tmp_scale:
+                tag_str = "<scales %s></scales>%s" % (tmp_scale, self.tag)
+            
         if self.syscalc_data:
             keys= ['rscale', 'asrwt', ('pdfrwt', 'beam', '1'), ('pdfrwt', 'beam', '2'),
                    'matchscale', 'totfact']
