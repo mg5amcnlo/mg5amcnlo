@@ -89,7 +89,7 @@ class LoopColorBasis(color_amp.ColorBasis):
                 if not simplified_cs:
                     # It can be that the color structure simplifies to zero.
                     CS.loop_Nc_power = 0
-                    break
+                    continue 
 
                 max_CS_loop_diag_Nc_power = max(cs.Nc_power \
                                                         for cs in simplified_cs)
