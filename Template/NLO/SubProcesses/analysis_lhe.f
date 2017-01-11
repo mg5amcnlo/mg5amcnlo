@@ -98,6 +98,9 @@ c      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
       parameter (zero=0.d0)
       parameter (izero=0)
 
+      integer itmax,ncall
+      common/citmax/itmax,ncall
+
       include 'nFKSconfigs.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -138,7 +141,7 @@ c********************************************************************
       endif
 
       if (twgt.eq.0d0)then
-         cross = cross + wgts(1)
+         cross = cross + wgts(1)/ncall
          return ! not written file for the first iteration
       elseif(abs(wgts(1)).lt.abs(twgt))then
          R = ran2()*abs(twgt)
@@ -159,12 +162,12 @@ c --- prepare the multi-weight information to be written in the event file
                do ii=1,nint(scalevarF(0))
                   do jj=1,nint(scalevarR(0))
                      i_wgt=i_wgt+1
-                     wgtxsecmu(jj,ii,kk)= wgts(i_wgt)
+                     wgtxsecmu(jj,ii,kk)= wgts(i_wgt)/ncall
                   enddo
                enddo
             else
                i_wgt=i_wgt+1
-               wgtxsecmu(1,1,kk)= wgts(i_wgt)
+               wgtxsecmu(1,1,kk)= wgts(i_wgt)/ncall
             endif
          enddo
       endif
@@ -173,11 +176,11 @@ c --- prepare the multi-weight information to be written in the event file
             if (lpdfvar(nn)) then
                do n=0,nmemPDF(nn)
                   i_wgt=i_wgt+1
-                  wgtxsecPDF(n,nn) = wgts(i_wgt)
+                  wgtxsecPDF(n,nn) = wgts(i_wgt)/ncall
                enddo
             else
                i_wgt=i_wgt+1
-               wgtxsecPDF(0,nn) = wgts(i_wgt)
+               wgtxsecPDF(0,nn) = wgts(i_wgt)/ncall
             endif
          enddo
       endif
@@ -224,7 +227,7 @@ c --- prepare the buffer information
       enddo
 
       call write_lhef_event(41,
-     #    nexternal,IDPRUP,wgts(1),0d0,0d0,0d0,
+     #    nexternal,IDPRUP,wgts(1)/ncall,0d0,0d0,0d0,
      #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
