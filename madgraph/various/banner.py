@@ -3515,7 +3515,9 @@ class RunCardNLO(RunCard):
         if proc_characteristic['ninitial'] == 1:
             #remove all cut
             self.remove_all_cut()
-        
+    
+    
+    
 class MadLoopParam(ConfigFile):
     """ a class for storing/dealing with the file MadLoopParam.dat
     contains a parser to read it, facilities to write a new file,...
@@ -3634,8 +3636,8 @@ class MadLoopParam(ConfigFile):
                 name = line[1:].split()[0]
             output.write(line)
         
-        
-        
+    
+            
         
         
         
