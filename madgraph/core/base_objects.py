@@ -237,7 +237,7 @@ class Particle(PhysicsObject):
         elif name == 'goldstone':
             return self['type'] == 'goldstone'
         elif name == 'propagating':
-            return self['line'] is not None
+            return self['line'] not in ['None',None] 
         else:
             return super(Particle, self).get(name)
 
@@ -348,7 +348,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly','dotted']:
+            if value not in ['None','dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly','dotted']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 
@@ -1258,7 +1258,7 @@ class Model(PhysicsObject):
             if isinstance(id, int):
                 try:
                     return self.get("particle_dict")[id]
-                except Exception,error:
+                except Exception, error:
                     return None
             else:
                 if not hasattr(self, 'name2part'):
@@ -1274,7 +1274,8 @@ class Model(PhysicsObject):
         self.name2part = {}
         for part in self.get("particle_dict").values():
             self.name2part[part.get('name')] = part
-
+            self.name2part[part.get('antiname')] = part
+            
     def get_lorentz(self, name):
         """return the lorentz object from the associate name"""
         if hasattr(self, 'lorentz_name2obj'):

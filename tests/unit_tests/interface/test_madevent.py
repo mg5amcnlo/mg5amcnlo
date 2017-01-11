@@ -103,6 +103,16 @@ class TestMadEventCmd(unittest.TestCase):
         self.assertEqual(detect(pjoin(card_dir, 'FO_analyse_card.dat')),
                          'FO_analyse_card.dat')
         
+        #MA5 card        
+        card_dir= pjoin(root_path,'input_files')
+        self.assertEqual(detect(pjoin(card_dir, 'madanalysis5_hadron_card.dat')),
+                         'madanalysis5_hadron_card.dat')
+        self.assertEqual(detect(pjoin(card_dir, 'madanalysis5_parton_card.dat')),
+                         'madanalysis5_parton_card.dat')
+        
+        
+        
+        
     def test_help_category(self):
         """Check that no help category are introduced by mistake.
            If this test failes, this is due to a un-expected ':' in a command of

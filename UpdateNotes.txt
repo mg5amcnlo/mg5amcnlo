@@ -1,13 +1,37 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.5.2(10/12/16)
+      OM: improve systematics (thanks to Philipp Pigard)
+      OM: new syntax to modify the run_card: set no_parton_cut
+          This removes all the cut present in the card.
+      OM: change the default configuration parameter cluster_local_path to None
+      OM: change the syscalc syntax for the pdf to avoid using & since this is not xml compliant
+      OM: avoid to bias module to include trivial weight in gridpack mode
+      OM: Fix a bug making 2.5.1 not compatible with python2.6
+      OM: Improve "add missing" command if a full block is missing
+      OM: Fixing a bug reporting wrong cross-section in the lhef <init> flag (only in presence of 
+          more than 80 channel of integration)
 
-2.5.1 (xx/xx/xx)
+2.5.1 (04/11/16)
+       PT+MZ: New interface for Herwig7.
+              Fixed a bug in the Herwig7/Herwig++ counterterm (relevant to 2 -> n, n>2:
+              in particular, the bug affected the dead zone for final-final colour connection
+              in processes with more than two particles in the Born final state)
        VH: Parallelization of PY8 at LO
        OM: add the possibility to automatically missing parameter in a param_card
            with command "update missing" at the time of the card edition. Usefull for 
            some SUSY card where some block entry are sometimes missing.
+       OM: Possibility to automatically run systematics program at NLO or Turn it off at LO
+           (hidden entry of the run_card systematics_program = systematics|syscalc|none)
+       RF: Some refactoring of the NLO phase-space generation,
+           including some small improvements in efficiency.
+       OM: Plugin can be include in a directory MG5aMC_PLUGIN the above directory need to be in
+           the $PYTHONPATH
+       OM: Fix systematics for e+ e- initial state.
+       VH: Fix various bug in the HepMc handling related to PY8 (LO generation)
+       OM: allow install maddm functionality (install ./bin/maddm executable)
 
-2.5.0 (xx/xx/xx)
+2.5.0 (08/09/16)
      FUNCTIONALITY
        VH+OM: Adding an official interface to Pythia8 (parton shower) at Leading-Order
 	        More information at https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOPY8Merging	   

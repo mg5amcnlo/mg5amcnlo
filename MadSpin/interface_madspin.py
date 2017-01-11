@@ -252,7 +252,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         if '--bypass_check' in args:
             args.remove('--bypass_check')
             bypass_check = True
-            
         if len(args) == 1:  
             logger.warning("""No param_card defined for the new model. We will use the default one but this might completely wrong.""")
         elif len(args) != 2:
@@ -711,9 +710,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         # 2. Generate the events requested
         # 3. perform the merge of the events.
         #    if not enough events. re-generate the missing one.
-        # First define an utility function for generating events when needed
-
-
         
         args = self.split_arg(line)
 
@@ -922,7 +918,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 wgts[key] *= self.branching_ratio
             # all particle have been decay if needed
             output_lhe.write(str(event))
-        output_lhe.write('</LesHouchesEvent>\n')        
+        output_lhe.write('</LesHouchesEvents>\n')        
                     
     
     def load_model(self, name, use_mg_default, complex_mass=False):
@@ -959,6 +955,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         """
                     
         part = self.model.get_particle(pdg)
+        if not part:
+            return {}# this particle is not defined in the current model so ignore it
         name = part.get_name()
         out = {}
         logger.info("generate %s decay event for particle %s" % (nb_event, name))
@@ -987,6 +985,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                             decay_dir), options=options)
                     me5_cmd.options["automatic_html_opening"] = False
+                    me5_cmd.options["madanalysis5_path"] = None
+                    me5_cmd.options["madanalysis_path"] = None
+                    try:
+                        os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
+                        os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
+                    except Exception,error:
+                        logger.debug(error)
+                        pass            
                     if self.options["run_card"]:
                         run_card = self.options["run_card"]
                     else:
@@ -994,6 +1000,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     
                     run_card["iseed"] = self.seed
                     run_card['gridpack'] = True
+                    run_card['systematics_program'] = False
                     run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                     param_card = self.banner['slha']
                     open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
@@ -1011,12 +1018,22 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                                 decay_dir), options=mg5.options)
                 me5_cmd.options["automatic_html_opening"] = False
+                me5_cmd.options["automatic_html_opening"] = False
+                me5_cmd.options["madanalysis5_path"] = None
+                me5_cmd.options["madanalysis_path"] = None
+                try:
+                    os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
+                    os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
+                except Exception,error:
+                    logger.debug(error)
+                    pass                    
                 if self.options["run_card"]:
                     run_card = self.options["run_card"]
                 else:
                     run_card = banner.RunCard(pjoin(decay_dir, "Cards", "run_card.dat"))
                 run_card["nevents"] = int(1.2*nb_event)
                 run_card["iseed"] = self.seed
+                run_card["systematics_program"] = 'None'
                 run_card.write(pjoin(decay_dir, "Cards", "run_card.dat"))
                 param_card = self.banner['slha']
                 open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)

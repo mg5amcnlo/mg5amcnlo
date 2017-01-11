@@ -101,7 +101,7 @@ import mg5decay.decay_objects as decay_objects
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
 logger_check = logging.getLogger('check') # -> stdout
-logger_mg = logging.getLogger('madgraph') # -> stdout
+logger_mg = logging.getLogger('madgraph.interface') # -> stdout
 logger_stderr = logging.getLogger('fatalerror') # ->stderr
 logger_tuto = logging.getLogger('tutorial') # -> stdout include instruction in
                                             #order to learn MG5
@@ -1499,24 +1499,29 @@ This will take effect only in a NEW terminal
             self._export_format = args.pop(0)
         elif args:
             # check for PLUGIN format
-            for plug in os.listdir(pjoin(MG5DIR, 'PLUGIN')):
-                if os.path.exists(pjoin(MG5DIR, 'PLUGIN', plug, '__init__.py')):
-                    try:
-                        __import__('PLUGIN.%s' % plug)
-                    except Exception, error:
-                        logger.warning("error detected in plugin: %s.", plug)
-                        logger.warning("%s", error)
-                        continue
-                    plugin = sys.modules['PLUGIN.%s' % plug]                
-                    if hasattr(plugin, 'new_output'):
-                        if not misc.is_plugin_supported(plugin):
+            for plugpath in self.plugin_path:
+                plugindirname = os.path.basename(plugpath)
+                for plug in os.listdir(plugpath):
+                    if os.path.exists(pjoin(plugpath, plug, '__init__.py')):
+                        try:
+                            __import__('%s.%s' % (plugindirname,plug))
+                        except Exception, error:
+                            logger.warning("error detected in plugin: %s.", plug)
+                            logger.warning("%s", error)
                             continue
-                        if args[0] in plugin.new_output:
-                            self._export_format = 'plugin'
-                            self._export_plugin = plugin.new_output[args[0]]
-                            logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
-                            args.pop(0)
-                            break
+                        plugin = sys.modules['%s.%s' % (plugindirname,plug)]                
+                        if hasattr(plugin, 'new_output'):
+                            if not misc.is_plugin_supported(plugin):
+                                continue
+                            if args[0] in plugin.new_output:
+                                self._export_format = 'plugin'
+                                self._export_plugin = plugin.new_output[args[0]]
+                                logger.info('Output will be done with PLUGIN: %s' % plug ,'$MG:color:BLACK')
+                                args.pop(0)
+                                break
+                else:
+                    continue
+                break
             else:
                 self._export_format = default
         else:
@@ -2447,6 +2452,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
+        misc.sprint([text,line,begidx, endidx])
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -2862,6 +2868,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                              mgme_dir)
                 self._mgme_dir = MG4DIR
 
+        # check that make_opts exists
+        make_opts = pjoin(MG5DIR, 'Template','LO','Source','make_opts')
+        make_opts_source = pjoin(MG5DIR, 'Template','LO','Source','.make_opts')
+        if not os.path.exists(make_opts):
+            shutil.copy(make_opts_source, make_opts)
+        elif  os.path.getmtime(make_opts) <  os.path.getmtime(make_opts_source):
+            shutil.copy(make_opts_source, make_opts)
+            
         # Variables to store state information
         self._multiparticles = {}
         self.options = {}
@@ -5695,7 +5709,7 @@ MG5aMC that supports quadruple precision (typically g++ based on gcc 4.6+).""")
             path = {}
     
             data_path = ['http://madgraph.phys.ucl.ac.be/package_info.dat',
-                         'http://madgraph.hep.uiuc.edu/package_info.dat']
+                         'http://madgraph.physics.illinois.edu/package_info.dat']
 
             r = random.randint(0,1)
             r = [r, (1-r)]
@@ -5964,7 +5978,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                 ff.write(text)
                 ff.close()
                 import stat
-                os.chmod(pjoin(MG5DIR, 'bin', name), stat.S_IRWXU)
+                os.chmod(pjoin(MG5DIR, 'bin', '%s.py' % name), stat.S_IRWXU)
                 logger.info('To use this module, you need to quite MG5aMC and run the executable bin/%s.py' % name)
             status=0
                 
@@ -6412,6 +6426,12 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             subprocess.call([os.path.join('tests','test_manager.py')],
                                                                   cwd=MG5DIR)            
             print 'new version installed, please relaunch mg5'
+            try:
+                os.remove(pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+                shutil.copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
+                            pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+            except:
+                pass
             sys.exit(0)
         elif answer == 'n':
             # prevent for a future check
@@ -6523,8 +6543,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     else:
                         continue
                 # this is for hepmc
-                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HEPEVT_Wrapper.h')):
-                    if not os.path.isfile(pjoin(path, 'include', 'HEPEVT_Wrapper.h')):
+                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HepMC', 'HEPEVT_Wrapper.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'HepMC', 'HEPEVT_Wrapper.h')):
                         self.options['hepmc_path'] = None
                     else:
                         continue
@@ -7770,7 +7790,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
 
     # Calculate decay width
-    def do_compute_widths(self, line, model=None, do2body=True):
+    def do_compute_widths(self, line, model=None, do2body=True, decaymodel=None):
         """Documented commands:Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; compute_widths particle [other particles] [--options=]
@@ -7803,8 +7823,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             modelname = self._curr_model.get('modelpath+restriction')
             with misc.MuteLogger(['madgraph'], ['INFO']):
                 model = import_ufo.import_model(modelname, decay=True)
-        else:
-            self._curr_model = model
+        self._curr_model = model
+            
         if not isinstance(model, model_reader.ModelReader):
             model = model_reader.ModelReader(model)
 
@@ -7895,7 +7915,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                                          ' '.join('--%s=%s' % (key,value)
                                                   for key,value in opts.items()
                                                   if key not in ['precision_channel'])
-                                         ), skip_2body=skip_2body)
+                                         ), skip_2body=skip_2body, model=decaymodel)
 
         if self._curr_amps:
             logger.info('Pass to numerical integration for computing the widths:')
@@ -8072,7 +8092,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         return
 
     # Calculate decay width
-    def do_decay_diagram(self, line, skip_2body=False, model=None):
+    def do_decay_diagram(self, line, skip_2body=False,  model=None):
         """Not in help: Generate amplitudes for decay width calculation, with fixed
            number of final particles (called level)
            syntax; decay_diagram part_name level param_path
@@ -8095,7 +8115,8 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
         """
 
         if model:
-            self._curr_model = model
+            self._curr_decaymodel = model
+
 
         args = self.split_arg(line)
         #check the validity of the arguments

@@ -2445,7 +2445,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                       '%(proc_prefix)sBornColorFlowCoefs.dat'
                                                 %matrix_element.rep_dict),'w')
             self.write_color_flow_coefs_data_file(dat_writer,
-                          born_col_amps, matrix_element.get('loop_color_basis'))
+                          born_col_amps, matrix_element.get('born_color_basis'))
             dat_writer.close()
             
             dat_writer = open(pjoin('..','MadLoop5_resources',

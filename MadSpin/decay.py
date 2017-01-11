@@ -2708,16 +2708,20 @@ class decay_all_events(object):
                     commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
                     
                     # check if we have to increase by one the born order
-                    if '%s=' % order in process:
+                    if '%s=' % order in process or '%s<=' % order in process:
                         result=re.split(' ',process)
                         process=''
                         for r in result:
                             if '%s=' % order in r:
                                 ior=re.split('=',r)
-                                r='QCD=%i' % (int(ior[1])+1)
+                                r='%s<=%i' % (order,int(ior[1])+1)
+                            elif '%s<=' % order in r:
+                                ior=re.split('=',r)
+                                r='%s<=%i' % (order,int(ior[1])+1)
+                                                                
                             process=process+r+' '
                     #handle special tag $ | / @
-                    result = re.split('([/$@]|\w+=\w+)', process, 1)                    
+                    result = re.split('([/$@]|\w+<?=\w+)', process, 1)     
                     if len(result) ==3:
                         process, split, rest = result
                         commandline+="add process %s pert_%s %s%s %s --no_warning=duplicate;" % (process, order ,split, rest, proc_nb)
@@ -2810,16 +2814,20 @@ class decay_all_events(object):
                         commandline += "define pert_%s = %s;" % (order, ' '.join(map(str,pert)) )
                         
                         # check if we have to increase by one the born order
-                        if '%s=' % order in process:
+                        if '%s=' % order in process or '%s<=' % order in process:
                             result=re.split(' ',process)
                             process=''
                             for r in result:
                                 if '%s=' % order in r:
                                     ior=re.split('=',r)
-                                    r='QCD=%i' % (int(ior[1])+1)
+                                    r='%s=%i' % (order,int(ior[1])+1)
+                                elif '%s<=' % order in r:
+                                    ior=re.split('=',r)
+                                    r='%s<=%i' % (order,int(ior[1])+1)
                                 process=process+r+' '
+                                
                         #handle special tag $ | / @
-                        result = re.split('([/$@]|\w+=\w+)', process, 1)                    
+                        result = re.split('([/$@]|\w+<?=\w+)', process, 1)                    
                         if len(result) ==3:
                             process, split, rest = result
                             commandline+="add process %s pert_%s %s%s , %s %s --no_warning=duplicate;" % \

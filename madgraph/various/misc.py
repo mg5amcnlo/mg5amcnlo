@@ -45,7 +45,6 @@ else:
     import madgraph.iolibs.files as files
     MADEVENT = False
 
-
     
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
@@ -991,15 +990,25 @@ class TMP_variable(object):
     """
 
     def __init__(self, cls, attribute, value):
-        
-        self.old_value = getattr(cls, attribute)
+
         self.cls = cls
-        self.attribute = attribute
-        setattr(self.cls, self.attribute, value)
+        self.attribute = attribute        
+        if isinstance(attribute, list):
+            self.old_value = []
+            for key, onevalue in zip(attribute, value):
+                self.old_value.append(getattr(cls, key))
+                setattr(self.cls, key, onevalue)
+        else:
+            self.old_value = getattr(cls, attribute)
+            setattr(self.cls, self.attribute, value)
     
     def __exit__(self, ctype, value, traceback ):
-
-        setattr(self.cls, self.attribute, self.old_value)
+        
+        if isinstance(self.attribute, list):
+            for key, old_value in zip(self.attribute, self.old_value):
+                setattr(self.cls, key, old_value)
+        else:
+            setattr(self.cls, self.attribute, self.old_value)
         
     def __enter__(self):
         return self.old_value 
@@ -1225,7 +1234,7 @@ def get_HEPTools_location_setter(HEPToolsDir,type):
     is in the environment paths of the user. If not, it returns a preamble that
     sets it before calling the exectuable, for example:
        <preamble> ./my_exe
-    with <preamble> -> DYLD_LIBRARY_PATH='blabla;$DYLD_LIBRARY_PATH'"""
+    with <preamble> -> DYLD_LIBRARY_PATH=blabla:$DYLD_LIBRARY_PATH"""
     
     assert(type in ['bin','include','lib'])
     
@@ -1236,7 +1245,7 @@ def get_HEPTools_location_setter(HEPToolsDir,type):
     
     if target_env_var not in os.environ or \
                 target_path not in os.environ[target_env_var].split(os.pathsep):
-        return "%s='%s;$%s' "%(target_env_var,target_path,target_env_var)
+        return "%s=%s:$%s "%(target_env_var,target_path,target_env_var)
     else:
         return ''
 
@@ -1321,6 +1330,7 @@ def sprint(*args, **opt):
         intro = ' %s = \033[0m' % line
     else:
         intro = ''
+    
     
     if not use_print:
         log.log(level, ' '.join([intro]+[str(a) for a in args]) + \
