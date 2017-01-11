@@ -17,13 +17,6 @@
 # to be set empty.
 FO_ANALYSIS_FORMAT = HwU
 #
-# **** information for lhe type of output only
-FO_LHE_MIN_WEIGHT = 0d0
-# 0d0 keep ALL weigthed events
-# > 0d0 unweight all events with weight lower than the entry
-# < 0d0 min_weight is determined by the cross-section of each channel times 
-#          the absolute value of the entry.
-
 #
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 

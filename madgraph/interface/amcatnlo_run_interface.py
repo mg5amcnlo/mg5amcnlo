@@ -72,6 +72,7 @@ except ImportError:
     import internal.shower_card as shower_card
     import internal.FO_analyse_card as analyse_card 
     import internal.histograms as histograms
+    import internal.lhe_parser as lhe_parser
 else:
     # import from madgraph directory
     aMCatNLO = False
@@ -87,6 +88,7 @@ else:
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
     import madgraph.various.histograms as histograms
+    import madgraph.various.lhe_parser as lhe_parser
     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
 
 class aMCatNLOError(Exception):
@@ -1968,10 +1970,52 @@ RESTART = %(mint_mode)s
                      pjoin(self.me_dir, 'Events', self.run_name))
             logger.info('The results of this run and the ROOT file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+        elif self.analyse_card['fo_analysis_format'].lower() == 'lhe':
+            self.combine_FO_lhe(jobs)
+            logger.info('The results of this run and the LHE File (for plot only)' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))            
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
 
+    def combine_FO_lhe(self,jobs):
+        """combine the various lhe file generated in each directory.
+           They are two steps:
+           1) banner 
+           2) reweight each sample by the factor written at the end of each file
+           3) concatenate each of the new files (gzip those).
+        """
+        
+        logger.debug('Combining lhe events for plotting analysis')
+        output = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+        if os.path.exists(output):
+            os.remove(output)
+        
+        # 1. write the banner
+        text = open(pjoin(jobs[0]['dirname'],'header.txt'),'r').read()
+        i1, i2 = text.find('<initrwgt>'),text.find('</initrwgt>') 
+        self.banner['initrwgt'] = text[10+i1:i2]
+#        
+#        <init>
+#        2212 2212 6.500000e+03 6.500000e+03 0 0 247000 247000 -4 1
+#        8.430000e+02 2.132160e+00 8.430000e+02 1
+#        <generator name='MadGraph5_aMC@NLO' version='2.5.2'>please cite 1405.0301 </generator>
+#        </init>
+
+        cross = sum(j['result'] for j in jobs)
+        error = math.sqrt(sum(j['error'] for j in jobs))
+        self.banner['init'] = "0 0 0e0 0e0 0 0 0 0 -4 1\n  %s %s %s 1" % (cross, error, cross)
+        self.banner.write(output[:-3], close_tag=False)
+        misc.gzip(output[:-3])
+        
+        # 2. concatanate the various files    
+        for job in jobs:
+            dirname = job['dirname']
+            misc.gzip(pjoin(dirname,'events.lhe'))
+            os.system('cat %s >> %s' %(pjoin(dirname,'events.lhe.gz'), output))
+            os.remove(pjoin(dirname,'events.lhe.gz'))
+            
+            
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
         logger.debug('Combining HwU plots.')

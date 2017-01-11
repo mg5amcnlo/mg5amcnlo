@@ -263,7 +263,7 @@ c
             write(*,*)doreweight,iwgtinfo
             stop
           endif
-          kwgtinfo= 9 !iwgtinfo
+          kwgtinfo= iwgtinfo
           write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
      &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)

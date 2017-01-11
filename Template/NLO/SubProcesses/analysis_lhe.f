@@ -30,10 +30,13 @@ c      call inihist
       double precision cross, twgt
       logical opened_file
       common /FO_LHE_CROSS/ cross, twgt, opened_file
-      if (.not.opened_file)then
-           open(41,file= 'events.lhe',status='OLD',POSITION='APPEND')
-      endif
-      write(41,*) '!', xnorm
+c      if (.not.opened_file)then
+c           open(41,file= 'events.lhe',status='OLD',POSITION='APPEND')
+c      endif
+c      write(41,*) '!', xnorm
+      close(41)
+      open(41, file='header.txt')
+      call write_lhef_header(41, 0, 'FO')
       close(41)
       opened_file = .false.
       end
@@ -90,11 +93,34 @@ c      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
       logical to_write
       double precision R
 
+      double precision zero
+      integer izero 
+      parameter (zero=0.d0)
+      parameter (izero=0)
+
+      include 'nFKSconfigs.inc'
+      INTEGER NFKSPROCESS
+      COMMON/C_NFKSPROCESS/NFKSPROCESS
+      integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
+     &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
+      double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
+      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
+     #                fksfather_lhe,ipartner_lhe
+      common/cto_LHE2/scale1_lhe,scale2_lhe
+
 c Auxiliary quantities used when writing events
 c      integer jwgtinfo,mexternal
 c      common/cwgtaux0/jwgtinfo,mexternal
 
+      integer kwgtinfo
       integer i_wgt, kk, ii, jj, n,nn
+      character*140 buff
+      INTEGER MAXNUP
+      PARAMETER (MAXNUP=500)
+      INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
+     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
+      DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
+     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
 c     ic(1,*) = Particle ID
@@ -125,6 +151,7 @@ c********************************************************************
          wgts(1) = sign(twgt,wgts(1))
       endif
 
+c --- prepare the multi-weight information to be written in the event file
       i_wgt=1
       if (do_rwgt_scale) then
          do kk=1,dyn_scale(0)
@@ -155,23 +182,50 @@ c********************************************************************
          enddo
       endif
 
-      
-      ickkw=0
+c --- prepare the buffer information
+      if(.not.doreweight)then
+           write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
+     &          ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
+     &          ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
+     &          ,zero,zero,zero
+      else
+          if(iwgtinfo.ne.-5)then
+            write(*,*)'Error in write_events_lhe'
+            write(*,*)'  Inconsistency in reweight parameters'
+            write(*,*)doreweight,iwgtinfo
+            stop
+          endif
+          kwgtinfo= 9
+          write(buff,201)'#aMCatNLO',iSorH_lhe,ifks_lhe(nFKSprocess)
+     &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
+     &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
+     &         ,scale2_lhe(nFKSprocess),kwgtinfo,nexternal,iwgtnumpartn
+     &         ,zero,zero,zero,zero,zero
+       endif
+
       shower_scale = 0d0
       npart = nexternal
 
       do i=1,nexternal
-         ic(1,i) = ipdg(i)
-         ic(2,i) = 0 ! invalid to make PS to fail
-         ic(3,i) = 0
-         ic(4,i) = 501
-         ic(5,i) = 501 ! invalid to make PS to fail
-         ic(6,i) = istatus(i)
-         ic(7,i) = 9
+        IDUP(i)= ipdg(i)
+        ISTUP(i)= istatus(i)
+        MOTHUP(1,i)=0
+        MOTHUP(2,i)=0
+        ICOLUP(1,i)=501
+        ICOLUP(2,i)=501
+        PUP(1,i)=p(1,i)
+        PUP(2,i)=p(2,i)
+        PUP(3,i)=p(3,i)
+        PUP(4,i)=p(0,i)
+        PUP(5,i)=p(4,i)
+        VTIMUP(i)=0.d0
+        SPINUP(i)=9
       enddo
-         
-      jwgtinfo = 9
-      call write_events_lhe(p,wgts(1),ic,npart,41,shower_scale
-     $     ,ickkw)
 
+      call write_lhef_event(41,
+     #    nexternal,IDPRUP,wgts(1),0d0,0d0,0d0,
+     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+
+ 201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       end
