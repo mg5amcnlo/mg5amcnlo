@@ -9,13 +9,21 @@
 #                                                                               
 #######################################################################
 #
-# Analysis format. Can either be 'topdrawer', 'root', 'HwU' or 'none'.
+# Analysis format. Can either be 'topdrawer', 'root', 'HwU', 'lhe' or 'none'.
 # When choosing HwU, it comes with a GnuPlot wrapper. When choosing
 # topdrawer, the histogramming package 'dbook.f' is included in the
 # code, while when choosing root the 'rbook_fe8.f' and 'rbook_be8.cc'
 # are included. If 'none' is chosen, all the other entries below have
 # to be set empty.
 FO_ANALYSIS_FORMAT = HwU
+#
+# **** information for lhe type of output only
+FO_LHE_MIN_WEIGHT = 0d0
+# 0d0 keep ALL weigthed events
+# > 0d0 unweight all events with weight lower than the entry
+# < 0d0 min_weight is determined by the cross-section of each channel times 
+#          the absolute value of the entry.
+
 #
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 

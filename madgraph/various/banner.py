@@ -3635,7 +3635,13 @@ class MadLoopParam(ConfigFile):
             output.write(line)
         
         
+class FOAnalyseCardError(Exception):
+    pass
+
         
+    
+    
+            
         
         
         

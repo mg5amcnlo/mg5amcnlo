@@ -17,8 +17,10 @@
 import sys
 import re
 import os
-
+import logging
 pjoin = os.path.join
+
+logger = logging.getLogger('madgraph.stdout')
 
 class FOAnalyseCardError(Exception):
     pass
@@ -26,7 +28,8 @@ class FOAnalyseCardError(Exception):
 class FOAnalyseCard(dict):
     """A simple handler for the fixed-order analyse card """
 
-    string_vars = ['fo_extralibs', 'fo_extrapaths', 'fo_includepaths', 'fo_analyse', 'fo_analysis_format']
+    string_vars = ['fo_extralibs', 'fo_extrapaths', 'fo_includepaths', 
+                   'fo_analyse', 'fo_analysis_format', 'fo_lhe_min_weight']
 
     
     def __init__(self, card=None, testing=False):
@@ -41,7 +44,7 @@ class FOAnalyseCard(dict):
     
     def read_card(self, card_path):
         """read the FO_analyse_card, if testing card_path is the content"""
-        fo_analysis_formats = ['topdrawer','hwu','root','none']
+        fo_analysis_formats = ['topdrawer','hwu','root','none', 'lhe']
         if not self.testing:
             content = open(card_path).read()
         else:
@@ -58,13 +61,13 @@ class FOAnalyseCard(dict):
                 if key == 'fo_extralibs':
                     value = value.replace('lib', '').replace('.a', '')
                 elif key == 'fo_analysis_format' and value.lower() not in fo_analysis_formats:
-                    raise FO_AnalyseCardError('Unknown FO_ANALYSIS_FORMAT: %s' % value)
+                    raise FOAnalyseCardError('Unknown FO_ANALYSIS_FORMAT: %s' % value)
                 if value.lower() == 'none':
                     self[key] = ''
                 else:
                     self[key] = value
             else:
-                raise FO_AnalyseCardError('Unknown entry: %s = %s' % (key, value))
+                raise FOAnalyseCardError('Unknown entry: %s = %s' % (key, value))
             self.keylist.append(key)
 
 
@@ -72,6 +75,11 @@ class FOAnalyseCard(dict):
         """write the parsed FO_analyse.dat (to be included in the Makefile) 
         in side card_path.
         if self.testing, the function returns its content"""
+
+        if self['fo_analysis_format'] in ['lhe','none']:
+            if self['fo_analyse']:
+                logger.warning('FO_ANALYSE parameter of the FO_analyse card should be empty for this analysis format. Removing this information.')
+                self['fo_analyse'] = ''
 
         lines = []
         to_add = ''
@@ -85,6 +93,8 @@ class FOAnalyseCard(dict):
                         to_add = 'HwU.o open_output_files_dummy.o'
                     elif value == 'root':
                         to_add = 'rbook_fe8.o rbook_be8.o HwU_dummy.o'
+                    elif value == 'lhe':
+                        to_add = 'analysis_lhe.o open_output_files_dummy.o HwU_dummy.o write_event.o'
                     else:
                         to_add = 'analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o'
                         
