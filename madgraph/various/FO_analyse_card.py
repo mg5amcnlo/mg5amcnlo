@@ -76,7 +76,7 @@ class FOAnalyseCard(dict):
         in side card_path.
         if self.testing, the function returns its content"""
 
-        if self['fo_analysis_format'] in ['lhe','none']:
+        if 'fo_analysis_format' in self and self['fo_analysis_format'] in ['lhe','none']:
             if self['fo_analyse']:
                 logger.warning('FO_ANALYSE parameter of the FO_analyse card should be empty for this analysis format. Removing this information.')
                 self['fo_analyse'] = ''
