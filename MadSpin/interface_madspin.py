@@ -1151,16 +1151,17 @@ class MadSpinInterface(extended_cmd.Cmd):
                     efficiency = 1.1
                 else:
                     efficiency = 2.0
+                    
+                totwidth = self.banner.get('param_card', 'decay', abs(pdg)).value
                 #check if a splitting is needed
                 if nb_needed == nb_event:
                     nb_needed = int(efficiency*nb_needed) + nevents_for_max   
                     evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_needed, mg5, output_width=True)
-                    totwidth = self.banner.get('param_card', 'decay', pdg).value
                     if pwidth > 1.01*totwidth:
                         logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
                     elif pwidth > totwidth:
                         pwidth = totwidth
-                    br = pwidth / self.banner.get('param_card', 'decay', pdg).value
+                    br = pwidth / totwidth
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
                     nb_needed = int(efficiency*nb_needed) +nevents_for_max *nb_mult
@@ -1170,15 +1171,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                         continue
                     elif len(self.list_branches[name]) == nb_mult:
                         evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_event, mg5, output_width=True)
-                        totwidth,pwidth = self.banner.get('param_card', 'decay', pdg).value
                         if pwidth > 1.01*totwidth:
                             logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
                         elif pwidth > totwidth:
                             pwidth = totwidth
+                        br = pwidth / totwidth**nb_mult
                         br *= math.factorial(nb_mult)
                     else:
                         evt_decayfile[pdg],pwidth = self.generate_events(pdg, nb_needed, mg5, cumul=True, output_width=True)
-                        totwidth,pwidth = self.banner.get('param_card', 'decay', pdg).value
                         if pwidth > 1.01*totwidth:
                             logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
                         elif pwidth > totwidth:
