@@ -132,7 +132,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 inputfile = inputfile + '.gz'
             else: 
                 raise self.InvalidCmd('No such file or directory : %s' % inputfile)
-        
+
         if inputfile.endswith('.gz'):
             misc.gunzip(inputfile)
             inputfile = inputfile[:-3]
@@ -392,7 +392,6 @@ class MadSpinInterface(extended_cmd.Cmd):
     def do_set(self, line):
         """ add one of the options """
         
-        misc.sprint(line)
         args = self.split_arg(line)
         self.check_set(args)
         
@@ -521,7 +520,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         launch
         '''
 
-    #@misc.mute_logger()
+    @misc.mute_logger()
     def do_launch(self, line):
         """end of the configuration launched the code"""
         
@@ -530,7 +529,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         elif self.options["spinmode"] == "onshell":
             return self.run_onshell(line)
         elif self.options["spinmode"] == "bridge":
-            raise Exception, "Bridge mode not yet available due to lack of validation."
+            raise Exception, "Bridge mode not available."
         
         if self.options['ms_dir'] and os.path.exists(pjoin(self.options['ms_dir'], 'madspin.pkl')):
             return self.run_from_pickle()
@@ -947,13 +946,18 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.mg5cmd._curr_model = self.model
         self.mg5cmd.process_model()
 
-    def generate_events(self, pdg, nb_event, mg5, restrict_file=None, cumul=False):
+    def generate_events(self, pdg, nb_event, mg5, restrict_file=None, cumul=False,
+                        output_width=False):
         """generate new events for this particle
            restrict_file allow to only generate a subset of the definition
            cumul allow to merge all the definition in one run (add process)
                  to generate events according to cross-section
         """
-                    
+        
+        if cumul:
+            width = 0.
+        else:   
+            width = 1.
         part = self.model.get_particle(pdg)
         if not part:
             return {}# this particle is not defined in the current model so ignore it
@@ -1007,6 +1011,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self.seed += 1
                     # actually creation
                     me5_cmd.exec_cmd("generate_events run_01 -f")
+                    if output_width:
+                        if cumul:
+                            width += me5_cmd.results.current['cross']
+                        else:
+                            width *= me5_cmd.results.current['cross']
                     me5_cmd.exec_cmd("exit")                        
                     #remove pointless informat
                     misc.call(["rm", "Cards", "bin", 'Source', 'SubProcesses'], cwd=decay_dir)
@@ -1039,6 +1048,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 open(pjoin(decay_dir, "Cards", "param_card.dat"),"w").write(param_card)
                 self.seed += 1
                 me5_cmd.exec_cmd("generate_events run_01 -f")
+                if output_width:
+                    if cumul:    
+                        width += me5_cmd.results.current['cross']
+                    else:
+                        width *= me5_cmd.results.current['cross']
                 me5_cmd.exec_cmd("exit")
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
             else:
@@ -1047,8 +1061,10 @@ class MadSpinInterface(extended_cmd.Cmd):
             if cumul:
                 break
         
-        return out
-
+        if not output_width:
+            return out
+        else:
+            return out, width
 
     def run_onshell(self, line):
         """Run the onshell Algorithm"""
@@ -1064,7 +1080,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         #    if not enough events. re-generate the missing one.
         # First define an utility function for generating events when needed
 
-        misc.sprint("start run_onshell")
         args = self.split_arg(line)
 
         #0. Define the path where to write the file
@@ -1081,7 +1096,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         self.events_file.close()
         orig_lhe = lhe_parser.EventFile(self.events_file.name)
 
-        misc.sprint("check production file")        
         #count the number of particle need to be decayed.
         to_decay = collections.defaultdict(int)
         nb_event = 0
@@ -1091,9 +1105,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if particle.status == 1 and particle.pdg in self.final_state:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
-        misc.sprint(to_decay)
-        misc.sprint("import the mode -> temporary with logging")   
-        with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [20,20,50,20]):
+        #misc.sprint(to_decay)
+        #misc.sprint("import the mode -> temporary with logging")   
+        with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
             if not self.model:
                 modelpath = self.model.get('modelpath+restriction')
@@ -1123,13 +1137,13 @@ class MadSpinInterface(extended_cmd.Cmd):
             nevents_for_max = 75
         nevents_for_max *= self.options['max_weight_ps_point']
         
-        misc.sprint("generate the decay events -> temporary with logging") 
-        with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [10,10,50,10]):
+        with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
             mg5 = self.mg5cmd
             if not self.model:
                 modelpath = self.model.get('modelpath+restriction')
                 mg5.exec_cmd("import model %s" % modelpath)      
             evt_decayfile = {}
+            br = 1.
             for pdg, nb_needed in to_decay.items():
                 # muliply by expected effeciency of generation
                 spin = self.model.get_particle(pdg).get('spin')
@@ -1140,7 +1154,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                 #check if a splitting is needed
                 if nb_needed == nb_event:
                     nb_needed = int(efficiency*nb_needed) + nevents_for_max   
-                    evt_decayfile[pdg] = self.generate_events(pdg, nb_needed, mg5)
+                    evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_needed, mg5, output_width=True)
+                    totwidth = self.banner.get('param_card', 'decay', pdg).value
+                    if pwidth > 1.01*totwidth:
+                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
+                    elif pwidth > totwidth:
+                        pwidth = totwidth
+                    br = pwidth / self.banner.get('param_card', 'decay', pdg).value
                 elif nb_needed %  nb_event == 0:
                     nb_mult = nb_needed // nb_event
                     nb_needed = int(efficiency*nb_needed) +nevents_for_max *nb_mult
@@ -1149,9 +1169,21 @@ class MadSpinInterface(extended_cmd.Cmd):
                     if name not in self.list_branches:
                         continue
                     elif len(self.list_branches[name]) == nb_mult:
-                        evt_decayfile[pdg] = self.generate_events(pdg, nb_event, mg5)
+                        evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_event, mg5, output_width=True)
+                        totwidth,pwidth = self.banner.get('param_card', 'decay', pdg).value
+                        if pwidth > 1.01*totwidth:
+                            logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
+                        elif pwidth > totwidth:
+                            pwidth = totwidth
+                        br *= math.factorial(nb_mult)
                     else:
-                        evt_decayfile[pdg] = self.generate_events(pdg, nb_needed, mg5, cumul=True)
+                        evt_decayfile[pdg],pwidth = self.generate_events(pdg, nb_needed, mg5, cumul=True, output_width=True)
+                        totwidth,pwidth = self.banner.get('param_card', 'decay', pdg).value
+                        if pwidth > 1.01*totwidth:
+                            logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
+                        elif pwidth > totwidth:
+                            pwidth = totwidth
+                        br *= (pwidth / totwidth)**nb_mult
                 else:
                     part = self.model.get_particle(pdg)
                     name = part.get_name()
@@ -1159,9 +1191,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                         continue
                     raise self.InvalidCmd("The onshell mode of MadSpin does not support event files where events do not *all* share the same set of final state particles to be decayed.")
         
-        misc.sprint('generate the various directory')
-        # 3. generate the various matrix-element
+        self.branching_ratio = br
+        self.efficiency = 1
+        self.cross, self.error = self.banner.get_cross(witherror=True)
+        self.cross *= self.branching_ratio
+        self.error *= self.branching_ratio
         
+        # 3. generate the various matrix-element
         self.update_status('generating Madspin matrix element')
         self.generate_all = madspin.decay_all_events_onshell(self, self.banner, self.events_file, 
                                                     self.options)
@@ -1185,7 +1221,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         start = time.time()
         for curr_event,production in enumerate(orig_lhe):
             if curr_event and curr_event % 1000 == 0 and float(str(curr_event)[1:]) ==0:
-                print "decaying event number %s [%s s]" % (curr_event, time.time()-start)
+                print "decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start)
             while 1:
                 nb_try +=1
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
@@ -1194,9 +1230,10 @@ class MadSpinInterface(extended_cmd.Cmd):
                     break
             self.efficiency = curr_event/nb_try
             output_lhe.write(str(full_evt))
-        
-        misc.sprint('Done so far. output written in %s' % output_lhe.name)
-        raise Exception
+            
+        output_lhe.write('</LesHouchesEvents>\n')    
+        self.efficiency = 1 # to let me5 to write the correct number of events
+#        misc.sprint('Done so far. output written in %s' % output_lhe.name)
         
     
     def get_decay_from_file(self,production, evt_decayfile, nb_remain):
@@ -1246,7 +1283,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 except StopIteration:
                     eff = self.efficiency
                     needed = 1.05 * nb_remain / eff
-                    misc.sprint(nb_remain, eff, needed)
                     needed = min(50000, max(needed, 1000))
                     with misc.MuteLogger(["madgraph", "madevent", "ALOHA", "cmdprint"], [50,50,50,50]):
                         new_file = self.generate_events(particle.pdg, needed, self.mg5cmd, [decay_file_nb])
@@ -1296,6 +1332,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         std_weight=math.sqrt(std_weight)
         base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
 
+#        misc.sprint(all_maxwgt)
         for i in [20, 30, 40, 50]:
             if len(all_maxwgt) < i:
                 break
@@ -1305,9 +1342,6 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
             if all_maxwgt[1] > base_max_weight:
                 base_max_weight = 1.05 * all_maxwgt[1]
-
-        misc.sprint(all_maxwgt)
-        misc.sprint('final', base_max_weight)            
         return base_max_weight
             
             

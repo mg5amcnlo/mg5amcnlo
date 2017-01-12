@@ -2040,15 +2040,12 @@ class decay_all_events(object):
                 save_load_object.save_to_file(pickle_info,
                                           (self.all_ME,self.all_decay,self.width_estimator))                
         
-        misc.sprint("BR DONE")
         if not self.options["onlyhelicity"] and self.options['spinmode'] != 'onshell':
             resonances = self.width_estimator.resonances
             logger.debug('List of resonances: %s' % resonances)
             self.extract_resonances_mass_width(resonances) 
 
-        misc.sprint("start compile")
         self.compile()
-        misc.sprint("compile done")
         
     def get_MC_masses(self):
         
@@ -2672,7 +2669,6 @@ class decay_all_events(object):
             
         
         mgcmd.exec_cmd("set group_subprocesses False")
-        misc.sprint("start production")
         logger.info('generating the production square matrix element')
         start = time.time()
         commandline=''
@@ -4068,7 +4064,6 @@ class decay_all_events_onshell(decay_all_events):
             
         
         mgcmd.exec_cmd("set group_subprocesses False")
-        misc.sprint("add production")
         logger.info('generating the production square matrix element')
         start = time.time()
         commandline=''
@@ -4275,7 +4270,6 @@ class decay_all_events_onshell(decay_all_events):
                 initial.sort(), final.sort()
                 tag = (tuple(initial), tuple(final))
                 self.all_me[tag] = {'pdir': "P%s" % me_string, 'order': order}
-                misc.sprint(tag, "P%s" % me_string)
 
 
         return self.all_me
