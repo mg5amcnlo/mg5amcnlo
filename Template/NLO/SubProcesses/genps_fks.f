@@ -382,6 +382,9 @@ c 'do_mapping_granny' to false to never do the phase-space mapping to
 c keep the invariant mass of the granny fixed.
       do_mapping_granny=.true.
 
+c Set the minimal tau = x1*x2. This also checks if granny is a resonance
+      call set_tau_min()
+
       if (granny_is_res) then
          which_is_granny(nFKSprocess)=igranny
          if (.not. do_mapping_granny) then
@@ -406,7 +409,6 @@ c physical range of the invariant mass in the event!)
             granny_m2_red_local( 1)=granny_m2_red( 1)
             xmbemin2_0=granny_m2_red_local(-1)
             xmbemax2_0=granny_m2_red_local(1)
-
             if (pmass(j_fks).gt.0d0) then
                border=max(border_massive ,fborder*(sqrt(xmbemax2_0)
      &                                            -sqrt(xmbemin2_0)))
@@ -802,8 +804,6 @@ c Set one_body to true if it's a 2->1 process at the Born (i.e. 2->2 for the n+1
          firsttime=.false.
          iconfigsave=iconfig0
       endif                     ! firsttime
-c Set the minimal tau = x1*x2.
-      call set_tau_min()
 c
       xjac0=1d0
       xpswgt0=1d0
@@ -877,7 +877,7 @@ c Generate the momenta for the initial state of the Born system
       pb(1,-nbranch)= 0d0
       pb(2,-nbranch)= 0d0
       pb(3,-nbranch)= 0d0
-c
+c     
 c Generate Born-level momenta
 c
 c Start by generating all the invariant masses of the s-channels
