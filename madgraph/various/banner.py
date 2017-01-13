@@ -2320,6 +2320,9 @@ class RunCard(ConfigFile):
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
         
+        if self['fo_lhe_weight_ratio'] != 0:
+            raise Exception
+        
         for incname in self.includepath:
             if incname is True:
                 pathinc = self.default_include_file
@@ -3332,6 +3335,9 @@ class RunCardNLO(RunCard):
         self.add_param('maxjetflavor', 4, hidden=True)
         self.add_param('iappl', 0)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
+        
+        #internal variable
+        self.add_param('FO_LHE_weight_ratio',1e-3, hidden=True, system=True)
     
     def check_validity(self):
         """check the validity of the various input"""

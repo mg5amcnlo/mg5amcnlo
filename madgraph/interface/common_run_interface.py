@@ -70,6 +70,7 @@ except ImportError:
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.lhe_parser as lhe_parser
+    import internal.FO_analyse_card as FO_analyse_card 
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True    
 else:
@@ -81,6 +82,7 @@ else:
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import madgraph.various.lhe_parser as lhe_parser
+    import madgraph.various.FO_analyse_card as FO_analyse_card 
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
@@ -5108,7 +5110,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.run_card['event_norm'] == 'sum':
                 logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
                 self.do_set('run_card event_norm average')         
-                
+        
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
             modify_extralibs, modify_extrapaths = False,False

@@ -15,7 +15,7 @@ c event (event with lower weights will be un-weighted)
       common /FO_LHE_CROSS/ cross, twgt, opened_file
       iteration = 0
       cross = 0d0
-      twgt = 0d0
+      twgt = -2d0
       
 c      call inihist
       open(41,file= 'events.lhe',status='UNKNOWN')
@@ -50,7 +50,13 @@ c      write(41,*) '!', xnorm
       common /FO_LHE_CROSS/ cross, twgt, opened_file
       integer itmax,ncall
       common/citmax/itmax,ncall
-      twgt = cross/ncall/1d2
+c
+c    For FO run (with lhe type of analysis
+c                                         
+      double precision FO_LHE_weight_ratio
+      common /FO_ANALYSIS_LHW/FO_LHE_weight_ratio
+
+      twgt = abs(cross)/ncall*FO_LHE_weight_ratio
       iteration = iteration +1
       close(41)
       opened_file= .false.
@@ -140,7 +146,7 @@ c********************************************************************
            opened_file = .true.
       endif
 
-      if (twgt.eq.0d0)then
+      if (twgt.eq.-2d0)then
          cross = cross + wgts(1)/ncall
          return ! not written file for the first iteration
       elseif(abs(wgts(1)).lt.abs(twgt))then

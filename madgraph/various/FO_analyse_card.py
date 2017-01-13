@@ -29,7 +29,8 @@ class FOAnalyseCard(dict):
     """A simple handler for the fixed-order analyse card """
 
     string_vars = ['fo_extralibs', 'fo_extrapaths', 'fo_includepaths', 
-                   'fo_analyse', 'fo_analysis_format', 'fo_lhe_min_weight']
+                   'fo_analyse', 'fo_analysis_format', 'fo_lhe_min_weight',
+                   'fo_lhe_weight_ratio']
 
     
     def __init__(self, card=None, testing=False):
@@ -122,7 +123,7 @@ class FOAnalyseCard(dict):
                     line = ''
                 lines.append(line)
             else:
-                raise FO_AnalyseCardError('Unknown key: %s = %s' % (key, value))
+                raise FOAnalyseCardError('Unknown key: %s = %s' % (key, value))
 
         if self.testing:
             return ('\n'.join(lines) + '\n')
