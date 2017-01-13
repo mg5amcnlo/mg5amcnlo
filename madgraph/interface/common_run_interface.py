@@ -5541,7 +5541,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
         logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
-        logger.info('      --clean remove all previously existing file')
+        logger.info('      --clean remove all previously existing line in  the file')
         logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
         logger.info('********************* HELP ADD ***************************') 
 
