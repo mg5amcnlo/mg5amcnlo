@@ -643,12 +643,9 @@ class MELauncher(ExtLauncher):
             command = 'generate_events %s' % self.name
         else:
             warning_text = '''\
-This command will create a new param_card with the computed width. 
-This param_card makes sense only if you include all processes for
-the computation of the width. For more efficient width computation:
-see arXiv:1402.1178.'''
+            Note that since 2.3. The launch for 1>N pass in event generation
+            For efficient width computation see arXiv:1402.1178.'''
             logger.warning(warning_text)
-
             command = 'generate_events %s' % self.name
         if mode == "1":
             command += " --cluster"
