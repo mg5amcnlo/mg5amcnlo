@@ -3067,8 +3067,14 @@ RESTART = %(mint_mode)s
 
         # write the executable
         with open(pjoin(rundir, 'shower.sh'), 'w') as fsock:
+            # set the PATH for the dynamic libraries
+            if sys.platform == 'darwin':
+                ld_library_path = 'DYLD_LIBRARY_PATH'
+            else:
+                ld_library_path = 'LD_LIBRARY_PATH'
             fsock.write(open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
-                % {'extralibs': ':'.join(extrapaths)})
+                % {'ld_library_path': ld_library_path,
+                   'extralibs': ':'.join(extrapaths)})
         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
 
         if event_files:
