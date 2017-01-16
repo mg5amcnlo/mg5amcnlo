@@ -1,4 +1,8 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
+2.5.3(XX/XX/17)
+      PT: Modified the default shower starting scale in montecarlocounter.f.
+          The new reference scale from which the dampening profile is computed is sum_i mt_i/2, i
+          being Born level final-state momenta. 
 
 2.5.2(10/12/16)
       OM: improve systematics (thanks to Philipp Pigard)

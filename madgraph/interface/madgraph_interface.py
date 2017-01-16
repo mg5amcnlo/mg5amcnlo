@@ -6501,12 +6501,12 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path',
                        'mg5amc_py8_interface_path','madanalysis5_path']:
                 if self.options[key] in ['None', None]:
-                    self.options[key] = None
+                    self.options[key] = None 
                     continue
                 path = self.options[key]
                 #this is for pythia8
                 if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia8', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(path, 'include', 'Pythia8', 'Pythia.h')):
+                    if not os.path.isfile(pjoin(path,  'include', 'Pythia8', 'Pythia.h')):
                         self.options['pythia8_path'] = None
                     else:
                         continue

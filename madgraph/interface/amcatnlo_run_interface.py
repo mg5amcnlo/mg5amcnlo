@@ -2951,15 +2951,29 @@ RESTART = %(mint_mode)s
             extrapaths.append(pjoin(self.options['hepmc_path'], 'lib'))
             self.shower_card['extrapaths'] += ' %s' % pjoin(self.options['hepmc_path'], 'lib')
 
+        # add the HEPMC path of the pythia8 installation
+        if shower == 'PYTHIA8':
+            hepmc = subprocess.Popen([pjoin(self.options['pythia8_path'], 'bin', 'pythia8-config'), '--hepmc2'],
+                         stdout = subprocess.PIPE).stdout.read().strip()
+            #this gives all the flags, i.e.
+            #-I/Path/to/HepMC/include -L/Path/to/HepMC/lib -lHepMC
+            # we just need the path to the HepMC libraries
+            extrapaths.append(hepmc.split()[1].replace('-L', '')) 
+
         if shower == 'PYTHIA8' and not os.path.exists(pjoin(self.options['pythia8_path'], 'xmldoc')):
             extrapaths.append(pjoin(self.options['pythia8_path'], 'lib'))
 
-        if 'LD_LIBRARY_PATH' in os.environ.keys():
-            ldlibrarypath = os.environ['LD_LIBRARY_PATH']
+        # set the PATH for the dynamic libraries
+        if sys.platform == 'darwin':
+            ld_library_path = 'DYLD_LIBRARY_PATH'
         else:
-            ldlibrarypath = ''
-        ldlibrarypath += ':' + ':'.join(extrapaths)
-        os.putenv('LD_LIBRARY_PATH', ldlibrarypath)
+            ld_library_path = 'LD_LIBRARY_PATH'
+        if ld_library_path in os.environ.keys():
+            paths = os.environ[ld_library_path]
+        else:
+            paths = ''
+        paths += ':' + ':'.join(extrapaths)
+        os.putenv(ld_library_path, paths)
 
         shower_card_path = pjoin(self.me_dir, 'MCatNLO', 'shower_card.dat')
         self.shower_card.write_card(shower, shower_card_path)
@@ -3067,8 +3081,14 @@ RESTART = %(mint_mode)s
 
         # write the executable
         with open(pjoin(rundir, 'shower.sh'), 'w') as fsock:
+            # set the PATH for the dynamic libraries
+            if sys.platform == 'darwin':
+                ld_library_path = 'DYLD_LIBRARY_PATH'
+            else:
+                ld_library_path = 'LD_LIBRARY_PATH'
             fsock.write(open(pjoin(self.me_dir, 'MCatNLO', 'shower_template.sh')).read() \
-                % {'extralibs': ':'.join(extrapaths)})
+                % {'ld_library_path': ld_library_path,
+                   'extralibs': ':'.join(extrapaths)})
         subprocess.call(['chmod', '+x', pjoin(rundir, 'shower.sh')])
 
         if event_files:
