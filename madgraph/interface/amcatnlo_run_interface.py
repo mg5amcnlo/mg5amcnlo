@@ -2943,8 +2943,8 @@ RESTART = %(mint_mode)s
                                       'hwpp_path'],
                          'PYTHIA8': ['pythia8_path']}
 
-            if not all([self.options[ppath] for ppath in path_dict[shower]]):
-                raise aMCatNLOError('Some paths are missing in the configuration file.\n' + \
+            if not all([self.options[ppath] and os.path.exists(self.options[ppath]) for ppath in path_dict[shower]]):
+                raise aMCatNLOError('Some paths are missing or invalid in the configuration file.\n' + \
                         ('Please make sure you have set these variables: %s' % ', '.join(path_dict[shower])))
 
         if shower == 'HERWIGPP':

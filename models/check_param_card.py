@@ -480,7 +480,6 @@ class ParamCard(dict):
                     model_value = model_value.real
                 if not misc.equal(model_value, param_value, 4):
                     modify = True
-                    misc.sprint(modify)
                     if loglevel == 20:
                         logger.info('For consistency, the width of particle %s (%s) is changed to %s.' % (lhacode, particle.get('name'), model_value), '$MG:color:BLACK')
                     else:
@@ -1175,10 +1174,10 @@ class ParamCardRule(object):
                         is_modified = True
                         if log ==20:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
-                                        (block, id, 0.0), '$MG:color:BLACK')                            
+                                        block, id, 0.0, '$MG:color:BLACK')                            
                         elif log:
                             logger.log(log,'For model consistency, update %s with id %s to value %s',
-                                        (block, id, 0.0))
+                                        block, id, 0.0)
                         
         # check one 
         for block, id, comment in self.one:

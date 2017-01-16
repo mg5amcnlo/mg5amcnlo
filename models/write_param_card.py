@@ -174,6 +174,7 @@ class ParamCardWriter(object):
   
         # order the parameter in a smart way
         self.external.sort(self.order_param)
+        todo_block= ['MASS', 'DECAY'] # ensure that those two block are always written
         
         cur_lhablock = ''
         for param in self.external:
@@ -182,11 +183,16 @@ class ParamCardWriter(object):
                 # check if some dependent param should be written
                 self.write_dep_param_block(cur_lhablock)
                 cur_lhablock = param.lhablock.upper()
+                if cur_lhablock in todo_block:
+                    todo_block.remove(cur_lhablock)
                 # write the header of the new block
                 self.write_block(cur_lhablock)
             #write the parameter
             self.write_param(param, cur_lhablock)
         self.write_dep_param_block(cur_lhablock)
+        for cur_lhablock in todo_block:
+            self.write_block(cur_lhablock)
+            self.write_dep_param_block(cur_lhablock)
         self.write_qnumber()
         
     def write_block(self, name):

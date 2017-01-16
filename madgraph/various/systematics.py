@@ -366,7 +366,15 @@ class Systematics(object):
         for lhapdfid,values in pdfs.items():
             if lhapdfid == self.orig_pdf.lhapdfID:
                 continue
+            if len(values) == 1 :
+                continue
             pdfset = self.pdfsets[lhapdfid]
+
+            if pdfset.errorType == 'unknown' :
+                # Don't know how to determine uncertainty for 'unknown' errorType :
+                # File "lhapdf.pyx", line 329, in lhapdf.PDFSet.uncertainty (lhapdf.cpp:6621)
+                # RuntimeError: "ErrorType: unknown" not supported by LHAPDF::PDFSet::uncertainty.
+                continue
             pdferr =  pdfset.uncertainty(values)
             resume.write( '#PDF %s: %g +%2.3g%% -%2.3g%%\n' % (pdfset.name, pdferr.central,pdferr.errplus*100/all_cross[0], pdferr.errminus*100/all_cross[0]))
 
@@ -402,6 +410,7 @@ class Systematics(object):
         
         text = ''
         
+        default = self.args[0]
         for arg in self.args[1:]:
             mur, muf, alps, dyn, pdf = arg[:5]
             if pdf == self.orig_pdf and alps ==1 and (mur!=1 or muf!=1 or dyn!=-1):
@@ -409,7 +418,7 @@ class Systematics(object):
                     text += "<weightgroup name=\"Central scale variation\" combine=\"envelope\">\n"
                     in_scale=True
             elif in_scale:
-                if (pdf == self.orig_pdf and alps ==1):
+                if (pdf == self.orig_pdf and alps ==1) and arg != default:
                     pass
                 else:
                     text += "</weightgroup> # scale\n"
@@ -423,7 +432,12 @@ class Systematics(object):
                 text += "</weightgroup> # ALPS\n"
                 in_alps=False
             
-            if pdf != self.orig_pdf and mur == muf == 1 and dyn==-1 and alps ==1:
+            if mur == muf == 1 and dyn==-1 and alps ==1:
+                if pdf.lhapdfID < 0:
+                    for central,sets in self.pdfsets.items():
+                        if pdf in sets.set():
+                            misc.sprint(central)
+                
                 if pdf.lhapdfID in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET -> PDFSET\n"
@@ -432,7 +446,7 @@ class Systematics(object):
                     text +="<weightgroup name=\"%s\" combine=\"%s\"> # %s: %s\n" %\
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdf.lhapdfID 
-                elif pdf.memberID == 1 and (pdf.lhapdfID - pdf.memberID) in self.pdfsets:
+                elif pdf.memberID == 0 and (pdf.lhapdfID - pdf.memberID) in self.pdfsets:
                     if in_pdf:
                         text += "</weightgroup> # PDFSET -> PDFSET\n"
                     pdfset = self.pdfsets[pdf.lhapdfID - 1]
@@ -441,6 +455,7 @@ class Systematics(object):
                             (pdfset.name, pdfset.errorType,pdfset.lhapdfID, descrip)
                     in_pdf=pdfset.lhapdfID 
                 elif in_pdf and pdf.lhapdfID - pdf.memberID != in_pdf:
+                    misc.sprint(pdf.lhapdfID)
                     text += "</weightgroup> # PDFSET -> PDF\n"
                     in_pdf = False 
             elif in_pdf:
@@ -525,7 +540,14 @@ class Systematics(object):
                 new_args[pos[name]] = value
                 all_args.append(new_args)
         
-        self.args = [default]+ [arg for arg in all_args if arg!= default]
+        self.args = [default] + [arg for arg in all_args if arg!= default]
+
+        # add the default before the pdf scan to have a full grouping
+        pdfplusone = [pdf for pdf in self.pdf if pdf.lhapdfID == self.orig_pdf.lhapdfID+1]
+        if pdfplusone:
+            pdfplusone = default[:-1] + [pdfplusone[0]] 
+            index = self.args.index(pdfplusone)
+            self.args.insert(index, default)
 
         self.log( "#Will Compute %s weights per event." % (len(self.args)-1))
         return
@@ -602,7 +624,10 @@ class Systematics(object):
         
         # MUR part
         if self.b1 == 0 == self.b2:
-            wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
+            if loinfo['n_qcd'] != 0:
+                wgt = self.alpsrunner(Dmur*mur)**loinfo['n_qcd']
+            else:
+                wgt = 1.0
         else:
             wgt = pdf.alphasQ(Dmur*mur)**loinfo['n_qcd']
         # MUF/PDF part
@@ -757,7 +782,19 @@ def call_systematics(args, result=sys.stdout, running=True,
             else:
                 opts['alps'] = [1.0]
             opts['together'] = [('mur','muf','alps','dyn')]
-            pdfs =  card['sys_pdf'].split('&&')
+            if '&&' in card['sys_pdf']:
+                pdfs =  card['sys_pdf'].split('&&')
+            else:
+                data = card['sys_pdf'].split()
+                pdfs = []
+                for d in data:
+                    if not d.isdigit():
+                        pdfs.append(d)
+                    elif int(d) > 500:
+                        pdfs.append(d)
+                    else:
+                        pdfs[-1] = '%s %s' % (pdfs[-1], d)
+
             opts['dyn'] = [-1,1,2,3,4]
             opts['pdf'] = []
             for pdf in pdfs:
@@ -782,7 +819,21 @@ def call_systematics(args, result=sys.stdout, running=True,
     return obj
 
 if __name__ == "__main__":
-    call_systematics(sys.argv[1:])
+    sys_args = sys.argv[1:]
+    for i, arg in enumerate(sys_args) :
+        if arg.startswith('--lhapdf_config=') :
+            lhapdf = misc.import_python_lhapdf(arg[len('--lhapdf_config='):])
+            del sys_args[i]
+            break
+
+    if 'lhapdf' not in globals():
+        lhapdf = misc.import_python_lhapdf('lhapdf-config')
+         
+    if not lhapdf:
+            sys.exit('Can not run systematics since can not link python to lhapdf, specify --lhapdf-config=')
+    call_systematics(sys_args)
+    
+
    
    
         

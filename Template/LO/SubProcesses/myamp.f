@@ -273,9 +273,6 @@ c     For decay-chain syntax use BWcutoff here too (22/12/14)
             if (onshell .and. (lbw(nbw).eq. 2) .or.
      $          .not. onshell .and. (lbw(nbw).eq. 1)) then
                cut_bw=.true.
-               if (gForceBW(i, iconfig).eq.1) then
-                  return
-               endif
 c               write(*,*) 'cut_bw: ',nbw,xmass,onshell,lbw(nbw),cut_bw
             endif
          endif
