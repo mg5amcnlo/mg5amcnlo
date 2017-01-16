@@ -121,6 +121,8 @@ c Auxiliary quantities used when writing events
 c      integer jwgtinfo,mexternal
 c      common/cwgtaux0/jwgtinfo,mexternal
 
+c     ptot (to determine the initial state)
+      double precision ptot(0:3)
       integer kwgtinfo
       integer i_wgt, kk, ii, jj, n,nn
       character*140 buff
@@ -215,6 +217,9 @@ c --- prepare the buffer information
 
       shower_scale = 0d0
       npart = nexternal
+      do i =0,3
+        ptot(i) = 0d0
+      enddo
 
       do i=1,nexternal
         IDUP(i)= ipdg(i)
@@ -228,9 +233,19 @@ c --- prepare the buffer information
         PUP(3,i)=p(3,i)
         PUP(4,i)=p(0,i)
         PUP(5,i)=p(4,i)
+        ptot(0)=ptot(0) + p(0,i)
+        ptot(1)=ptot(1) + p(1,i)
+        ptot(2)=ptot(2) + p(2,i)
+        ptot(3)=ptot(3) + p(3,i)
         VTIMUP(i)=0.d0
         SPINUP(i)=9
       enddo
+
+c     assume massless initial state to get back the initial momenta
+      PUP(4,1) = (ptot(0) + ptot(3))/2
+      PUP(3,1) = PUP(4,1)
+      PUP(4,2) = (ptot(0) - ptot(3))/2
+      PUP(3,2) = - PUP(4,2)
 
       call write_lhef_event(41,
      #    nexternal,IDPRUP,wgts(1)/ncall,0d0,0d0,0d0,

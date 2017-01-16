@@ -2320,9 +2320,6 @@ class RunCard(ConfigFile):
         # ensure that all parameter are coherent and fix those if needed
         self.check_validity()
         
-        if self['fo_lhe_weight_ratio'] != 0:
-            raise Exception
-        
         for incname in self.includepath:
             if incname is True:
                 pathinc = self.default_include_file

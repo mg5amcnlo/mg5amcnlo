@@ -1983,7 +1983,7 @@ RESTART = %(mint_mode)s
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
         elif self.analyse_card['fo_analysis_format'].lower() == 'lhe':
             self.combine_FO_lhe(jobs)
-            logger.info('The results of this run and the LHE File (for plot only)' + \
+            logger.info('The results of this run and the LHE File (to be used for plotting only)' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))            
         else:
             logger.info('The results of this run' + \
