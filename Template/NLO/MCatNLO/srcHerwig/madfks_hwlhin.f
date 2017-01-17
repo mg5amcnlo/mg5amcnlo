@@ -85,7 +85,6 @@ c Avoids rounding problems for zero-mass particles
                 call read_rwgt_line_wgt(iunit,ww(iww))
              enddo
              read(iunit,'(a)')string ! </rwgt>
-             write(*,*) string
           endif
            do while(index(string,'</event>').eq.0)
              read(iunit,'(a)')string ! <rwgt>
