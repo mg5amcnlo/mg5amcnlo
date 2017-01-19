@@ -2027,14 +2027,14 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # We also need to write the overall maximum quantities for this group
         # of processes in 'global_specs.inc'. In aMCatNLO, there is always
         # only one process, so this is trivial
-        self.write_global_specs(matrix_element)
+        self.write_global_specs(matrix_element, output_path=pjoin(dirpath,'global_specs.inc'))
         open('unique_id.inc','w').write(
 """      integer UNIQUE_ID
       parameter(UNIQUE_ID=1)""")
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopCommons.f','MadLoopParams.inc','global_specs.inc']
+                     'MadLoopCommons.f','MadLoopParams.inc']
 
         # We should move to MadLoop5_resources directory from the SubProcesses
         ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
@@ -3773,14 +3773,15 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         # We also need to write the overall maximum quantities for this group
         # of processes in 'global_specs.inc'. In aMCatNLO, there is always
         # only one process, so this is trivial
-        self.write_global_specs(matrix_element)
+        self.write_global_specs(matrix_element, output_path=pjoin(dirpath,'global_specs.inc'))
+        
         open('unique_id.inc','w').write(
 """      integer UNIQUE_ID
       parameter(UNIQUE_ID=1)""")
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc','MadLoopCommons.f','global_specs.inc']
+                     'MadLoopParams.inc','MadLoopCommons.f']
 
         for file in linkfiles:
             ln('../../%s' % file)

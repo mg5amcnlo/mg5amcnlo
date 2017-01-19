@@ -907,7 +907,7 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
             return two value:
             - True/False if the matrix_element was modified
             - the new(or old) matrix element"""
-        misc.sprint("DO not modify grouping") 
+
         return False, matrix_element
         
     #===========================================================================

@@ -13,6 +13,8 @@ c
       include 'run_config.inc'
       include 'maxamps.inc'
       include 'nexternal.inc'
+      include 'cuts.inc'
+      include '../../Source/run.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -32,16 +34,13 @@ c
       integer pow(-max_branch:-1,lmaxconfigs)
       character*20 param(maxpara),value(maxpara)
       double precision pmass(nexternal)   !External particle mass
-      double precision pi1(0:3),pi2(0:3),m1,m2,ebeam(2)
-      integer lpp(2)
+      double precision pi1(0:3),pi2(0:3),m1,m2
 c
 c     Global
 c
       include 'coupl.inc'
       logical gridpack
       common/to_gridpack/gridpack
-      double precision bwcutoff
-      common/to_bwcutoff/bwcutoff
       double precision stot
       common/to_stot/stot
 c
@@ -53,6 +52,13 @@ c
       include 'configs.inc'
       data use_config/0,lmaxconfigs*0/
 
+c
+c    needed for the run_card handling
+c
+      logical gridrun
+      integer iseed,lhaid
+      character*100 pdlabel
+      double precision sf1,sf2,pb1,pb2,d
 c-----
 c  Begin Code
 c-----
@@ -74,13 +80,14 @@ c         write(*,*) 'Unknown compression',icomp
 c         stop
 c      endif
 
-      call load_para(npara,param,value)
-      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
-      call get_real(npara,param,value," bwcutoff ",bwcutoff,5d0)
-      call get_real(npara,param,value," ebeam1 ",ebeam(1),0d0)
-      call get_real(npara,param,value," ebeam2 ",ebeam(2),0d0)
-      call get_integer(npara,param,value," lpp1 ",lpp(1),0)
-      call get_integer(npara,param,value," lpp2 ",lpp(2),0)
+      include '../../Source/run_card.inc'
+c      call load_para(npara,param,value)
+c      call get_logical(npara,param,value," gridpack ",gridpack,.false.)
+c      call get_real(npara,param,value," bwcutoff ",bwcutoff,5d0)
+c      call get_real(npara,param,value," ebeam1 ",ebeam(1),0d0)
+c      call get_real(npara,param,value," ebeam2 ",ebeam(2),0d0)
+c      call get_integer(npara,param,value," lpp1 ",lpp(1),0)
+c      call get_integer(npara,param,value," lpp2 ",lpp(2),0)
 
       call setpara('%(param_card_name)s' %(setparasecondarg)s)   !Sets up couplings and masses
       include 'pmass.inc'

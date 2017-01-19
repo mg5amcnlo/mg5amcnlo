@@ -2445,7 +2445,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                                       '%(proc_prefix)sBornColorFlowCoefs.dat'
                                                 %matrix_element.rep_dict),'w')
             self.write_color_flow_coefs_data_file(dat_writer,
-                          born_col_amps, matrix_element.get('loop_color_basis'))
+                          born_col_amps, matrix_element.get('born_color_basis'))
             dat_writer.close()
             
             dat_writer = open(pjoin('..','MadLoop5_resources',
@@ -2482,7 +2482,7 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
 
         writer.writelines(file,context=self.get_context(matrix_element))
     
-    def write_global_specs(self, matrix_element_list):
+    def write_global_specs(self, matrix_element_list, output_path=None):
         """ From the list of matrix element, or the single matrix element, derive
         the global quantities to write in global_coef_specs.inc"""
         
@@ -2495,7 +2495,12 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
         else:
             me_list = [matrix_element_list]    
 
-        open(pjoin(self.dir_path,'SubProcesses','global_specs.inc'),'w').write(
+        if output_path is None:
+            out_path = pjoin(self.dir_path,'SubProcesses','global_specs.inc')
+        else:
+            out_path = output_path
+
+        open(out_path,'w').write(
 """      integer MAXNEXTERNAL
       parameter(MAXNEXTERNAL=%d)
       integer OVERALLMAXRANK

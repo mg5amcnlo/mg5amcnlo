@@ -771,8 +771,13 @@ class HwU(Histogram):
             elif selector == 'ALPSFACT':
                 selector = r'ALPSFACT'
             elif selector == 'PDF':
-                selector = r'MUF=1_MUR=1_PDF=(\d*)'
+                selector = r'(?:MUF=1_MUR=1_PDF=|MU(?:F|R)="1.0" MU(?:R|F)="1.0" PDF=")(\d*)'
                 if not mode:
+#                    pdfs=[]
+##                    for n in self.bins[0].wgts:
+#                        misc.sprint( n)
+#                        if re.search(selector,n, re.IGNORECASE):
+#                            pdfs.append(int(re.findall(selector, n)[0]))
                     pdfs = [int(re.findall(selector, n)[0]) for n in self.bins[0].wgts if re.search(selector,n, re.IGNORECASE)]
                     min_pdf, max_pdf = min(pdfs), max(pdfs) 
                     if max_pdf - min_pdf > 100:
@@ -816,9 +821,9 @@ class HwU(Histogram):
             for i in xrange(len(values[0])):
                 pdf_stdev = 0.0
                 data = [values[s][i] for s in xrange(len(values))]
-                sdata = sum(data)
-                sdata2 = sum(x**2 for x in data)
-                pdf_stdev = math.sqrt(max(sdata2 -sdata**2/float(len(values)-2),0.0))
+                sdata = sum(data)/len(data)
+                sdata2 = sum(x**2 for x in data)/len(data)
+                pdf_stdev = math.sqrt(max(sdata2 -sdata**2,0.0))
                 min_value.append(sdata - pdf_stdev)
                 max_value.append(sdata + pdf_stdev)                 
 

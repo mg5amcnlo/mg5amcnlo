@@ -570,12 +570,21 @@ class TestMEfromfile(unittest.TestCase):
 
     def setUp(self):
         
-        self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
+        self.debuging = False
+        if self.debuging:
+            self.path = pjoin(MG5DIR, 'ACC_TEST')
+            if os.path.exists(self.path):
+                 shutil.rmtree(self.path)
+            os.mkdir(self.path) 
+        else:
+            self.path = tempfile.mkdtemp(prefix='acc_test_mg5')
         self.run_dir = pjoin(self.path, 'MGPROC') 
+        
     
     def tearDown(self):
 
-        shutil.rmtree(self.path)
+        if not self.debuging:
+            shutil.rmtree(self.path)
 
     def test_add_time_of_flight(self):
         """checking time of flight is working fine"""
@@ -646,6 +655,7 @@ class TestMEfromfile(unittest.TestCase):
         self.assertTrue(has_zero)
         self.assertTrue(has_non_zero)
         
+        self.assertFalse(self.debuging)
     
 
     def test_w_production_with_ms_decay(self):

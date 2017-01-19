@@ -237,7 +237,7 @@ class Particle(PhysicsObject):
         elif name == 'goldstone':
             return self['type'] == 'goldstone'
         elif name == 'propagating':
-            return self['line'] is not None
+            return self['line'] not in ['None',None] 
         else:
             return super(Particle, self).get(name)
 
@@ -348,7 +348,7 @@ class Particle(PhysicsObject):
             if not isinstance(value, str):
                 raise self.PhysicsObjectError, \
                     "Line type %s is not a string" % repr(value)
-            if value not in ['dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly','dotted']:
+            if value not in ['None','dashed', 'straight', 'wavy', 'curly', 'double','swavy','scurly','dotted']:
                 raise self.PhysicsObjectError, \
                    "Line type %s is unknown" % value
 

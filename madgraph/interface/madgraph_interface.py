@@ -2452,6 +2452,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
+        misc.sprint([text,line,begidx, endidx])
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -2871,6 +2872,14 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                              mgme_dir)
                 self._mgme_dir = MG4DIR
 
+        # check that make_opts exists
+        make_opts = pjoin(MG5DIR, 'Template','LO','Source','make_opts')
+        make_opts_source = pjoin(MG5DIR, 'Template','LO','Source','.make_opts')
+        if not os.path.exists(make_opts):
+            shutil.copy(make_opts_source, make_opts)
+        elif  os.path.getmtime(make_opts) <  os.path.getmtime(make_opts_source):
+            shutil.copy(make_opts_source, make_opts)
+            
         # Variables to store state information
         self._multiparticles = {}
         self.options = {}
@@ -6416,6 +6425,12 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             subprocess.call([os.path.join('tests','test_manager.py')],
                                                                   cwd=MG5DIR)            
             print 'new version installed, please relaunch mg5'
+            try:
+                os.remove(pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+                shutil.copy(pjoin(MG5DIR, 'Template','LO','Source','.make_opts'),
+                            pjoin(MG5DIR, 'Template','LO','Source','make_opts'))
+            except:
+                pass
             sys.exit(0)
         elif answer == 'n':
             # prevent for a future check
@@ -6493,12 +6508,12 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             if key in ['pythia8_path', 'hwpp_path', 'thepeg_path', 'hepmc_path',
                        'mg5amc_py8_interface_path','madanalysis5_path']:
                 if self.options[key] in ['None', None]:
-                    self.options[key] = None
+                    self.options[key] = None 
                     continue
                 path = self.options[key]
                 #this is for pythia8
                 if key == 'pythia8_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'Pythia8', 'Pythia.h')):
-                    if not os.path.isfile(pjoin(path, 'include', 'Pythia8', 'Pythia.h')):
+                    if not os.path.isfile(pjoin(path,  'include', 'Pythia8', 'Pythia.h')):
                         self.options['pythia8_path'] = None
                     else:
                         continue
@@ -6527,8 +6542,8 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     else:
                         continue
                 # this is for hepmc
-                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HEPEVT_Wrapper.h')):
-                    if not os.path.isfile(pjoin(path, 'include', 'HEPEVT_Wrapper.h')):
+                elif key == 'hepmc_path' and not os.path.isfile(pjoin(MG5DIR, path, 'include', 'HepMC', 'HEPEVT_Wrapper.h')):
+                    if not os.path.isfile(pjoin(path, 'include', 'HepMC', 'HEPEVT_Wrapper.h')):
                         self.options['hepmc_path'] = None
                     else:
                         continue
