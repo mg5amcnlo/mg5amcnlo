@@ -3990,6 +3990,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['ML'] =pjoin(self.me_dir,'Cards','MadLoopParams.dat')
         self.paths['shower'] = pjoin(self.me_dir,'Cards','shower_card.dat')
         self.paths['shower_default'] = pjoin(self.me_dir,'Cards','shower_card_default.dat')
+        self.paths['FO_analyse'] = pjoin(self.me_dir,'Cards','FO_analyse_card.dat')
+        self.paths['FO_analyse_default'] = pjoin(self.me_dir,'Cards','FO_analyse_card_default.dat')
         self.paths['pythia'] =pjoin(self.me_dir, 'Cards','pythia_card.dat')
         self.paths['PY8'] = pjoin(self.me_dir, 'Cards','pythia8_card.dat')
         self.paths['PY8_default'] = pjoin(self.me_dir, 'Cards','pythia8_card_default.dat')
@@ -5754,7 +5756,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-1]
-                
+
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
         elif 'MadLoopParams' in answer:
