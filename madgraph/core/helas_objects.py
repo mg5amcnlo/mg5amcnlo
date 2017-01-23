@@ -976,7 +976,6 @@ class HelasWavefunction(base_objects.PhysicsObject):
                 " not been computed yet for this wavefunction and an"+\
                 " alohaModel was not specified, so that the information"+\
                 " cannot be retrieved."
-        
         result = None
         
         if info=="interaction_rank" and len(self['mothers'])==0:

@@ -6582,7 +6582,12 @@ def ExportV4Factory(cmd, noclean, output_type='default', group_subprocesses=True
         elif cmd._export_format in ['madweight']:
             return ProcessExporterFortranMW(cmd._export_dir, opt)
         elif format == 'plugin':
-            return cmd._export_plugin(cmd._export_dir, opt)
+            if isinstance(cmd._curr_amps[0], 
+                                         loop_diagram_generation.LoopAmplitude):
+                return cmd._export_plugin(cmd._export_dir, loop_induced_opt)
+            else:
+                return cmd._export_plugin(cmd._export_dir, opt)
+
         else:
             raise Exception, 'Wrong export_v4 format'
     else:
