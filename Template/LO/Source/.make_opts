@@ -39,6 +39,7 @@ endif
 
 # Increase the number of allowed charcters in a Fortran line
 FFLAGS+= -ffixed-line-length-132
+#FFLAGS+= -extend-source # for ifort type of compiler
 
 # Set FC unless it's defined by an environment variable
 ifeq ($(origin FC),default)

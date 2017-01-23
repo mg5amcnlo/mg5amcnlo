@@ -772,14 +772,16 @@ class MultiEventFile(EventFile):
                     grouped_error[group] = self.error[i]**2
             else:
                 ban = banner_mod.Banner(ff.banner)
-                for line in  ban['init']:
+                for line in  ban['init'].split('\n'):
                     splitline = line.split()
                     if len(splitline)==4:
-                        cross, error, wgt, group = splitline
-                        grouped_cross[int(group)] += cross
-                        grouped_error[int(group)] += error**2                        
-                
-                
+                        cross, error, _, group = splitline
+                        if int(group) in grouped_cross:
+                            grouped_cross[group] += float(cross)
+                            grouped_error[group] += float(error)**2                        
+                        else:
+                            grouped_cross[group] = float(cross)
+                            grouped_error[group] = float(error)**2                             
         nb_group = len(grouped_cross)
         
         # compute the information for the first line 
@@ -817,7 +819,6 @@ class MultiEventFile(EventFile):
             init_information["cross_info"].append( cross_info % conv)
         init_information["cross_info"] = '\n'.join(init_information["cross_info"])
         init_information['lha_stra'] = -1 * abs(lha_strategy)
-        
         
         template_init =\
         """    %(idbmup1)i %(idbmup2)i %(ebmup1)e %(ebmup2)e %(pdfgup1)i %(pdfgup2)i %(pdfsup1)i %(pdfsup2)i %(lha_stra)i %(nprup)i

@@ -45,7 +45,6 @@ else:
     import madgraph.iolibs.files as files
     MADEVENT = False
 
-
     
 logger = logging.getLogger('cmdprint.ext_program')
 logger_stderr = logging.getLogger('madevent.misc')
@@ -1235,7 +1234,7 @@ def get_HEPTools_location_setter(HEPToolsDir,type):
     is in the environment paths of the user. If not, it returns a preamble that
     sets it before calling the exectuable, for example:
        <preamble> ./my_exe
-    with <preamble> -> DYLD_LIBRARY_PATH='blabla;$DYLD_LIBRARY_PATH'"""
+    with <preamble> -> DYLD_LIBRARY_PATH=blabla:$DYLD_LIBRARY_PATH"""
     
     assert(type in ['bin','include','lib'])
     
@@ -1246,7 +1245,7 @@ def get_HEPTools_location_setter(HEPToolsDir,type):
     
     if target_env_var not in os.environ or \
                 target_path not in os.environ[target_env_var].split(os.pathsep):
-        return "%s='%s;$%s' "%(target_env_var,target_path,target_env_var)
+        return "%s=%s:$%s "%(target_env_var,target_path,target_env_var)
     else:
         return ''
 

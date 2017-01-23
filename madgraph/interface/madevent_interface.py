@@ -3824,11 +3824,15 @@ Please install this tool with the following MG5_aMC command:
         # Now setup the preamble to make sure that everything will use the locally
         # installed tools (if present) even if the user did not add it to its
         # environment variables.
-        if MADEVENT:
+        if 'heptools_install_dir' in self.options:
             preamble = misc.get_HEPTools_location_setter(
-               pjoin(self.options['mg5amc_py8_interface_path'],os.pardir),'lib')
+                                     self.options['heptools_install_dir'],'lib')
         else:
-            preamble = misc.get_HEPTools_location_setter(
+            if MADEVENT:
+                preamble = misc.get_HEPTools_location_setter(
+                pjoin(self.options['mg5amc_py8_interface_path'],os.pardir),'lib')
+            else:
+                preamble = misc.get_HEPTools_location_setter(
                                                  pjoin(MG5DIR,'HEPTools'),'lib')
             
         open(pythia_cmd_card,'w').write("""!
