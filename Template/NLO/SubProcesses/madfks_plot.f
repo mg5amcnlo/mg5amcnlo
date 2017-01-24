@@ -236,14 +236,9 @@ C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
       integer istatus(nexternal),iPDG(nexternal)
       double precision pmass(nexternal)
       common/to_mass/pmass
-      integer maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
-     &     icolup(2,nexternal,maxflow),niprocs
-      common /c_leshouche_inc/idup,mothup,icolup,niprocs
-      integer nwgt,max_weight
+      integer max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision www(max_weight),wgtden,ratio
+      double precision www(max_weight)
       double precision xsecScale_acc(maxscales,maxscales,maxdynscales)
      $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
       common /scale_pdf_print/xsecScale_acc,xsecPDFr_acc
