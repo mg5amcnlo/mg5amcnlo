@@ -3040,7 +3040,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                     else:
                         continue
                 else:
-                    break
                     raise self.InvalidCmd, "%s is not recognized as a supported cluster format." % cluster_name
                 
                 
