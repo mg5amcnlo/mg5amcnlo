@@ -145,7 +145,16 @@ architecture
 
 EVTDIR=`pwd`"/../Events"
 
-if [ "$PDFCODE" -ne 0 ]
+HWEXE=Herwig++
+if [ -f $HWPPPATH/bin/Herwig ]; then HWEXE=Herwig ; fi
+HWVER=`$HWPPPATH/bin/$HWEXE --version`
+HWVER=($(echo "$HWVER" | sed 's/ / /g'))
+HWVER=($(echo ${HWVER[1]} | tr "." "\n"))
+HWVER=${HWVER[0]}
+if [ "$HWVER" -ge 7 ]; then HWNEW=1 ; HWEXE=Herwig   ; fi
+if [ "$HWVER" -le 2 ]; then HWNEW=0 ; HWEXE=Herwig++ ; fi
+
+if [[ "$PDFCODE" -ne 0 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -eq 1 ]
 then
   HERPDF='EXTPDF'
   PDFLIBRARY='LHAPDF'
@@ -157,6 +166,7 @@ then
   if [ "$PDFCODE" -gt 1 ]; then PDFSET=$PDFCODE; fi
   if [ "$PDFCODE" -lt 0 ]; then LHAOFL=EXTRAPOLATE; fi
   if [ "$PDFCODE" -lt -1 ]; then PDFSET=$((PDFCODE*-1)); fi
+  if [[ "$PDFCODE" -eq 0 && "$HWNEW" -eq 1 ]]; then PDFSET=25000 ; LHAOFL=FREEZE ; fi
   linklhapdf
 # convert PDF number to name reading PDFsets.index
   ISLHA5=0
@@ -174,6 +184,11 @@ then
       echo 'Unable to understand LHAPDF version!'
       exit 1
   fi
+  if [[ "$ISLHA5" -eq 1 && "$HWNEW" -eq 1 ]]
+  then
+      echo " Please, use LHAPDF6 with HW7 "
+      exit 1
+  fi
   while read pdfline
   do
     pdfinfo=($(echo ${pdfline}))
@@ -183,7 +198,7 @@ then
 	if [ "$ISLHA6" -eq 1 ]; then PDFSETN="${pdfinfo[1]}"; fi
     fi
   done < $LHAINDEX
-elif [ "$PDFCODE" -eq 0 ]
+elif [[ "$PDFCODE" -eq 0 && "$HWNEW" -eq 0 ]]
 then
   HERPDF='DEFAULT'
   PDFLIBRARY='THISLIB'
@@ -259,16 +274,16 @@ then
   EXEC_NAME="$EXEC_NAMEF"
 fi
 EXEC_NAMEFF="$EXEPREFIX""$EXEC_NAMEF"
-
 rm -f $thisdir/$EXEC_NAMEFF
-# new compilation step for HW++ mode
-  # compile the analyzer & link it into the EXE directory
-  # TODO: Stream via Inputs script
+
 HWPPMAKE="HWPPPATH="$HWPPPATH" HEPMC="$HEPMCPATH
 if [ "$HWPPUTI" != "" ]
 then
   HWPPUTIMAKE="HWPPUTI="$HWPPUTI
   FORFILEMAKE="FORFILE="$HWPPUTI
+  HEPMCF=HepMCFortran7.h
+  if [ "$HWVER" -le 2 ]; then HEPMCF=HepMCFortran2.h; fi
+  cp $thisdir/HWPPAnalyzer/$HEPMCF $thisdir/HWPPAnalyzer/HepMCFortran.h
   HWPPANALYZER=HepMCFortran
   if ! make -C $thisdir/HWPPAnalyzer $HWPPUTI $HWPPANALYZER.so $HWPPMAKE "$LIBSMAKE" "$LIBSMAKEP" "$INCLMAKE" "$FORFILEMAKE"
   then
@@ -278,7 +293,7 @@ then
   ln -sf $thisdir/HWPPAnalyzer/$HWPPANALYZER.so $thisdir
 fi
   # link the HW++ executable into the EXE directoy
-  # ln -sf $HWPPPATH/bin/Herwig++ $thisdir
+  # ln -sf $HWPPPATH/bin/$HWEXE $thisdir
   # link the stupid LHAPDF index, if necessary
   whichherpdf $HERPDF
   if [ $pdftype = 1 ]
@@ -290,8 +305,8 @@ fi
 runfile="MCATNLO_"$MCMODE
   # create executable if eveything is ok
   echo "#!/bin/bash" > $thisdir/$EXEC_NAMEFF
-  echo "./Herwig++ read MCATNLO_"$MCMODE"_input" >> $thisdir/$EXEC_NAMEFF
-  echo "./Herwig++ run -N "$NEVENTS" "$runfile".run" >> $thisdir/$EXEC_NAMEFF
+  echo "./$HWEXE read MCATNLO_"$MCMODE"_input" >> $thisdir/$EXEC_NAMEFF
+  echo "./$HWEXE run -N "$NEVENTS" "$runfile".run" >> $thisdir/$EXEC_NAMEFF
   chmod +x $thisdir/$EXEC_NAMEFF
 teststatus Compilation
 }
@@ -399,42 +414,29 @@ set /Herwig/EventHandlers/LHEHandler:PartonExtractor /Herwig/Partons/QCDExtracto
 set /Herwig/EventHandlers/LHEHandler:CascadeHandler /Herwig/Shower/ShowerHandler 
 set /Herwig/EventHandlers/LHEHandler:HadronizationHandler /Herwig/Hadronization/ClusterHadHandler
 set /Herwig/EventHandlers/LHEHandler:DecayHandler /Herwig/Decays/DecayHandler
-insert /Herwig/EventHandlers/LHEHandler:PreCascadeHandlers 0 /Herwig/NewPhysics/DecayHandler
-
 set /Herwig/Generators/LHCGenerator:EventHandler /Herwig/EventHandlers/LHEHandler
 set /Herwig/Generators/LHCGenerator:NumberOfEvents $NEVENTS
 set /Herwig/Generators/LHCGenerator:RandomNumberGenerator:Seed $RNDEVSEED_HWPP
 set /Herwig/Generators/LHCGenerator:PrintEvent $MAXPR_HWPP
 set /Herwig/Generators/LHCGenerator:MaxErrors $ERR_NUM_HWPP 
 set /Herwig/Generators/LHCGenerator:DebugLevel 1
-
 EOF
 
-whichherpdf $HERPDF
-if [ $pdftype = 1 ]
+if [ $HWNEW = 0 ]
 then
-
 cat <<EOF >> ./$ifile
+insert /Herwig/EventHandlers/LHEHandler:PreCascadeHandlers 0 /Herwig/NewPhysics/DecayHandler
+EOF
+fi
 
+whichherpdf $HERPDF
+if [[ "$pdftype" -eq 1 && "$HWNEW" -eq 0 ]] || [ "$HWNEW" -eq 1 ]
+then
+cat <<EOF >> ./$ifile
 # Define PDF from MCatNLO.inputs PDFSET number
 mkdir /LHAPDF
 create ThePEG::LHAPDF /LHAPDF/MCNLOPDF ThePEGLHAPDF.so
-EOF
-
-if [ "$ISLHA5" -eq 1 ]
-then
-cat <<EOF >> ./$ifile
-set /LHAPDF/MCNLOPDF:PDFNumber $PDFSET
-EOF
-fi
-if [ "$ISLHA6" -eq 1 ]
-then
-cat <<EOF >> ./$ifile
 set /LHAPDF/MCNLOPDF:PDFName $PDFSETN
-EOF
-fi
-
-cat <<EOF >> ./$ifile
 set /LHAPDF/MCNLOPDF:RemnantHandler /Herwig/Partons/HadronRemnants
 set /Herwig/EventHandlers/LHEReader:PDFA /LHAPDF/MCNLOPDF
 set /Herwig/EventHandlers/LHEReader:PDFB /LHAPDF/MCNLOPDF
@@ -442,13 +444,11 @@ set /Herwig/Particles/p+:PDF /LHAPDF/MCNLOPDF
 set /Herwig/Particles/pbar-:PDF /LHAPDF/MCNLOPDF
 set /Herwig/Shower/ShowerHandler:PDFA /LHAPDF/MCNLOPDF
 set /Herwig/Shower/ShowerHandler:PDFB /LHAPDF/MCNLOPDF
-
 EOF
 
-else
-
+elif  [[ "$pdftype" -eq 0 && "$HWNEW" -eq 0 ]]
+then
 cat <<EOF >> ./$ifile
-
 # Use internal HW++ defualt PDF sets
 set /Herwig/EventHandlers/LHEReader:PDFA /Herwig/Partons/MRST-NLO
 set /Herwig/EventHandlers/LHEReader:PDFB /Herwig/Partons/MRST-NLO
@@ -456,7 +456,6 @@ set /Herwig/Particles/p+:PDF /Herwig/Partons/MRST-NLO
 set /Herwig/Particles/pbar-:PDF /Herwig/Partons/MRST-NLO
 set /Herwig/Shower/ShowerHandler:PDFA /Herwig/Partons/MRST-NLO
 set /Herwig/Shower/ShowerHandler:PDFB /Herwig/Partons/MRST-NLO
-
 EOF
 fi
 
@@ -512,6 +511,29 @@ set /Herwig/Shower/AlphaQCD:NumberOfLoops 2
 #set /Herwig/EventHandlers/LHEReader:ShowerAlpha  AlphaQCD
 EOF
 fi
+
+
+if [ $HWNEW = 1 ]
+then
+cat <<EOF >> ./$ifile
+set /Herwig/Shower/PartnerFinder:PartnerMethod Random
+set /Herwig/Shower/PartnerFinder:ScaleChoice Partner
+set /Herwig/Shower/GtoQQbarSplitFn:AngularOrdered Yes
+
+#set /Herwig/Shower/Evolver:Interactions QCDOnly
+#set /Herwig/Shower/Evolver:SoftCorrelations No
+#set /Herwig/Shower/Evolver:SpinCorrelations Yes
+
+set /Herwig/Shower/Evolver:SpinCorrelations No
+set /Herwig/Shower/KinematicsReconstructor:FinalStateReconOption Default
+set /Herwig/Shower/KinematicsReconstructor:InitialStateReconOption Rapidity
+set /Herwig/Shower/ShowerHandler:MaxPtIsMuF Yes
+set /Herwig/Shower/ShowerHandler:RestrictPhasespace On
+
+EOF
+fi
+
+
 
 cat<<EOF >> ./$ifile
 # CREATE AND APPLY CUTS

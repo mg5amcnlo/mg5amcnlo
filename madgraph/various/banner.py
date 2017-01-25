@@ -1020,7 +1020,25 @@ class ConfigFile(dict):
                 value = value.strip()
                 if value.startswith('[') and value.endswith(']'):
                     value = value[1:-1]
-                value = filter(None, re.split(r'(?:(?<!\\)\s)|,', value, re.VERBOSE)) 
+                #do not perform split within a " or ' block  
+                data = re.split(r"((?<![\\])['\"])((?:.(?!(?<![\\])\1))*.?)\1", str(value))
+                new_value = []
+                i = 0
+                while len(data) > i:
+                    current = filter(None, re.split(r'(?:(?<!\\)\s)|,', data[i], re.VERBOSE))
+                    i+=1
+                    if len(data) > i+1:
+                        if current:
+                            current[-1] += '{0}{1}{0}'.format(data[i], data[i+1])
+                        else:
+                            current = ['{0}{1}{0}'.format(data[i], data[i+1])]
+                        i+=2
+                    new_value += current
+ 
+                            
+                            
+                value = new_value                           
+                
             elif not hasattr(value, '__iter__'):
                 value = [value]
             elif isinstance(value, dict):
@@ -1283,7 +1301,8 @@ class ProcCharacteristic(ConfigFile):
         self.add_param('has_loops', False)
         self.add_param('bias_module','None')
         self.add_param('max_n_matched_jets', 0)
-        self.add_param('colored_pdgs', [1,2,3,4,5])        
+        self.add_param('colored_pdgs', [1,2,3,4,5])
+        self.add_param('complex_mass_scheme', False)        
 
     def read(self, finput):
         """Read the input file, this can be a path to a file, 
@@ -1436,6 +1455,9 @@ class PY8Card(ConfigFile):
         self.add_param("Beams:frameType", 4,
             hidden=True,
             comment='Tell Pythia8 that an LHEF input is used.')
+        self.add_param("HEPMCoutput:scaling", 1.0e9,
+            hidden=True,
+            comment='1.0 corresponds to HEPMC weight given in [mb]. We choose here the [pb] normalization.')
         self.add_param("Check:epTolErr", 1e-2,
             hidden=True,
             comment='Be more forgiving with momentum mismatches.')
@@ -1520,6 +1542,8 @@ class PY8Card(ConfigFile):
         self.hidden_param = []
         self.hidden_params_to_always_write = set()
         self.visible_params_to_always_write = set()
+        # List of parameters that should never be written out given the current context.
+        self.params_to_never_write = set()
         
         # Parameters which have been set by the system (i.e. MG5 itself during
         # the regular course of the shower interface)
@@ -1576,6 +1600,11 @@ class PY8Card(ConfigFile):
         if name.lower() in self.system_set:
             self.system_set.remove(name.lower())
 
+    def vetoParamWriteOut(self, name):
+        """ Forbid the writeout of a specific parameter of this card when the 
+        "write" function will be invoked."""
+        self.params_to_never_write.add(name.lower())
+    
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
         request and only if not already user_set."""
@@ -1647,18 +1676,23 @@ class PY8Card(ConfigFile):
             
 
     def write(self, output_file, template, read_subrun=False, 
-                           print_only_visible=False, direct_pythia_input=False):
+                    print_only_visible=False, direct_pythia_input=False, add_missing=True):
         """ Write the card to output_file using a specific template.
         > 'print_only_visible' specifies whether or not the hidden parameters
             should be written out if they are in the hidden_params_to_always_write
             list and system_set.
         > If 'direct_pythia_input' is true, then visible parameters which are not
           in the self.visible_params_to_always_write list and are not user_set
-          or system_set are commented."""
+          or system_set are commented.
+        > If 'add_missing' is False then parameters that should be written_out but are absent
+        from the template will not be written out."""
 
         # First list the visible parameters
         visible_param = [p for p in self if p.lower() not in self.hidden_param
-                                                  or p.lower() in self.user_set]        
+                                                  or p.lower() in self.user_set]
+        # Filter against list of parameters vetoed for write-out
+        visible_param = [p for p in visible_param if p.lower() not in self.params_to_never_write]
+        
         # Now the hidden param which must be written out
         if print_only_visible:
             hidden_output_param = []
@@ -1667,6 +1701,8 @@ class PY8Card(ConfigFile):
               not p.lower() in self.user_set and
               (p.lower() in self.hidden_params_to_always_write or 
                                                   p.lower() in self.system_set)]
+        # Filter against list of parameters vetoed for write-out
+        hidden_output_param = [p for p in hidden_output_param if p not in self.params_to_never_write]
         
         if print_only_visible:
             subruns = []
@@ -1788,7 +1824,11 @@ class PY8Card(ConfigFile):
                 hidden_output_param.pop(hidden_output_param.index(param))
             else:
                 # Just copy parameters which don't need to be specified
-                output.write(line)
+                if param.lower() not in self.params_to_never_write:
+                    output.write(line)
+                else:
+                    output.write('! The following parameter was forced to be commented out by MG5aMC.\n')
+                    output.write('! %s'%line)
                 # Proceed to next line
                 last_pos = tmpl.tell()
                 line     = tmpl.readline()
@@ -1815,6 +1855,11 @@ class PY8Card(ConfigFile):
             # Proceed to next line
             last_pos = tmpl.tell()
             line     = tmpl.readline()
+        
+        # If add_missing is False, make sure to empty the list of remaining parameters
+        if not add_missing:
+            visible_param = []
+            hidden_output_param = []
         
         # Now output the missing parameters. Warn about visible ones.
         if len(visible_param)>0 and not template is None:
@@ -2091,10 +2136,9 @@ class RunCard(ConfigFile):
                 raise Exception, "No such file %s" % finput
         
         for line in finput:
-            
             line = line.split('#')[0]
             line = line.split('!')[0]
-            line = line.split('=',1)
+            line = line.rsplit('=',1)
             if len(line) != 2:
                 continue
             value, name = line
@@ -2546,6 +2590,9 @@ class RunCardLO(RunCard):
         self.add_param("maxjetflavor", 4)
         self.add_param("xqcut", 0.0, cut=True)
         self.add_param("use_syst", True)
+        self.add_param('systematics_program', 'auto', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics, syscalc')
+        self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
+        
         self.add_param("sys_scalefact", "0.5 1 2", include=False)
         self.add_param("sys_alpsfact", "None", include=False)
         self.add_param("sys_matchscale", "auto", include=False)
@@ -2742,6 +2789,20 @@ class RunCardLO(RunCard):
                 self['drjl'] = 0
                 self['sys_alpsfact'] = "0.5 1 2"
                 
+        # For interference module, the systematics are wrong.
+        # automatically set use_syst=F and set systematics_program=none
+        no_systematics = False
+        for proc in proc_def:
+            for oneproc in proc:
+                if '^2' in oneproc.nice_string():
+                    no_systematics = True
+                    break
+            else:
+                continue
+            break
+        if no_systematics:
+            self['use_syst'] = False
+            self['systematics_program'] = 'none'
             
     def write(self, output_file, template=None, python_template=False):
         """Write the run_card in output_file according to template 
@@ -3245,6 +3306,9 @@ class RunCardNLO(RunCard):
         self.add_param('pdf_set_min', 244601, hidden=True)
         self.add_param('pdf_set_max', 244700, hidden=True)
         self.add_param('store_rwgt_info', False)
+        self.add_param('systematics_program', 'none', include=False, hidden=True, comment='Choose which program to use for systematics computation: none, systematics')
+        self.add_param('systematics_arguments', [''], include=False, hidden=True, comment='Choose the argment to pass to the systematics command. like --mur=0.25,1,4. Look at the help of the systematics function for more details.')
+             
         #merging
         self.add_param('ickkw', 0)
         self.add_param('bwcutoff', 15.0)
@@ -3366,7 +3430,6 @@ class RunCardNLO(RunCard):
         if len(self['reweight_scale']) == 1 and len(self['dynamical_scale_choice']) != 1:
             self['reweight_scale']=self['reweight_scale']*len(self['dynamical_scale_choice']) 
             logger.warning("Setting 'reweight_scale' for all 'dynamical_scale_choice' to %s" % self['reweight_pdf'][0])
-
 
         # Check that there are no identical elements in lhaid or dynamical_scale_choice
         if len(self['lhaid']) != len(set(self['lhaid'])):

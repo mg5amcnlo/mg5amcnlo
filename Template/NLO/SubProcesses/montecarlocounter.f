@@ -2501,6 +2501,8 @@ c Shower scale
       double precision shattmp,dot,emsca_bare,ref_scale,scalemin,
      &scalemax,rrnd,ran2,emscainv,dum(5),xm12,qMC,ptresc
       integer ileg
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
 
       logical emscasharp
       double precision emsca
@@ -2521,7 +2523,7 @@ c Consistency check
      &                       xm12,dum(1),dum(2),dum(3),dum(4),dum(5),qMC,.true.)
 
       emsca=2d0*sqrt(ebeam(1)*ebeam(2))
-      scalemax=sqrt((1-xi_i_fks)*shat)
+      call assign_ref_scale(p_born,xi_i_fks,shat,scalemax)
       if(dampMCsubt)then
          call assign_scaleminmax(shat,xi_i_fks,scalemin,scalemax,ileg,xm12)
          emscasharp=(scalemax-scalemin).lt.(1d-3*scalemax)
@@ -2545,14 +2547,17 @@ c Consistency check
 
       subroutine assign_scaleminmax(shat,xi,xscalemin,xscalemax,ileg,xm12)
       implicit none
+      include "nexternal.inc"
       include "run.inc"
       include "madfks_mcatnlo.inc"
       integer i,ileg
       double precision shat,xi,ref_scale,xscalemax,xscalemin,xm12
       character*4 abrv
       common/to_abrv/abrv
+      double precision p_born(0:3,nexternal-1)
+      common/pborn/p_born
 
-      ref_scale=sqrt((1-xi)*shat)
+      call assign_ref_scale(p_born,xi,shat,ref_scale)
       xscalemin=max(shower_scale_factor*frac_low*ref_scale,scaleMClow)
       xscalemax=max(shower_scale_factor*frac_upp*ref_scale,
      &              xscalemin+scaleMCdelta)
@@ -2567,6 +2572,33 @@ c
       return
       end
 
+
+      subroutine assign_ref_scale(p,xii,sh,ref_sc)
+      implicit none
+      include "nexternal.inc"
+      double precision p(0:3,nexternal-1),xii,sh,ref_sc
+      integer i_scale,i
+      parameter(i_scale=1)
+
+      ref_sc=0d0
+      if(i_scale.eq.0)then
+c Born-level CM energy squared
+         ref_sc=dsqrt(max(0d0,(1-xii)*sh))
+      elseif(i_scale.eq.1)then
+c Sum of final-state transverse masses
+         do i=3,nexternal-1
+            ref_sc=ref_sc+dsqrt(max(0d0,(p(0,i)+p(3,i))*(p(0,i)-p(3,i))))
+         enddo
+         ref_sc=ref_sc/2d0
+      else
+         write(*,*)'Wrong i_scale in assign_ref_scale',i_scale
+         stop
+      endif
+c Safety threshold for the reference scale
+      ref_sc=max(ref_sc,30d0)
+
+      return
+      end
 
 
       subroutine dinvariants_dFKS(ileg,s,x,yi,yj,xm12,xm22,dw1dx,dw1dy,dw2dx,dw2dy)
@@ -2662,13 +2694,13 @@ c
       double precision z,xi,s,x,yi,xm12,xm22,w1,w2,qMC,scalemax,wcc
       logical lzone
 
-      double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,
+      double precision max_scale,upscale,upscale2,xmp2,xmm2,xmr2,ww,Q2,
      &lambda,dot,e0sq,beta,dum,ycc,mdip,mdip_g,zp1,zm1,zp2,zm2,zp3,zm3
       external dot
 
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
-      double precision pip(0:3),pifat(0:3)
+      double precision pip(0:3),pifat(0:3),psum(0:3)
 
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -2706,6 +2738,7 @@ c Definition and initialisation of variables
       do i=0,3
          pifat(i)=p_born(i,ifat)
          pip(i)  =p_born(i,ip)
+         psum(i) =pifat(i)+pip(i) 
       enddo
       max_scale=scalemax
       xmp2=dot(pip,pip)
@@ -2715,7 +2748,8 @@ c Definition and initialisation of variables
       xmm2=xm12*(4-ileg)
       xmr2=xm22*(4-ileg)-xm12*(3-ileg)
       ww=w1*(4-ileg)-w2*(3-ileg)
-      lambda=sqrt((s+xmm2-xmp2)**2-4*s*xmm2)
+      Q2=dot(psum,psum)
+      lambda=sqrt((Q2+xmm2-xmp2)**2-4*Q2*xmm2)
       beta=sqrt(1-4*s*(xmm2+ww)/(s-xmr2+xmm2+ww)**2)
       wcc=1d0
       ycc=1-parp67*x/(1-x)**2/2
@@ -2742,7 +2776,7 @@ c
          if(ileg.le.2)upscale2=2*e0sq
          if(ileg.gt.2)then
             upscale2=2*e0sq+xmm2
-            if(ip.gt.2)upscale2=(s+xmm2-xmp2+lambda)/2
+            if(ip.gt.2)upscale2=(Q2+xmm2-xmp2+lambda)/2
          endif
          if(xi.lt.upscale2)lzone=.true.
 c

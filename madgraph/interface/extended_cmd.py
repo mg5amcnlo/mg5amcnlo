@@ -43,6 +43,7 @@ except ImportError, error:
         import internal.misc as misc
     except:
         raise error
+    
     MADEVENT = True
 
 
@@ -859,7 +860,25 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
            
     keyboard_stop_msg = """stopping all current operation
             in order to quit the program please enter exit"""
-     
+
+    if MADEVENT:
+        plugin_path = []
+    else:
+        plugin_path = [pjoin(MG5DIR, 'PLUGIN')]
+    if 'PYTHONPATH' in os.environ:
+        for PluginCandidate in os.environ['PYTHONPATH'].split(':'):
+            try:
+                dirlist = os.listdir(PluginCandidate)
+            except OSError:
+                continue
+            for onedir in dirlist:
+                if onedir == 'MG5aMC_PLUGIN':
+                    plugin_path.append(pjoin(PluginCandidate, 'MG5aMC_PLUGIN'))
+                    break
+            else:
+                continue
+            break
+    
     def __init__(self, *arg, **opt):
         """Init history and line continuation"""
         

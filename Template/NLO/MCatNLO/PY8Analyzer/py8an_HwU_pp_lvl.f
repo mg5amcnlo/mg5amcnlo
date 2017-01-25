@@ -61,6 +61,7 @@ c for the uncertainty estimate
       call set_error_estimation(0)
       nwgt_analysis=nwgt
       do i=1,1
+        l=0
         call HwU_book(l+1,'total rate   '//HwUtype(i),2,-2.d0,2.d0)
         call HwU_book(l+2,'lep rapidity '//HwUtype(i),40,-9d0,9d0)
         call HwU_book(l+3,'lep pt       '//HwUtype(i),100,0d0,200d0)

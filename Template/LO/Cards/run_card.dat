@@ -60,7 +60,7 @@
 # Type and output format
 #*********************************************************************
   %(gridpack)s     = gridpack  !True = setting up the grid pack
-  %(time_of_flight)s = time_of_flight ! threshold below which info is not written (-1 means not written)
+  %(time_of_flight)s = time_of_flight ! threshold (in mm) below which the invariant livetime is not written (-1 means not written)
   %(lhe_version)s = lhe_version       ! Change the way clustering information pass to shower.        
   %(clusinfo)s = clusinfo         ! include clustering tag in output
   %(event_norm)s =  event_norm       ! average/sum. Normalization of the weight in the LHEF
@@ -87,7 +87,7 @@
 # Generation bias, check the wiki page below for more information:   *
 #  'cp3.irmp.ucl.ac.be/projects/madgraph/wiki/LOEventGenerationBias' *
 #*********************************************************************
- %(bias_module)s = bias_module  ! Bias type of bias, [None, ptj_bias, <custom_folder>]
+ %(bias_module)s = bias_module  ! Bias type of bias, [None, ptj_bias, -custom_folder-]
  %(bias_parameters)s = bias_parameters ! Specifies the parameters of the module.
 #
 #*******************************                                                 
@@ -263,9 +263,7 @@
 #
 #*********************************************************************
 # Store info for systematics studies                                 *
-# WARNING: If use_syst is T, matched Pythia output is                *
-#          meaningful ONLY if plotted taking matchscale              *
-#          reweighting into account!                                 *
+# WARNING: Do not use for interference type of computation           *
 #*********************************************************************
    %(use_syst)s  = use_syst      ! Enable systematics studies
 #
@@ -278,6 +276,6 @@
 %(sys_alpsfact)s = sys_alpsfact  # \alpha_s emission scale factors
 %(sys_matchscale)s = sys_matchscale # variation of merging scale
 # PDF sets and number of members (0 or none for all members).
-%(sys_pdf)s = sys_pdf # separate by && if more than one set.
+%(sys_pdf)s = sys_pdf # list of pdf sets
 # MSTW2008nlo68cl.LHgrid 1  = sys_pdf
 #

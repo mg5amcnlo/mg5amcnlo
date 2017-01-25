@@ -69,10 +69,10 @@ class TestMG5aMCDistribution(unittest.TestCase):
             with misc.TMP_directory() as tmp_path:
                 subprocess.call('bzr branch lp:~maddevelopers/mg5amcnlo/HEPToolsInstallers BZR_VERSION',
                                 cwd=tmp_path, shell=True)
-                shutil.copy(pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz'),
-                            pjoin(tmp_path,'OfflineHEPToolsInstaller.tar.gz'))    
-                subprocess.call('tar -xzf OfflineHEPToolsInstaller.tar.gz', cwd=tmp_path, shell=True)
-                shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'OFFLINE_VERSION'))
+#                shutil.copy(pjoin(MG5DIR,'vendor','OfflineHEPToolsInstaller.tar.gz'),
+#                            pjoin(tmp_path,'OfflineHEPToolsInstaller.tar.gz'))    
+#                subprocess.call('tar -xzf OfflineHEPToolsInstaller.tar.gz', cwd=tmp_path, shell=True)
+#                shutil.move(pjoin(tmp_path,'HEPToolsInstallers'),pjoin(tmp_path,'OFFLINE_VERSION'))
                 online_path = dict(tuple(line.split()[:2]) for line in urllib.urlopen(
                       'http://madgraph.phys.ucl.ac.be/package_info.dat'))['HEPToolsInstaller']
                 subprocess.call('tar -xzf %s'%TestMG5aMCDistribution.get_data(online_path,tmp_path), 
@@ -87,7 +87,8 @@ class TestMG5aMCDistribution(unittest.TestCase):
                     if os.path.basename(path)=='.bzr':
                         continue
                     file_name = os.path.basename(path)
-                    for comparison in ['OFFLINE_VERSION','ONLINE_VERSION_UCL','ONLINE_VERSION_UIUC']:
+#                    for comparison in ['OFFLINE_VERSION','ONLINE_VERSION_UCL','ONLINE_VERSION_UIUC']:
+                    for comparison in ['ONLINE_VERSION_UCL','ONLINE_VERSION_UIUC']:
 #                        misc.sprint('Testing %s in %s vs %s.'%(file_name,'BZR_VERSION',comparison))
                         diff = subprocess.Popen('diff %s %s'%(path,
                                 pjoin(tmp_path,comparison,file_name)),
