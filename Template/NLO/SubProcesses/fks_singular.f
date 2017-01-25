@@ -4404,6 +4404,7 @@ c      include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
+      include "mint.inc"
       double precision p(0:3,nexternal),bsv_wgt,born_wgt,avv_wgt
       double precision pp(0:3,nexternal)
       
@@ -4460,7 +4461,7 @@ c For tests of virtuals
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
 
-      double precision average_virtual,virtual_fraction
+      double precision average_virtual(maxchannels),virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
       double precision virtual_over_born
       common/c_vob/virtual_over_born
@@ -4635,7 +4636,7 @@ c Finite part of one-loop corrections
 c convert to Binoth Les Houches Accord standards
          virt_wgt=0d0
          if (fold.eq.0) then
-            if ((ran2().le.virtual_fraction .and.
+            if ((ran2().le.virtual_fraction(ichan) .and.
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
                call cpu_time(tBefore)
                Call BinothLHA(p_born,born_wgt,virt_wgt)
@@ -4644,9 +4645,9 @@ c$$$               virt_wgt=m1l_W_finite_CDR(p_born,born_wgt)
                tOLP=tOLP+(tAfter-tBefore)
                virtual_over_born=virt_wgt/(born_wgt*ao2pi)
                if (ickkw.ne.-1)
-     &              virt_wgt=virt_wgt-average_virtual*born_wgt*ao2pi
+     &              virt_wgt=virt_wgt-average_virtual(ichan)*born_wgt*ao2pi
                if (abrv.ne.'virt') then
-                  virt_wgt=virt_wgt/virtual_fraction
+                  virt_wgt=virt_wgt/virtual_fraction(ichan)
                endif
                virt_wgt_save=virt_wgt
 c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
@@ -4656,7 +4657,7 @@ c$$$               bsv_wgt=bsv_wgt+virt_wgt_save
 c$$$            bsv_wgt=bsv_wgt+virt_wgt_save
          endif
          if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1)
-     &        avv_wgt=average_virtual*born_wgt*ao2pi
+     &        avv_wgt=average_virtual(ichan)*born_wgt*ao2pi
 
 c eq.(MadFKS.C.13)
          if(abrv.eq.'viSA'.or.abrv.eq.'viSB')then
@@ -5415,9 +5416,11 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       end
 
 
-      subroutine setfksfactor(iconfig,match_to_shower)
+      subroutine setfksfactor(match_to_shower)
       implicit none
 
+      include 'mint.inc'
+      
       double precision CA,CF, PI
       parameter (CA=3d0,CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
@@ -5431,7 +5434,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       logical softtest,colltest
       common/sctests/softtest,colltest
 
-      integer config_fks,i,j,iconfig,fac1,fac2
+      integer config_fks,i,j,fac1,fac2
       logical match_to_shower
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -5474,6 +5477,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       logical rotategranny
       common/crotategranny/rotategranny
+      double precision diagramsymmetryfactor_save(maxchannels)
+      save diagramsymmetryfactor_save
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
@@ -5715,6 +5720,7 @@ c for the real is used. THIS NEEDS TO BE CHANGED WHEN MERGING WITH THE
 c 'FKS_EW' STUFF
       iden_comp=dble(iden_born_FKS(nFKSprocess))/
      &          dble(iden_real_FKS(nFKSprocess))
+
       
       
 c Set matrices used by MC counterterms
@@ -5749,27 +5755,35 @@ c Setup the FKS symmetry factors.
 
       if (firsttime) then
 c Check to see if this channel needs to be included in the multi-channeling
-         diagramsymmetryfactor=0d0
+         do kchan=1,nchans
+            diagramsymmetryfactor_save(kchan)=0d0
+         enddo
          if (multi_channel) then
             open (unit=19,file="symfact.dat",status="old",err=14)
             do i=1,mapconfig(0)
                read (19,*,err=23) fac1,fac2
-               if (i.eq.iconfig) then
-                  if (mapconfig(iconfig).ne.fac1) then
-                     write (*,*) 'inconsistency in symfact.dat',i
-     $                    ,iconfig,mapconfig(iconfig),fac1
-                     stop
+               do kchan=1,nchans
+                  if (i.eq.iconfigs(kchan)) then
+                     if (mapconfig(iconfigs(kchan)).ne.fac1) then
+                        write (*,*) 'inconsistency in symfact.dat',i
+     $                       ,kchan,iconfigs(kchan)
+     $                       ,mapconfig(iconfigs(kchan)),fac1
+                        stop
+                     endif
+                     diagramsymmetryfactor_save(kchan)=dble(fac2)
                   endif
-                  diagramsymmetryfactor=dble(fac2)
-               endif
+               enddo
             enddo
             close(19)
          else                   ! no multi_channel
-            diagramsymmetryfactor=1d0
+            do kchan=1,nchans
+               diagramsymmetryfactor_save(kchan)=1d0
+            enddo
          endif
  12      continue
          firsttime=.false.
       endif
+      diagramsymmetryfactor=diagramsymmetryfactor_save(ichan)
 
       return
 
@@ -5781,7 +5795,9 @@ c Check to see if this channel needs to be included in the multi-channeling
       write (*,*) '"symfact.dat" is not of the correct format'
       stop
  14   continue
-      diagramsymmetryfactor=1d0
+      do kchan=1,nchans
+         diagramsymmetryfactor_save(kchan)=1d0
+      enddo
       goto 12
       end
 

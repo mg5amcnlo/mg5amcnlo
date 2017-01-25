@@ -1583,6 +1583,7 @@ ACCURACY = %(accuracy)s
 ADAPT_GRID = 2
 MULTICHANNEL = 1
 SUM_HELICITY = 1
+NCHANS = 1
 CHANNEL = %(channel)s
 SPLIT = %(split)s
 RUN_MODE = %(run_mode)s

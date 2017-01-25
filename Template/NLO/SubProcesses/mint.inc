@@ -1,3 +1,10 @@
+*     -*-fortran-*-
+
+      integer maxchannels
+      parameter (maxchannels=1) ! generate this parameter with gensym?
+      integer nchans,iconfigs(maxchannels),kchan,iconfig,ichan
+      common /channels/ nchans,iconfigs,iconfig,ichan
+
 c Note that the number of intervals in the integration
 c grids, 'nintervals', should be equal to
 c "nintervals = min_inter * 2^n",
@@ -16,3 +23,11 @@ c where 'n' is smaller or equal to 'min_it'.
 
       double precision accuracy
       common /to_accuracy/ accuracy
+
+      integer nvirt(nintervals_virt,ndimmax,maxchannels)
+     $     ,nvirt_acc(nintervals_virt,ndimmax,maxchannels)
+      double precision ave_virt(nintervals_virt,ndimmax,maxchannels)
+     $     ,ave_virt_acc(nintervals_virt,ndimmax,maxchannels)
+     $     ,ave_born_acc(nintervals_virt ,ndimmax,maxchannels)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
+     $     ,nvirt_acc
