@@ -256,7 +256,7 @@ c Loop over PS points
       do kpoint=1,ncalls
          new_point=.true.
 c first determine which integration channel we want to pick this point from         
-         call get_channel(xint,vol_chan)
+         call get_channel(ans,vol_chan)
 c find random x, and its random cell
          do kdim=1,ndim
             kfold(kdim)=1
@@ -277,7 +277,7 @@ c if(even), we should compute the ncell and the rand from the ran3()
          enddo
          ifirst=0
  1       continue
-         vol=1
+         vol=1d0/vol_chan
 c c convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
          do kdim=1,ndim
             nintcurr=nint_used/ifold(kdim)
@@ -542,6 +542,8 @@ c double the number of points for the next iteration
      $        'accumulated results '//title(i)//' =',ans(i,0),' +/- '
      $        ,unc(i,0) ,' (',efrac(i)*100d0,'%)'
       enddo
+      write (*,*) 'ans:',(ans(1,kchan),kchan=1,nchans)
+      write (*,*) 'ans:',(ans(2,kchan),kchan=1,nchans)
       if (nit_included.le.1) then
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF ='
      $        ,0d0
@@ -955,7 +957,7 @@ c Choose cell flat
       enddo
       ifirst=0
  5    continue
-      vol=1
+      vol=1d0/vol_chan
       do kdim=1,ndim
          nintcurr=nintervals/ifold(kdim)
          nintcurr_virt=nintervals_virt/ifold(kdim)
@@ -1262,17 +1264,50 @@ c reset the acc values
 
 
 
-      subroutine get_channel(xint,vol_chan)
+      subroutine get_channel(ans,vol_chan)
+c Picks one random 'ichan' among the 'nchans' integration channels and
+c fills the channels common block in mint.inc.
       implicit none
       include 'mint.inc'
-      double precision xint(maxchannels),vol_chan
-      if (nchans.ne.1) then
-         write (*,*) 'nchans must be equal to one',nchans
-         stop 1
+      double precision ans(nintegrals,0:maxchannels),vol_chan,ran3,target,sum
+      external ran3
+      if (nchans.eq.1) then
+         ichan=1
+         iconfig=iconfigs(ichan)
+         vol_chan=1d0
+      elseif (nchans.gt.1) then
+         if (ans(1,0).le.0d0) then
+c     pick one at random (flat)
+            ichan=int(ran3(.false.)*nchans)+1
+            iconfig=iconfigs(ichan)
+            vol_chan=1d0/dble(nchans)
+         else
+c     pick one at random (weighted by cross section)
+            sum=0d0
+            do kchan=1,nchans
+               sum=sum+ans(1,kchan)
+            enddo
+            if (abs(sum-ans(1,0))/(sum+ans(1,0)).gt.1d-8) then
+               write (*,*) 'ERROR: sum should be equal to ans',
+     &              sum,ans(1,0)
+               stop 1
+            endif
+            target=ans(1,0)*ran3(.false.)
+            sum=0d0
+            ichan=0
+            do while (sum.lt.target)
+               ichan=ichan+1
+               sum=sum+ans(1,ichan)
+            enddo
+            if (ichan.eq.0 .or. ichan.gt.nchans) then
+               write (*,*) 'ERROR: ichan cannot be zero or'/
+     $              /' larger than nchans',ichan,nchans
+               stop
+            endif
+            iconfig=iconfigs(ichan)
+            vol_chan=ans(1,ichan)/ans(1,0)
+         endif
       endif
-      ichan=1
-      vol_chan=1d0
-      iconfig=iconfigs(ichan)
       return
       end
       
