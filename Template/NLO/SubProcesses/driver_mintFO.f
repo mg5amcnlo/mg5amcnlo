@@ -759,7 +759,7 @@ c-----
                   endif
                enddo
             enddo
-            write(*,12) 'Running Configuration Number(s): '
+            write(*,*) 'Running Configuration Number(s): '
      $           ,(iconfigs(kchan),kchan=1,nchans)
          elseif(buffer(1:5).eq.'SPLIT') then
             read(buffer(8:),*) i

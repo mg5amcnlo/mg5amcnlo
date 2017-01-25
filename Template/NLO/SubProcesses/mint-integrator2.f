@@ -119,7 +119,7 @@ c of intervals in the grids.
          nint_used_virt=nintervals_virt
       else
 c if ncalls0.le.0, reset it and double the events per iteration
-         ncalls0=80*ndim
+         ncalls0=80*ndim*(nchans/3+1)
          double_events=.true.
          if (imode.eq.1 .or. imode.eq.-1) then
             nint_used=nintervals
@@ -626,8 +626,8 @@ c Compute the results of the last three iterations
 c Iteration is finished; now rearrange the grid
          do kchan=1,nchans
             do kdim=1,ndim
-               call regrid(xacc(0,kdim,kchan),xgrid(0,kdim,kchan),nhits(1,kdim,kchan)
-     $              ,nint_used)
+               call regrid(xacc(0,kdim,kchan),xgrid(0,kdim,kchan)
+     $              ,nhits(1,kdim,kchan),nint_used)
             enddo
          enddo
          call regrid_ave_virt(nint_used_virt,ndim)
@@ -700,11 +700,18 @@ c Do next iteration
       subroutine regrid(xacc,xgrid,nhits,ninter)
       implicit none
       include "mint.inc"
-      integer  ninter,nhits(nintervals)
+      integer  ninter,nhits(nintervals),np
       real * 8 xacc(0:nintervals),xgrid(0:nintervals)
       real * 8 xn(nintervals),r,tiny,xl,xu,nl,nu,sum
       parameter ( tiny=1d-8 )
       integer kint,jint
+c compute total number of points and update grids if large
+      np=0
+      do kint=1,ninter
+         np=np+nhits(kint)
+      enddo
+      if (np.lt.ninter) return
+      
 c Use the same smoothing as in VEGAS uses for the grids, i.e. use the
 c average of the central and the two neighbouring grid points: (Only do
 c this if we are already at the maximum intervals, because the doubling
