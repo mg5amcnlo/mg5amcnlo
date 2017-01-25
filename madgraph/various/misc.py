@@ -1623,8 +1623,12 @@ def is_plugin_supported(obj):
 It has been validated for the last time with version: %s""",
                                         name, '.'.join(str(i) for i in val_ver))
     else:
-        logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
-        plugin_support[name] = False
+        if __debug__:
+            logger.error("Plugin %s seems not supported by this version of MG5aMC. Keep it active (please update status)" % name)
+            plugin_support[name] = True            
+        else:
+            logger.error("Plugin %s is not supported by this version of MG5aMC." % name)
+            plugin_support[name] = False
     return plugin_support[name]
     
 
