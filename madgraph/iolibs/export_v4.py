@@ -2011,6 +2011,12 @@ CF2PY double precision, intent(in) :: SCALE2
   integer npdg, nhel
   double precision p(*)
   double precision ANS, ALPHAS, PI,SCALE2
+  include 'coupl.inc'
+  
+  PI = 3.141592653589793D0
+  G = 2* DSQRT(ALPHAS*PI)
+  CALL UPDATE_AS_PARAM()
+  if (scale2.ne.0d0) stop 1
 
 %(smatrixhel)s
 

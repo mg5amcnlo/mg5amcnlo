@@ -1854,7 +1854,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 ##########    END SINGLE CORE HANDLING #############
             else:
                 ##########    START MULTI-CORE HANDLING #############
-                misc.sprint(self.options['nb_core'])
                 if not isinstance(self.cluster, cluster.MultiCore):
                     mycluster = cluster.MultiCore(nb_core=self.options['nb_core'])
                 else:
@@ -1899,14 +1898,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                         #stdout = open(pjoin(self.me_dir,'Events', self.run_name, 'reweight%s.log' % i),'w')
                         new_command.append('--multicore=wait')
                     mycluster.submit(prog=command[0], argument=new_command[1:], stdout=stdout, cwd=os.getcwd())
-                misc.sprint('pass in WAIT')
                 mycluster.wait(self.me_dir,update_status)
-                misc.sprint('WAIT IS OVER')
                 devnull.close()
                 logger.info("Collect and combine the various output file.")
                 lhe = lhe_parser.MultiEventFile(all_lhe, parse=False)
                 nb_event, cross_sections = lhe.write(new_args[0], get_info=True)
-                misc.sprint(nb_event, [cross_sections[key] for key in cross_sections if isinstance(key, str) and key.startswith('rwgt')])
                 if any(os.path.exists('%s_%s_debug.log' % (f, self.run_tag)) for f in all_lhe):
                     for f in all_lhe:
                         if os.path.exists('%s_%s_debug.log' % (f, self.run_tag)):
