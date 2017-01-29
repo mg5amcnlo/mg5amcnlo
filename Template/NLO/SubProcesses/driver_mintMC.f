@@ -56,7 +56,7 @@ c For MINT:
      $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
      $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
      $     ,0:maxchannels),x(ndimmax)
-      integer ixi_i,iphi_i,iy_ij,vn
+      integer ixi_i,iphi_i,iy_ij,vn,nhits_in_grids(maxchannels)
       integer ifold(ndimmax) 
       common /cifold/ifold
       integer ifold_energy,ifold_phi,ifold_yij
@@ -200,7 +200,7 @@ c to restore grids:
 c
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2)
+     $        ,ans,unc,chi2,nhits_in_grids)
          open(unit=58,file='res_0',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
          write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
@@ -256,7 +256,7 @@ c Prepare the MINT folding
          
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2)
+     $        ,ans,unc,chi2,nhits_in_grids)
          
 c If integrating the virtuals alone, we include the virtuals in
 c ans(1). Therefore, no need to have them in ans(5) and we have to set
