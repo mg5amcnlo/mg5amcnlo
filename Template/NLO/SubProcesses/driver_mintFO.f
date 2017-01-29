@@ -55,6 +55,7 @@ c Vegas stuff
       integer n_mp, n_disc
 c For MINT:
       include "mint.inc"
+      integer nhits_in_grids(maxchannels)
       real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
      $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
      $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
@@ -214,7 +215,7 @@ c to restore grids:
                do j=1,nintervals_virt
                   read (12,*) (ave_virt(j,i,kchan),i=1,ndim)
                enddo
-               read(12,*) ans(1,kchan),unc(1,kchan),dummy,dummy
+               read(12,*) ans(1,kchan),unc(1,kchan),dummy,dummy,nhits_in_grids(kchan)
                read(12,*) virtual_fraction(kchan),average_virtual(kchan)
             enddo
             close (12)
@@ -233,7 +234,7 @@ c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax
-     $        ,ymax_virt,ans,unc,chi2)
+     $        ,ymax_virt,ans,unc,chi2,nhits_in_grids)
          call topout
          write(*,*)'Final result [ABS]:',ans(1,0),' +/-',unc(1,0)
          write(*,*)'Final result:',ans(2,0),' +/-',unc(2,0)
@@ -254,7 +255,7 @@ c to save grids:
             do j=1,nintervals_virt
                write (12,*) (ave_virt(j,i,kchan),i=1,ndim)
             enddo
-            write (12,*) ans(1,kchan),unc(1,kchan),ncall,itmax
+            write (12,*) ans(1,kchan),unc(1,kchan),ncall,itmax,nhits_in_grids(kchan)
             write (12,*) virtual_fraction(kchan),average_virtual(kchan)
          enddo
          close (12)
