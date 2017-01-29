@@ -77,7 +77,7 @@ c others: same as 1 (for now)
      $     ,0:maxchannels),unc(nintegrals,0:maxchannels),ans3(nintegrals
      $     ,3),unc3(nintegrals,3),ans_l3(nintegrals),unc_l3(nintegrals)
      $     ,chi2_l3(nintegrals),vol_chan
-      real * 8 xint_virt(maxchannels),ymax_virt(maxchannels)
+      real * 8 xint_virt(maxchannels),ymax_virt(maxchannels),ans_chan(0:maxchannels)
       real * 8 x(ndimmax),vol
       real * 8 xacc(0:nintervals,ndimmax,maxchannels)
       integer icell(ndimmax),ncell(ndimmax),ncell_virt
@@ -159,6 +159,11 @@ c Initialize grids
             nhits_in_grids(kchan)=0
          enddo
          call init_ave_virt(nint_used_virt,ndim)
+         ans_chan(0)=0d0
+         do kchan=1,nchans
+            ans_chan(kchan)=ans(1,kchan) ! for 1st iteration in MC over channels
+            ans_chan(0)=ans_chan(0)+ans(1,kchan)
+         enddo
       elseif(imode.eq.1) then
 c Initialize upper bounding envelope
          do kchan=1,nchans
@@ -289,7 +294,7 @@ c Loop over PS points
       do kpoint=1,ncalls
          new_point=.true.
 c first determine which integration channel we want to pick this point from         
-         call get_channel(ans,vol_chan)
+         call get_channel(ans_chan,vol_chan)
 c find random x, and its random cell
          do kdim=1,ndim
             kfold(kdim)=1
@@ -511,6 +516,7 @@ c Reset the MINT grids
                   ans(i,kchan)=0d0
                   unc(i,kchan)=0d0
                   chi2(i,kchan)=0d0
+                  ans_chan(kchan)=0d0
                enddo
                do j=1,3
                   ans3(i,j)=0d0
@@ -531,6 +537,7 @@ c Reset the MINT grids
                ans(i,kchan)=vtot(i,kchan)
                unc(i,kchan)=etot(i,kchan)
             enddo
+            ans_chan(kchan)=ans(1,kchan)
          enddo
          write (*,'(a,1x,e10.4)') 'Chi^2 per d.o.f.',0d0
       else
@@ -565,6 +572,7 @@ c double the number of points for the next iteration
                chi2(i,kchan)=chi2(i,kchan)+(vtot(i,kchan)-ans(i,kchan))**2/etot(i,kchan)**2
             endif
          enddo
+         ans_chan(kchan)=ans(1,kchan)
          enddo
          write (*,'(a,1x,e10.4)') 'Chi^2=',(vtot(1,0)-ans(1,0))**2
      $        /etot(1,0)**2
@@ -580,8 +588,7 @@ c double the number of points for the next iteration
      $        'accumulated results '//title(i)//' =',ans(i,0),' +/- '
      $        ,unc(i,0) ,' (',efrac(i)*100d0,'%)'
       enddo
-      write (*,*) 'ans:',(ans(1,kchan),kchan=1,nchans)
-      write (*,*) 'ans:',(ans(2,kchan),kchan=1,nchans)
+      write (*,*) 'ans_chan:',(ans_chan(kchan),kchan=1,nchans)
       if (nit_included.le.1) then
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF ='
      $        ,0d0
@@ -1334,14 +1341,14 @@ c Picks one random 'ichan' among the 'nchans' integration channels and
 c fills the channels common block in mint.inc.
       implicit none
       include 'mint.inc'
-      double precision ans(nintegrals,0:maxchannels),vol_chan,ran3,target,sum
+      double precision ans(0:maxchannels),vol_chan,ran3,target,sum
       external ran3
       if (nchans.eq.1) then
          ichan=1
          iconfig=iconfigs(ichan)
          vol_chan=1d0
       elseif (nchans.gt.1) then
-         if (ans(1,0).le.0d0) then
+         if (ans(0).le.0d0) then
 c     pick one at random (flat)
             ichan=int(ran3(.false.)*nchans)+1
             iconfig=iconfigs(ichan)
@@ -1350,19 +1357,19 @@ c     pick one at random (flat)
 c     pick one at random (weighted by cross section)
             sum=0d0
             do kchan=1,nchans
-               sum=sum+ans(1,kchan)
+               sum=sum+ans(kchan)
             enddo
-            if (abs(sum-ans(1,0))/(sum+ans(1,0)).gt.1d-8) then
+            if (abs(sum-ans(0))/(sum+ans(0)).gt.1d-8) then
                write (*,*) 'ERROR: sum should be equal to ans',
-     &              sum,ans(1,0)
+     &              sum,ans(0)
                stop 1
             endif
-            target=ans(1,0)*ran3(.false.)
+            target=ans(0)*ran3(.false.)
             sum=0d0
             ichan=0
             do while (sum.lt.target)
                ichan=ichan+1
-               sum=sum+ans(1,ichan)
+               sum=sum+ans(ichan)
             enddo
             if (ichan.eq.0 .or. ichan.gt.nchans) then
                write (*,*) 'ERROR: ichan cannot be zero or'/
@@ -1370,7 +1377,7 @@ c     pick one at random (weighted by cross section)
                stop
             endif
             iconfig=iconfigs(ichan)
-            vol_chan=ans(1,ichan)/ans(1,0)
+            vol_chan=ans(ichan)/ans(0)
          endif
       endif
       return
