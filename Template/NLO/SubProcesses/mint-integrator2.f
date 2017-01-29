@@ -141,6 +141,11 @@ c Grids read from file
          do kdim=1,ndim
             ifold(kdim)=1
          enddo
+         ans_chan(0)=0d0
+         do kchan=1,nchans
+            ans_chan(kchan)=ans(1,kchan)
+            ans_chan(0)=ans_chan(0)+ans(1,kchan)
+         enddo
       elseif(imode.eq.0) then
 c Initialize grids
          even=.true.
@@ -159,10 +164,8 @@ c Initialize grids
             nhits_in_grids(kchan)=0
          enddo
          call init_ave_virt(nint_used_virt,ndim)
-         ans_chan(0)=0d0
-         do kchan=1,nchans
-            ans_chan(kchan)=ans(1,kchan) ! for 1st iteration in MC over channels
-            ans_chan(0)=ans_chan(0)+ans(1,kchan)
+         do kchan=0,nchans
+            ans_chan(kchan)=0d0
          enddo
       elseif(imode.eq.1) then
 c Initialize upper bounding envelope
@@ -613,13 +616,9 @@ c in the calculation
          enddo
          write (*,*) 'update virtual fraction to:      '
      $        ,(virtual_fraction(kchan),kchan=1,nchans)
-         write (*,*) 'average value for the virtual is:'
-     $        ,(average_virtual(kchan),kchan=1,nchans)
       elseif (imode.eq.1) then
          write (*,*) 'virtual fraction is:             '
      $        ,(virtual_fraction(kchan),kchan=1,nchans)
-         write (*,*) 'average value for the virtual is:'
-     $        ,(average_virtual(kchan),kchan=1,nchans)
       endif
 c Update the results of the last tree iterations
       do i=1,nintegrals
