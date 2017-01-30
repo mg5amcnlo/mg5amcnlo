@@ -1718,7 +1718,8 @@ RESTART = %(mint_mode)s
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
-            if fixed_order and self.run_card['iappl'] == 0:
+            if fixed_order and self.run_card['iappl'] == 0 \
+               and self.run_card['req_acc_FO'] > 0:
                 jobs_to_run_new,jobs_to_collect= \
                     self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
