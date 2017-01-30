@@ -3,7 +3,8 @@
       integer maxchannels
       parameter (maxchannels=20) ! same as in amcatnlo_run_interface
       integer nchans,iconfigs(maxchannels),kchan,iconfig,ichan
-      common /channels/ nchans,iconfigs,iconfig,ichan
+      double precision wgt_mult
+      common /channels/ wgt_mult,nchans,iconfigs,iconfig,ichan
 
 c Note that the number of intervals in the integration
 c grids, 'nintervals', should be equal to

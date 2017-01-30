@@ -47,11 +47,13 @@ c        topdrawer default in MG5_aMC).
 c     input 2: Sum PS points for a given iteration and error estimate by
 c       square root of the sum of the squares. Perform a weighted average
 c       iteration-by-iteration
+c     input 3: Same as input 2, but no weighted average iteration-by-
+c       iteration.
       implicit none
       integer input
       integer error_estimation
       common /HwU_common2/ error_estimation
-      if (input.ge.0 .and. input.le.2) then
+      if (input.ge.0 .and. input.le.3) then
          error_estimation=input
       else
          write (*,*) 'unknown error estimation',input
@@ -68,7 +70,7 @@ c complete common block seems to be included in the size executable
 c (approx. 110 MB).
       integer error_estimation
       common /HwU_common2/ error_estimation
-      data error_estimation /1/
+      data error_estimation /3/
       end
       
 c Book the histograms at the start of the run. Give a 'label' (an
@@ -303,6 +305,44 @@ c     Add the results of the current iteration to the accumulated results
      $              1d0/sqrt(1d0/histy_err(label,i)**2+1d0/etot**2)
             endif
          enddo
+      elseif (error_estimation.eq.3) then
+         do i=1,nbin(label)
+c     Skip bin if no entries
+            if (histi(label,i).eq.0) cycle
+c     Divide weights by the number of PS points. This means that this is
+c     now normalised to the total cross section in that bin
+            do j=1,nwgts
+               vtot(j)=histy(j,label,i)*nPSinv
+            enddo
+c     Error estimation of the current bin
+            etot=sqrt(abs(histy2(label,i)*nPSinv-vtot(1)**2)*nPSinv)
+c     Include "Bessel's correction" to have a corrected (even though
+c     still biased) estimator of the standard deviation.
+            if (histi(label,i).gt.1) then
+               etot=etot* sqrt(dble(histi(label,i))
+     &                    /(dble(histi(label,i))-1.5d0))
+            else
+               etot=0.999d49
+            endif
+c     If the error estimation of the accumulated results is still zero
+c     (i.e. no points were added yet, e.g. because it is the first
+c     iteration) simply copy the results of this iteration over the
+c     accumulated results.
+            if (histy_err(label,i).eq.0d0) then
+               do j=1,nwgts
+                  histy_acc(j,label,i)=vtot(j)
+               enddo
+               histy_err(label,i)=etot
+            else
+c     Add the results of the current iteration to the accumulated results
+               do j=1,nwgts
+                  histy_acc(j,label,i)=((niter-1)*histy_acc(j,label,i)
+     $                 +vtot(j))/dble(niter)
+               enddo
+               histy_err(label,i)=sqrt(((niter-1)*histy_err(label,i)**2
+     $              +etot**2)/dble(niter))
+            endif
+         enddo 
       elseif(error_estimation.eq.1) then
 c     simply sum the weights in the bins
          do i=1,nbin(label)

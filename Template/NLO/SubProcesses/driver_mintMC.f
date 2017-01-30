@@ -660,6 +660,7 @@ c These should be ignored (but kept for 'historical reasons')
       write(*,12) 'Running Configuration Number: ',iconfig
       nchans=1
       iconfigs(1)=iconfig
+      wgt_mult=1d0
 
       write (*,'(a)') 'Enter running mode for MINT:'
       write (*,'(a)') '0 to set-up grids, 1 to integrate,'//

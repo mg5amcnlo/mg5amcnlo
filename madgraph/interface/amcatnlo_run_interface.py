@@ -1473,12 +1473,14 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 if fixed_order:
                     lch=len(channels)
                     maxchannels=20    # combine up to 20 channels in a single job
-                    njobs=int(lch/maxchannels)+1
-                    for nj in range(njobs): 
+                    if self.run_card['iappl'] != 0: maxchannels=1
+                    njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
+                           else int(lch/maxchannels))
+                    for nj in range(1,njobs+1):
                         job={}
                         job['p_dir']=p_dir
-                        job['channel']=str(nj+1)
-                        job['nchans']=(int(lch/njobs) if lch%njobs <= nj else int(lch/njobs)+1)
+                        job['channel']=str(nj)
+                        job['nchans']=(int(lch/njobs)+1 if nj <= lch%njobs else int(lch/njobs))
                         job['configs']=' '.join(channels[:job['nchans']])
                         del channels[:job['nchans']]
                         job['split']=0
@@ -1496,7 +1498,10 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['mint_mode']=0
                         job['run_mode']=run_mode
                         job['wgt_frac']=1.0
+                        job['wgt_mult']=1.0
                         jobs_to_run.append(job)
+                    if channels:
+                        raise aMCatNLOError('channels is not empty %s' % channels)
                 else:
                     for channel in channels:
                         job={}
@@ -1549,6 +1554,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['run_mode']=run_mode
                         job['dirname']=pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)
                         job['wgt_frac']=1.0
+                        job['wgt_mult']=1.0
                         if not fixed_order: job['mint_mode']=1
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
@@ -1593,6 +1599,11 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     for f in ['grid.MC_integer','mint_grids','res_1']:
                         if not os.path.isfile(pjoin(job['dirname'],f)):
                             files.ln(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
+            else:
+                if job['split'] != 0:
+                    for f in ['grid.MC_integer','mint_grids']:
+                        if not os.path.isfile(pjoin(job['dirname'],f)):
+                            files.cp(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
 
 
     def write_input_file(self,job,fixed_order):
@@ -1608,6 +1619,7 @@ SUM_HELICITY = 1
 NCHANS = %(nchans)s
 CHANNEL = %(configs)s
 SPLIT = %(split)s
+WGT_MULT= %(wgt_mult)s
 RUN_MODE = %(run_mode)s
 RESTART = %(mint_mode)s
 """ \
@@ -1706,6 +1718,9 @@ RESTART = %(mint_mode)s
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
+            if fixed_order and self.run_card['iappl'] == 0:
+                jobs_to_run_new,jobs_to_collect= \
+                    self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
             jobs_to_collect_new=jobs_to_collect
         return jobs_to_run_new,jobs_to_collect_new
@@ -1738,6 +1753,58 @@ RESTART = %(mint_mode)s
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
                 f.write('%i\n' % job['nevents'])
 
+                
+    def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
+        """Looks in the jobs_to_run to see if there is the need to split the
+           jobs, depending on the expected time they take. Updates
+           jobs_to_run and jobs_to_collect to replace the split-job by
+           its splits.
+        """
+        # determine the number jobs we should have (this is per p_dir)
+        if self.options['run_mode'] ==2:
+            nb_submit = self.options['nb_core']
+        elif self.options['run_mode'] ==1:
+            nb_submit = self.options['cluster_size']
+        else:
+            nb_submit =1 
+
+        # total expected aggregated running time
+        time_expected=0
+        for job in jobs_to_run:
+            time_expected+=job['time_spend']*(job['niters']*job['npoints'])/  \
+                           (job['niters_done']*job['npoints_done'])
+
+        # this means that we must expect the following per job (in
+        # ideal conditions)
+        time_per_job=time_expected/nb_submit
+
+        jobs_to_collect_new=copy.copy(jobs_to_collect)
+        for job in jobs_to_run:
+            time_expected=job['time_spend']*(job['niters']*job['npoints'])/  \
+                           (job['niters_done']*job['npoints_done'])
+            # if the time expected for this job is (much) larger than
+            # the time spend in the previous iteration, and larger
+            # than the expected time per job, split it
+            if time_expected > max(2*job['time_spend'],time_per_job):
+                jobs_to_collect_new.remove(job)
+                # determine the number of splits needed
+                nsplit=int(time_expected/max(2*job['time_spend'],time_per_job))
+                for i in range(1,nsplit+1):
+                    job_new=copy.copy(job)
+                    job_new['split']=i
+                    job_new['wgt_mult']=1/float(nsplit)
+                    job_new['dirname']=job['dirname']+'_%i' % job_new['split']
+                    job_new['accuracy']=min(job['accuracy']*math.sqrt(float(nsplit)),0.1)
+                    if nsplit >= job['niters']:
+                        job_new['niters']=1
+                        job_new['npoints']=int(job['npoints']*job['niters']/nsplit)
+                    else:
+                        job_new['npoints']=int(job['npoints']/nsplit)
+                    jobs_to_collect_new.append(job_new)
+        jobs_to_run_new=copy.copy(jobs_to_collect_new)
+        return jobs_to_run_new,jobs_to_collect_new
+                
+        
     def check_the_need_to_split(self,jobs_to_run,jobs_to_collect):
         """Looks in the jobs_to_run to see if there is the need to split the
            event generation step. Updates jobs_to_run and
@@ -3945,7 +4012,6 @@ RESTART = %(mint_mode)s
     def run_exe(self, exe, args, run_type, cwd=None):
         """this basic function launch locally/on cluster exe with args as argument.
         """
-        
         # first test that exe exists:
         execpath = None
         if cwd and os.path.exists(pjoin(cwd, exe)):

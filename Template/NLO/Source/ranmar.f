@@ -193,6 +193,8 @@ c
 c     Arguments
 c
       integer iseed
+      integer random_offset_split
+      common /c_random_offset_split/ random_offset_split
 c
 c     Local
 c
@@ -206,7 +208,7 @@ c-----
          close(lun)
          return
  14   close(lun)
- 25   iseed = 0
+ 25   iseed = random_offset_split
       end
 
       subroutine ranmar(rvec)

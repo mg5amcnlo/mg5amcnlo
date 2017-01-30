@@ -684,7 +684,8 @@ c
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
-
+      integer random_offset_split
+      common /c_random_offset_split/ random_offset_split
       logical done
       character*100 buffer
 c-----
@@ -763,7 +764,10 @@ c-----
             write(*,*) 'Running Configuration Number(s): '
      $           ,(iconfigs(kchan),kchan=1,nchans)
          elseif(buffer(1:5).eq.'SPLIT') then
-            read(buffer(8:),*) i
+            read(buffer(8:),*) random_offset_split
+            write (*,*) 'Splitting channel:',random_offset_split
+         elseif(buffer(1:8).eq.'WGT_MULT') then
+            read(buffer(11:),*) wgt_mult
             write (*,*) 'Splitting channel:',i
          elseif(buffer(1:8).eq.'RUN_MODE') then
             read(buffer(11:),*) abrvinput

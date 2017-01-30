@@ -325,7 +325,7 @@ c if(even), we should compute the ncell and the rand from the ran3()
          enddo
          ifirst=0
  1       continue
-         vol=1d0/vol_chan
+         vol=1d0/vol_chan * wgt_mult
 c c convert 'flat x' ('rand') to 'vegas x' ('x') and include jacobian ('vol')
          do kdim=1,ndim
             nintcurr=nint_used/ifold(kdim)
