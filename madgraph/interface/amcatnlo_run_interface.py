@@ -1471,27 +1471,32 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     logger.warning('No integration channels found for contribution %s' % p_dir)
                     continue
                 if fixed_order:
-                    job={}
-                    job['p_dir']=p_dir
-                    job['channel']='1'
-                    job['configs']=' '.join(channels)
-                    job['nchans']=len(channels)
-                    job['split']=0
-                    if req_acc == -1:
-                        job['accuracy']=0
-                        job['niters']=niters
-                        job['npoints']=npoints
-                    elif req_acc > 0:
-                        job['accuracy']=0.05
-                        job['niters']=6
-                        job['npoints']=-1
-                    else:
-                        raise aMCatNLOError('No consistent "req_acc_FO" set. Use a value '+
-                                            'between 0 and 1 or set it equal to -1.')
-                    job['mint_mode']=0
-                    job['run_mode']=run_mode
-                    job['wgt_frac']=1.0
-                    jobs_to_run.append(job)
+                    lch=len(channels)
+                    maxchannels=20    # combine up to 20 channels in a single job
+                    njobs=int(lch/maxchannels)+1
+                    for nj in range(njobs): 
+                        job={}
+                        job['p_dir']=p_dir
+                        job['channel']=str(nj+1)
+                        job['nchans']=(int(lch/njobs) if lch%njobs <= nj else int(lch/njobs)+1)
+                        job['configs']=' '.join(channels[:job['nchans']])
+                        del channels[:job['nchans']]
+                        job['split']=0
+                        if req_acc == -1:
+                            job['accuracy']=0
+                            job['niters']=niters
+                            job['npoints']=npoints
+                        elif req_acc > 0:
+                            job['accuracy']=0.05
+                            job['niters']=6
+                            job['npoints']=-1
+                        else:
+                            raise aMCatNLOError('No consistent "req_acc_FO" set. Use a value '+
+                                                'between 0 and 1 or set it equal to -1.')
+                        job['mint_mode']=0
+                        job['run_mode']=run_mode
+                        job['wgt_frac']=1.0
+                        jobs_to_run.append(job)
                 else:
                     for channel in channels:
                         job={}
@@ -1526,6 +1531,12 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                 split=int(chan_dir.split('_')[2])
                             else:
                                 split=0
+                            with open(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir),'r') as f:
+                                for line in f:
+                                    if "NCHANS =" in line:
+                                        job['nchans']=int(line.split('=')[-1])
+                                    elif "CHANNEL =" in line:
+                                        job['configs']=(line.split('=')[-1]).strip
                         else:
                             if len(chan_dir.split('_')) == 2:
                                 split=int(chan_dir.split('_')[1])

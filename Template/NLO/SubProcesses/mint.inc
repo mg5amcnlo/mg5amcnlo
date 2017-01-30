@@ -1,7 +1,7 @@
 *     -*-fortran-*-
 
       integer maxchannels
-      parameter (maxchannels=100) ! generate this parameter with gensym?
+      parameter (maxchannels=20) ! same as in amcatnlo_run_interface
       integer nchans,iconfigs(maxchannels),kchan,iconfig,ichan
       common /channels/ nchans,iconfigs,iconfig,ichan
 
