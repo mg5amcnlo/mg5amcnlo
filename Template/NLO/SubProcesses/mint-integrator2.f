@@ -86,7 +86,7 @@ c others: same as 1 (for now)
       common/cifold/ifold
       integer nhits(nintervals,ndimmax,maxchannels)
      $     ,nhits_in_grids(maxchannels)
-      real * 8 rand(ndimmax)
+      real * 8 rand(ndimmax),HwU_values(2)
       real * 8 dx(ndimmax),f(nintegrals),vtot(nintegrals,0:maxchannels)
      $     ,etot(nintegrals,0:maxchannels),prod,f1(nintegrals)
      $     ,chi2(nintegrals,0:maxchannels),efrac(nintegrals),dummy
@@ -210,6 +210,9 @@ c Initialize upper bounding envelope
             ans3(i,j)=0d0
             unc3(i,j)=0d0
          enddo
+      enddo
+      do i=1,2
+         HwU_values(i)=0d0
       enddo
 c Main loop over the iterations
  10   continue
@@ -463,7 +466,8 @@ C including it in the accumalated results and plots.
       if (efrac(1).gt.0.3d0 .and. iappl.eq.0) then
 c Do not include the results in the plots
          if (fixed_order) call accum(.false.)
-         if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1))
+         if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1)
+     $        ,HwU_values)
       endif
       if (efrac(1).gt.0.3d0 .and. nit.gt.3 .and. iappl.eq.0) then
 c Do not include the results in the updating of the grids.
@@ -537,6 +541,9 @@ c Reset the MINT grids
                   unc3(i,j)=0d0
                enddo
             enddo
+            do i=1,2
+               HwU_values(i)=0d0
+            enddo
             bad_iteration=.false.
          else
             bad_iteration=.true.
@@ -545,6 +552,8 @@ c Reset the MINT grids
       else
          bad_iteration=.false.
       endif
+      HwU_values(1)=etot(1,0)
+      HwU_values(2)=unc(1,0)
       if(nit.eq.1) then
          do kchan=0,nchans
             do i=1,nintegrals
@@ -693,7 +702,8 @@ c Quit if the desired accuracy has been reached
             nit=nitmax
 c Improve the stats in the plots
             if (fixed_order) call accum(.true.)
-            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1)
+     $           ,HwU_values)
             goto 10
          elseif(unc_l3(1)/ans_l3(1)*max(1d0,chi2_l3(1)).lt.accuracy)
      $           then
@@ -707,7 +717,8 @@ c Improve the stats in the plots
             enddo
 c Improve the stats in the plots
             if (fixed_order) call accum(.true.)
-            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
+            if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1)
+     $           ,HwU_values)
             goto 10
          endif
       endif
@@ -730,7 +741,8 @@ c double the number of points for the next iteration
       if (double_events) ncalls0=ncalls0*2
 c Also improve stats in plots
       if (fixed_order) call accum(.true.)
-      if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1))
+      if (fixed_order) call HwU_accum_iter(.true.,ntotcalls(1)
+     $     ,HwU_values)
 c Do next iteration
       goto 10
       end

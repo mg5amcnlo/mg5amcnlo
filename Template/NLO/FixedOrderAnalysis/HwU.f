@@ -47,8 +47,7 @@ c        topdrawer default in MG5_aMC).
 c     input 2: Sum PS points for a given iteration and error estimate by
 c       square root of the sum of the squares. Perform a weighted average
 c       iteration-by-iteration
-c     input 3: Same as input 2, but no weighted average iteration-by-
-c       iteration.
+c     input 3: Same as input 2, but weighted average is same as from MINT
       implicit none
       integer input
       integer error_estimation
@@ -192,19 +191,20 @@ c iteration ('histy') to the accumulated results ('histy_acc'), with the
 c uncertainty estimate given in 'histy_err' and empties the arrays for
 c the current iteration so that they can be filled with the next
 c iteration.
-      subroutine HwU_accum_iter(inclde,nPSpoints)
+      subroutine HwU_accum_iter(inclde,nPSpoints,values)
       implicit none
       include "HwU.inc"
       logical inclde
       integer nPSpoints,label,i,j
       double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
+     $     ,values(2)
       data niter /0d0/
       nPSinv = 1d0/dble(nPSpoints)
       if (inclde) niter = niter+1d0
       do label=1,max_plots
          if (.not. booked(label)) cycle
          if (inclde) then
-            call accumulate_results(label,nPSinv,niter)
+            call accumulate_results(label,nPSinv,niter,values)
          endif
 c     Reset the histo of the current iteration to zero so that they are
 c     ready for the next iteration.
@@ -229,7 +229,7 @@ c HwU_output) to write intermediate plots to disk.
       implicit none
       include "HwU.inc"
       integer label,nPSpoints,i,j
-      double precision nPSinv,niter
+      double precision nPSinv,niter,dummy(2)
       nPSinv=1d0/dble(nPSpoints)
       niter=1d0
       do label=1,max_plots
@@ -241,7 +241,7 @@ c     Set all the bins to zero.
             enddo
             histy_err(label,i)=0d0
          enddo
-         call accumulate_results(label,nPSinv,niter)
+         call accumulate_results(label,nPSinv,niter,dummy)
       enddo
       return
       end
@@ -256,11 +256,12 @@ c error_estimation==0 it uses Poisson statistics to compute the
 c uncertainty. Note that this means that during the filling of the
 c histograms the central value should not be zero if any of the other
 c weights are non-zero.
-      subroutine accumulate_results(label,nPSinv,niter)
+      subroutine accumulate_results(label,nPSinv,niter,values)
       implicit none
       include "HwU.inc"
       integer label,i,j
       double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
+     $     ,values(2),a1,a2
       integer error_estimation
       common /HwU_common2/ error_estimation
       if (error_estimation.eq.2) then
@@ -336,11 +337,14 @@ c     accumulated results.
             else
 c     Add the results of the current iteration to the accumulated results
                do j=1,nwgts
-                  histy_acc(j,label,i)=((niter-1)*histy_acc(j,label,i)
-     $                 +vtot(j))/dble(niter)
+                  histy_acc(j,label,i)=(histy_acc(j,label,i)
+     &                 /values(2)+vtot(j)/values(1))/(1d0
+     &                 /values(2) + 1d0/values(1))
                enddo
-               histy_err(label,i)=sqrt(((niter-1)*histy_err(label,i)**2
-     $              +etot**2)/dble(niter))
+               a1=((1d0/values(1))/((1d0/values(1))+1d0/values(2)))**2
+               a2=((1d0/values(2))/((1d0/values(1))+1d0/values(2)))**2
+               histy_err(label,i)=sqrt(a2*histy_err(label,i)**2 +
+     &              a1*etot**2)
             endif
          enddo 
       elseif(error_estimation.eq.1) then
