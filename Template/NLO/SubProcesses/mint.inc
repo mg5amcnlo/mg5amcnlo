@@ -1,7 +1,7 @@
 *     -*-fortran-*-
 
       integer maxchannels
-      parameter (maxchannels=1) ! generate this parameter with gensym?
+      parameter (maxchannels=100) ! generate this parameter with gensym?
       integer nchans,iconfigs(maxchannels),kchan,iconfig,ichan
       common /channels/ nchans,iconfigs,iconfig,ichan
 

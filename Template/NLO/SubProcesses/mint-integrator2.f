@@ -220,7 +220,8 @@ c emptied.
          do kint=1,nint_used
             np=np+nhits(kint,1,kchan)
          enddo
-         write (*,*) kchan,regridded(kchan),np,nhits_in_grids(kchan)
+         write (*,*) 'channel',kchan,':',regridded(kchan),np
+     $        ,nhits_in_grids(kchan)
       enddo
       call flush(6)
       if(nit.ge.nitmax) then
@@ -602,7 +603,8 @@ c double the number of points for the next iteration
      $        'accumulated results '//title(i)//' =',ans(i,0),' +/- '
      $        ,unc(i,0) ,' (',efrac(i)*100d0,'%)'
       enddo
-      write (*,*) 'ans_chan:',(ans_chan(kchan),kchan=1,nchans)
+      write (*,*) 'ans_chan :',(ans_chan(kchan),kchan=1,nchans)
+      write (*,*) 'Xsec chan:',(ans(2,kchan),kchan=1,nchans)
       if (nit_included.le.1) then
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF ='
      $        ,0d0

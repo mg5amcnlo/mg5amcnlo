@@ -1470,22 +1470,20 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 except IOError:
                     logger.warning('No integration channels found for contribution %s' % p_dir)
                     continue
-                for channel in channels:
+                if fixed_order:
                     job={}
                     job['p_dir']=p_dir
-                    job['channel']=channel
+                    job['channel']='1'
+                    job['configs']=' '.join(channels)
+                    job['nchans']=len(channels)
                     job['split']=0
-                    if fixed_order and req_acc == -1:
+                    if req_acc == -1:
                         job['accuracy']=0
                         job['niters']=niters
                         job['npoints']=npoints
-                    elif fixed_order and req_acc > 0:
-                        job['accuracy']=0.10
+                    elif req_acc > 0:
+                        job['accuracy']=0.05
                         job['niters']=6
-                        job['npoints']=-1
-                    elif not fixed_order:
-                        job['accuracy']=0.03
-                        job['niters']=12
                         job['npoints']=-1
                     else:
                         raise aMCatNLOError('No consistent "req_acc_FO" set. Use a value '+
@@ -1494,6 +1492,19 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                     job['run_mode']=run_mode
                     job['wgt_frac']=1.0
                     jobs_to_run.append(job)
+                else:
+                    for channel in channels:
+                        job={}
+                        job['p_dir']=p_dir
+                        job['channel']=channel
+                        job['split']=0
+                        job['accuracy']=0.03
+                        job['niters']=12
+                        job['npoints']=-1
+                        job['mint_mode']=0
+                        job['run_mode']=run_mode
+                        job['wgt_frac']=1.0
+                        jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
         else:
             # if options['only_generation'] is true, we need to loop
@@ -1583,8 +1594,8 @@ ACCURACY = %(accuracy)s
 ADAPT_GRID = 2
 MULTICHANNEL = 1
 SUM_HELICITY = 1
-NCHANS = 1
-CHANNEL = %(channel)s
+NCHANS = %(nchans)s
+CHANNEL = %(configs)s
 SPLIT = %(split)s
 RUN_MODE = %(run_mode)s
 RESTART = %(mint_mode)s
