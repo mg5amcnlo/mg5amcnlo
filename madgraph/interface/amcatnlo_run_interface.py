@@ -1776,7 +1776,7 @@ RESTART = %(mint_mode)s
 
         # this means that we must expect the following per job (in
         # ideal conditions)
-        time_per_job=time_expected/nb_submit
+        time_per_job=time_expected/(nb_submit*(1+len(jobs_to_run)/2))
 
         jobs_to_collect_new=copy.copy(jobs_to_collect)
         for job in jobs_to_run:
