@@ -1529,6 +1529,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir))):
                         job={}
                         job['p_dir']=p_dir
+                        job['wgt_mult']=1.0
                         if fixed_order:
                             channel=chan_dir.split('_')[1]
                             job['channel']=channel[1:] # remove the 'G'
@@ -1536,12 +1537,15 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                                 split=int(chan_dir.split('_')[2])
                             else:
                                 split=0
-                            with open(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir),'r') as f:
-                                for line in f:
+                            with open(pjoin(self.me_dir, 'SubProcesses', p_dir, \
+                                            chan_dir,'input_app.txt'),'r') as f:
+                                for line in f.readlines():
                                     if "NCHANS =" in line:
                                         job['nchans']=int(line.split('=')[-1])
                                     elif "CHANNEL =" in line:
-                                        job['configs']=(line.split('=')[-1]).strip
+                                        job['configs']=(line.split('=')[-1]).strip()
+                                    elif "WGT_MULT =" in line:
+                                        job['wgt_mult']=float(line.split('=')[-1])
                         else:
                             if len(chan_dir.split('_')) == 2:
                                 split=int(chan_dir.split('_')[1])
@@ -1554,7 +1558,6 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['run_mode']=run_mode
                         job['dirname']=pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)
                         job['wgt_frac']=1.0
-                        job['wgt_mult']=1.0
                         if not fixed_order: job['mint_mode']=1
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
@@ -1593,8 +1596,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
             self.write_input_file(job,fixed_order)
+            # link or copy the grids from the base directory to the split directory:
             if not fixed_order:
-                # copy the grids from the base directory to the split directory:
                 if job['split'] != 0:
                     for f in ['grid.MC_integer','mint_grids','res_1']:
                         if not os.path.isfile(pjoin(job['dirname'],f)):
@@ -1690,7 +1693,10 @@ RESTART = %(mint_mode)s
             name_suffix={'born' :'B' , 'all':'F'}
             cross, error = sum_html.make_all_html_results(self, ['G%s*' % name_suffix[run_mode]])
         self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error) 
+        self.results.add_detail('error', error)
+# Combine grids from split fixed order jobs
+        if fixed_order:
+            self.combine_split_order_grids(jobs_to_collect)
 # Set-up jobs for the next iteration/MINT step
         jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
         # if there are no more jobs, we are done!
@@ -1753,6 +1759,70 @@ RESTART = %(mint_mode)s
         for job in jobs:
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
                 f.write('%i\n' % job['nevents'])
+
+
+    def combine_split_order_grids(self,jobs_to_collect):
+        """Combines the mint_grids and MC-integer grids from the split order
+        jobs (fixed order only).
+        """
+        # combine the jobs that need to be combined in job
+        # groups. Simply combine the ones that have the same p_dir and
+        # same channel. 
+        jobgroups_to_combine=[]
+        for job in jobs_to_collect:
+            if job['split'] != 1: continue 
+            jobgroups_to_combine.append(filter(lambda j: j['p_dir'] == job['p_dir'] and \
+                                          j['channel'] == job['channel'], jobs_to_collect))
+        for job_group in jobgroups_to_combine:
+            files_mint_grids=[]
+            files_MC_integer=[]
+            for job in job_group:
+                files_mint_grids.append(open(pjoin(job['dirname'],'mint_grids'),'r+'))
+                files_MC_integer.append(open(pjoin(job['dirname'],'grid.MC_integer'),'r+'))
+            # Needed to average the grids (both xgrids, ave_virt and
+            # MC_integer grids), but sum the cross section info. The
+            # latter is only the only line that contains integers.
+            for files in [files_mint_grids,files_MC_integer]:
+                linesoffiles=[f.readlines() for f in files]
+                to_write=[]
+                for rowgrp in zip(*linesoffiles):
+                    try:
+                        # check that last element on the line is an
+                        # integer (will raise ValueError if not the
+                        # case). If integer, this is the line that
+                        # contains information that needs to be
+                        # summed. All other lines can be averaged.
+                        is_integer = [[int(row.strip().split()[-1])] for row in rowgrp]
+                        floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
+                        floatgrps = zip(*floatsbyfile)
+                        special=[]
+                        for i,floatgrp in enumerate(floatgrps):
+                            if i==0: # sum X-sec
+                                special.append(sum(floatgrp))
+                            elif i==1: # sum unc in quadrature
+                                special.append(math.sqrt(sum([err**2 for err in floatgrp])))
+                            elif i==2: # average number of PS per iteration
+                                special.append(int(sum(floatgrp)/len(floatgrp)))
+                            elif i==3: # sum the number of iterations
+                                special.append(int(sum(floatgrp)))
+                            elif i==4: # average the nhits_in_grids
+                                special.append(int(sum(floatgrp)/len(floatgrp)))
+                            else:
+                                raise aMCatNLOError('"mint_grids" files not in correct format. '+\
+                                                    'Cannot combine them.')
+                        to_write.append(" ".join(str(s) for s in special) + "\n")
+                    except ValueError:
+                        # just average all
+                        floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
+                        floatgrps = zip(*floatsbyfile)
+                        averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
+                        to_write.append(" ".join(str(a) for a in averages) + "\n")
+                for f in files:
+                    # overwrite the existing files then close them.
+                    f.seek(0)
+                    f.writelines(to_write)
+                    f.truncate()
+                    f.close
 
                 
     def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
