@@ -966,6 +966,11 @@ c The following works only if i_fks is always greater than j_fks.
                jpart(4,j_fks)=lc+1
                jpart(5,j_fks)=jpart(5,imother)
             endif
+         elseif (j_part.eq.1.and.i_part.eq.1) then ! e.g. e+ > e+ gamma
+            jpart(4,i_fks)=0
+            jpart(5,i_fks)=0
+            jpart(4,j_fks)=0
+            jpart(5,j_fks)=0
          else
             write (*,*) 'Error #1 in fill_icolor_H',i_part,j_part
             stop
