@@ -1880,7 +1880,7 @@ RESTART = %(mint_mode)s
                                 j['channel'] == job['channel'], jobs_to_collect_new):
                     jobs_to_collect_new.remove(j)
                 # determine the number of splits needed
-                nsplit=int(time_expected/max(2*job['time_spend'],time_per_job))
+                nsplit=int(time_expected/max(2*job['time_spend'],time_per_job))+1
                 for i in range(1,nsplit+1):
                     job_new=copy.copy(job)
                     job_new['split']=i
