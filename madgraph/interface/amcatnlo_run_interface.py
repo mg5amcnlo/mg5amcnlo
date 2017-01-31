@@ -1560,6 +1560,13 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         job['wgt_frac']=1.0
                         if not fixed_order: job['mint_mode']=1
                         jobs_to_run.append(job)
+            # For fixed order runs with splitting. Remove the 'master':
+            for job in jobs_to_run:
+                if job['split'] != 1: continue 
+                jobs_to_run.remove(filter(lambda j: \
+                                       j['p_dir'] == job['p_dir'] and \
+                                       j['channel'] == job['channel'] and \
+                                       j['split'] == 0, jobs_to_run)[0])
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
             if fixed_order:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run,
