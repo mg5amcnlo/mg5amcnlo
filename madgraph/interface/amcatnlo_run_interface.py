@@ -38,6 +38,10 @@ import datetime
 import tarfile
 import traceback
 import StringIO
+try:
+    import cpickle as pickle
+except:
+    import pickle
 
 try:
     import readline
@@ -1517,57 +1521,15 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
         else:
-            # if options['only_generation'] is true, we need to loop
-            # over all the existing G* directories and create the jobs
-            # from there.
-            name_suffix={'born' :'B', 'all':'F'}
-            for p_dir in p_dirs:
-                for chan_dir in os.listdir(pjoin(self.me_dir,'SubProcesses',p_dir)):
-                    if ((chan_dir.startswith(run_mode+'_G') and fixed_order) or\
-                        (chan_dir.startswith('G'+name_suffix[run_mode]) and (not fixed_order))) and \
-                       (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)) or \
-                        os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir))):
-                        job={}
-                        job['p_dir']=p_dir
-                        job['wgt_mult']=1.0
-                        if fixed_order:
-                            channel=chan_dir.split('_')[1]
-                            job['channel']=channel[1:] # remove the 'G'
-                            if len(chan_dir.split('_')) == 3:
-                                split=int(chan_dir.split('_')[2])
-                            else:
-                                split=0
-                            with open(pjoin(self.me_dir, 'SubProcesses', p_dir, \
-                                            chan_dir,'input_app.txt'),'r') as f:
-                                for line in f.readlines():
-                                    if "NCHANS =" in line:
-                                        job['nchans']=int(line.split('=')[-1])
-                                    elif "CHANNEL =" in line:
-                                        job['configs']=(line.split('=')[-1]).strip()
-                                    elif "WGT_MULT =" in line:
-                                        job['wgt_mult']=float(line.split('=')[-1])
-                        else:
-                            if len(chan_dir.split('_')) == 2:
-                                split=int(chan_dir.split('_')[1])
-                                channel=chan_dir.split('_')[0]
-                                job['channel']=channel[2:] # remove the 'G'
-                            else:
-                                job['channel']=chan_dir[2:] # remove the 'G'
-                                split=0
-                        job['split']=split
-                        job['run_mode']=run_mode
-                        job['dirname']=pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)
-                        job['wgt_frac']=1.0
-                        if not fixed_order: job['mint_mode']=1
-                        jobs_to_run.append(job)
-            # For fixed order runs with splitting. Remove the 'master':
-            for job in jobs_to_run:
-                if job['split'] != 1: continue 
-                jobs_to_run.remove(filter(lambda j: \
-                                       j['p_dir'] == job['p_dir'] and \
-                                       j['channel'] == job['channel'] and \
-                                       j['split'] == 0, jobs_to_run)[0])
-            jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
+            # if options['only_generation'] is true, just read the current jobs from file
+            try:
+                with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'rb') as f:
+                    jobs_to_collect=pickle.load(f)
+                jobs_to_run=copy.copy(jobs_to_collect)
+            except:
+                raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \
+                                    pjoin(self.me_dir,'SubProcesses','job_status.pkl'))
+            # Update cross sections and determine which jobs to run next
             if fixed_order:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run,
                                                  jobs_to_collect,integration_step,mode,run_mode)
@@ -1703,12 +1665,16 @@ RESTART = %(mint_mode)s
         self.results.add_detail('error', error)
 # Combine grids from split fixed order jobs
         if fixed_order:
-            self.combine_split_order_grids(jobs_to_collect)
+            jobs_to_run=self.combine_split_order_run(jobs_to_run)
 # Set-up jobs for the next iteration/MINT step
         jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
-        # if there are no more jobs, we are done!
+        # IF THERE ARE NO MORE JOBS, WE ARE DONE!!!
 # Print summary
         if (not jobs_to_run_new) and fixed_order:
+            # Write the jobs_to_collect directory to file so that we
+            # can restart them later (with only-generation option)
+            with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
+                pickle.dump(jobs_to_collect,f)
             # print final summary of results (for fixed order)
             scale_pdf_info=self.collect_scale_pdf_info(options,jobs_to_collect)
             self.print_summary(options,integration_step,mode,scale_pdf_info,done=True)
@@ -1724,6 +1690,10 @@ RESTART = %(mint_mode)s
             scale_pdf_info=[]
 # Prepare for the next integration/MINT step
         if (not fixed_order) and integration_step+1 == 2 :
+            # Write the jobs_to_collect directory to file so that we
+            # can restart them later (with only-generation option)
+            with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
+                pickle.dump(jobs_to_collect,f)
             # next step is event generation (mint_step 2)
             jobs_to_run_new,jobs_to_collect_new= \
                     self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
@@ -1767,69 +1737,110 @@ RESTART = %(mint_mode)s
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
                 f.write('%i\n' % job['nevents'])
 
-
-    def combine_split_order_grids(self,jobs_to_collect):
-        """Combines the mint_grids and MC-integer grids from the split order
-        jobs (fixed order only).
-        """
+    def combine_split_order_run(self,jobs_to_run):
+        """Combines jobs and grids from split jobs that have been run"""
         # combine the jobs that need to be combined in job
         # groups. Simply combine the ones that have the same p_dir and
         # same channel. 
         jobgroups_to_combine=[]
-        for job in jobs_to_collect:
-            if job['split'] != 1: continue 
-            jobgroups_to_combine.append(filter(lambda j: j['p_dir'] == job['p_dir'] and \
-                                          j['channel'] == job['channel'], jobs_to_collect))
+        jobs_to_run_new=[]
+        for job in jobs_to_run:
+            if job['split'] == 0:
+                jobs_to_run_new.append(job) # this jobs wasn't split
+            elif job['split'] == 1:
+                jobgroups_to_combine.append(filter(lambda j: j['p_dir'] == job['p_dir'] and \
+                                            j['channel'] == job['channel'], jobs_to_run))
+            else:
+                continue
         for job_group in jobgroups_to_combine:
-            files_mint_grids=[]
-            files_MC_integer=[]
-            for job in job_group:
-                files_mint_grids.append(open(pjoin(job['dirname'],'mint_grids'),'r+'))
-                files_MC_integer.append(open(pjoin(job['dirname'],'grid.MC_integer'),'r+'))
-            # Needed to average the grids (both xgrids, ave_virt and
-            # MC_integer grids), but sum the cross section info. The
-            # latter is only the only line that contains integers.
-            for files in [files_mint_grids,files_MC_integer]:
-                linesoffiles=[f.readlines() for f in files]
-                to_write=[]
-                for rowgrp in zip(*linesoffiles):
-                    try:
-                        # check that last element on the line is an
-                        # integer (will raise ValueError if not the
-                        # case). If integer, this is the line that
-                        # contains information that needs to be
-                        # summed. All other lines can be averaged.
-                        is_integer = [[int(row.strip().split()[-1])] for row in rowgrp]
-                        floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                        floatgrps = zip(*floatsbyfile)
-                        special=[]
-                        for i,floatgrp in enumerate(floatgrps):
-                            if i==0: # sum X-sec
-                                special.append(sum(floatgrp))
-                            elif i==1: # sum unc in quadrature
-                                special.append(math.sqrt(sum([err**2 for err in floatgrp])))
-                            elif i==2: # average number of PS per iteration
-                                special.append(int(sum(floatgrp)/len(floatgrp)))
-                            elif i==3: # sum the number of iterations
-                                special.append(int(sum(floatgrp)))
-                            elif i==4: # average the nhits_in_grids
-                                special.append(int(sum(floatgrp)/len(floatgrp)))
-                            else:
-                                raise aMCatNLOError('"mint_grids" files not in correct format. '+\
-                                                    'Cannot combine them.')
-                        to_write.append(" ".join(str(s) for s in special) + "\n")
-                    except ValueError:
-                        # just average all
-                        floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
-                        floatgrps = zip(*floatsbyfile)
-                        averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
-                        to_write.append(" ".join(str(a) for a in averages) + "\n")
-                for f in files:
-                    # overwrite the existing files then close them.
-                    f.seek(0)
-                    f.writelines(to_write)
-                    f.truncate()
-                    f.close
+            # Combine the grids (mint-grids & MC-integer grids) first
+            self.combine_split_order_grids(job_group)
+            jobs_to_run_new.append(self.combine_split_order_jobs(job_group))
+        return jobs_to_run_new
+
+    def combine_split_order_jobs(self,job_group):
+        """combine the jobs in job_group and return a single summed job"""
+        # first copy one of the jobs in 'jobs'
+        sum_job=copy.copy(job_group[0])
+        # update the information to have a 'non-split' job:
+        sum_job['dirname']=pjoin(sum_job['dirname'].rsplit('_',1)[0])
+        sum_job['split']=0
+        sum_job['wgt_mult']=1.0
+        # information to be summed:
+        keys=['niters_done','niters','result','resultABS','time_spend']
+        keys2=['error','errorABS']
+        # information to be summed in quadrature:
+        for key in keys2:
+            sum_job[key]=math.pow(sum_job[key],2)
+        # Loop over the jobs and sum the information
+        for i,job in enumerate(job_group):
+            if i==0 : continue # skip the first
+            for key in keys:
+                sum_job[key]+=job[key]
+            for key in keys2:
+                sum_job[key]+=math.pow(job[key],2)
+        for key in keys2:
+            sum_job[key]=math.sqrt(sum_job[key])
+        sum_job['err_percABS'] = sum_job['errorABS']/sum_job['resultABS']*100.
+        sum_job['err_perc'] = sum_job['error']/sum_job['result']*100.
+        sum_job['npoints']=int(sum_job['npoints']/len(job_group))
+        sum_job['npoints_done']=int(sum_job['npoints_done']/len(job_group))
+        return sum_job
+
+    
+    def combine_split_order_grids(self,job_group):
+        """Combines the mint_grids and MC-integer grids from the split order
+        jobs (fixed order only).
+        """
+        files_mint_grids=[]
+        files_MC_integer=[]
+        for job in job_group:
+            files_mint_grids.append(open(pjoin(job['dirname'],'mint_grids'),'r+'))
+            files_MC_integer.append(open(pjoin(job['dirname'],'grid.MC_integer'),'r+'))
+        # Needed to average the grids (both xgrids, ave_virt and
+        # MC_integer grids), but sum the cross section info. The
+        # latter is only the only line that contains integers.
+        for files in [files_mint_grids,files_MC_integer]:
+            linesoffiles=[f.readlines() for f in files]
+            to_write=[]
+            for rowgrp in zip(*linesoffiles):
+                try:
+                    # check that last element on the line is an
+                    # integer (will raise ValueError if not the
+                    # case). If integer, this is the line that
+                    # contains information that needs to be
+                    # summed. All other lines can be averaged.
+                    is_integer = [[int(row.strip().split()[-1])] for row in rowgrp]
+                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
+                    floatgrps = zip(*floatsbyfile)
+                    special=[]
+                    for i,floatgrp in enumerate(floatgrps):
+                        if i==0: # sum X-sec
+                            special.append(sum(floatgrp))
+                        elif i==1: # sum unc in quadrature
+                            special.append(math.sqrt(sum([err**2 for err in floatgrp])))
+                        elif i==2: # average number of PS per iteration
+                            special.append(int(sum(floatgrp)/len(floatgrp)))
+                        elif i==3: # sum the number of iterations
+                            special.append(int(sum(floatgrp)))
+                        elif i==4: # average the nhits_in_grids
+                            special.append(int(sum(floatgrp)/len(floatgrp)))
+                        else:
+                            raise aMCatNLOError('"mint_grids" files not in correct format. '+\
+                                                'Cannot combine them.')
+                    to_write.append(" ".join(str(s) for s in special) + "\n")
+                except ValueError:
+                    # just average all
+                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
+                    floatgrps = zip(*floatsbyfile)
+                    averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
+                    to_write.append(" ".join(str(a) for a in averages) + "\n")
+            for f in files:
+                # overwrite the existing files then close them.
+                f.seek(0)
+                f.writelines(to_write)
+                f.truncate()
+                f.close
 
                 
     def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
@@ -1845,17 +1856,15 @@ RESTART = %(mint_mode)s
             nb_submit = self.options['cluster_size']
         else:
             nb_submit =1 
-
         # total expected aggregated running time
         time_expected=0
         for job in jobs_to_run:
             time_expected+=job['time_spend']*(job['niters']*job['npoints'])/  \
                            (job['niters_done']*job['npoints_done'])
-
         # this means that we must expect the following per job (in
         # ideal conditions)
         time_per_job=time_expected/(nb_submit*(1+len(jobs_to_run)/2))
-
+        jobs_to_run_new=[]
         jobs_to_collect_new=copy.copy(jobs_to_collect)
         for job in jobs_to_run:
             time_expected=job['time_spend']*(job['niters']*job['npoints'])/  \
@@ -1864,13 +1873,18 @@ RESTART = %(mint_mode)s
             # the time spend in the previous iteration, and larger
             # than the expected time per job, split it
             if time_expected > max(2*job['time_spend'],time_per_job):
-                jobs_to_collect_new.remove(job)
+                # remove current job from jobs_to_collect. Make sure
+                # to remove all the split ones in case the original
+                # job had been a split one (before it was re-combined)
+                for j in filter(lambda j: j['p_dir'] == job['p_dir'] and \
+                                j['channel'] == job['channel'], jobs_to_collect_new):
+                    jobs_to_collect_new.remove(j)
                 # determine the number of splits needed
                 nsplit=int(time_expected/max(2*job['time_spend'],time_per_job))
                 for i in range(1,nsplit+1):
                     job_new=copy.copy(job)
                     job_new['split']=i
-                    job_new['wgt_mult']=1/float(nsplit)
+                    job_new['wgt_mult']=1./float(nsplit)
                     job_new['dirname']=job['dirname']+'_%i' % job_new['split']
                     job_new['accuracy']=min(job['accuracy']*math.sqrt(float(nsplit)),0.1)
                     if nsplit >= job['niters']:
@@ -1879,7 +1893,9 @@ RESTART = %(mint_mode)s
                     else:
                         job_new['npoints']=int(job['npoints']/nsplit)
                     jobs_to_collect_new.append(job_new)
-        jobs_to_run_new=copy.copy(jobs_to_collect_new)
+                    jobs_to_run_new.append(job_new)
+            else:
+                jobs_to_run_new.append(job)
         return jobs_to_run_new,jobs_to_collect_new
                 
         
