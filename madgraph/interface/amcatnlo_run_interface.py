@@ -1786,8 +1786,8 @@ RESTART = %(mint_mode)s
             sum_job[key]=math.sqrt(sum_job[key])
         sum_job['err_percABS'] = sum_job['errorABS']/sum_job['resultABS']*100.
         sum_job['err_perc'] = sum_job['error']/sum_job['result']*100.
-        sum_job['npoints']=int(sum_job['npoints']/len(job_group))
-        sum_job['npoints_done']=int(sum_job['npoints_done']/len(job_group))
+        sum_job['niters']=int(sum_job['niters_done']/len(job_group))
+        sum_job['niters_done']=int(sum_job['niters_done']/len(job_group))
         return sum_job
 
     
