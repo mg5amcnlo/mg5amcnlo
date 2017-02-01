@@ -1668,12 +1668,13 @@ RESTART = %(mint_mode)s
 # Set-up jobs for the next iteration/MINT step
         jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
         # IF THERE ARE NO MORE JOBS, WE ARE DONE!!!
-# Print summary
-        if (not jobs_to_run_new) and fixed_order:
+        if fixed_order:
             # Write the jobs_to_collect directory to file so that we
             # can restart them later (with only-generation option)
             with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
                 pickle.dump(jobs_to_collect,f)
+# Print summary
+        if (not jobs_to_run_new) and fixed_order:
             # print final summary of results (for fixed order)
             scale_pdf_info=self.collect_scale_pdf_info(options,jobs_to_collect)
             self.print_summary(options,integration_step,mode,scale_pdf_info,done=True)
@@ -1745,6 +1746,7 @@ RESTART = %(mint_mode)s
         jobs_to_run_new=[]
         for job in jobs_to_run:
             if job['split'] == 0:
+                job['combined']=1
                 jobs_to_run_new.append(job) # this jobs wasn't split
             elif job['split'] == 1:
                 jobgroups_to_combine.append(filter(lambda j: j['p_dir'] == job['p_dir'] and \
@@ -1765,6 +1767,7 @@ RESTART = %(mint_mode)s
         sum_job['dirname']=pjoin(sum_job['dirname'].rsplit('_',1)[0])
         sum_job['split']=0
         sum_job['wgt_mult']=1.0
+        sum_job['combined']=len(job_group)
         # information to be summed:
         keys=['niters_done','npoints_done','niters','npoints',\
               'result','resultABS','time_spend']
@@ -1889,9 +1892,9 @@ RESTART = %(mint_mode)s
             # if the time expected for this job is (much) larger than
             # the time spend in the previous iteration, and larger
             # than the expected time per job, split it
-            if time_expected > max(2*job['time_spend'],time_per_job):
+            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job):
                 # determine the number of splits needed
-                nsplit=min(max(int(time_expected/max(2*job['time_spend'],time_per_job)),2),nb_submit)
+                nsplit=min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
                 for i in range(1,nsplit+1):
                     job_new=copy.copy(job)
                     job_new['split']=i
