@@ -1850,8 +1850,7 @@ RESTART = %(mint_mode)s
         # Also copy them over the 'master' location
         for f in ['grid.MC_integer','mint_grids']:
             job1=job_group[0]
-            if not os.path.isfile(pjoin(job1['dirname'],f)):
-                files.cp(pjoin(job1['dirname'],f),location)
+            files.cp(pjoin(job1['dirname'],f),location)
 
                 
     def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
