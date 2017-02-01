@@ -171,6 +171,14 @@ c Initialize grids
          do kchan=0,nchans
             ans_chan(kchan)=0d0
          enddo
+         if (double_events) then
+c           when double events, start with the very first channel
+c           only. For the first iteration, we compute each channel
+c           separately.
+            ans_chan(0)=1d0
+            ans_chan(1)=1d0
+            ncalls0=ncalls0/nchans
+         endif
       elseif(imode.eq.1) then
 c Initialize upper bounding envelope
          do kchan=1,nchans
@@ -214,6 +222,7 @@ c Initialize upper bounding envelope
       do i=1,2
          HwU_values(i)=0d0
       enddo
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Main loop over the iterations
  10   continue
       do kchan=1,nchans
@@ -301,6 +310,7 @@ c Reset the accumulated results for grid updating
       do i=1,nintegrals
          non_zero_point(i)=0
       enddo
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Loop over PS points
  2    kpoint_iter=kpoint_iter+1
       do kpoint=1,ncalls
@@ -413,8 +423,6 @@ c included.
          enddo
 c Add the PS point to the result of this iteration
          do i=1,nintegrals
-            vtot(i,0)=vtot(i,0)+f(i)
-            etot(i,0)=etot(i,0)+f(i)**2
             vtot(i,ichan)=vtot(i,ichan)+f(i)
             etot(i,ichan)=etot(i,ichan)+f(i)**2
          enddo
@@ -438,17 +446,53 @@ c Goto beginning of loop over PS points until enough points have found
 c that pass cuts.
       if (non_zero_point(1).lt.int(0.99*ncalls)
      &                        .and. double_events) goto 2
-
+c This is the loop over all the channels for the very first iteration.
+      if (imode.eq.0 .and. nit.eq.1 .and. double_events) then
+         do kchan=nchans,1,-1
+            if (ans_chan(kchan).eq.1d0) then
+               do i=1,nintegrals
+                  vtot(i,kchan)=vtot(i,kchan)/dble(ntotcalls(i))
+                  etot(i,kchan)=etot(i,kchan)/dble(ntotcalls(i))
+                  etot(i,kchan)=sqrt(abs(etot(i,kchan)-vtot(i,kchan)**2)
+     $                 /dble(ntotcalls(i)))
+                  ntotcalls(i)=0
+                  non_zero_point(i)=0
+               enddo
+               if (kchan.eq.nchans) exit
+               ans_chan(kchan)=0d0
+               ans_chan(kchan+1)=1d0
+               goto 2
+            endif
+         enddo
+c set the total result for the first iteration as the sum over all the channels
+         do i=1,nintegrals
+            do kchan=1,nchans
+               vtot(i,0)=vtot(i,0)+vtot(i,kchan)
+               etot(i,0)=etot(i,0)+etot(i,kchan)**2
+            enddo
+            etot(i,0)=sqrt(etot(i,0))
+         enddo
+         ncalls0=ncalls0*nchans
+      endif
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c Iteration done. Update the accumulated results and print them to the
 c screen
       do i=1,nintegrals
-         do kchan=0,nchans
-            vtot(i,kchan)=vtot(i,kchan)/dble(ntotcalls(i))
-            etot(i,kchan)=etot(i,kchan)/dble(ntotcalls(i))
+         if (imode.eq.0 .and. nit.eq.1 .and. double_events) then
+            continue
+         else
+            do kchan=nchans,0,-1
+               if (kchan.ne.0) then
+                  vtot(i,0)=vtot(i,0)+vtot(i,kchan)
+                  etot(i,0)=etot(i,0)+etot(i,kchan)
+               endif
+               vtot(i,kchan)=vtot(i,kchan)/dble(ntotcalls(i))
+               etot(i,kchan)=etot(i,kchan)/dble(ntotcalls(i))
 c the abs is to avoid tiny negative values
-            etot(i,kchan)=sqrt(abs(etot(i,kchan)-vtot(i,kchan)**2)
-     $           /dble(ntotcalls(i)))
-         enddo
+               etot(i,kchan)=sqrt(abs(etot(i,kchan)-vtot(i,kchan)**2)
+     $              /dble(ntotcalls(i)))
+            enddo
+         endif
          if (vtot(i,0).ne.0d0) then
             efrac(i)=abs(etot(i,0)/vtot(i,0))
          else
