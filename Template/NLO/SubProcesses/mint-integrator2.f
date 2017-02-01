@@ -455,12 +455,15 @@ c This is the loop over all the channels for the very first iteration.
                   etot(i,kchan)=etot(i,kchan)/dble(ntotcalls(i))
                   etot(i,kchan)=sqrt(abs(etot(i,kchan)-vtot(i,kchan)**2)
      $                 /dble(ntotcalls(i)))
-                  ntotcalls(i)=0
-                  non_zero_point(i)=0
                enddo
                if (kchan.eq.nchans) exit
                ans_chan(kchan)=0d0
                ans_chan(kchan+1)=1d0
+               do i=1,nintegrals
+                  ntotcalls(i)=0
+                  non_zero_point(i)=0
+               enddo
+               kpoint_iter=0
                goto 2
             endif
          enddo
