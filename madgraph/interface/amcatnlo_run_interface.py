@@ -1766,7 +1766,8 @@ RESTART = %(mint_mode)s
         sum_job['split']=0
         sum_job['wgt_mult']=1.0
         # information to be summed:
-        keys=['niters_done','niters','result','resultABS','time_spend']
+        keys=['niters_done','npoints_done','niters','npoints',\
+              'result','resultABS','time_spend']
         keys2=['error','errorABS']
         # information to be summed in quadrature:
         for key in keys2:
