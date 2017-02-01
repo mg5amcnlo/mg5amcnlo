@@ -1574,8 +1574,7 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             else:
                 if job['split'] != 0:
                     for f in ['grid.MC_integer','mint_grids']:
-                        if not os.path.isfile(pjoin(job['dirname'],f)):
-                            files.cp(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
+                        files.cp(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
 
 
     def write_input_file(self,job,fixed_order):
@@ -1794,9 +1793,16 @@ RESTART = %(mint_mode)s
         """
         files_mint_grids=[]
         files_MC_integer=[]
+        location=None
         for job in job_group:
             files_mint_grids.append(open(pjoin(job['dirname'],'mint_grids'),'r+'))
             files_MC_integer.append(open(pjoin(job['dirname'],'grid.MC_integer'),'r+'))
+            if not location:
+                location=pjoin(job['dirname'].rsplit('_',1)[0])
+            else:
+                if location != pjoin(job['dirname'].rsplit('_',1)[0]) :
+                    raise aMCatNLOError('Not all jobs have the same location. '\
+                                        +'Cannot combine them.')
         # Needed to average the grids (both xgrids, ave_virt and
         # MC_integer grids), but sum the cross section info. The
         # latter is only the only line that contains integers.
@@ -1841,6 +1847,11 @@ RESTART = %(mint_mode)s
                 f.writelines(to_write)
                 f.truncate()
                 f.close
+        # Also copy them over the 'master' location
+        for f in ['grid.MC_integer','mint_grids']:
+            job1=job_group[0]
+            if not os.path.isfile(pjoin(job1['dirname'],f)):
+                files.cp(pjoin(job1['dirname'],f),location)
 
                 
     def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
@@ -1867,18 +1878,18 @@ RESTART = %(mint_mode)s
         jobs_to_run_new=[]
         jobs_to_collect_new=copy.copy(jobs_to_collect)
         for job in jobs_to_run:
+            # remove current job from jobs_to_collect. Make sure
+            # to remove all the split ones in case the original
+            # job had been a split one (before it was re-combined)
+            for j in filter(lambda j: j['p_dir'] == job['p_dir'] and \
+                                j['channel'] == job['channel'], jobs_to_collect_new):
+                jobs_to_collect_new.remove(j)
             time_expected=job['time_spend']*(job['niters']*job['npoints'])/  \
                            (job['niters_done']*job['npoints_done'])
             # if the time expected for this job is (much) larger than
             # the time spend in the previous iteration, and larger
             # than the expected time per job, split it
             if time_expected > max(2*job['time_spend'],time_per_job):
-                # remove current job from jobs_to_collect. Make sure
-                # to remove all the split ones in case the original
-                # job had been a split one (before it was re-combined)
-                for j in filter(lambda j: j['p_dir'] == job['p_dir'] and \
-                                j['channel'] == job['channel'], jobs_to_collect_new):
-                    jobs_to_collect_new.remove(j)
                 # determine the number of splits needed
                 nsplit=min(max(int(time_expected/max(2*job['time_spend'],time_per_job)),2),nb_submit)
                 for i in range(1,nsplit+1):
@@ -1888,13 +1899,14 @@ RESTART = %(mint_mode)s
                     job_new['dirname']=job['dirname']+'_%i' % job_new['split']
                     job_new['accuracy']=min(job['accuracy']*math.sqrt(float(nsplit)),0.1)
                     if nsplit >= job['niters']:
-                        job_new['niters']=1
                         job_new['npoints']=int(job['npoints']*job['niters']/nsplit)
+                        job_new['niters']=1
                     else:
                         job_new['npoints']=int(job['npoints']/nsplit)
                     jobs_to_collect_new.append(job_new)
                     jobs_to_run_new.append(job_new)
             else:
+                jobs_to_collect_new.append(job)
                 jobs_to_run_new.append(job)
         return jobs_to_run_new,jobs_to_collect_new
                 
