@@ -1862,9 +1862,9 @@ RESTART = %(mint_mode)s
         """
         # determine the number jobs we should have (this is per p_dir)
         if self.options['run_mode'] ==2:
-            nb_submit = self.options['nb_core']
+            nb_submit = int(self.options['nb_core'])
         elif self.options['run_mode'] ==1:
-            nb_submit = self.options['cluster_size']
+            nb_submit = int(self.options['cluster_size'])
         else:
             nb_submit =1 
         # total expected aggregated running time
