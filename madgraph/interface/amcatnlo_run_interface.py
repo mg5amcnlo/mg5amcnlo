@@ -1806,8 +1806,8 @@ RESTART = %(mint_mode)s
         # Needed to average the grids (both xgrids, ave_virt and
         # MC_integer grids), but sum the cross section info. The
         # latter is only the only line that contains integers.
-        for files in [files_mint_grids,files_MC_integer]:
-            linesoffiles=[f.readlines() for f in files]
+        for fs in [files_mint_grids,files_MC_integer]:
+            linesoffiles=[f.readlines() for f in fs]
             to_write=[]
             for rowgrp in zip(*linesoffiles):
                 try:
@@ -1841,7 +1841,7 @@ RESTART = %(mint_mode)s
                     floatgrps = zip(*floatsbyfile)
                     averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
                     to_write.append(" ".join(str(a) for a in averages) + "\n")
-            for f in files:
+            for f in fs:
                 # overwrite the existing files then close them.
                 f.seek(0)
                 f.writelines(to_write)
