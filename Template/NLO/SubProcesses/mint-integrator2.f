@@ -216,15 +216,14 @@ c Initialize upper bounding envelope
       enddo
 c Main loop over the iterations
  10   continue
-c This makes sure that current stdout is written to log.txt and cache is
-c emptied.
       do kchan=1,nchans
          np=0
          do kint=1,nint_used
             np=np+nhits(kint,1,kchan)
          enddo
-         write (*,*) 'channel',kchan,':',regridded(kchan),np
-     $        ,nhits_in_grids(kchan)
+         write (*,250) 'channel',kchan,':',iconfigs(kchan)
+     $        ,regridded(kchan),np,nhits_in_grids(kchan),ans_chan(kchan)
+     $        ,ans(2,kchan),virtual_fraction(kchan)
       enddo
       call flush(6)
       if(nit.ge.nitmax) then
@@ -612,8 +611,6 @@ c double the number of points for the next iteration
      $        'accumulated results '//title(i)//' =',ans(i,0),' +/- '
      $        ,unc(i,0) ,' (',efrac(i)*100d0,'%)'
       enddo
-      write (*,*) 'ans_chan :',(ans_chan(kchan),kchan=1,nchans)
-      write (*,*) 'Xsec chan:',(ans(2,kchan),kchan=1,nchans)
       if (nit_included.le.1) then
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF ='
      $        ,0d0
@@ -629,11 +626,6 @@ c in the calculation
      $           *max(min(2d0*etot(3,kchan)/etot(1,kchan),2d0),0.25d0)
      $           ,1d0),Min_virt_fraction)
          enddo
-         write (*,*) 'update virtual fraction to:      '
-     $        ,(virtual_fraction(kchan),kchan=1,nchans)
-      elseif (imode.eq.1) then
-         write (*,*) 'virtual fraction is:             '
-     $        ,(virtual_fraction(kchan),kchan=1,nchans)
       endif
 c Update the results of the last tree iterations
       do i=1,nintegrals
@@ -745,6 +737,9 @@ c Also improve stats in plots
      $     ,HwU_values)
 c Do next iteration
       goto 10
+      return
+ 250  format(a7,i5,1x,a1,1x,i5,1x,l,1x,i8,1x,i8,2x,e10.4,2x,e10.4,2x
+     $     ,e10.4)
       end
 
       subroutine double_grid(xgrid,nhits,ninter)
