@@ -292,7 +292,7 @@ c Reset the accumulated results for grid updating
                   enddo
                   nhits_in_grids(kchan)=np ! set equal to number of
                                            ! points used for last update
-               elseif (regridded(kchan) .and. reset)
+               elseif (regridded(kchan) .and. reset) then
                   nhits_in_grids(kchan)=0
                endif
                do kdim=1,ndim
