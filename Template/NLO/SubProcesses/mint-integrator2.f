@@ -206,6 +206,11 @@ c Initialize upper bounding envelope
          do kchan=1,nchans
             ymax_virt(kchan)=xint_virt(kchan)
          enddo
+         ans_chan(0)=0d0
+         do kchan=1,nchans
+            ans_chan(kchan)=ans(1,kchan)
+            ans_chan(0)=ans_chan(0)+ans(1,kchan)
+         enddo
       endif
       nit=0
       nit_included=0
@@ -559,6 +564,14 @@ c Reset the MINT grids
                   nhits_in_grids(kchan)=0
                enddo
                call init_ave_virt(nint_used_virt,ndim)
+               do kchan=0,nchans
+                  ans_chan(kchan)=0d0
+               enddo
+               if (double_events) then
+                  ans_chan(0)=1d0
+                  ans_chan(1)=1d0
+                  ncalls0=ncalls0/nchans
+               endif
             elseif (imode.eq.1) then
                do kdim=1,ndim
                   nintcurr=nint_used/ifold(kdim)
@@ -580,7 +593,6 @@ c Reset the MINT grids
                   ans(i,kchan)=0d0
                   unc(i,kchan)=0d0
                   chi2(i,kchan)=0d0
-                  ans_chan(kchan)=0d0
                enddo
                do j=1,3
                   ans3(i,j)=0d0
