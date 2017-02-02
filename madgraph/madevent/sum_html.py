@@ -663,7 +663,7 @@ function check_link(url,alt, id){
 </script>
 """ 
 
-def collect_result(cmd, folder_names):
+def collect_result(cmd, folder_names, jobs):
     """ """ 
 
     run = cmd.results.current['run_name']
@@ -685,16 +685,20 @@ def collect_result(cmd, folder_names):
                 if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
                     continue
                                       
-                if not folder_names:
+                if not folder_names and not jobs:
                     name = 'G' + name
                     P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
-                else:
+                elif not jobs:
                     for folder in folder_names:
                         if 'G' in folder:
                             dir = folder.replace('*', name)
                         else:
                             dir = folder.replace('*', '_G' + name)
                         P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
+            if jobs:
+                for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
+                    P_comb.add_results(os.path.basename(job['dirname']),\
+                                       pjoin(job['dirname'],'results.dat'))
         except IOError:
             continue
         P_comb.compute_values()
@@ -703,15 +707,15 @@ def collect_result(cmd, folder_names):
     return all
 
 
-def make_all_html_results(cmd, folder_names = []):
-    """ folder_names has been added for the amcatnlo runs """
+def make_all_html_results(cmd, folder_names = [], jobs=[]):
+    """ folder_names and jobs have been added for the amcatnlo runs """
     run = cmd.results.current['run_name']
     if not os.path.exists(pjoin(cmd.me_dir, 'HTML', run)):
         os.mkdir(pjoin(cmd.me_dir, 'HTML', run))
     
     unit = cmd.results.unit
     P_text = ""      
-    Presults = collect_result(cmd, folder_names=folder_names)
+    Presults = collect_result(cmd, folder_names=folder_names, jobs=jobs)
             
     
     for P_comb in Presults:
