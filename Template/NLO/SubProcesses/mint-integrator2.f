@@ -285,13 +285,15 @@ c Reset the accumulated results for grid updating
          do kchan=1,nchans
             if (regridded(kchan).or.reset) then ! only reset if grids were 
                                                 ! updated (or forced reset)
-               if (regridded(kchan)) then
+               if (regridded(kchan) .and. .not. reset) then
                   np=0
                   do kint=1,nint_used
                      np=np+nhits(kint,1,kchan)
                   enddo
                   nhits_in_grids(kchan)=np ! set equal to number of
                                            ! points used for last update
+               elseif (regridded(kchan) .and. reset)
+                  nhits_in_grids(kchan)=0
                endif
                do kdim=1,ndim
                   do kint=0,nint_used
@@ -530,7 +532,6 @@ c empty the accumalated results for the MINT grids
          if (imode.eq.0) then
 c emptying accum. results is done above when the iteration starts
             reset=.true.
-            continue
          elseif (imode.eq.1) then
 c Cannot really skip the increase of the upper bounding envelope. So,
 c simply continue here. Note that no matter how large the integrand for
