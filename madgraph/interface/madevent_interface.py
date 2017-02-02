@@ -5680,7 +5680,7 @@ tar -czf split_$1.tar.gz split_$1
                 switch['analysis'] = 'MADANALYSIS_5'
 
         if len(valid_options['analysis'])>1:                
-            available_mode.append('5')
+            available_mode.append('3')
             if switch['analysis'] == void:
                 switch['analysis'] = 'OFF'
         else:
@@ -5701,21 +5701,21 @@ tar -czf split_$1.tar.gz split_$1
                         
         # Check switch status for MS/reweight
         if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
-            available_mode.append('3')
+            available_mode.append('4')
             valid_options['madspin'] = ['ON', 'OFF']
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
             if misc.has_f2py() or self.options['f2py_compiler']:
-                available_mode.append('4')
+                available_mode.append('5')
                 valid_options['reweight'] = ['ON', 'OFF']
                 if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                     switch['reweight'] = 'ON'
                 else:
                     switch['reweight'] = 'OFF'
             else: 
-                switch['reweight'] = 'Not available (requires NumPy)'
+                switch['reweight'] = 'Not available (requires NumPy/f2py)'
                        
         if '-R' in args or '--reweight' in args:
             if switch['reweight'] == 'OFF':
@@ -5732,6 +5732,8 @@ tar -czf split_$1.tar.gz split_$1
             if len(valid_options[key]) >1:
                 options += ['%s=%s' % (key, s) for s in valid_options[key]]
                 options.append(key)
+            else:
+                options.append('%s=OFF' % (key))
                 
         options += ['parton'] + sorted(list(set(available_mode)))
         options += options_legacy
