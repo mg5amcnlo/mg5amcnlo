@@ -284,7 +284,7 @@ c     still biased) estimator of the standard deviation.
                etot=etot* sqrt(dble(histi(label,i))
      &                    /(dble(histi(label,i))-1.5d0))
             else
-               etot=0.999d49
+               etot=abs(vtot(1))*10d0 ! multiply by 10 to make it large
             endif
 c     If the error estimation of the accumulated results is still zero
 c     (i.e. no points were added yet, e.g. because it is the first
@@ -323,7 +323,7 @@ c     still biased) estimator of the standard deviation.
                etot=etot* sqrt(dble(histi(label,i))
      &                    /(dble(histi(label,i))-1.5d0))
             else
-               etot=0.999d49
+               etot=abs(vtot(1))*10d0 ! multiply by 10 to make it large
             endif
 c     If the error estimation of the accumulated results is still zero
 c     (i.e. no points were added yet, e.g. because it is the first
