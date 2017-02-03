@@ -516,7 +516,7 @@ c the abs is to avoid tiny negative values
       enddo
 C If there was a large fluctation in this iteration, be careful with
 C including it in the accumalated results and plots.
-      if (efrac(1).gt.0.3d0 .and. iappl.eq.0) then
+      if (efrac(1).gt.0.3d0 .and. iappl.eq.0 .and. nit.gt.3) then
 c Do not include the results in the plots
          if (fixed_order) call accum(.false.)
          if (fixed_order) call HwU_accum_iter(.false.,ntotcalls(1)
