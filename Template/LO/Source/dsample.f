@@ -1714,7 +1714,7 @@ c         if (kn .eq. events) then
          if (kn .ge. max_events .and. non_zero .le. 5) then
             call none_pass(max_events)
          endif
-         if (non_zero .eq. events .or. (kn .gt. 200*events .and.
+         if (non_zero .ge. events .or. (kn .gt. 200*events .and.
      $        non_zero .gt. 5)) then
 
 c          # special mode where we store information to combine them
