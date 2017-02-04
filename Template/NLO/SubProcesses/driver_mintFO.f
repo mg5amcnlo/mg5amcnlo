@@ -768,7 +768,7 @@ c-----
             write (*,*) 'Splitting channel:',random_offset_split
          elseif(buffer(1:8).eq.'WGT_MULT') then
             read(buffer(11:),*) wgt_mult
-            write (*,*) 'Splitting channel:',i
+            write (*,*) 'Weight multiplier:',wgt_mult
          elseif(buffer(1:8).eq.'RUN_MODE') then
             read(buffer(11:),*) abrvinput
             if(abrvinput(5:5).eq.'0')then
