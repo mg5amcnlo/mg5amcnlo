@@ -3583,6 +3583,12 @@ already exists and is not a fifo file."""%fifo_path)
         # need to read parameters from the Banner.
         PY8_Card.MadGraphSet('JetMatching:setMad', False)
         if run_type=='MLM':
+            # When running MLM make sure that we do not write out the parameter
+            # Merging:xxx as this can interfere with the MLM merging in older
+            # versions of the driver.
+            PY8_Card.vetoParamWriteOut('Merging:TMS')
+            PY8_Card.vetoParamWriteOut('Merging:Process')
+            PY8_Card.vetoParamWriteOut('Merging:nJetMax')
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
@@ -3590,7 +3596,7 @@ already exists and is not a fifo file."""%fifo_path)
             
             if PY8_Card['JetMatching:qCut']<(1.5*self.run_card['xqcut']):
                 logger.error(
-    'The MLM merging qCut parameter you chose (%f) is less than'%PY8_Card['JetMatching:qCut']+
+    'The MLM merging qCut parameter you chose (%f) is less than '%PY8_Card['JetMatching:qCut']+
     '1.5*xqcut, with xqcut your run_card parameter (=%f).\n'%self.run_card['xqcut']+
     'It would be better/safer to use a larger qCut or a smaller xqcut.')
 
@@ -3648,6 +3654,13 @@ already exists and is not a fifo file."""%fifo_path)
                 PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
         # We use the positivity of 'ktdurham' cut as a CKKWl marker.
         elif run_type=='CKKW':
+            # When running CKKWL make sure that we do not write out the parameter
+            # JetMatching:xxx as this can interfere with the MLM merging in older
+            # versions of the driver.
+            PY8_Card.vetoParamWriteOut('JetMatching:qCut')
+            PY8_Card.vetoParamWriteOut('JetMatching:doShowerKt')
+            PY8_Card.vetoParamWriteOut('JetMatching:nJetMax')
+
             CKKW_cut = None
             # Specific CKKW settings
             if self.run_card['ptlund']<=0.0 and self.run_card['ktdurham']>0.0:
@@ -3679,7 +3692,7 @@ already exists and is not a fifo file."""%fifo_path)
                  " select a '%s' cut larger than 0.0 in the run_card."%CKKW_cut)
             if PY8_Card['Merging:TMS']<self.run_card[CKKW_cut]:
                 logger.error(
-    'The CKKWl merging scale you chose (%f) is less than'%PY8_Card['Merging:TMS']+
+    'The CKKWl merging scale you chose (%f) is less than '%PY8_Card['Merging:TMS']+
     'the %s cut specified in the run_card parameter (=%f).\n'%(CKKW_cut,self.run_card[CKKW_cut])+
     'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
     
@@ -3727,10 +3740,15 @@ already exists and is not a fifo file."""%fifo_path)
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
         'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
         else:
-            # Here, the run is therefore not a merged-type of run. We must therefore make sure *not*
-            # to specify the "Merging:Process' as this makes older versions of the driver crash if 
-            # there is no merging in place
+            # When not performing any merging, make sure that we do not write out the parameter
+            # JetMatching:xxx or Merging:xxx as this can trigger undesired vetos in an unmerged
+            # simulation.
+            PY8_Card.vetoParamWriteOut('Merging:TMS')
             PY8_Card.vetoParamWriteOut('Merging:Process')
+            PY8_Card.vetoParamWriteOut('Merging:nJetMax')
+            PY8_Card.vetoParamWriteOut('JetMatching:qCut')
+            PY8_Card.vetoParamWriteOut('JetMatching:doShowerKt')
+            PY8_Card.vetoParamWriteOut('JetMatching:nJetMax')
 
         return HepMC_event_output
 
