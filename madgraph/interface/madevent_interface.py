@@ -3544,7 +3544,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if PY8_Card['HEPMCoutput:file']=='auto':
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
-            PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag)
+            PY8_Card.defaultSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag)
         elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
             fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
             fifo_path  = None
@@ -3592,7 +3592,7 @@ already exists and is not a fifo file."""%fifo_path)
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
-                PY8_Card.MadGraphSet('JetMatching:qCut',1.5*self.run_card['xqcut'])
+                PY8_Card.defaultSet('JetMatching:qCut',1.5*self.run_card['xqcut'])
             
             if PY8_Card['JetMatching:qCut']<(1.5*self.run_card['xqcut']):
                 logger.error(
@@ -3606,7 +3606,7 @@ already exists and is not a fifo file."""%fifo_path)
 
             # Automatically set qWeed to xqcut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
-                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
+                PY8_Card.defaultSet('SysCalc:qWeed',self.run_card['xqcut'])
 
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:
@@ -3614,12 +3614,12 @@ already exists and is not a fifo file."""%fifo_path)
                         qcut = PY8_Card['JetMatching:qCut']
                         value = [factor*qcut for factor in [0.5,0.75,1.0,1.5,2.0] if\
                                  factor*qcut> 1.5*self.run_card['xqcut'] ]
-                        PY8_Card.MadGraphSet('SysCalc:qCutList', value)
+                        PY8_Card.defaultSet('SysCalc:qCutList', value)
                     else:
                         qCutList = [float(qc) for qc in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
-                        PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList)
+                        PY8_Card.defaultSet('SysCalc:qCutList', qCutList)
             
             for scale in PY8_Card['SysCalc:qCutList']:
                 if scale<(1.5*self.run_card['xqcut']):
@@ -3634,7 +3634,7 @@ already exists and is not a fifo file."""%fifo_path)
             # PY8 should not implement the MLM veto since the driver should do it
             # if merging scale variation is turned on
             if self.run_card['use_syst']:
-                PY8_Card.MadGraphSet('JetMatching:doVeto',False)
+                PY8_Card.defaultSet('JetMatching:doVeto',False)
 
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
@@ -3651,7 +3651,7 @@ already exists and is not a fifo file."""%fifo_path)
             if PY8_Card['JetMatching:nJetMax'.lower()] == -1:
                 logger.info("No user-defined value for Pythia8 parameter "+
             "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
-                PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
+                PY8_Card.defaultSet('JetMatching:nJetMax',nJetMax)
         # We use the positivity of 'ktdurham' cut as a CKKWl marker.
         elif run_type=='CKKW':
             # When running CKKWL make sure that we do not write out the parameter
@@ -3680,13 +3680,13 @@ already exists and is not a fifo file."""%fifo_path)
             
             # Automatically set qWeed to the CKKWL cut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
-                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card[CKKW_cut])
+                PY8_Card.defaultSet('SysCalc:qWeed',self.run_card[CKKW_cut])
             
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['Merging:TMS']==-1.0:
                 if self.run_card[CKKW_cut]>0.0:
-                    PY8_Card.MadGraphSet('Merging:TMS',self.run_card[CKKW_cut])
+                    PY8_Card.defaultSet('Merging:TMS',self.run_card[CKKW_cut])
                 else:
                     raise self.InvalidCmd('When running CKKWl merging, the user'+\
                  " select a '%s' cut larger than 0.0 in the run_card."%CKKW_cut)
@@ -3706,8 +3706,8 @@ already exists and is not a fifo file."""%fifo_path)
             PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
             # PY8 should not implement the CKKW veto since the driver should do it.
             if self.run_card['use_syst']:
-                PY8_Card.MadGraphSet('Merging:applyVeto',False)
-                PY8_Card.MadGraphSet('Merging:includeWeightInXsection',False)
+                PY8_Card.defaultSet('Merging:applyVeto',False)
+                PY8_Card.defaultSet('Merging:includeWeightInXsection',False)
             # Use the parameter maxjetflavor for Merging:nQuarksMerge which specifies
             # up to which parton must be matched.
             PY8_Card.MadGraphSet('Merging:nQuarksMerge',self.run_card['maxjetflavor'])
@@ -3724,12 +3724,12 @@ already exists and is not a fifo file."""%fifo_path)
                         tms = PY8_Card["Merging:TMS"]
                         value = [factor*tms for factor in [0.5,0.75,1.0,1.5,2.0]
                                  if factor*tms > self.run_card[CKKW_cut]]
-                        PY8_Card.MadGraphSet('SysCalc:tmsList', value)
+                        PY8_Card.defaultSet('SysCalc:tmsList', value)
                     else:
                         tmsList = [float(tms) for tms in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
-                        PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList)
+                        PY8_Card.defaultSet('SysCalc:tmsList', tmsList)
             
             for scale in PY8_Card['SysCalc:tmsList']:
                 if scale<self.run_card[CKKW_cut]:
