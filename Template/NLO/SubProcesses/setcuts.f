@@ -536,18 +536,15 @@ c
 c For the bound, we have to square and divide by stot.
             tau_lower_bound_resonance=taumin_s(iFKS,ichan)**2/stot
 c
-            write (*,'(a,i3,a,3(e12.5,x))') 'nFKSprocess:',iFKS
-     &           ,'. Absolute lower bound for tau at the Born is'
-     &           ,tau_Born_lower_bound,taumin(iFKS,ichan),dsqrt(stot) 
-            if (j_fks.le.nincoming) then
-               write (*,'(a,i3,a,3(e12.5,x))') 'nFKSprocess:',iFKS
-     &              ,'. Lower bound for tau is',tau_lower_bound
-     &              ,taumin_j(iFKS,ichan),dsqrt(stot)
+            if (j_fks.gt.nincoming) then
+               write (*,'(a7,x,i3,x,i5,x,a1,3(e12.5,x)))') 'tau_min'
+     $              ,iFKS,ichan,':',taumin(iFKS,ichan),taumin_j(iFKS
+     $              ,ichan),taumin_s(iFKS,ichan)
+            else
+               write (*,'(a7,x,i3,x,i5,x,a1,e12.5,x,a13,e12.5,x))')
+     $              'tau_min',iFKS,ichan,':',taumin(iFKS,ichan)
+     $              ,'     --      ',taumin_s(iFKS,ichan)
             endif
-            write (*,'(a,i3,a,3(e12.5,x))') 'nFKSprocess:',iFKS
-     &           ,'. Lower bound for tau is (taking resonances'/
-     &           /' into account)' ,tau_lower_bound_resonance
-     &           ,taumin_s(iFKS,ichan) ,dsqrt(stot)
          enddo
       endif
       tau_Born_lower_bound=taumin(nFKSprocess,ichan)**2/stot
