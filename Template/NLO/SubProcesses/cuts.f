@@ -38,6 +38,9 @@ C     external functions that can be used. Some are defined in this
 C     file, others are in ./Source/kin_functions.f
       REAL*8 R2_04,invm2_04,pt_04,eta_04,pt,eta
       external R2_04,invm2_04,pt_04,eta_04,pt,eta
+C     recombination of photons
+      double precision p_reco(0:4,nexternal), R_reco
+      integer iPDG_reco(nexternal)
 c local integers
       integer i,j
 c jet cluster algorithm
@@ -74,19 +77,23 @@ C***************************************************************
 C Cuts from the run_card.dat
 C***************************************************************
 C***************************************************************
+      !first recombine the photons and fermions
+      call recombine_momenta(rphreco, etaphreco, lepphreco, quarkphreco,
+     $                       p, iPDG, p_reco, iPDG_reco)
+
 c
 c CHARGED LEPTON CUTS
 c
 c find the charged leptons (also used in the photon isolation cuts below)
       do i=1,nexternal
          if(istatus(i).eq.1 .and.
-     &    (ipdg(i).eq.11 .or. ipdg(i).eq.13 .or. ipdg(i).eq.15)) then
+     &    (ipdg_reco(i).eq.11 .or. ipdg_reco(i).eq.13 .or. ipdg_reco(i).eq.15)) then
             is_a_lm(i)=.true.
          else
             is_a_lm(i)=.false.
          endif
          if(istatus(i).eq.1 .and.
-     &    (ipdg(i).eq.-11 .or. ipdg(i).eq.-13 .or. ipdg(i).eq.-15)) then
+     &    (ipdg_reco(i).eq.-11 .or. ipdg_reco(i).eq.-13 .or. ipdg_reco(i).eq.-15)) then
             is_a_lp(i)=.true.
          else
             is_a_lp(i)=.false.
@@ -97,14 +104,14 @@ c apply the charged lepton cuts
          if (is_a_lp(i).or.is_a_lm(i)) then
 c transverse momentum
             if (ptl.gt.0d0) then
-               if (pt_04(p(0,i)).lt.ptl) then
+               if (pt_04(p_reco(0,i)).lt.ptl) then
                   passcuts_user=.false.
                   return
                endif
             endif
 c pseudo-rapidity
             if (etal.gt.0d0) then
-               if (abs(eta_04(p(0,i))).gt.etal) then
+               if (abs(eta_04(p_reco(0,i))).gt.etal) then
                   passcuts_user=.false.
                   return
                endif
@@ -114,26 +121,26 @@ c DeltaR and invariant mass cuts
                do j=nincoming+1,nexternal
                   if (is_a_lm(j)) then
                      if (drll.gt.0d0) then
-                        if (R2_04(p(0,i),p(0,j)).lt.drll**2) then
+                        if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll**2) then
                            passcuts_user=.false.
                            return
                         endif
                      endif
                      if (mll.gt.0d0) then
-                        if (invm2_04(p(0,i),p(0,j),1d0).lt.mll**2) then
+                        if (invm2_04(p_reco(0,i),p_reco(0,j),1d0).lt.mll**2) then
                            passcuts_user=.false.
                            return
                         endif
                      endif
                      if (ipdg(i).eq.-ipdg(j)) then
                         if (drll_sf.gt.0d0) then
-                           if (R2_04(p(0,i),p(0,j)).lt.drll_sf**2) then
+                           if (R2_04(p_reco(0,i),p_reco(0,j)).lt.drll_sf**2) then
                               passcuts_user=.false.
                               return
                            endif
                         endif
                         if (mll_sf.gt.0d0) then
-                           if (invm2_04(p(0,i),p(0,j),1d0).lt.mll_sf**2)
+                           if (invm2_04(p_reco(0,i),p_reco(0,j),1d0).lt.mll_sf**2)
      $                          then
                               passcuts_user=.false.
                               return
@@ -151,8 +158,8 @@ c
 c find the jets
       do i=1,nexternal
          if (istatus(i).eq.1 .and.
-     &        (abs(ipdg(i)).le.maxjetflavor .or. ipdg(i).eq.21
-     &         .or.(ipdg(i).eq.22.and.gamma_is_j))) then
+     &        (abs(ipdg_reco(i)).le.maxjetflavor .or. ipdg_reco(i).eq.21
+     &         .or.(ipdg_reco(i).eq.22.and.gamma_is_j))) then
             is_a_j(i)=.true.
          else
             is_a_j(i)=.false.
@@ -172,7 +179,7 @@ c more than the Born).
             if (is_a_j(j)) then
                nQCD=nQCD+1
                do i=0,3
-                  pQCD(i,nQCD)=p(i,j)
+                  pQCD(i,nQCD)=p_reco(i,j)
                enddo
             endif
          enddo
@@ -183,7 +190,7 @@ c THE UNLOPS CUT:
 c Use special pythia pt cut for minimal pT
          do i=1,nexternal
             do j=0,3
-               p_unlops(j,i)=p(j,i)
+               p_unlops(j,i)=p_reco(j,i)
             enddo
          enddo
          call pythia_UNLOPS(p_unlops,passUNLOPScuts)
@@ -281,6 +288,9 @@ c find the photons
             endif
          enddo
          if(nph.eq.0)goto 444
+         write(*,*) 'ERROR in cuts.f: photon isolation is not working'
+     $           // ' for mixed QED-QCD corrections'
+         stop 1
          
          if(isoEM)then
             nem=nph
@@ -400,17 +410,20 @@ c
 
 
 
-      subroutine recombine_momenta(R, p_in, pdg_in, p_out, pdg_out)
+      subroutine recombine_momenta(R, etaph, reco_l, reco_q, p_in, pdg_in, p_out, pdg_out)
       implicit none
       ! recombine photons with the closest fermion if the distance is
-      ! less than R. Output a new set of momenta and pdgs corresponding
+      ! less than R and if the rapidity of photons is < etaph (etaph < 0
+      ! means no cut). Output a new set of momenta and pdgs corresponding
       ! to the recombined particles. If recombination occurs the photon
       ! disappears from the output particles
       ! arguments
       include 'nexternal.inc'
-      double precision R, p_in(0:4,nexternal), p_out(0:4,nexternal)
+      double precision R, etaph, p_in(0:4,nexternal), p_out(0:4,nexternal)
+      logical reco_l, reco_q
       integer pdg_in(nexternal), pdg_out(nexternal)
       ! local variables
+      integer nq, nl
       integer id_ph
       parameter (id_ph=22)
       integer n_ph, i_ph
@@ -419,7 +432,7 @@ c
       double precision dreco, dthis
       integer skip
       logical is_light_charged_fermion
-      double precision R2
+      double precision R2_04, eta_04
       ! 
       integer times_reco
       common/to_times_reco/ times_reco
@@ -431,10 +444,25 @@ c
         enddo
       enddo
 
+      ! check if we want to recombine with leptons
+      if (reco_l) then
+          nl = 3
+      else 
+          nl = 0
+      endif
+
+      ! check if we want to recombine with quarks
+      if (reco_q) then
+          nq = 5
+      else 
+          nq = 0
+      endif
+
       ! count the photons
       n_ph=0
       do i=nincoming+1, nexternal
-        if (pdg_in(i).eq.id_ph) then
+        if (pdg_in(i).eq.id_ph.and.
+     $   (abs(eta_04(p_in(0,i))).lt.etaph.or.etaph.lt.0d0)) then
             n_ph=n_ph+1
             i_ph=i
         endif
@@ -461,8 +489,8 @@ c
         dreco=R
         if (i_ph.gt.0) then
           do i = nincoming+1, nexternal
-            if (is_light_charged_fermion(pdg_in(i),5,3)) then
-              dthis=dsqrt(R2(p_in(0,i_ph),p_in(0,i)))
+            if (is_light_charged_fermion(pdg_in(i),nq,nl)) then
+              dthis=dsqrt(R2_04(p_in(0,i_ph),p_in(0,i)))
               if (dthis.le.dreco) then
                 dreco=dthis
                 ifreco=i

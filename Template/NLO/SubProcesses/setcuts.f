@@ -157,12 +157,12 @@ c
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
       double precision taumin(fks_configs),taumin_s(fks_configs)
-     &     ,taumin_j(fks_configs),stot,xk(nexternal)
+     &     ,taumin_j(fks_configs),stot,xk(-nexternal:nexternal)
       save  taumin,taumin_s,taumin_j,stot
       integer i,j,k,d1,d2,iFKS,nt
       double precision xm(-nexternal:nexternal),xm1,xm2,xmi
       double precision xw(-nexternal:nexternal),xw1,xw2,xwi
-      integer tsign,j_fks
+      integer tsign,i_fks,j_fks
       double precision tau_Born_lower_bound,tau_lower_bound_resonance
      &     ,tau_lower_bound
       common/ctau_lower_bound/tau_Born_lower_bound
@@ -209,8 +209,8 @@ c
       include "born_props.inc"
 
 c The following assumes that light QCD particles are at the end of the
-c list. Exclude one of them to set tau bound at the Born level This
-c sets a hard cut in the minimal shat of the Born phase-space
+c list. Exclude one of them (i_fks) to set tau bound at the Born level 
+c This sets a hard cut in the minimal shat of the Born phase-space
 c generation.
 c
 c The contribution from ptj should be treated only as a 'soft lower
@@ -232,12 +232,15 @@ c            stop
          firsttime=.false.
          do iFKS=1,fks_configs
             j_fks=FKS_J_D(iFKS)
+            i_fks=FKS_I_D(iFKS)
             taumin(iFKS)=0.d0
             taumin_s(iFKS)=0.d0
             taumin_j(iFKS)=0.d0
             do i=nincoming+1,nexternal
+C Skip i_fks
+               if (i.eq.i_fks) cycle
 c Add the minimal jet pTs to tau
-               if(IS_A_J(i) .and. i.ne.nexternal)then
+               if(IS_A_J(i)) then
                   if  (j_fks.gt.nincoming .and. j_fks.lt.nexternal) then
                      taumin(iFKS)=taumin(iFKS)+max(ptj,emass(i))
                      taumin_s(iFKS)=taumin_s(iFKS)+max(ptj,emass(i))
