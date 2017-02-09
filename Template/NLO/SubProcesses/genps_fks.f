@@ -3115,7 +3115,7 @@ c     flat transformation:
             jac=jac*A
          else
 c     S=A/(B-x) transformation:
-            if (s_mass.gt.smax) then
+            if (s_mass.ge.smax) then
                jac=-422d0
                return
             endif
@@ -3200,7 +3200,7 @@ c     alternative mass.
             s=A*x+B
             jac=jac*A
          else
-            if(smax.lt.cBW_mass(1)**2) then
+            if(smax.le.cBW_mass(1)**2) then
                jac=-453d0
                return
             endif
@@ -3255,7 +3255,7 @@ c     above alternative mass.
             s=A*x+B
             jac=jac*A
          else
-            if(smax.lt.cBW_mass(1)**2) then
+            if(smax.le.cBW_mass(1)**2) then
                jac=-464d0
                return
             endif
