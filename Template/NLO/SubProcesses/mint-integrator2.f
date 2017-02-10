@@ -314,7 +314,8 @@ c including the virtual_fraction.
                if (f(ithree).ne.0d0) then
                   f(isix)=f(isix)/virtual_fraction
                   call fill_ave_virt(x,nint_used_virt,ndim,k_ord_virt
-     &                 ,f(ithree),f(isix))
+     $                 ,(f(ithree)+average_virtual(k_ord_virt)*f(isix))
+     $                 *virtual_fraction,f(isix)*virtual_fraction)
                else
                   f(isix)=0d0
                endif
@@ -1238,11 +1239,10 @@ c need to solve for k_new = (virt+k_old*born)/born
             if (ave_virt(i,kdim,k_ord_virt).eq.0d0) then ! i.e. first iteration
                ave_virt(i,kdim,k_ord_virt)=ave_virt_acc(i,kdim
      &              ,k_ord_virt)/ave_born_acc(i,kdim,k_ord_virt)
-     &              +ave_virt(i,kdim,k_ord_virt)
             else  ! give some importance to the iterations already done
                ave_virt(i,kdim,k_ord_virt)=(ave_virt_acc(i,kdim
      &              ,k_ord_virt)/ave_born_acc(i,kdim,k_ord_virt)
-     &              +ave_virt(i,kdim,k_ord_virt)*2d0)/2d0
+     &              +ave_virt(i,kdim,k_ord_virt))/2d0
             endif
          enddo
       enddo
