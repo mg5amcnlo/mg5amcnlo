@@ -3333,8 +3333,10 @@ class RunCardNLO(RunCard):
         self.add_param('iappl', 0)   
         self.add_param('lhe_version', 3, hidden=True, include=False)
         
-        #internal variable
+        #internal variable related to FO_analyse_card
         self.add_param('FO_LHE_weight_ratio',1e-3, hidden=True, system=True)
+        self.add_param('FO_LHE_postprocessing',['grouping','random'], 
+                       hidden=True, system=True, include=False)
     
     def check_validity(self):
         """check the validity of the various input"""

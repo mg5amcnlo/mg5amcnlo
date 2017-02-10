@@ -113,10 +113,14 @@ c      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
       integer iSorH_lhe,ifks_lhe(fks_configs) ,jfks_lhe(fks_configs)
      &     ,fksfather_lhe(fks_configs) ,ipartner_lhe(fks_configs)
       double precision scale1_lhe(fks_configs),scale2_lhe(fks_configs)
-      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe,
-     #                fksfather_lhe,ipartner_lhe
+      common/cto_LHE1/iSorH_lhe,ifks_lhe,jfks_lhe, fksfather_lhe,ipartner_lhe
       common/cto_LHE2/scale1_lhe,scale2_lhe
-
+c
+c     forbid unweighting close to the fks pole (should not happen but better safe than sorry)
+      double precision p_i_fks_ev(0:3),p_i_fks_cnt(0:3,-2:2)
+      double precision xi_i_fks_ev,y_ij_fks_ev
+      common/fksvariables/xi_i_fks_ev,y_ij_fks_ev,p_i_fks_ev,p_i_fks_cnt
+c
 c Auxiliary quantities used when writing events
 c      integer jwgtinfo,mexternal
 c      common/cwgtaux0/jwgtinfo,mexternal
@@ -129,9 +133,9 @@ c     ptot (to determine the initial state)
       INTEGER MAXNUP
       PARAMETER (MAXNUP=500)
       INTEGER NUP,IDPRUP,IDUP(MAXNUP),ISTUP(MAXNUP),
-     # MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
+     & MOTHUP(2,MAXNUP),ICOLUP(2,MAXNUP)
       DOUBLE PRECISION XWGTUP,AQEDUP,AQCDUP,
-     # PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
+     & PUP(5,MAXNUP),VTIMUP(MAXNUP),SPINUP(MAXNUP)
 c********************************************************************
 c     Writes one event from data file #lun according to LesHouches
 c     ic(1,*) = Particle ID
@@ -151,15 +155,16 @@ c********************************************************************
       if (twgt.eq.-2d0)then
          cross = cross + wgts(1)/ncall
          return ! not written file for the first iteration
-      elseif(abs(wgts(1)).lt.abs(twgt))then
+      elseif(abs(wgts(1)).lt.abs(twgt).and.xi_i_fks_ev.gt.1e-3.and.y_ij_fks_ev.gt.1e-2)then
          R = ran2()*abs(twgt)
          if (R.gt.abs(wgts(1)))then
-            return
+             return
+         else
+            do i =2, max_weight
+                wgts(i) = wgts(i)*abs(twgt/wgts(1))
+            enddo
+            wgts(1) = sign(twgt,wgts(1))
          endif
-         do i =2, max_weight
-            wgts(i) = wgts(i)*abs(twgt/wgts(1))
-         enddo
-         wgts(1) = sign(twgt,wgts(1))
       endif
 
 c --- prepare the multi-weight information to be written in the event file
@@ -199,7 +204,7 @@ c --- prepare the buffer information
      &          ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &          ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
      &          ,scale2_lhe(nFKSprocess),izero,izero,izero,zero,zero
-     &          ,zero,zero,zero
+     &          ,zero,zero,ibody*1d0
       else
           if(iwgtinfo.ne.-5)then
             write(*,*)'Error in write_events_lhe'
@@ -212,7 +217,7 @@ c --- prepare the buffer information
      &         ,jfks_lhe(nFKSprocess),fksfather_lhe(nFKSprocess)
      &         ,ipartner_lhe(nFKSprocess),scale1_lhe(nFKSprocess)
      &         ,scale2_lhe(nFKSprocess),kwgtinfo,nexternal,iwgtnumpartn
-     &         ,zero,zero,zero,zero,zero
+     &         ,zero,zero,zero,zero,ibody*1d0
        endif
 
       shower_scale = 0d0
@@ -248,8 +253,8 @@ c     assume massless initial state to get back the initial momenta
       PUP(3,2) = - PUP(4,2)
 
       call write_lhef_event(41,
-     #    nexternal,IDPRUP,wgts(1)/ncall,0d0,0d0,0d0,
-     #    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+     &    nexternal,IDPRUP,wgts(1)/ncall,0d0,0d0,0d0,
+     &    IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
 
  201  format(a9,1x,i1,4(1x,i2),2(1x,d14.8),2x,i2,2(1x,i2),5(1x,d14.8))
       end

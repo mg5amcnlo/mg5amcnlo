@@ -173,6 +173,7 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
+        self.parsing = True
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
@@ -230,8 +231,9 @@ class EventFile(object):
         init_pos = self.tell()
         self.seek(0)
         nb_event=0
-        for _ in self:
-            nb_event +=1
+        with misc.TMP_variable(self,'parsing',False):
+            for _ in self:
+                nb_event +=1
         self.len = nb_event
         self.seek(init_pos)
         return self.len
@@ -1661,6 +1663,24 @@ class Event(list):
             if len(popup_index) != len(set(popup_index)):
                 logger.critical(self)
                 raise Exception, "Wrong color flow: identical poping-up index, %s" % (popup_index)
+               
+    def __eq__(self, other):
+        """two event are the same if they have the same momentum. other info are ignored"""
+        
+        if other is None:
+            return False
+        
+        for i,p in enumerate(self):
+            if p.E != other[i].E:
+                return False
+            elif p.pz != other[i].pz:
+                return False
+            elif p.px != other[i].px:
+                return False
+            elif p.py != other[i].py:
+                return False
+        return True
+        
                
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""

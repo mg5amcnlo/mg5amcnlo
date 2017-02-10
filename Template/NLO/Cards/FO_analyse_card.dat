@@ -18,6 +18,11 @@
 FO_ANALYSIS_FORMAT = HwU
 #
 #
+#LHE Post-processing can be 'True','False', 'nogrouping', 'norandom', 
+#    'nogrouping,norandom'. If not 'True' then the full file need to be used.
+#    Having it on False saves quite a lot of cpu/disk access.
+FO_LHE_POSTPROCESSING = norandom,nogrouping
+#
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 
 #

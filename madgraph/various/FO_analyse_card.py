@@ -30,7 +30,8 @@ class FOAnalyseCard(dict):
 
     string_vars = ['fo_extralibs', 'fo_extrapaths', 'fo_includepaths', 
                    'fo_analyse', 'fo_analysis_format', 'fo_lhe_min_weight',
-                   'fo_lhe_weight_ratio']
+                   'fo_lhe_weight_ratio',
+                   'fo_lhe_postprocessing']
 
     
     def __init__(self, card=None, testing=False):
