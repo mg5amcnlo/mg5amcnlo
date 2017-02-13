@@ -471,8 +471,7 @@ C and save files/grids as any other run
          write (*,*) 'ERROR: INTEGRAL APPEARS TO BE ZERO.'
          write (*,*) 'TRIED',ntotcalls(1),'PS POINTS AND ONLY '
      &        ,non_zero_point(1),' GAVE A NON-ZERO INTEGRAND.'
-         call close_run_zero_res(ncalls0, nitmax, ndim, nintervals,
-     &    nintervals_virt)
+         call close_run_zero_res(ncalls0, nitmax, ndim)
          stop 
       endif
 c Goto beginning of loop over PS points until enough points have found
@@ -1474,19 +1473,16 @@ c reset the acc values
       end
 
 
-      subroutine close_run_zero_res(ncalls, nitmax, ndim, nintervals,
-     &    nintervals_virt)
-      integer ncalls, nitmax, ndim, nintervals, nintervals_virt
+      subroutine close_run_zero_res(ncalls, nitmax, ndim)
+      implicit none
+      include "mint.inc"
+      integer ncalls, nitmax, ndim
       integer j,i,k
       integer              n_ord_virt
       common /c_n_ord_virt/n_ord_virt
 
       write(*,*) 'Final result [ABS]:  0.000E000   +/-  0.000E000'
       write(*,*) 'Final result:  0.000E000   +/-  0.000E000'
-      open(unit=58,file='res_0',status='unknown')
-      write(58,*) 'Final result [ABS]:  0.000E000   +/-  0.000E000'
-      write(58,*) 'Final result:  0.000E000   +/-  0.000E000'
-      close(58)
  
       open(unit=58,file='results.dat',status='unknown')
       write(58,*) 0d0,0d0,0d0,0,0,0,0,0d0,0d0,0d0
