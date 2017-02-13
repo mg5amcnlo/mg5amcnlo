@@ -1,4 +1,11 @@
-c
+*     -*-fortran-*-
+
+      integer maxchannels
+      parameter (maxchannels=20) ! same as in amcatnlo_run_interface
+      integer nchans,iconfigs(maxchannels),kchan,iconfig,ichan
+      double precision wgt_mult
+      common /channels/ wgt_mult,nchans,iconfigs,iconfig,ichan
+
 c Note that the number of intervals in the integration
 c grids, 'nintervals', should be equal to
 c     nintervals = min_inter * 2^n,
@@ -53,3 +60,12 @@ c
       data title(24)/'B  9         '/
       data title(25)/'V 10         '/
       data title(26)/'B 10         '/
+
+      integer nvirt(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels)
+     $     ,nvirt_acc(nintervals_virt,ndimmax,0:n_ave_virt,maxchannels)
+      double precision ave_virt(nintervals_virt,ndimmax,0:n_ave_virt
+     $     ,maxchannels),ave_virt_acc(nintervals_virt,ndimmax
+     $     ,0:n_ave_virt,maxchannels),ave_born_acc(nintervals_virt
+     $     ,ndimmax,0:n_ave_virt,maxchannels)
+      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
+     $     ,nvirt_acc

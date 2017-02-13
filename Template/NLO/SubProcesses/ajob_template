@@ -34,7 +34,11 @@ integration_step=$4
 TAGTAGTAGTAGTAGTAGTAG for i in 1 ; do
     
     if [[ $run_mode == 'all' || $run_mode == 'born' ]] ; then
-	j=$run_mode\_G$i
+	if [[ $runnumber == '0' ]] ; then
+	    j=$run_mode\_G$i
+	else
+	    j=$run_mode\_G$i\_$runnumber
+	fi
     else
 	if [[ $runnumber == '0' ]] ; then
 	    j=G$run_mode$i

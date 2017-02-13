@@ -32,10 +32,6 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       
-      integer           iconfig
-      common/to_configs/iconfig
-
-
       double precision twgt, maxwgt,swgt(maxevents)
       integer                             lun, nw
       common/to_unwgt/twgt, maxwgt, swgt, lun, nw
@@ -59,9 +55,11 @@ c Vegas stuff
       integer n_mp, n_disc
 c For MINT:
       include "mint.inc"
-      real* 8 xgrid(0:nintervals,ndimmax),ymax(nintervals,ndimmax)
-     $     ,ymax_virt,ans(nintegrals),unc(nintegrals),chi2(nintegrals)
-     $     ,x(ndimmax),itmax_fl
+      integer nhits_in_grids(maxchannels)
+      real* 8 xgrid(0:nintervals,ndimmax,maxchannels),ymax(nintervals
+     $     ,ndimmax,maxchannels),ymax_virt(maxchannels),ans(nintegrals
+     $     ,0:maxchannels),unc(nintegrals,0:maxchannels),chi2(nintegrals
+     $     ,0:maxchannels),x(ndimmax),itmax_fl
       integer ixi_i,iphi_i,iy_ij,vn
       integer ifold(ndimmax) 
       common /cifold/ifold
@@ -72,13 +70,6 @@ c For MINT:
       logical unwgt
       double precision evtsgn
       common /c_unwgt/evtsgn,unwgt
-      integer nvirt(nintervals_virt,ndimmax,0:n_ave_virt)
-     &     ,nvirt_acc(nintervals_virt,ndimmax,0:n_ave_virt)
-      double precision ave_virt(nintervals_virt,ndimmax,0:n_ave_virt)
-     $     ,ave_virt_acc(nintervals_virt,ndimmax,0:n_ave_virt)
-     $     ,ave_born_acc(nintervals_virt ,ndimmax,0:n_ave_virt)
-      common/c_ave_virt/ave_virt,ave_virt_acc,ave_born_acc,nvirt
-     $     ,nvirt_acc
 
       logical SHsep
       logical Hevents
@@ -90,7 +81,8 @@ c statistics for MadLoop
 
       double precision virtual_over_born
       common/c_vob/virtual_over_born
-      double precision average_virtual(0:n_ave_virt),virtual_fraction
+      double precision average_virtual(0:n_ave_virt,maxchannels)
+     $     ,virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
       include 'orders.inc'
       integer              n_ord_virt
@@ -129,10 +121,12 @@ c
 c     Read general MadFKS parameters
 c
       call FKSParamReader(paramFileName,.TRUE.,.FALSE.)
-      do i=0,n_ave_virt
-         average_virtual(i)=0d0
+      do kchan=1,maxchannels
+         do i=0,n_ave_virt
+            average_virtual(i,kchan)=0d0
+         enddo
+         virtual_fraction(kchan)=max(virt_fraction,min_virt_fraction)
       enddo
-      virtual_fraction=max(virt_fraction,min_virt_fraction)
       n_ord_virt=amp_split_size
       
 c
@@ -180,7 +174,7 @@ c
 c     Get user input
 c
       write(*,*) "getting user params"
-      call get_user_params(ncall,itmax,iconfig,imode)
+      call get_user_params(ncall,itmax,imode)
       if(imode.eq.0)then
         flat_grid=.true.
       else
@@ -199,7 +193,7 @@ c at the NLO)
         write(*,*)'NLO computations require muF1=muF2'
         stop
       endif
-      write(*,*) "about to integrate ", ndim,ncall,itmax,iconfig
+      write(*,*) "about to integrate ", ndim,ncall,itmax
 c APPLgrid
       if (imode.eq.0) iappl=0 ! overwrite when starting completely fresh
       if(iappl.ne.0) then
@@ -219,25 +213,36 @@ c     Fill the number of combined matrix elements for given initial state lumino
          if(imode.eq.0)then
 c Don't safe the reweight information when just setting up the grids.
             doreweight=.false.
-            do j=0,nintervals
+            do kchan=1,nchans
                do i=1,ndimmax
-                  xgrid(j,i)=0.d0
+                  do j=0,nintervals
+                     xgrid(j,i,kchan)=0.d0
+                  enddo
                enddo
             enddo
          else
             doreweight=do_rwgt_scale.or.do_rwgt_pdf
 c to restore grids:
             open (unit=12, file='mint_grids',status='old')
-            do j=0,nintervals
-               read (12,*) (xgrid(j,i),i=1,ndim)
-            enddo
-            do j=1,nintervals_virt
-               do k=0,n_ord_virt
-                  read (12,*) (ave_virt(j,i,k),i=1,ndim)
+            ans(1,0)=0d0
+            unc(1,0)=0d0
+            do kchan=1,nchans
+               do j=0,nintervals
+                  read (12,*) (xgrid(j,i,kchan),i=1,ndim)
                enddo
+               do j=1,nintervals_virt
+                  do k=0,n_ord_virt
+                     read (12,*) (ave_virt(j,i,k,kchan),i=1,ndim)
+                  enddo
+               enddo
+               read(12,*) ans(1,kchan),unc(1,kchan),dummy,dummy
+     $              ,nhits_in_grids(kchan)
+               read(12,*) virtual_fraction(kchan),average_virtual(0
+     $              ,kchan)
+               ans(1,0)=ans(1,kchan)
+               unc(1,0)=unc(1,kchan)**2
             enddo
-            read (12,*) ans(1),unc(1),dummy,dummy
-            read (12,*) virtual_fraction,average_virtual(0)
+            unc(1,0)=sqrt(unc(1,0))
             close (12)
             write (*,*) "Update iterations and points to",itmax,ncall
          endif
@@ -246,41 +251,50 @@ c
 
          if (ickkw.eq.-1) then
             min_virt_fraction=1d0
-            virtual_fraction=1d0
+            do kchan=1,nchans
+               virtual_fraction(kchan)=1d0
+            enddo
          endif
 c
 c Setup for parton-level NLO reweighting
          if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
 C check for zero cross-section
 C if restoring grids corresponding to sigma=0, just terminate the run
-         if (imode.ne.0.and.ans(1).eq.0d0.and.unc(1).eq.0d0) then
+         if (imode.ne.0.and.ans(1,0).eq.0d0.and.unc(1,0).eq.0d0) then
             call initplot()
             call close_run_zero_res(ncall, itmax, ndim, nintervals,
      &                              nintervals_virt)
             stop
          endif
-         call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
-     $        ,ans,unc,chi2)
+         call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax
+     $        ,ymax_virt,ans,unc,chi2,nhits_in_grids)
          call topout
-         write(*,*)'Final result [ABS]:',ans(1),' +/-',unc(1)
-         write(*,*)'Final result:',ans(2),' +/-',unc(2)
-         write(*,*)'chi**2 per D.o.F.:',chi2(1)
+         write(*,*)'Final result [ABS]:',ans(1,0),' +/-',unc(1,0)
+         write(*,*)'Final result:',ans(2,0),' +/-',unc(2,0)
+         write(*,*)'chi**2 per D.o.F.:',chi2(1,0)
          open(unit=58,file='results.dat',status='unknown')
-         write(58,*) ans(1),unc(2),0d0,0,0,0,0,0d0,0d0,ans(2)
+         do kchan=0,nchans
+            write(58,*) ans(1,kchan),unc(2,kchan),0d0,0,0,0,0,0d0,0d0
+     $           ,ans(2,kchan)
+         enddo
          close(58)
 c
 c to save grids:
          open (unit=12, file='mint_grids',status='unknown')
-         do j=0,nintervals
-            write (12,*) (xgrid(j,i),i=1,ndim)
-         enddo
-         do j=1,nintervals_virt
-            do k=0,n_ord_virt
-               write (12,*) (ave_virt(j,i,k),i=1,ndim)
+         do kchan=1,nchans
+            do j=0,nintervals
+               write (12,*) (xgrid(j,i,kchan),i=1,ndim)
             enddo
+            do j=1,nintervals_virt
+               do k=0,n_ord_virt
+                  write (12,*) (ave_virt(j,i,k,kchan),i=1,ndim)
+               enddo
+            enddo
+            write (12,*) ans(1,kchan),unc(1,kchan),ncall,itmax
+     $           ,nhits_in_grids(kchan)
+            write (12,*) virtual_fraction(kchan),average_virtual(0
+     $           ,kchan)
          enddo
-         write (12,*) ans(1),unc(1),ncall,itmax
-         write (12,*) virtual_fraction,average_virtual(0)
          close (12)
       else
          write (*,*) 'Unknown imode',imode
@@ -357,7 +371,10 @@ c to save grids:
       write(*,*) 'Time spent in Total : ',tTot
 
       open (unit=12, file='res.dat',status='unknown')
-      write (12,*)ans(1),unc(1),ans(2),unc(2),itmax,ncall,tTot
+      do kchan=0,nchans
+         write (12,*)ans(1,kchan),unc(1,kchan),ans(2,kchan),unc(2,kchan)
+     $        ,itmax,ncall,tTot
+      enddo
       close(12)
 
 
@@ -415,15 +432,13 @@ c timing statistics
       parameter (izero=0,ione=1,itwo=2,mohdr=-100)
       logical passcuts,passcuts_nbody,passcuts_n1body,sum
       external passcuts
-      integer             ini_fin_fks
+      integer             ini_fin_fks(maxchannels)
       common/fks_channels/ini_fin_fks
       data sum /.false./
       integer         ndim
       common/tosigint/ndim
       logical       nbody
       common/cnbody/nbody
-      integer           iconfig
-      common/to_configs/iconfig
       double precision p1_cnt(0:3,nexternal,-2:2),wgt_cnt(-2:2)
      $     ,pswgt_cnt(-2:2),jac_cnt(-2:2)
       common/counterevnts/p1_cnt,wgt_cnt,pswgt_cnt,jac_cnt
@@ -464,14 +479,17 @@ c timing statistics
       if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
-      call get_MC_integer(1,fks_configs,nFKS_picked,vol)
-      if (ini_fin_fks.eq.1) then
+      call get_MC_integer(ini_fin_fks(ichan),fks_configs,nFKS_picked
+     $     ,vol)
+      if (ini_fin_fks(ichan).eq.1) then
          do while (fks_j_d(nFKS_picked).le.nincoming) 
-            call get_MC_integer(1,fks_configs,nFKS_picked,vol)
+            call get_MC_integer(ini_fin_fks(ichan),fks_configs
+     $           ,nFKS_picked,vol)
          enddo
-      elseif (ini_fin_fks.eq.2) then
+      elseif (ini_fin_fks(ichan).eq.2) then
          do while (fks_j_d(nFKS_picked).gt.nincoming) 
-            call get_MC_integer(1,fks_configs,nFKS_picked,vol)
+            call get_MC_integer(ini_fin_fks(ichan),fks_configs
+     $           ,nFKS_picked,vol)
          enddo
       endif
 
@@ -482,7 +500,7 @@ c The nbody contributions
       calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
       call update_fks_dir(nFKS_born,iconfig)
-      if (ini_fin_fks.eq.0) then
+      if (ini_fin_fks(ichan).eq.0) then
          jac=1d0
       else
          jac=0.5d0
@@ -572,10 +590,11 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
 c Importance sampling for FKS configurations
       if (sum) then
          call get_wgt_nbody(sig)
-         call fill_MC_integer(1,nFKS_picked,abs(sig))
+         call fill_MC_integer(ini_fin_fks(ichan),nFKS_picked,abs(sig))
       else
          call get_wgt_no_nbody(sig)
-         call fill_MC_integer(1,nFKS_picked,abs(sig)*vol)
+         call fill_MC_integer(ini_fin_fks(ichan),nFKS_picked,abs(sig)
+     $        *vol)
       endif
 
 c Finalize PS point
@@ -703,7 +722,7 @@ c     If still not found, just pick any one that has a soft singularity
       end
 
 c
-      subroutine get_user_params(ncall,itmax,iconfig,irestart)
+      subroutine get_user_params(ncall,itmax,irestart)
 c**********************************************************************
 c     Routine to get user specified parameters for run
 c**********************************************************************
@@ -716,25 +735,24 @@ c
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
       include 'run.inc'
+      include 'mint.inc'
 c
 c     Arguments
 c
-      integer ncall,itmax,iconfig, jconfig
+      integer ncall,itmax
 c
 c     Local
 c
       integer i, j
-      double precision dconfig
+      double precision dconfig(maxchannels)
 c
 c     Global
 c
-      integer ini_fin_fks
+      integer ini_fin_fks(maxchannels)
       common /fks_channels/ini_fin_fks
       integer           isum_hel
       logical                   multi_channel
       common/to_matrix/isum_hel, multi_channel
-      double precision    accuracy
-      common /to_accuracy/accuracy
       integer           use_cut
       common /to_weight/use_cut
 
@@ -768,7 +786,8 @@ c
       integer mc_hel,ihel
       double precision volh
       common/mc_int2/volh,mc_hel,ihel,fillh
-
+      integer random_offset_split
+      common /c_random_offset_split/ random_offset_split
       logical done
       character*100 buffer
 c-----
@@ -778,6 +797,7 @@ c-----
       unwgt=.false.
       open (unit=83,file='input_app.txt',status='old')
       done=.false.
+      nchans=0
       do while (.not. done)
          read(83,'(a)',err=222,end=222) buffer
          if (buffer(1:7).eq.'NPOINTS') then
@@ -817,30 +837,54 @@ c-----
                write(*,*) 'Do MC over helicities for the virtuals'
             endif
             isum_hel=0
-         elseif(buffer(1:7).eq.'CHANNEL') then
-            read(buffer(10:),*) dconfig
-            iconfig = int(dconfig)
-            if ( nint(dconfig*10) - iconfig*10 .eq.0 ) then
-               ini_fin_fks=0
-            elseif ( nint(dconfig*10) -iconfig*10 .eq.1 ) then
-               ini_fin_fks=1
-            elseif ( nint(dconfig*10) -iconfig*10 .eq.2 ) then
-               ini_fin_fks=2
-            else
-               write (*,*) 'ERROR: invalid configuration number',dconfig
+         elseif(buffer(1:6).eq.'NCHANS') then
+            read(buffer(9:),*) nchans
+            write (*,*) 'Number of channels to integrate together:'
+     $           ,nchans
+            if (nchans.gt.maxchannels) then
+               write (*,*) 'Too many integration channels to be '/
+     $              /'integrated together. Increase maxchannels',nchans
+     $              ,maxchannels
                stop 1
             endif
-            do i=1,mapconfig(0)
-               if (iconfig.eq.mapconfig(i)) then
-                  iconfig=i
-                  exit
+         elseif(buffer(1:7).eq.'CHANNEL') then
+            if (nchans.le.0) then
+               write (*,*) '"NCHANS" missing in input files'/
+     $              /' (still zero)',nchans
+               stop
+            endif
+            read(buffer(10:),*) (dconfig(kchan),kchan=1,nchans)
+            do kchan=1,nchans
+               iconfigs(kchan) = int(dconfig(kchan))
+               if ( nint(dconfig(kchan)*10)-iconfigs(kchan)*10.eq.0 )
+     $              then
+                  ini_fin_fks(kchan)=0
+               elseif ( nint(dconfig(kchan)*10)-iconfigs(kchan)*10.eq.1
+     $                 ) then
+                  ini_fin_fks(kchan)=1
+               elseif ( nint(dconfig(kchan)*10)-iconfigs(kchan)*10.eq.2
+     $                 ) then
+                  ini_fin_fks(kchan)=2
+               else
+                  write (*,*) 'ERROR: invalid configuration number',dconfig
+                  stop 1
                endif
+               do i=1,mapconfig(0)
+                  if (iconfigs(kchan).eq.mapconfig(i)) then
+                     iconfigs(kchan)=i
+                     exit
+                  endif
+               enddo
             enddo
-            write(*,*) 'Running Configuration Number: ',iconfig
-     $           ,ini_fin_fks
+            write(*,*) 'Running Configuration Number(s): '
+     $           ,(iconfigs(kchan),kchan=1,nchans)
+            write(*,*) 'initial-or-final',(ini_fin_fks(kchan),kchan=1,nchans)
          elseif(buffer(1:5).eq.'SPLIT') then
-            read(buffer(8:),*) i
-            write (*,*) 'Splitting channel:',i
+            read(buffer(8:),*) random_offset_split
+            write (*,*) 'Splitting channel:',random_offset_split
+         elseif(buffer(1:8).eq.'WGT_MULT') then
+            read(buffer(11:),*) wgt_mult
+            write (*,*) 'Weight multiplier:',wgt_mult
          elseif(buffer(1:8).eq.'RUN_MODE') then
             read(buffer(11:),*) abrvinput
             if(abrvinput(5:5).eq.'0')then
@@ -884,7 +928,6 @@ c-----
             endif
          endif
       endif
-c
 c
 c     Here I want to set up with B.W. we map and which we don't
 c

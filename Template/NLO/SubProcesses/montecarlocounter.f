@@ -205,7 +205,7 @@ c
      #      ( abs(particle_type(ipart)).ne.3 .and.
      #        particle_type(ipart).ne.8 ) )then
           write(*,*)'Error #2 in check_mc_matrices',i,ipart,
-     #              particle_type(ipart)
+     #particle_type(ipart)
           stop
         endif
       enddo

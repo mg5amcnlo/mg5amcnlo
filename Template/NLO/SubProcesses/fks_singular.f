@@ -5546,7 +5546,7 @@ c      include "fks.inc"
       include "run.inc"
       include "fks_powers.inc"
       include 'reweight.inc'
-      include 'mint.inc'
+      include "mint.inc"
       double precision p(0:3,nexternal),bsv_wgt,born_wgt,avv_wgt
       double precision pp(0:3,nexternal)
       
@@ -5605,7 +5605,8 @@ c For tests of virtuals
       integer iminmax
       common/cExceptPSpoint/iminmax,ExceptPSpoint
 
-      double precision average_virtual(0:n_ave_virt),virtual_fraction
+      double precision average_virtual(0:n_ave_virt,maxchannels)
+     $     ,virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
       double precision virtual_over_born
       common/c_vob/virtual_over_born
@@ -5924,7 +5925,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       enddo
       
       if (fold.eq.0) then
-         if ((ran2().le.virtual_fraction .and.
+         if ((ran2().le.virtual_fraction(ichan) .and.
      $           abrv(1:3).ne.'nov').or.abrv(1:4).eq.'virt') then
             call cpu_time(tBefore)
             Call BinothLHA(p_born,born_wgt,virt_wgt)
@@ -5935,18 +5936,19 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
             tOLP=tOLP+(tAfter-tBefore)
             virtual_over_born=virt_wgt/born_wgt
             if (ickkw.ne.-1) then
-              virt_wgt=virt_wgt-average_virtual(0)*born_wgt
+              virt_wgt=virt_wgt-average_virtual(0,ichan)*born_wgt
               do iamp=1,amp_split_size
                  if (amp_split_virt(iamp).eq.0d0) cycle
                  amp_split_virt(iamp)=amp_split_virt(iamp)-
-     $               average_virtual(iamp)*amp_split_born_for_virt(iamp)
+     $                average_virtual(iamp,ichan)
+     $                *amp_split_born_for_virt(iamp)
               enddo
             endif
             if (abrv.ne.'virt') then
-               virt_wgt=virt_wgt/virtual_fraction
+               virt_wgt=virt_wgt/virtual_fraction(ichan)
                do iamp=1,amp_split_size
                   amp_split_virt(iamp)=amp_split_virt(iamp)
-     &                 /virtual_fraction
+     &                 /virtual_fraction(ichan)
                enddo
             endif
             virt_wgt_save=virt_wgt
@@ -5961,11 +5963,11 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
          enddo
       endif
       if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
-         avv_wgt=average_virtual(0)*born_wgt
+         avv_wgt=average_virtual(0,ichan)*born_wgt
          do iamp=1, amp_split_size
             if (amp_split_born_for_virt(iamp).eq.0d0) cycle
             amp_split_avv(iamp)=
-     $        average_virtual(iamp)*amp_split_born_for_virt(iamp)
+     $        average_virtual(iamp,ichan)*amp_split_born_for_virt(iamp)
          enddo
       endif
 
@@ -6636,9 +6638,11 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       end
 
 
-      subroutine setfksfactor(iconfig,match_to_shower)
+      subroutine setfksfactor(match_to_shower)
       implicit none
 
+      include 'mint.inc'
+      
       double precision CA,CF, PI
       parameter (CA=3d0,CF=4d0/3d0)
       parameter (pi=3.1415926535897932385d0)
@@ -6652,8 +6656,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       logical softtest,colltest
       common/sctests/softtest,colltest
 
-      integer config_fks,i,j,iconfig,fac1,fac2
-      double precision dfac1
+      integer config_fks,i,j,fac1,fac2
       logical match_to_shower
 
       double precision fkssymmetryfactor,fkssymmetryfactorBorn,
@@ -6692,6 +6695,8 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       logical rotategranny
       common/crotategranny/rotategranny
+      double precision diagramsymmetryfactor_save(maxchannels)
+      save diagramsymmetryfactor_save
       double precision diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
 
@@ -6701,6 +6706,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
 
       character*1 integrate
       integer i_fks,j_fks
+      double precision dfac1
       common/fks_indices/i_fks,j_fks
       integer fac_i,fac_j,i_fks_pdg,j_fks_pdg,iden(nexternal)
 
@@ -6948,7 +6954,8 @@ c matrix elements is not the one that should be used for those terms
 c (should be the one in the real instead).
       iden_comp=dble(iden_born_FKS(nFKSprocess))/
      &          dble(iden_real_FKS(nFKSprocess))
-            
+
+      
 c Set matrices used by MC counterterms
       if (match_to_shower) call set_mc_matrices
 
@@ -6986,7 +6993,9 @@ c Setup the FKS symmetry factors.
 
       if (firsttime) then
 c Check to see if this channel needs to be included in the multi-channeling
-         diagramsymmetryfactor=0d0
+         do kchan=1,nchans
+            diagramsymmetryfactor_save(kchan)=0d0
+         enddo
          if (multi_channel) then
             open (unit=19,file="symfact.dat",status="old",err=14)
             i=0
@@ -6998,23 +7007,29 @@ c Check to see if this channel needs to be included in the multi-channeling
                   i=i-1
                   cycle
                endif
-               if (i.eq.iconfig) then
-                  if (mapconfig(iconfig).ne.fac1) then
-                     write (*,*) 'inconsistency in symfact.dat',i
-     $                    ,iconfig,mapconfig(iconfig),fac1
-                     stop
+               do kchan=1,nchans
+                  if (i.eq.iconfigs(kchan)) then
+                     if (mapconfig(iconfigs(kchan)).ne.fac1) then
+                        write (*,*) 'inconsistency in symfact.dat',i
+     $                       ,kchan,iconfigs(kchan)
+     $                       ,mapconfig(iconfigs(kchan)),fac1
+                        stop
+                     endif
+                     diagramsymmetryfactor_save(kchan)=dble(fac2)
                   endif
-                  diagramsymmetryfactor=dble(fac2)
-               endif
+               enddo
             enddo
  23         continue
             close(19)
          else                   ! no multi_channel
-            diagramsymmetryfactor=1d0
+            do kchan=1,nchans
+               diagramsymmetryfactor_save(kchan)=1d0
+            enddo
          endif
  12      continue
          firsttime=.false.
       endif
+      diagramsymmetryfactor=diagramsymmetryfactor_save(ichan)
 
       return
 
@@ -7023,11 +7038,13 @@ c Check to see if this channel needs to be included in the multi-channeling
       write (*,*) 'make and run "genint_fks" first.'
       stop
  14   continue
-      diagramsymmetryfactor=1d0
+      do kchan=1,nchans
+         diagramsymmetryfactor_save(kchan)=1d0
+      enddo
       goto 12
       end
 
-      subroutine set_granny(nFKSprocess,iconfig,mass_min)
+      subroutine set_granny(nFKSprocess,iconf,mass_min)
 c This determines of the grandmother of the FKS pair is a resonance. If
 c so, set granny_is_res=.true. and also set to which internal propagator
 c the grandmother corresponds (igranny) as well as the aunt (iaunt).
@@ -7037,8 +7054,9 @@ c parametrisation.
       include 'genps.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
+      include 'mint.inc'
 c arguments
-      integer nFKSprocess,iconfig
+      integer nFKSprocess,iconf
       double precision mass_min(-nexternal:nexternal)
 c common block that is filled by this subroutine
       logical granny_is_res
@@ -7050,14 +7068,18 @@ c common block that is filled by this subroutine
 c other common blocks
       integer i_fks,j_fks
       common/fks_indices/i_fks,j_fks
-c local 
-      logical firsttime_fks(fks_configs)
-      data firsttime_fks/fks_configs*.true./
+c     local
+      integer size
+      parameter (size=fks_configs*maxchannels)
+      logical firsttime_fks(fks_configs,maxchannels)
+      data firsttime_fks/size*.true./
       integer i,imother
 c save
-      logical granny_is_res_fks(fks_configs)
-      integer igranny_fks(fks_configs),iaunt_fks(fks_configs)
-      logical granny_chain_fks(-nexternal:nexternal,fks_configs)
+      logical granny_is_res_fks(fks_configs,maxchannels)
+      integer igranny_fks(fks_configs,maxchannels),iaunt_fks(fks_configs
+     $     ,maxchannels)
+      logical granny_chain_fks(-nexternal:nexternal,fks_configs
+     $     ,maxchannels)
       save granny_is_res_fks,igranny_fks,iaunt_fks,granny_chain_fks
 c itree info
       include 'born_conf.inc'
@@ -7073,23 +7095,23 @@ c
 c If it's the firsttime going into this subroutine for this nFKSprocess,
 c save all the relevant information so that for later calls a simple
 c copy will do.
-      if (firsttime_fks(nFKSprocess)) then
-         firsttime_fks(nFKSprocess)=.false.
+      if (firsttime_fks(nFKSprocess,ichan)) then
+         firsttime_fks(nFKSprocess,ichan)=.false.
 c need to have at least 2->3 (or 1->3) process to have non-trivial
 c grandmother
          if (nexternal-nincoming.lt.3) then
-            igranny_fks(nFKSprocess)=0
-            iaunt_fks(nFKSprocess)=0
-            granny_is_res_fks(nFKSprocess)=.false.
+            igranny_fks(nFKSprocess,ichan)=0
+            iaunt_fks(nFKSprocess,ichan)=0
+            granny_is_res_fks(nFKSprocess,ichan)=.false.
             igranny=0
             iaunt=0
             granny_is_res=.false.
             return
 c j_fks needs to be final state to have non-trivial grandmother
          elseif (j_fks.le.nincoming) then
-            igranny_fks(nFKSprocess)=0
-            iaunt_fks(nFKSprocess)=0
-            granny_is_res_fks(nFKSprocess)=.false.
+            igranny_fks(nFKSprocess,ichan)=0
+            iaunt_fks(nFKSprocess,ichan)=0
+            granny_is_res_fks(nFKSprocess,ichan)=.false.
             igranny=0
             iaunt=0
             granny_is_res=.false.
@@ -7099,21 +7121,21 @@ c determine if grandmother is an s-channel particle. If so, set igranny
 c and iaunt.
          imother=min(i_fks,j_fks)
          do i=-1,-(nexternal-(2+nincoming)),-1
-            if (iforest(1,i,iconfig).eq.1 .or.
-     &              iforest(1,i,iconfig).eq.2) then
+            if (iforest(1,i,iconf).eq.1 .or.
+     &              iforest(1,i,iconf).eq.2) then
 c no more s-channels, so exit the do-loop and set igranny=0
-               igranny_fks(nFKSprocess)=0
-               iaunt_fks(nFKSprocess)=0
+               igranny_fks(nFKSprocess,ichan)=0
+               iaunt_fks(nFKSprocess,ichan)=0
                exit
-            elseif (iforest(1,i,iconfig).eq.imother) then
+            elseif (iforest(1,i,iconf).eq.imother) then
 c Daughter 1 is the fks_mother.
-               igranny_fks(nFKSprocess)=i
-               iaunt_fks(nFKSprocess)=iforest(2,i,iconfig)
+               igranny_fks(nFKSprocess,ichan)=i
+               iaunt_fks(nFKSprocess,ichan)=iforest(2,i,iconf)
                exit
-            elseif (iforest(2,i,iconfig).eq.imother) then
+            elseif (iforest(2,i,iconf).eq.imother) then
 c Daughter 2 is the fks_mother.
-               igranny_fks(nFKSprocess)=i
-               iaunt_fks(nFKSprocess)=iforest(1,i,iconfig)
+               igranny_fks(nFKSprocess,ichan)=i
+               iaunt_fks(nFKSprocess,ichan)=iforest(1,i,iconf)
                exit
             endif
          enddo
@@ -7121,42 +7143,42 @@ c If there is an s-channel grandmother, determine if it's a resonance by
 c making sure that it's massive and has a non-zero width. In the special
 c case that the grandmother is the s-hat propagator (which means that
 c the process has no t-channels), set granny_is_res to false.
-         if (igranny_fks(nFKSprocess).ne.0 .and.
-     $        igranny_fks(nFKSprocess).ne.-(nexternal-(2+nincoming))) then
-            if (pmass(igranny_fks(nFKSprocess),iconfig).ne.0d0 .and.
-     $           pwidth(igranny_fks(nFKSprocess),iconfig).gt.0d0) then
+         if (igranny_fks(nFKSprocess,ichan).ne.0 .and.
+     $        igranny_fks(nFKSprocess,ichan).ne.-(nexternal-(2+nincoming))) then
+            if (pmass(igranny_fks(nFKSprocess,ichan),iconf).ne.0d0 .and.
+     $           pwidth(igranny_fks(nFKSprocess,ichan),iconf).gt.0d0) then
                ! also check if the sum of all the masses of all final
                ! state particles originating from the granny is smaller
                ! than the mass of the granny. Otherwise it will never be
                ! on-shell, and we don't need the special mapping.
-               if (pmass(igranny_fks(nFKSprocess),iconfig) .gt.
-     $              mass_min(igranny_fks(nFKSprocess))) then
-                  granny_is_res_fks(nFKSprocess)=.true.
+               if (pmass(igranny_fks(nFKSprocess,ichan),iconf) .gt.
+     $              mass_min(igranny_fks(nFKSprocess,ichan))) then
+                  granny_is_res_fks(nFKSprocess,ichan)=.true.
                else
-                  granny_is_res_fks(nFKSprocess)=.false.
+                  granny_is_res_fks(nFKSprocess,ichan)=.false.
                endif
             else
-               granny_is_res_fks(nFKSprocess)=.false.
+               granny_is_res_fks(nFKSprocess,ichan)=.false.
             endif
          else
-            granny_is_res_fks(nFKSprocess)=.false.
+            granny_is_res_fks(nFKSprocess,ichan)=.false.
          endif
 c Now we have igranny and granny_is_res_fks. We can now determine the
 c chain of s-channels that originates from the grandmother
          do i=-nexternal,nexternal
-            granny_chain_fks(i,nFKSprocess)=.false.
+            granny_chain_fks(i,nFKSprocess,ichan)=.false.
          enddo
-         if (granny_is_res_fks(nFKSprocess)) then
+         if (granny_is_res_fks(nFKSprocess,ichan)) then
 c granny is part of the chain            
-            granny_chain_fks(igranny_fks(nFKSprocess),nFKSprocess)
+            granny_chain_fks(igranny_fks(nFKSprocess,ichan),nFKSprocess,ichan)
      &           =.true.
 c loop from the granny to the external particles. If mother was part of
 c the granny chain, so are the daugthers.
-            do i=igranny_fks(nFKSprocess),-1
-               if (granny_chain_fks(i,nFKSprocess)) then
-                  granny_chain_fks(iforest(1,i,iconfig),nFKSprocess) =
+            do i=igranny_fks(nFKSprocess,ichan),-1
+               if (granny_chain_fks(i,nFKSprocess,ichan)) then
+                  granny_chain_fks(iforest(1,i,iconf),nFKSprocess,ichan) =
      $                 .true.
-                  granny_chain_fks(iforest(2,i,iconfig),nFKSprocess) =
+                  granny_chain_fks(iforest(2,i,iconf),nFKSprocess,ichan) =
      $                 .true.
                endif
             enddo
@@ -7164,12 +7186,12 @@ c the granny chain, so are the daugthers.
       endif
 c Here is the simply copy for later calls to this subroutine: set
 c igranny, iaunt and granny_is_res from the saved information
-      if (granny_is_res_fks(nFKSprocess)) then
-         igranny=igranny_fks(nFKSprocess)
-         iaunt=iaunt_fks(nFKSprocess)
+      if (granny_is_res_fks(nFKSprocess,ichan)) then
+         igranny=igranny_fks(nFKSprocess,ichan)
+         iaunt=iaunt_fks(nFKSprocess,ichan)
          granny_is_res=.true.
          do i=-nexternal,nexternal
-            granny_chain(i)=granny_chain_fks(i,nFKSprocess)
+            granny_chain(i)=granny_chain_fks(i,nFKSprocess,ichan)
             if (i.le.0) then
                granny_chain_real_final(i)=.false.
             elseif (i.lt.max(i_fks,j_fks)) then

@@ -444,10 +444,11 @@ class BasicCmd(OriginalCmd):
     def set_readline_completion_display_matches_hook(self):
         """ This has been refactorized here so that it can be called when another
         program called by MG5 (such as MadAnalysis5) changes this attribute of readline"""
-        if readline and not 'libedit' in readline.__doc__:
-            readline.set_completion_display_matches_hook(self.print_suggestions)
-        else:
-            readline.set_completion_display_matches_hook()
+        if readline:
+            if not 'libedit' in readline.__doc__:
+                readline.set_completion_display_matches_hook(self.print_suggestions)
+            else:
+                readline.set_completion_display_matches_hook()
 
     def preloop(self):
         self.set_readline_completion_display_matches_hook()
@@ -906,6 +907,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 readline.set_completer(self.complete)
                 readline.parse_and_bind(self.completekey+": complete")
             except ImportError:
+                readline = None
                 pass
         if readline and not 'libedit' in readline.__doc__:
             readline.set_completion_display_matches_hook(self.print_suggestions)
