@@ -46,6 +46,14 @@ def async_generate_real(args):
 
     #amplitude generation
     amplitude = real_amp.generate_real_amplitude()
+    # check that the amplitude has diagrams, otherwise quit here
+    # and return an empty list
+    if not amplitude['diagrams']:
+        msg = "Discarding amplitude with no diagrams%s" % \
+              (amplitude['process'].nice_string(print_weighted=False).replace('Process ', ''))
+        logger.debug(msg)
+        return []
+
     helasreal = helas_objects.HelasMatrixElement(amplitude)
     logger.info('Generating real %s' % \
             real_amp.process.nice_string(print_weighted=False).replace('Process', 'process'))
@@ -89,18 +97,24 @@ def async_generate_born(args):
     realmapout = args[7]
 
     logger.info('Generating born %s' % \
-            born.born_proc.nice_string(print_weighted=False).replace('Process', 'process'))
+            born.born_amp['process'].nice_string(print_weighted=False).replace('Process', 'process'))
     
     #load informations on reals from temp files
     helasreal_list = []
     for amp in born.real_amps:
-        idx = pdg_list.index(amp.pdgs)
-        infilename = realmapout[idx]
-        infile = open(infilename,'rb')
-        realdata = cPickle.load(infile)
-        infile.close()
-        amp.amplitude = realdata[0]
-        helasreal_list.append(realdata[1])
+        # if the pdg_list is not there, it has been removed
+        # because there are no diagrams
+        try:
+            idx = pdg_list.index(amp.pdgs)
+            infilename = realmapout[idx]
+            infile = open(infilename,'rb')
+            realdata = cPickle.load(infile)
+            infile.close()
+            amp.amplitude = realdata[0]
+            helasreal_list.append(realdata[1])
+
+        except ValueError:
+            born.real_amps.remove(amp)
         
     born.link_born_reals()
         
@@ -109,10 +123,11 @@ def async_generate_born(args):
     
     # generate the virtuals if needed
     has_loops = False
-    if born.born_proc.get('NLO_mode') == 'all' and OLP == 'MadLoop':
-        myproc = copy.copy(born.born_proc)
+    if born.born_amp['process'].get('NLO_mode') == 'all' and OLP == 'MadLoop':
+        myproc = copy.copy(born.born_amp['process'])
         # take the orders that are actually used by the matrix element
-        myproc['orders'] = loop_orders
+        ###myproc['orders'] = loop_orders
+        myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
         myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
         myamp = loop_diagram_generation.LoopAmplitude(myproc)
         if myamp.get('diagrams'):
@@ -251,7 +266,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             self['has_loops'] = False
             #more efficient generation
             born_procs = fksmulti.get('born_processes')
-            born_pdg_list = [[l['id'] for l in born.born_proc['legs']] \
+            born_pdg_list = [[l['id'] for l in born.born_amp['process']['legs']] \
             for born in born_procs ]
             loop_orders = {}
             for  born in born_procs:
@@ -290,6 +305,16 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             except KeyboardInterrupt:
                 pool.terminate()
                 raise KeyboardInterrupt 
+
+            # sometimes empty output from map_async can be there if the amplitude has no diagrams
+            # these empty entries need to be discarded
+            for rout, ramp, rpdg  in zip(realmapout, real_amp_list, pdg_list):
+                if not rout:
+                    realmapout.remove(rout)
+                    real_amp_list.remove(ramp)
+                    pdg_list.remove(rpdg)
+
+            realmapout = [r for r in realmapout if r]
 
             realmapfiles = []
             for realout in realmapout:
@@ -639,6 +664,7 @@ class FKSHelasProcess(object):
                             self.real_processes.append(fksreal_me)
                             real_amps_new.append(proc)
             else:
+                #old mode
                 for proc in fksproc.real_amps:
                     if proc.amplitude['diagrams']:
                         fksreal_me = FKSHelasRealProcess(proc, real_me_list, real_amp_list, **opts)
@@ -651,15 +677,15 @@ class FKSHelasProcess(object):
                                     fksreal_me.matrix_element.get('diagrams'):
                                 self.real_processes.append(fksreal_me)
                                 real_amps_new.append(proc)
-                fksproc.real_amps = real_amps_new
 
-                if fksproc.virt_amp:
-                    self.virt_matrix_element = \
-                      loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, 
-                              optimized_output = loop_optimized)
-                else: 
-                    self.virt_matrix_element = None
-                self.color_links = []
+            fksproc.real_amps = real_amps_new
+            if fksproc.virt_amp:
+                self.virt_matrix_element = \
+                  loop_helas_objects.LoopHelasMatrixElement(fksproc.virt_amp, 
+                          optimized_output = loop_optimized)
+            else: 
+                self.virt_matrix_element = None
+            self.color_links = []
 
 
     def set_color_links(self):

@@ -167,6 +167,9 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                "only generate them."+\
                " For this, use the 'virt=' mode, without multiparticle labels."
 
+        self['OLP'] = olp
+        self['ncores_for_proc_gen'] = ncores_for_proc_gen
+
         #check process definition(s):
         # a process such as g g > g g will lead to real emissions 
         #   (e.g: u g > u g g ) which will miss some corresponding born,
@@ -763,13 +766,17 @@ class FKSProcess(object):
             self.combine_real_amplitudes()
         if not self.ncores_for_proc_gen:
             self.generate_real_amplitudes(pdg_list, real_amp_list)
-            #MZself.link_born_reals()
+            self.link_born_reals()
 
 
     def link_born_reals(self):
         """create the rb_links in the real matrix element to find 
         which configuration in the real correspond to which in the born
         """
+        # remove and fix in order to take into account mixed expansion
+        logger.debug('link_born_real: skipping')
+        return
+
         for real in self.real_amps:
             for info in real.fks_infos:
                 info['rb_links'] = fks_common.link_rb_configs(\
