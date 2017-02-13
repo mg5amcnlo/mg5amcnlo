@@ -314,7 +314,7 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
                     real_amp_list.remove(ramp)
                     pdg_list.remove(rpdg)
 
-            realmapout = [r for r in realmapout if r]
+            #realmapout = [r for r in realmapout if r]
 
             realmapfiles = []
             for realout in realmapout:
@@ -885,6 +885,7 @@ class FKSHelasRealProcess(object): #test written
 
             elif type(real_me_list) == helas_objects.HelasMatrixElement: 
                 #new NLO generation mode
+                assert(fksrealproc.process in real_me_list['processes'])
                 self.matrix_element = real_me_list
 
             else:
