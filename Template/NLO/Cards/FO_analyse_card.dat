@@ -9,19 +9,14 @@
 #                                                                               
 #######################################################################
 #
-# Analysis format. Can either be 'topdrawer', 'root', 'HwU', 'lhe' or 'none'.
+# Analysis format.
+# Can either be 'topdrawer', 'root', 'HwU', 'LHE' or 'none'.
 # When choosing HwU, it comes with a GnuPlot wrapper. When choosing
 # topdrawer, the histogramming package 'dbook.f' is included in the
 # code, while when choosing root the 'rbook_fe8.f' and 'rbook_be8.cc'
 # are included. If 'none' is chosen, all the other entries below have
 # to be set empty.
 FO_ANALYSIS_FORMAT = HwU
-#
-#
-#LHE Post-processing can be 'True','False', 'nogrouping', 'norandom', 
-#    'nogrouping,norandom'. If not 'True' then the full file need to be used.
-#    Having it on False saves quite a lot of cpu/disk access.
-FO_LHE_POSTPROCESSING = norandom,nogrouping
 #
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 

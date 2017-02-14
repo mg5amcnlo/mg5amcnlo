@@ -78,7 +78,7 @@ class FOAnalyseCard(dict):
         in side card_path.
         if self.testing, the function returns its content"""
 
-        if 'fo_analysis_format' in self and self['fo_analysis_format'] in ['lhe','none']:
+        if 'fo_analysis_format' in self and self['fo_analysis_format'].lower() in ['lhe','none']:
             if self['fo_analyse']:
                 logger.warning('FO_ANALYSE parameter of the FO_analyse card should be empty for this analysis format. Removing this information.')
                 self['fo_analyse'] = ''
@@ -96,7 +96,7 @@ class FOAnalyseCard(dict):
                     elif value == 'root':
                         to_add = 'rbook_fe8.o rbook_be8.o HwU_dummy.o'
                     elif value == 'lhe':
-                        to_add = 'analysis_lhe.o open_output_files_dummy.o HwU_dummy.o write_event.o'
+                        to_add = 'analysis_lhe.o open_output_files_dummy.o write_event.o'
                     else:
                         to_add = 'analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o'
                         
