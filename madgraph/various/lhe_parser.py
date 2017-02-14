@@ -173,6 +173,8 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
+        self.parsing = True # check if/when we need to parse the event.
+        
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
@@ -230,8 +232,9 @@ class EventFile(object):
         init_pos = self.tell()
         self.seek(0)
         nb_event=0
-        for _ in self:
-            nb_event +=1
+        with misc.TMP_variable(self, 'parsing', False):
+            for _ in self:
+                nb_event +=1
         self.len = nb_event
         self.seek(init_pos)
         return self.len
@@ -248,8 +251,10 @@ class EventFile(object):
                 text = ''
             if mode:
                 text += line
-        return Event(text)
-    
+        if self.parsing:
+            return Event(text)
+        else:
+            return text
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
             - the list of the hightest weight (of size trunc_error*NB_EVENT

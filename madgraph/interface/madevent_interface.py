@@ -3620,7 +3620,6 @@ already exists and is not a fifo file."""%fifo_path)
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
                         PY8_Card.defaultSet('SysCalc:qCutList', qCutList)
-            
             for scale in PY8_Card['SysCalc:qCutList']:
                 if scale<(1.5*self.run_card['xqcut']):
                     logger.error(
@@ -4447,7 +4446,7 @@ tar -czf split_$1.tar.gz split_$1
         if self.run_card['use_syst']:
             output_files.append('syst.dat')
         if self.run_card['ickkw'] == 1: 
-            output_files.append(['beforeveto.tree', 'xsecs.tree', 'events.tree'])
+            output_files += ['beforeveto.tree', 'xsecs.tree', 'events.tree']
         
         os.environ['PDG_MASS_TBL'] = pjoin(pythia_src,'mass_width_2004.mc')
         self.cluster.launch_and_wait(pjoin(pythia_src, 'pythia'),
