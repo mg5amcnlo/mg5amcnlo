@@ -1810,7 +1810,7 @@ RESTART = %(mint_mode)s
         # Needed to average the grids (both xgrids, ave_virt and
         # MC_integer grids), but sum the cross section info. The
         # latter is only the only line that contains integers.
-        for fs in [files_mint_grids,files_MC_integer]:
+        for j,fs in enumerate([files_mint_grids,files_MC_integer]):
             linesoffiles=[f.readlines() for f in fs]
             to_write=[]
             for rowgrp in zip(*linesoffiles):
@@ -1845,16 +1845,16 @@ RESTART = %(mint_mode)s
                     floatgrps = zip(*floatsbyfile)
                     averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
                     to_write.append(" ".join(str(a) for a in averages) + "\n")
+            # close the files
             for f in fs:
-                # overwrite the existing files then close them.
-                f.seek(0)
-                f.writelines(to_write)
-                f.truncate()
                 f.close
-        # Also copy them over the 'master' location
-        for f in ['grid.MC_integer','mint_grids']:
-            job1=job_group[0]
-            files.cp(pjoin(job1['dirname'],f),location)
+            # write the data over the master location
+            if j==0:
+                with open(pjoin(location,'mint_grids'),'w') as f:
+                    f.writelines(to_write)
+            elif j==1:
+                with open(pjoin(location,'grid.MC_integer'),'w') as f:
+                    f.writelines(to_write)
 
                 
     def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
