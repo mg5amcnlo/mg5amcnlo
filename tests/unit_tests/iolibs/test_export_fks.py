@@ -99,7 +99,7 @@ class TestFKSOutput(unittest.TestCase):
         run_cmd('set OLP MadLoop')
 
 
-    def test_w_nlo_gen(self):
+    def test_w_nlo_gen_qcd(self):
         """check that the new (memory and cpu efficient) and old generation
         mode at NLO give the same results for p p > w [QCD]
         """
@@ -111,10 +111,58 @@ class TestFKSOutput(unittest.TestCase):
 
         interface = MGCmd.MasterCmd()
         
-        run_cmd('generate p p > w+ QED=1 QCD=0 [QCD]')
+        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QCD]')
         run_cmd('output %s' % os.path.join(path, 'W-oldway'))
         run_cmd('set low_mem_multicore_nlo_generation True')
-        run_cmd('generate p p > w+ QED=1 QCD=0 [QCD]')
+        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QCD]')
+        run_cmd('output %s' % os.path.join(path, 'W-newway'))
+        run_cmd('set low_mem_multicore_nlo_generation False')
+        
+        # the P0 dirs
+        for oldf in \
+          (glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.inc')) + \
+           glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', '*.f')) + \
+           [os.path.join(path, 'W-oldway', 'SubProcesses', 'proc_characteristics')]):
+            
+            if os.path.islink(oldf): 
+                continue
+
+            newf = oldf.replace('oldway', 'newway')
+
+            for old_l, new_l in zip(open(oldf), open(newf)):
+                self.assertEqual(old_l, new_l)
+
+        # the V0 dirs
+        for oldf in \
+          (glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', 'V0*', '*.inc')) + \
+           glob.glob(os.path.join(path, 'W-oldway', 'SubProcesses', 'P0*', 'V0*', '*.f'))):
+            
+            if os.path.islink(oldf): 
+                continue
+
+            newf = oldf.replace('oldway', 'newway')
+
+            for old_l, new_l in zip(open(oldf), open(newf)):
+                self.assertEqual(old_l, new_l)
+
+
+
+    def test_w_nlo_gen_qed(self):
+        """check that the new (memory and cpu efficient) and old generation
+        mode at NLO give the same results for p p > w [QCD]
+        """
+        path = tempfile.mkdtemp('', 'TMPWTest', None)
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        interface = MGCmd.MasterCmd()
+        
+        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QED]')
+        run_cmd('output %s' % os.path.join(path, 'W-oldway'))
+        run_cmd('set low_mem_multicore_nlo_generation True')
+        run_cmd('generate p p > e+ ve QED=2 QCD=0 [QED]')
         run_cmd('output %s' % os.path.join(path, 'W-newway'))
         run_cmd('set low_mem_multicore_nlo_generation False')
         

@@ -101,6 +101,7 @@ def async_generate_born(args):
     
     #load informations on reals from temp files
     helasreal_list = []
+    amp_to_remove = []
     for amp in born.real_amps:
         # if the pdg_list is not there, it has been removed
         # because there are no diagrams
@@ -114,7 +115,11 @@ def async_generate_born(args):
             helasreal_list.append(realdata[1])
 
         except ValueError:
-            born.real_amps.remove(amp)
+            logger.debug('Removing amplitude: %s' % amp.process.nice_string())
+            amp_to_remove.append(amp)
+
+    for amp in amp_to_remove:
+        born.real_amps.remove(amp)
         
     born.link_born_reals()
         
@@ -133,7 +138,7 @@ def async_generate_born(args):
         if myamp.get('diagrams'):
             has_loops = True
             born.virt_amp = myamp
-        
+
     helasfull = FKSHelasProcess(born, helasreal_list,
                                 loop_optimized = loop_optimized,
                                 decay_ids=[],
@@ -885,7 +890,10 @@ class FKSHelasRealProcess(object): #test written
 
             elif type(real_me_list) == helas_objects.HelasMatrixElement: 
                 #new NLO generation mode
-                assert(fksrealproc.process in real_me_list['processes'])
+                assert fksrealproc.process in real_me_list['processes'], \
+                       "Inconsistent input in FKSHelasRealProcess\nfksrealproc: %s\nME: %s" % \
+                               (fksrealproc.process.nice_string(), 
+                                ' - '.join([p.nice_string() for p in real_me_list['processes']]))
                 self.matrix_element = real_me_list
 
             else:
