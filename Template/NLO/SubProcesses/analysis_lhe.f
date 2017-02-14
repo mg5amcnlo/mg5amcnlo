@@ -41,11 +41,6 @@ c event (event with lower weights will be un-weighted)
       endif
       end
 
-      subroutine accum(ldummy)
-      implicit none
-      logical ldummy
-      end
-
       subroutine analysis_fill(p,istatus,ipdg,wgts,ibody)
       implicit none
       include 'nexternal.inc'
@@ -222,5 +217,6 @@ c Dummy routines
       subroutine addfil(string)
       character*(*) string
       end
-
-
+      subroutine accum(ldummy)
+      logical ldummy
+      end
