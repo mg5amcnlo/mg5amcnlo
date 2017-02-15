@@ -2449,7 +2449,7 @@ class CompleteForCmd(cmd.CompleteCmd):
 
     def complete_set(self, text, line, begidx, endidx):
         "Complete the set command"
-        misc.sprint([text,line,begidx, endidx])
+        #misc.sprint([text,line,begidx, endidx])
         args = self.split_arg(line[0:begidx])
 
         # Format
@@ -5494,7 +5494,7 @@ This implies that with decay chains:
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
-            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+            return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
              'HEPToolsInstallers','HEPToolInstaller.py'),'pythia8',
              '--prefix=%s' % prefix]
                         + lhapdf_option + compiler_options + add_options)
@@ -5505,7 +5505,7 @@ This implies that with decay chains:
              # And that the option '--force' is placed last.
             add_options = [opt for opt in add_options if opt!='--force']+\
                         (['--force'] if '--force' in add_options else [])
-            return_code = misc.call([pjoin(MG5DIR,'HEPTools',
+            return_code = misc.call([sys.executable, pjoin(MG5DIR,'HEPTools',
               'HEPToolsInstallers', 'HEPToolInstaller.py'), tool,'--prefix=%s'%
               prefix] + compiler_options + add_options)
 

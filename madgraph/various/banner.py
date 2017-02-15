@@ -1608,14 +1608,22 @@ class PY8Card(ConfigFile):
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
         request and only if not already user_set."""
-        if name.lower() not in self.user_set:
+        try:
+            force = opts.pop('force')
+        except KeyError:
+            force = False
+        if force or name.lower() not in self.user_set:
             self.__setitem__(name, value, change_userdefine=False, **opts)
             self.system_set.add(name.lower())
     
     def MadGraphSet(self, name, value, **opts):
         """ Sets a card attribute, but only if it is absent or not already
         user_set."""
-        if name.lower() not in self or name.lower() not in self.user_set:
+        try:
+            force = opts.pop('force')
+        except KeyError:
+            force = False
+        if name.lower() not in self or (force or name.lower() not in self.user_set):
             self.__setitem__(name, value, change_userdefine=False, **opts)
             self.system_set.add(name.lower())            
     
