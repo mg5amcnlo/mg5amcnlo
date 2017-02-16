@@ -24,6 +24,7 @@ import shutil
 
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
+import models
 import models.import_ufo as import_ufo
 import models.usermod as usermod
 import models as ufomodels
@@ -510,6 +511,7 @@ class Test_ADDON_UFO(unittest.TestCase):
         self.sm_path = import_ufo.find_ufo_path('sm')
         self.base_model = usermod.UFOModel(self.sm_path)
         self.mymodel = Model()
+        self.sm = models.load_model('sm')
         for key in self.mymodel.__dict__:
             obj = getattr(self.mymodel, key)
             for o in obj[:]:
@@ -823,6 +825,7 @@ class Test_ADDON_UFO(unittest.TestCase):
         
         self.base_model.add_coupling(GC_107)
         self.assertEqual(nb_coup,  len(self.base_model.couplings))
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings))
         self.assertTrue(hasattr(GC_107, 'replace'))
  
         GC_107 = Coupling(name = 'GC_110',
@@ -831,6 +834,7 @@ class Test_ADDON_UFO(unittest.TestCase):
         
         self.base_model.add_coupling(GC_107)
         self.assertEqual(nb_coup,  len(self.base_model.couplings))
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings))
         self.assertTrue(hasattr(GC_107, 'replace')) 
  
         
@@ -840,6 +844,7 @@ class Test_ADDON_UFO(unittest.TestCase):
         
         self.base_model.add_coupling(GC_107)
         self.assertEqual(nb_coup+1,  len(self.base_model.couplings))
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings))
         self.assertFalse(hasattr(GC_107, 'replace'))        
         
     
@@ -916,6 +921,10 @@ class Test_ADDON_UFO(unittest.TestCase):
         self.base_model.add_interaction(V_2, self.mymodel)
         self.assertEqual(orig, len(self.base_model.vertices))
         
+        ## check that the sm model is not impacted
+        self.assertNotEqual(orig, len(self.sm.all_vertices))
+
+
     def test_identify_particle(self):
         
         GC_1 = Coupling(name = 'GC_1',

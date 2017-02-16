@@ -3103,7 +3103,7 @@ This implies that with decay chains:
         
         #Need to do the work!!!        
         import models.usermod as usermod
-        base_model = usermod.UFOModel(self._curr_model.get('modelpath'))
+        base_model = copy.deepcopy(usermod.UFOModel(self._curr_model.get('modelpath')))
         
         identify = dict(tuple(a.split('=')) for a in args if '=' in a)
         base_model.add_model(path=model_path, identify_particles=identify)
