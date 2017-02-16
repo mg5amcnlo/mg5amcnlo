@@ -53,7 +53,6 @@ class UFOModel(object):
         as empty."""
         self.modelpath = modelpath
         model = ufomodels.load_model(modelpath)
-        #model = copy.deepcopy(model1)
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR, 'Base Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
@@ -273,6 +272,10 @@ class UFOModel(object):
                                                   if name not in args]
         else:
             other_attr = obj.__dict__.keys()
+        
+        other_attr.sort()
+        if other_attr == ['GhostNumber', 'LeptonNumber', 'Y', 'partial_widths', 'selfconjugate']:
+            other_attr=['GhostNumber', 'LeptonNumber', 'Y','selfconjugate']
             
         for data in other_attr:
             name =str(data)
@@ -288,6 +291,7 @@ class UFOModel(object):
             nb_space += add_space
             
         text = text[:-2] + ')\n\n'
+        #print text
 
         return text
              
