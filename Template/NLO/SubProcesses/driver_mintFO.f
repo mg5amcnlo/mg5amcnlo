@@ -478,8 +478,8 @@ c timing statistics
       if (ickkw.eq.-1) H1_factor_virt=0d0
       if (ickkw.eq.3) call set_FxFx_scale(0,p)
       call update_vegas_x(xx,x)
-      call get_MC_integer(ini_fin_fks(ichan),fks_configs,nFKS_picked
-     $     ,vol)
+      call get_MC_integer(max(ini_fin_fks(ichan),1),fks_configs
+     $     ,nFKS_picked,vol)
       if (ini_fin_fks(ichan).eq.1) then
          do while (fks_j_d(nFKS_picked).le.nincoming) 
             call get_MC_integer(ini_fin_fks(ichan),fks_configs
@@ -589,11 +589,12 @@ c Include PDFs and alpha_S and reweight to include the uncertainties
 c Importance sampling for FKS configurations
       if (sum) then
          call get_wgt_nbody(sig)
-         call fill_MC_integer(ini_fin_fks(ichan),nFKS_picked,abs(sig))
+         call fill_MC_integer(max(ini_fin_fks(ichan),1),nFKS_picked
+     $        ,abs(sig))
       else
          call get_wgt_no_nbody(sig)
-         call fill_MC_integer(ini_fin_fks(ichan),nFKS_picked,abs(sig)
-     $        *vol)
+         call fill_MC_integer(max(ini_fin_fks(ichan),1),nFKS_picked
+     $        ,abs(sig)*vol)
       endif
 
 c Finalize PS point

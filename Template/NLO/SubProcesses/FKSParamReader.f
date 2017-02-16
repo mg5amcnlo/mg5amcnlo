@@ -54,6 +54,8 @@
                 stop 'VirtualFraction should be a fraction'/
      $               /' between 0 and 1'
              endif 
+           else if (buff .eq. '#SeparateFlavourConfigurations') then
+             read(68,*,end=999) separate_flavour_configs
            else
              write(*,*) 'The parameter name ',buff(2:),
      &' is not reckognized.'
@@ -96,6 +98,7 @@ C     a non existing or malformed parameter file
       write(*,*) ' > NHelForMCoverHels         = ',NHelForMCoverHels
       write(*,*) ' > VirtualFraction           = ',Virt_fraction
       write(*,*) ' > MinVirtualFraction        = ',Min_virt_fraction
+      write(*,*) ' > SeparateFlavourConfigs    = ',separate_flavour_configs
       write(*,*)
      & '==============================================================='
       paramPrinted=.TRUE.
@@ -117,4 +120,5 @@ C     a non existing or malformed parameter file
       PrecisionVirtualAtRunTime=1d-3
       Virt_fraction=1d0
       Min_virt_fraction=0.005d0
+      separate_flavour_configs=.false.
       end

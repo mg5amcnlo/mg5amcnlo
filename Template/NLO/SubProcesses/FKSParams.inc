@@ -13,6 +13,8 @@
 
       integer NHelForMCoverHels
 
+      logical separate_flavour_configs
+
       common /FKSPARAMS/IRPoleCheckThreshold,virt_fraction,
      &       PrecisionVirtualAtRunTime,min_virt_fraction,
-     &       NHelForMCoverHels
+     &       NHelForMCoverHels,separate_flavour_configs

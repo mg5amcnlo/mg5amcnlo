@@ -70,6 +70,22 @@
 0.005d0
 ! Default :: 0.005d0
 !
+! For fixed order calculations only (ignored for (N)LO+PS runs): This
+! parameter determines if parton flavour configurations with idential
+! matrix elements should be separated at the level of the analysis or
+! not (these contributions are typically added together in
+! parton_lum_?.f files and only the PDG info of the first contribution
+! is passed to the analysis). This can be useful to tag e.g. b-jets in
+! the case of a 5FS calculation. [Warning: in this case jets that
+! contain both a b quark and a bbar quark should not be considered
+! b-jet]. Setting this to .true. makes the code slower, in particular
+! for complicated analyses as well as when doing reweighting for many
+! scales and PDFs sets, since they have to be done for each flavour
+! configuration separately.
+#SeparateFlavourConfigurations
+.false.
+! Default :: .false.
+!
 ! ==========================================================================
 ! End of FKS_params.dat file
 ! ==========================================================================

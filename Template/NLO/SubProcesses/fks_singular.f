@@ -1397,7 +1397,8 @@ c     niproc(icontr) : number of combined subprocesses in parton_lum_*.f
 c     parton_iproc(iproc,icontr) : value of the PDF for the iproc
 c        contribution
 c     parton_pdg(nexternal,iproc,icontr) : value of the PDG codes for
-c        the iproc contribution
+c     the iproc contribution
+c     ipr(icontr): for seperate_parton_configs: the iproc of current contribution
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1455,6 +1456,7 @@ c Check for NaN's and INF's. Simply skip the contribution
       qcdpower(icontr)=QCD_power
       cpower(icontr)=wgtcpower
       orderstag(icontr)=orders_tag
+      ipr(icontr)=0
       call set_pdg(icontr,nFKSprocess)
 
 c Compensate for the fact that in the Born matrix elements, we use the
@@ -1547,11 +1549,12 @@ c or to fill histograms.
       include 'orders.inc'
       include 'mint.inc'
       include 'reweight0.inc'
+      include 'FKSParams.inc'
       integer orders(nsplitorders)
-      integer i,j,k,iamp
+      integer i,j,k,iamp,i_add
       logical virt_found
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac
-     $     ,wgt_wo_pdf
+     $     ,wgt_wo_pdf,conv
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum
@@ -1563,10 +1566,13 @@ c or to fill histograms.
       INTEGER              IPROC
       DOUBLE PRECISION PD(0:MAXPROC)
       COMMON /SUBPROC/ PD, IPROC
+      parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       virt_found=.false.
-      do i=1,icontr
+      i=0
+      do while (i.lt.icontr)
+         i=i+1
          nFKSprocess=nFKS(i)
          xbk(1) = bjx(1,i)
          xbk(2) = bjx(2,i)
@@ -1584,6 +1590,22 @@ c call the PDFs
 c set_pdg_codes fills the niproc, parton_iproc, parton_pdg and parton_pdg_uborn
          call set_pdg_codes(iproc,pd,nFKSprocess,i)
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
+         if (separate_flavour_configs .and. ipr(i).eq.0) then
+            call separate_flavour_config(i,i_add)
+            icontr=icontr+i_add
+            if (icontr.gt.max_contr) then
+               write (*,*) 'ERROR in separate_flavour_config: '/
+     $              /'too many contributions',max_contr
+               stop 1
+            endif
+         endif
+         if (separate_flavour_configs .and. ipr(i).ne.0) then
+            if (nincoming.eq.2) then
+               xlum=pd(ipr(i))*conv
+            else
+               xlum=pd(ipr(i))
+            endif
+         endif
          iwgt=1
          wgt_wo_pdf=(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) + wgt(3,i)
      &        *log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
@@ -1618,7 +1640,62 @@ c and not be part of the plots nor computation of the cross section.
       return
       end
 
+      subroutine separate_flavour_config(ict,i_add)
+      implicit none
+      include 'nexternal.inc'
+      include 'c_weight.inc'
+      logical              fixed_order,nlo_ps
+      common /c_fnlo_nlops/fixed_order,nlo_ps
+      integer ict,i_add,i,j,k,ict_new,n
+      if ((.not.fixed_order).or.nlo_ps
+     &     .or. niproc(ict).eq.1) then
+         i_add=0
+         return
+      endif
+      i_add=niproc(ict)-1
+      do i=1,niproc(ict)
+         if (i.eq.1) then
+            niproc(ict)=1
+            ipr(ict)=1
+            cycle
+         endif
+         ict_new=icontr+(i-1)
+         ipr(ict_new)=i
+         itype(ict_new)=itype(ict)
+         do j=1,3
+            wgt(j,ict_new)=wgt(j,ict)
+            scales2(j,ict_new)=scales2(j,ict)
+         enddo
+         do j=1,2
+            bjx(j,ict_new)=bjx(j,ict)
+            wgt_ME_tree(j,ict_new)=wgt_ME_tree(j,ict)
+         enddo
+         g_strong(ict_new)=g_strong(ict)
+         nFKS(ict_new)=nFKS(ict)
+         y_bst(ict_new)=y_bst(ict)
+         QCDpower(ict_new)=QCDpower(ict)
+         cpower(ict_new)=cpower(ict)
+         orderstag(ict_new)=orderstag(ict)
+         H_event(ict_new)=H_event(ict)
+         do k=1,nexternal
+            do j=0,3
+               momenta(j,k,ict_new)=momenta(j,k,ict)
+               do n=1,2
+                  momenta_m(j,k,n,ict_new)=momenta_m(j,k,n,ict)
+               enddo
+            enddo
+            pdg(k,ict_new)=parton_pdg(k,i,ict)
+            pdg_uborn(k,ict_new)=parton_pdg_uborn(k,i,ict)
+            parton_pdg(k,1,ict_new)=parton_pdg(k,i,ict)
+            parton_pdg_uborn(k,1,ict_new)=parton_pdg_uborn(k,i,ict)
+         enddo
+         niproc(ict_new)=1
+         parton_iproc(1,ict_new)=parton_iproc(i,ict)
+      enddo
+      return
+      end
 
+      
       subroutine set_pdg_codes(iproc,pd,iFKS,ict)
       implicit none
       include 'nexternal.inc'
@@ -1655,7 +1732,7 @@ c           Keep GeV's for decay processes (no conv. factor needed)
                    ! if not, assign photon/gluon depending on split_type
                    if (split_type_d(iFKS,qcd_pos)) then
                      parton_pdg_uborn(k,j,ict)=21
-                   else if (split_type_d(iFKS,qed_pos)) then
+                   elseif (split_type_d(iFKS,qed_pos)) then
                      parton_pdg_uborn(k,j,ict)=22
                    else
                      write (*,*) 'set_pdg_codes ',
@@ -1689,7 +1766,11 @@ c           Keep GeV's for decay processes (no conv. factor needed)
             elseif(k.lt.fks_i_d(iFKS)) then
                parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k,j)
             elseif(k.eq.nexternal) then
-               parton_pdg_uborn(k,j,ict)=0
+               if (split_type_d(iFKS,qcd_pos)) then
+                  parton_pdg_uborn(k,j,ict)=21 ! give the extra particle a gluon PDG code
+               elseif (split_type_d(iFKS,qed_pos)) then
+                  parton_pdg_uborn(k,j,ict)=22 ! give the extra particle a photon PDG code
+               endif
             elseif(k.ge.fks_i_d(iFKS)) then
                parton_pdg_uborn(k,j,ict)=idup_d(iFKS,k+1,j)
             endif
@@ -1709,15 +1790,21 @@ c wgts() array to include the weights.
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
+      include 'FKSParams.inc'
+      include 'genps.inc'
       integer i,kr,kf,iwgt_save,dd
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales),c_mu2_r
      $     ,c_mu2_f,mu2_f(maxscales),mu2_q,alphas,g(maxscales)
-     $     ,rwgt_muR_dep_fac
+     $     ,rwgt_muR_dep_fac,conv
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c currently we have 'iwgt' weights in the wgts() array.
@@ -1746,6 +1833,13 @@ c factorisation scale variation (require recomputation of the PDFs)
                q2fact(1)=mu2_f(kf)
                q2fact(2)=mu2_f(kf)
                xlum(kf) = dlum()
+               if (separate_flavour_configs .and. ipr(i).ne.0) then
+                  if (nincoming.eq.2) then
+                     xlum(kf)=pd(ipr(i))*conv
+                  else
+                     xlum(kf)=pd(ipr(i))
+                  endif
+               endif
             enddo
             do kf=1,nint(scalevarF(0))
                if ((.not. lscalevar(dd)) .and. kf.ne.1) exit
@@ -1783,16 +1877,22 @@ c computations (ickkw.eq.-1).
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
+      include 'FKSParams.inc'
+      include 'genps.inc'
       integer i,ks,kh,iwgt_save
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales)
      &     ,mu2_f(maxscales),mu2_q,alphas,g(maxscales),rwgt_muR_dep_fac
      &     ,veto_multiplier_new(maxscales,maxscales)
-     &     ,veto_compensating_factor_new
+     &     ,veto_compensating_factor_new,conv
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
       write(*,*) 'FIX NLLL'
       stop 1
@@ -1839,6 +1939,13 @@ c soft scale variation
                q2fact(1)=mu2_f(ks)
                q2fact(2)=mu2_f(ks)
                xlum(ks) = dlum()
+               if (separate_flavour_configs .and. ipr(i).ne.0) then
+                  if (nincoming.eq.2) then
+                     xlum=pd(ipr(i))*conv
+                  else
+                     xlum=pd(ipr(i))
+                  endif
+               endif
                iwgt=iwgt+1      ! increment the iwgt for the wgts() array
                if (iwgt.gt.max_wgt) then
                   write (*,*) 'ERROR too many weights in reweight_scale'
@@ -1880,15 +1987,21 @@ c wgts() array to include the weights.
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
+      include 'FKSParams.inc'
+      include 'genps.inc'
       integer n,izero,i,nn
       parameter (izero=0)
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac,g
-     &     ,alphas
+     &     ,alphas,conv
       external rwgt_muR_dep_fac
       parameter (pi=3.1415926535897932385d0)
       external dlum,alphas
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
+      INTEGER              IPROC
+      DOUBLE PRECISION PD(0:MAXPROC)
+      COMMON /SUBPROC/ PD, IPROC
+      parameter (conv=389379660d0) ! conversion to picobarns
       call cpu_time(tBefore)
       if (icontr.eq.0) return
       do nn=1,lhaPDFid(0)
@@ -1914,6 +2027,13 @@ c allows for better caching of the PDFs
                q2fact(2)=mu2_f
 c Compute the luminosity
                xlum = dlum()
+               if (separate_flavour_configs .and. ipr(i).ne.0) then
+                  if (nincoming.eq.2) then
+                     xlum=pd(ipr(i))*conv
+                  else
+                     xlum=pd(ipr(i))
+                  endif
+               endif
 c Recompute the strong coupling: alpha_s in the PDF might change
                g=sqrt(4d0*pi*alphas(sqrt(mu2_r)))
 c add the weights to the array
@@ -2743,7 +2863,7 @@ c momenta in the momenta_str_l() array.
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
-      integer k,i,ii,j,jj,ict,ipr,momenta_conf(2)
+      integer k,i,ii,j,jj,ict,ipro,momenta_conf(2)
       logical momenta_equal,found
       double precision conv,momenta_str_l(0:3,nexternal,max_n_ctr)
       external momenta_equal
@@ -2793,9 +2913,9 @@ c momenta_str_l array. If not, add it.
          if (.not. Hevents) then
 c For S-events, be careful to take all the IPROC that contribute to the
 c iproc_picked:
-            ipr=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
+            ipro=eto(etoi(iproc_picked,nFKS(ict)),nFKS(ict))
             do ii=1,iproc_save(nFKS(ict))
-               if (eto(ii,nFKS(ict)).ne.ipr) cycle
+               if (eto(ii,nFKS(ict)).ne.ipro) cycle
                n_ctr_found=n_ctr_found+1
 
                if (nincoming.eq.2) then
@@ -2837,7 +2957,7 @@ c iproc_picked:
             enddo
          else
 c H-event
-            ipr=iproc_picked
+            ipro=iproc_picked
             n_ctr_found=n_ctr_found+1
 
             if (nincoming.eq.2) then
@@ -2852,7 +2972,7 @@ c H-event
 
             procid=''
             do j=1,nexternal
-               write (str_temp,*) parton_pdg(j,ipr,ict)
+               write (str_temp,*) parton_pdg(j,ipro,ict)
                procid=trim(adjustl(procid))//' '
      &              //trim(adjustl(str_temp))
             enddo
@@ -2870,8 +2990,8 @@ c H-event
      &           nFKS(ict),
      &           fks_i_d(nFKS(ict)),
      &           fks_j_d(nFKS(ict)),
-     &           parton_pdg_uborn(fks_j_d(nFKS(ict)),ipr,ict),
-     &           parton_iproc(ipr,ict)
+     &           parton_pdg_uborn(fks_j_d(nFKS(ict)),ipro,ict),
+     &           parton_iproc(ipro,ict)
             n_ctr_str(n_ctr_found) =
      &           trim(adjustl(n_ctr_str(n_ctr_found)))//' '
      &           //trim(adjustl(str_temp))
