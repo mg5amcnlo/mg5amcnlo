@@ -9,7 +9,7 @@
 #                                                                               
 #######################################################################
 #
-# Analysis format. Can either be 'topdrawer', 'root', 'HwU', 'lhe' or 'none'.
+# Analysis format. Can either be 'topdrawer', 'root', 'HwU' or 'none'.
 # When choosing HwU, it comes with a GnuPlot wrapper. When choosing
 # topdrawer, the histogramming package 'dbook.f' is included in the
 # code, while when choosing root the 'rbook_fe8.f' and 'rbook_be8.cc'

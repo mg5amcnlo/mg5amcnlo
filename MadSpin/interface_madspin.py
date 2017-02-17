@@ -963,7 +963,7 @@ class MadSpinInterface(extended_cmd.Cmd):
             return {}# this particle is not defined in the current model so ignore it
         name = part.get_name()
         out = {}
-        logger.info("generate %s decay event for particle %s" % (nb_event, name))
+        logger.info("generate %s decay event for particle %s" % (int(nb_event), name))
         if name not in self.list_branches:
             return out
         for i,proc in enumerate(self.list_branches[name]):
@@ -984,13 +984,13 @@ class MadSpinInterface(extended_cmd.Cmd):
                 
                 options = dict(mg5.options)
                 if self.options['ms_dir']:
-                    misc.sprint("start gridpack!")
                     # we are in gridpack mode -> create it
                     me5_cmd = madevent_interface.MadEventCmdShell(me_dir=os.path.realpath(\
                                             decay_dir), options=options)
                     me5_cmd.options["automatic_html_opening"] = False
                     me5_cmd.options["madanalysis5_path"] = None
                     me5_cmd.options["madanalysis_path"] = None
+                    me5_cmd.allow_notification_center = False
                     try:
                         os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
                         os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
@@ -1030,6 +1030,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                 me5_cmd.options["automatic_html_opening"] = False
                 me5_cmd.options["madanalysis5_path"] = None
                 me5_cmd.options["madanalysis_path"] = None
+                me5_cmd.allow_notification_center = False
                 try:
                     os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card_default.dat'))
                     os.remove(pjoin(decay_dir, 'Cards', 'madanalysis5_parton_card.dat'))
@@ -1053,6 +1054,9 @@ class MadSpinInterface(extended_cmd.Cmd):
                         width += me5_cmd.results.current['cross']
                     else:
                         width *= me5_cmd.results.current['cross']
+                if run_card["nevents"] > 1.01 * me5_cmd.results.current['nb_event']:
+                    logger.critical('The number of event generated is only %s/%s. This typically indicates that you need specify cut on the decay process.',me5_cmd.results.current['nb_event'], run_card["nevents"])
+                    logger.critical('We strongly suggest that you cancel/discard this run.')
                 me5_cmd.exec_cmd("exit")
                 out[i] = lhe_parser.EventFile(pjoin(decay_dir, "Events", 'run_01', 'unweighted_events.lhe.gz'))            
             else:
@@ -1212,6 +1216,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         #5. generate the decay 
         orig_lhe.seek(0)
         output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe'), 'w')
+        self.banner.scale_init_cross(self.branching_ratio)
         self.banner.write(output_lhe, close_tag=False)
         
         
@@ -1229,6 +1234,11 @@ class MadSpinInterface(extended_cmd.Cmd):
                 if random.random()*maxwgt < wgt:
                     break
             self.efficiency = curr_event/nb_try
+            # change the weight associate to the event
+            full_evt.wgt *= self.branching_ratio
+            wgts = full_evt.parse_reweight()
+            for key in wgts:
+                wgts[key] *= self.branching_ratio            
             output_lhe.write(str(full_evt))
             
         output_lhe.write('</LesHouchesEvents>\n')    

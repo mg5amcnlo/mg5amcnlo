@@ -2759,7 +2759,7 @@ class decay_all_events(object):
 
         # 4. compute the full matrix element -----------------------------------
         if not self.options["onlyhelicity"]:
-            logger.info('generating the full square matrix element (with decay)')
+            logger.info('generating the full matrix element squared (with decay)')
             start = time.time()
             to_decay = self.mscmd.list_branches.keys()
             decay_text = []
@@ -4128,7 +4128,7 @@ class decay_all_events_onshell(decay_all_events):
 #        self.all_ME.adding_me(matrix_elements, pjoin(path_me,'production_me'))
         
         # 4. compute the full matrix element -----------------------------------
-        logger.info('generating the full square matrix element (with decay)')
+        logger.info('generating the full matrix element squared (with decay)')
 #        start = time.time()
         to_decay = self.mscmd.list_branches.keys()
         decay_text = []
