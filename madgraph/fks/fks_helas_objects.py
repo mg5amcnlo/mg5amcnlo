@@ -183,12 +183,20 @@ def async_finalize_matrix_elements(args):
 
     me.born_me.set('color_basis',col_basis)
     me.born_me.set('color_matrix',col_matrix)
+
+    cannot_combine = []
     
     for iother,othermefile in enumerate(duplist):
         infileother = open(othermefile,'rb')
         otherme = cPickle.load(infileother)
         infileother.close()
-        me.add_process(otherme)
+        # before entering this function, only the born
+        # processes were compared. Now compare the
+        # full ME (born/real/virtual)
+        if otherme == me:
+            me.add_process(otherme)
+        else:
+            cannot_combine.append(othermefile)
         
     me.set_color_links()    
         
@@ -211,7 +219,7 @@ def async_finalize_matrix_elements(args):
     output.close()
     
     #data to be returned to parent process (filename plus small objects only)
-    return [output.name,initial_states,me.get_used_lorentz(),me.get_used_couplings(),has_virtual]
+    return [output.name,initial_states,me.get_used_lorentz(),me.get_used_couplings(),has_virtual,cannot_combine]
 
 
 class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
@@ -342,46 +350,60 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
             for realtmp in realmapout:
                 os.remove(realtmp[0])
                 
-            logger.info('Collecting infos and finalizing matrix elements...')
-            unique_me_list = []
-            duplicate_me_lists = []
-            for bornout in bornmapout:
-                mefile = bornout[0]
-                metag = bornout[1]
-                has_loops = bornout[2]
-                self['has_loops'] = self['has_loops'] or has_loops
-                processes = bornout[3]
-                self['processes'].extend(processes)
-                unique = True
-                for ime2,bornout2 in enumerate(unique_me_list):
-                    mefile2 = bornout2[0]
-                    metag2 = bornout2[1]
-                    if metag==metag2:
-                        duplicate_me_lists[ime2].append(mefile)
-                        unique = False
-                        break;
-                if unique:
-                    unique_me_list.append(bornout)
-                    duplicate_me_lists.append([])
-            
-            memapin = []
-            for i,bornout in enumerate(unique_me_list):
-                mefile = bornout[0]
-                memapin.append([i,mefile, duplicate_me_lists[i]])
+            memapout = []
+            while bornmapout:
+                logger.info('Collecting infos and finalizing matrix elements, %d left...' \
+                            % (len(bornmapout)))
+                unique_me_list = []
+                duplicate_me_lists = []
+                for bornout in bornmapout:
+                    mefile = bornout[0]
+                    metag = bornout[1]
+                    has_loops = bornout[2]
+                    self['has_loops'] = self['has_loops'] or has_loops
+                    processes = bornout[3]
+                    self['processes'].extend(processes)
+                    unique = True
+                    for ime2,bornout2 in enumerate(unique_me_list):
+                        mefile2 = bornout2[0]
+                        metag2 = bornout2[1]
+                        if metag==metag2:
+                            duplicate_me_lists[ime2].append(mefile)
+                            unique = False
+                            break;
+                    if unique:
+                        unique_me_list.append(bornout)
+                        duplicate_me_lists.append([])
+                
+                memapin = []
+                not_combined = []
+                for i,bornout in enumerate(unique_me_list):
+                    mefile = bornout[0]
+                    memapin.append([i,mefile, duplicate_me_lists[i]])
 
-            try:
-                memapout = pool.map_async(async_finalize_matrix_elements,memapin).get(9999999)
-            except KeyboardInterrupt:
-                pool.terminate()
-                raise KeyboardInterrupt 
+                try:
+                    memapout.append(pool.map_async(async_finalize_matrix_elements,memapin).get(9999999))
+                except KeyboardInterrupt:
+                    pool.terminate()
+                    raise KeyboardInterrupt 
 
-            #remove born+virtual temp files
-            for bornout in bornmapout:
-                mefile = bornout[0]
-                os.remove(mefile)
+                # check the matrix element that were marked as
+                # duplicate but could not be combined
+                for meout in memapout[-1]:
+                    not_combined += meout[5]
+
+                #remove born+virtual temp files
+                for bornout in bornmapout[:]:
+                    mefile = bornout[0]
+                    if not mefile in not_combined:
+                        os.remove(mefile)
+                        bornmapout.remove(bornout)
 
             pool.close()
             pool.join()
+
+            # now we can flatten out memapout
+            memapout = sum(memapout, [])
 
             #set final list of matrix elements (paths to temp files)
             matrix_elements = []

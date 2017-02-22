@@ -101,7 +101,7 @@ class TestFKSOutput(unittest.TestCase):
 
     def test_w_nlo_gen_qcd(self):
         """check that the new (memory and cpu efficient) and old generation
-        mode at NLO give the same results for p p > w [QCD]
+        mode at NLO give the same results for p p > e+ ve [QCD]
         """
         path = tempfile.mkdtemp('', 'TMPWTest', None)
 
@@ -149,7 +149,7 @@ class TestFKSOutput(unittest.TestCase):
 
     def test_w_nlo_gen_qed(self):
         """check that the new (memory and cpu efficient) and old generation
-        mode at NLO give the same results for p p > w [QCD]
+        mode at NLO give the same results for p p > e+ ve [QED]
         """
         path = tempfile.mkdtemp('', 'TMPWTest', None)
 
@@ -194,6 +194,56 @@ class TestFKSOutput(unittest.TestCase):
                 self.assertEqual(old_l, new_l)
 
 
+
+    def test_z_nlo_gen_qed(self):
+        """check that the new (memory and cpu efficient) and old generation
+        mode at NLO give the same results for p p > e+ e- [QED], in particular
+        that b-initiated processes are NOT combined with d-s ones
+        """
+        path = tempfile.mkdtemp('', 'TMPWTest', None)
+
+        def run_cmd(cmd):
+            interface.exec_cmd(cmd, errorhandling=False, printcmd=False, 
+                               precmd=True, postcmd=True)
+
+        interface = MGCmd.MasterCmd()
+        
+        run_cmd('define p3 = d s b d~ s~ b~')
+        run_cmd('generate p3 p3 > e+ e- QED=2 QCD=0 [QED]')
+        run_cmd('output %s' % os.path.join(path, 'Z-oldway'))
+        run_cmd('set low_mem_multicore_nlo_generation True')
+        run_cmd('generate p3 p3 > e+ e- QED=2 QCD=0 [QED]')
+        run_cmd('output %s' % os.path.join(path, 'Z-newway'))
+        run_cmd('set low_mem_multicore_nlo_generation False')
+        
+        # the P0 dirs
+        for oldf in \
+          (glob.glob(os.path.join(path, 'Z-oldway', 'SubProcesses', 'P0*', '*.inc')) + \
+           glob.glob(os.path.join(path, 'Z-oldway', 'SubProcesses', 'P0*', '*.f')) + \
+           [os.path.join(path, 'Z-oldway', 'SubProcesses', 'proc_characteristics')]):
+            
+            if os.path.islink(oldf): 
+                continue
+
+            newf = oldf.replace('oldway', 'newway')
+
+            for old_l, new_l in zip(open(oldf), open(newf)):
+                self.assertEqual(old_l, new_l)
+
+        # the V0 dirs
+        for oldf in \
+          (glob.glob(os.path.join(path, 'Z-oldway', 'SubProcesses', 'P0*', 'V0*', '*.inc')) + \
+           glob.glob(os.path.join(path, 'Z-oldway', 'SubProcesses', 'P0*', 'V0*', '*.f'))):
+            
+            if os.path.islink(oldf): 
+                continue
+
+            newf = oldf.replace('oldway', 'newway')
+
+            for old_l, new_l in zip(open(oldf), open(newf)):
+                self.assertEqual(old_l, new_l)
+
+
     def test_w_nlo_gen_gosam(self):
         """check that the new generation mode works when gosam is set 
         for p p > w [QCD] 
@@ -208,7 +258,7 @@ class TestFKSOutput(unittest.TestCase):
         try:
             run_cmd('set low_mem_multicore_nlo_generation True')
             run_cmd('set OLP GoSam')
-            run_cmd('generate p p > w+ [QCD]')
+            run_cmd('generate p p > w+ QED=1 QCD=0 [QCD]')
             try:
                 run_cmd('output %s' % os.path.join(path, 'W-newway'))
             except fks_common.FKSProcessError, err:
