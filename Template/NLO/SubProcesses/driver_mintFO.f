@@ -239,8 +239,8 @@ c to restore grids:
      $              ,nhits_in_grids(kchan)
                read(12,*) virtual_fraction(kchan),average_virtual(0
      $              ,kchan)
-               ans(1,0)=ans(1,kchan)
-               unc(1,0)=unc(1,kchan)**2
+               ans(1,0)=ans(1,0)+ans(1,kchan)
+               unc(1,0)=unc(1,0)+unc(1,kchan)**2
             enddo
             unc(1,0)=sqrt(unc(1,0))
             close (12)

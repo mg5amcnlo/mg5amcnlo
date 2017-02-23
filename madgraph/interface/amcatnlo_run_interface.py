@@ -1707,6 +1707,14 @@ RESTART = %(mint_mode)s
                     self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
             jobs_to_collect_new=jobs_to_collect
+        if fixed_order:
+            # Write the jobs_to_collect directory to file so that we
+            # can collect plots (by hand) even if there was some
+            # error. Mainly for debugging only. Normally this file
+            # should not be used. (Rather, use 'job_status.pkl' which
+            # is only written if all jobs are finished correctly)
+            with open(pjoin(self.me_dir,"SubProcesses","job_status2.pkl"),'wb') as f:
+                pickle.dump(jobs_to_collect_new,f)
         return jobs_to_run_new,jobs_to_collect_new
 
 
