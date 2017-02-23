@@ -46,6 +46,7 @@ _input_file_path = os.path.join(_file_path, os.path.pardir, os.path.pardir,
 class IOExportFKSTest(IOTests.IOTestManager):
     """Test class for the export fks module"""
 
+
     def generate(self, process, model, multiparticles=[]):
         """Create a process"""
 
@@ -55,6 +56,10 @@ class IOExportFKSTest(IOTests.IOTestManager):
 
         interface = MGCmd.MasterCmd()
         
+        if model.endswith('CMS'):
+            run_cmd('set complex_mass_scheme')
+            model = model[:-3]
+
         run_cmd('import model %s' % model)
         for multi in multiparticles:
             run_cmd('define %s' % multi)
@@ -82,6 +87,17 @@ class IOExportFKSTest(IOTests.IOTestManager):
     def testIO_test_pptt_fks_loonly(self):
         """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
         self.generate(['p p > t t~ QED=0 QCD=2 [LOonly=QCD]'], 'sm')
+
+    @IOTests.createIOTest()
+    def testIO_test_wprod_fksew(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > e+ ve QED=2 QCD=0 [QED]'], 'loop_qcd_qed_smCMS')
+
+    @IOTests.createIOTest()
+    def testIO_test_pptt_fksrealew(self):
+        """ target: SubProcesses/[P0.*\/.+\.(inc|f)]"""
+        self.generate(['p p > t t~ QED=0 QCD=2 [real=QED]'], 'sm', 
+                      multiparticles = ['p = u u~ d d~ s s~ c c~ g a'])
 
 
 class TestFKSOutput(unittest.TestCase):
