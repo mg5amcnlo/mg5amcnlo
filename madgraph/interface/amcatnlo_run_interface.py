@@ -2008,6 +2008,7 @@ RESTART = %(mint_mode)s
                     # Update the number of PS points based on errorABS, ncall and accuracy
                     itmax_fl=job['niters_done']*math.pow(job['errorABS']/
                                                          (job['accuracy']*job['resultABS']),2)
+                    itmax_fl=itmax_fl*1.1 # add 10% to make sure to have enough
                     if itmax_fl <= 4.0 :
                         job['niters']=max(int(round(itmax_fl)),2)
                         job['npoints']=job['npoints_done']*2
