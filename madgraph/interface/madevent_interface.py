@@ -2893,7 +2893,6 @@ Beware that this can be dangerous for local multicore runs.""")
             self.pass_in_difficult_integration_mode()
         
         jobs, P_zero_result = ajobcreator.launch()
-        misc.sprint(jobs)
         # Check if all or only some fails
         if P_zero_result:
             if len(P_zero_result) == len(subproc):
@@ -5083,6 +5082,8 @@ tar -czf split_$1.tar.gz split_$1
         time_mod = max([os.path.getctime(pjoin(self.me_dir,'Cards','run_card.dat')),
                         os.path.getctime(pjoin(self.me_dir,'Cards','param_card.dat'))])
         if self.configured > time_mod and hasattr(self, 'random'):
+            #just ensure that cluster specific are correctly handled
+            self.cluster.modify_interface(self)
             return
         else:
             self.configured = time.time()

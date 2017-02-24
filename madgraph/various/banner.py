@@ -2610,7 +2610,9 @@ class RunCardLO(RunCard):
         #job handling of the survey/ refine
         self.add_param('job_strategy', 0, hidden=True, include=False)
         self.add_param('survey_splitting', -1, hidden=True, include=False)
+        self.add_param('survey_nchannel_per_job', 2, hidden=True, include=False)
         self.add_param('refine_evt_by_job', -1, hidden=True, include=False)
+        
         # Specify what particle IDs to use for the CKKWL merging cut ktdurham
         
     def check_validity(self):
