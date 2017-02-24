@@ -2639,12 +2639,14 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 run_card = banner_mod.RunCard(opt['run_card'])
             else:
                 run_card = self.run_card
+            self.run_card = run_card
+            self.cluster.modify_interface(self)
             if self.ninitial == 1:
                 run_card['lpp1'] =  0
                 run_card['lpp2'] =  0
                 run_card['ebeam1'] = 0
                 run_card['ebeam2'] = 0
-            
+                
             # Ensure that the bias parameters has all the required input from the
             # run_card
             if run_card['bias_module'].lower() not in ['dummy','none']:
