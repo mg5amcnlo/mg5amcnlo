@@ -639,7 +639,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         
         replace_dict= {'libraries': set_of_lib, 
                        'model':model_line,
-                       'additional_dsample': ''} 
+                       'additional_dsample': '',
+                       'additional_dependencies':''} 
         
         if writer:
             text = open(path).read() % replace_dict
