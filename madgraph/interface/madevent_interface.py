@@ -5193,6 +5193,7 @@ tar -czf split_$1.tar.gz split_$1
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
             self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
+            self.configured = time.time()
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
