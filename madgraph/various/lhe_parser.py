@@ -153,6 +153,8 @@ class Particle(object):
 class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
 
+    eventgroup = False
+
     def __new__(self, path, mode='r', *args, **opt):
         
         if not path.endswith(".gz"):
@@ -240,17 +242,38 @@ class EventFile(object):
 
     def next(self):
         """get next event"""
-        text = ''
-        line = ''
-        mode = 0
-        while '</event>' not in line:
-            line = super(EventFile, self).next()
-            if '<event' in line:
-                mode = 1
-                text = ''
-            if mode:
-                text += line
-        return Event(text)
+        if not self.eventgroup:
+            text = ''
+            line = ''
+            mode = 0
+            while '</event>' not in line:
+                line = super(EventFile, self).next()
+                if '<event' in line:
+                    mode = 1
+                    text = ''
+                if mode:
+                    text += line
+            return Event(text)
+        else:
+            events = []
+            text = ''
+            line = ''
+            mode = 0
+            while '</eventgroup>' not in line:
+                line = super(EventFile, self).next()
+                if '<eventgroup' in line:
+                    events=[]
+                    text = ''
+                elif '<event' in line:
+                    text=''
+                    mode=1
+                elif '</event>' in line:
+                    events.append(Event(text))
+                    text = ''
+                    mode = 0
+                if mode:
+                    text += line
+            return events
     
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
@@ -286,7 +309,21 @@ class EventFile(object):
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
-                
+    
+    def write_events(self, event):
+        """ write a single events or a list of event
+        if self.eventgroup is ON, then add <eventgroup> around the lists of events
+        """
+        
+        if isinstance(event, Event):
+            if self.eventgroup:
+                self.write('<eventgroup>\n%s\n<eventgroup>\n' % event)
+        elif isinstance(event, list):
+            self.write('<eventgroup>\n')
+            for evt in event:
+                self.write(str(evt))
+            self.write('</eventgroup>\n')
+    
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
                  event_target=0, log_level=logging.INFO, normalization='average'):
         """unweight the current file according to wgt information wgt.
@@ -698,7 +735,11 @@ class MultiEventFile(EventFile):
                 self.files = start_list
         self._configure = False
         
-    def add(self, path, cross, error, across):
+    def close(self,*args,**opts):
+        for f in self.files:
+            f.close(*args, **opts)
+        
+    def add(self, path, cross, error, across, nb_event=0, scale=1):
         """ add a file to the pool, across allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
@@ -708,6 +749,7 @@ class MultiEventFile(EventFile):
             return 
         
         obj = EventFile(path)
+        obj.eventgroup = self.eventgroup 
         if len(self.files) == 0 and not self.banner:
             self.banner = obj.banner
         self.curr_nb_events.append(0)
@@ -715,9 +757,12 @@ class MultiEventFile(EventFile):
         self.allcross.append(cross)
         self.across.append(across)
         self.error.append(error)
-        self.scales.append(1)
+        self.scales.append(scale)
         self.files.append(obj)
+        if len:
+            obj.len = nb_event
         self._configure = False
+        return obj
         
     def __iter__(self):
         return self
@@ -738,7 +783,11 @@ class MultiEventFile(EventFile):
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
                 event = obj.next()
-                event.sample_scale = self.scales[i] # for file reweighting
+                if not self.eventgroup:
+                    event.sample_scale = self.scales[i] # for file reweighting
+                else:
+                    for evt in event:
+                        evt.sample_scale = self.scales[i]
                 return event
         else:
             raise Exception
@@ -1103,7 +1152,15 @@ class Event(list):
                     logger.warning("WRONG MOTHER INFO %s", self)
                     particle.mother2 = 0
 
-   
+    def rescale_weights(self, ratio):
+        """change all the weights by a given ratio"""
+        
+        self.wgt *= ratio
+        self.parse_reweight()
+        for key in self.reweight_data:
+            self.reweight_data[key] *= ratio
+        return self.wgt
+    
     def reorder_mother_child(self):
         """check and correct the mother/child position.
            only correct one order by call (but this is a recursive call)"""

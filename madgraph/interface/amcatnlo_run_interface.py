@@ -2028,141 +2028,71 @@ RESTART = %(mint_mode)s
         self.banner.write(output[:-3], close_tag=False)
         misc.gzip(output[:-3])
         
-        def get_eventtype(event):
-            """ determine if the event is of type born(=3) or other """
-            for line in event.comment.split('\n'):
-                if line.startswith('#aMCatNLO'):
-                    return int(float(line.split()[-1].lower().replace('d','e')))
         
-        # If they are nothing to do (norandom,nogrouping) then just concatenate file
-        if 'false' in self.run_card['fo_lhe_postprocessing'] or \
-           ('nogrouping' in self.run_card['fo_lhe_postprocessing'] and\
-             'norandom' in self.run_card['fo_lhe_postprocessing']):
-            # 2. concatanate the various files    
+        
+        fsock = lhe_parser.EventFile(output,'a')
+        if 'nogrouping' in self.run_card['fo_lhe_postprocessing']:
+            fsock.eventgroup = False
+        else:
+            fsock.eventgroup = True
+        
+        if 'norandom' in self.run_card['fo_lhe_postprocessing']:
             for job in jobs:
                 dirname = job['dirname']
-                misc.gzip(pjoin(dirname,'events.lhe'))
-                os.system('cat %s >> %s' %(pjoin(dirname,'events.lhe.gz'), output))
-                os.remove(pjoin(dirname,'events.lhe.gz'))
-        elif 'norandom' in self.run_card['fo_lhe_postprocessing']:
-            fsock = lhe_parser.EventFile(output,'a')
-            for job in jobs:
-                dirname = job['dirname']
+                #read last line
+                lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
+                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                # get normalisation ratio 
+                ratio = cross/sumwgt
                 lhe = lhe_parser.EventFile(pjoin(dirname,'events.lhe'))
-                previousevent=None
-                previouseventtype= 0
-                for event in  lhe:
-                    eventtype = get_eventtype(event)
-                    if previousevent == event:
-                        previousevent.wgt += event.wgt
-                        previousevent.parse_reweight()
-                        event.parse_reweight()
-                        for key in previousevent.reweight_data:
-                            previousevent.reweight_data[key] += event.reweight_data[key]
-                    elif previousevent:
-                        if previouseventtype == 3:
-                            # grouping should always be ON in this part.
-                            fsock.write('<eventgroup>\n')
-                        fsock.write(str(previousevent))
-                        if eventtype == 3:
-                            fsock.write('</eventgroup>\n')
-                        previousevent = event
-                        previouseventtype = eventtype  
-                    else:
-                        previousevent = event
-                        previouseventtype = eventtype                                               
-                else:
-                    if previousevent:
-                        if previouseventtype == 3:
-                            # grouping should always be ON in this part.
-                            fsock.write('<eventgroup>\n')
-                        fsock.write(str(previousevent))
-                        fsock.write('</eventgroup>\n') 
+                lhe.eventgroup = True # read the events by eventgroup
+                for eventsgroup in lhe:
+                    neweventsgroup = []
+                    for i,event in enumerate(eventsgroup):
+                        event.rescale_weights(ratio)
+                        if i>0 and 'noidentification' not in self.run_card['fo_lhe_postprocessing'] \
+                                                and event == neweventsgroup[-1]:
+                            neweventsgroup[-1].wgt += event.wgt
+                            for key in event.reweight_data:
+                                neweventsgroup[-1].reweight_data[key] += event.reweight_data[key]
+                        else:
+                            neweventsgroup.append(event)
+                    fsock.write_events(neweventsgroup)
                 lhe.close()
                 os.remove(pjoin(dirname,'events.lhe'))
         else:
-            fsock = lhe_parser.EventFile(output,'a')
             lhe = []
-            lenlhe = []
+            lenlhe = []     
             misc.sprint('need to combine %s event file' % len(jobs))
+            globallhe = lhe_parser.MultiEventFile()
+            globallhe.eventgroup = True
             for job in jobs:
                 dirname = job['dirname']
-                lhe.append(lhe_parser.EventFile(pjoin(dirname,'events.lhe')))
-                lenlhe.append(len(lhe[-1]))
-            misc.sprint('all file parsed once to get the event file. start combining', time.time()-start)
-            misc.sprint(lenlhe)
-
-                
-                
-            lastevents = [None]*len(lhe) # we typically read one event too much, this store it    
-            done = 0
-            tot = sum(lenlhe)
-            nbopenfile=len(lhe)
-            previousevent = None 
-            previouseventtype = None
-            eventtype = None
-            while done < tot:
-                #pick a random file
-                pick = random.randint(0, tot-done-1)
-                tmp=0
-                for i in range(len(lhe)):
-                    tmp += lenlhe[i]
-                    if pick < tmp:
-                        pick = i
-                        break
-                else:
-                    misc.sprint(pick, tot-done, lenlhe, sum(lenlhe))
-                    misc.sprint( '%s : 0 < %s < %s = %s = %s' % (done, pick, nbopenfile, len(lastevents), len(lhe)))
-                previousevent=False
-                while True:
-                    #keep this file as much as needed
-                    if lastevents[pick]:
-                        event, lastevents[pick] = lastevents[pick], None
-                        eventtype = 3
+                lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
+                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                lastlhe = globallhe.add(pjoin(dirname,'events.lhe'),cross, 0, cross,
+                                        nb_event=int(nb_event), scale=cross/sumwgt)
+            for eventsgroup in globallhe:
+                neweventsgroup = []
+                for i,event in enumerate(eventsgroup):
+                    event.rescale_weights(event.sample_scale)
+                    if i>0 and 'noidentification' not in self.run_card['fo_lhe_postprocessing'] \
+                                            and event == neweventsgroup[-1]:
+                        neweventsgroup[-1].wgt += event.wgt
+                        for key in event.reweight_data:
+                            neweventsgroup[-1].reweight_data[key] += event.reweight_data[key]
                     else:
-                        event = lhe[pick].next()
-                        eventtype = get_eventtype(event)
-                        lenlhe[pick] -= 1
-                        done +=1
-
-                    
-                    if previousevent:
-                        if previousevent == event:
-                            #sum the weight in lastevent typicall born+rest
-                            previousevent.wgt += event.wgt
-                            previousevent.parse_reweight()
-                            event.parse_reweight()
-                            for key in previousevent.reweight_data:
-                                previousevent.reweight_data[key] += event.reweight_data[key]
-                        else:
-                            if 'nogrouping' not in self.run_card['fo_lhe_postprocessing']:
-                                if previouseventtype == 3:
-                                    fsock.write('<eventgroup>\n')
-                            fsock.write(str(previousevent))
-                            if eventtype == 3:
-                                if 'nogrouping' not in self.run_card['fo_lhe_postprocessing']:
-                                    fsock.write('</eventgroup>\n')
-                                lastevents[pick] = event
-                                if lenlhe[pick] !=0:
-                                    break
-                            previousevent = event
-                            previouseventtype = eventtype
-                    else:
-                        previousevent = event
-                        previouseventtype = eventtype
-                    
-                    #always write the last event:
-                    if lenlhe[pick] == 0 :
-                        if 'nogrouping' not in self.run_card['fo_lhe_postprocessing']:
-                            if eventtype == 3:
-                                fsock.write('<eventgroup>\n') 
-                            fsock.write(str(event))
-                            fsock.write('</eventgroup>\n') 
-                        else:
-                            fsock.write(str(event))
-                        break
+                        neweventsgroup.append(event) 
+                fsock.write_events(neweventsgroup)               
+            globallhe.close()
+            fsock.write('</LesHouchesEvents>\n') 
+            fsock.close()
+            misc.sprint('combining lhe file done in ', time.time()-start)
+            for job in jobs:
+                dirname = job['dirname']
+                os.remove(pjoin(dirname,'events.lhe'))
                                 
-            fsock.write('</LesHouchesEvents>\n')                                
+                                           
                         
         misc.sprint('combining lhe file done in ', time.time()-start)
                         
