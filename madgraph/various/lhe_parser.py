@@ -314,15 +314,16 @@ class EventFile(object):
         """ write a single events or a list of event
         if self.eventgroup is ON, then add <eventgroup> around the lists of events
         """
-        
         if isinstance(event, Event):
             if self.eventgroup:
                 self.write('<eventgroup>\n%s\n<eventgroup>\n' % event)
         elif isinstance(event, list):
-            self.write('<eventgroup>\n')
+            if self.eventgroup:
+                self.write('<eventgroup>\n')
             for evt in event:
                 self.write(str(evt))
-            self.write('</eventgroup>\n')
+            if self.eventgroup:
+                self.write('</eventgroup>\n')
     
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
                  event_target=0, log_level=logging.INFO, normalization='average'):
