@@ -1,9 +1,24 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
+
 2.5.3(XX/XX/17)
       PT: Modified the default shower starting scale in montecarlocounter.f.
           The new reference scale from which the dampening profile is computed is sum_i mt_i/2, i
           being Born level final-state momenta.
+      OM: New "special mode" for madspin accessible via "set spinmode onshell".
+          This mode allow for full spin-correlation with 3 (or more) body decay but the decaying particle
+          remains exactly onshell in this mode. Loop-induced production/decay are not allowed in this mode.
+      OM+RF: Allowing for creation of LHE like output of the fixed order run at NLO.
+          This LHEF file is unvalid for parton-shower (all PS should crash on such file). It will be 
+          unphysical to shower such sample anyway.
+          Two hidden parameters of the  FO_analyse_card.dat allow some control on the LHEF creation
+       	  "fo_lhe_weight_ratio" allows to control the strength of a partial unweighting [default:1e-3]
+             increasing this number reduce the LHEF size.
+          "fo_lhe_postprocessing" can take value like nogrouping, norandom, noidentification.
+             nogrouping forbids the appearance of the LHEF(version2) tag <eventgroup>
+             norandom   does not apply the randomization of the events.
+             noidentification does not merge born event with other born like counter-event
       RF: Better job handling for fNLO runs.
+      VH: Fixing various problem with the pythia8 interface (especially for MLM merging)
 
 2.5.2(10/12/16)
       OM: improve systematics (thanks to Philipp Pigard)

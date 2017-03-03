@@ -153,6 +153,8 @@ class Particle(object):
 class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
 
+    eventgroup = False
+
     def __new__(self, path, mode='r', *args, **opt):
         
         if not path.endswith(".gz"):
@@ -174,7 +176,7 @@ class EventFile(object):
         """open file and read the banner [if in read mode]"""
         
         self.parsing = True # check if/when we need to parse the event.
-        
+
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
@@ -241,20 +243,48 @@ class EventFile(object):
 
     def next(self):
         """get next event"""
-        text = ''
-        line = ''
-        mode = 0
-        while '</event>' not in line:
-            line = super(EventFile, self).next()
-            if '<event' in line:
-                mode = 1
-                text = ''
-            if mode:
-                text += line
-        if self.parsing:
-            return Event(text)
+
+        if not self.eventgroup:
+            text = ''
+            line = ''
+            mode = 0
+            while '</event>' not in line:
+                line = super(EventFile, self).next()
+                if '<event' in line:
+                    mode = 1
+                    text = ''
+                if mode:
+                    text += line
+
+            if self.parsing:
+                return Event(text)
+            else:
+                return text
         else:
-            return text
+            events = []
+            text = ''
+            line = ''
+            mode = 0
+            while '</eventgroup>' not in line:
+                line = super(EventFile, self).next()
+                if '<eventgroup' in line:
+                    events=[]
+                    text = ''
+                elif '<event' in line:
+                    text=''
+                    mode=1
+                elif '</event>' in line:
+                    if parsing:
+                        events.append(Event(text))
+                    else:
+                        events.append(text)
+                    text = ''
+                    mode = 0
+                if mode:
+                    text += line        
+            return events
+    
+
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
             - the list of the hightest weight (of size trunc_error*NB_EVENT
@@ -289,7 +319,22 @@ class EventFile(object):
         all_wgt = all_wgt[-nb_keep:] 
         self.seek(0)
         return all_wgt, cross, nb_event
-                
+    
+    def write_events(self, event):
+        """ write a single events or a list of event
+        if self.eventgroup is ON, then add <eventgroup> around the lists of events
+        """
+        if isinstance(event, Event):
+            if self.eventgroup:
+                self.write('<eventgroup>\n%s\n<eventgroup>\n' % event)
+        elif isinstance(event, list):
+            if self.eventgroup:
+                self.write('<eventgroup>\n')
+            for evt in event:
+                self.write(str(evt))
+            if self.eventgroup:
+                self.write('</eventgroup>\n')
+    
     def unweight(self, outputpath, get_wgt=None, max_wgt=0, trunc_error=0, 
                  event_target=0, log_level=logging.INFO, normalization='average'):
         """unweight the current file according to wgt information wgt.
@@ -701,7 +746,11 @@ class MultiEventFile(EventFile):
                 self.files = start_list
         self._configure = False
         
-    def add(self, path, cross, error, across):
+    def close(self,*args,**opts):
+        for f in self.files:
+            f.close(*args, **opts)
+        
+    def add(self, path, cross, error, across, nb_event=0, scale=1):
         """ add a file to the pool, across allow to reweight the sum of weight 
         in the file to the given cross-section 
         """
@@ -711,6 +760,7 @@ class MultiEventFile(EventFile):
             return 
         
         obj = EventFile(path)
+        obj.eventgroup = self.eventgroup 
         if len(self.files) == 0 and not self.banner:
             self.banner = obj.banner
         self.curr_nb_events.append(0)
@@ -718,9 +768,12 @@ class MultiEventFile(EventFile):
         self.allcross.append(cross)
         self.across.append(across)
         self.error.append(error)
-        self.scales.append(1)
+        self.scales.append(scale)
         self.files.append(obj)
+        if nb_event:
+            obj.len = nb_event
         self._configure = False
+        return obj
         
     def __iter__(self):
         return self
@@ -741,7 +794,11 @@ class MultiEventFile(EventFile):
             if nb_event <= sum_nb:
                 self.curr_nb_events[i] += 1
                 event = obj.next()
-                event.sample_scale = self.scales[i] # for file reweighting
+                if not self.eventgroup:
+                    event.sample_scale = self.scales[i] # for file reweighting
+                else:
+                    for evt in event:
+                        evt.sample_scale = self.scales[i]
                 return event
         else:
             raise Exception
@@ -1106,7 +1163,15 @@ class Event(list):
                     logger.warning("WRONG MOTHER INFO %s", self)
                     particle.mother2 = 0
 
-   
+    def rescale_weights(self, ratio):
+        """change all the weights by a given ratio"""
+        
+        self.wgt *= ratio
+        self.parse_reweight()
+        for key in self.reweight_data:
+            self.reweight_data[key] *= ratio
+        return self.wgt
+    
     def reorder_mother_child(self):
         """check and correct the mother/child position.
            only correct one order by call (but this is a recursive call)"""
@@ -1369,6 +1434,20 @@ class Event(list):
                 else:
                     particle.color2 = color_mapping[particle.color2]                
 
+    def add_decays(self, pdg_to_decay):
+        """use auto-recursion"""
+
+        pdg_to_decay = dict(pdg_to_decay)
+
+        for i,particle in enumerate(self):
+            if particle.status != 1:
+                continue
+            if particle.pdg in pdg_to_decay and pdg_to_decay[particle.pdg]:
+                one_decay = pdg_to_decay[particle.pdg].pop()
+                self.add_decay_to_particle(i, one_decay)
+                return self.add_decays(pdg_to_decay)
+        return self
+                
 
 
     def remove_decay(self, pdg_code=0, event_id=None):
@@ -1666,6 +1745,24 @@ class Event(list):
             if len(popup_index) != len(set(popup_index)):
                 logger.critical(self)
                 raise Exception, "Wrong color flow: identical poping-up index, %s" % (popup_index)
+               
+    def __eq__(self, other):
+        """two event are the same if they have the same momentum. other info are ignored"""
+        
+        if other is None:
+            return False
+        
+        for i,p in enumerate(self):
+            if p.E != other[i].E:
+                return False
+            elif p.pz != other[i].pz:
+                return False
+            elif p.px != other[i].px:
+                return False
+            elif p.py != other[i].py:
+                return False
+        return True
+        
                
     def __str__(self, event_id=''):
         """return a correctly formatted LHE event"""
@@ -2104,12 +2201,13 @@ class OneNLOWeight(object):
     def parse(self, text):
         """parse the line and create the related object"""
         #0.546601845792D+00 0.000000000000D+00 0.000000000000D+00 0.119210435309D+02 0.000000000000D+00  5 -1 2 -11 12 21 0 0.24546101D-01 0.15706890D-02 0.12586055D+04 0.12586055D+04 0.12586055D+04  1  2  2  2  5  2  2 0.539995789976D+04
+        #0.274922677249D+01 0.000000000000D+00 0.000000000000D+00 0.770516514633D+01 0.113763730192D+00  5 21 2 -11 12 1 2 0.52500539D-02 0.30205908D+00 0.45444066D+04 0.45444066D+04 0.45444066D+04 0.12520062D+01  1  2  1  3  5  1       -1 0.110944218997D+05
         # below comment are from Rik description email
-        
         data = text.split()
         # 1. The first three doubles are, as before, the 'wgt', i.e., the overall event of this
         # contribution, and the ones multiplying the log[mu_R/QES] and the log[mu_F/QES]
         # stripped of alpha_s and the PDFs.
+        # from example: 0.274922677249D+01 0.000000000000D+00 0.000000000000D+00
         self.pwgt = [float(f) for f in data[:3]]
         # 2. The next two doubles are the values of the (corresponding) Born and 
         #    real-emission matrix elements. You can either use these values to check 
@@ -2128,20 +2226,27 @@ class OneNLOWeight(object):
         #    (I'm not sure that reweighting tree-level with loop^2 is something that 
         #    we can do in general, because we don't really know what to do with the 
         #    virtual matrix elements because we cannot generate 2-loop diagrams.)
+        #    from example: 0.770516514633D+01 0.113763730192D+00
         self.born = float(data[3])
         self.real = float(data[4])
         # 3. integer: number of external particles of the real-emission configuration  (as before)
+        #    from example: 5
         self.nexternal = int(data[5])
         # 4. PDG codes corresponding to the real-emission configuration (as before)
+        #    from example: 21 2 -11 12 1 2
         self.pdgs = [int(i) for i in data[6:6+self.nexternal]]
         flag = 6+self.nexternal # new starting point for the position
         # 5. next integer is the power of g_strong in the matrix elements (as before)
+        #    from example: 2
         self.qcdpower = int(data[flag])
         # 6. 2 doubles: The bjorken x's used for this contribution (as before)
+        #    from example: 0.52500539D-02 0.30205908D+00 
         self.bjks = [float(f) for f in data[flag+1:flag+3]]
         # 7. 3 doubles: The Ellis-sexton scale, the renormalisation scale and the factorisation scale, all squared, used for this contribution (as before)
+        #    from example: 0.45444066D+04 0.45444066D+04 0.45444066D+04
         self.scales2 = [float(f) for f in data[flag+3:flag+6]]
         # 8.the value of g_strong
+        #    from example:  0.12520062D+01 
         self.gs = float(data[flag+6])
         # 9. 2 integers: the corresponding Born and real-emission type kinematics. (in the list of momenta)
         #    Note that also the Born-kinematics has n+1 particles, with, in general, 
@@ -2149,6 +2254,7 @@ class OneNLOWeight(object):
         #    there could also be 2 particles with perfectly collinear momentum). 
         #    To convert this from n+1 to a n particles, you have to sum the momenta 
         #    of the two particles that 'merge', see point 12 below.
+        #    from example:  1  2 
         self.born_related = int(data[flag+7])
         self.real_related = int(data[flag+8])
         # 10. 1 integer: the 'type'. This is the information you should use to determine 
@@ -2161,10 +2267,10 @@ class OneNLOWeight(object):
         #     type=1 : real-emission:     
         #     type=2 : Born: 
         #     type=3 : integrated counter terms: 
-        #     type=4 : soft counter-term            : 
-        #     type=5 : collinear counter-term     : 
+        #     type=4 : soft counter-term: 
+        #     type=5 : collinear counter-term: 
         #     type=6 : soft-collinear counter-term: 
-        #     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO :  
+        #     type=7 : O(alphaS) expansion of Sudakov factor for NNLL+NLO:  
         #     type=8 : soft counter-term (with n+1-body kin.):     
         #     type=9 : collinear counter-term (with n+1-body kin.): 
         #     type=10: soft-collinear counter-term (with n+1-body kin.): 
@@ -2173,10 +2279,12 @@ class OneNLOWeight(object):
         #     type=13: MC subtraction with n+1-body kin.: 
         #     type=14: virtual corrections minus approximate virtual
         #     type=15: approximate virtual corrections: 
+        #     from example: 1 
         self.type = int(data[flag+9])
         # 11. 1 integer: The FKS configuration for this contribution (not really 
         #     relevant for anything, but is used in checking the reweighting to 
-        #     get scale & PDF uncertainties). 
+        #     get scale & PDF uncertainties).
+        #     from example:  3  
         self.nfks = int(data[flag+10])
         # 12. 2 integers: the two particles that should be merged to form the 
         #     born contribution from the real-emission one. Remove these two particles
@@ -2184,13 +2292,16 @@ class OneNLOWeight(object):
         #     at the location of the minimum of the two particles removed. 
         #     I.e., if you merge particles 2 and 4, you have to insert the new particle 
         #     as the 2nd particle. And particle 5 and above will be shifted down by one.
+        #     from example: 5  1      
         self.to_merge_pdg = [int (f) for f in data[flag+11:flag+13]]
         # 13. 1 integer: the PDG code of the particle that is created after merging the two particles at point 12.
+        #     from example  -1 
         self.merge_new_pdg = int(data[flag+13])
         # 14. 1 double: the reference number that one should be able to reconstruct 
         #     form the weights (point 1 above) and the rest of the information of this line. 
         #     This is really the contribution to this event as computed by the code 
-        #     (and is passed to the integrator). It contains everything. 
+        #     (and is passed to the integrator). It contains everything.
+        #     from example: 0.110944218997D+05  
         self.ref_wgt = float(data[flag+14])
 
         #check the momenta configuration linked to the event

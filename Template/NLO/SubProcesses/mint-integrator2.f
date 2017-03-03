@@ -114,7 +114,11 @@ c APPLgrid switch
       common /for_applgrid/ iappl
       logical              fixed_order,nlo_ps
       common /c_fnlo_nlops/fixed_order,nlo_ps
+      integer                                   npoints
+      double precision            cross_section
+      common /for_FixedOrder_lhe/ cross_section,npoints
       reset=.false.
+
 c if ncalls0 is greater than 0, use the default running, i.e. do not
 c double the events after each iteration as well as use a fixed number
 c of intervals in the grids.
@@ -212,6 +216,7 @@ c Initialize upper bounding envelope
             ans_chan(0)=ans_chan(0)+ans(1,kchan)
          enddo
       endif
+      cross_section=ans_chan(0)
       nit=0
       nit_included=0
       do i=1,nintegrals
@@ -256,6 +261,7 @@ c We did enough iterations, update arguments and return
          else
             nitmax=nit_included
          endif
+         cross_section=ans(2,0)
          do kchan=1,nchans
             if (regridded(kchan)) then
                np=0
@@ -280,6 +286,7 @@ c number of calls
          ncalls=ncalls0
          write (*,*) 'Update # PS points: ',ncalls0,' --> ',ncalls
       endif
+      npoints=ncalls
 c Reset the accumulated results for grid updating
       if(imode.eq.0) then
          do kchan=1,nchans
@@ -671,6 +678,7 @@ c double the number of points for the next iteration
      $        'accumulated results '//title(i)//' =',ans(i,0),' +/- '
      $        ,unc(i,0) ,' (',efrac(i)*100d0,'%)'
       enddo
+      cross_section=ans(1,0)
       if (nit_included.le.1) then
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF ='
      $        ,0d0

@@ -619,6 +619,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'HwU_dummy.f',
                      'madfks_plot.f',
                      'analysis_dummy.f',
+                     'analysis_lhe.f',
                      'mint-integrator2.f',
                      'MC_integer.f',
                      'mint.inc',
