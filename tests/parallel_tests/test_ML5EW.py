@@ -49,6 +49,7 @@ HCR_processes_long =  [
                        ('t t~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                        ('ve ve~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                        ('w+ w- > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                       ('w+ w- > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                        ('h h > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                        ('u u~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                        ('e+ e- > t t~ g',{'QCD':1,'QED':2},['QED'],{'QCD':2,'QED':6}),
@@ -103,6 +104,7 @@ ML5EW_processes_long =  [
                          ('t t~ > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                          ('ve ve~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                          ('w+ w- > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
+                         ('w+ w- > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                          ('h h > h h',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                          ('u u~ > e+ e-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6}),
                          ('e+ e- > t t~ g',{'QCD':1,'QED':2},['QED'],{'QCD':2,'QED':6}),
@@ -390,6 +392,13 @@ class ML5EWTest(unittest.TestCase):
     def test_long_sm_vs_stored_HCR_wpwm_hh_QED(self):
         proc = 'wpwm_hh_QED'
         compare_processes(self,[HCR_processes_long_dic[proc]], 
+               model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
+               filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
+
+#   ('w+ w- > w+ w-',{'QCD':0,'QED':2},['QED'],{'QCD':0,'QED':6})
+    def test_long_sm_vs_stored_HCR_wpwm_wpwm_QED(self):
+        proc = 'wpwm_wpwm_QED'
+        compare_processes(self,[HCR_processes_long_dic[proc]],
                model = self.test_model_name, pickle_file = 'hcr_%s.pkl'%proc,
                filename = 'ptest_long_sm_vs_HCR_%s'%proc, chosen_runner = 'HCR')
         
@@ -707,7 +716,7 @@ if '__main__' == __name__:
     #model = 'loop_qcd_qed_sm_Gmu-parallel_test_WW'
     #model = 'loop_qcd_qed_sm_Gmu-parallel_test_ZZ'
     #model = 'loop_qcd_qed_sm_Gmu-parallel_test_WZ'
-    model = 'loop_qcd_qed_sm-parallel_test_MB'
+    #model = 'loop_qcd_qed_sm-parallel_test_MB'
     for savefile in HCR_processes_long_dic.keys():
         res_list = []
         proc_list = []

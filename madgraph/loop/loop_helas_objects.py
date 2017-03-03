@@ -545,13 +545,19 @@ class LoopHelasAmplitude(helas_objects.HelasAmplitude):
 
         self['loopsymmetryfactor']=1
         
-        # Make sure all particles are self-conjugated and identical in the loop
+        # First, make sure all particles are self-conjugated and identical in the loop
         if len(set([wf.get('pdg_code') for wf in self.get('wavefunctions')]))==1 and \
           not any([not wf.get('self_antipart') for wf in self.get('wavefunctions')]):
             # Now make sure we only include tadpoles or bubble
             if len(self.get('wavefunctions')) in [3,4]:
                 self['loopsymmetryfactor']=2
-        
+        # Second, make sure all particles are identical in the bubbles
+        if len(self.get('wavefunctions'))==4 and \
+                len(set([abs(wf.get('pdg_code')) for wf in self.get('wavefunctions')]))==1:
+            pdgs_sum=sum([wf.get('pdg_code') for wf in self.get('wavefunctions')])
+            if pdgs_sum==0:
+                self['loopsymmetryfactor']=2
+
 #===============================================================================
 # LoopHelasDiagram
 #===============================================================================
