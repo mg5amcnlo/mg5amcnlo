@@ -107,6 +107,7 @@ def mute_logger(names=['madgraph','ALOHA','cmdprint','madevent'], levels=[50,50,
         return f_with_no_logger
     return control_logger
 
+PACKAGE_INFO = {}
 #===============================================================================
 # get_pkg_info
 #===============================================================================
@@ -116,6 +117,7 @@ def get_pkg_info(info_str=None):
     a dictionary with empty values is returned. As an option, an info
     string can be passed to be read instead of the file content.
     """
+    global PACKAGE_INFO
 
     if info_str:
         info_dict = parse_info_str(StringIO.StringIO(info_str))
@@ -125,10 +127,13 @@ def get_pkg_info(info_str=None):
         info_dict['version'] = open(pjoin(internal.__path__[0],'..','..','MGMEVersion.txt')).read().strip()
         info_dict['date'] = '20xx-xx-xx'                        
     else:
+        if PACKAGE_INFO:
+            return PACKAGE_INFO
         info_dict = files.read_from_file(os.path.join(madgraph.__path__[0],
                                                   "VERSION"),
                                                   parse_info_str, 
                                                   print_error=False)
+        PACKAGE_INFO = info_dict
         
     return info_dict
 
@@ -1545,15 +1550,30 @@ class ProcessTimer:
 #      pass
 
 ## Define apple_notify (in a way which is system independent
-try:
-    import Foundation
-    import objc
-    NSUserNotification = objc.lookUpClass('NSUserNotification')
-    NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+class Applenotification(object):
 
-    def apple_notify(subtitle, info_text, userInfo={}):
+    def __init__(self):
+        self.init = False
+        self.working = True
+
+    def load_notification(self):        
         try:
-            notification = NSUserNotification.alloc().init()
+            import Foundation
+            import objc
+            self.NSUserNotification = objc.lookUpClass('NSUserNotification')
+            self.NSUserNotificationCenter = objc.lookUpClass('NSUserNotificationCenter')
+        except:
+            self.working=False
+        self.working=True
+
+    def __call__(self,subtitle, info_text, userInfo={}):
+        
+        if not self.init:
+            self.load_notification()
+        if not self.working:
+            return
+        try:
+            notification = self.NSUserNotification.alloc().init()
             notification.setTitle_('MadGraph5_aMC@NLO')
             notification.setSubtitle_(subtitle)
             notification.setInformativeText_(info_text)
@@ -1561,13 +1581,14 @@ try:
                 notification.setUserInfo_(userInfo)
             except:
                 pass
-            NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
+            self.NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
         except:
-            pass
-except:
-    def apple_notify(subtitle, info_text, userInfo={}):
-        return
-## End apple notify
+            pass        
+        
+
+
+apple_notify = Applenotification()
+
 
 
 def get_older_version(v1, v2):
@@ -1739,3 +1760,27 @@ def import_python_lhapdf(lhapdfconfig):
     else:
         python_lhapdf = None
     return python_lhapdf
+
+############################### TRACQER FOR OPEN FILE
+#openfiles = set()
+#oldfile = __builtin__.file
+#
+#class newfile(oldfile):
+#    done = 0
+#    def __init__(self, *args):
+#        self.x = args[0]
+#        if 'matplotlib' in self.x:
+#            raise Exception
+#        print "### OPENING %s ### %s " % (str(self.x) , time.time()-start)
+#        oldfile.__init__(self, *args)
+#        openfiles.add(self)
+#
+#    def close(self):
+#        print "### CLOSING %s ### %s" % (str(self.x), time.time()-start)
+#        oldfile.close(self)
+#        openfiles.remove(self)
+#oldopen = __builtin__.open
+#def newopen(*args):
+#    return newfile(*args)
+#__builtin__.file = newfile
+#__builtin__.open = newopen

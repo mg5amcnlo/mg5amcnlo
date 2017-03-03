@@ -39,6 +39,7 @@ import inspect
 import urllib
 import random
 
+
 #useful shortcut
 pjoin = os.path.join
 
@@ -59,6 +60,8 @@ import madgraph.loop.loop_diagram_generation as loop_diagram_generation
 import madgraph.loop.loop_base_objects as loop_base_objects
 import madgraph.core.drawing as draw_lib
 import madgraph.core.helas_objects as helas_objects
+
+
 
 import madgraph.iolibs.drawing_eps as draw
 import madgraph.iolibs.export_cpp as export_cpp
@@ -97,6 +100,7 @@ import aloha.create_aloha as create_aloha
 import aloha.aloha_lib as aloha_lib
 
 import mg5decay.decay_objects as decay_objects
+
 
 # Special logger for the Cmd Interface
 logger = logging.getLogger('cmdprint') # -> stdout
@@ -6489,7 +6493,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
                     self.options[name] = value
                 if value.lower() == "none" or value=="":
                     self.options[name] = None
-
+        config_file.close()      
         self.options['stdout_level'] = logging.getLogger('madgraph').level
         if not final:
             return self.options # the return is usefull for unittest

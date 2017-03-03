@@ -17,17 +17,11 @@
 """
 from __future__ import division
 
+
+
 import ast
-import atexit
-import cmath
-import cmd
-import glob
 import logging
-import math
-import optparse
 import os
-import pydoc
-import random
 import re
 import shutil
 import signal
@@ -44,7 +38,7 @@ try:
     GNU_SPLITTING = ('GNU' in readline.__doc__)
 except:
     GNU_SPLITTING = True
-
+     
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
 sys.path.insert(0, os.path.join(root_path,'bin'))
@@ -66,7 +60,7 @@ except ImportError:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
-    import internal.histograms as histograms
+#    import internal.histograms as histograms # imported later to not slow down the loading of the code
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.lhe_parser as lhe_parser
@@ -84,7 +78,7 @@ else:
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
-    import madgraph.various.histograms as histograms
+#    import madgraph.various.histograms as histograms # imported later to not slow down the loading of the code
     
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
@@ -1077,6 +1071,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                    data_path):
         """Generated the HwU plots from Pythia8 driver output for a specific
         observable."""
+        
+        try:
+            import madgraph
+        except ImportError:  
+            import internal.histograms as histograms
+        else:
+            import madgraph.various.histograms as histograms
         
         # Make sure that the file is present
         if not os.path.isfile(data_path):

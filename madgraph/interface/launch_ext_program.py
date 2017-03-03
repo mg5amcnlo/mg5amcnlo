@@ -13,29 +13,27 @@
 #
 ################################################################################
 
-import glob
+
 import logging
 import os
 import pydoc
-import re
-import sys
 import subprocess
-import thread
 import time
-
+start=time.time()
 import madgraph.iolibs.files as files
-import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madevent_interface as me_cmd
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_mod
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
-from madgraph.iolibs.files import cp
+#from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+#from madgraph.iolibs.files import cp
 pjoin = os.path.join
 
 
 logger = logging.getLogger('cmdprint.ext_program')
+
+
 
 class ExtLauncher(object):
     """ Generic Class for executing external program """
@@ -788,5 +786,4 @@ class Pythia8Launcher(ExtLauncher):
 
 # old compatibility shortcut
 open_file = misc.open_file
-
 

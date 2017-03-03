@@ -17,29 +17,22 @@
 """
 from __future__ import division
 
-import atexit
 import collections
-import cmath
 import glob
 import logging
 import math
-import optparse
 import os
-import pydoc
 import random
 import re
-import signal
-import shutil
+
 import stat
 import subprocess
 import sys
-import traceback
 import time
 import tarfile
 import StringIO
-import shutil
+#import shutil
 import copy
-import xml.dom.minidom as minidom
 
 try:
     import readline
@@ -59,8 +52,6 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     import madgraph
-
-    
 except ImportError: 
     # import from madevent directory
     MADEVENT = True
@@ -78,7 +69,7 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
-    import internal.histograms as histograms
+#    import internal.histograms as histograms # imported later to not slow down the loading of the code
     from internal.files import ln
 else:
     # import from madgraph directory
@@ -95,12 +86,10 @@ else:
     import madgraph.various.misc as misc
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
-    import madgraph.various.histograms as histograms
-
+#    import madgraph.various.histograms as histograms  # imported later to not slow down the loading of the code
     import models.check_param_card as check_param_card
     from madgraph.iolibs.files import ln    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
-
 
 
 
@@ -3488,12 +3477,14 @@ Beware that this can be dangerous for local multicore runs.""")
             py8_path                  = pjoin(MG5DIR,py8_path)
 
         # Retrieve all the on-install and current versions  
-        MG5_version_on_install = open(pjoin(mg5amc_py8_interface_path,
-                           'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+        fsock =  open(pjoin(mg5amc_py8_interface_path, 'MG5AMC_VERSION_ON_INSTALL'))
+        MG5_version_on_install = fsock.read().replace('\n','')
+        fsock.close()
         if MG5_version_on_install == 'UNSPECIFIED':
             MG5_version_on_install = None
-        PY8_version_on_install = open(pjoin(mg5amc_py8_interface_path,
-                              'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+        fsock = open(pjoin(mg5amc_py8_interface_path, 'PYTHIA8_VERSION_ON_INSTALL'))
+        PY8_version_on_install = fsock.read().replace('\n','')
+        fsock.close()
         MG5_curr_version =misc.get_pkg_info()['version']
         try:
             p = subprocess.Popen(['./get_pythia8_version.py',py8_path],
@@ -3759,6 +3750,14 @@ already exists and is not a fifo file."""%fifo_path)
 
     def do_pythia8(self, line):
         """launch pythia8"""
+
+
+        try:
+            import madgraph
+        except ImportError:  
+            import internal.histograms as histograms
+        else:
+            import madgraph.various.histograms as histograms
 
         # Check argument's validity
         args = self.split_arg(line)
@@ -4416,6 +4415,7 @@ tar -czf split_$1.tar.gz split_$1
     
     def extract_cross_sections_from_DJR(self,djr_output):
         """Extract cross-sections from a djr XML output."""
+        import xml.dom.minidom as minidom
         run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
         all_nodes = dict((int(node.getAttribute('id')),node) for
                                                       node in run_nodes)
