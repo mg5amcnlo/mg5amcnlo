@@ -139,6 +139,12 @@ class MECmdShell(IOTests.IOTestManager):
         open('%s/Cards/run_card_default.dat' % self.path, 'w').write(card)
         os.system('cp  %s/Cards/run_card_default.dat %s/Cards/run_card.dat' % (self.path, self.path))
 
+        card = open('%s/Cards/param_card_default.dat' % self.path).read()
+        self.assertTrue( 'DECAY   6 1.491500e+00 # WT' in card)
+        card = card.replace('DECAY   6 1.491500e+00 # WT', 'DECAY   6 0.0e+00 # WT')
+        open('%s/Cards/param_card_default.dat' % self.path, 'w').write(card)
+        os.system('cp  %s/Cards/param_card_default.dat %s/Cards/param_card.dat' % (self.path, self.path))
+
         card = open('%s/Cards/shower_card_default.dat' % self.path).read()
         self.assertTrue( 'ANALYSE      =' in card)
         card = card.replace('ANALYSE      =', 'ANALYSE     = mcatnlo_hwan_pp_tj.o myfastjetfortran.o mcatnlo_hbook_gfortran8.o')
