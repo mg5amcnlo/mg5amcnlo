@@ -185,6 +185,7 @@ class TestCmdShell1(unittest.TestCase):
                     'notification_center':True,
                     'timeout': 60,
                     'ignore_six_quark_processes': False,
+                    'include_lepton_initiated_processes': False,
                     'OLP': 'MadLoop',
                     'auto_update': 7,
                     'cluster_nb_retry': 1,

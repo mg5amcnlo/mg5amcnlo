@@ -50,6 +50,9 @@ c Vegas stuff
       double precision average_virtual(0:n_ave_virt,maxchannels)
      $     ,virtual_fraction(maxchannels)
       common/c_avg_virt/average_virtual,virtual_fraction
+      include 'orders.inc'
+      integer              n_ord_virt
+      common /c_n_ord_virt/n_ord_virt
 
       double precision weight
 c For MINT:

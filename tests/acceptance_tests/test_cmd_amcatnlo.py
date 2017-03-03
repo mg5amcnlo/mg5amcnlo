@@ -131,7 +131,7 @@ class MECmdShell(IOTests.IOTestManager):
     @set_global()
     def test_check_singletop_fastjet(self):
         cmd = os.getcwd()
-        self.generate(['p p > t j [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
+        self.generate(['p p > t j QED=2 QCD=0 [real=QCD]'], 'sm-no_b_mass', multiparticles=['p = p b b~', 'j = j b b~'])
 
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( '10000 = nevents' in card)
@@ -170,7 +170,7 @@ class MECmdShell(IOTests.IOTestManager):
         #reasons)
         
         cmd = os.getcwd()
-        self.generate(['p p > h w+ > ta+ ta- e+ ve [QCD]'], 'sm')
+        self.generate(['p p > h w+ > ta+ ta- e+ ve QED=4 QCD=0 [QCD]'], 'sm')
         self.assertEqual(cmd, os.getcwd())
 
         #info_html_target = open(os.path.join(cmd, 'tests', 'input_files',
@@ -184,7 +184,7 @@ class MECmdShell(IOTests.IOTestManager):
         """test that an exception is raised when trying to shower with hwpp without
         having set the corresponding pahts"""
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'HERWIGPP   = parton_shower')
@@ -209,7 +209,7 @@ class MECmdShell(IOTests.IOTestManager):
         """test that an exception is raised when trying to shower with py8 without
         having set the corresponding pahts"""
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( 'HERWIG6   = parton_shower' in card)
         card = card.replace('HERWIG6   = parton_shower', 'PYTHIA8   = parton_shower')
@@ -236,7 +236,7 @@ class MECmdShell(IOTests.IOTestManager):
     def test_split_evt_gen(self):
         """test that the event generation splitting works"""
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve [QCD] '], 'sm')
+        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD] '], 'sm')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
         self.assertTrue( ' -1 = nevt_job' in card)
         card = card.replace(' -1 = nevt_job', '500 = nevt_job')
@@ -260,7 +260,7 @@ class MECmdShell(IOTests.IOTestManager):
         
         if os.path.exists('%s/Cards/proc_card_mg5.dat' % self.path):
             proc_path = '%s/Cards/proc_card_mg5.dat' % self.path
-            if 'p p > e+ ve [QCD]' in open(proc_path).read():
+            if 'p p > e+ ve QED=2 QCD=0 [QCD]' in open(proc_path).read():
                 if files.is_uptodate(proc_path, min_time=self.loadtime):
                     if hasattr(self, 'cmd_line'):
                         self.cmd_line.exec_cmd('quit')
@@ -280,7 +280,7 @@ class MECmdShell(IOTests.IOTestManager):
                     return
 
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         self.do('quit')
         card = open('%s/Cards/run_card_default.dat' % self.path).read()
@@ -386,7 +386,7 @@ class MECmdShell(IOTests.IOTestManager):
         """test the param_card created is correct"""
         
         cmd = os.getcwd()
-        self.generate(['p p > e+ ve [QCD]'], 'loop_sm')
+        self.generate(['p p > e+ ve QED=2 QCD=0 [QCD]'], 'loop_sm')
         self.assertEqual(cmd, os.getcwd())
         #change splitevent generation
         card = open('%s/Cards/run_card.dat' % self.path).read()
