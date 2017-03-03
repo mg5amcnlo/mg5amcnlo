@@ -770,7 +770,7 @@ class MultiEventFile(EventFile):
         self.error.append(error)
         self.scales.append(scale)
         self.files.append(obj)
-        if len:
+        if nb_event:
             obj.len = nb_event
         self._configure = False
         return obj

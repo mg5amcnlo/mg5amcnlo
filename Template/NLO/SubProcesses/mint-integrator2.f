@@ -216,7 +216,7 @@ c Initialize upper bounding envelope
             ans_chan(0)=ans_chan(0)+ans(1,kchan)
          enddo
       endif
-      cross_section=ans(1)
+      cross_section=ans_chan(0)
       nit=0
       nit_included=0
       do i=1,nintegrals
@@ -261,7 +261,7 @@ c We did enough iterations, update arguments and return
          else
             nitmax=nit_included
          endif
-         cross_section=ans(2)
+         cross_section=ans(2,0)
          do kchan=1,nchans
             if (regridded(kchan)) then
                np=0
@@ -678,7 +678,7 @@ c double the number of points for the next iteration
      $        'accumulated results '//title(i)//' =',ans(i,0),' +/- '
      $        ,unc(i,0) ,' (',efrac(i)*100d0,'%)'
       enddo
-      cross_section=ans(1)
+      cross_section=ans(1,0)
       if (nit_included.le.1) then
          write (*,'(a,1x,e10.4)') 'accumulated result Chi^2 per DoF ='
      $        ,0d0
