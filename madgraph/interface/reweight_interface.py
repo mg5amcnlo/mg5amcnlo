@@ -12,7 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-""" Command interface for MadSpin """
+""" Command interface for Re-Weighting """
 from __future__ import division
 import difflib
 import logging
@@ -35,7 +35,7 @@ import madgraph.interface.master_interface as master_interface
 import madgraph.interface.common_run_interface as common_run_interface
 import madgraph.interface.madevent_interface as madevent_interface
 import madgraph.iolibs.files as files
-import MadSpin.interface_madspin as madspin_interface
+#import MadSpin.interface_madspin as madspin_interface
 import madgraph.various.misc as misc
 import madgraph.various.banner as banner
 import madgraph.various.lhe_parser as lhe_parser
@@ -46,7 +46,7 @@ import madgraph.core.diagram_generation as diagram_generation
 
 import models.import_ufo as import_ufo
 import models.check_param_card as check_param_card 
-import MadSpin.decay as madspin
+#import MadSpin.decay as madspin
 
 
 logger = logging.getLogger('decay.stdout') # -> stdout
@@ -203,7 +203,8 @@ class ReweightInterface(extended_cmd.Cmd):
         logger.info("options: %s" % option)
 
 
-    def get_LO_definition_from_NLO(self, proc, real_only=False):
+    @staticmethod
+    def get_LO_definition_from_NLO(proc, model, real_only=False):
         """return the LO definitions of the process corresponding to the born/real"""
         
         # split the line definition with the part before and after the NLO tag
@@ -223,7 +224,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 order = order.split('=',1)[1]
                 
             # define the list of particles that are needed for the radiation
-            pert = fks_common.find_pert_particles_interactions(self.model,
+            pert = fks_common.find_pert_particles_interactions(model,
                                            pert_order = order)['soft_particles']
             commandline += "define pert_%s = %s;" % (order.replace(' ',''), ' '.join(map(str,pert)) )
             
@@ -1390,11 +1391,11 @@ class ReweightInterface(extended_cmd.Cmd):
                 has_nlo = True
                 if self.banner.get('run_card','ickkw') == 3:
                     if len(proc) == min([len(p.strip()) for p in data['processes']]):
-                        commandline += self.get_LO_definition_from_NLO(proc)
+                        commandline += self.get_LO_definition_from_NLO(proc,self.model)
                     else:
-                        commandline += self.get_LO_definition_from_NLO(proc, real_only=True)
+                        commandline += self.get_LO_definition_from_NLO(proc,self.model, real_only=True)
                 else:
-                    commandline += self.get_LO_definition_from_NLO(proc)
+                    commandline += self.get_LO_definition_from_NLO(proc,self.model)
         
         commandline = commandline.replace('add process', 'generate',1)
         logger.info(commandline)

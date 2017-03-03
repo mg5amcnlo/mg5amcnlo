@@ -18,6 +18,7 @@
 # to be set empty.
 FO_ANALYSIS_FORMAT = HwU
 #
+#
 # Needed extra-libraries (FastJet is already linked):
 FO_EXTRALIBS = 
 #
