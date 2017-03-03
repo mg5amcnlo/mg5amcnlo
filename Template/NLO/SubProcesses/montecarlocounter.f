@@ -2578,7 +2578,7 @@ c
       include "nexternal.inc"
       double precision p(0:3,nexternal-1),xii,sh,ref_sc
       integer i_scale,i
-      parameter(i_scale=1)
+      parameter(i_scale=0)
 
       ref_sc=0d0
       if(i_scale.eq.0)then
