@@ -5,16 +5,14 @@
       include "unlops.inc"
       include "run.inc"
       include 'timing_variables.inc'
+      include 'mint.inc'
       integer ndim
       common/tosigint/ndim
-      integer           iconfig
-      common/to_configs/iconfig
       integer itmax,ncall
       common/citmax/itmax,ncall
       logical Hevents
       common/SHevents/Hevents
       integer i,j,lunlhe
-      include 'mint.inc'
       real*8 xx(ndimmax),weight,evnt_wgt
       logical putonshell
       double precision wgt,unwgtfun

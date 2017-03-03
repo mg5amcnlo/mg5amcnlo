@@ -175,7 +175,8 @@ class EventFile(object):
     def __init__(self, path, mode='r', *args, **opt):
         """open file and read the banner [if in read mode]"""
         
-        self.parsing = True
+        self.parsing = True # check if/when we need to parse the event.
+
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
@@ -233,7 +234,7 @@ class EventFile(object):
         init_pos = self.tell()
         self.seek(0)
         nb_event=0
-        with misc.TMP_variable(self,'parsing',False):
+        with misc.TMP_variable(self, 'parsing', False):
             for _ in self:
                 nb_event +=1
         self.len = nb_event
@@ -242,6 +243,7 @@ class EventFile(object):
 
     def next(self):
         """get next event"""
+
         if not self.eventgroup:
             text = ''
             line = ''
@@ -253,7 +255,11 @@ class EventFile(object):
                     text = ''
                 if mode:
                     text += line
-            return Event(text)
+
+            if self.parsing:
+                return Event(text)
+            else:
+                return text
         else:
             events = []
             text = ''
@@ -268,13 +274,17 @@ class EventFile(object):
                     text=''
                     mode=1
                 elif '</event>' in line:
-                    events.append(Event(text))
+                    if parsing:
+                        events.append(Event(text))
+                    else:
+                        events.append(text)
                     text = ''
                     mode = 0
                 if mode:
-                    text += line
+                    text += line        
             return events
     
+
     def initialize_unweighting(self, get_wgt, trunc_error):
         """ scan once the file to return 
             - the list of the hightest weight (of size trunc_error*NB_EVENT
@@ -544,7 +554,7 @@ class EventFile(object):
                     print("currently at %s event [%is]" % (nb_event, time.time()-start))
             for i in range(nb_fct):
                 value = fcts[i](event)
-                if not opts['no_output']:
+                if not opt['no_output']:
                     out[i].append(value)
             if nb_event > opt['maxevent']:
                 break
@@ -2118,6 +2128,34 @@ class FourMomentum(object):
         
         if abs(out.pz) < 1e-6 * out.E:
             out.pz = 0
+        return out
+    
+    def boost_to_restframe(self, pboost):
+        """apply the boost transformation such that pboost is at rest in the new frame.
+        First apply a rotation to allign the pboost to the z axis and then use
+        zboost routine (see above)
+        """
+        
+
+        
+        
+        # write pboost as (E, p cosT sinF, p sinT sinF, p cosF)
+        # rotation such that it become (E, 0 , 0 , p ) is
+        #  cosT sinF  ,  -sinT  , cosT sinF
+        #  sinT cosF  ,  cosT   , sinT sinF
+        # -sinT       ,   0     , cosF
+        p  =  math.sqrt( pboost.px**2 + pboost.py**2+ pboost.pz**2)
+        cosF = pboost.pz / p
+        sinF = math.sqrt(1-cosF**2)
+        sinT = pboost.py/p/sinF
+        cosT = pboost.px/p/sinF
+        
+        out=FourMomentum([self.E,
+                          self.px*cosT*cosF + self.py*sinT*cosF-self.pz*sinF,
+                          -self.px*sinT+      self.py*cosT,
+                          self.px*cosT*sinF + self.py*sinT*sinF + self.pz*cosF
+                          ])
+        out = out.zboost(E=pboost.E,pz=p)
         return out
         
         

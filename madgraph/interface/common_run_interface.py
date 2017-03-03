@@ -1606,8 +1606,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                             if t not in ['errorset', 'central']]
         
         # Copy all the relevant PDF sets
-        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
-            
+        try:
+            [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('impossible to download all the pdfsets. Bypass systematics')
+            return
         
         if self.options['run_mode'] ==2:
             nb_submit = min(self.options['nb_core'], nb_event//2500)
@@ -3992,6 +3996,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['ML'] =pjoin(self.me_dir,'Cards','MadLoopParams.dat')
         self.paths['shower'] = pjoin(self.me_dir,'Cards','shower_card.dat')
         self.paths['shower_default'] = pjoin(self.me_dir,'Cards','shower_card_default.dat')
+        self.paths['FO_analyse'] = pjoin(self.me_dir,'Cards','FO_analyse_card.dat')
+        self.paths['FO_analyse_default'] = pjoin(self.me_dir,'Cards','FO_analyse_card_default.dat')
         self.paths['pythia'] =pjoin(self.me_dir, 'Cards','pythia_card.dat')
         self.paths['PY8'] = pjoin(self.me_dir, 'Cards','pythia8_card.dat')
         self.paths['PY8_default'] = pjoin(self.me_dir, 'Cards','pythia8_card_default.dat')
@@ -5127,7 +5133,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.run_card['parton_shower'] == 'PYTHIA8':
                 # First check sanity of PY8
                 if not self.mother_interface.options['pythia8_path']:
-                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified  to MadGraph5_aMC@NLO'
+                    raise self.mother_interface.InvalidCmd, 'Pythia8 is not correctly specified  to MadGraph5_aMC@NLO'
                 executable = pjoin(self.mother_interface.options['pythia8_path'], 'bin', 'pythia8-config')
                 if not os.path.exists(executable):
                     raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified to MadGraph5_aMC@NLO'                
@@ -5757,7 +5763,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-1]
-                
+
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
         elif 'MadLoopParams' in answer:

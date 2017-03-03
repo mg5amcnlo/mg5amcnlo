@@ -228,13 +228,17 @@ class ReweightInterface(extended_cmd.Cmd):
             commandline += "define pert_%s = %s;" % (order.replace(' ',''), ' '.join(map(str,pert)) )
             
             # check if we have to increase by one the born order
-            if '%s=' % order in process:
+            
+            if '%s=' % order in process or '%s<=' % order in process:
                 result=re.split(' ',process)
                 process=''
                 for r in result:
                     if '%s=' % order in r:
                         ior=re.split('=',r)
                         r='QCD=%i' % (int(ior[1])+1)
+                    elif '%s<=' % order in r:
+                        ior=re.split('=',r)
+                        r='QCD<=%i' % (int(ior[1])+1)
                     process=process+r+' '
             #handle special tag $ | / @
             result = re.split('([/$@]|\w+(?:^2)?(?:=|<=|>)?\w+)', process, 1)                    
@@ -890,7 +894,6 @@ class ReweightInterface(extended_cmd.Cmd):
         # LO reweighting    
         w_orig = self.calculate_matrix_element(event, 0, space)
         w_new =  self.calculate_matrix_element(event, 1, space)
-        
         if w_orig == 0:
             tag, order = event.get_tag_and_order()
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
@@ -1193,7 +1196,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 
         else:
             nhel = 0
-
+        pold = list(p)
         p = self.invert_momenta(p)
 
         with misc.chdir(Pdir):
@@ -1478,15 +1481,20 @@ class ReweightInterface(extended_cmd.Cmd):
                          commentdefault=False)
             
             if self.multicore == 'create':
-                print "compile OLP", data['paths'][0]
-                misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][0],'SubProcesses'),
+                try:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][0],'SubProcesses'),
                              nb_core=self.mother.options['nb_core'])
+                except:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][0],'SubProcesses'))                    
         
         if os.path.exists(pjoin(path_me, data['paths'][1], 'Cards', 'MadLoopParams.dat')):
             if self.multicore == 'create':
                 print "compile OLP", data['paths'][1]
-                misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
+                try:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'),
                              nb_core=self.mother.options['nb_core'])
+                except:
+                    misc.compile(['OLP_static'], cwd=pjoin(path_me, data['paths'][1],'SubProcesses'))                    
                 
         
         # 5. create the virtual for NLO reweighting  ---------------------------

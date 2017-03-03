@@ -1608,14 +1608,22 @@ class PY8Card(ConfigFile):
     def systemSet(self, name, value, **opts):
         """Set an attribute of this card, independently of a specific user
         request and only if not already user_set."""
-        if name.lower() not in self.user_set:
+        try:
+            force = opts.pop('force')
+        except KeyError:
+            force = False
+        if force or name.lower() not in self.user_set:
             self.__setitem__(name, value, change_userdefine=False, **opts)
             self.system_set.add(name.lower())
     
     def MadGraphSet(self, name, value, **opts):
         """ Sets a card attribute, but only if it is absent or not already
         user_set."""
-        if name.lower() not in self or name.lower() not in self.user_set:
+        try:
+            force = opts.pop('force')
+        except KeyError:
+            force = False
+        if name.lower() not in self or (force or name.lower() not in self.user_set):
             self.__setitem__(name, value, change_userdefine=False, **opts)
             self.system_set.add(name.lower())            
     
@@ -2451,7 +2459,7 @@ class RunCardLO(RunCard):
         self.add_param("scale", 91.1880)
         self.add_param("dsqrt_q2fact1", 91.1880, fortran_name="sf1")
         self.add_param("dsqrt_q2fact2", 91.1880, fortran_name="sf2")
-        self.add_param("dynamical_scale_choice", -1)
+        self.add_param("dynamical_scale_choice", -1, comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy")
         
         # Bias module options
         self.add_param("bias_module", 'None', include=False)
@@ -3287,7 +3295,7 @@ class RunCardNLO(RunCard):
         self.add_param('muf1_ref_fixed', -1.0, hidden=True)
         self.add_param('muf_ref_fixed', 91.118)                       
         self.add_param('muf2_ref_fixed', -1.0, hidden=True)
-        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale')
+        self.add_param("dynamical_scale_choice", [-1],fortran_name='dyn_scale', comment="\'-1\' is based on CKKW back clustering (following feynman diagram).\n \'1\' is the sum of transverse energy.\n '2' is HT (sum of the transverse mass)\n '3' is HT/2\n '4' is the center of mass energy")
         self.add_param('fixed_qes_scale', False, hidden=True)
         self.add_param('qes_ref_fixed', -1.0, hidden=True)
         self.add_param('mur_over_ref', 1.0)

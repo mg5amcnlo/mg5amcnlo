@@ -3643,9 +3643,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 os.remove(pjoin(self.dir_path,'HTML','card.jpg'))
             except Exception, error:
                 pass
-            logger.info("Generate jpeg diagrams")
-            for Pdir in P_dir_list:
-                misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+            
+            if misc.which('gs'):
+                logger.info("Generate jpeg diagrams")
+                for Pdir in P_dir_list:
+                    misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull, cwd=pjoin(subpath, Pdir))
 
         logger.info("Generate web pages")

@@ -231,13 +231,18 @@ class Systematics(object):
         ids = [lowest_id+i for i in range(len(self.args)-1)]
         all_cross = [0 for i in range(len(self.args))]
         
+        self.input.parsing = False
         for nb_event,event in enumerate(self.input):
             if nb_event < self.start_event:
                 continue
+            elif nb_event == self.start_event:
+                self.input.parsing = True
+                event = lhe_parser.Event(event)
             elif nb_event >= self.stop_event:
                 if self.force_write_banner:
                     self.output.write('</LesHouchesEvents>\n')
                 break
+            
             if self.is_lo:
                 if (nb_event-self.start_event)>=0 and (nb_event-self.start_event) % 2500 ==0:
                     self.log( '# currently at event %s [elapsed time: %.2g s]' % (nb_event, time.time()-start_time))

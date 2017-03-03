@@ -57,12 +57,18 @@ JetMatching:nJetMax      = -1
 Merging:TMS              = -1.0
 ! This must be set manually, according to Pythia8 directives.
 ! An example of possible value is 'pp>LEPTONS,NEUTRINOS'
+! Alternatively, from Pythia v8.223 onwards, the value 'guess' can be 
+! used to instruct Pythia to guess the hard process. The guess would mean 
+! that all particles apart from light partons will be considered as a part 
+! of the hard process. This guess is prone to errors if the desired hard 
+! process is complicated (i.e. contains light partons). The user should
+! then be wary of suspicious error messages in the Pythia log file. 
 Merging:Process          = <set_by_user>
 ! A value of -1 means that it is automatically guessed by MadGraph.
 ! It is however always safer to explicitly set it.
 Merging:nJetMax  		 = -1
 !
-! For all merging schemes, decide wehter you want the merging scale
+! For all merging schemes, decide whehter you want the merging scale
 ! variation computed for only the central weights or all other 
 ! PDF and scale variation weights as well
 SysCalc:fullCutVariation = off

@@ -4569,6 +4569,111 @@ end
             self.assertEqual(text.split('\n'), target.split('\n'))         
         except Exception:
             self.assertEqual(text.split('\n'), target2.split('\n'))         
+
+    def test_short_fortranwriter_CFF(self):
+        """ test that python writer works """
+
+        solution = """subroutine FFV1C1_1(F1, V3, COUP, M2, W2,F2)
+implicit none
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 F2(6)
+ complex*16 V3(*)
+ complex*16 TMP0
+ real*8 P2(0:3)
+ real*8 W2
+ real*8 P3(0:3)
+ complex*16 F1(*)
+ real*8 M2
+ complex*16 denom
+ complex*16 COUP
+ complex*16 FCT0
+P3(0) = dble(V3(1))
+P3(1) = dble(V3(2))
+P3(2) = dimag(V3(2))
+P3(3) = dimag(V3(1))
+    F2(1) = +F1(1)+V3(1)
+    F2(2) = +F1(2)+V3(2)
+P2(0) = -dble(F2(1))
+P2(1) = -dble(F2(2))
+P2(2) = -dimag(F2(2))
+P2(3) = -dimag(F2(1))
+ TMP0 = (P3(0)*P3(0)-P3(1)*P3(1)-P3(2)*P3(2)-P3(3)*P3(3))
+ FCT0 = exp(TMP0)
+    denom = COUP/(P2(0)**2-P2(1)**2-P2(2)**2-P2(3)**2 - M2 * (M2 -CI* W2))
+    F2(3)= denom*(-CI )* FCT0*(F1(3)*(P2(0)*(V3(6)-V3(3))+(P2(1)*(V3(4)-CI*(V3(5)))+(P2(2)*(V3(5)+CI*(V3(4)))+P2(3)*(V3(6)-V3(3)))))+(F1(4)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-1d0)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(5)*(V3(3)+V3(6))+F1(6)*(V3(4)+CI*(V3(5))))))
+    F2(4)= denom*CI * FCT0*(F1(3)*(P2(0)*(+CI*(V3(5))-V3(4))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(+CI*(V3(5))-V3(4))+F1(6)*(V3(6)-V3(3)))))
+    F2(5)= denom*CI * FCT0*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(+CI*(V3(5))-V3(4))+(P2(2)*(-1d0)*(V3(5)+CI*(V3(4)))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(V3(6)-V3(3))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(V3(6)-V3(3))+F1(4)*(V3(4)+CI*(V3(5))))))
+    F2(6)= denom*(-CI )* FCT0*(F1(5)*(P2(0)*(+CI*(V3(5))-V3(4))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(+CI*(V3(5))-V3(4)))))+(F1(6)*(P2(0)*(V3(6)-V3(3))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(V3(5)-CI*(V3(4)))+P2(3)*(V3(6)-V3(3)))))+M2*(F1(3)*(+CI*(V3(5))-V3(4))+F1(4)*(V3(3)+V3(6)))))
+end
+
+
+"""        
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'cmath.exp( P(-1,3)*P(-1,3)) * Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1)
+        routine = amp.write(output_dir=None, language='Fortran')
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+
+        solution = """subroutine FFV1C1_1(F1, V3, COUP, M2, W2,F2)
+implicit none
+ complex*16 CI
+ parameter (CI=(0d0,1d0))
+ complex*16 F2(6)
+ complex*16 V3(*)
+ complex*16 TMP0
+ complex*16 mymdl_VEC
+ external mymdl_VEC
+ real*8 W2
+ real*8 P3(0:3)
+ complex*16 F1(*)
+ real*8 M2
+ complex*16 denom
+ real*8 P2(0:3)
+ complex*16 FCT1
+ complex*16 COUP
+P3(0) = dble(V3(1))
+P3(1) = dble(V3(2))
+P3(2) = dimag(V3(2))
+P3(3) = dimag(V3(1))
+    F2(1) = +F1(1)+V3(1)
+    F2(2) = +F1(2)+V3(2)
+P2(0) = -dble(F2(1))
+P2(1) = -dble(F2(2))
+P2(2) = -dimag(F2(2))
+P2(3) = -dimag(F2(1))
+ TMP0 = (P3(0)*P3(0)-P3(1)*P3(1)-P3(2)*P3(2)-P3(3)*P3(3))
+ FCT1 = mymdl_VEC(TMP0)
+    denom = COUP/(P2(0)**2-P2(1)**2-P2(2)**2-P2(3)**2 - M2 * (M2 -CI* W2))
+    F2(3)= denom*(-CI )* FCT1*(F1(3)*(P2(0)*(V3(6)-V3(3))+(P2(1)*(V3(4)-CI*(V3(5)))+(P2(2)*(V3(5)+CI*(V3(4)))+P2(3)*(V3(6)-V3(3)))))+(F1(4)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(-1d0)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(5)*(V3(3)+V3(6))+F1(6)*(V3(4)+CI*(V3(5))))))
+    F2(4)= denom*CI * FCT1*(F1(3)*(P2(0)*(+CI*(V3(5))-V3(4))+(P2(1)*(V3(3)-V3(6))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))+P2(3)*(V3(4)-CI*(V3(5))))))+(F1(4)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(-1d0)*(V3(4)+CI*(V3(5)))+(P2(2)*(+CI*(V3(4))-V3(5))-P2(3)*(V3(3)+V3(6)))))+M2*(F1(5)*(+CI*(V3(5))-V3(4))+F1(6)*(V3(6)-V3(3)))))
+    F2(5)= denom*CI * FCT1*(F1(5)*(P2(0)*(V3(3)+V3(6))+(P2(1)*(+CI*(V3(5))-V3(4))+(P2(2)*(-1d0)*(V3(5)+CI*(V3(4)))-P2(3)*(V3(3)+V3(6)))))+(F1(6)*(P2(0)*(V3(4)+CI*(V3(5)))+(P2(1)*(V3(6)-V3(3))+(P2(2)*(-CI*(V3(3))+CI*(V3(6)))-P2(3)*(V3(4)+CI*(V3(5))))))+M2*(F1(3)*(V3(6)-V3(3))+F1(4)*(V3(4)+CI*(V3(5))))))
+    F2(6)= denom*(-CI )* FCT1*(F1(5)*(P2(0)*(+CI*(V3(5))-V3(4))+(P2(1)*(V3(3)+V3(6))+(P2(2)*(-1d0)*(+CI*(V3(3)+V3(6)))+P2(3)*(+CI*(V3(5))-V3(4)))))+(F1(6)*(P2(0)*(V3(6)-V3(3))+(P2(1)*(V3(4)+CI*(V3(5)))+(P2(2)*(V3(5)-CI*(V3(4)))+P2(3)*(V3(6)-V3(3)))))+M2*(F1(3)*(+CI*(V3(5))-V3(4))+F1(4)*(V3(3)+V3(6)))))
+end
+
+
+"""        
+        FFV = UFOLorentz(name = 'FFV1',
+                 spins = [ 2, 2, 3 ],
+                 structure = 'mymdl_VEC( P(-1,3)*P(-1,3) ) * Gamma(3,2,1)')        
+        builder = create_aloha.AbstractRoutineBuilder(FFV)
+        builder.apply_conjugation()
+        amp = builder.compute_routine(1)
+        routine = amp.write(output_dir=None, language='Fortran')
+        split_solution = solution.split('\n')
+        split_routine = routine.split('\n')
+        self.assertEqual(split_solution, split_routine)
+        self.assertEqual(len(split_routine), len(split_solution))
+
+
+
     def test_short_fortranwriter_C(self):
         """ test that python writer works """
 

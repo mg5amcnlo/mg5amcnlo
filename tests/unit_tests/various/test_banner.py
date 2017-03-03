@@ -440,11 +440,29 @@ Beams:LHEF='events_ouaf.lhe.gz'
         read_PY8Card=bannermod.PY8Card(out)
         self.assertEqual(modified_PY8Card, read_PY8Card)
 
+import shutil
 class TestRunCard(unittest.TestCase):
     """ A class to test the TestConfig functionality """
     # a lot of the funtionality are actually already tested in the child
     # TESTMadLoopParam and are not repeated here.
-     
+    debugging=False
+
+    def setUp(self):
+        
+        if not self.debugging:
+            self.tmpdir = tempfile.mkdtemp(prefix='amc')
+            #if os.path.exists(self.tmpdir):
+            #    shutil.rmtree(self.tmpdir)
+            #os.mkdir(self.tmpdir)
+        else:
+            if os.path.exists(pjoin(MG5DIR, 'TEST_AMC')):
+                shutil.rmtree(pjoin(MG5DIR, 'TEST_AMC'))
+            os.mkdir(pjoin(MG5DIR, 'TEST_AMC'))
+            self.tmpdir = pjoin(MG5DIR, 'TEST_AMC')
+            
+    def tearDown(self):
+        if not self.debugging:
+            shutil.rmtree(self.tmpdir)
         
     def test_basic(self):
         """ """
@@ -481,21 +499,25 @@ class TestRunCard(unittest.TestCase):
         self.assertTrue(hasattr(run_card2, 'cuts_parameter'))   
               
   
+        self.assertFalse(self.debugging)
+
     def test_default(self):
       
         run_card = bannermod.RunCard()
-        fsock = tempfile.NamedTemporaryFile(mode = 'w')
+#        fsock = tempfile.NamedTemporaryFile(mode = 'w')
+        fsock = open(pjoin(self.tmpdir,'run_card_test'),'w')
         run_card.write(fsock)
-      
+        fsock.close()
         run_card2 = bannermod.RunCard(fsock.name)
       
         for key in run_card:
             self.assertEqual(run_card[key], run_card2[key])
       
         run_card = bannermod.RunCardNLO()
-        fsock = tempfile.NamedTemporaryFile(mode = 'w')
+#        fsock = tempfile.NamedTemporaryFile(mode = 'w')
+        fsock = open(pjoin(self.tmpdir,'run_card_test2'),'w')
         run_card.write(fsock)
-      
+        fsock.close()
         #card should be identical if we do not run the consistency post-processing
         run_card2 = bannermod.RunCard(fsock.name, consistency=False)
         for key in run_card:
@@ -518,9 +540,10 @@ class TestRunCard(unittest.TestCase):
         self.assertTrue(has_userset)
         
         #write run_card3 and check that nothing is changed
-        fsock2 = tempfile.NamedTemporaryFile(mode = 'w')
+#        fsock2 = tempfile.NamedTemporaryFile(mode = 'w')
+        fsock2 = open(pjoin(self.tmpdir,'run_card_test3'),'w')
         run_card3.write(fsock2)
-        
+        fsock2.close()
         self.assertEqual(open(fsock.name).read(), open(fsock2.name).read())
             
 
