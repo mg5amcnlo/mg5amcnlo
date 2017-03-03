@@ -128,7 +128,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         for processes which feature g/a > qqbar splitting.
         Check if the extra countertersm are found when needed"""
 
-        self.interface.do_set('include_initial_leptons_split True')
+        self.interface.do_set('include_lepton_initiated_processes True')
         self.interface.do_define('p p a')
         self.interface.do_generate('p p > t t~ QED=2 QCD=2 [real=QCD QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
@@ -180,7 +180,7 @@ class TestAMCatNLOEW(unittest.TestCase):
                 for real in proc.real_amps:
                     self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
         # avoid border effects
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
 
 
     def test_generate_fks_ew_extra_cnts_ttx_qed2qcd1(self):
@@ -190,7 +190,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         In this case the extra counterterms/splittings should not be 
         included in the gg since it is only needed for counterterms"""
 
-        self.interface.do_set('include_initial_leptons_split True')
+        self.interface.do_set('include_lepton_initiated_processes True')
         self.interface.do_define('p p a')
         self.interface.do_generate('p p > t t~ QED=2 QCD=1 [real=QCD QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
@@ -238,7 +238,7 @@ class TestAMCatNLOEW(unittest.TestCase):
                 for real in proc.real_amps:
                     self.assertEqual(real.fks_infos[0]['extra_cnt_index'], -1)
         # avoid border effects
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
 
 
 # other tests for the extra cnts for dijet
@@ -251,7 +251,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QCD corrections to the leftmost blob.
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         self.interface.do_generate('u u~ > jj jj QED=0 QCD=2 [real=QCD]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
@@ -282,7 +282,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QED corrections to the rightmost blob.
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         self.interface.do_generate('u u~ > jj jj QED=2 QCD=0 [real=QED]')
         quarks = [-1,-2,-3,-4,1,2,3,4]
@@ -314,7 +314,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         or, equivalently, QCD corrections to the central blob
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -370,7 +370,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         or, equivalently, QCD corrections to the rightmost blob
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -421,7 +421,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QED and QCD corrections to the leftmost blob
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -475,7 +475,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QED and QCD corrections to the central blob
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -531,7 +531,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QED and QCD corrections to the rightmost blob,
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -581,7 +581,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QCD corrections to the leftmost and central blobs
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -636,7 +636,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         or, equivalently, QCD corrections to the rightmost and central blob
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -703,7 +703,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QED corrections to the rightmost and central blobs,
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -753,7 +753,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QCD corrections to the three blobs
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -823,7 +823,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         considering the NLO QCD corrections to the tree blobs
         No extra cnts should be there"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -894,7 +894,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         Here we will use a simplified dijet case, u u~ > g/a g/a
         with all born orders and all corrections"""
 
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')
         self.interface.do_define('jj = g a')
         quarks = [-1,-2,-3,-4,1,2,3,4]
 
@@ -1169,7 +1169,7 @@ class TestAMCatNLOEW(unittest.TestCase):
 
 
     def test_include_lep_split(self):
-        """test that the include_initial_leptons_split options works as expected"""
+        """test that the include_lepton_initiated_processes options works as expected"""
         interface = mgcmd.MasterCmd()
         leptons=[11,13,15]
         quarks=[1,2,3,4,5]
@@ -1188,7 +1188,7 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[2]]))
 
         # now set it to true
-        self.interface.do_set('include_initial_leptons_split True')
+        self.interface.do_set('include_lepton_initiated_processes True')
         # initial state leptons
         self.interface.do_generate('a a > w+ w- QED=2 QCD=0 [real=QED]')
         fksproc = self.interface._fks_multi_proc['born_processes'][0]
@@ -1196,4 +1196,4 @@ class TestAMCatNLOEW(unittest.TestCase):
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[0]]))
         self.assertTrue(any([leptons[0] in [abs(l['id']) for l in real['leglist']] for real in reals[1]]))
         # avoid border effects
-        self.interface.do_set('include_initial_leptons_split False')
+        self.interface.do_set('include_lepton_initiated_processes False')

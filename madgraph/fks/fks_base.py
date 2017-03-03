@@ -201,12 +201,28 @@ class FKSMultiProcess(diagram_generation.MultiProcess): #test written
                     break
 
         amps = self.get('amplitudes')
+
+        # get the list of leptons from the model, in order to discard 
+        # lepton-initiated processes unless the init_lep_split flag is specified
+        if self['process_definitions']:
+            leptons = self['process_definitions'][0]['model'].get_lepton_pdgs()
+        else:
+            leptons = []
+
         #generate reals, but combine them after having combined the borns
         for i, amp in enumerate(amps):
+            # skip amplitudes with two initial leptons unless the init_lep_split option is True
+            if not self['init_lep_split'] and \
+                    all([l['id'] in leptons \
+                    for l in [ll for ll in amp.get('process').get('legs') if not ll['state']]]):
+                logger.info(('Discarding process%s.\n  If you want to include it, set the \n' + \
+                             '  \'include_lepton_initiated_processes\' option to True') % \
+                             amp.get('process').nice_string().replace('Process', ''))
+                continue
+
             logger.info("Generating FKS-subtracted matrix elements for born process%s (%d / %d)" \
-                % (amp['process'].nice_string(print_weighted=False).replace(\
-                                                                 'Process', ''),
-                 i + 1, len(amps)))
+                % (amp['process'].nice_string(print_weighted=False).replace('Process', ''),
+                   i + 1, len(amps)))
 
             born = FKSProcess(amp, ncores_for_proc_gen = self['ncores_for_proc_gen'], \
                                    init_lep_split=self['init_lep_split'])
@@ -807,16 +823,25 @@ class FKSProcess(object):
         else:
             decay_process=False
 
+        # count the number of initial-state leptons
+        ninit_lep = [l['id'] in model.get_lepton_pdgs() and not l['state'] for l in leglist].count(True)
+
         for i in leglist:
             i_i = i['number'] - 1
             self.reals.append([])
             for pert_order in pert_orders:
+                # no splittings for initial states in decay processes
                 if decay_process and not i['state']:
+                    splittings=[]
+                # if there are leptons in the initial state and init_lep_split is False,
+                # only split initial state leptons; do nothing for any other particle
+                elif not self.init_lep_split and ninit_lep >= 1 and \
+                  (i['state'] or i['id'] not in model.get_lepton_pdgs()):
                     splittings=[]
                 else:
                     splittings = fks_common.find_splittings( \
                         i, model, {}, pert_order, \
-                        include_leptons=self.init_lep_split or i['state'])
+                        include_init_leptons=self.init_lep_split)
                 for split in splittings:
                     # find other 'mother' particles which can end up in the same splitting
                     extra_mothers = {}

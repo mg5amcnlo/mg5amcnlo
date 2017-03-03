@@ -101,6 +101,34 @@ class TestFKSQED(unittest.TestCase):
             TestFKSQED.fksmultiproc_ppjj = \
                     fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict))
 
+        #quark/electron production, to test the init_lep_split flag 
+        if not hasattr(self, 'fksmultiproc_uuee_wlepotns') or \
+           not hasattr(self, 'fksmultiproc_uuee_nolepotns'):
+            multi_ids = [1, -1, 11, -11]
+            p = MG.MultiLeg({'ids': multi_ids, 'state': False})
+            j = MG.MultiLeg({'ids': multi_ids, 'state': True})
+            leglist = MG.MultiLegList([p, p, j, j])
+
+            procdef_dict = {'legs': leglist, 
+                           'orders':{},
+                           'model': self.mymodel,
+                           'id': 1,
+                           'NLO_mode': 'real',
+                           'required_s_channels':[],
+                           'forbidden_s_channels':[],
+                           'forbidden_particles':[],
+                           'is_decay_chain': False,
+                           'perturbation_couplings':['QED'],
+                           'decay_chains': MG.ProcessList(),
+                           'overall_orders': {},
+                           'squared_orders': {'QCD':0, 'QED':6},
+                           'born_orders':{'QCD':0, 'QED':6}}
+             
+            TestFKSQED.fksmultiproc_uuee_wlepotns = \
+                    fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict), {'init_lep_split': True})
+            TestFKSQED.fksmultiproc_uuee_nolepotns = \
+                    fks_base.FKSMultiProcess(MG.ProcessDefinition(procdef_dict), {'init_lep_split': False})
+
 
     def test_qqtoqqQed(self):
         """test the dijet QED corrections for a subprocess"""
@@ -129,6 +157,40 @@ class TestFKSQED(unittest.TestCase):
         # a gluon
         self.assertEqual(len(fksproc.reals[2]), 2)
         self.assertEqual(len(fksproc.reals[3]), 2)
+
+
+    def test_uuee_leptons(self):
+        """test the correct usage of the init_lep_split flag"""
+
+        fksmultiproc_wlep = self.fksmultiproc_uuee_wlepotns
+        fksmultiproc_nolep = self.fksmultiproc_uuee_nolepotns
+        #check that the correct orders are set for the real amplitudes
+
+        #there should be 16 born processes with leptons and 12 without 
+        # (remeber, without leptons means no born process with BOTH initial-
+        # state leptons, so things like u e- > u e- are kept)
+        self.assertEqual(len(fksmultiproc_wlep['born_processes']), 20)
+        self.assertEqual(len(fksmultiproc_nolep['born_processes']), 14)
+
+        pdg_list_wlep = [born.get_pdg_codes() for born in fksmultiproc_wlep['born_processes']]
+        pdg_list_nolep = [born.get_pdg_codes() for born in fksmultiproc_nolep['born_processes']]
+
+        # check that in fksmultiproc_nolep the only real emissions for the processes
+        # with leptons in the initial states (u e) have (u a) in the initial state
+        # and check that the real emission of the other processes are identical
+        # as for the case with leptons
+        checked_nolep = 0
+        for ib, born in enumerate(fksmultiproc_nolep['born_processes']):
+            if [abs(pdg) for pdg in born.get_pdg_codes()[0:2]] in [[1, 11], [11, 1]]:
+                checked_nolep += 1
+                for real in born.real_amps:
+                    self.assertTrue(list(real.pdgs)[0:2] in [[1, 22], [-1, 22], [22, 1], [22, -1]])
+            else:
+                born2 = fksmultiproc_wlep['born_processes'][pdg_list_wlep.index(pdg_list_nolep[ib])]
+                self.assertEqual(len(born.real_amps), len(born2.real_amps))
+
+        # there should be 8 processes with one initial state lepton in fksmultiproc_nolep
+        self.assertEqual(checked_nolep, 8)
         
 
     def test_pptojj_2flav(self):
@@ -138,8 +200,8 @@ class TestFKSQED(unittest.TestCase):
         #check that the correct orders are set for the real amplitudes
         born_pdg_list = [amp.get_pdg_codes() for amp in fksmultiproc['born_processes']]
 
-        #there should be 35 born processes
-        self.assertEqual(len(fksmultiproc['born_processes']), 35)
+        #there should be 59 born processes
+        self.assertEqual(len(fksmultiproc['born_processes']), 59)
 
         for born in fksmultiproc['born_processes']:
             for real in born.real_amps:

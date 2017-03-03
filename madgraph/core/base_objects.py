@@ -1358,12 +1358,40 @@ class Model(PhysicsObject):
                 p ['color'] != 1 and p['mass'].lower() == 'zero'])
 
 
+    def get_quark_pdgs(self):
+        """returns the PDG codes of the light quarks and antiquarks"""
+        pdg_list = [p['pdg_code'] for p in self.get('particles') \
+                       if p['spin'] == 2 and \
+                       p['color'] == 3 and \
+                       p['charge'] != 0. and p['mass'].lower() == 'zero']
+
+        for p in pdg_list[:]:
+            if not self.get('particle_dict')[p]['self_antipart']:
+                pdg_list.append(self.get('particle_dict')[p].get_anti_pdg_code())
+                
+        return sorted(pdg_list)
+
+
     def get_nleps(self):
-        """returns the number of light quark flavours in the model."""
+        """returns the number of light lepton flavours in the model."""
         return len([p for p in self.get('particles') \
                 if p['spin'] == 2 and p['is_part'] and \
                 p['color'] == 1 and \
                 p['charge'] != 0. and p['mass'].lower() == 'zero'])
+
+
+    def get_lepton_pdgs(self):
+        """returns the PDG codes of the light leptons and antileptons"""
+        pdg_list = [p['pdg_code'] for p in self.get('particles') \
+                       if p['spin'] == 2 and \
+                       p['color'] == 1 and \
+                       p['charge'] != 0. and p['mass'].lower() == 'zero']
+
+        for p in pdg_list[:]:
+            if not self.get('particle_dict')[p]['self_antipart']:
+                pdg_list.append(self.get('particle_dict')[p].get_anti_pdg_code())
+                
+        return sorted(pdg_list)
 
     
     def get_particles_hierarchy(self):

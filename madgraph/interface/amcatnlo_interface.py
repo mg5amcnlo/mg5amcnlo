@@ -540,7 +540,7 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         # this is the options dictionary to pass to the FKSMultiProcess
         fks_options = {'OLP': self.options['OLP'],
                        'ignore_six_quark_processes': self.options['ignore_six_quark_processes'],
-                       'init_lep_split': self.options['include_initial_leptons_split'],
+                       'init_lep_split': self.options['include_lepton_initiated_processes'],
                        'ncores_for_proc_gen': self.ncores_for_proc_gen}
         try:
             self._fks_multi_proc.add(fks_base.FKSMultiProcess(myprocdef,fks_options))

@@ -744,7 +744,7 @@ class HelpToCmd(cmd.HelpCmd):
         logger.info("complex_mass_scheme True|False",'$MG:color:GREEN')
         logger.info(" > (default False) Set complex mass scheme.")
         logger.info(" > Complex mass scheme is not yet supported for loop processes.")
-        logger.info("include_initial_leptons_split True|False",'$MG:color:GREEN')
+        logger.info("include_lepton_initiated_processes True|False",'$MG:color:GREEN')
         logger.info(" > (default False) Do not include real emission with leptons in the initial state.")
         logger.info("timeout VALUE",'$MG:color:GREEN')
         logger.info(" > (default 20) Seconds allowed to answer questions.")
@@ -1375,7 +1375,7 @@ This will take effect only in a NEW terminal
         if len(args) == 1 and args[0] in ['complex_mass_scheme',\
                                           'loop_optimized_output',\
                                           'loop_color_flows',\
-                                          'include_initial_leptons_split',\
+                                          'include_lepton_initiated_processes',\
                                           'low_mem_multicore_nlo_generation']:
             args.append('True')
 
@@ -2463,7 +2463,7 @@ class CompleteForCmd(cmd.CompleteCmd):
         if len(args) == 2:
             if args[1] in ['group_subprocesses', 'complex_mass_scheme',\
                            'loop_optimized_output', 'loop_color_flows',\
-                           'include_initial_leptons_split',\
+                           'include_lepton_initiated_processes',\
                            'low_mem_multicore_nlo_generation']:
                 return self.list_completion(text, ['False', 'True', 'default'])
             elif args[1] in ['ignore_six_quark_processes']:
@@ -2756,7 +2756,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                     'cpp_compiler',
                     'loop_optimized_output',
                     'complex_mass_scheme',
-                    'include_initial_leptons_split',
+                    'include_lepton_initiated_processes',
                     'gauge',
                     'EWscheme',
                     'max_npoint_for_channel']
@@ -2814,7 +2814,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                           'ignore_six_quark_processes': False,
                           'low_mem_multicore_nlo_generation': False,
                           'complex_mass_scheme': False,
-                          'include_initial_leptons_split': False,
+                          'include_lepton_initiated_processes': False,
                           'gauge':'unitary',
                           'stdout_level':None,
                           'loop_optimized_output':True,

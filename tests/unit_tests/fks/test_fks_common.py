@@ -909,6 +909,8 @@ class TestFKSCommon(unittest.TestCase):
         res_list_qcd = []
         leg_list_qed = []
         res_list_qed = []
+        res_list_qed_noleptons = []
+
         # QCD splitting
         #INITIAL STATE SPLITTINGS
         # u to u>g u or g>u~u
@@ -930,6 +932,7 @@ class TestFKSCommon(unittest.TestCase):
                                  'state' : True,
                                  'fks' : 'i'})], self.model)
                                  ])
+
         # g to g>gg or g>uu~ or g>u~u or g>dd~ or g>d~d
         leg_list_qcd.append( MG.Leg({'id' : 21, 
                                  'state' : False, 
@@ -984,6 +987,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #d to dg
         leg_list_qcd.append( MG.Leg({'id' : 1, 
                                  'state' : True, 
@@ -995,6 +999,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #t to tg
         leg_list_qcd.append( MG.Leg({'id' : 6, 
                                  'state' : True, 
@@ -1018,6 +1023,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #d~ to dg
         leg_list_qcd.append( MG.Leg({'id' : -1, 
                                  'state' : True, 
@@ -1029,6 +1035,7 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 21, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+
         #t~ to tg
         leg_list_qcd.append( MG.Leg({'id' : -6, 
                                  'state' : True, 
@@ -1089,6 +1096,9 @@ class TestFKSCommon(unittest.TestCase):
                                  'state' : True,
                                  'fks' : 'i'})], self.model)
                                  ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         # a or u>ua or u~>u~a or d>da or d~>d~a or e->e-a or e+>e+a
         leg_list_qed.append( MG.Leg({'id' : 22, 
                                  'state' : False, 
@@ -1137,7 +1147,38 @@ class TestFKSCommon(unittest.TestCase):
                                  'fks' : 'i'})], self.model)
                                  ]
                                  )
-        # FINAL STATE splitting
+        res_list_qed_noleptons.append([fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 1, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 1, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -1, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -1, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : 2, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : 2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model),
+                        fks_common.to_fks_legs(
+                        [fks_common.FKSLeg({'id' : -2, 
+                                 'state' : False,
+                                 'fks' : 'j'}),
+                        fks_common.FKSLeg({'id' : -2, 
+                                 'state' : True,
+                                 'fks' : 'i'})], self.model)
+                                 ]
+                                 )
+
+        # FINAL STATE splittings
         #u~ to da
         leg_list_qed.append( MG.Leg({'id' : -2, 
                                  'state' : True, 
@@ -1149,6 +1190,9 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         #d~ to da
         leg_list_qed.append( MG.Leg({'id' : -1, 
                                  'state' : True, 
@@ -1160,6 +1204,9 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         #e+ to e+a
         leg_list_qed.append( MG.Leg({'id' : -11, 
                                  'state' : True, 
@@ -1171,7 +1218,9 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
-        
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
+
         #t~ to ta
         leg_list_qed.append( MG.Leg({'id' : -6, 
                                  'state' : True, 
@@ -1183,6 +1232,8 @@ class TestFKSCommon(unittest.TestCase):
                         fks_common.FKSLeg({'id' : 22, 
                                  'state' : True,
                                  'fks' : 'i'})], self.model) ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
         
         #a > e-e+ or uu~ or dd~
         leg_list_qed.append( MG.Leg({'id' : 22, 
@@ -1210,14 +1261,25 @@ class TestFKSCommon(unittest.TestCase):
                                  'state' : True,
                                  'fks' : 'i'})], self.model)
                         ])
+        # same without leptons
+        res_list_qed_noleptons.append(res_list_qed[-1])
 
+        # now check the results
+        #QCD
         for leg, res in zip (leg_list_qcd, res_list_qcd):    
             self.assertEqual(res, 
                              fks_common.find_splittings(leg, self.model, {},pert='QCD') )
-            
+            # nothing should change if the include_init_leptons Flag is set to False
+            self.assertEqual(res, 
+                             fks_common.find_splittings(leg, self.model, {},pert='QCD', include_init_leptons=False) )
+        #QED    
         for leg, res in zip (leg_list_qed, res_list_qed):   
             self.assertEqual(res, 
                              fks_common.find_splittings(leg, self.model, {},pert='QED') )               
+        for leg, res in zip (leg_list_qed, res_list_qed_noleptons):   
+            # if the include_init_leptons flag is true, one should have different splittings in this case
+            self.assertEqual(res, 
+                             fks_common.find_splittings(leg, self.model, {},pert='QED', include_init_leptons=False) )               
     
     def test_insert_legs(self):
         """test the correct implementation of the fks_common function"""
