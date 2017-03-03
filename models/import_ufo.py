@@ -86,7 +86,7 @@ def find_ufo_path(model_name):
         raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     
 
-    return model_path
+    return
 
 def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
                                                     complex_mass_scheme = None):
@@ -177,6 +177,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
             keep_external=False
         if keep_external:
             logger.info('Detect SLHA2 format. keeping restricted parameter in the param_card')
+            
         model.restrict_model(restrict_file, rm_parameter=not decay,
            keep_external=keep_external, complex_mass_scheme=complex_mass_scheme)
         model.path = model_path
@@ -187,8 +188,7 @@ def import_model(model_name, decay=False, restrict=True, prefix='mdl_',
         else:
             # It might be that the default of the model (i.e. 'CMSParam') is CMS.
             model.change_mass_to_complex_scheme(toCMS=False)
-
-        
+      
     return model
     
 
@@ -1592,12 +1592,8 @@ class RestrictModel(model_reader.ModelReader):
 
         # compute the value of all parameters
         # Get the list of definition of model functions, parameter values. 
-        self.set_parameters_and_couplings(param_card, 
+        model_definitions = self.set_parameters_and_couplings(param_card, 
                                         complex_mass_scheme=complex_mass_scheme)
-        
-        
-        # Keep the list of definition of model functions, parameter values. 
-        model_definitions = self.set_parameters_and_couplings(param_card)
         
         # Simplify conditional statements
         logger.debug('Simplifying conditional expressions')

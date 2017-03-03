@@ -1557,7 +1557,10 @@ try:
             notification.setTitle_('MadGraph5_aMC@NLO')
             notification.setSubtitle_(subtitle)
             notification.setInformativeText_(info_text)
-            notification.setUserInfo_(userInfo)
+            try:
+                notification.setUserInfo_(userInfo)
+            except:
+                pass
             NSUserNotificationCenter.defaultUserNotificationCenter().scheduleNotification_(notification)
         except:
             pass

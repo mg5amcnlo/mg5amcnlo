@@ -1607,8 +1607,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                             if t not in ['errorset', 'central']]
         
         # Copy all the relevant PDF sets
-        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
-            
+        try:
+            [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('impossible to download all the pdfsets. Bypass systematics')
+            return
         
         if self.options['run_mode'] ==2:
             nb_submit = min(self.options['nb_core'], nb_event//2500)

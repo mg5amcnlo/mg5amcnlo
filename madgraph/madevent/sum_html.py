@@ -663,7 +663,7 @@ function check_link(url,alt, id){
 </script>
 """ 
 
-def collect_result(cmd, folder_names, jobs):
+def collect_result(cmd, folder_names, jobs=None):
     """ """ 
 
     run = cmd.results.current['run_name']

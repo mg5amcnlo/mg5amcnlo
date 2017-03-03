@@ -50,6 +50,11 @@ import numbers
 import re
 import aloha # define mode of writting
 
+try:
+    import madgraph.various.misc as misc
+except Exception:
+    import aloha.misc as misc
+
 class defaultdict(collections.defaultdict):
 
     def __call__(self, *args):
@@ -158,7 +163,6 @@ class Computation(dict):
         # check if the function is a pure numerical function.
         if (fct_tag.startswith('cmath.') or fct_tag in self.known_fct) and \
                     all(isinstance(x, numbers.Number) for x in argument):
-            print "start the hack"
             import cmath
             if fct_tag.startswith('cmath.'):
                 module = ''
@@ -1056,7 +1060,8 @@ class LorentzObjectRepresentation(dict):
         self.spin_ind = spin_indices #spin indices
         self.nb_spin = len(spin_indices) #their number
         self.nb_ind = self.nb_lor + self.nb_spin #total number of indices
-                
+        
+        
         #store the representation
         if self.lorentz_ind or self.spin_ind:
             dict.__init__(self, representation) 
