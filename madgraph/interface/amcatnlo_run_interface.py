@@ -2199,7 +2199,6 @@ RESTART = %(mint_mode)s
         
         logger.info('Combining lhe events for plotting analysis')
         start = time.time()
-        misc.sprint(self.run_card['fo_lhe_postprocessing'])
         self.run_card['fo_lhe_postprocessing'] = [i.lower() for i in self.run_card['fo_lhe_postprocessing']]
         output = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
         if os.path.exists(output):

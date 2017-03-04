@@ -274,7 +274,7 @@ class EventFile(object):
                     text=''
                     mode=1
                 elif '</event>' in line:
-                    if parsing:
+                    if self.parsing:
                         events.append(Event(text))
                     else:
                         events.append(text)
