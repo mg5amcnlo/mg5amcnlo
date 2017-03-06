@@ -4957,7 +4957,7 @@ tar -czf split_$1.tar.gz split_$1
             exename = os.path.basename(exe)
             # For condor cluster, create the input/output files
             if 'ajob' in exename: 
-                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat','dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
                   'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
@@ -5001,7 +5001,7 @@ tar -czf split_$1.tar.gz split_$1
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
             elif 'survey' in exename:
-                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat', 'dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
                   'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
@@ -5053,7 +5053,7 @@ tar -czf split_$1.tar.gz split_$1
                              input_files=input_files, output_files=output_files,
                              required_output=required_output, **opt)
             elif "refine_splitted.sh" in exename:
-                input_files = ['madevent','symfact.dat','iproc.dat',
+                input_files = ['madevent','symfact.dat','iproc.dat', 'dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses',
