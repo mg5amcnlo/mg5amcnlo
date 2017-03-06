@@ -5761,7 +5761,7 @@ tar -czf split_$1.tar.gz split_$1
                 options += ['delphes',   'delphes=ON', 'delphes=OFF']             
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['detector'] = 'DELPHES'
-                else:
+                elif switch['detector'] not in ['PGS']:
                     switch['detector'] = 'OFF'
             elif valid_options['detector'] == ['OFF']:
                 switch['detector'] = "Requires a shower"
