@@ -4602,7 +4602,7 @@ RESTART = %(mint_mode)s
             not os.path.exists(os.path.realpath(pjoin(libdir, 'mpmodule.mod'))):
             if  os.path.exists(pjoin(sourcedir,'CutTools')):
                 logger.info('Compiling CutTools (can take a couple of minutes) ...')
-                misc.compile(['CutTools'], cwd = sourcedir)
+                misc.compile(['CutTools','-j1'], cwd = sourcedir, nb_core=1)
                 logger.info('          ...done.')
             else:
                 raise aMCatNLOError('Could not compile CutTools because its'+\
@@ -4624,7 +4624,7 @@ RESTART = %(mint_mode)s
                     logger.info('CutTools was compiled with a different fortran'+\
                                             ' compiler. Re-compiling it now...')
                     misc.compile(['cleanCT'], cwd = sourcedir)
-                    misc.compile(['CutTools'], cwd = sourcedir)
+                    misc.compile(['CutTools','-j1'], cwd = sourcedir, nb_core=1)
                     logger.info('          ...done.')
                 else:
                     raise aMCatNLOError("CutTools installation in %s"\

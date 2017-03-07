@@ -6254,7 +6254,7 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
 
             # Re-compile CutTools and IREGI
             if os.path.isfile(pjoin(MG5DIR,'vendor','CutTools','includects','libcts.a')):
-                misc.compile(cwd=pjoin(MG5DIR,'vendor','CutTools'))
+                misc.compile(arg=['-j1'],cwd=pjoin(MG5DIR,'vendor','CutTools'),nb_core=1)
             if os.path.isfile(pjoin(MG5DIR,'vendor','IREGI','src','libiregi.a')):
                 misc.compile(cwd=pjoin(MG5DIR,'vendor','IREGI','src'))
 
