@@ -202,7 +202,7 @@ class IOExportMadLoopUnitTest(IOTests.IOTestManager):
                                        exporters = 'default',
                                        orders = {'QCD': 2, 'QED': 2} )
 
-    def testIO_ProcOutputIOTests(self, load_only=False):
+    def testIO_UnitProcOutputIOTests(self, load_only=False):
       """ Run the iotests """
       
       self.load_IOTestsUnit()      

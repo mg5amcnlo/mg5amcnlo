@@ -2081,9 +2081,10 @@ class LoopProcessOptimizedExporterFortranSA(LoopProcessExporterFortranSA):
                 final_lwf = lamp.get_final_loop_wavefunction()
                 while not final_lwf is None:
                     # We define here an HEFT vertex as any vertex built up from
-                    # only massless vectors and scalars (at least one of each)
+                    # only massless vectors and massive scalars (at least one of each)
+                    # We ask for massive scalars in part to remove the gluon ghost false positive.
                     scalars = len([1 for wf in final_lwf.get('mothers') if 
-                                                             wf.get('spin')==1])
+                                    wf.get('spin')==1 and wf.get('mass')!='ZERO'])
                     vectors = len([1 for wf in final_lwf.get('mothers') if 
                                   wf.get('spin')==3 and wf.get('mass')=='ZERO'])
                     if scalars>=1 and vectors>=1 and \

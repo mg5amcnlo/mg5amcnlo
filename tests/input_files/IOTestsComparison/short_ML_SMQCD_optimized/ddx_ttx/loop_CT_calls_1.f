@@ -95,27 +95,27 @@ C      if true.
         GOTO 1001
       ENDIF
 
-C     CutTools call for loop numbers 1,10,11
+C     CutTools call for loop numbers 1,8,9
       CALL ML5_0_LOOP_2(5,6,DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO,1)
 C     CutTools call for loop numbers 2
-      CALL ML5_0_LOOP_4(1,2,4,3,DCMPLX(ZERO),DCMPLX(ZERO)
-     $ ,DCMPLX(MDL_MT),DCMPLX(ZERO),2,I_SO,2)
+      CALL ML5_0_LOOP_3(3,4,5,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,2,I_SO,2)
 C     CutTools call for loop numbers 3
-      CALL ML5_0_LOOP_4(1,2,3,4,DCMPLX(ZERO),DCMPLX(ZERO)
-     $ ,DCMPLX(MDL_MT),DCMPLX(ZERO),2,I_SO,3)
+      CALL ML5_0_LOOP_3(3,4,5,DCMPLX(ZERO),DCMPLX(MDL_MT)
+     $ ,DCMPLX(MDL_MT),2,I_SO,3)
 C     CutTools call for loop numbers 4,5
       CALL ML5_0_LOOP_3(1,2,6,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
      $ ,I_SO,4)
 C     CutTools call for loop numbers 6
-      CALL ML5_0_LOOP_2(5,6,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,5)
+      CALL ML5_0_LOOP_4(1,2,4,3,DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(MDL_MT),DCMPLX(ZERO),2,I_SO,5)
 C     CutTools call for loop numbers 7
-      CALL ML5_0_LOOP_2(5,6,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,I_SO,6)
-C     CutTools call for loop numbers 8
-      CALL ML5_0_LOOP_3(3,4,5,DCMPLX(ZERO),DCMPLX(MDL_MT)
-     $ ,DCMPLX(MDL_MT),2,I_SO,7)
-C     CutTools call for loop numbers 9
-      CALL ML5_0_LOOP_3(3,4,5,DCMPLX(MDL_MT),DCMPLX(ZERO),DCMPLX(ZERO)
-     $ ,2,I_SO,8)
+      CALL ML5_0_LOOP_4(1,2,3,4,DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(MDL_MT),DCMPLX(ZERO),2,I_SO,6)
+C     CutTools call for loop numbers 10
+      CALL ML5_0_LOOP_2(5,6,DCMPLX(MDL_MB),DCMPLX(MDL_MB),2,I_SO,7)
+C     CutTools call for loop numbers 11
+      CALL ML5_0_LOOP_2(5,6,DCMPLX(MDL_MT),DCMPLX(MDL_MT),2,I_SO,8)
 
       GOTO 1001
  5000 CONTINUE

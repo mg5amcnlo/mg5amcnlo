@@ -325,12 +325,12 @@ C            component
 
 
 
-      SUBROUTINE ML5_0_LOOP_2_3(P1, P2, W1, W2, W3, M1, M2,  RANK,
-     $  SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_3_4(P1, P2, P3, W1, W2, W3, W4, M1, M2, M3
+     $ ,  RANK, SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=2)
+      PARAMETER (NLOOPLINE=3)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NLOOPGROUPS
@@ -343,9 +343,9 @@ C     These are constants related to the split orders
 C     
 C     ARGUMENTS 
 C     
-      INTEGER W1, W2, W3
-      COMPLEX*16 M1, M2
-      INTEGER P1, P2
+      INTEGER W1, W2, W3, W4
+      COMPLEX*16 M1, M2, M3
+      INTEGER P1, P2, P3
       INTEGER RANK, LSYMFACT
       INTEGER LOOPNUM, SQUAREDSOINDEX
 C     
@@ -354,7 +354,7 @@ C
       REAL*8 PL(0:3,NLOOPLINE)
       REAL*16 MP_PL(0:3,NLOOPLINE)
       COMPLEX*16 M2L(NLOOPLINE)
-      INTEGER PAIRING(NLOOPLINE),WE(3)
+      INTEGER PAIRING(NLOOPLINE),WE(4)
       INTEGER I, J, K, TEMP,I_LIB
       LOGICAL COMPLEX_MASS,DOING_QP
 C     
@@ -400,10 +400,13 @@ C     Determine it uses qp or not
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
-        M2L(1)=M2**2
+        WE(4)=W4
+        M2L(1)=M3**2
         M2L(2)=M1**2
+        M2L(3)=M2**2
         PAIRING(1)=P1
         PAIRING(2)=P2
+        PAIRING(3)=P3
         R=RANK
         ID=LOOPNUM
         SQSOINDEX=SQUAREDSOINDEX
@@ -592,12 +595,12 @@ C         Tensor Integral Reduction is used
       ENDIF
       END
 
-      SUBROUTINE ML5_0_LOOP_3_4(P1, P2, P3, W1, W2, W3, W4, M1, M2, M3
-     $ ,  RANK, SQUAREDSOINDEX, LOOPNUM)
+      SUBROUTINE ML5_0_LOOP_2_3(P1, P2, W1, W2, W3, M1, M2,  RANK,
+     $  SQUAREDSOINDEX, LOOPNUM)
       INTEGER    NEXTERNAL
       PARAMETER (NEXTERNAL=4)
       INTEGER    NLOOPLINE
-      PARAMETER (NLOOPLINE=3)
+      PARAMETER (NLOOPLINE=2)
       INTEGER    NWAVEFUNCS
       PARAMETER (NWAVEFUNCS=10)
       INTEGER    NLOOPGROUPS
@@ -610,9 +613,9 @@ C     These are constants related to the split orders
 C     
 C     ARGUMENTS 
 C     
-      INTEGER W1, W2, W3, W4
-      COMPLEX*16 M1, M2, M3
-      INTEGER P1, P2, P3
+      INTEGER W1, W2, W3
+      COMPLEX*16 M1, M2
+      INTEGER P1, P2
       INTEGER RANK, LSYMFACT
       INTEGER LOOPNUM, SQUAREDSOINDEX
 C     
@@ -621,7 +624,7 @@ C
       REAL*8 PL(0:3,NLOOPLINE)
       REAL*16 MP_PL(0:3,NLOOPLINE)
       COMPLEX*16 M2L(NLOOPLINE)
-      INTEGER PAIRING(NLOOPLINE),WE(4)
+      INTEGER PAIRING(NLOOPLINE),WE(3)
       INTEGER I, J, K, TEMP,I_LIB
       LOGICAL COMPLEX_MASS,DOING_QP
 C     
@@ -667,13 +670,10 @@ C     Determine it uses qp or not
         WE(1)=W1
         WE(2)=W2
         WE(3)=W3
-        WE(4)=W4
-        M2L(1)=M3**2
+        M2L(1)=M2**2
         M2L(2)=M1**2
-        M2L(3)=M2**2
         PAIRING(1)=P1
         PAIRING(2)=P2
-        PAIRING(3)=P3
         R=RANK
         ID=LOOPNUM
         SQSOINDEX=SQUAREDSOINDEX

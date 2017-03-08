@@ -745,144 +745,148 @@ C         Amplitude(s) for born diagram with ID 3
           CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),GC_5,AMP(3,H))
           CALL FFV1P0_3(W(1,4,H),W(1,3,H),GC_5,ZERO,ZERO,W(1,8,H))
 C         Counter-term amplitude(s) for loop diagram number 4
-          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,1))
-          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,2))
-          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,3))
-          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,4))
-C         Counter-term amplitude(s) for loop diagram number 5
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,5))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,6))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,7))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,8))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB,AMPL(1,9))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,10)
-     $     )
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GT,AMPL(1,11))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,12)
-     $     )
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GG_1EPS,AMPL(2,13)
-     $     )
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,14))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,15))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,16))
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,17))
-C         Counter-term amplitude(s) for loop diagram number 7
-          CALL R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,8,H),R2_GGQ,R2_GGB
-     $     ,AMPL(1,18))
-C         Counter-term amplitude(s) for loop diagram number 8
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,19))
-C         Counter-term amplitude(s) for loop diagram number 10
-          CALL R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,8,H),R2_GGQ,R2_GGT
-     $     ,AMPL(1,20))
-C         Counter-term amplitude(s) for loop diagram number 11
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,21))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,22))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,23))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,24))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQB,AMPL(1,25))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,26))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQT,AMPL(1,27))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,28))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQG_1EPS,AMPL(2
-     $     ,29))
-          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),R2_GQQ,AMPL(1,30))
-          CALL FFV1_2(W(1,4,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,9,H))
-C         Counter-term amplitude(s) for loop diagram number 13
-          CALL R2_QQ_1_R2_QQ_2_0(W(1,9,H),W(1,6,H),R2_QQQ,R2_QQT
-     $     ,AMPL(1,31))
-          CALL R2_QQ_2_0(W(1,9,H),W(1,6,H),UV_TMASS,AMPL(1,32))
-          CALL R2_QQ_2_0(W(1,9,H),W(1,6,H),UV_TMASS_1EPS,AMPL(2,33))
-C         Counter-term amplitude(s) for loop diagram number 14
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,34))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,35))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,36))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,37))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQB,AMPL(1,38))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,39))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQT,AMPL(1,40))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,41))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQG_1EPS,AMPL(2
-     $     ,42))
-          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),R2_GQQ,AMPL(1,43))
-          CALL FFV1_1(W(1,3,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,10,H))
-C         Counter-term amplitude(s) for loop diagram number 16
-          CALL R2_QQ_1_R2_QQ_2_0(W(1,7,H),W(1,10,H),R2_QQQ,R2_QQT
-     $     ,AMPL(1,44))
-          CALL R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS,AMPL(1,45))
-          CALL R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS_1EPS,AMPL(2,46))
-C         Counter-term amplitude(s) for loop diagram number 17
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,47))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,48))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,49))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,50))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQB,AMPL(1,51))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,52))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQT,AMPL(1,53))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,54))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQG_1EPS,AMPL(2
-     $     ,55))
-          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),R2_GQQ,AMPL(1,56))
-C         Counter-term amplitude(s) for loop diagram number 19
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,57))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,58))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,59))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,60))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQB,AMPL(1,61))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,62))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQT,AMPL(1,63))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,64))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQG_1EPS,AMPL(2
-     $     ,65))
-          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),R2_GQQ,AMPL(1,66))
-C         Counter-term amplitude(s) for loop diagram number 20
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,67))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,68))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,69))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,70))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQB,AMPL(1,71))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,72))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQT,AMPL(1,73))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
-     $     ,74))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQG_1EPS,AMPL(2
-     $     ,75))
-          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),R2_GQQ,AMPL(1,76))
-C         Counter-term amplitude(s) for loop diagram number 22
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,77))
-C         Counter-term amplitude(s) for loop diagram number 32
           CALL R2_GG_1_R2_GG_2_0(W(1,5,H),W(1,8,H),R2_GGG_1,R2_GGG_2
+     $     ,AMPL(1,1))
+C         Counter-term amplitude(s) for loop diagram number 5
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),R2_GQQ,AMPL(1,2))
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQG_1EPS,AMPL(2,3)
+     $     )
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2,4)
+     $     )
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2,5)
+     $     )
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2,6)
+     $     )
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2,7)
+     $     )
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2,8)
+     $     )
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQQ_1EPS,AMPL(2,9)
+     $     )
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQB,AMPL(1,10))
+          CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),UV_GQQT,AMPL(1,11))
+          CALL FFV1_2(W(1,4,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,9,H))
+C         Counter-term amplitude(s) for loop diagram number 7
+          CALL R2_QQ_1_R2_QQ_2_0(W(1,9,H),W(1,6,H),R2_QQQ,R2_QQT
+     $     ,AMPL(1,12))
+          CALL R2_QQ_2_0(W(1,9,H),W(1,6,H),UV_TMASS_1EPS,AMPL(2,13))
+          CALL R2_QQ_2_0(W(1,9,H),W(1,6,H),UV_TMASS,AMPL(1,14))
+C         Counter-term amplitude(s) for loop diagram number 8
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),R2_GQQ,AMPL(1,15))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQG_1EPS,AMPL(2
+     $     ,16))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,17))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,18))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,19))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,20))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,21))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,22))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQB,AMPL(1,23))
+          CALL FFV1_0(W(1,4,H),W(1,6,H),W(1,2,H),UV_GQQT,AMPL(1,24))
+          CALL FFV1_1(W(1,3,H),W(1,2,H),GC_5,MDL_MT,MDL_WT,W(1,10,H))
+C         Counter-term amplitude(s) for loop diagram number 10
+          CALL R2_QQ_1_R2_QQ_2_0(W(1,7,H),W(1,10,H),R2_QQQ,R2_QQT
+     $     ,AMPL(1,25))
+          CALL R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS_1EPS,AMPL(2,26))
+          CALL R2_QQ_2_0(W(1,7,H),W(1,10,H),UV_TMASS,AMPL(1,27))
+C         Counter-term amplitude(s) for loop diagram number 11
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),R2_GQQ,AMPL(1,28))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQG_1EPS,AMPL(2
+     $     ,29))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,30))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,31))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,32))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,33))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,34))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,35))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQB,AMPL(1,36))
+          CALL FFV1_0(W(1,7,H),W(1,3,H),W(1,2,H),UV_GQQT,AMPL(1,37))
+C         Counter-term amplitude(s) for loop diagram number 13
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),R2_GQQ,AMPL(1,38))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQG_1EPS,AMPL(2
+     $     ,39))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,40))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,41))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,42))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,43))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,44))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,45))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQB,AMPL(1,46))
+          CALL FFV1_0(W(1,4,H),W(1,10,H),W(1,1,H),UV_GQQT,AMPL(1,47))
+C         Counter-term amplitude(s) for loop diagram number 14
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),R2_GQQ,AMPL(1,48))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQG_1EPS,AMPL(2
+     $     ,49))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,50))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,51))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,52))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,53))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,54))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQQ_1EPS,AMPL(2
+     $     ,55))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQB,AMPL(1,56))
+          CALL FFV1_0(W(1,9,H),W(1,3,H),W(1,1,H),UV_GQQT,AMPL(1,57))
+C         Counter-term amplitude(s) for loop diagram number 17
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GG,AMPL(1,58))
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,59)
+     $     )
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,60)
+     $     )
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,61)
+     $     )
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,62)
+     $     )
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,63)
+     $     )
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB_1EPS,AMPL(2,64)
+     $     )
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GG_1EPS,AMPL(2,65)
+     $     )
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GB,AMPL(1,66))
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),UV_3GT,AMPL(1,67))
+C         Counter-term amplitude(s) for loop diagram number 31
+          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,68))
+          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,69))
+          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,70))
+          CALL R2_GG_1_0(W(1,5,H),W(1,8,H),R2_GGQ,AMPL(1,71))
+C         Counter-term amplitude(s) for loop diagram number 32
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,72))
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,73))
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,74))
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,75))
+C         Counter-term amplitude(s) for loop diagram number 34
+          CALL R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,8,H),R2_GGQ,R2_GGB
+     $     ,AMPL(1,76))
+C         Counter-term amplitude(s) for loop diagram number 35
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,77))
+C         Counter-term amplitude(s) for loop diagram number 37
+          CALL R2_GG_1_R2_GG_3_0(W(1,5,H),W(1,8,H),R2_GGQ,R2_GGT
      $     ,AMPL(1,78))
-C         Counter-term amplitude(s) for loop diagram number 33
-          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GG,AMPL(1,79))
+C         Counter-term amplitude(s) for loop diagram number 38
+          CALL VVV1_0(W(1,1,H),W(1,2,H),W(1,8,H),R2_3GQ,AMPL(1,79))
 C         Amplitude(s) for UVCT diagram with ID 40
           CALL FFV1_0(W(1,4,H),W(1,3,H),W(1,5,H),GC_5,AMPL(1,80))
           AMPL(1,80)=AMPL(1,80)*(2.0D0*UVWFCT_G_2+2.0D0*UVWFCT_G_1
@@ -936,206 +940,206 @@ C      automatically done.
 
 C     Loop amplitude for loop diagram with ID 4
       CALL ML5_0_LOOP_2_2(1,5,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,4,86,AMPL(1,86),S(86))
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4
+     $ ,MP__GC_4,2,2,1,86,AMPL(1,86),S(86))
 C     Loop amplitude for loop diagram with ID 5
-      CALL ML5_0_LOOP_3_3(2,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,4,87,AMPL(1,87),S(87))
-C     Loop amplitude for loop diagram with ID 6
-      CALL ML5_0_LOOP_3_3(3,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,4,88,AMPL(1,88),S(88))
-C     Loop amplitude for loop diagram with ID 7
-      CALL ML5_0_LOOP_2_2(1,5,8,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,1,89,AMPL(1,89),S(89))
-C     Loop amplitude for loop diagram with ID 8
-      CALL ML5_0_LOOP_3_3(2,1,2,8,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
-     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,90,AMPL(1,90),S(90))
-C     Loop amplitude for loop diagram with ID 9
-      CALL ML5_0_LOOP_3_3(3,1,2,8,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
-     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
-     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,91,AMPL(1,91),S(91))
-C     Loop amplitude for loop diagram with ID 10
-      CALL ML5_0_LOOP_2_2(1,5,8,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,1,92,AMPL(1,92),S(92))
-C     Loop amplitude for loop diagram with ID 11
-      CALL ML5_0_LOOP_3_3(4,3,4,5,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,93,AMPL(1,93),S(93))
-C     Loop amplitude for loop diagram with ID 12
-      CALL ML5_0_LOOP_3_3(5,3,4,5,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+      CALL ML5_0_LOOP_3_3(2,3,4,5,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_4
-     $ ,MP__GC_4,2,1,1,94,AMPL(1,94),S(94))
-C     Loop amplitude for loop diagram with ID 13
-      CALL ML5_0_LOOP_2_2(6,6,9,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,MP__GC_4,2,1,1,87,AMPL(1,87),S(87))
+C     Loop amplitude for loop diagram with ID 6
+      CALL ML5_0_LOOP_3_3(3,3,4,5,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(MDL_MT)
+     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,1,88,AMPL(1,88),S(88))
+C     Loop amplitude for loop diagram with ID 7
+      CALL ML5_0_LOOP_2_2(4,6,9,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,1,1,1,95,AMPL(1,95),S(95))
-C     Loop amplitude for loop diagram with ID 14
-      CALL ML5_0_LOOP_3_3(7,2,4,6,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,MP__GC_5,1,1,1,89,AMPL(1,89),S(89))
+C     Loop amplitude for loop diagram with ID 8
+      CALL ML5_0_LOOP_3_3(5,2,4,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,1,90,AMPL(1,90),S(90))
+C     Loop amplitude for loop diagram with ID 9
+      CALL ML5_0_LOOP_3_3(6,2,4,6,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,1,91,AMPL(1,91),S(91))
+C     Loop amplitude for loop diagram with ID 10
+      CALL ML5_0_LOOP_2_2(4,10,7,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,1,1,1,92,AMPL(1,92),S(92))
+C     Loop amplitude for loop diagram with ID 11
+      CALL ML5_0_LOOP_3_3(7,2,3,7,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,1,93,AMPL(1,93),S(93))
+C     Loop amplitude for loop diagram with ID 12
+      CALL ML5_0_LOOP_3_3(8,2,3,7,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
+     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,1,94,AMPL(1,94),S(94))
+C     Loop amplitude for loop diagram with ID 13
+      CALL ML5_0_LOOP_3_3(5,1,4,10,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,1,95,AMPL(1,95),S(95))
+C     Loop amplitude for loop diagram with ID 14
+      CALL ML5_0_LOOP_3_3(7,1,3,9,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
      $ ,MP__GC_5,2,1,1,96,AMPL(1,96),S(96))
 C     Loop amplitude for loop diagram with ID 15
-      CALL ML5_0_LOOP_3_3(8,2,4,6,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,97,AMPL(1,97),S(97))
+      CALL ML5_0_LOOP_4_4(9,1,2,4,3,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
+     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,GC_4,MP__GC_4,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,3,1,1
+     $ ,97,AMPL(1,97),S(97))
 C     Loop amplitude for loop diagram with ID 16
-      CALL ML5_0_LOOP_2_2(6,10,7,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,1,1,1,98,AMPL(1,98),S(98))
-C     Loop amplitude for loop diagram with ID 17
-      CALL ML5_0_LOOP_3_3(9,2,3,7,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+      CALL ML5_0_LOOP_4_4(10,1,2,3,4,DCMPLX(ZERO),CMPLX(MP__ZERO
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,99,AMPL(1,99),S(99))
+     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,GC_4,MP__GC_4,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,3,1,1
+     $ ,98,AMPL(1,98),S(98))
+C     Loop amplitude for loop diagram with ID 17
+      CALL ML5_0_LOOP_3_3(11,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4,MP__GC_4,GC_4
+     $ ,MP__GC_4,3,1,1,99,AMPL(1,99),S(99))
 C     Loop amplitude for loop diagram with ID 18
-      CALL ML5_0_LOOP_3_3(10,2,3,7,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+      CALL ML5_0_LOOP_2_3_2(12,1,2,1,8,2,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
+     $ ,GC_6,MP__GC_6,1,2,1,100,AMPL(1,100),S(100))
+      CALL ML5_0_LOOP_2_3_2(13,1,2,1,8,2,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
+     $ ,GC_6,MP__GC_6,1,2,1,101,AMPL(1,101),S(101))
+      CALL ML5_0_LOOP_2_3_2(14,1,2,1,8,2,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
+     $ ,GC_6,MP__GC_6,1,2,1,102,AMPL(1,102),S(102))
+C     Loop amplitude for loop diagram with ID 19
+      CALL ML5_0_LOOP_4_4(15,1,3,2,4,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
      $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,100,AMPL(1,100),S(100))
-C     Loop amplitude for loop diagram with ID 19
-      CALL ML5_0_LOOP_3_3(7,1,4,10,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,101,AMPL(1,101),S(101))
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,103,AMPL(1,103),S(103))
 C     Loop amplitude for loop diagram with ID 20
-      CALL ML5_0_LOOP_3_3(9,1,3,9,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+      CALL ML5_0_LOOP_3_3(6,1,4,10,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
      $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,102,AMPL(1,102),S(102))
+     $ ,MP__GC_5,2,1,1,104,AMPL(1,104),S(104))
 C     Loop amplitude for loop diagram with ID 21
-      CALL ML5_0_LOOP_4_4(11,1,2,3,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,103,AMPL(1,103),S(103))
+      CALL ML5_0_LOOP_3_3(8,1,3,9,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
+     $ ,CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,1,105,AMPL(1,105),S(105))
 C     Loop amplitude for loop diagram with ID 22
-      CALL ML5_0_LOOP_3_3(2,1,2,8,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,104,AMPL(1,104),S(104))
+      CALL ML5_0_LOOP_2_3_2(12,1,2,2,8,1,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
+     $ ,GC_6,MP__GC_6,1,2,1,106,AMPL(1,106),S(106))
+      CALL ML5_0_LOOP_2_3_2(13,1,2,2,8,1,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
+     $ ,GC_6,MP__GC_6,1,2,1,107,AMPL(1,107),S(107))
+      CALL ML5_0_LOOP_2_3_2(14,1,2,2,8,1,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
+     $ ,GC_6,MP__GC_6,1,2,1,108,AMPL(1,108),S(108))
 C     Loop amplitude for loop diagram with ID 23
-      CALL ML5_0_LOOP_3_3(3,1,2,8,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,105,AMPL(1,105),S(105))
-C     Loop amplitude for loop diagram with ID 24
-      CALL ML5_0_LOOP_4_4(12,1,2,4,3,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
-     $ ,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,3,1,1,106,AMPL(1,106),S(106))
-C     Loop amplitude for loop diagram with ID 25
-      CALL ML5_0_LOOP_4_4(13,1,3,2,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+      CALL ML5_0_LOOP_4_4(16,1,3,2,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
      $ ,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_4,MP__GC_4,GC_5
-     $ ,MP__GC_5,3,1,1,107,AMPL(1,107),S(107))
+     $ ,MP__GC_5,3,1,1,109,AMPL(1,109),S(109))
+C     Loop amplitude for loop diagram with ID 24
+      CALL ML5_0_LOOP_4_4(17,1,2,4,3,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,3,1,1,110,AMPL(1,110),S(110))
+C     Loop amplitude for loop diagram with ID 25
+      CALL ML5_0_LOOP_4_4(18,1,2,3,4,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,3,1,1,111,AMPL(1,111),S(111))
 C     Loop amplitude for loop diagram with ID 26
-      CALL ML5_0_LOOP_3_3(8,1,4,10,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,108,AMPL(1,108),S(108))
+      CALL ML5_0_LOOP_2_3_2(19,2,1,2,1,8,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_6,MP__GC_6
+     $ ,GC_4,MP__GC_4,1,2,1,112,AMPL(1,112),S(112))
+      CALL ML5_0_LOOP_2_3_2(20,2,1,2,1,8,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_6,MP__GC_6
+     $ ,GC_4,MP__GC_4,1,2,1,113,AMPL(1,113),S(113))
+      CALL ML5_0_LOOP_2_3_2(21,2,1,2,1,8,DCMPLX(ZERO),CMPLX(MP__ZERO
+     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_6,MP__GC_6
+     $ ,GC_4,MP__GC_4,1,2,1,114,AMPL(1,114),S(114))
 C     Loop amplitude for loop diagram with ID 27
-      CALL ML5_0_LOOP_3_3(10,1,3,9,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,2,1,1,109,AMPL(1,109),S(109))
+      CALL ML5_0_LOOP_3_4_3(22,1,1,2,3,4,2,1,DCMPLX(MDL_MT)
+     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_6,MP__GC_6,1,1,1,115,AMPL(1,115),S(115))
+      CALL ML5_0_LOOP_3_4_3(23,1,1,2,3,4,2,1,DCMPLX(MDL_MT)
+     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_6,MP__GC_6,1,1,1,116,AMPL(1,116),S(116))
+      CALL ML5_0_LOOP_3_4_3(24,1,1,2,3,4,2,1,DCMPLX(MDL_MT)
+     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_6,MP__GC_6,1,1,1,117,AMPL(1,117),S(117))
 C     Loop amplitude for loop diagram with ID 28
-      CALL ML5_0_LOOP_4_4(14,1,3,2,4,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
-     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,110,AMPL(1,110),S(110))
-C     Loop amplitude for loop diagram with ID 29
-      CALL ML5_0_LOOP_3_4_3(15,1,1,2,3,4,1,2,DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_6,MP__GC_6,1,1,1,111,AMPL(1,111),S(111))
-      CALL ML5_0_LOOP_3_4_3(16,1,1,2,3,4,1,2,DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_6,MP__GC_6,1,1,1,112,AMPL(1,112),S(112))
-      CALL ML5_0_LOOP_3_4_3(17,1,1,2,3,4,1,2,DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
-     $ ,MP__GC_5,GC_6,MP__GC_6,1,1,1,113,AMPL(1,113),S(113))
-C     Loop amplitude for loop diagram with ID 30
-      CALL ML5_0_LOOP_4_4(18,1,2,4,3,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,GC_4,MP__GC_4,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,3,1,1
-     $ ,114,AMPL(1,114),S(114))
-C     Loop amplitude for loop diagram with ID 31
-      CALL ML5_0_LOOP_4_4(19,1,2,3,4,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(MDL_MT)
-     $ ,CMPLX(MP__MDL_MT,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,GC_4,MP__GC_4,GC_4,MP__GC_4,GC_5,MP__GC_5,GC_5,MP__GC_5,3,1,1
-     $ ,115,AMPL(1,115),S(115))
-C     Loop amplitude for loop diagram with ID 32
-      CALL ML5_0_LOOP_2_2(20,5,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+      CALL ML5_0_LOOP_2_2(25,5,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4
-     $ ,MP__GC_4,2,2,1,116,AMPL(1,116),S(116))
-C     Loop amplitude for loop diagram with ID 33
-      CALL ML5_0_LOOP_3_3(21,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,MP__GC_4,2,1,1,118,AMPL(1,118),S(118))
+C     Loop amplitude for loop diagram with ID 29
+      CALL ML5_0_LOOP_3_3(26,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
      $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4,MP__GC_4,GC_4
-     $ ,MP__GC_4,3,1,1,117,AMPL(1,117),S(117))
-C     Loop amplitude for loop diagram with ID 34
-      CALL ML5_0_LOOP_2_3_2(22,1,2,1,8,2,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_6,MP__GC_6,1,2,1,118,AMPL(1,118),S(118))
-      CALL ML5_0_LOOP_2_3_2(23,1,2,1,8,2,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_6,MP__GC_6,1,2,1,119,AMPL(1,119),S(119))
-      CALL ML5_0_LOOP_2_3_2(24,1,2,1,8,2,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_6,MP__GC_6,1,2,1,120,AMPL(1,120),S(120))
-C     Loop amplitude for loop diagram with ID 35
-      CALL ML5_0_LOOP_2_3_2(22,1,2,2,8,1,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_6,MP__GC_6,1,2,1,121,AMPL(1,121),S(121))
-      CALL ML5_0_LOOP_2_3_2(23,1,2,2,8,1,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_6,MP__GC_6,1,2,1,122,AMPL(1,122),S(122))
-      CALL ML5_0_LOOP_2_3_2(24,1,2,2,8,1,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4
-     $ ,GC_6,MP__GC_6,1,2,1,123,AMPL(1,123),S(123))
-C     Loop amplitude for loop diagram with ID 36
-      CALL ML5_0_LOOP_2_3_2(25,2,1,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_6,MP__GC_6
-     $ ,GC_4,MP__GC_4,1,2,1,124,AMPL(1,124),S(124))
-      CALL ML5_0_LOOP_2_3_2(26,2,1,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_6,MP__GC_6
-     $ ,GC_4,MP__GC_4,1,2,1,125,AMPL(1,125),S(125))
-      CALL ML5_0_LOOP_2_3_2(27,2,1,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO
-     $ ,KIND=16),DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_6,MP__GC_6
-     $ ,GC_4,MP__GC_4,1,2,1,126,AMPL(1,126),S(126))
-C     Loop amplitude for loop diagram with ID 37
+     $ ,MP__GC_4,3,1,1,119,AMPL(1,119),S(119))
+C     Loop amplitude for loop diagram with ID 30
+      CALL ML5_0_LOOP_3_3(27,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4,MP__GC_4,GC_4
+     $ ,MP__GC_4,3,1,1,120,AMPL(1,120),S(120))
+C     Loop amplitude for loop diagram with ID 31
       CALL ML5_0_LOOP_2_2(28,5,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
-     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4
-     $ ,MP__GC_4,2,1,1,127,AMPL(1,127),S(127))
-C     Loop amplitude for loop diagram with ID 38
+     $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,2,1,4,121,AMPL(1,121),S(121))
+C     Loop amplitude for loop diagram with ID 32
       CALL ML5_0_LOOP_3_3(29,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4,MP__GC_4,GC_4
-     $ ,MP__GC_4,3,1,1,128,AMPL(1,128),S(128))
-C     Loop amplitude for loop diagram with ID 39
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,3,1,4,122,AMPL(1,122),S(122))
+C     Loop amplitude for loop diagram with ID 33
       CALL ML5_0_LOOP_3_3(30,1,2,8,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16)
      $ ,DCMPLX(ZERO),CMPLX(MP__ZERO,KIND=16),DCMPLX(ZERO)
-     $ ,CMPLX(MP__ZERO,KIND=16),GC_4,MP__GC_4,GC_4,MP__GC_4,GC_4
-     $ ,MP__GC_4,3,1,1,129,AMPL(1,129),S(129))
+     $ ,CMPLX(MP__ZERO,KIND=16),GC_5,MP__GC_5,GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,3,1,4,123,AMPL(1,123),S(123))
+C     Loop amplitude for loop diagram with ID 34
+      CALL ML5_0_LOOP_2_2(28,5,8,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,1,124,AMPL(1,124),S(124))
+C     Loop amplitude for loop diagram with ID 35
+      CALL ML5_0_LOOP_3_3(29,1,2,8,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,125,AMPL(1,125),S(125))
+C     Loop amplitude for loop diagram with ID 36
+      CALL ML5_0_LOOP_3_3(30,1,2,8,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB
+     $ ,KIND=16),DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16)
+     $ ,DCMPLX(MDL_MB),CMPLX(MP__MDL_MB,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,126,AMPL(1,126),S(126))
+C     Loop amplitude for loop diagram with ID 37
+      CALL ML5_0_LOOP_2_2(28,5,8,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,2,1,1,127,AMPL(1,127),S(127))
+C     Loop amplitude for loop diagram with ID 38
+      CALL ML5_0_LOOP_3_3(29,1,2,8,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,128,AMPL(1,128),S(128))
+C     Loop amplitude for loop diagram with ID 39
+      CALL ML5_0_LOOP_3_3(30,1,2,8,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT
+     $ ,KIND=16),DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16)
+     $ ,DCMPLX(MDL_MT),CMPLX(MP__MDL_MT,KIND=16),GC_5,MP__GC_5,GC_5
+     $ ,MP__GC_5,GC_5,MP__GC_5,3,1,1,129,AMPL(1,129),S(129))
 
       DO I=NCTAMPS+1,NLOOPAMPS
         ANS(1)=ANS(1)+AMPL(1,I)

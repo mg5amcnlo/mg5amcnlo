@@ -96,24 +96,24 @@ C      if true.
       ENDIF
 
 C     CutTools call for loop numbers 1
-      CALL ML5_0_LOOP_2(6,9,DCMPLX(ZERO),DCMPLX(ZERO),1,I_SO,1)
-C     CutTools call for loop numbers 2
       CALL ML5_0_LOOP_3(2,7,6,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
-     $ ,I_SO,2)
+     $ ,I_SO,1)
+C     CutTools call for loop numbers 2
+      CALL ML5_0_LOOP_2(6,9,DCMPLX(ZERO),DCMPLX(ZERO),1,I_SO,2)
 C     CutTools call for loop numbers 3
       CALL ML5_0_LOOP_3(1,7,8,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
      $ ,I_SO,3)
 C     CutTools call for loop numbers 4
       CALL ML5_0_LOOP_4(1,2,5,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
      $ ,DCMPLX(ZERO),3,I_SO,4)
-C     CutTools call for loop numbers 5,8
-      CALL ML5_0_LOOP_3(1,5,9,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
-     $ ,I_SO,5)
-C     CutTools call for loop numbers 6
-      CALL ML5_0_LOOP_4(1,5,2,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
-     $ ,DCMPLX(ZERO),3,I_SO,6)
-C     CutTools call for loop numbers 7
+C     CutTools call for loop numbers 5
       CALL ML5_0_LOOP_4(1,2,7,5,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
+     $ ,DCMPLX(ZERO),3,I_SO,5)
+C     CutTools call for loop numbers 6,8
+      CALL ML5_0_LOOP_3(1,5,9,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2
+     $ ,I_SO,6)
+C     CutTools call for loop numbers 7
+      CALL ML5_0_LOOP_4(1,5,2,7,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO)
      $ ,DCMPLX(ZERO),3,I_SO,7)
 C     CutTools call for loop numbers 9
       CALL ML5_0_LOOP_2(8,10,DCMPLX(ZERO),DCMPLX(ZERO),1,I_SO,8)
