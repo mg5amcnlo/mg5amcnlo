@@ -687,7 +687,7 @@ c
       integer random_offset_split
       common /c_random_offset_split/ random_offset_split
       logical done
-      character*100 buffer
+      character*140 buffer
 c-----
 c  Begin Code
 c-----
