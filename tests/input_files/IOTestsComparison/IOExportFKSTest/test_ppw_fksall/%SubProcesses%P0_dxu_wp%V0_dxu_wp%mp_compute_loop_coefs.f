@@ -8,8 +8,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d~ u > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: s~ c > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: d~ u > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: s~ c > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
 C     
 C     Modules
 C     
@@ -43,7 +43,7 @@ C
       PARAMETER (DP_IMAG1=(0D0,1D0))
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 
 
 C     

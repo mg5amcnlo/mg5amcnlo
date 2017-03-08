@@ -62,7 +62,7 @@ C
       PARAMETER (NCOMB=12)
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS 
 C     
@@ -181,7 +181,7 @@ C
       PARAMETER (NCOMB=12)
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS 
 C     

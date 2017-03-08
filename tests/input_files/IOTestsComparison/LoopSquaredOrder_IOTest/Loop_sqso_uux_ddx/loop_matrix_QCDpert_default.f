@@ -2048,6 +2048,47 @@ C
 
       END
 
+      INTEGER FUNCTION ML5_0_GETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C     
+C     Return the power of the IORDER-th order appearing at position
+C      INDX
+C     in the split-orders output
+C     
+C     ['QCD']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=1, NSQSO=1)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      DATA (SQPLITORDERS(  1,I),I=  1,  1) /    6/
+C     
+C     BEGIN CODE
+C     
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+        WRITE(*,*) 'INVALID IORDER ML5', IORDER
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
+        STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+        WRITE(*,*) 'INVALID INDX ML5', INDX
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
+        STOP
+      ENDIF
+
+      ML5_0_GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
+
+      END
+
       INTEGER FUNCTION ML5_0_ML5SOINDEX_FOR_BORN_AMP(AMPID)
 C     
 C     For a given born amplitude number, it returns the ID of the

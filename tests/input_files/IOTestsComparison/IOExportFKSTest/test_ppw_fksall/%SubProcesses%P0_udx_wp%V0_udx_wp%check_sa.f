@@ -253,10 +253,10 @@ C
           WRITE (*,*) 'Detailed result for each coupling orders'
      $     //' combination.'
           WRITE(*,*) 'All Born contributions are of split orders'
-     $     //' (QCD=0)'
+     $     //' (QCD=0 QED=2)'
           WRITE (*,*) '---------------------------------'
           WRITE(*,*) 'All loop contributions are of split orders'
-     $     //' (QCD=2)'
+     $     //' (QCD=2 QED=2)'
           WRITE (*,*) '---------------------------------'
           UNITS=MOD(RETURNCODE,10)
           TENS=(MOD(RETURNCODE,100)-UNITS)/10
@@ -361,10 +361,10 @@ C
      $     ,NSQSO_BORN)
           WRITE (69,*) 'Loop_kept',(CHOSEN_LOOP_SO_CONFIGS(I),I=1
      $     ,NSQUAREDSO)
-          WRITE (69,*) 'Born_SO_Results 0'
+          WRITE (69,*) 'Born_SO_Results 0 2'
           WRITE (69,*) 'SO_Born BORN ',MATELEM(0,1)
-          WRITE (69,*) 'Split_Orders_Names QCD'
-          WRITE (69,*) 'Loop_SO_Results 2'
+          WRITE (69,*) 'Split_Orders_Names QCD QED'
+          WRITE (69,*) 'Loop_SO_Results 2 2'
           WRITE (69,*) 'SO_Loop ACC  ',PREC_FOUND(1)
           WRITE (69,*) 'SO_Loop FIN  ',MATELEM(1,1)
           WRITE (69,*) 'SO_Loop 1EPS ',MATELEM(2,1)

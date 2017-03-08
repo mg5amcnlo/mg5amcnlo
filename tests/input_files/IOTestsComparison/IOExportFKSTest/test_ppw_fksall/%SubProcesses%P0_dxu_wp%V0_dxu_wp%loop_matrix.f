@@ -12,8 +12,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities for the point in phase space P(0:3,NEXTERNAL)
 C     and external lines W(0:6,NEXTERNAL)
 C     
-C     Process: d~ u > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: s~ c > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: d~ u > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: s~ c > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
 C     
 C     Modules
 C     
@@ -70,7 +70,7 @@ C
 C     These are constants related to the split orders
       INCLUDE 'nsqso_born.inc'
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
       INTEGER ANS_DIMENSION
       PARAMETER(ANS_DIMENSION=MAX(NSQSO_BORN,NSQUAREDSO))
       INTEGER NSQSOXNLG
@@ -85,7 +85,7 @@ C     , Ninja and COLLIER
 C     Only CutTools or possibly Ninja (if installed with qp support)
 C      provide QP
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=1)
+      PARAMETER (QP_NLOOPLIB=2)
       INTEGER MAXSTABILITYLENGTH
       DATA MAXSTABILITYLENGTH/20/
       COMMON/STABILITY_TESTS/MAXSTABILITYLENGTH
@@ -259,7 +259,7 @@ C      loop_library is not available
 C     in which case neither is its quadruple precision version.
       LOGICAL LOOPLIBS_QPAVAILABLE(0:7)
       DATA LOOPLIBS_QPAVAILABLE /.FALSE.,.TRUE.,.FALSE.,.FALSE.
-     $ ,.FALSE.,.FALSE.,.FALSE.,.FALSE./
+     $ ,.FALSE.,.FALSE.,.TRUE.,.FALSE./
 C     PS CAN POSSIBILY BE PASSED THROUGH IMPROVE_PS BUT IS NOT
 C      MODIFIED FOR THE PURPOSE OF THE STABILITY TEST
 C     EVEN THOUGH THEY ARE PUT IN COMMON BLOCK, FOR NOW THEY ARE NOT
@@ -2009,12 +2009,12 @@ C
 C     This functions returns the integer index identifying the split
 C      orders list passed in argument which correspond to the values
 C      of the following list of couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQSO
-      PARAMETER (NSO=1, NSQSO=1)
+      PARAMETER (NSO=2, NSQSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -2024,7 +2024,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J
       INTEGER SQPLITORDERS(NSQSO,NSO)
-      DATA (SQPLITORDERS(  1,I),I=  1,  1) /    2/
+      DATA (SQPLITORDERS(  1,I),I=  1,  2) /    2,    2/
       COMMON/ML5SQPLITORDERS/SQPLITORDERS
 C     
 C     BEGIN CODE
@@ -2042,6 +2042,47 @@ C
      $ //'RS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
+
+      END
+
+      INTEGER FUNCTION GETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C     
+C     Return the power of the IORDER-th order appearing at position
+C      INDX
+C     in the split-orders output
+C     
+C     ['QCD', 'QED']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=2, NSQSO=1)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      DATA (SQPLITORDERS(  1,I),I=  1,  2) /    2,    2/
+C     
+C     BEGIN CODE
+C     
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+        WRITE(*,*) 'INVALID IORDER ML5', IORDER
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
+        STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+        WRITE(*,*) 'INVALID INDX ML5', INDX
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
+        STOP
+      ENDIF
+
+      GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
 
       END
 
@@ -2117,7 +2158,7 @@ C
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -2127,8 +2168,8 @@ C     LOCAL VARIABLES
 C     
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
-      DATA (AMPSPLITORDERS(  1,I),I=  1,  1) /    0/
-      DATA (AMPSPLITORDERS(  2,I),I=  1,  1) /    2/
+      DATA (AMPSPLITORDERS(  1,I),I=  1,  2) /    0,    1/
+      DATA (AMPSPLITORDERS(  2,I),I=  1,  2) /    2,    1/
       COMMON/ML5AMPSPLITORDERS/AMPSPLITORDERS
 C     
 C     FUNCTION
@@ -2151,12 +2192,12 @@ C
 C     This functions returns the orders identified by the squared
 C      split order index in argument. Order values correspond to
 C      following list of couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQSO
-      PARAMETER (NSO=1, NSQSO=1)
+      PARAMETER (NSO=2, NSQSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -2191,12 +2232,12 @@ C
 C     This functions returns the orders identified by the split order
 C      index in argument. Order values correspond to following list of
 C      couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NAMPSO
-      PARAMETER (NSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -2233,12 +2274,12 @@ C     This functions returns the integer index identifying the
 C      amplitude split orders passed in argument which correspond to
 C      the values of the following list of couplings (and in this
 C      order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NAMPSO
-      PARAMETER (NSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     

@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: u d~ > w+ g WEIGHTED<=3 [ all = QCD ]
-C     Process: c s~ > w+ g WEIGHTED<=3 [ all = QCD ]
+C     Process: u d~ > w+ g [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: c s~ > w+ g [ all = QED QCD ] QCD^2=2 QED^2=2
 C     
 C     ****************************************************            
 C         
@@ -25,21 +25,19 @@ C
 C     ARGUMENTS                                                       
 C         
 C     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), LUM
+      DOUBLE PRECISION LUM
 C     
 C     LOCAL VARIABLES                                                 
 C         
 C     
-      INTEGER I, ICROSS,ITYPE,LP
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      INTEGER I, ICROSS,LP
       DOUBLE PRECISION U1,C1
       DOUBLE PRECISION SX2,DX2
-      DOUBLE PRECISION XPQ(-7:7)
 C     
 C     EXTERNAL FUNCTIONS                                              
 C         
 C     
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
+      DOUBLE PRECISION PDG2PDF
 C     
 C     GLOBAL VARIABLES                                                
 C         
@@ -65,41 +63,22 @@ C
 C     ----------                                                      
 C         
       LUM = 0D0
-      IF (IMIRROR.EQ.2) THEN
-        IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          U1=PDG2PDF(ABS(LPP(2)),2*LP,XBK(2),DSQRT(Q2FACT(2)))
-          C1=PDG2PDF(ABS(LPP(2)),4*LP,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          SX2=PDG2PDF(ABS(LPP(1)),-3*LP,XBK(1),DSQRT(Q2FACT(1)))
-          DX2=PDG2PDF(ABS(LPP(1)),-1*LP,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! u d~ > w+ g
-        PD(IPROC) = U1*DX2
-        IPROC=IPROC+1  ! c s~ > w+ g
-        PD(IPROC) = C1*SX2
-      ELSE
-        IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          U1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
-          C1=PDG2PDF(ABS(LPP(1)),4*LP,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          SX2=PDG2PDF(ABS(LPP(2)),-3*LP,XBK(2),DSQRT(Q2FACT(2)))
-          DX2=PDG2PDF(ABS(LPP(2)),-1*LP,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! u d~ > w+ g
-        PD(IPROC) = U1*DX2
-        IPROC=IPROC+1  ! c s~ > w+ g
-        PD(IPROC) = C1*SX2
+      IF (ABS(LPP(1)) .GE. 1) THEN
+        LP=SIGN(1,LPP(1))
+        U1=PDG2PDF(ABS(LPP(1)),2*LP,XBK(1),DSQRT(Q2FACT(1)))
+        C1=PDG2PDF(ABS(LPP(1)),4*LP,XBK(1),DSQRT(Q2FACT(1)))
       ENDIF
+      IF (ABS(LPP(2)) .GE. 1) THEN
+        LP=SIGN(1,LPP(2))
+        SX2=PDG2PDF(ABS(LPP(2)),-3*LP,XBK(2),DSQRT(Q2FACT(2)))
+        DX2=PDG2PDF(ABS(LPP(2)),-1*LP,XBK(2),DSQRT(Q2FACT(2)))
+      ENDIF
+      PD(0) = 0D0
+      IPROC = 0
+      IPROC=IPROC+1  ! u d~ > w+ g
+      PD(IPROC) = U1*DX2
+      IPROC=IPROC+1  ! c s~ > w+ g
+      PD(IPROC) = C1*SX2
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

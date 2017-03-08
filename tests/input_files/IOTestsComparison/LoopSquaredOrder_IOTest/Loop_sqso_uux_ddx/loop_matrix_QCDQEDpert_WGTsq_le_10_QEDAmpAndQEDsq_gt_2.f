@@ -225,7 +225,7 @@ C
 
 
       LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
-      DATA CHOSEN_SO_CONFIGS/.FALSE.,.TRUE.,.FALSE./
+      DATA CHOSEN_SO_CONFIGS/.FALSE.,.TRUE.,.TRUE./
       COMMON/ML5_0_CHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
 
       INTEGER N_DP_EVAL, N_QP_EVAL
@@ -2078,6 +2078,49 @@ C
      $ //'D_ORDERS'
       WRITE(*,*) 'Could not find squared orders ',(ORDERS(I),I=1,NSO)
       STOP
+
+      END
+
+      INTEGER FUNCTION ML5_0_GETORDPOWFROMINDEX_ML5(IORDER, INDX)
+C     
+C     Return the power of the IORDER-th order appearing at position
+C      INDX
+C     in the split-orders output
+C     
+C     ['WEIGHTED', 'QCD', 'QED']
+C     
+C     CONSTANTS
+C     
+      INTEGER    NSO, NSQSO
+      PARAMETER (NSO=3, NSQSO=3)
+C     
+C     ARGUMENTS
+C     
+      INTEGER ORDERS(NSO)
+C     
+C     LOCAL VARIABLES
+C     
+      INTEGER I,J
+      INTEGER SQPLITORDERS(NSQSO,NSO)
+      DATA (SQPLITORDERS(  1,I),I=  1,  3) /    8,    4,    2/
+      DATA (SQPLITORDERS(  2,I),I=  1,  3) /   10,    2,    4/
+      DATA (SQPLITORDERS(  3,I),I=  1,  3) /   12,    0,    6/
+C     
+C     BEGIN CODE
+C     
+      IF (IORDER.GT.NSO.OR.IORDER.LT.1) THEN
+        WRITE(*,*) 'INVALID IORDER ML5', IORDER
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSO
+        STOP
+      ENDIF
+
+      IF (INDX.GT.NSQSO.OR.INDX.LT.1) THEN
+        WRITE(*,*) 'INVALID INDX ML5', INDX
+        WRITE(*,*) 'SHOULD BE BETWEEN 1 AND ', NSQSO
+        STOP
+      ENDIF
+
+      ML5_0_GETORDPOWFROMINDEX_ML5=SQPLITORDERS(INDX, IORDER)
 
       END
 

@@ -1,11 +1,18 @@
       INTEGER IPOS, JPOS
       INTEGER FKS_I_D(3), FKS_J_D(3)
+      INTEGER EXTRA_CNT_D(3), ISPLITORDER_BORN_D(3),
+     $  ISPLITORDER_CNT_D(3)
       INTEGER FKS_J_FROM_I_D(3, NEXTERNAL, 0:NEXTERNAL)
       INTEGER PARTICLE_TYPE_D(3, NEXTERNAL), PDG_TYPE_D(3, NEXTERNAL)
       REAL*8 PARTICLE_CHARGE_D(3, NEXTERNAL)
+      LOGICAL SPLIT_TYPE_D(3, 2)
+      LOGICAL NEED_COLOR_LINKS_D(3), NEED_CHARGE_LINKS_D(3)
 
       DATA FKS_I_D / 5, 5, 5 /
       DATA FKS_J_D / 2, 3, 4 /
+
+      DATA NEED_COLOR_LINKS_D / .TRUE., .TRUE., .TRUE. /
+      DATA NEED_CHARGE_LINKS_D / .FALSE., .FALSE., .FALSE. /
 
       DATA (FKS_J_FROM_I_D(1, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 
@@ -13,6 +20,21 @@
 
       DATA (FKS_J_FROM_I_D(3, 5, JPOS), JPOS = 0, 4)  / 4, 1, 2, 3, 4 /
 
+
+C     Split type: the order of elements is QCD, QED
+      DATA (SPLIT_TYPE_D (1, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+      DATA (SPLIT_TYPE_D (2, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+      DATA (SPLIT_TYPE_D (3, IPOS), IPOS=1, 2) / .TRUE., .FALSE. /
+
+C     Extra cnt: if the real emission needs an extra cnt (g/a >
+C      qqbar), then
+C     this is the id of the extra cnt. Otherwise it should be set to 0.
+C     If not 0, store also the position in the splitorders array of
+C      the 
+C     coupling corresponding to the splitting type
+      DATA EXTRA_CNT_D / 0, 0, 0 /
+      DATA ISPLITORDER_BORN_D / 0, 0, 0 /
+      DATA ISPLITORDER_CNT_D / 0, 0, 0 /
 
 C     
 C     Particle type:
@@ -35,15 +57,15 @@ C
 C     Particle charge:
 C     charge is set 0. with QCD corrections, which is irrelevant
       DATA (PARTICLE_CHARGE_D(1, IPOS), IPOS=1, NEXTERNAL) /  
-     $  0.000000000000000D0,   0.000000000000000D0,  
-     $  0.000000000000000D0,   0.000000000000000D0,  
+     $  0.666666666666667D0,  -0.333333333333333D0,  
+     $  0.666666666666667D0,   0.333333333333333D0,  
      $  0.000000000000000D0 /
       DATA (PARTICLE_CHARGE_D(2, IPOS), IPOS=1, NEXTERNAL) /  
-     $  0.000000000000000D0,   0.000000000000000D0,  
-     $  0.000000000000000D0,   0.000000000000000D0,  
+     $  0.666666666666667D0,  -0.333333333333333D0,  
+     $  0.666666666666667D0,   0.333333333333333D0,  
      $  0.000000000000000D0 /
       DATA (PARTICLE_CHARGE_D(3, IPOS), IPOS=1, NEXTERNAL) /  
-     $  0.000000000000000D0,   0.000000000000000D0,  
-     $  0.000000000000000D0,   0.000000000000000D0,  
+     $  0.666666666666667D0,  -0.333333333333333D0,  
+     $  0.666666666666667D0,   0.333333333333333D0,  
      $  0.000000000000000D0 /
 

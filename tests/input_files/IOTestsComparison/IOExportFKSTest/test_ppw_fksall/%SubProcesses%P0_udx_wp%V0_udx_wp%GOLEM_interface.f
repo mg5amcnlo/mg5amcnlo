@@ -9,8 +9,8 @@ C     The Golem95 version should be higher than 1.3.0.
 C     It supports RANK = NLOOPLINE + 1 tensor integrals when 1 <
 C      NLOOPLINE < 6.
 C     
-C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: u d~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: c s~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
 C     
 C     
 C     MODULES

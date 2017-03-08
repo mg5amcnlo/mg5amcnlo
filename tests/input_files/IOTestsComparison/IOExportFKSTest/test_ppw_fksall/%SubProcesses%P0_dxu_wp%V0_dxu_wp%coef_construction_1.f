@@ -26,7 +26,7 @@ C
       PARAMETER (MP__ZERO=0.0E0_16)
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -103,8 +103,8 @@ C     Coefficient construction for loop diagram with ID 2
       CALL FFV2L1_2(PL(0,2),W(1,3),GC_47,ZERO,ZERO,PL(0,3),COEFS)
       CALL UPDATE_WL_1_1(WL(1,0,1,2),4,COEFS,4,4,WL(1,0,1,3))
       CALL CREATE_LOOP_COEFS(WL(1,0,1,3),2,4,1,1,1,2,H)
-C     At this point, all loop coefficients needed for (QCD=2), i.e. of
-C      split order ID=1, are computed.
+C     At this point, all loop coefficients needed for (QCD=2 QED=2),
+C      i.e. of split order ID=1, are computed.
       IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 4000
 
       GOTO 1001

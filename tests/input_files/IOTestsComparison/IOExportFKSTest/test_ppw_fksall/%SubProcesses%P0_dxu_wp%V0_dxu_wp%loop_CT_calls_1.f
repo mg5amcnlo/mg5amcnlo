@@ -26,7 +26,7 @@ C
       PARAMETER (MP__ZERO=0.0E0_16)
 C     These are constants related to the split orders
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=2)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=2)
 C     
 C     ARGUMENTS
 C     
@@ -98,8 +98,8 @@ C      if true.
 C     CutTools call for loop numbers 1
       CALL LOOP_3(1,2,3,DCMPLX(ZERO),DCMPLX(ZERO),DCMPLX(ZERO),2,I_SO
      $ ,1)
-C     At this point, all reductions needed for (QCD=2), i.e. of split
-C      order ID=1, are computed.
+C     At this point, all reductions needed for (QCD=2 QED=2), i.e. of
+C      split order ID=1, are computed.
       IF(FILTER_SO.AND.SQSO_TARGET.EQ.1) GOTO 5000
 
       GOTO 1001

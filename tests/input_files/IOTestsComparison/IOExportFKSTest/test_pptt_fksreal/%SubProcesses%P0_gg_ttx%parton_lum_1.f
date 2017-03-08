@@ -7,7 +7,7 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     RETURNS PARTON LUMINOSITIES FOR MADFKS                          
 C        
 C     
-C     Process: g g > t t~ g WEIGHTED<=3 [ real = QCD ]
+C     Process: g g > t t~ g [ real = QED QCD ] QCD^2=6 QED^2=0
 C     
 C     ****************************************************            
 C         
@@ -24,21 +24,19 @@ C
 C     ARGUMENTS                                                       
 C         
 C     
-      DOUBLE PRECISION PP(0:3,NEXTERNAL), LUM
+      DOUBLE PRECISION LUM
 C     
 C     LOCAL VARIABLES                                                 
 C         
 C     
-      INTEGER I, ICROSS,ITYPE,LP
-      DOUBLE PRECISION P1(0:3,NEXTERNAL)
+      INTEGER I, ICROSS,LP
       DOUBLE PRECISION G1
       DOUBLE PRECISION G2
-      DOUBLE PRECISION XPQ(-7:7)
 C     
 C     EXTERNAL FUNCTIONS                                              
 C         
 C     
-      DOUBLE PRECISION ALPHAS2,REWGT,PDG2PDF
+      DOUBLE PRECISION PDG2PDF
 C     
 C     GLOBAL VARIABLES                                                
 C         
@@ -64,33 +62,18 @@ C
 C     ----------                                                      
 C         
       LUM = 0D0
-      IF (IMIRROR.EQ.2) THEN
-        IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          G1=PDG2PDF(ABS(LPP(2)),0*LP,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          G2=PDG2PDF(ABS(LPP(1)),0*LP,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! g g > t t~ g
-        PD(IPROC) = G1*G2
-      ELSE
-        IF (ABS(LPP(1)) .GE. 1) THEN
-          LP=SIGN(1,LPP(1))
-          G1=PDG2PDF(ABS(LPP(1)),0*LP,XBK(1),DSQRT(Q2FACT(1)))
-        ENDIF
-        IF (ABS(LPP(2)) .GE. 1) THEN
-          LP=SIGN(1,LPP(2))
-          G2=PDG2PDF(ABS(LPP(2)),0*LP,XBK(2),DSQRT(Q2FACT(2)))
-        ENDIF
-        PD(0) = 0D0
-        IPROC = 0
-        IPROC=IPROC+1  ! g g > t t~ g
-        PD(IPROC) = G1*G2
+      IF (ABS(LPP(1)) .GE. 1) THEN
+        LP=SIGN(1,LPP(1))
+        G1=PDG2PDF(ABS(LPP(1)),0*LP,XBK(1),DSQRT(Q2FACT(1)))
       ENDIF
+      IF (ABS(LPP(2)) .GE. 1) THEN
+        LP=SIGN(1,LPP(2))
+        G2=PDG2PDF(ABS(LPP(2)),0*LP,XBK(2),DSQRT(Q2FACT(2)))
+      ENDIF
+      PD(0) = 0D0
+      IPROC = 0
+      IPROC=IPROC+1  ! g g > t t~ g
+      PD(IPROC) = G1*G2
       DO I=1,IPROC
         IF (NINCOMING.EQ.2) THEN
           LUM = LUM + PD(I) * CONV

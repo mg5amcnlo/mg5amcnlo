@@ -2088,6 +2088,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # We assume the orders to be common to all Subprocesses
         
         orders = process_list[0].get('orders') 
+        if not orders:
+            orders = {o : v / 2 for (o, v) in process_list[0].get('squared_orders').items()}
         if 'QED' in orders.keys() and 'QCD' in orders.keys():
             QED=orders['QED']
             QCD=orders['QCD']

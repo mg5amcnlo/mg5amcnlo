@@ -1352,7 +1352,7 @@ class HwU(Histogram):
             if type=='PDF' and use_lhapdf:
                 lhapdf.setVerbosity(0)
 
-        print 'FORCING use_lhapdf=False'
+        logger.critical('FORCING use_lhapdf=False')
         use_lhapdf = False
 
         # Place the new weight label last before the first tuple

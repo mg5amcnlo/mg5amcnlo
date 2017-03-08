@@ -67,8 +67,8 @@ C     Returns amplitude squared summed/avg over colors
 C     and helicities
 C     for the point in phase space P(0:3,NEXTERNAL)
 C     
-C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: u d~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: c s~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -248,8 +248,8 @@ C
 C     Returns amplitude squared summed/avg over colors
 C     for the point with external lines W(0:6,NEXTERNAL)
 C     
-C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: u d~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: c s~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
 C     
       IMPLICIT NONE
 C     
@@ -306,7 +306,7 @@ C     ----------
       CALL VXXXXX(P(0,3),MDL_MW,NHEL(3),+1*IC(3),W(1,3))
 C     Amplitude(s) for diagram number 1
       CALL FFV2_0(W(1,1),W(1,2),W(1,3),GC_47,AMP(1))
-C     JAMPs contributing to orders QCD=0
+C     JAMPs contributing to orders QCD=0 QED=1
       JAMP(1,1)=+AMP(1)
 
       RES = 0.D0
@@ -440,7 +440,7 @@ C     CONSTANTS
 C     
 
       INTEGER    NSO, NSQUAREDSO, NAMPSO
-      PARAMETER (NSO=1, NSQUAREDSO=1, NAMPSO=1)
+      PARAMETER (NSO=2, NSQUAREDSO=1, NAMPSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -450,7 +450,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I, SQORDERS(NSO)
       INTEGER AMPSPLITORDERS(NAMPSO,NSO)
-      DATA (AMPSPLITORDERS(  1,I),I=  1,  1) /    0/
+      DATA (AMPSPLITORDERS(  1,I),I=  1,  2) /    0,    1/
       COMMON/AMPSPLITORDERS/AMPSPLITORDERS
 C     
 C     FUNCTION
@@ -471,12 +471,12 @@ C
 C     This functions returns the integer index identifying the squared
 C      split orders list passed in argument which corresponds to the
 C      values of the following list of couplings (and in this order).
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQSO, NAMPSO
-      PARAMETER (NSO=1, NSQSO=1, NAMPSO=1)
+      PARAMETER (NSO=2, NSQSO=1, NAMPSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -486,7 +486,7 @@ C     LOCAL VARIABLES
 C     
       INTEGER I,J
       INTEGER SQSPLITORDERS(NSQSO,NSO)
-      DATA (SQSPLITORDERS(  1,I),I=  1,  1) /    0/
+      DATA (SQSPLITORDERS(  1,I),I=  1,  2) /    0,    2/
       COMMON/SQPLITORDERS/SQPLITORDERS
 C     
 C     BEGIN CODE
@@ -529,12 +529,12 @@ C
 C     This functions returns the orders identified by the squared
 C      split order index in argument. Order values correspond to
 C      following list of couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NSQSO
-      PARAMETER (NSO=1, NSQSO=1)
+      PARAMETER (NSO=2, NSQSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -569,12 +569,12 @@ C
 C     This functions returns the orders identified by the split order
 C      index in argument. Order values correspond to following list of
 C      couplings (and in this order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NAMPSO
-      PARAMETER (NSO=1, NAMPSO=1)
+      PARAMETER (NSO=2, NAMPSO=1)
 C     
 C     ARGUMENTS
 C     
@@ -609,12 +609,12 @@ C     This functions returns the integer index identifying the
 C      amplitude split orders passed in argument which correspond to
 C      the values of the following list of couplings (and in this
 C      order):
-C     ['QCD']
+C     ['QCD', 'QED']
 C     
 C     CONSTANTS
 C     
       INTEGER    NSO, NAMPSO
-      PARAMETER (NSO=1, NAMPSO=1)
+      PARAMETER (NSO=2, NAMPSO=1)
 C     
 C     ARGUMENTS
 C     

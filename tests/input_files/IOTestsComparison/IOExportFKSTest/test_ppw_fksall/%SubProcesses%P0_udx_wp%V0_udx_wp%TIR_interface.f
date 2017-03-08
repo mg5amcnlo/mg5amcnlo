@@ -7,8 +7,8 @@ C     Visit launchpad.net/madgraph5 and amcatnlo.web.cern.ch
 C     
 C     Interface between MG5 and TIR.
 C     
-C     Process: u d~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
-C     Process: c s~ > w+ QED<=1 WEIGHTED<=2 [ all = QCD ]
+C     Process: u d~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
+C     Process: c s~ > w+ [ all = QED QCD ] QCD^2=2 QED^2=2
 C     
 C     
 C     CONSTANTS 
@@ -384,7 +384,7 @@ C
       INTEGER NLOOPLIB
       PARAMETER (NLOOPLIB=7)
       INTEGER QP_NLOOPLIB
-      PARAMETER (QP_NLOOPLIB=1)
+      PARAMETER (QP_NLOOPLIB=2)
       INTEGER NLOOPGROUPS
       PARAMETER (NLOOPGROUPS=1)
 C     
