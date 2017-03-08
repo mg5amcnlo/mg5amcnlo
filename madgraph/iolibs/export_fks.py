@@ -2060,16 +2060,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             calls = 0
         return calls
 
-    def get_qed_qcd_orders_from_weighted(self, nexternal, weighted):
-        """computes the QED/QCD orders from the knowledge of the n of ext particles
-        and of the weighted orders"""
-        # n vertices = nexternal - 2 =QED + QCD
-        # weighted = 2*QED + QCD
-        QED = weighted - nexternal + 2
-        QCD = weighted - 2 * QED
-        return QED, QCD
-
-
 
     #===============================================================================
     # write_lh_order
@@ -2100,7 +2090,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             QED=0
             QCD=orders['QCD']
         else:
-            QED, QCD = self.get_qed_qcd_orders_from_weighted(\
+            QED, QCD = fks_common.get_qed_qcd_orders_from_weighted(\
                     len(process_list[0].get('legs')),
                     orders['WEIGHTED'])
 

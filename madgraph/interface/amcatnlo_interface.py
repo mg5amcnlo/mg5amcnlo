@@ -42,6 +42,7 @@ import madgraph.interface.extended_cmd as extended_cmd
 import madgraph.interface.amcatnlo_run_interface as run_interface
 import madgraph.interface.launch_ext_program as launch_ext
 import madgraph.interface.loop_interface as Loop_interface
+import madgraph.fks.fks_common as fks_common
 import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_helas_objects as fks_helas
 import madgraph.iolibs.export_fks as export_fks
@@ -463,11 +464,34 @@ class aMCatNLOInterface(CheckFKS, CompleteFKS, HelpFKS, Loop_interface.CommonLoo
         self.proc_validity(myprocdef,'aMCatNLO_%s'%proc_type[1])
 
         # set the orders
+        # if some orders have been set by the user,
+        # check that all the orders of the model have been specified
+        # set to zero those which have not been specified and warn the user
+        if myprocdef['orders'] and not all([o in myprocdef['orders'].keys() for o in myprocdef['model'].get_coupling_orders()]):
+            for o in myprocdef['model'].get_coupling_orders():
+                if o not in myprocdef['orders'].keys():
+                    myprocdef['orders'][o] = 0
+                    logger.warning(('%s order is missing in the process definition. It will be set to 0.\n' + \
+                                    'If this is not what you need, please regenerate with the correct orders.') % o)
+
         # this is in case no orders have been passed
         if not myprocdef['orders']:
-            myprocdef.set('orders', diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef))
-            #MZ at least at the beginning, warn the user
-            logger.warning('Setting the orders automatically in process definition')
+            # find the minimum weighted order, then extract the values for the varius
+            # couplings in the model
+            weighted = diagram_generation.MultiProcess.find_optimal_process_orders(myprocdef)
+
+            # this is a very rough attempt, and works only to guess QED/QCD
+            qed, qcd = fks_common.get_qed_qcd_orders_from_weighted(len(myprocdef['legs']), weighted['WEIGHTED'])
+            orders = {'QED': qed, 'QCD': qcd}
+            # set all the other coupling to zero
+            for o in myprocdef['model'].get_coupling_orders():
+                if o not in ['QED', 'QCD']:
+                    orders[o] = 0
+
+            myprocdef.set('orders', orders)
+            # warn the user of what happened
+            logger.warning(('Setting the born orders automatically in the process definition to %s.\n' + \
+                            'If this is not what you need, please regenerate with the correct orders.') % myprocdef['orders'])
 
         myprocdef['born_orders'] = copy.copy(myprocdef['orders'])
         # split all orders in the model, for the moment it's the simplest solution

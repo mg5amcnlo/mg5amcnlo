@@ -123,6 +123,88 @@ class TestAMCatNLOEW(unittest.TestCase):
                     self.assertEqual(len(info['splitting_type']), 1)
 
 
+    def test_generate_fks_ew_noorders(self):
+        """check that the generate command works as expected when no (or just some)
+        orders are set.
+        """
+        cmd_list = [
+            'u u~ > d d~ QED=0 QCD=2 [real=QED]',
+            'u u~ > d d~ QCD=2 [real=QED]',
+            'u u~ > d d~ [real=QED]',
+            \
+            'u u~ > d d~ QED=0 QCD=2 [real=QED QCD]',
+            'u u~ > d d~ QCD=2 [real=QED QCD]',
+            'u u~ > d d~ [real=QED QCD]',
+            \
+            'u u~ > d d~ QED=0 QCD=2 [real=QCD]',
+            'u u~ > d d~ QCD=2 [real=QCD]',
+            'u u~ > d d~ [real=QCD]']
+
+        # expected born_orders
+        born_orders_list = 9*[{'QED':0, 'QCD':2}]
+
+        # perturbation couplings (always set to [QED, QCD]
+        pert_couplings_list = 9*[['QED','QCD']]
+
+        # expected squared_orders (should take into
+        #  account the perturbation
+        squared_orders_list = 3*[{'QED':2, 'QCD':4}] + \
+                              3*[{'QED':2, 'QCD':6}] + \
+                              3*[{'QED':0, 'QCD':6}]
+
+        # number of expected born diagrams
+        # 1 QCD diagram and 3 EW ones
+        nborndiag_list = [4, 4, 4, 4, 4, 4, 1, 1, 1]
+
+        # number of expected real emission processes
+        # for QED perturbations also the gluon emissions have to be generated, 
+        # as their alpha x alpha_s^2 contribution has to be included
+        nrealproc_list = [6, 6, 6, 6, 6, 6, 3, 3, 3]
+
+        # number of expected real emission diagrams
+        # u u~ > d d~ g has 5 with QED=0, 17 with QED=2
+        # u u~ > d d~ a has 4 with QED=1, 17 with QED=3
+        #
+        # for e.g. 'u u~ > d d~ QED=0 QCD=2 [real=QED]'
+        # the real emissions are ordered as follows:
+        #   u u~ > d d~ a [ QED ] QED=2 QCD=4
+        #   a u~ > d d~ u~ [ QED ] QED=2 QCD=4
+        #   u u~ > d d~ g [ QED ] QED=2 QCD=4
+        #   g u~ > d d~ u~ [ QED ] QED=2 QCD=4
+        #   u a > d d~ u [ QED ] QED=2 QCD=4
+        #   u g > d u d~ [ QED ] QED=2 QCD=4
+        nrealdiags_list = 3*[[4, 4, 17, 17, 4, 17]] + \
+                          3*[[4, 4, 17, 17, 4, 17]] + \
+                          3*[[5, 5, 5]]
+
+        for cmd, born_orders, squared_orders, pert_couplings, nborndiag, nrealproc, nrealdiags in \
+                zip(cmd_list, born_orders_list, squared_orders_list, pert_couplings_list, nborndiag_list, 
+                        nrealproc_list, nrealdiags_list):
+            self.interface.do_generate(cmd)
+
+            fksprocess = self.interface._fks_multi_proc['born_processes'][0]
+
+            # check that the extra_cnt_amp_list is empty
+            self.assertEqual(0, len(fksprocess.extra_cnt_amp_list))
+
+            self.assertEqual(born_orders, fksprocess.born_amp['process']['born_orders'])
+            self.assertEqual(squared_orders, fksprocess.born_amp['process']['squared_orders'])
+            self.assertEqual(pert_couplings, fksprocess.born_amp['process']['perturbation_couplings'])
+
+            self.assertEqual(len(fksprocess.born_amp['diagrams']), nborndiag)
+            self.assertEqual(len(fksprocess.real_amps), nrealproc)
+            for amp, n in zip(fksprocess.real_amps, nrealdiags):
+                # check that the fks_j_from i have also been set 
+                self.assertNotEqual(amp.fks_j_from_i, {})
+                self.assertEqual(n, len(amp.amplitude['diagrams']))
+                # and that no extra counterterm is needed
+                for info in amp.fks_infos:
+                    self.assertEqual(info['extra_cnt_index'], -1)
+                    self.assertEqual(len(info['underlying_born']), 1)
+                    self.assertEqual(len(info['splitting_type']), 1)
+
+
+
     def test_generate_fks_ew_extra_cnts_ttx_full(self):
         """check that the generate command works as expected.
         for processes which feature g/a > qqbar splitting.

@@ -48,6 +48,16 @@ class FKSDiagramTag(diagram_generation.DiagramTag): #test written
         return [((leg.get('id'), leg.get('number')), leg.get('number'))]
 
 
+def get_qed_qcd_orders_from_weighted(nexternal, weighted):
+    """computes the QED/QCD orders from the knowledge of the n of ext particles
+    and of the weighted orders"""
+    # n vertices = nexternal - 2 =QED + QCD
+    # weighted = 2*QED + QCD
+    QED = weighted - nexternal + 2
+    QCD = weighted - 2 * QED
+    return QED, QCD
+
+
 def link_rb_configs(born_amp, real_amp, i, j, ij):
     """finds the real configurations that match the born ones, i.e.  for
     each born configuration, the real configuration that has the ij ->
