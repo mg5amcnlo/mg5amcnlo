@@ -24,6 +24,7 @@ import shutil
 
 import tests.unit_tests as unittest
 import madgraph.core.base_objects as base_objects
+import models
 import models.import_ufo as import_ufo
 import models.usermod as usermod
 import models as ufomodels
@@ -467,10 +468,12 @@ QED = CouplingOrder(name = 'QED',
             else:
                 new_text.append(line)
         text=new_text
-        
-        
-        self.assertEqual(target, text)
-
+                
+        for line1, line2 in zip(target, text):
+            try:
+                self.assertEqual(line1.replace(',',')'), line2.replace(',',')'))
+            except Exception:
+                self.assertEqual(target, text)
     def test_write_vertices(self):
         """Check that the content of the file is valid"""
 
@@ -510,6 +513,7 @@ class Test_ADDON_UFO(unittest.TestCase):
         self.sm_path = import_ufo.find_ufo_path('sm')
         self.base_model = usermod.UFOModel(self.sm_path)
         self.mymodel = Model()
+        self.sm = models.load_model('sm')
         for key in self.mymodel.__dict__:
             obj = getattr(self.mymodel, key)
             for o in obj[:]:
@@ -564,6 +568,7 @@ class Test_ADDON_UFO(unittest.TestCase):
         #Add a particle which is exactly the Higgs like in the Standard Model
         self.base_model.add_particle(H)
         self.assertEqual( number_particles, len(self.base_model.particles))
+        self.assertEqual( number_particles, len(self.sm.all_particles))
         
         #Same name but different pid ->add but with rename
         H = Particle(pdg_code = 26,
@@ -581,6 +586,8 @@ class Test_ADDON_UFO(unittest.TestCase):
              Y = 0) 
         self.base_model.add_particle(H)
         self.assertEqual( number_particles+1, len(self.base_model.particles))       
+        self.assertEqual( number_particles, len(self.sm.all_particles))
+        orig_number_particles = number_particles
         number_particles+=1
         self.assertEqual(H.name, 'H__1')
         
@@ -599,7 +606,8 @@ class Test_ADDON_UFO(unittest.TestCase):
              LeptonNumber = 0,
              Y = 0) 
         self.base_model.add_particle(H)
-        self.assertEqual( number_particles+1, len(self.base_model.particles))       
+        self.assertEqual( number_particles+1, len(self.base_model.particles)) 
+        self.assertEqual( orig_number_particles, len(self.sm.all_particles))      
         number_particles+=1
         self.assertEqual(H.name, 'H2')
         #Different name But different pid.
@@ -617,7 +625,8 @@ class Test_ADDON_UFO(unittest.TestCase):
              LeptonNumber = 0,
              Y = 0) 
         self.base_model.add_particle(H)
-        self.assertEqual( number_particles, len(self.base_model.particles))       
+        self.assertEqual( number_particles, len(self.base_model.particles)) 
+        self.assertEqual( orig_number_particles, len(self.sm.all_particles))      
         #number_particles+=1
         self.assertEqual(H.name, 'H3')
         
@@ -639,7 +648,8 @@ class Test_ADDON_UFO(unittest.TestCase):
              LeptonNumber = 0,
              Y = 0)         
         self.base_model.add_particle(H)
-        self.assertEqual( number_particles, len(self.base_model.particles))       
+        self.assertEqual( number_particles, len(self.base_model.particles))
+        self.assertEqual( orig_number_particles, len(self.sm.all_particles))       
         self.assertEqual(H.name, 'H')        
         self.assertEqual(H.mass.name, 'ZERO')
         true_higgs = self.base_model.particle_dict[25]
@@ -678,7 +688,8 @@ class Test_ADDON_UFO(unittest.TestCase):
         self.base_model.add_parameter(M5)
         self.base_model.add_parameter(W5)
         self.base_model.add_particle(B)
-        self.assertEqual( number_particles, len(self.base_model.particles))       
+        self.assertEqual( number_particles, len(self.base_model.particles)) 
+        self.assertEqual( orig_number_particles, len(self.sm.all_particles))      
         # For the mass both are define, so this is should be a merge
         self.assertEqual(B.name, 'B')        
         self.assertEqual(B.mass.name, 'M5')
@@ -823,7 +834,9 @@ class Test_ADDON_UFO(unittest.TestCase):
         
         self.base_model.add_coupling(GC_107)
         self.assertEqual(nb_coup,  len(self.base_model.couplings))
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings))
         self.assertTrue(hasattr(GC_107, 'replace'))
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings))
  
         GC_107 = Coupling(name = 'GC_110',
                   value = '(ee*complex(0,1)*complexconjugate(CKM3x2))/(sw*cmath.sqrt(2))',
@@ -831,8 +844,9 @@ class Test_ADDON_UFO(unittest.TestCase):
         
         self.base_model.add_coupling(GC_107)
         self.assertEqual(nb_coup,  len(self.base_model.couplings))
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings))
         self.assertTrue(hasattr(GC_107, 'replace')) 
- 
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings)) 
         
         GC_107 = Coupling(name = 'GC_107',
                   value = '(ee*complex(0,1)*complexconjugate(CKM3x99))/(sw*cmath.sqrt(2))',
@@ -840,6 +854,7 @@ class Test_ADDON_UFO(unittest.TestCase):
         
         self.base_model.add_coupling(GC_107)
         self.assertEqual(nb_coup+1,  len(self.base_model.couplings))
+        self.assertEqual(nb_coup,  len(self.sm.all_couplings))
         self.assertFalse(hasattr(GC_107, 'replace'))        
         
     
@@ -916,6 +931,10 @@ class Test_ADDON_UFO(unittest.TestCase):
         self.base_model.add_interaction(V_2, self.mymodel)
         self.assertEqual(orig, len(self.base_model.vertices))
         
+        ## check that the sm model is not impacted
+        self.assertNotEqual(orig, len(self.sm.all_vertices))
+
+
     def test_identify_particle(self):
         
         GC_1 = Coupling(name = 'GC_1',

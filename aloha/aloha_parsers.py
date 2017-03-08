@@ -36,6 +36,11 @@ import vendor.ply.yacc as yacc
 from aloha.aloha_lib import KERNEL
 logger = logging.getLogger('aloha.parsers')
 
+try:
+    import madgraph.various.misc as misc
+except Exception:
+    import aloha.misc as misc
+
 
 # PLY lexer class
 class UFOExpressionParser(object):
@@ -268,7 +273,6 @@ class ALOHAExpressionParser(UFOExpressionParser):
         if re_groups:
             p1 = re_groups.group("name")
         new = aloha_lib.KERNEL.add_function_expression(p1, eval(p[3]))
-        
         p[0] = str(new)
     
     def p_expression_function2(self, p):

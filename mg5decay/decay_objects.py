@@ -954,7 +954,7 @@ class DecayParticle(base_objects.Particle):
                     if 0 < minv_max.real < 0.100:
                         logger.warning("WARNING: Mass gap lower than pion mass for decay of %s "
                                                              % self['pdg_code'])
-                        logger.warning("decay into colored particle will be remove.")
+                        logger.warning("decay into colored particle will be removed.")
                         allow_qcd=False
                         if model.get_particle(abs(leg['id']))['color'] != 1:
                             continue
@@ -4164,8 +4164,25 @@ class Channel(base_objects.Diagram):
                     for i, part in enumerate(vertex['particles']):
                         mass  = abs(eval(part.get('mass')))
                         q_dict_lor['q%i' % (i+1)] = mass / 2
-                    
-                    lor_value = eval(new_structure % q_dict_lor)
+
+                    try:                    
+                        lor_value = eval(new_structure % q_dict_lor)
+                    except NameError , error:
+                        ufo_struct = model.lorentz_dict[vertex['lorentz'][key[1]]]
+
+                        for obj in ufo_struct.formfactors:
+                            val = self.lor_pattern.sub(self.simplify_lorentz,
+                                                         obj.value)
+                            while True:
+                                try:
+                                    exec('%s=%s' % (obj.name, val % q_dict_lor))
+                                except NameError, error:
+                                    failname = str(error).split("'")[1]
+                                    exec('%s=mdl_%s' % (failname, failname))
+                                else:
+                                    break
+                        lor_value = eval(new_structure % q_dict_lor)
+                            
                     # Avoid accidental zeros in lor_value
                     if lor_value == 0:
                         new_structure = new_structure.replace('-','+')

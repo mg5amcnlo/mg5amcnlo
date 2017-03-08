@@ -23,6 +23,7 @@ def load_model(name, decay=False):
     if name.endswith('/'):
         name = name[:-1]
     
+
     path_split = name.split(os.sep)
     if len(path_split) == 1:
         model_pos = 'models.%s' % name

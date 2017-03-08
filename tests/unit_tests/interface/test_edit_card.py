@@ -23,8 +23,10 @@ import madgraph.interface.common_run_interface as runcmd
 import madgraph.iolibs.files as files
 import madgraph.various.misc as misc
 import os
-import readline
-
+try:
+    import readline
+except:
+    readline = None
 
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.dirname(root_path)
@@ -78,7 +80,8 @@ class TestEditCardCmd(unittest.TestCase):
                                         mode='auto', mother_interface=fakemother)
 
     def get_completion(self, text):
-        readline.__doc__ = 'libedit'
+        if readline:
+            readline.__doc__ = 'libedit'
         data = text.split()
         fct = getattr(self.cmd, 'complete_%s' % (data[0]))
         line = ' '.join(data[1:])

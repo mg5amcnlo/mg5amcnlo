@@ -173,7 +173,7 @@ class MyTextTestRunner(unittest.TextTestRunner):
 # run
 #===============================================================================
 def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
-        timelimit=0):
+        timelimit=[0,0]):
     """ running the test associated to expression. By default, this launch all 
     test inherited from TestCase. Expression can be the name of directory, 
     module, class, function or event standard regular expression (in re format)
@@ -182,7 +182,9 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
     #init a test suite
     testsuite = unittest.TestSuite()
     collect = unittest.TestLoader()
-    TestSuiteModified.time_limit =  float(timelimit)
+    TestSuiteModified.time_limit =  float(timelimit[1])
+    TestSuiteModified.mintime_limit =  float(timelimit[0])
+
     for test_fct in TestFinder(package=package, expression=expression, \
                                    re_opt=re_opt):
         data = collect.loadTestsFromName(test_fct)        
@@ -209,7 +211,7 @@ def run(expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
 # run
 #===============================================================================
 def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit_tests', verbosity=1,
-        timelimit=0):
+        timelimit=[0,0]):
     """ running the test associated to expression one by one. and follow them by the to_crash one
         up to the time that to_crash is actually crashing. Then the run stops and print the list of the 
         routine tested. Then the code re-run itself(via a fork) to restrict the list. 
@@ -217,7 +219,8 @@ def run_border_search(to_crash='',expression='', re_opt=0, package='./tests/unit
     """
     #init a test suite
     collect = unittest.TestLoader()
-    TestSuiteModified.time_limit =  float(timelimit)
+    TestSuiteModified.time_limit =  float(timelimit[1])
+    TestSuiteModified.mintime_limit =  float(timelimit[0])
     all_test = TestFinder(package=package, expression=expression, re_opt=re_opt)
     import random
     random.shuffle(all_test)
@@ -509,13 +512,31 @@ class TestSuiteModified(unittest.TestSuite):
     them."""
     
     time_limit = 1
+    mintime_limit=0
     time_db = {}
+    stop_eval = False # bypass all following test when this is on True (but those in preserve)
 
     @tests.IOTests.set_global()
     def __call__(self, *args, **kwds):
-    
+
+        bypass= []
+        to_preserve=[]
+
+#        if 'TESTLHEParser' in str(self):
+#            TestSuiteModified.stop_eval = False
+
+        if any(name in str(self) for name in bypass):
+            MyTextTestRunner.stream.write('s')
+            return 
+
+        if  TestSuiteModified.stop_eval and \
+                all(name not in str(self) for name in to_preserve):
+            MyTextTestRunner.stream.write('s')
+            return
+
         time_db = TestSuiteModified.time_db
         time_limit = TestSuiteModified.time_limit
+        mintime_limit = TestSuiteModified.mintime_limit
         if not time_db and time_limit > 0:
             if not os.path.exists(pjoin(root_path, 'tests','time_db')):
                 TestSuiteModified.time_limit = -1
@@ -526,12 +547,19 @@ class TestSuiteModified(unittest.TestSuite):
                          for line in open(pjoin(root_path, 'tests','time_db'))
                          ])
                 time_db = TestSuiteModified.time_db
-            
-        if str(self) in time_db and time_db[str(self)] > abs(time_limit):
-            MyTextTestRunner.stream.write('T')
-            #print dir(self._tests[0]), type(self._tests[0]),self._tests[0] 
-            MyTextTestRunner.bypassed.append(str(self._tests[0]).split()[0])
-            return
+        
+
+
+        if str(self) in time_db and (time_db[str(self)] > abs(time_limit) or\
+                                         time_db[str(self)] < abs(mintime_limit)):
+            if any(name in str(self) for name in to_preserve): 
+                MyTextTestRunner.stream.write('T->R:')
+#                TestSuiteModified.stop_eval = True
+            else:
+                MyTextTestRunner.stream.write('T')
+                #print dir(self._tests[0]), type(self._tests[0]),self._tests[0] 
+#               MyTextTestRunner.bypassed.append(str(self._tests[0]).split()[0])
+                return
 
         
         start = time.time()
@@ -539,6 +567,7 @@ class TestSuiteModified(unittest.TestSuite):
         if not str(self) in time_db:
             TestSuiteModified.time_db[str(self)] = time.time() - start
             TestSuiteModified.time_limit *= -1
+
         
         
 #===============================================================================
@@ -937,7 +966,8 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
                                       "content of the folder IOTestsComparison")
     parser.add_option("-t", "--timed", default="Auto",
           help="limit the duration of each test. Negative number re-writes the information file.")    
-
+    parser.add_option("-T", "--mintime", default="0",
+          help="limit on the minimal duration of each test.")
     parser.add_option("", "--border_effect", default=None,
           help="Define the test which are sensitive to a border effect, the test will find which test creates this border effect")        
 
@@ -1025,10 +1055,10 @@ https://cp3.irmp.ucl.ac.be/projects/madgraph/wiki/DevelopmentPage/CodeTesting
         if not options.border_effect:
             #logging.basicConfig(level=vars(logging)[options.logging])
             output = run(args, re_opt=options.reopt, verbosity=options.verbose, \
-                package=options.path, timelimit=options.timed)
+                package=options.path, timelimit=[options.mintime,options.timed])
         else:
             output = run_border_search(options.border_effect, args, re_opt=options.reopt, verbosity=options.verbose, \
-                package=options.path, timelimit=options.timed)
+                package=options.path, timelimit=[options.mintime,options.timed])
     else:
         if options.IOTests=='L':
             print "Listing all tests defined in the reference files ..."

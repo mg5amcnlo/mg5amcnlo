@@ -13,29 +13,27 @@
 #
 ################################################################################
 
-import glob
+
 import logging
 import os
 import pydoc
-import re
-import sys
 import subprocess
-import thread
 import time
-
+start=time.time()
 import madgraph.iolibs.files as files
-import madgraph.interface.extended_cmd as cmd
 import madgraph.interface.madevent_interface as me_cmd
 import madgraph.various.misc as misc
 import madgraph.various.process_checks as process_checks
 import madgraph.various.banner as banner_mod
 
-from madgraph import MG4DIR, MG5DIR, MadGraph5Error
-from madgraph.iolibs.files import cp
+#from madgraph import MG4DIR, MG5DIR, MadGraph5Error
+#from madgraph.iolibs.files import cp
 pjoin = os.path.join
 
 
 logger = logging.getLogger('cmdprint.ext_program')
+
+
 
 class ExtLauncher(object):
     """ Generic Class for executing external program """
@@ -643,12 +641,9 @@ class MELauncher(ExtLauncher):
             command = 'generate_events %s' % self.name
         else:
             warning_text = '''\
-This command will create a new param_card with the computed width. 
-This param_card makes sense only if you include all processes for
-the computation of the width. For more efficient width computation:
-see arXiv:1402.1178.'''
+            Note that since 2.3. The launch for 1>N pass in event generation
+            For efficient width computation see arXiv:1402.1178.'''
             logger.warning(warning_text)
-
             command = 'generate_events %s' % self.name
         if mode == "1":
             command += " --cluster"
@@ -791,5 +786,4 @@ class Pythia8Launcher(ExtLauncher):
 
 # old compatibility shortcut
 open_file = misc.open_file
-
 

@@ -136,67 +136,67 @@ c
       detallb=etal-etalb
 c
       l=0
-      call HwU_fill(l+1,(ptv),(WGTS))
-      call HwU_fill(l+2,(ptv),(WGTS))
-      if(ptv.gt.0.d0)call HwU_fill(l+3,(log10(ptv)),(WGTS))
-      call HwU_fill(l+4,(yv),(WGTS))
-      call HwU_fill(l+5,(etav),(WGTS))
-      call HwU_fill(l+6,(xmv),(WGTS))
+      call HwU_fill(l+1,(ptv),WGTS)
+      call HwU_fill(l+2,(ptv),WGTS)
+      if(ptv.gt.0.d0)call HwU_fill(l+3,(log10(ptv)),WGTS)
+      call HwU_fill(l+4,(yv),WGTS)
+      call HwU_fill(l+5,(etav),WGTS)
+      call HwU_fill(l+6,(xmv),WGTS)
 c
-      call HwU_fill(l+7,(ptl),(WGTS))
-      call HwU_fill(l+8,(ptl),(WGTS))
-      if(ptl.gt.0.d0)call HwU_fill(l+9,(log10(ptl)),(WGTS))
-      call HwU_fill(l+10,(etal),(WGTS))
-      call HwU_fill(l+11,(ptlb),(WGTS))
-      call HwU_fill(l+12,(ptlb),(WGTS))
-      if(ptlb.gt.0.d0)call HwU_fill(l+13,(log10(ptlb)),(WGTS))
-      call HwU_fill(l+14,(etalb),(WGTS))
+      call HwU_fill(l+7,(ptl),WGTS)
+      call HwU_fill(l+8,(ptl),WGTS)
+      if(ptl.gt.0.d0)call HwU_fill(l+9,(log10(ptl)),WGTS)
+      call HwU_fill(l+10,(etal),WGTS)
+      call HwU_fill(l+11,(ptlb),WGTS)
+      call HwU_fill(l+12,(ptlb),WGTS)
+      if(ptlb.gt.0.d0)call HwU_fill(l+13,(log10(ptlb)),WGTS)
+      call HwU_fill(l+14,(etalb),WGTS)
 c
-      call HwU_fill(l+15,(detallb),(WGTS))
-      call HwU_fill(l+16,(azi),(WGTS))
-      if(azinorm.gt.0.d0) call HwU_fill(l+17,(log10(azinorm)),(WGTS))
-      call HwU_fill(l+18,(xmll),(WGTS))
-      call HwU_fill(l+19,(ptpair),(WGTS))
-      if(ptpair.gt.0)call HwU_fill(l+20,(log10(ptpair)),(WGTS))
-      call HwU_fill(l+21,(0d0),(WGTS))
+      call HwU_fill(l+15,(detallb),WGTS)
+      call HwU_fill(l+16,(azi),WGTS)
+      if(azinorm.gt.0.d0) call HwU_fill(l+17,(log10(azinorm)),WGTS)
+      call HwU_fill(l+18,(xmll),WGTS)
+      call HwU_fill(l+19,(ptpair),WGTS)
+      if(ptpair.gt.0)call HwU_fill(l+20,(log10(ptpair)),WGTS)
+      call HwU_fill(l+21,(0d0),WGTS)
 c
       l=l+21
 
       if(abs(etav).lt.ycut)then
-        call HwU_fill(l+1,(ptv),(WGTS))
-        call HwU_fill(l+2,(ptv),(WGTS))
-        if(ptv.gt.0.d0)call HwU_fill(l+3,(log10(ptv)),(WGTS))
+        call HwU_fill(l+1,(ptv),WGTS)
+        call HwU_fill(l+2,(ptv),WGTS)
+        if(ptv.gt.0.d0)call HwU_fill(l+3,(log10(ptv)),WGTS)
       endif
       if(ptv.gt.20.d0)then
-        call HwU_fill(l+4,(yv),(WGTS))
-        call HwU_fill(l+5,(etav),(WGTS))
+        call HwU_fill(l+4,(yv),WGTS)
+        call HwU_fill(l+5,(etav),WGTS)
       endif
       if(abs(etav).lt.ycut.and.ptv.gt.20.d0)then
-         call HwU_fill(l+6,(xmv),(WGTS))
-         call HwU_fill(l+21,(0d0),(WGTS))
+         call HwU_fill(l+6,(xmv),WGTS)
+         call HwU_fill(l+21,(0d0),WGTS)
       endif
 c
       if(abs(etal).lt.ycut)then
-        call HwU_fill(l+7,(ptl),(WGTS))
-        call HwU_fill(l+8,(ptl),(WGTS))
-        if(ptl.gt.0.d0)call HwU_fill(l+9,(log10(ptl)),(WGTS))
+        call HwU_fill(l+7,(ptl),WGTS)
+        call HwU_fill(l+8,(ptl),WGTS)
+        if(ptl.gt.0.d0)call HwU_fill(l+9,(log10(ptl)),WGTS)
       endif
-      if(ptl.gt.20.d0)call HwU_fill(l+10,(etal),(WGTS))
+      if(ptl.gt.20.d0)call HwU_fill(l+10,(etal),WGTS)
       if(abs(etalb).lt.ycut)then
-        call HwU_fill(l+11,(ptlb),(WGTS))
-        call HwU_fill(l+12,(ptlb),(WGTS))
-        if(ptlb.gt.0.d0)call HwU_fill(l+13,(log10(ptlb)),(WGTS))
+        call HwU_fill(l+11,(ptlb),WGTS)
+        call HwU_fill(l+12,(ptlb),WGTS)
+        if(ptlb.gt.0.d0)call HwU_fill(l+13,(log10(ptlb)),WGTS)
       endif
-      if(ptlb.gt.20.d0)call HwU_fill(l+14,(etalb),(WGTS))
+      if(ptlb.gt.20.d0)call HwU_fill(l+14,(etalb),WGTS)
 c
       if( abs(etal).lt.ycut.and.abs(etalb).lt.ycut .and.
      &     ptl.gt.20.d0.and.ptlb.gt.20.d0)then
-        call HwU_fill(l+15,(detallb),(WGTS))
-        call HwU_fill(l+16,(azi),(WGTS))
-        if(azinorm.gt.0.d0) call HwU_fill(l+17,(log10(azinorm)),(WGTS))
-        call HwU_fill(l+18,(xmll),(WGTS))
-        call HwU_fill(l+19,(ptpair),(WGTS))
-        if(ptpair.gt.0) call HwU_fill(l+20,(log10(ptpair)),(WGTS))
+        call HwU_fill(l+15,(detallb),WGTS)
+        call HwU_fill(l+16,(azi),WGTS)
+        if(azinorm.gt.0.d0) call HwU_fill(l+17,(log10(azinorm)),WGTS)
+        call HwU_fill(l+18,(xmll),WGTS)
+        call HwU_fill(l+19,(ptpair),WGTS)
+        if(ptpair.gt.0) call HwU_fill(l+20,(log10(ptpair)),WGTS)
       endif
 
  999  return      

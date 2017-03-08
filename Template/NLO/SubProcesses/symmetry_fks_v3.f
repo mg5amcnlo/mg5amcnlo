@@ -10,6 +10,7 @@ c
       include 'genps.inc'      
       include 'nexternal.inc'
       include '../../Source/run_config.inc'
+      include 'mint.inc'
       
       double precision ZERO
       parameter       (ZERO = 0d0)
@@ -49,7 +50,7 @@ c
      &     -1),p_ev_red_save(0:3,nexternal-1)
       double precision p1_cnt_save(0:3,nexternal,-2:2),p_born_save(0:3
      &     ,nexternal-1),p_ev_red1(0:3,nexternal-1)
-      integer ninvar, ndim, iconfig, minconfig, maxconfig
+      integer ninvar, ndim, minconfig, maxconfig
       common/tosigint/ndim
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer icb(nexternal-1,maxswitch),jc(12),nswitch
@@ -180,6 +181,8 @@ c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       call printout
       call run_printout
       iconfig=1
+      ichan=1
+      iconfigs(1)=iconfig
       call setfksfactor(iconfig,.false.)
 c
       ndim = 55

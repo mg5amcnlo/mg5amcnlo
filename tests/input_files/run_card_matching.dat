@@ -228,6 +228,7 @@
 #          reweighting into account!                                 *
 #*********************************************************************
    T  = use_syst      ! Enable systematics studies
+   systematics = systematics_program
 #
 #**************************************                                       
 # Parameter of the systematics study 

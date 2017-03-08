@@ -17,17 +17,11 @@
 """
 from __future__ import division
 
+
+
 import ast
-import atexit
-import cmath
-import cmd
-import glob
 import logging
-import math
-import optparse
 import os
-import pydoc
-import random
 import re
 import shutil
 import signal
@@ -44,7 +38,7 @@ try:
     GNU_SPLITTING = ('GNU' in readline.__doc__)
 except:
     GNU_SPLITTING = True
-
+     
 root_path = os.path.split(os.path.dirname(os.path.realpath( __file__ )))[0]
 root_path = os.path.split(root_path)[0]
 sys.path.insert(0, os.path.join(root_path,'bin'))
@@ -66,10 +60,11 @@ except ImportError:
     import internal.cluster as cluster
     import internal.check_param_card as check_param_card
     import internal.files as files
-    import internal.histograms as histograms
+#    import internal.histograms as histograms # imported later to not slow down the loading of the code
     import internal.save_load_object as save_load_object
     import internal.gen_crossxhtml as gen_crossxhtml
     import internal.lhe_parser as lhe_parser
+    import internal.FO_analyse_card as FO_analyse_card 
     from internal import InvalidCmd, MadGraph5Error
     MADEVENT=True    
 else:
@@ -81,10 +76,11 @@ else:
     import madgraph.iolibs.files as files
     import madgraph.various.cluster as cluster
     import madgraph.various.lhe_parser as lhe_parser
+    import madgraph.various.FO_analyse_card as FO_analyse_card 
     import madgraph.iolibs.save_load_object as save_load_object
     import madgraph.madevent.gen_crossxhtml as gen_crossxhtml
     import models.check_param_card as check_param_card
-    import madgraph.various.histograms as histograms
+#    import madgraph.various.histograms as histograms # imported later to not slow down the loading of the code
     
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR
     MADEVENT=False
@@ -1078,6 +1074,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         """Generated the HwU plots from Pythia8 driver output for a specific
         observable."""
         
+        try:
+            import madgraph
+        except ImportError:  
+            import internal.histograms as histograms
+        else:
+            import madgraph.various.histograms as histograms
+        
         # Make sure that the file is present
         if not os.path.isfile(data_path):
             return False
@@ -1604,8 +1607,12 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                                             if t not in ['errorset', 'central']]
         
         # Copy all the relevant PDF sets
-        [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
-            
+        try:
+            [self.copy_lhapdf_set([onelha], pdfsets_dir) for onelha in lhaid]
+        except Exception, error:
+            logger.debug(str(error))
+            logger.warning('impossible to download all the pdfsets. Bypass systematics')
+            return
         
         if self.options['run_mode'] ==2:
             nb_submit = min(self.options['nb_core'], nb_event//2500)
@@ -2339,7 +2346,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             MA5_options['inputs'] = '%s.gz'%input_file
             if not os.path.exists('%s.gz'%input_file):
                 if os.path.exists(input_file):
-                    misc.gzip(input_file, keep=True, stdout=output_file)
+                    misc.gzip(input_file, stdout='%s.gz' % input_file)
                 else:
                     logger.warning("LHE event file not found in \n%s\ns"%input_file+
                                        "Parton-level MA5 analysis will be skipped.")                 
@@ -3370,6 +3377,10 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         self.check_decay_events(args)
         # args now alway content the path to the valid files
         madspin_cmd = interface_madspin.MadSpinInterface(args[0])
+        # pass current options to the interface
+        madspin_cmd.mg5cmd.options.update(self.options)
+        madspin_cmd.cluster = self.cluster
+        
         madspin_cmd.update_status = lambda *x,**opt: self.update_status(*x, level='madspin',**opt)
 
         path = pjoin(self.me_dir, 'Cards', 'madspin_card.dat')
@@ -3390,6 +3401,9 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             if os.path.exists(current_file+'.gz'):
                 current_file += '.gz'
                 new_file += '.gz'
+            elif current_file.endswith('.gz') and os.path.exists(current_file[:-3]):
+                current_file = current_file[:-3]
+                new_file = new_file[:-3]
             else:
                 logger.error('MadSpin fails to create any decayed file.')
                 return
@@ -3745,7 +3759,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         Version which can be used independently of the class.
         local path is used if the global installation fails.
         """
-           
+
         if not lhapdf_version:
             lhapdf_version = subprocess.Popen([lhapdf_config, '--version'], 
                         stdout = subprocess.PIPE).stdout.read().strip()
@@ -3986,6 +4000,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['ML'] =pjoin(self.me_dir,'Cards','MadLoopParams.dat')
         self.paths['shower'] = pjoin(self.me_dir,'Cards','shower_card.dat')
         self.paths['shower_default'] = pjoin(self.me_dir,'Cards','shower_card_default.dat')
+        self.paths['FO_analyse'] = pjoin(self.me_dir,'Cards','FO_analyse_card.dat')
+        self.paths['FO_analyse_default'] = pjoin(self.me_dir,'Cards','FO_analyse_card_default.dat')
         self.paths['pythia'] =pjoin(self.me_dir, 'Cards','pythia_card.dat')
         self.paths['PY8'] = pjoin(self.me_dir, 'Cards','pythia8_card.dat')
         self.paths['PY8_default'] = pjoin(self.me_dir, 'Cards','pythia8_card_default.dat')
@@ -3999,6 +4015,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         self.paths['madanalysis5_hadron'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card.dat')
         self.paths['madanalysis5_parton_default'] = pjoin(self.me_dir,'Cards','madanalysis5_parton_card_default.dat')
         self.paths['madanalysis5_hadron_default'] = pjoin(self.me_dir,'Cards','madanalysis5_hadron_card_default.dat')
+        self.paths['FO_analyse'] = pjoin(self.me_dir,'Cards', 'FO_analyse_card.dat')
 
     def __init__(self, question, cards=[], mode='auto', *args, **opt):
 
@@ -5103,7 +5120,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.run_card['event_norm'] == 'sum':
                 logger.info('Pythia8 needs a specific normalisation of the events. We will change it accordingly.', '$MG:color:BLACK' )
                 self.do_set('run_card event_norm average')         
-                
+        
         # Check the extralibs flag.
         if self.has_shower and isinstance(self.run_card, banner_mod.RunCardNLO):
             modify_extralibs, modify_extrapaths = False,False
@@ -5120,7 +5137,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             if self.run_card['parton_shower'] == 'PYTHIA8':
                 # First check sanity of PY8
                 if not self.mother_interface.options['pythia8_path']:
-                    raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified  to MadGraph5_aMC@NLO'
+                    raise self.mother_interface.InvalidCmd, 'Pythia8 is not correctly specified  to MadGraph5_aMC@NLO'
                 executable = pjoin(self.mother_interface.options['pythia8_path'], 'bin', 'pythia8-config')
                 if not os.path.exists(executable):
                     raise self.mother.InvalidCmd, 'Pythia8 is not correctly specified to MadGraph5_aMC@NLO'                
@@ -5450,8 +5467,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             text = open(path).read()
             line = line.replace('--add', '').replace('-add','')
             logger.info("change madspin_card to add one decay to %s: %s" %(particle, line.strip()), '$MG:color:BLACK')
-            
-            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            if 'launch' in text:
+                text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            else: 
+                text += '\ndecay %s\n launch \n' % line
         else:
             # Here we have to remove all the previous definition of the decay
             #first find the particle
@@ -5461,10 +5480,14 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             decay_pattern = re.compile(r"^\s*decay\s+%s\s*>[\s\w+-~]*?$" % particle, re.I+re.M)
             text= open(path).read()
             text = decay_pattern.sub('', text)
-            text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
-
+            if 'launch' in text:
+                text = text.replace('launch', "\ndecay %s\nlaunch\n" % line,1)
+            else: 
+                text += '\ndecay %s\n launch \n' % line
+                
         with open(path,'w') as fsock:
             fsock.write(text) 
+        self.reload_card(path)
 
         
 
@@ -5527,8 +5550,10 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         logger.info( '     --line_position=X : insert the line before line X (starts at 0)')
         logger.info( '     --after_line="<regular-expression>" write the line after the first line matching the regular expression')
         logger.info( '     --before_line="<regular-expression>" write the line before the first line matching the regular expression')
+        logger.info('      --clean remove all previously existing line in  the file')
         logger.info( '   example: change reweight --after_line="^\s*change mode" change model heft')
         logger.info('********************* HELP ADD ***************************') 
+
 
     def complete_add(self, text, line, begidx, endidx, formatting=True):
         """ auto-completion for add command"""
@@ -5580,9 +5605,15 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             else:
                 logger.error("unknow card %s. Please retry." % args[0])
                 return
-
             # handling the various option on where to write the line            
-            if args[1].startswith('--line_position='):
+            if args[1] == '--clean':
+                ff = open(pjoin(self.me_dir,'Cards',card),'w')
+                ff.write("# %s \n" % card)
+                ff.write("%s \n" %  line.split(None,2)[2])
+                ff.close()
+                logger.info("writing the line in %s (empty file) the line: \"%s\"" %(card, line.split(None,2)[2] ),'$MG:color:BLACK')
+
+            elif args[1].startswith('--line_position='):
                 #position in file determined by user
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
                 split = text.split('\n')
@@ -5591,7 +5622,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(pos, newline)
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(pos, card, line.split(None,1)[1] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--after_line=banner'):
                 # write the line at the first not commented line
@@ -5603,7 +5634,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, line.split(None,2)[2])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')
                 
             elif args[1].startswith('--before_line='):
                 # catch the line/regular expression and write before that line
@@ -5619,10 +5650,8 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))                
-                        
-                
-        
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                
+                                
             elif args[1].startswith('--after_line='):
                 # catch the line/regular expression and write after that line
                 text = open(pjoin(self.me_dir,'Cards',card)).read()
@@ -5637,12 +5666,13 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 split.insert(posline+1, re.split(search_pattern,line)[-1])
                 ff = open(pjoin(self.me_dir,'Cards',card),'w')
                 ff.write('\n'.join(split))
-                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ))                                 
+                logger.info("writting at line %d of the file %s the line: \"%s\"" %(posline, card, line.split(None,1)[1] ),'$MG:color:BLACK')                                 
             else:
                 ff = open(pjoin(self.me_dir,'Cards',card),'a')
                 ff.write("%s \n" % line.split(None,1)[1])
                 ff.close()
-                logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ))
+                logger.info("adding at the end of the file %s the line: \"%s\"" %(card, line.split(None,1)[1] ),'$MG:color:BLACK')
+
             self.reload_card(pjoin(self.me_dir,'Cards',card))
             
 
@@ -5750,7 +5780,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 answer = 'plot'
             else:
                 answer = self.cards[int(answer)-1]
-                
+
         if 'madweight' in answer:
             answer = answer.replace('madweight', 'MadWeight')
         elif 'MadLoopParams' in answer:
