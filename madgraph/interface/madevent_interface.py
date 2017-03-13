@@ -31,7 +31,7 @@ import sys
 import time
 import tarfile
 import StringIO
-#import shutil
+import shutil
 import copy
 
 try:
