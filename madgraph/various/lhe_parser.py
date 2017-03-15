@@ -326,7 +326,9 @@ class EventFile(object):
         """
         if isinstance(event, Event):
             if self.eventgroup:
-                self.write('<eventgroup>\n%s\n<eventgroup>\n' % event)
+                self.write('<eventgroup>\n%s\n</eventgroup>\n' % event)
+            else:
+                self.write(str(event))
         elif isinstance(event, list):
             if self.eventgroup:
                 self.write('<eventgroup>\n')
