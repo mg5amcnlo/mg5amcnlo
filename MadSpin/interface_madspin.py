@@ -1339,7 +1339,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         assert all_maxwgt[0] >= all_maxwgt[1]
         decay_tools=madspin.decay_misc()
         ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt)
-        std_weight=math.sqrt(std_weight)
         base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
 
 #        misc.sprint(all_maxwgt)
@@ -1347,7 +1346,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             if len(all_maxwgt) < i:
                 break
             ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt[:i])
-            std_weight=math.sqrt(std_weight)
             base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
                 
             if all_maxwgt[1] > base_max_weight:
