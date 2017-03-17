@@ -1254,7 +1254,7 @@ class Event(list):
             return self.loweight
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
-        
+
         if start != -1 != stop :
             text = self.tag[start+8:stop]
 #<rscale>  3 0.29765919e+03</rscale>
@@ -1289,7 +1289,7 @@ class Event(list):
                     self.loweight['asrwt'] = [float(a) for a in args[2:2+nalps]] 
                     
                 elif 'totfact' in line:
-                    args = line.split() 
+                    args = line.replace('>','> ').split()
                     self.loweight['tot_fact'] = float(args[1])
         else:
             return None
