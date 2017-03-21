@@ -12,8 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-from __builtin__ import True
-
 """A set of functions performing routine administrative I/O tasks."""
 
 import contextlib
