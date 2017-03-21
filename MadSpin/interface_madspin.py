@@ -712,6 +712,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         args = self.split_arg(line)
 
+
+        asked_to_decay = set()
+        for part in self.list_branches.keys():
+            if part in self.mg5cmd._multiparticles:
+                for pdg in self.mg5cmd._multiparticles[part]:
+                    asked_to_decay.add(pdg)
+            else:
+                asked_to_decay.add(self.mg5cmd._curr_model.get('name2pdg')[part])
+
         #0. Define the path where to write the file
         self.path_me = os.path.realpath(self.options['curr_dir']) 
         if self.options['ms_dir']:
@@ -731,7 +740,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         for event in orig_lhe:
             nb_event +=1
             for particle in event:
-                if particle.status == 1 and particle.pdg in self.final_state:
+                if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
 
@@ -1086,6 +1095,14 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         args = self.split_arg(line)
 
+        asked_to_decay = set()
+        for part in self.list_branches.keys():
+            if part in self.mg5cmd._multiparticles:
+                for pdg in self.mg5cmd._multiparticles[part]:
+                    asked_to_decay.add(pdg)
+            else:
+                asked_to_decay.add(self.mg5cmd._curr_model.get('name2pdg')[part])
+
         #0. Define the path where to write the file
         self.path_me = os.path.realpath(self.options['curr_dir']) 
         if self.options['ms_dir']:
@@ -1106,7 +1123,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         for event in orig_lhe:
             nb_event +=1
             for particle in event:
-                if particle.status == 1 and particle.pdg in self.final_state:
+                if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
         #misc.sprint(to_decay)
