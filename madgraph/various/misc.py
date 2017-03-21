@@ -1592,6 +1592,8 @@ apple_notify = Applenotification()
 
 class EasterEgg(object):
     
+    done_notification = False
+    
     def __init__(self,msg):
         try:
             now = time.localtime()
@@ -1599,11 +1601,18 @@ class EasterEgg(object):
             
             if date not in [(21,3),(1,4)]:
                 return
+            if MADEVENT:
+                return
+            
+            import os
+            import pwd
+            username =pwd.getpwuid( os.getuid() )[ 0 ] 
+            msg = msg % {'user': username}
             
             if sys.platform == "darwin":
                 self.call_apple(msg)
             else:
-                self.cal_linux(msg)
+                self.call_linux(msg)
         except Exception:
             pass
     
@@ -1612,8 +1621,7 @@ class EasterEgg(object):
             self.call_apple(msg)
         except:
             pass
-        
-    
+            
     def call_apple(self, msg):
         
         #1. control if the volume is on or not
@@ -1628,12 +1636,20 @@ class EasterEgg(object):
             muted = True
         
         if muted:
-            apple_notify('on April first',' please put the sounds up')
-        
-        os.system('say %s' % msg)
+            if not EasterEgg.done_notification:
+                apple_notify('on April first',' please put the sounds up')
+                EasterEgg.done_notification = True
+        else:
+            os.system('say %s' % msg)
 
-
-a= EasterEgg('You are Loading Madgraph. Please be patient, we are doing the work')
+try:
+    import os 
+    import pwd
+    username =pwd.getpwuid( os.getuid() )[ 0 ]
+    if 'hirschi' in username or 'vryonidou' in username and __debug__:
+        EasterEgg('Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work')
+except:
+    pass
 
 def get_older_version(v1, v2):
     """ return v2  if v1>v2
