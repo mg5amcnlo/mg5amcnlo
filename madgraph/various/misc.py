@@ -1599,7 +1599,7 @@ class EasterEgg(object):
             now = time.localtime()
             date = now.tm_mday, now.tm_mon 
             
-            if date not in [(21,3),(1,4)]:
+            if date not in [(1,4),(21,3),(29,2)]:
                 return
             if MADEVENT:
                 return
@@ -1642,6 +1642,27 @@ class EasterEgg(object):
         else:
             os.system('say %s' % msg)
 
+
+    def call_linux(self, msg):
+        # check for fishing path
+        fishPath = madgraph.MG5DIR+"/input/.cowgraph.cow"
+        if os.path.exists(fishPath):
+            fishPath = " -f " + fishPath
+            #sprint("got fishPath: ",fishPath)
+
+        # check for fishing pole
+        fishPole = which('cowthink')
+        if not os.path.exists(fishPole):
+            if os.path.exists(which('cowsay')):
+                fishPole = which('cowsay')
+            else:
+                return
+
+        # go fishing
+        fishCmd = fishPole + fishPath + " " + msg
+        os.system(fishCmd)
+
+
 try:
     import os 
     import pwd
@@ -1650,6 +1671,7 @@ try:
         EasterEgg('Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work')
 except:
     pass
+
 
 def get_older_version(v1, v2):
     """ return v2  if v1>v2

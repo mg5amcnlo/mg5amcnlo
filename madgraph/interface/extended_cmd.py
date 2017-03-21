@@ -1374,7 +1374,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if hasattr(self, 'me_dir'):
             me_dir = os.path.basename(me_dir) + ' '
         
-        misc.EasterEgg('Be careful a cat a eating a lot of fish today. This make the code unstable.')
+        misc.EasterEgg('Be careful, a cat is eating a lot of fish today. This makes the code unstable.')
         try:
             raise 
         except self.InvalidCmd as error:            

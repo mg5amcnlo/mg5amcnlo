@@ -3,8 +3,8 @@
 ## 2017 March 21
 ## Based on cowsay/think library
 ##
-$the_cow = <<EOC;
-  $thoughts
+$the_cow = <<EOC ;
+  $thoughts                                    [Art by K. Gotanda]
     $thoughts
        $thoughts
 
@@ -12,6 +12,4 @@ $the_cow = <<EOC;
 
 
 
-
-			[Art by K. Gotanda]
 EOC
