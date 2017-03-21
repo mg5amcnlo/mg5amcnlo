@@ -2929,7 +2929,7 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_install('update --mode=mg5_end')
         print
 
-        misc.EasterEgg('Thanks %(user)s for using MadGraph5_aMC@NLO, even on April 1st!')
+        misc.EasterEgg('quit')
         
         
         return value

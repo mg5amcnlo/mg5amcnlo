@@ -1591,13 +1591,37 @@ apple_notify = Applenotification()
 class EasterEgg(object):
     
     done_notification = False
+    message_aprilfirst =\
+        {'error': ['Be careful, a cat is eating a lot of fish today. This makes the code unstable.',
+                   'Really, this sounds so fishy.',
+                   'A Higgs boson walks into a church. The priest says "We don\'t allow Higgs bosons in here".The Higgs boson replies, "But without me, how can you have mass?"',
+                   "Why Heisenberg detests driving cars? Because, every time he looks at the speedometer he get lost!",
+                   "May the mass times acceleration be with you.",
+                   "NOTE: This product may actually be nine-dimensional but, if this is the case, functionality is not affected by the extra five dimensions.",
+                   "IMPORTANT: This product is composed of 100%% matter: It is the responsibility of the User to make sure that it does not come in contact with antimatter.",
+                   'The fishes are out of joke. See you next year for some more'],
+         'loading': ['Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work'],
+         'quit': ['Thanks %(user)s for using MadGraph5_aMC@NLO, even on April 1st!']
+               }
     
-    def __init__(self,msg):
+    def __init__(self, msgtype):
+
         try:
             now = time.localtime()
             date = now.tm_mday, now.tm_mon 
-            
-            if date not in [(1,4)]:
+            if date in [(1,4),(21,3)]:
+                if msgtype in EasterEgg.message_aprilfirst:
+                    choices = EasterEgg.message_aprilfirst[msgtype]
+                    if len(choices) == 0:
+                        return
+                    elif len(choices) == 1:
+                        msg = choices[0]
+                    else:
+                        import random
+                        msg = choices[random.randint(0,len(choices)-2)]
+                    EasterEgg.message_aprilfirst[msgtype].remove(msg)
+                    
+            else:
                 return
             if MADEVENT:
                 return
@@ -1611,7 +1635,8 @@ class EasterEgg(object):
                 self.call_apple(msg)
             else:
                 self.call_linux(msg)
-        except Exception:
+        except Exception, error:
+            sprint(error)
             pass
     
     def __call__(self, msg):
@@ -1635,7 +1660,7 @@ class EasterEgg(object):
         
         if muted:
             if not EasterEgg.done_notification:
-                apple_notify('on April first',' please put the sounds up')
+                apple_notify('On April first','turn up your volume!')
                 EasterEgg.done_notification = True
         else:
             os.system('say %s' % msg)
@@ -1661,14 +1686,15 @@ class EasterEgg(object):
         os.system(fishCmd)
 
 
-try:
-    import os 
-    import pwd
-    username =pwd.getpwuid( os.getuid() )[ 0 ]
-    if 'hirschi' in username or 'vryonidou' in username and __debug__:
-        EasterEgg('Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work')
-except:
-    pass
+if __debug__:
+    try:
+        import os 
+        import pwd
+        username =pwd.getpwuid( os.getuid() )[ 0 ]
+        if 'hirschi' in username or 'vryonidou' in username and __debug__:
+            EasterEgg('loading')
+    except:
+        pass
 
 
 def get_older_version(v1, v2):
