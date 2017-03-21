@@ -1,0 +1,17 @@
+##
+## R. Ruiz
+## 2017 March 21
+## Based on cowsay/think library
+##
+$the_cow = <<EOC;
+  $thoughts
+    $thoughts
+       $thoughts
+
+     ><(((('>   ><(((('>   ><(((('>   ><(((('>   ><(((('>  
+
+
+
+
+			[Art by K. Gotanda]
+EOC
