@@ -1599,7 +1599,7 @@ class EasterEgg(object):
             now = time.localtime()
             date = now.tm_mday, now.tm_mon 
             
-            if date not in [(1,4),(21,3),(29,2)]:
+            if date not in [(1,4)]:
                 return
             if MADEVENT:
                 return
