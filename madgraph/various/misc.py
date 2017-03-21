@@ -12,6 +12,7 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
+from __builtin__ import True
 
 """A set of functions performing routine administrative I/O tasks."""
 
@@ -1589,7 +1590,50 @@ class Applenotification(object):
 
 apple_notify = Applenotification()
 
+class EasterEgg(object):
+    
+    def __init__(self,msg):
+        try:
+            now = time.localtime()
+            date = now.tm_mday, now.tm_mon 
+            
+            if date not in [(21,3),(1,4)]:
+                return
+            
+            if sys.platform == "darwin":
+                self.call_apple(msg)
+            else:
+                self.cal_linux(msg)
+        except Exception:
+            pass
+    
+    def __call__(self, msg):
+        try:
+            self.call_apple(msg)
+        except:
+            pass
+        
+    
+    def call_apple(self, msg):
+        
+        #1. control if the volume is on or not
+        p = subprocess.Popen("osascript -e 'get volume settings'", stdout=subprocess.PIPE, shell=True)
+        output, _  = p.communicate()
+        #output volume:25, input volume:71, alert volume:100, output muted:true
+        info = dict([[a.strip() for a in l.split(':',1)] for l in output.strip().split(',')])
+        muted = False
+        if 'output muted' in info and info['output muted'] == 'true':
+            muted = True
+        elif 'output volume' in info and info['output volume'] == '0':
+            muted = True
+        
+        if muted:
+            apple_notify('on April first',' please put the sounds up')
+        
+        os.system('say %s' % msg)
 
+
+a= EasterEgg('You are Loading Madgraph. Please be patient, we are doing the work')
 
 def get_older_version(v1, v2):
     """ return v2  if v1>v2
