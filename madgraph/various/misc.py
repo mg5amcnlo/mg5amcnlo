@@ -1593,14 +1593,14 @@ class EasterEgg(object):
     done_notification = False
     message_aprilfirst =\
         {'error': ['Be careful, a cat is eating a lot of fish today. This makes the code unstable.',
-                   'Really, this sounds so fishy.',
-                   'A Higgs boson walks into a church. The priest says "We don\'t allow Higgs bosons in here".The Higgs boson replies, "But without me, how can you have mass?"',
-                   "Why Heisenberg detests driving cars? Because, every time he looks at the speedometer he get lost!",
+                   'Really, this sounds fishy.',
+                   'A Higgs boson walks into a church. The priest says "We don\'t allow Higgs bosons in here." The Higgs boson replies, "But without me, how can you have mass?"',
+                   "Why does Heisenberg detest driving cars? Because, every time he looks at the speedometer he gets lost!",
                    "May the mass times acceleration be with you.",
-                   "NOTE: This product may actually be nine-dimensional but, if this is the case, functionality is not affected by the extra five dimensions.",
+                   "NOTE: This product may actually be nine-dimensional. If this is the case, functionality is not affected by the extra five dimensions.",
                    "IMPORTANT: This product is composed of 100%% matter: It is the responsibility of the User to make sure that it does not come in contact with antimatter.",
-                   'The fishes are out of joke. See you next year for some more'],
-         'loading': ['Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work'],
+                   'The fish are out of jokes. See you next year for more!'],
+         'loading': ['Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work.'],
          'quit': ['Thanks %(user)s for using MadGraph5_aMC@NLO, even on April 1st!']
                }
     
@@ -1609,7 +1609,7 @@ class EasterEgg(object):
         try:
             now = time.localtime()
             date = now.tm_mday, now.tm_mon 
-            if date in [(1,4),(21,3)]:
+            if date in [(1,4)]:
                 if msgtype in EasterEgg.message_aprilfirst:
                     choices = EasterEgg.message_aprilfirst[msgtype]
                     if len(choices) == 0:
@@ -1630,7 +1630,6 @@ class EasterEgg(object):
             import pwd
             username =pwd.getpwuid( os.getuid() )[ 0 ] 
             msg = msg % {'user': username}
-            
             if sys.platform == "darwin":
                 self.call_apple(msg)
             else:
