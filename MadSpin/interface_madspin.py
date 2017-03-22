@@ -1179,7 +1179,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     nb_needed = int(efficiency*nb_needed) + nevents_for_max   
                     evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_needed, mg5, output_width=True)
                     if pwidth > 1.01*totwidth:
-                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
+                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
                     elif pwidth > totwidth:
                         pwidth = totwidth
                     br = pwidth / totwidth
@@ -1405,7 +1405,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         
 #        misc.sprint([p.pdg for p in production])
 #        misc.sprint([p.pdg for p in full_event])
-#        misc.sprint(full_me, production_me, decay_me)
 
         return full_event, full_me/(production_me*decay_me)
         
@@ -1419,7 +1418,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         if pdir in self.all_f2py:
             p = event.get_momenta(orig_order)
             p = rwgt_interface.ReweightInterface.invert_momenta(p)
-            return self.all_f2py[pdir](p, event.aqcd, 0)
+            if event[0].color1 == 599 and event.aqcd==0:
+                return self.all_f2py[pdir](p, 0.113, 0)
+            else:
+                return self.all_f2py[pdir](p, event.aqcd, 0)
         else:
             if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))

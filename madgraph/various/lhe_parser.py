@@ -1134,7 +1134,11 @@ class Event(list):
                 status = 'tag'
                 
             if 'part' == status:
-                self.append(Particle(line, event=self))
+                part = Particle(line, event=self)
+                if part.E != 0:
+                    self.append(part)
+                elif self.nexternal:
+                        self.nexternal-=1
             else:
                 if '</event>' in line:
                     line = line.replace('</event>','',1)
