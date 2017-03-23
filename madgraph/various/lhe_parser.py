@@ -152,8 +152,7 @@ class Particle(object):
 
 class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
-
-    eventgroup = False
+    
 
     def __new__(self, path, mode='r', *args, **opt):
         
@@ -176,7 +175,7 @@ class EventFile(object):
         """open file and read the banner [if in read mode]"""
         
         self.parsing = True # check if/when we need to parse the event.
-
+        self.eventgroup  = False
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
@@ -281,7 +280,9 @@ class EventFile(object):
                     text = ''
                     mode = 0
                 if mode:
-                    text += line        
+                    text += line  
+            if len(events) == 0:
+                return self.next()
             return events
     
 
@@ -730,6 +731,7 @@ class MultiEventFile(EventFile):
     def __init__(self, start_list=[], parse=True):
         """if trunc_error is define here then this allow
         to only read all the files twice and not three times."""
+        self.eventgroup = False
         self.files = []
         self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
