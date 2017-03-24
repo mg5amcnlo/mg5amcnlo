@@ -5179,7 +5179,26 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if extrapaths:
                     self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
                 else:
-                    self.do_set('shower_card extrapaths None ')    
+                    self.do_set('shower_card extrapaths None ')   
+                    
+        if 'run' in self.allow_arg and 'param' in self.allow_arg:
+            for param in self.param_card['decay']:
+                width = param.value
+                if width == 0:
+                    continue
+                try:
+                    mass = self.param_card['mass'].get(param.lhacode).value
+                except Exception:
+                    logger.warning('Missing mass in the lha file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
+                    continue
+                if width/mass < 1e-12:
+                    logger.error('The width of particle %s is too small for s-channel resonances(%s). If you have that particle in s-channel this is likely to create numerical instability.', param.lhacode[0], width)
+                    time.sleep(1)
+                    
+                    
+            
+            
+             
     
     def reask(self, *args, **opt):
         
