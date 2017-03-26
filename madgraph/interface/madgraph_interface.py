@@ -7272,6 +7272,61 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
 
         launch_ext.open_file(file_path)
 
+
+# =========================================================
+# START LIHACK Special command for loop-induced interference with trees.
+# =========================================================
+
+    def do_prepare_model_for_loopInducedXTrees(self, line):
+        """Commands for adding the necessary TREE UV interactions to the current model."""
+        
+        # Short-hand to the current model that will be modified
+        model = self._curr_model
+
+        # First add the necessary BKG coupling_orders to the available coupling_orders 
+        # in the model
+        if model['order_hierarchy']:
+            for coupling_order in model['order_hierarchy'].keys():
+                model['order_hierarchy']['BKG_%s'%coupling_order]=model['order_hierarchy'][coupling_order]
+                model['perturbation_couplings'].append('BKG_%s'%coupling_order)
+
+        new_order_hierarchy = dict(model['order_hierarchy'])
+        new_perturbation_couplings = list(model['perturbation_couplings'])
+
+        # Dubplicate base interactions to make UV ones
+        new_interactions=[]
+        id_offset = 1000000
+        for inter in model['interactions'].get_type('base'):
+            new_interactions.append(copy.deepcopy(inter))
+            # Deepcopy intorrectly treats colorstring object. Need to do it by hand.
+            new_interactions[-1].set('color',[cs.create_copy() for cs in inter.get('color')])
+            id_offset += 1
+            new_interactions[-1].set('id',id_offset)            
+            new_interactions[-1].set('type','UVtree')
+            new_interactions[-1].set('loop_particles',[[]])
+            new_orders = {}
+            for order in new_interactions[-1]['orders']:
+                new_orders['BKG_%s'%order]=new_interactions[-1]['orders'][order]
+            new_interactions[-1].set('orders',new_orders)
+
+
+        model.set('interactions',base_objects.InteractionList(model.get('interactions')+new_interactions))
+        # Reset the model dictionaries to sync changes
+        model.reset_dictionaries()
+        # Refresh dictionaries manually (would be done automatically anyway)
+        model.actualize_dictionaries()
+       
+        model.set('order_hierarchy', new_order_hierarchy)
+        model.set('perturbation_couplings', new_perturbation_couplings)
+
+        logger.info('Model %s successfully patched for (finite) Loops x Trees interference computation.'%model.get('name'))
+        return
+
+# =========================================================
+# END Special command for loop-induced interference with trees.
+# =========================================================
+
+
     def do_output(self, line):
         """Main commands: Initialize a new Template or reinitialize one"""
 
@@ -8343,8 +8398,6 @@ class AskforCustomize(cmd.SmartQuestion):
             self.name2options[args[0]].status = False
         else:
             logger.warning('%s is not True/False. Didn\'t do anything.' % args[1])
-
-
 
     def get_question(self):
         """define the current question."""

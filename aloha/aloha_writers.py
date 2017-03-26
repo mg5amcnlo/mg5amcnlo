@@ -1171,7 +1171,7 @@ class ALOHAWriterForFortranLoopQP(QP, ALOHAWriterForFortranLoop):
 
 def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     """ build the name of the aloha function """
-    
+
     assert (name and outgoing is not None) or abstract
 
     if tag is None:
@@ -1193,11 +1193,18 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
     
     if outgoing is None:
         outgoing = abstract.outgoing
-
     return '%s_%s' % (name, outgoing)
 
 def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
+
+    def myHash(target_string):
+        if len(target_string)<50:
+            return target_string
+        if '%(propa)s' in target_string:
+            return 'HASH_'+(str(hash(target_string.lower()))).replace('-','m')+'%(propa)s'
+        else:
+            return 'HASH_'+(str(hash(target_string.lower()))).replace('-','m')
 
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
@@ -1224,9 +1231,11 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
         if unknown_propa and outgoing:
             routine += '%(propa)s'
         if outgoing is not None:
-            return routine +'_%s' % outgoing
+            return myHash(routine)+'_%s' % outgoing
+#            return routine +'_%s' % outgoing
         else:
-            return routine
+            return myHash(routine)
+#            return routine
 
     if tag is not None:
         addon = ''.join(tag)
@@ -1243,10 +1252,15 @@ def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     if unknown_propa:
         addon += '%(propa)s'
 
+#    if outgoing is not None:
+#        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+#    else:
+#        return '_'.join((name,) + tuple(other_names)) + addon
+
     if outgoing is not None:
-        return '_'.join((name,) + tuple(other_names)) + addon + '_%s' % outgoing
+        return myHash('_'.join((name,) + tuple(other_names))) + addon + '_%s' % outgoing
     else:
-        return '_'.join((name,) + tuple(other_names)) + addon
+        return myHash('_'.join((name,) + tuple(other_names))) + addon
 
 class ALOHAWriterForCPP(WriteALOHA): 
     """Routines for writing out helicity amplitudes as C++ .h and .cc files."""

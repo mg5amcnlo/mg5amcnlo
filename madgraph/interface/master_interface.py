@@ -296,7 +296,18 @@ class Switcher(object):
         
 
     # Dummy functions, not triggering any switch of interfaces
-            
+           
+# =========================================================
+# START Special command for loop-induced interference with trees.
+# =========================================================
+
+    def do_prepare_model_for_loopInducedXTrees(self, *args, **opts):
+        return self.cmd.do_prepare_model_for_loopInducedXTrees(self, *args, **opts)
+
+# =========================================================
+# END Special command for loop-induced interference with trees.
+# =========================================================
+
     def export(self, *args, **opts):
         return self.cmd.export(self, *args, **opts)
     

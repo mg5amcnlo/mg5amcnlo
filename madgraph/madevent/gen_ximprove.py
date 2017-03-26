@@ -141,9 +141,10 @@ class gensym(object):
                     
             #compile gensym
             self.cmd.compile(['gensym'], cwd=Pdir)
+
             if not os.path.exists(pjoin(Pdir, 'gensym')):
                 raise Exception, 'Error make gensym not successful'  
-            
+           
             # Launch gensym
             p = misc.Popen(['./gensym'], stdout=subprocess.PIPE, 
                                  stderr=subprocess.STDOUT, cwd=Pdir)
@@ -177,7 +178,7 @@ class gensym(object):
                         done = True
                 if not done:
                     raise Exception, 'Parsing error in gensym: %s' % stdout
-                     
+            
             self.cmd.compile(['madevent'], cwd=Pdir)
             self.submit_to_cluster(job_list)
         return job_list, P_zero_result

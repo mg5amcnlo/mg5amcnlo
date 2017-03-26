@@ -1345,6 +1345,14 @@ class LoopUVCTDiagram(base_objects.Diagram):
     this class of counter-term for example, and it is added along with the R2 
     interactions."""
 
+# ==== START LIHACK
+    def get_contracted_loop_diagram(self, model, struct_rep=None):
+        return copy.copy(self)    
+    def get_contracted_loop_diagram_without_tag(self, struct_rep=None):
+        return copy.copy(self)
+# ==== END LIHACK
+
+
     def default_setup(self):
         """Default values for all properties"""
 

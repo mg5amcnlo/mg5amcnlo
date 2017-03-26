@@ -424,7 +424,7 @@ def compile(arg=[], cwd=None, mode='fortran', job_specs = True, nb_core=1 ,**opt
             cmd.append('-j%s' % nb_core)
         cmd += arg
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
-                             stderr=subprocess.STDOUT, cwd=cwd, **opt)
+                             stderr=subprocess.PIPE, cwd=cwd, **opt)
         (out, err) = p.communicate()
     except OSError, error:
         if cwd and not os.path.exists(cwd):
