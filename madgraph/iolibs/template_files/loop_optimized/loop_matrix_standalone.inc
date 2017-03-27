@@ -2091,6 +2091,8 @@ C
 C
 C GLOBAL VARIABLES
 C
+      LOGICAL CHOSEN_SO_CONFIGS(NSQUAREDSO)
+      COMMON/%(proc_prefix)sCHOSEN_LOOP_SQSO/CHOSEN_SO_CONFIGS
 	  integer I_LIB
 	  common/%(proc_prefix)sI_LIB/I_LIB
 	  include 'MadLoopParams.inc'
@@ -2148,6 +2150,11 @@ C       When using COLLIER with the internal stability test, the first evaluatio
 		    estimate(i,k) = fulllist(i,k,1)
 		  ENDDO
 		ENDIF
+
+c       Make sure to hard-set to zero accuracies of coupling orders not included
+        if (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
+		  acc(k) = 0.0d0
+		ENDDO
 
 	  enddo
 
