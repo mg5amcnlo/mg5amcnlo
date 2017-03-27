@@ -2929,6 +2929,9 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
             self.do_install('update --mode=mg5_end')
         print
 
+        misc.EasterEgg('quit')
+        
+        
         return value
 
     # Add a process to the existing multiprocess definition

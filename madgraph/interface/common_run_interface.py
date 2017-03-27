@@ -5189,7 +5189,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 try:
                     mass = self.param_card['mass'].get(param.lhacode).value
                 except Exception:
-                    logger.warning('Missing mass in the lha file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
+                    logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                     continue
                 if width/mass < 1e-12:
                     logger.error('The width of particle %s is too small for s-channel resonances(%s). If you have that particle in s-channel this is likely to create numerical instability.', param.lhacode[0], width)
