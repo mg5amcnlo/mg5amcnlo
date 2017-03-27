@@ -1901,11 +1901,8 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
         if process.get('has_born'):
             ref_orders = [bao[0] for bao in born_amp_orders]
         else:
-# ==== START LIHACK
-#            ref_orders = [lao[0] for lao in loop_orders+ct_amp_orders]
-            ref_orders = [lao[0] for lao in loop_orders+ct_amp_orders+uvct_amp_orders]
-# ==== END LIHACK
-
+            ref_orders = [lao[0] for lao in loop_orders+ct_amp_orders]
+        
         # Temporarily we set squared_orders to be a dictionary with keys being
         # the actual contributing squared_orders and the values are the list 
         # [max_contrib_uvctamp_number,max_contrib_ct_amp_number,

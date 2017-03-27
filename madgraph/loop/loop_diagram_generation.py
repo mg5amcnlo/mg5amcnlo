@@ -752,11 +752,8 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # We add here the UV renormalization contribution built in
         # LoopUVCTDiagram. It is done before the squared order selection because
         # it is possible that some UV-renorm. diagrams are removed as well.
-# ==== START LIHACK
-#        if self['process']['has_born']:
-        if True:
+        if self['process']['has_born']:
             self.set_Born_CT()
-# ==== END LIHACK
             
         ldg_debug_info("#UVCTDiags generated",len(self['loop_UVCT_diagrams']))
 
@@ -1206,36 +1203,12 @@ class LoopAmplitude(diagram_generation.Amplitude):
         # Generate the UVCTdiagrams (born diagrams with 'UVCT_SPECIAL'=0 order 
         # will be generated along)
         self['process']['orders']['UVCT_SPECIAL']=1      
-
-# ==== START LIHACK
-#        UVCTsuccessful, UVCTdiagrams = \
-#          super(LoopAmplitude, self).generate_diagrams(True)
-        # Back up of the original process characteristics
-        bu = copy.copy(self['process']['required_s_channels'])
-        bu_orders = copy.copy(self['process']['orders'])
-        self['process']['required_s_channels'] = []
-        for order in self['process']['model'].get_coupling_orders():
-            if not order.startswith('BKG'):
-                self['process']['orders'][order] = 0
-            else:
-                if not order in self['process']['orders']:
-                    self['process']['orders'][order] = 999
-        self['process']['orders']['UVCT_SPECIAL'] = 999
-        # Specify here the coupling orders desired for the background. By default, all.
-#        self['process']['orders']['BKGQCD'] = 999
+        
         UVCTsuccessful, UVCTdiagrams = \
           super(LoopAmplitude, self).generate_diagrams(True)
-        # Restore backed up properties
-        self['process']['required_s_channels'] = copy.copy(bu)        
-        for order, value in bu_orders.items():
-            self['process']['orders'][order] = value
-# ==== END LIHACK
 
         for UVCTdiag in UVCTdiagrams:
-# ==== START LIHACK
-#            if UVCTdiag.get_order('UVCT_SPECIAL')==1:
-            if True:
-# ==== END LIHACK
+            if UVCTdiag.get_order('UVCT_SPECIAL')==1:
                 newUVCTDiag = loop_base_objects.LoopUVCTDiagram({\
                   'vertices':copy.deepcopy(UVCTdiag['vertices'])})
                 UVCTinter = newUVCTDiag.get_UVCTinteraction(self['process']['model'])

@@ -2152,9 +2152,11 @@ C       When using COLLIER with the internal stability test, the first evaluatio
 		ENDIF
 
 c       Make sure to hard-set to zero accuracies of coupling orders not included
-        if (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
-		  acc(k) = 0.0d0
-		ENDDO
+        if (K.ne.0) THEN
+		  IF (.NOT.CHOSEN_SO_CONFIGS(K)) THEN
+		    acc(k) = 0.0d0
+		  ENDIF
+		ENDIF
 
 	  enddo
 
