@@ -1916,8 +1916,10 @@ class decay_misc:
         sd=0.0
         for item in list_obj:
             sd+=(item-mean)**2
-        sd=sd/(N-1.0)
-        
+        if N > 1:
+            sd=math.sqrt(sd/(N-1.0))
+        else: 
+            sd = mean/5.
         return mean, sd
 
 class decay_all_events(object):
@@ -3210,14 +3212,12 @@ class decay_all_events(object):
                 weights.sort(reverse=True)
                 assert weights[0] >= weights[1]
                 ave_weight, std_weight = decay_tools.get_mean_sd(weights)
-                std_weight=math.sqrt(std_weight)
                 base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
 
                 for i in [20, 30, 40, 50]:
                     if len(weights) < i:
                         break
                     ave_weight, std_weight = decay_tools.get_mean_sd(weights[:i])
-                    std_weight=math.sqrt(std_weight)
                     base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
                     
                 if weights[0] > base_max_weight:

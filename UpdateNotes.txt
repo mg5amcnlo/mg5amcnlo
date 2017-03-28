@@ -1,5 +1,11 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.5.4(28/03/17)
+      OM: Add a warning in presense of small width
+      OM: Fix a bug related to a missing library (introduced in 2.5.3)
+      OM: Improve stability of the onshell mode of MadSpin
+      VH: Fix some problem related to LHAPDF
+
 2.5.3(09/03/17)
       PT: Modified the default shower starting scale in montecarlocounter.f.
           The new reference scale from which the dampening profile is computed is sum_i mt_i/2, i

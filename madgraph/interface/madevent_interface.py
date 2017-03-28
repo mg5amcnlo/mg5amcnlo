@@ -31,7 +31,7 @@ import sys
 import time
 import tarfile
 import StringIO
-#import shutil
+import shutil
 import copy
 
 try:
@@ -6281,8 +6281,7 @@ class MadLoopInitializer(object):
         # Now run make
         devnull = open(os.devnull, 'w')
         start=time.time()
-        retcode = subprocess.call(['make','check'],
-                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+        retcode = misc.compile(arg=['-j1','check'], cwd=dir_name, nb_core=1)
         compilation_time = time.time()-start
         if retcode != 0:
             logging.info("Error while executing make in %s" % dir_name)

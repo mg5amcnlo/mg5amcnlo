@@ -162,15 +162,22 @@ class gensym(object):
                 [float(s) for s in jobs]
             except Exception:
                 logger.debug("unformated string found in gensym. Please check:\n %s" % stdout)
+                done=False
                 job_list[Pdir] = []
-                for s in jobs:
+                lines = stdout.split('\n')
+                for l in lines:
                     try:
-                        float(s)
+                        [float(s) for s in l.split()]
                     except:
                         continue
                     else:
-                        job_list[Pdir].append(s)        
-                
+                        if done:
+                            raise Exception, 'Parsing error in gensym: %s' % stdout 
+                        job_list[Pdir] = l.split()        
+                        done = True
+                if not done:
+                    raise Exception, 'Parsing error in gensym: %s' % stdout
+                     
             self.cmd.compile(['madevent'], cwd=Pdir)
             self.submit_to_cluster(job_list)
         return job_list, P_zero_result

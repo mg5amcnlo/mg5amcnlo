@@ -88,7 +88,8 @@ class MadSpinInterface(extended_cmd.Cmd):
                         'onlyhelicity': False,
                         'spinmode': "madspin",
                         'use_old_dir': False, #should be use only for faster debugging
-                        'run_card': None # define cut for spinmode==none.
+                        'run_card': None, # define cut for spinmode==none.
+                        'fixed_order': False # to activate fixed order handling of counter-event
                         }
         
 
@@ -419,7 +420,14 @@ class MadSpinInterface(extended_cmd.Cmd):
                     self.options['run_card'] =  banner.RunCardLO()
                     self.options['run_card'].remove_all_cut()
                 self.options['run_card'][args[1]] = args[2]
-                
+        elif args[0] in 'fixed_order':
+            if args[1].lower() in ['t', 'true']:
+                self.options['fixed_order'] = True
+                logger.warning('Fix order madspin fails to have the correct scale information. This can bias the results!')
+                logger.warning('Not all functionality of MadSpin handle this mode correctly (only onshell mode so far).')
+            else:
+                self.options['fixed_order'] = False
+            logger.info('fixed_order options set to %s', self.options['fixed_order'])
         else:
             self.options[args[0]] = int(args[1])
     
@@ -712,6 +720,15 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         args = self.split_arg(line)
 
+
+        asked_to_decay = set()
+        for part in self.list_branches.keys():
+            if part in self.mg5cmd._multiparticles:
+                for pdg in self.mg5cmd._multiparticles[part]:
+                    asked_to_decay.add(pdg)
+            else:
+                asked_to_decay.add(self.mg5cmd._curr_model.get('name2pdg')[part])
+
         #0. Define the path where to write the file
         self.path_me = os.path.realpath(self.options['curr_dir']) 
         if self.options['ms_dir']:
@@ -731,7 +748,7 @@ class MadSpinInterface(extended_cmd.Cmd):
         for event in orig_lhe:
             nb_event +=1
             for particle in event:
-                if particle.status == 1 and particle.pdg in self.final_state:
+                if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
 
@@ -1086,6 +1103,14 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         args = self.split_arg(line)
 
+        asked_to_decay = set()
+        for part in self.list_branches.keys():
+            if part in self.mg5cmd._multiparticles:
+                for pdg in self.mg5cmd._multiparticles[part]:
+                    asked_to_decay.add(pdg)
+            else:
+                asked_to_decay.add(self.mg5cmd._curr_model.get('name2pdg')[part])
+
         #0. Define the path where to write the file
         self.path_me = os.path.realpath(self.options['curr_dir']) 
         if self.options['ms_dir']:
@@ -1099,14 +1124,18 @@ class MadSpinInterface(extended_cmd.Cmd):
 
         self.events_file.close()
         orig_lhe = lhe_parser.EventFile(self.events_file.name)
+        if self.options['fixed_order']:
+            orig_lhe.eventgroup = True
 
         #count the number of particle need to be decayed.
         to_decay = collections.defaultdict(int)
         nb_event = 0
         for event in orig_lhe:
+            if self.options['fixed_order']:
+                event = event[0]
             nb_event +=1
             for particle in event:
-                if particle.status == 1 and particle.pdg in self.final_state:
+                if particle.status == 1 and particle.pdg in asked_to_decay:
                     # final state and tag as to decay
                     to_decay[particle.pdg] += 1
         #misc.sprint(to_decay)
@@ -1162,7 +1191,7 @@ class MadSpinInterface(extended_cmd.Cmd):
                     nb_needed = int(efficiency*nb_needed) + nevents_for_max   
                     evt_decayfile[pdg], pwidth = self.generate_events(pdg, nb_needed, mg5, output_width=True)
                     if pwidth > 1.01*totwidth:
-                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--')
+                        logger.warning('partial width (%s) larger than total width (%s) --from param_card--', pwidth, totwidth)
                     elif pwidth > totwidth:
                         pwidth = totwidth
                     br = pwidth / totwidth
@@ -1216,6 +1245,9 @@ class MadSpinInterface(extended_cmd.Cmd):
         #5. generate the decay 
         orig_lhe.seek(0)
         output_lhe = lhe_parser.EventFile(orig_lhe.name.replace('.lhe', '_decayed.lhe'), 'w')
+        if self.options['fixed_order']:
+            output_lhe.eventgroup = True
+        
         self.banner.scale_init_cross(self.branching_ratio)
         self.banner.write(output_lhe, close_tag=False)
         
@@ -1225,6 +1257,8 @@ class MadSpinInterface(extended_cmd.Cmd):
         
         start = time.time()
         for curr_event,production in enumerate(orig_lhe):
+            if self.options['fixed_order']:
+                production, counterevt= production[0], production[1:]
             if curr_event and curr_event % 1000 == 0 and float(str(curr_event)[1:]) ==0:
                 print "decaying event number %s. Efficiency: %s [%s s]" % (curr_event, 1/self.efficiency, time.time()-start)
             while 1:
@@ -1232,14 +1266,24 @@ class MadSpinInterface(extended_cmd.Cmd):
                 decays = self.get_decay_from_file(production, evt_decayfile, nb_event-curr_event)
                 full_evt, wgt = self.get_onshell_evt_and_wgt(production, decays)
                 if random.random()*maxwgt < wgt:
+                    if self.options['fixed_order']:
+                        full_evt = [full_evt] + [evt.add_decays(decays) for evt in counterevt]
                     break
             self.efficiency = curr_event/nb_try
-            # change the weight associate to the event
-            full_evt.wgt *= self.branching_ratio
-            wgts = full_evt.parse_reweight()
-            for key in wgts:
-                wgts[key] *= self.branching_ratio            
-            output_lhe.write(str(full_evt))
+            if self.options['fixed_order']:
+                for evt in full_evt:
+                    # change the weight associate to the event
+                    evt.wgt *= self.branching_ratio
+                    wgts = evt.parse_reweight()
+                    for key in wgts:
+                        wgts[key] *= self.branching_ratio 
+            else:
+                # change the weight associate to the event
+                full_evt.wgt *= self.branching_ratio
+                wgts = full_evt.parse_reweight()
+                for key in wgts:
+                    wgts[key] *= self.branching_ratio            
+            output_lhe.write_events(full_evt)
             
         output_lhe.write('</LesHouchesEvents>\n')    
         self.efficiency = 1 # to let me5 to write the correct number of events
@@ -1328,6 +1372,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             maxwgt = 0
             orig_lhe.seek(0)
             base_event = orig_lhe.next()
+            if self.options['fixed_order']:
+                base_event = base_event[0]
             for j in range(self.options['max_weight_ps_point']):
                 decays = self.get_decay_from_file(base_event, evt_decayfile, nevents-i)   
                 #carefull base_event is modified by the following function                  
@@ -1339,7 +1385,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         assert all_maxwgt[0] >= all_maxwgt[1]
         decay_tools=madspin.decay_misc()
         ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt)
-        std_weight=math.sqrt(std_weight)
         base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
 
 #        misc.sprint(all_maxwgt)
@@ -1347,7 +1392,6 @@ class MadSpinInterface(extended_cmd.Cmd):
             if len(all_maxwgt) < i:
                 break
             ave_weight, std_weight = decay_tools.get_mean_sd(all_maxwgt[:i])
-            std_weight=math.sqrt(std_weight)
             base_max_weight = max(base_max_weight, 1.05 * (ave_weight+self.options['nb_sigma']*std_weight))
                 
             if all_maxwgt[1] > base_max_weight:
@@ -1390,7 +1434,6 @@ class MadSpinInterface(extended_cmd.Cmd):
         
 #        misc.sprint([p.pdg for p in production])
 #        misc.sprint([p.pdg for p in full_event])
-#        misc.sprint(full_me, production_me, decay_me)
 
         return full_event, full_me/(production_me*decay_me)
         
@@ -1404,7 +1447,10 @@ class MadSpinInterface(extended_cmd.Cmd):
         if pdir in self.all_f2py:
             p = event.get_momenta(orig_order)
             p = rwgt_interface.ReweightInterface.invert_momenta(p)
-            return self.all_f2py[pdir](p, event.aqcd, 0)
+            if event[0].color1 == 599 and event.aqcd==0:
+                return self.all_f2py[pdir](p, 0.113, 0)
+            else:
+                return self.all_f2py[pdir](p, event.aqcd, 0)
         else:
             if sys.path[0] != pjoin(self.path_me, 'madspin_me', 'SubProcesses'):
                 sys.path.insert(0, pjoin(self.path_me, 'madspin_me', 'SubProcesses'))

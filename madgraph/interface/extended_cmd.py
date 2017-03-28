@@ -1374,7 +1374,8 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         if hasattr(self, 'me_dir'):
             me_dir = os.path.basename(me_dir) + ' '
         
-        
+        misc.EasterEgg('error')
+            
         try:
             raise 
         except self.InvalidCmd as error:            

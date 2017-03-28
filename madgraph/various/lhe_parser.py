@@ -152,8 +152,7 @@ class Particle(object):
 
 class EventFile(object):
     """A class to allow to read both gzip and not gzip file"""
-
-    eventgroup = False
+    
 
     def __new__(self, path, mode='r', *args, **opt):
         
@@ -176,7 +175,7 @@ class EventFile(object):
         """open file and read the banner [if in read mode]"""
         
         self.parsing = True # check if/when we need to parse the event.
-
+        self.eventgroup  = False
         try:
             super(EventFile, self).__init__(path, mode, *args, **opt)
         except IOError:
@@ -281,7 +280,9 @@ class EventFile(object):
                     text = ''
                     mode = 0
                 if mode:
-                    text += line        
+                    text += line  
+            if len(events) == 0:
+                return self.next()
             return events
     
 
@@ -326,7 +327,9 @@ class EventFile(object):
         """
         if isinstance(event, Event):
             if self.eventgroup:
-                self.write('<eventgroup>\n%s\n<eventgroup>\n' % event)
+                self.write('<eventgroup>\n%s\n</eventgroup>\n' % event)
+            else:
+                self.write(str(event))
         elif isinstance(event, list):
             if self.eventgroup:
                 self.write('<eventgroup>\n')
@@ -728,6 +731,7 @@ class MultiEventFile(EventFile):
     def __init__(self, start_list=[], parse=True):
         """if trunc_error is define here then this allow
         to only read all the files twice and not three times."""
+        self.eventgroup = False
         self.files = []
         self.parsefile = parse #if self.files is formatted or just the path
         self.banner = ''
@@ -1132,7 +1136,11 @@ class Event(list):
                 status = 'tag'
                 
             if 'part' == status:
-                self.append(Particle(line, event=self))
+                part = Particle(line, event=self)
+                if part.E != 0:
+                    self.append(part)
+                elif self.nexternal:
+                        self.nexternal-=1
             else:
                 if '</event>' in line:
                     line = line.replace('</event>','',1)
@@ -1245,53 +1253,51 @@ class Event(list):
             text = self.tag[start+8:stop]
             self.nloweight = NLO_PARTIALWEIGHT(text, self, real_type=real_type)
         return self.nloweight
-        
+            
     def parse_lo_weight(self):
         """ """
+        
+        
         if hasattr(self, 'loweight'):
             return self.loweight
+        
+        if not hasattr(Event, 'loweight_pattern'):
+            Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
+                                    <asrwt>\s*(?P<asrwt>[\s\d.+-]+)\s*</asrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?1["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <pdfrwt\s+beam=["']?2["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
+                                    <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
+            ''',re.X+re.I+re.M)
         
         start, stop = self.tag.find('<mgrwt>'), self.tag.find('</mgrwt>')
         
         if start != -1 != stop :
             text = self.tag[start+8:stop]
-#<rscale>  3 0.29765919e+03</rscale>
-#<asrwt>0</asrwt>
-#<pdfrwt beam="1">  1       21 0.15134321e+00 0.29765919e+03</pdfrwt>
-#<pdfrwt beam="2">  1       21 0.38683649e-01 0.29765919e+03</pdfrwt>
-#<totfact> 0.17315115e+03</totfact>
+            
+            info = Event.loweight_pattern.search(text)
             self.loweight={}
-            for line in text.split('\n'):
-                line = line.replace('<', ' <').replace("'",'"')
-                if 'rscale' in line:
-                    _, nqcd, scale, _ = line.split()
-                    self.loweight['n_qcd'] = int(nqcd)
-                    self.loweight['ren_scale'] = float(scale)
-                elif '<pdfrwt beam="1"' in line:
-                    args = line.split()
-                    self.loweight['n_pdfrw1'] = int(args[2])
-                    npdf = self.loweight['n_pdfrw1']
-                    self.loweight['pdf_pdg_code1'] = [int(i) for i in args[3:3+npdf]]
-                    self.loweight['pdf_x1'] = [float(i) for i in args[3+npdf:3+2*npdf]]
-                    self.loweight['pdf_q1'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
-                elif '<pdfrwt beam="2"' in line:
-                    args = line.split()
-                    self.loweight['n_pdfrw2'] = int(args[2])
-                    npdf = self.loweight['n_pdfrw2']
-                    self.loweight['pdf_pdg_code2'] = [int(i) for i in args[3:3+npdf]]
-                    self.loweight['pdf_x2'] = [float(i) for i in args[3+npdf:3+2*npdf]]
-                    self.loweight['pdf_q2'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
-                elif '<asrwt>' in line:
-                    args = line.replace('>','> ').split()
-                    nalps = int(args[1])
-                    self.loweight['asrwt'] = [float(a) for a in args[2:2+nalps]] 
-                    
-                elif 'totfact' in line:
-                    args = line.split() 
-                    self.loweight['tot_fact'] = float(args[1])
+            self.loweight['n_qcd'] = int(info.group('nqcd'))
+            self.loweight['ren_scale'] = float(info.group('ren_scale'))
+            self.loweight['asrwt'] =[float(x) for x in info.group('asrwt').split()[1:]]
+            self.loweight['tot_fact'] = float(info.group('totfact'))
+            
+            args = info.group('beam1').split()
+            npdf = int(args[0])
+            self.loweight['n_pdfrw1'] = npdf
+            self.loweight['pdf_pdg_code1'] = [int(i) for i in args[1:1+npdf]]
+            self.loweight['pdf_x1'] = [float(i) for i in args[1+npdf:1+2*npdf]]
+            self.loweight['pdf_q1'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]
+            args = info.group('beam2').split()
+            npdf = int(args[0])
+            self.loweight['n_pdfrw2'] = npdf
+            self.loweight['pdf_pdg_code2'] = [int(i) for i in args[1:1+npdf]]
+            self.loweight['pdf_x2'] = [float(i) for i in args[1+npdf:1+2*npdf]]
+            self.loweight['pdf_q2'] = [float(i) for i in args[1+2*npdf:1+3*npdf]]            
+            
         else:
             return None
-        return self.loweight
+        return self.loweight            
+    
             
     def parse_matching_scale(self):
         """Parse the line containing the starting scale for the shower"""
@@ -2572,8 +2578,23 @@ class NLO_PARTIALWEIGHT(object):
 
 if '__main__' == __name__:   
     
+    lhe = EventFile('unweighted_events.lhe.gz')
+    #lhe.parsing = False
+    start = time.time()
+    for event in lhe:
+        event.parse_lo_weight()
+    print 'old method -> ', time.time()-start
+    lhe = EventFile('unweighted_events.lhe.gz')
+    #lhe.parsing = False
+    start = time.time()
+    for event in lhe:
+        event.parse_lo_weight_test()
+    print 'new method -> ', time.time()-start    
+    
+
     # Example 1: adding some missing information to the event (here distance travelled)
     if False: 
+        start = time
         lhe = EventFile('unweighted_events.lhe.gz')
         output = open('output_events.lhe', 'w')
         #write the banner to the output file

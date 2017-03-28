@@ -565,6 +565,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     debug_output = 'ME5_debug'
     helporder = ['Main Commands', 'Documented commands', 'Require MG5 directory',
                    'Advanced commands']
+    sleep_for_error = True
 
     # The three options categories are treated on a different footage when a
     # set/save configuration occur. current value are kept in self.options
@@ -3058,6 +3059,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         - If a scan parameter is define. create the iterator and recall this fonction 
           on the first element.
         - If some width are set on 'Auto', call the computation tools.
+        - Check that no width are too small (raise a warning if this is the case)
         3) if dependent is on True check for dependent parameter (automatic for scan)"""
         
         pattern_scan = re.compile(r'''^(decay)?[\s\d]*scan''', re.I+re.M)  
@@ -3090,11 +3092,26 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
     Those will be computed as soon as you have finish the edition of the cards.
     If you want to force the computation right now and being able to re-edit
     the cards afterwards, you can type \"compute_wdiths\".''')
-        
+                
+        card = check_param_card.ParamCard(path)
         if dependent:   
-            card = check_param_card.ParamCard(path)
+            
             AskforEditCard.update_dependent(self, self.me_dir, card, path, timer=20)
         
+        for param in card['decay']:
+            width = param.value
+            if width == 0:
+                continue
+            try:
+                mass = card['mass'].get(param.lhacode).value
+            except Exception:
+                logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
+                continue
+            if width/mass < 1e-12:
+                logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                if CommonRunCmd.sleep_for_error:
+                    time.sleep(5)
+                    CommonRunCmd.sleep_for_error = False
         return
 
     def add_error_log_in_html(self, errortype=None):
@@ -5179,8 +5196,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
                 if extrapaths:
                     self.do_set('shower_card extrapaths %s ' % ' '.join(extrapaths))
                 else:
-                    self.do_set('shower_card extrapaths None ')    
-    
+                    self.do_set('shower_card extrapaths None ')   
+                    
+                        
     def reask(self, *args, **opt):
         
         cmd.OneLinePathCompletion.reask(self,*args, **opt)

@@ -41,6 +41,151 @@ class TESTLHEParser(unittest.TestCase):
         if self.path != pjoin(MG5DIR, "tmp_lhe_test"):
             shutil.rmtree(self.path)
 
+
+
+    def test_parsing_lo_weight(self):
+        """test that our parser can handle a large range of lo_weight format"""
+
+        def parse_lo_weight_old(evt):
+            """parsing for unittest onlyx"""
+
+            
+            start, stop = evt.tag.find('<mgrwt>'), evt.tag.find('</mgrwt>')
+    
+            if start != -1 != stop :
+                text = evt.tag[start+8:stop]
+    #<rscale>  3 0.29765919e+03</rscale>
+    #<asrwt>0</asrwt>
+    #<pdfrwt beam="1">  1       21 0.15134321e+00 0.29765919e+03</pdfrwt>
+    #<pdfrwt beam="2">  1       21 0.38683649e-01 0.29765919e+03</pdfrwt>
+    #<totfact> 0.17315115e+03</totfact>
+                evt.loweight={}
+                for line in text.split('\n'):
+                    line = line.replace('<', ' <').replace("'",'"')
+                    if 'rscale' in line:
+                        _, nqcd, scale, _ = line.split()
+                        evt.loweight['n_qcd'] = int(nqcd)
+                        evt.loweight['ren_scale'] = float(scale)
+                    elif '<pdfrwt beam="1"' in line:
+                        args = line.split()
+                        evt.loweight['n_pdfrw1'] = int(args[2])
+                        npdf = evt.loweight['n_pdfrw1']
+                        evt.loweight['pdf_pdg_code1'] = [int(i) for i in args[3:3+npdf]]
+                        evt.loweight['pdf_x1'] = [float(i) for i in args[3+npdf:3+2*npdf]]
+                        evt.loweight['pdf_q1'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
+                    elif '<pdfrwt beam="2"' in line:
+                        args = line.split()
+                        evt.loweight['n_pdfrw2'] = int(args[2])
+                        npdf = evt.loweight['n_pdfrw2']
+                        evt.loweight['pdf_pdg_code2'] = [int(i) for i in args[3:3+npdf]]
+                        evt.loweight['pdf_x2'] = [float(i) for i in args[3+npdf:3+2*npdf]]
+                        evt.loweight['pdf_q2'] = [float(i) for i in args[3+2*npdf:3+3*npdf]]
+                    elif '<asrwt>' in line:
+                        args = line.replace('>','> ').split()
+                        nalps = int(args[1])
+                        evt.loweight['asrwt'] = [float(a) for a in args[2:2+nalps]] 
+                        
+                    elif 'totfact' in line:
+                        args = line.replace('>','> ').split()
+                        evt.loweight['tot_fact'] = float(args[1])
+            else:
+                return None
+            return evt.loweight
+
+        
+        events=["""
+<event>
+ 4      0 +1.7208000e-01 1.00890300e+02 7.95774700e-02 1.27947900e-01
+       -1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 +1.1943355e+01 1.19433546e+01 0.00000000e+00 0.0000e+00 1.0000e+00
+        2 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 -1.0679326e+03 1.06793262e+03 0.00000000e+00 0.0000e+00 -1.0000e+00
+       24  1    1    2    0    0 +6.0417155e+00 +4.2744556e+01 -7.9238049e+02 7.97619997e+02 8.04190073e+01 3.4933e-25 -1.0000e+00
+       23  1    1    2    0    0 -6.0417155e+00 -4.2744556e+01 -2.6360878e+02 2.82255979e+02 9.11880035e+01 1.8975e-26 1.0000e+00
+</event>
+""","""
+<event>
+ 4      0 +1.7208000e-01 1.00890300e+02 7.95774700e-02 1.27947900e-01
+       -1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 +1.1943355e+01 1.19433546e+01 0.00000000e+00 0.0000e+00 1.0000e+00
+        2 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 -1.0679326e+03 1.06793262e+03 0.00000000e+00 0.0000e+00 -1.0000e+00
+       24  1    1    2    0    0 +6.0417155e+00 +4.2744556e+01 -7.9238049e+02 7.97619997e+02 8.04190073e+01 3.4933e-25 -1.0000e+00
+       23  1    1    2    0    0 -6.0417155e+00 -4.2744556e+01 -2.6360878e+02 2.82255979e+02 9.11880035e+01 1.8975e-26 1.0000e+00
+<mgrwt>
+<rscale>  2 0.12500000E+03</rscale>
+<asrwt>0</asrwt>
+<pdfrwt beam="1">  1        4 0.11319990E+00 0.12500000E+03</pdfrwt>
+<pdfrwt beam="2">  1       -1 0.59528052E+00 0.12500000E+03</pdfrwt>
+<totfact>-0.27352270E-03</totfact>
+</mgrwt>
+</event>""",
+"""
+<event>
+ 4      0 +1.7208000e-01 1.00890300e+02 7.95774700e-02 1.27947900e-01
+       -1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 +1.1943355e+01 1.19433546e+01 0.00000000e+00 0.0000e+00 1.0000e+00
+        2 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 -1.0679326e+03 1.06793262e+03 0.00000000e+00 0.0000e+00 -1.0000e+00
+       24  1    1    2    0    0 +6.0417155e+00 +4.2744556e+01 -7.9238049e+02 7.97619997e+02 8.04190073e+01 3.4933e-25 -1.0000e+00
+       23  1    1    2    0    0 -6.0417155e+00 -4.2744556e+01 -2.6360878e+02 2.82255979e+02 9.11880035e+01 1.8975e-26 1.0000e+00
+<mgrwt>
+<rscale>  2 0.12500000E+03</rscale>
+<asrwt> 1 0.11 </asrwt>
+<pdfrwt beam='1'>  1        4 0.11319990E+00 0.12500000E+03</pdfrwt>
+<pdfrwt beam=2>    2      1 -1  0.2 0.11e-02 0.59528052E+00 0.12500000E+03</pdfrwt>
+<totfact> 115 </totfact>
+</mgrwt>
+</event>""",
+"""<event>
+ 4      0 +1.7208000e-01 1.00890300e+02 7.95774700e-02 1.27947900e-01
+       -1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 +1.1943355e+01 1.19433546e+01 0.00000000e+00 0.0000e+00 1.0000e+00
+        2 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 -1.0679326e+03 1.06793262e+03 0.00000000e+00 0.0000e+00 -1.0000e+00
+       24  1    1    2    0    0 +6.0417155e+00 +4.2744556e+01 -7.9238049e+02 7.97619997e+02 8.04190073e+01 3.4933e-25 -1.0000e+00
+       23  1    1    2    0    0 -6.0417155e+00 -4.2744556e+01 -2.6360878e+02 2.82255979e+02 9.11880035e+01 1.8975e-26 1.0000e+00
+<mgrwt>
+<rscale>2 0.12500000E+03</rscale>
+<asrwt>1 0.11 </asrwt>
+<pdfrwt beam='1'>  1        4 0.11319990E+00 0.12500000e+03 </pdfrwt>
+<pdfrwt beam=2>    2      1 -1  0.2 0.11e-02 0.59528052E+00 0.12500000E+03 </pdfrwt>
+<totfact> 115.001 </totfact>
+</mgrwt>
+</event>""",
+"""<event>
+ 4      0 +1.7208000e-01 1.00890300e+02 7.95774700e-02 1.27947900e-01
+       -1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 +1.1943355e+01 1.19433546e+01 0.00000000e+00 0.0000e+00 1.0000e+00
+        2 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 -1.0679326e+03 1.06793262e+03 0.00000000e+00 0.0000e+00 -1.0000e+00
+       24  1    1    2    0    0 +6.0417155e+00 +4.2744556e+01 -7.9238049e+02 7.97619997e+02 8.04190073e+01 3.4933e-25 -1.0000e+00
+       23  1    1    2    0    0 -6.0417155e+00 -4.2744556e+01 -2.6360878e+02 2.82255979e+02 9.11880035e+01 1.8975e-26 1.0000e+00
+<mgrwt>
+<rscale>2 0.12500000E+03</rscale>
+<asrwt>1 0.11 </asrwt>
+<pdfrwt beam='1'>  1        4 0.11319990E+00 0.12500000e+03 </pdfrwt>
+<pdfrwt beam=2>    2      1 -1  0.2 0.11e-02 0.59528052E+00 0.12500000E+03 </pdfrwt>
+<totfact> 115.001 </totfact>
+</mgrwt>
+</event>"""]
+     
+        solutions = [None, 
+                  {'pdf_pdg_code1': [4], 'asrwt': [], 'pdf_pdg_code2': [-1], 'pdf_q1': [125.0], 'pdf_q2': [125.0], 'n_pdfrw1': 1, 'n_pdfrw2': 1, 'tot_fact': -0.0002735227, 'pdf_x2': [0.59528052], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'ren_scale': 125.0},
+                  {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.0},
+                  {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.001},
+                  {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.001},
+                  {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.001}]
+     
+        for i,evt in enumerate(events):
+            evt1 = lhe_parser.Event(evt)
+            evt2 = lhe_parser.Event(evt)
+            lo = evt1.parse_lo_weight()
+            try:
+                lo2 = parse_lo_weight_old(evt2)
+            except:
+                pass
+            else:
+                if lo:
+                    for key in lo2:
+                        self.assertEqual(lo[key], lo2[key])
+            self.assertEqual(lo, solutions[i])
+         
+     
+     
+        
+        
+
     def test_read_write_lhe(self):
         """test that we can read/write an lhe event file"""
         

@@ -12,7 +12,6 @@
 # For more information, visit madgraph.phys.ucl.ac.be and amcatnlo.web.cern.ch
 #
 ################################################################################
-
 """A set of functions performing routine administrative I/O tasks."""
 
 import contextlib
@@ -1589,6 +1588,112 @@ class Applenotification(object):
 
 apple_notify = Applenotification()
 
+class EasterEgg(object):
+    
+    done_notification = False
+    message_aprilfirst =\
+        {'error': ['Be careful, a cat is eating a lot of fish today. This makes the code unstable.',
+                   'Really, this sounds fishy.',
+                   'A Higgs boson walks into a church. The priest says "We don\'t allow Higgs bosons in here." The Higgs boson replies, "But without me, how can you have mass?"',
+                   "Why does Heisenberg detest driving cars? Because, every time he looks at the speedometer he gets lost!",
+                   "May the mass times acceleration be with you.",
+                   "NOTE: This product may actually be nine-dimensional. If this is the case, functionality is not affected by the extra five dimensions.",
+                   "IMPORTANT: This product is composed of 100%% matter: It is the responsibility of the User to make sure that it does not come in contact with antimatter.",
+                   'The fish are out of jokes. See you next year for more!'],
+         'loading': ['Hi %(user)s, You are Loading Madgraph. Please be patient, we are doing the work.'],
+         'quit': ['Thanks %(user)s for using MadGraph5_aMC@NLO, even on April 1st!']
+               }
+    
+    def __init__(self, msgtype):
+
+        try:
+            now = time.localtime()
+            date = now.tm_mday, now.tm_mon 
+            if date in [(1,4)]:
+                if msgtype in EasterEgg.message_aprilfirst:
+                    choices = EasterEgg.message_aprilfirst[msgtype]
+                    if len(choices) == 0:
+                        return
+                    elif len(choices) == 1:
+                        msg = choices[0]
+                    else:
+                        import random
+                        msg = choices[random.randint(0,len(choices)-2)]
+                    EasterEgg.message_aprilfirst[msgtype].remove(msg)
+                    
+            else:
+                return
+            if MADEVENT:
+                return
+            
+            import os
+            import pwd
+            username =pwd.getpwuid( os.getuid() )[ 0 ] 
+            msg = msg % {'user': username}
+            if sys.platform == "darwin":
+                self.call_apple(msg)
+            else:
+                self.call_linux(msg)
+        except Exception, error:
+            sprint(error)
+            pass
+    
+    def __call__(self, msg):
+        try:
+            self.call_apple(msg)
+        except:
+            pass
+            
+    def call_apple(self, msg):
+        
+        #1. control if the volume is on or not
+        p = subprocess.Popen("osascript -e 'get volume settings'", stdout=subprocess.PIPE, shell=True)
+        output, _  = p.communicate()
+        #output volume:25, input volume:71, alert volume:100, output muted:true
+        info = dict([[a.strip() for a in l.split(':',1)] for l in output.strip().split(',')])
+        muted = False
+        if 'output muted' in info and info['output muted'] == 'true':
+            muted = True
+        elif 'output volume' in info and info['output volume'] == '0':
+            muted = True
+        
+        if muted:
+            if not EasterEgg.done_notification:
+                apple_notify('On April first','turn up your volume!')
+                EasterEgg.done_notification = True
+        else:
+            os.system('say %s' % msg)
+
+
+    def call_linux(self, msg):
+        # check for fishing path
+        fishPath = madgraph.MG5DIR+"/input/.cowgraph.cow"
+        if os.path.exists(fishPath):
+            fishPath = " -f " + fishPath
+            #sprint("got fishPath: ",fishPath)
+
+        # check for fishing pole
+        fishPole = which('cowthink')
+        if not os.path.exists(fishPole):
+            if os.path.exists(which('cowsay')):
+                fishPole = which('cowsay')
+            else:
+                return
+
+        # go fishing
+        fishCmd = fishPole + fishPath + " " + msg
+        os.system(fishCmd)
+
+
+if __debug__:
+    try:
+        import os 
+        import pwd
+        username =pwd.getpwuid( os.getuid() )[ 0 ]
+        if 'hirschi' in username or 'vryonidou' in username and __debug__:
+            EasterEgg('loading')
+    except:
+        pass
 
 
 def get_older_version(v1, v2):
