@@ -80,14 +80,15 @@ class LoopExporterFortran(object):
         ProcessExporterFortran but give access to arguments like dir_path and
         clean using options. This avoids method resolution object ambiguity"""
 
-    default_opt = {'clean': False, 'complex_mass':False,
+    default_opt = dict(export_v4.ProcessExporterFortran.default_opt)
+    default_opt.update({'clean': False, 'complex_mass':False,
                         'export_format':'madloop', 'mp':True,
                         'loop_dir':'', 'cuttools_dir':'', 
                         'fortran_compiler':'gfortran',
                         'SubProc_prefix': 'P',
                         'output_dependencies': 'external',
                         'compute_color_flows': False,
-                        'mode':''}
+                        'mode':''})
 
     include_names    = {'ninja' : 'mninja.mod',
                         'golem' : 'generic_function_1p.mod',

@@ -86,8 +86,10 @@ $(CHECK_SA_BORN_SPLITORDERS):  check_sa_born_splitOrders.o $(patsubst $(DOTF),$(
 # This is the core of madloop computationally wise, so make sure to turn optimizations on and bound checks off.
 # We use %olynomial.o and not directly polynomial.o because we want it to match when both doing make check here
 # or make OLP one directory above
+%oloop_matrix.o : %olynomial.o %oloop_matrix.f
 %olynomial.o : %olynomial.f
 	$(FC) $(patsubst -O%,, $(subst -fbounds-check,,$(FFLAGS))) $(POLYNOMIAL_OPTIMIZATION) $(POLYNOMIAL_BOUNDS_CHECK) -c $< -o $@ $(LOOP_INCLUDE)
+
 
 $(DOTO) : $(DOTF) $(POLYNOMIAL) $(OLP_POLYNOMIAL)
 	$(FC) $(FFLAGS) -c $< -o $@ $(LOOP_INCLUDE)

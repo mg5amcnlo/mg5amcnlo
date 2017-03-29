@@ -1958,7 +1958,10 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
     # Create proc_card_mg5.dat for Standalone directory
     #===========================================================================
     def finalize(self, matrix_elements, history, mg5options, flaglist):
-        """Finalize Standalone MG4 directory by generation proc_card_mg5.dat"""
+        """Finalize Standalone MG4 directory by 
+           generation proc_card_mg5.dat
+           generate a global makefile
+           """
             
         compiler =  {'fortran': mg5options['fortran_compiler'],
                      'cpp': mg5options['cpp_compiler'],
@@ -1985,14 +1988,25 @@ class ProcessExporterFortranSA(ProcessExporterFortran):
                            pjoin(self.dir_path, 'Source', 'PDF'))
             self.write_pdf_opendata()
             
-        
         if self.prefix_info:
             self.write_f2py_splitter()
             self.write_f2py_makefile()
             self.write_f2py_check_sa(matrix_elements,
                             pjoin(self.dir_path,'SubProcesses','check_sa.py'))
+        else:
+            # create a single makefile to compile all the subprocesses
+            text = '''\n# For python linking (require f2py part of numpy)\nifeq ($(origin MENUM),undefined)\n  MENUM=2\nendif\n''' 
+            deppython = ''
+            for Pdir in os.listdir(pjoin(self.dir_path,'SubProcesses')):
+                if os.path.isdir(pjoin(self.dir_path, 'SubProcesses', Pdir)):
+                    text += '%(0)s/matrix$(MENUM)py.so:\n\tcd %(0)s;make matrix$(MENUM)py.so\n'% {'0': Pdir}
+                    deppython += ' %(0)s/matrix$(MENUM)py.so ' % {'0': Pdir}
+            text+='all: %s\n\techo \'done\'' % deppython
             
-            
+            ff = open(pjoin(self.dir_path, 'SubProcesses', 'makefile'),'a')
+            ff.write(text)
+            ff.close()
+                    
     def write_f2py_splitter(self):
         """write a function to call the correct matrix element"""
         
@@ -2129,7 +2143,6 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
         including the necessary matrix.f and nexternal.inc files"""
 
         cwd = os.getcwd()
-
         # Create the directory PN_xx_xxxxx in the specified path
         dirpath = pjoin(self.dir_path, 'SubProcesses', \
                        "P%s" % matrix_element.get('processes')[0].shell_string())
@@ -3789,9 +3802,11 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                 os.remove(pjoin(self.dir_path,'HTML','card.jpg'))
             except Exception, error:
                 pass
-            logger.info("Generate jpeg diagrams")
-            for Pdir in P_dir_list:
-                misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
+            
+            if misc.which('gs'):
+                logger.info("Generate jpeg diagrams")
+                for Pdir in P_dir_list:
+                    misc.call([pjoin(self.dir_path, 'bin', 'internal', 'gen_jpeg-pl')],
                                 stdout = devnull, cwd=pjoin(subpath, Pdir))
 
         logger.info("Generate web pages")

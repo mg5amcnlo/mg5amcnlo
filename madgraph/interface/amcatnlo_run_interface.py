@@ -38,6 +38,10 @@ import datetime
 import tarfile
 import traceback
 import StringIO
+try:
+    import cpickle as pickle
+except:
+    import pickle
 
 try:
     import readline
@@ -71,7 +75,7 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.shower_card as shower_card
     import internal.FO_analyse_card as analyse_card 
-    import internal.histograms as histograms
+    import internal.lhe_parser as lhe_parser
 else:
     # import from madgraph directory
     aMCatNLO = False
@@ -86,7 +90,7 @@ else:
     import madgraph.various.misc as misc
     import madgraph.various.shower_card as shower_card
     import madgraph.various.FO_analyse_card as analyse_card
-    import madgraph.various.histograms as histograms
+    import madgraph.various.lhe_parser as lhe_parser
     from madgraph import InvalidCmd, aMCatNLOError, MadGraph5Error,MG5DIR
 
 class aMCatNLOError(Exception):
@@ -1140,10 +1144,24 @@ class aMCatNLOCmd(CmdExtended, HelpToCmd, CompleteForCmd, common_run.CommonRunCm
 
 
     ############################################################################
-    def do_treatcards(self, line, amcatnlo=True):
+    def do_treatcards(self, line, amcatnlo=True,mode=''):
         """Advanced commands: this is for creating the correct run_card.inc from the nlo format"""
                 #check if no 'Auto' are present in the file
         self.check_param_card(pjoin(self.me_dir, 'Cards','param_card.dat'))
+        
+        # propagate the FO_card entry FO_LHE_weight_ratio to the run_card.
+        # this variable is system only in the run_card 
+        # can not be done in EditCard since this parameter is not written in the 
+        # run_card directly.
+        if mode in ['LO', 'NLO']: 
+            name = 'fo_lhe_weight_ratio'
+            FO_card = analyse_card.FOAnalyseCard(pjoin(self.me_dir,'Cards', 'FO_analyse_card.dat'))
+            if name in FO_card:
+                self.run_card.set(name, FO_card[name], user=False)
+            name = 'fo_lhe_postprocessing'
+            if name in FO_card:
+                self.run_card.set(name, FO_card[name], user=False)
+                        
         return super(aMCatNLOCmd,self).do_treatcards(line, amcatnlo)
     
     ############################################################################
@@ -1470,66 +1488,62 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                 except IOError:
                     logger.warning('No integration channels found for contribution %s' % p_dir)
                     continue
-                for channel in channels:
-                    job={}
-                    job['p_dir']=p_dir
-                    job['channel']=channel
-                    job['split']=0
-                    if fixed_order and req_acc == -1:
-                        job['accuracy']=0
-                        job['niters']=niters
-                        job['npoints']=npoints
-                    elif fixed_order and req_acc > 0:
-                        job['accuracy']=0.10
-                        job['niters']=6
-                        job['npoints']=-1
-                    elif not fixed_order:
+                if fixed_order:
+                    lch=len(channels)
+                    maxchannels=20    # combine up to 20 channels in a single job
+                    if self.run_card['iappl'] != 0: maxchannels=1
+                    njobs=(int(lch/maxchannels)+1 if lch%maxchannels!= 0 \
+                           else int(lch/maxchannels))
+                    for nj in range(1,njobs+1):
+                        job={}
+                        job['p_dir']=p_dir
+                        job['channel']=str(nj)
+                        job['nchans']=(int(lch/njobs)+1 if nj <= lch%njobs else int(lch/njobs))
+                        job['configs']=' '.join(channels[:job['nchans']])
+                        del channels[:job['nchans']]
+                        job['split']=0
+                        if req_acc == -1:
+                            job['accuracy']=0
+                            job['niters']=niters
+                            job['npoints']=npoints
+                        elif req_acc > 0:
+                            job['accuracy']=0.05
+                            job['niters']=6
+                            job['npoints']=-1
+                        else:
+                            raise aMCatNLOError('No consistent "req_acc_FO" set. Use a value '+
+                                                'between 0 and 1 or set it equal to -1.')
+                        job['mint_mode']=0
+                        job['run_mode']=run_mode
+                        job['wgt_frac']=1.0
+                        job['wgt_mult']=1.0
+                        jobs_to_run.append(job)
+                    if channels:
+                        raise aMCatNLOError('channels is not empty %s' % channels)
+                else:
+                    for channel in channels:
+                        job={}
+                        job['p_dir']=p_dir
+                        job['channel']=channel
+                        job['split']=0
                         job['accuracy']=0.03
                         job['niters']=12
                         job['npoints']=-1
-                    else:
-                        raise aMCatNLOError('No consistent "req_acc_FO" set. Use a value '+
-                                            'between 0 and 1 or set it equal to -1.')
-                    job['mint_mode']=0
-                    job['run_mode']=run_mode
-                    job['wgt_frac']=1.0
-                    jobs_to_run.append(job)
-            jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
-        else:
-            # if options['only_generation'] is true, we need to loop
-            # over all the existing G* directories and create the jobs
-            # from there.
-            name_suffix={'born' :'B', 'all':'F'}
-            for p_dir in p_dirs:
-                for chan_dir in os.listdir(pjoin(self.me_dir,'SubProcesses',p_dir)):
-                    if ((chan_dir.startswith(run_mode+'_G') and fixed_order) or\
-                        (chan_dir.startswith('G'+name_suffix[run_mode]) and (not fixed_order))) and \
-                       (os.path.isdir(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)) or \
-                        os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir))):
-                        job={}
-                        job['p_dir']=p_dir
-                        if fixed_order:
-                            channel=chan_dir.split('_')[1]
-                            job['channel']=channel[1:] # remove the 'G'
-                            if len(chan_dir.split('_')) == 3:
-                                split=int(chan_dir.split('_')[2])
-                            else:
-                                split=0
-                        else:
-                            if len(chan_dir.split('_')) == 2:
-                                split=int(chan_dir.split('_')[1])
-                                channel=chan_dir.split('_')[0]
-                                job['channel']=channel[2:] # remove the 'G'
-                            else:
-                                job['channel']=chan_dir[2:] # remove the 'G'
-                                split=0
-                        job['split']=split
+                        job['mint_mode']=0
                         job['run_mode']=run_mode
-                        job['dirname']=pjoin(self.me_dir, 'SubProcesses', p_dir, chan_dir)
                         job['wgt_frac']=1.0
-                        if not fixed_order: job['mint_mode']=1
                         jobs_to_run.append(job)
             jobs_to_collect=copy.copy(jobs_to_run) # These are all jobs
+        else:
+            # if options['only_generation'] is true, just read the current jobs from file
+            try:
+                with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'rb') as f:
+                    jobs_to_collect=pickle.load(f)
+                jobs_to_run=copy.copy(jobs_to_collect)
+            except:
+                raise aMCatNLOError('Cannot reconstruct saved job status in %s' % \
+                                    pjoin(self.me_dir,'SubProcesses','job_status.pkl'))
+            # Update cross sections and determine which jobs to run next
             if fixed_order:
                 jobs_to_run,jobs_to_collect=self.collect_the_results(options,req_acc,jobs_to_run,
                                                  jobs_to_collect,integration_step,mode,run_mode)
@@ -1565,12 +1579,16 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
             if not os.path.isdir(dirname):
                 os.makedirs(dirname)
             self.write_input_file(job,fixed_order)
+            # link or copy the grids from the base directory to the split directory:
             if not fixed_order:
-                # copy the grids from the base directory to the split directory:
                 if job['split'] != 0:
                     for f in ['grid.MC_integer','mint_grids','res_1']:
                         if not os.path.isfile(pjoin(job['dirname'],f)):
                             files.ln(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
+            else:
+                if job['split'] != 0:
+                    for f in ['grid.MC_integer','mint_grids']:
+                        files.cp(pjoin(job['dirname'].rsplit("_",1)[0],f),job['dirname'])
 
 
     def write_input_file(self,job,fixed_order):
@@ -1583,8 +1601,10 @@ ACCURACY = %(accuracy)s
 ADAPT_GRID = 2
 MULTICHANNEL = 1
 SUM_HELICITY = 1
-CHANNEL = %(channel)s
+NCHANS = %(nchans)s
+CHANNEL = %(configs)s
 SPLIT = %(split)s
+WGT_MULT= %(wgt_mult)s
 RUN_MODE = %(run_mode)s
 RESTART = %(mint_mode)s
 """ \
@@ -1650,15 +1670,23 @@ RESTART = %(mint_mode)s
         self.cross_sect_dict = self.write_res_txt_file(jobs_to_collect,integration_step)
 # Update HTML pages
         if fixed_order:
-            cross, error = sum_html.make_all_html_results(self, ['%s*' % run_mode])
+            cross, error = sum_html.make_all_html_results(self, jobs=jobs_to_collect)
         else:
             name_suffix={'born' :'B' , 'all':'F'}
-            cross, error = sum_html.make_all_html_results(self, ['G%s*' % name_suffix[run_mode]])
+            cross, error = sum_html.make_all_html_results(self, folder_names=['G%s*' % name_suffix[run_mode]])
         self.results.add_detail('cross', cross)
-        self.results.add_detail('error', error) 
+        self.results.add_detail('error', error)
+# Combine grids from split fixed order jobs
+        if fixed_order:
+            jobs_to_run=self.combine_split_order_run(jobs_to_run)
 # Set-up jobs for the next iteration/MINT step
         jobs_to_run_new=self.update_jobs_to_run(req_acc,integration_step,jobs_to_run,fixed_order)
-        # if there are no more jobs, we are done!
+        # IF THERE ARE NO MORE JOBS, WE ARE DONE!!!
+        if fixed_order:
+            # Write the jobs_to_collect directory to file so that we
+            # can restart them later (with only-generation option)
+            with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
+                pickle.dump(jobs_to_collect,f)
 # Print summary
         if (not jobs_to_run_new) and fixed_order:
             # print final summary of results (for fixed order)
@@ -1676,6 +1704,10 @@ RESTART = %(mint_mode)s
             scale_pdf_info=[]
 # Prepare for the next integration/MINT step
         if (not fixed_order) and integration_step+1 == 2 :
+            # Write the jobs_to_collect directory to file so that we
+            # can restart them later (with only-generation option)
+            with open(pjoin(self.me_dir,"SubProcesses","job_status.pkl"),'wb') as f:
+                pickle.dump(jobs_to_collect,f)
             # next step is event generation (mint_step 2)
             jobs_to_run_new,jobs_to_collect_new= \
                     self.check_the_need_to_split(jobs_to_run_new,jobs_to_collect)
@@ -1683,6 +1715,10 @@ RESTART = %(mint_mode)s
             self.write_nevents_unweighted_file(jobs_to_collect_new,jobs_to_collect)
             self.write_nevts_files(jobs_to_run_new)
         else:
+            if fixed_order and self.run_card['iappl'] == 0 \
+               and self.run_card['req_acc_FO'] > 0:
+                jobs_to_run_new,jobs_to_collect= \
+                    self.split_jobs_fixed_order(jobs_to_run_new,jobs_to_collect)
             self.prepare_directories(jobs_to_run_new,mode,fixed_order)
             jobs_to_collect_new=jobs_to_collect
         return jobs_to_run_new,jobs_to_collect_new
@@ -1715,6 +1751,183 @@ RESTART = %(mint_mode)s
             with open(pjoin(job['dirname'],'nevts'),'w') as f:
                 f.write('%i\n' % job['nevents'])
 
+    def combine_split_order_run(self,jobs_to_run):
+        """Combines jobs and grids from split jobs that have been run"""
+        # combine the jobs that need to be combined in job
+        # groups. Simply combine the ones that have the same p_dir and
+        # same channel. 
+        jobgroups_to_combine=[]
+        jobs_to_run_new=[]
+        for job in jobs_to_run:
+            if job['split'] == 0:
+                job['combined']=1
+                jobs_to_run_new.append(job) # this jobs wasn't split
+            elif job['split'] == 1:
+                jobgroups_to_combine.append(filter(lambda j: j['p_dir'] == job['p_dir'] and \
+                                            j['channel'] == job['channel'], jobs_to_run))
+            else:
+                continue
+        for job_group in jobgroups_to_combine:
+            # Combine the grids (mint-grids & MC-integer grids) first
+            self.combine_split_order_grids(job_group)
+            jobs_to_run_new.append(self.combine_split_order_jobs(job_group))
+        return jobs_to_run_new
+
+    def combine_split_order_jobs(self,job_group):
+        """combine the jobs in job_group and return a single summed job"""
+        # first copy one of the jobs in 'jobs'
+        sum_job=copy.copy(job_group[0])
+        # update the information to have a 'non-split' job:
+        sum_job['dirname']=pjoin(sum_job['dirname'].rsplit('_',1)[0])
+        sum_job['split']=0
+        sum_job['wgt_mult']=1.0
+        sum_job['combined']=len(job_group)
+        # information to be summed:
+        keys=['niters_done','npoints_done','niters','npoints',\
+              'result','resultABS','time_spend']
+        keys2=['error','errorABS']
+        # information to be summed in quadrature:
+        for key in keys2:
+            sum_job[key]=math.pow(sum_job[key],2)
+        # Loop over the jobs and sum the information
+        for i,job in enumerate(job_group):
+            if i==0 : continue # skip the first
+            for key in keys:
+                sum_job[key]+=job[key]
+            for key in keys2:
+                sum_job[key]+=math.pow(job[key],2)
+        for key in keys2:
+            sum_job[key]=math.sqrt(sum_job[key])
+        sum_job['err_percABS'] = sum_job['errorABS']/sum_job['resultABS']*100.
+        sum_job['err_perc'] = sum_job['error']/sum_job['result']*100.
+        sum_job['niters']=int(sum_job['niters_done']/len(job_group))
+        sum_job['niters_done']=int(sum_job['niters_done']/len(job_group))
+        return sum_job
+
+    
+    def combine_split_order_grids(self,job_group):
+        """Combines the mint_grids and MC-integer grids from the split order
+        jobs (fixed order only).
+        """
+        files_mint_grids=[]
+        files_MC_integer=[]
+        location=None
+        for job in job_group:
+            files_mint_grids.append(open(pjoin(job['dirname'],'mint_grids'),'r+'))
+            files_MC_integer.append(open(pjoin(job['dirname'],'grid.MC_integer'),'r+'))
+            if not location:
+                location=pjoin(job['dirname'].rsplit('_',1)[0])
+            else:
+                if location != pjoin(job['dirname'].rsplit('_',1)[0]) :
+                    raise aMCatNLOError('Not all jobs have the same location. '\
+                                        +'Cannot combine them.')
+        # Needed to average the grids (both xgrids, ave_virt and
+        # MC_integer grids), but sum the cross section info. The
+        # latter is only the only line that contains integers.
+        for j,fs in enumerate([files_mint_grids,files_MC_integer]):
+            linesoffiles=[f.readlines() for f in fs]
+            to_write=[]
+            for rowgrp in zip(*linesoffiles):
+                try:
+                    # check that last element on the line is an
+                    # integer (will raise ValueError if not the
+                    # case). If integer, this is the line that
+                    # contains information that needs to be
+                    # summed. All other lines can be averaged.
+                    is_integer = [[int(row.strip().split()[-1])] for row in rowgrp]
+                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
+                    floatgrps = zip(*floatsbyfile)
+                    special=[]
+                    for i,floatgrp in enumerate(floatgrps):
+                        if i==0: # sum X-sec
+                            special.append(sum(floatgrp))
+                        elif i==1: # sum unc in quadrature
+                            special.append(math.sqrt(sum([err**2 for err in floatgrp])))
+                        elif i==2: # average number of PS per iteration
+                            special.append(int(sum(floatgrp)/len(floatgrp)))
+                        elif i==3: # sum the number of iterations
+                            special.append(int(sum(floatgrp)))
+                        elif i==4: # average the nhits_in_grids
+                            special.append(int(sum(floatgrp)/len(floatgrp)))
+                        else:
+                            raise aMCatNLOError('"mint_grids" files not in correct format. '+\
+                                                'Cannot combine them.')
+                    to_write.append(" ".join(str(s) for s in special) + "\n")
+                except ValueError:
+                    # just average all
+                    floatsbyfile = [[float(a) for a in row.strip().split()] for row in rowgrp]
+                    floatgrps = zip(*floatsbyfile)
+                    averages = [sum(floatgrp)/len(floatgrp) for floatgrp in floatgrps]
+                    to_write.append(" ".join(str(a) for a in averages) + "\n")
+            # close the files
+            for f in fs:
+                f.close
+            # write the data over the master location
+            if j==0:
+                with open(pjoin(location,'mint_grids'),'w') as f:
+                    f.writelines(to_write)
+            elif j==1:
+                with open(pjoin(location,'grid.MC_integer'),'w') as f:
+                    f.writelines(to_write)
+
+                
+    def split_jobs_fixed_order(self,jobs_to_run,jobs_to_collect):
+        """Looks in the jobs_to_run to see if there is the need to split the
+           jobs, depending on the expected time they take. Updates
+           jobs_to_run and jobs_to_collect to replace the split-job by
+           its splits.
+        """
+        # determine the number jobs we should have (this is per p_dir)
+        if self.options['run_mode'] ==2:
+            nb_submit = int(self.options['nb_core'])
+        elif self.options['run_mode'] ==1:
+            nb_submit = int(self.options['cluster_size'])
+        else:
+            nb_submit =1 
+        # total expected aggregated running time
+        time_expected=0
+        for job in jobs_to_run:
+            time_expected+=job['time_spend']*(job['niters']*job['npoints'])/  \
+                           (job['niters_done']*job['npoints_done'])
+        # this means that we must expect the following per job (in
+        # ideal conditions)
+        time_per_job=time_expected/(nb_submit*(1+len(jobs_to_run)/2))
+        jobs_to_run_new=[]
+        jobs_to_collect_new=copy.copy(jobs_to_collect)
+        for job in jobs_to_run:
+            # remove current job from jobs_to_collect. Make sure
+            # to remove all the split ones in case the original
+            # job had been a split one (before it was re-combined)
+            for j in filter(lambda j: j['p_dir'] == job['p_dir'] and \
+                                j['channel'] == job['channel'], jobs_to_collect_new):
+                jobs_to_collect_new.remove(j)
+            time_expected=job['time_spend']*(job['niters']*job['npoints'])/  \
+                           (job['niters_done']*job['npoints_done'])
+            # if the time expected for this job is (much) larger than
+            # the time spend in the previous iteration, and larger
+            # than the expected time per job, split it
+            if time_expected > max(2*job['time_spend']/job['combined'],time_per_job):
+                # determine the number of splits needed
+                nsplit=min(max(int(time_expected/max(2*job['time_spend']/job['combined'],time_per_job)),2),nb_submit)
+                for i in range(1,nsplit+1):
+                    job_new=copy.copy(job)
+                    job_new['split']=i
+                    job_new['wgt_mult']=1./float(nsplit)
+                    job_new['dirname']=job['dirname']+'_%i' % job_new['split']
+                    job_new['accuracy']=min(job['accuracy']*math.sqrt(float(nsplit)),0.1)
+                    if nsplit >= job['niters']:
+                        job_new['npoints']=int(job['npoints']*job['niters']/nsplit)
+                        job_new['niters']=1
+                    else:
+                        job_new['npoints']=int(job['npoints']/nsplit)
+                    jobs_to_collect_new.append(job_new)
+                    jobs_to_run_new.append(job_new)
+            else:
+                jobs_to_collect_new.append(job)
+                jobs_to_run_new.append(job)
+        return jobs_to_run_new,jobs_to_collect_new
+                
+        
     def check_the_need_to_split(self,jobs_to_run,jobs_to_collect):
         """Looks in the jobs_to_run to see if there is the need to split the
            event generation step. Updates jobs_to_run and
@@ -1968,10 +2181,122 @@ RESTART = %(mint_mode)s
                      pjoin(self.me_dir, 'Events', self.run_name))
             logger.info('The results of this run and the ROOT file with the plots' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
+        elif self.analyse_card['fo_analysis_format'].lower() == 'lhe':
+            self.combine_FO_lhe(jobs)
+            logger.info('The results of this run and the LHE File (to be used for plotting only)' + \
+                        ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))            
         else:
             logger.info('The results of this run' + \
                         ' have been saved in %s' % pjoin(self.me_dir, 'Events', self.run_name))
 
+    def combine_FO_lhe(self,jobs):
+        """combine the various lhe file generated in each directory.
+           They are two steps:
+           1) banner 
+           2) reweight each sample by the factor written at the end of each file
+           3) concatenate each of the new files (gzip those).
+        """
+        
+        logger.info('Combining lhe events for plotting analysis')
+        start = time.time()
+        self.run_card['fo_lhe_postprocessing'] = [i.lower() for i in self.run_card['fo_lhe_postprocessing']]
+        output = pjoin(self.me_dir, 'Events', self.run_name, 'events.lhe.gz')
+        if os.path.exists(output):
+            os.remove(output)
+        
+
+        
+        
+        # 1. write the banner
+        text = open(pjoin(jobs[0]['dirname'],'header.txt'),'r').read()
+        i1, i2 = text.find('<initrwgt>'),text.find('</initrwgt>') 
+        self.banner['initrwgt'] = text[10+i1:i2]
+#        
+#        <init>
+#        2212 2212 6.500000e+03 6.500000e+03 0 0 247000 247000 -4 1
+#        8.430000e+02 2.132160e+00 8.430000e+02 1
+#        <generator name='MadGraph5_aMC@NLO' version='2.5.2'>please cite 1405.0301 </generator>
+#        </init>
+
+        cross = sum(j['result'] for j in jobs)
+        error = math.sqrt(sum(j['error'] for j in jobs))
+        self.banner['init'] = "0 0 0e0 0e0 0 0 0 0 -4 1\n  %s %s %s 1" % (cross, error, cross)
+        self.banner.write(output[:-3], close_tag=False)
+        misc.gzip(output[:-3])
+        
+        
+        
+        fsock = lhe_parser.EventFile(output,'a')
+        if 'nogrouping' in self.run_card['fo_lhe_postprocessing']:
+            fsock.eventgroup = False
+        else:
+            fsock.eventgroup = True
+        
+        if 'norandom' in self.run_card['fo_lhe_postprocessing']:
+            for job in jobs:
+                dirname = job['dirname']
+                #read last line
+                lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
+                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                # get normalisation ratio 
+                ratio = cross/sumwgt
+                lhe = lhe_parser.EventFile(pjoin(dirname,'events.lhe'))
+                lhe.eventgroup = True # read the events by eventgroup
+                for eventsgroup in lhe:
+                    neweventsgroup = []
+                    for i,event in enumerate(eventsgroup):
+                        event.rescale_weights(ratio)
+                        if i>0 and 'noidentification' not in self.run_card['fo_lhe_postprocessing'] \
+                                                and event == neweventsgroup[-1]:
+                            neweventsgroup[-1].wgt += event.wgt
+                            for key in event.reweight_data:
+                                neweventsgroup[-1].reweight_data[key] += event.reweight_data[key]
+                        else:
+                            neweventsgroup.append(event)
+                    fsock.write_events(neweventsgroup)
+                lhe.close()
+                os.remove(pjoin(dirname,'events.lhe'))
+        else:
+            lhe = []
+            lenlhe = []     
+            misc.sprint('need to combine %s event file' % len(jobs))
+            globallhe = lhe_parser.MultiEventFile()
+            globallhe.eventgroup = True
+            for job in jobs:
+                dirname = job['dirname']
+                lastline = misc.BackRead(pjoin(dirname,'events.lhe')).readline()
+                nb_event, sumwgt, cross = [float(i) for i in lastline.split()]
+                lastlhe = globallhe.add(pjoin(dirname,'events.lhe'),cross, 0, cross,
+                                        nb_event=int(nb_event), scale=cross/sumwgt)
+            for eventsgroup in globallhe:
+                neweventsgroup = []
+                for i,event in enumerate(eventsgroup):
+                    event.rescale_weights(event.sample_scale)
+                    if i>0 and 'noidentification' not in self.run_card['fo_lhe_postprocessing'] \
+                                            and event == neweventsgroup[-1]:
+                        neweventsgroup[-1].wgt += event.wgt
+                        for key in event.reweight_data:
+                            neweventsgroup[-1].reweight_data[key] += event.reweight_data[key]
+                    else:
+                        neweventsgroup.append(event) 
+                fsock.write_events(neweventsgroup)               
+            globallhe.close()
+            fsock.write('</LesHouchesEvents>\n') 
+            fsock.close()
+            misc.sprint('combining lhe file done in ', time.time()-start)
+            for job in jobs:
+                dirname = job['dirname']
+                os.remove(pjoin(dirname,'events.lhe'))
+                                
+                                           
+                        
+        misc.sprint('combining lhe file done in ', time.time()-start)
+                        
+                        
+                    
+
+            
+            
     def combine_plots_HwU(self,jobs,out,normalisation=None):
         """Sums all the plots in the HwU format."""
         logger.debug('Combining HwU plots.')
@@ -2105,7 +2430,8 @@ RESTART = %(mint_mode)s
             content += '</font>\n'
             #then just flush the content of the small log inside the big log
             #the PRE tag prints everything verbatim
-            content += '<PRE>\n' + open(log).read() + '\n</PRE>'
+            with open(log) as l:
+                content += '<PRE>\n' + l.read() + '\n</PRE>'
             content +='<br>\n'
             outfile.write(content)
             content=''
@@ -3922,7 +4248,6 @@ RESTART = %(mint_mode)s
     def run_exe(self, exe, args, run_type, cwd=None):
         """this basic function launch locally/on cluster exe with args as argument.
         """
-        
         # first test that exe exists:
         execpath = None
         if cwd and os.path.exists(pjoin(cwd, exe)):
@@ -4178,7 +4503,7 @@ RESTART = %(mint_mode)s
         p_dirs = [d for d in \
                 open(pjoin(self.me_dir, 'SubProcesses', 'subproc.mg')).read().split('\n') if d]
         # create param_card.inc and run_card.inc
-        self.do_treatcards('', amcatnlo=True)
+        self.do_treatcards('', amcatnlo=True, mode=mode)
         # if --nocompile option is specified, check here that all exes exists. 
         # If they exists, return
         if all([os.path.exists(pjoin(self.me_dir, 'SubProcesses', p_dir, exe)) \
@@ -4740,7 +5065,6 @@ Please, shower the Les Houches events before using them for physics analyses."""
         if not options['force'] and not self.force:
             self.ask_edit_cards(cards, plot=False, first_cmd=first_cmd)
 
-        
         self.banner = banner_mod.Banner()
 
         # store the cards in the banner

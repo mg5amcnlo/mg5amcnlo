@@ -43,8 +43,8 @@ SYMMETRY = symmetry.o idenparts.o
 $(PROG): $(PROCESS) auto_dsig.o $(LIBS)
 	$(FC) -o $(PROG) $(PROCESS) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
 
-gensym: $(SYMMETRY) configs.inc $(LIBDIR)libmodel.$(libext) $(LIBDIR)libgeneric.$(libext)
-	$(FC) -o gensym $(SYMMETRY) -L../../lib/ -lmodel -lgeneric -lpdf $(LDFLAGS)
+gensym: $(SYMMETRY) configs.inc $(LIBS)
+	$(FC) -o gensym $(SYMMETRY) $(LINKLIBS) $(LDFLAGS) $(BIASDEPENDENCIES)
 
 $(LIBDIR)libmodel.$(libext): ../../Cards/param_card.dat
 	cd ../../Source/MODEL; make

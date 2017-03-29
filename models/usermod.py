@@ -17,7 +17,7 @@
     different part of the model. Check of consistency of the model are performed.
     This produce a new valid UFO model in output.
 """
-
+import copy
 import glob
 import logging
 import os
@@ -53,7 +53,6 @@ class UFOModel(object):
         as empty."""
         self.modelpath = modelpath
         model = ufomodels.load_model(modelpath)
-        
         # Check the validity of the model. Too old UFO (before UFO 1.0)
         if not hasattr(model, 'all_orders'):
             raise USRMODERROR, 'Base Model doesn\'t follows UFO convention (no couplings_order information)\n' +\
@@ -62,28 +61,39 @@ class UFOModel(object):
             raise USRMODERROR, 'Base Model doesn\'t follows UFO convention (Mass/Width of particles are string name, not object)\n' +\
                                'MG5 is able to load such model but NOT to the add model feature.' 
                                  
-        
-        self.particles = model.all_particles
+        old_particles = [id(p) for p in model.all_particles]
+        self.particles = [copy.copy(p) for p in model.all_particles]
         if any(hasattr(p, 'loop_particles') for p in self.particles):
             raise USRMODERROR, 'Base Model doesn\'t follows UFO convention '
-        self.vertices = model.all_vertices
-        self.couplings = model.all_couplings
-        self.lorentz = model.all_lorentz
-        self.parameters = model.all_parameters
+        self.vertices = list(model.all_vertices)
+        # ensure that the particles are correctly listed
+        for v in self.vertices:
+            new_p = []
+            for p in v.particles:
+                try:
+                    new_p.append(self.particles[old_particles.index(id(p))])
+                except:
+                    p3 = [p2 for p2 in self.particles if p2.name == p.name and p2.pdg_code == p.pdg_code]
+                    new_p.append(p3[0])
+            v.particles  = new_p
+
+        self.couplings = list(model.all_couplings)
+        self.lorentz = list(model.all_lorentz)
+        self.parameters = list(model.all_parameters)
         self.Parameter = self.parameters[0].__class__
-        self.orders = model.all_orders
+        self.orders = list(model.all_orders)
         
-        self.functions = model.all_functions
+        self.functions = list(model.all_functions)
         self.new_external = []
         # UFO optional file
         if hasattr(model, 'all_propagators'):
-            self.propagators = model.all_propagators
+            self.propagators = list(model.all_propagators)
         else:
             self.propagators = [] 
             
         # UFO NLO extension
         if hasattr(model, 'all_CTvertices'):
-            self.CTvertices = model.all_CTvertices
+            self.CTvertices = list(model.all_CTvertices)
         else:
             self.CTvertices = []
         
@@ -262,6 +272,10 @@ class UFOModel(object):
                                                   if name not in args]
         else:
             other_attr = obj.__dict__.keys()
+        
+        other_attr.sort()
+        if other_attr == ['GhostNumber', 'LeptonNumber', 'Y', 'partial_widths', 'selfconjugate']:
+            other_attr=['GhostNumber', 'LeptonNumber', 'Y','selfconjugate']
             
         for data in other_attr:
             name =str(data)
@@ -277,6 +291,7 @@ class UFOModel(object):
             nb_space += add_space
             
         text = text[:-2] + ')\n\n'
+        #print text
 
         return text
              

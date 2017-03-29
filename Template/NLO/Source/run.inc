@@ -79,4 +79,8 @@ c
       common/to_rwgt/ do_rwgt_scale, rw_Fscale_down, rw_Fscale_up, rw_Rscale_down, rw_Rscale_up,
      # do_rwgt_pdf, pdf_set_min, pdf_set_max,
      # store_rwgt_info 
-
+c
+c    For FO run (with lhe type of analysis
+c
+      double precision FO_LHE_weight_ratio
+      common /FO_ANALYSIS_LHW/FO_LHE_weight_ratio

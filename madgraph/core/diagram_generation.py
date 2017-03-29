@@ -1336,7 +1336,7 @@ class DecayChainAmplitude(Amplitude):
         self['decay_chains'] = DecayChainAmplitudeList()
 
     def __init__(self, argument = None, collect_mirror_procs = False,
-                 ignore_six_quark_processes = False, loop_filter=None):
+                 ignore_six_quark_processes = False, loop_filter=None, diagram_filter=False):
         """Allow initialization with Process and with ProcessDefinition"""
 
         if isinstance(argument, base_objects.Process):
@@ -1351,11 +1351,13 @@ class DecayChainAmplitude(Amplitude):
                   MultiProcessClass.generate_multi_amplitudes(argument,
                                                     collect_mirror_procs,
                                                     ignore_six_quark_processes,
-                                                    loop_filter=loop_filter))
+                                                    loop_filter=loop_filter,
+                                                    diagram_filter=diagram_filter))
             else:
                 self['amplitudes'].append(\
                   MultiProcessClass.get_amplitude_from_proc(argument,
-                                                       loop_filter=loop_filter))
+                                                       loop_filter=loop_filter,
+                                                       diagram_filter=diagram_filter))
                 # Clean decay chains from process, since we haven't
                 # combined processes with decay chains yet
                 process = copy.copy(self.get('amplitudes')[0].get('process'))
@@ -1633,7 +1635,8 @@ class MultiProcess(base_objects.PhysicsObject):
                     self['amplitudes'].append(\
                         DecayChainAmplitude(process_def,
                                        self.get('collect_mirror_procs'),
-                                       self.get('ignore_six_quark_processes')))
+                                       self.get('ignore_six_quark_processes'),
+                                       diagram_filter=self['diagram_filter']))
                 else:
                     self['amplitudes'].extend(\
                        self.generate_multi_amplitudes(process_def,
@@ -1669,7 +1672,8 @@ class MultiProcess(base_objects.PhysicsObject):
 
         # Set automatic coupling orders
         process_definition.set('orders', MultiProcess.\
-                               find_optimal_process_orders(process_definition))
+                               find_optimal_process_orders(process_definition,
+                               diagram_filter))
         # Check for maximum orders from the model
         process_definition.check_expansion_orders()
 
@@ -1851,7 +1855,7 @@ class MultiProcess(base_objects.PhysicsObject):
         
 
     @staticmethod
-    def find_optimal_process_orders(process_definition):
+    def find_optimal_process_orders(process_definition, diagram_filter=False):
         """Find the minimal WEIGHTED order for this set of processes.
 
         The algorithm:
@@ -2025,7 +2029,7 @@ class MultiProcess(base_objects.PhysicsObject):
 
                     amplitude = Amplitude({'process': process})
                     try:
-                        amplitude.generate_diagrams()
+                        amplitude.generate_diagrams(diagram_filter=diagram_filter)
                     except InvalidCmd:
                         failed_procs.append(tuple(sorted_legs))
                     else:

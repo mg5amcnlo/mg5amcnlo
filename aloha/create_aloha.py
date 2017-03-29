@@ -211,9 +211,10 @@ in presence of majorana particle/flow violation"""
         new_id = _conjugate_gap + old_id
         
         self.kernel_tag = set()
-        if not self.routine_kernel or isinstance(self.routine_kernel, str):            
+        aloha_lib.KERNEL.use_tag = set()
+        if not self.routine_kernel or isinstance(self.routine_kernel, str):    
             self.routine_kernel = eval(self.parse_expression(self.lorentz_expr))
-        
+            self.kernel_tag = aloha_lib.KERNEL.use_tag
         # We need to compute C Gamma^T C^-1 = C_ab G_cb (-1) C_cd 
         #                  = C_ac G_bc (-1) C_bd = C_ac G_bc C_db
         self.routine_kernel = \
@@ -399,7 +400,7 @@ in presence of majorana particle/flow violation"""
         
         if factorize:
             lorentz = lorentz.factorize()
-            
+        
         lorentz.tag = set(aloha_lib.KERNEL.use_tag)
         return lorentz     
 

@@ -453,7 +453,12 @@ class ParamCard(dict):
             lhacode = abs(particle.get_pdg_code())
 
             if isinstance(mass, base_objects.ModelVariable) and not isinstance(mass, base_objects.ParamCardVariable):
-                param_value = self.get('mass').get(lhacode).value
+                try:
+                    param_value = self.get('mass').get(lhacode).value
+                except Exception:
+                    param = Parameter(block='mass', lhacode=(lhacode,),value=0,comment='added')
+                    param_value = -999.999
+                    self.get('mass').append(param)
                 model_value = parameters[particle.get('mass')]
                 if isinstance(model_value, complex):
                     if model_value.imag > 1e-5 * model_value.real:
@@ -472,7 +477,12 @@ class ParamCard(dict):
         
             width = model.get_parameter(particle.get('width'))            
             if isinstance(width, base_objects.ModelVariable):
-                param_value = self.get('decay').get(lhacode).value
+                try:
+                    param_value = self.get('decay').get(lhacode).value
+                except Exception:
+                    param = Parameter(block='decay', lhacode=(lhacode,),value=0,comment='added')
+                    param_value = -999.999
+                    self.get('decay').append(param)
                 model_value = parameters[particle.get('width')]
                 if isinstance(model_value, complex):
                     if model_value.imag > 1e-5 * model_value.real:
