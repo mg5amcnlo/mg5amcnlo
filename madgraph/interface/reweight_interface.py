@@ -1709,11 +1709,22 @@ class ReweightInterface(extended_cmd.Cmd):
                 prefix = all_prefix[i]
                 hel = hel_dict[prefix]
                 if tag in data:
-                    misc.sprint(onedir)
-                    misc.sprint(tag, onedir)
-                    misc.sprint(data[tag][:-1])
-                    misc.sprint(order, pdir,)
-                    raise Exception
+                    oldpdg = data[tag][0][0]+data[tag][0][1]
+                    if all_prefix[all_pdgs.index(pdg)] == all_prefix[all_pdgs.index(oldpdg)]:
+                        for i in range(len(pdg)):
+                            if pdg[i] == oldpdg[i]:
+                                continue
+                            if self.model.get_mass(int(pdg[i])) == self.model.get_mass(int(oldpdg[i])):
+                                continue
+                            misc.sprint(tag, onedir)
+                            misc.sprint(data[tag][:-1])
+                            misc.sprint(order, pdir,)
+                            raise Exception                                
+                    else: 
+                        misc.sprint(tag, onedir)
+                        misc.sprint(data[tag][:-1])
+                        misc.sprint(order, pdir,)
+                        raise Exception
                 
                 data[tag] = order, pdir, hel
              
