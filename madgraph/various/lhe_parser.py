@@ -2026,12 +2026,12 @@ class FourMomentum(object):
     @property
     def mass(self):
         """return the mass"""    
-        return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
+        return math.sqrt(max(self.E**2 - self.px**2 - self.py**2 - self.pz**2,0))
 
     @property
     def mass_sqr(self):
         """return the mass square"""    
-        return self.E**2 - self.px**2 - self.py**2 - self.pz**2
+        return max(self.E**2 - self.px**2 - self.py**2 - self.pz**2,0)
 
     @property
     def pt(self):
