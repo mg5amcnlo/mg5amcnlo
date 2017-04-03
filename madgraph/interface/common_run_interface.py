@@ -1510,10 +1510,23 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             --from_card=
         """
         
+        try:
+             lhapdf_version = self.get_lhapdf_version()
+        except Exception:
+            logger.info('No version of lhapdf. Can not run systematics computation')
+            return
+        else:
+             if lhapdf_version.startswith('5'):
+                 logger.info('can not run systematics with lhapdf 5')
+                 return              
+        
         lhapdf = misc.import_python_lhapdf(self.options['lhapdf'])
         if not lhapdf:
             logger.info('can not run systematics since can not link python to lhapdf')
             return
+        
+ 
+
     
         self.update_status('Running Systematics computation', level='parton')
         args = self.split_arg(line)
