@@ -1714,6 +1714,8 @@ class ReweightInterface(extended_cmd.Cmd):
                         for i in range(len(pdg)):
                             if pdg[i] == oldpdg[i]:
                                 continue
+                            if not self.model:
+                                continue
                             if self.model.get_mass(int(pdg[i])) == self.model.get_mass(int(oldpdg[i])):
                                 continue
                             misc.sprint(tag, onedir)
