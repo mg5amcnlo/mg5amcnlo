@@ -5094,7 +5094,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             isinstance(self.run_card,banner_mod.RunCardNLO) and \
             not self.run_card['store_rwgt_info']:
             #check if a NLO reweighting is required
-                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO)\s*(?:#|$)''', re.M+re.I)
+                re_pattern = re.compile(r'''^\s*change\s*mode\s* (LO\+NLO|LO|NLO|NLO_tree)\s*(?:#|$)''', re.M+re.I)
                 text = open(self.paths['reweight']).read()
                 options = re_pattern.findall(text)
                 if any(o in ['NLO', 'LO+NLO'] for o in options):
