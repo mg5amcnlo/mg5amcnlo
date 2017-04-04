@@ -2808,7 +2808,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
                        'cluster_size':100,
-                       'output_dependencies':'external'
+                       'output_dependencies':'external',
+                       'crash_on_error':False
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -7234,6 +7235,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.allow_notification_center = self.options[args[0]]
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
+        # True/False formatting
+        elif args[0] in ['crash_on_error']:
+            tmp = banner_module.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            self.options[args[0]] = tmp        
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
         elif args[0] in self.options:
