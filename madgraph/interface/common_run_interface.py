@@ -2994,7 +2994,7 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.check_set(args)
 
             if args[0] in self.options_configuration and '--no_save' not in args:
-                self.exec_cmd('save options --auto')
+                self.exec_cmd('save options %s --auto' % args[0])
             elif args[0] in self.options_madevent:
                 logger.info('This option will be the default in any output that you are going to create in this session.')
                 logger.info('In order to keep this changes permanent please run \'save options\'')

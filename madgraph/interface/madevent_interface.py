@@ -2023,7 +2023,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
-        self.ask_run_configuration(mode, args)
+        switch_mode = self.ask_run_configuration(mode, args)
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -2119,6 +2119,11 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+
+                if switch_mode['analysis'] == 'EXROOTANALYSIS':
+                    input = pjoin(self.me_dir, 'Events', self.run_name,'unweighted_events.lhe.gz')
+                    output = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.root')
+                    self.create_root_file(input , output)
 
                 self.exec_cmd('madanalysis5_parton --no_default', postcmd=False, printcmd=False)
                 # shower launches pgs/delphes if needed    
@@ -3220,15 +3225,6 @@ Beware that this can be dangerous for local multicore runs.""")
         
         
         self.to_store.append('event')
-        eradir = self.options['exrootanalysis_path']
-        madir = self.options['madanalysis_path']
-        td = self.options['td_path']
-        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
-           os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-                if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-                    os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-                self.create_root_file(output='%s/unweighted_events.root' % \
-                                                                  self.run_name)
     
     ############################################################################ 
     def correct_bias(self):
@@ -5528,12 +5524,28 @@ tar -czf split_$1.tar.gz split_$1
         self.update_status('Creating root files', level='parton')
 
         eradir = self.options['exrootanalysis_path']
+        totar = False
+        if input.endswith('.gz'):
+            misc.gunzip(input, keep=True)
+            totar = True
+            input = input[:-3]
+            
         try:
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
                              input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
         except Exception:
             logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
+    
+        if totar:
+            if os.path.exists('%s.gz' % input):
+                try:
+                    os.remove(input)
+                except:
+                    pass
+            else:
+                misc.gzip(input,keep=False)
+            
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
@@ -5746,6 +5758,15 @@ tar -czf split_$1.tar.gz split_$1
             if hadron_card_present or parton_card_present:
                 switch['analysis'] = 'MADANALYSIS_5'
 
+        # ExRootanalysis
+        eradir = self.options['exrootanalysis_path']
+        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
+            valid_options['analysis'].insert(0,'EXROOTANALYSIS')
+            if switch['analysis'] in ['OFF', void]:
+                switch['analysis'] = 'EXROOTANALYSIS'
+
+                 
+
         if len(valid_options['analysis'])>1:                
             available_mode.append('3')
             if switch['analysis'] == void:
@@ -5817,7 +5838,7 @@ tar -czf split_$1.tar.gz split_$1
                 return red%switch_value
             elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
                                   'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
-                                  'DELPHES-CMS','DELPHES']:
+                                  'DELPHES-CMS','DELPHES', 'EXROOTANALYSIS']:
                 return green%switch_value
             else:
                 return bold%switch_value                
@@ -5976,7 +5997,7 @@ tar -czf split_$1.tar.gz split_$1
             self.ask_edit_cards(cards, plot=False, mode='auto')
         else:
             self.ask_edit_cards(cards, plot=False)
-        return
+        return switch
     
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None, pythia_version=6):

@@ -1282,6 +1282,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
 
         if hasattr(self, 'options') and 'crash_on_error' in self.options and \
                                                 self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
@@ -1306,6 +1307,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         
         if hasattr(self, 'options') and 'crash_on_error' in self.options and \
                                                 self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
@@ -1340,6 +1342,7 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             debug_file.write('Fail to write options with error %s' % error)
         if hasattr(self, 'options') and 'crash_on_error' in self.options and \
                                                 self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
             sys.exit(str(error))
         
         #stop the execution if on a non interactive mode                                
@@ -1896,7 +1899,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
-            
         for key in to_write:
             if key in to_keep:
                 text += '%s = %s \n' % (key, to_keep[key])
