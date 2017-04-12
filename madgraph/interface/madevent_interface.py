@@ -5991,7 +5991,7 @@ tar -czf split_$1.tar.gz split_$1
         
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
-            return
+            return switch
 
         if answer == 'auto':
             self.ask_edit_cards(cards, plot=False, mode='auto')
