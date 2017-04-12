@@ -172,7 +172,7 @@ class ReweightInterface(extended_cmd.Cmd):
 
         if 'madspin' in self.banner and not allow_madspin:
             raise self.InvalidCmd('Reweight should be done before running MadSpin')
-                
+        
                 
         # load information
         process = self.banner.get_detail('proc_card', 'generate')
@@ -1449,8 +1449,9 @@ class ReweightInterface(extended_cmd.Cmd):
 
                 if not os.path.exists(Pdir):
                     to_check.append(tag)
-                    continue                        
-                if tag in data['id2path']:
+                    continue   
+                         
+                if self.banner.run_card['ickkw']!=3 and tag in data['id2path']:
                     if not Pdir == data['id2path'][tag][1]:
                         misc.sprint(tag, Pdir, data['id2path'][tag][1])
                         raise self.InvalidCmd, '2 different process have the same final states. This module can not handle such situation'
