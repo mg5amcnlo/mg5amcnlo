@@ -141,7 +141,6 @@ c
      &                   particle_charge(i).ne.0d0
       enddo
       do i=1,nexternal
-
          if (i.lt.min(i_fks,j_fks)) then
             particle_type_born(i)=particle_type(i)
             particle_charge_born(i)=particle_charge(i)

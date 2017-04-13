@@ -107,8 +107,8 @@ c specified in coupl.inc
          is_a_lp(i)=.false.
          is_a_lm(i)=.false.
          is_a_ph(i)=.false.
-
-c-light-jets
+         
+c     -light-jets
          if (abs(idup(i,1)).le.maxjetflavor) then
               is_a_j(i)=.true.
          endif
@@ -126,7 +126,6 @@ c-photons
          if (idup(i,1).eq.22.and..not.gamma_is_j)  is_a_ph(i)=.true. ! iso photon
          if (idup(i,1).eq.22.and.gamma_is_j)  is_a_j(i)=.true. !  photon in jets
       enddo
-
       RETURN
       END
 

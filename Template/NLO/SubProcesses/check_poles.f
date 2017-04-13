@@ -14,7 +14,7 @@ C
       integer return_code
       double precision tolerance, tolerance_default
       double precision, allocatable :: accuracies(:)
-      double precision accuracy
+      double precision accuracy2
       double precision ren_scale, energy
       include 'genps.inc'
       include 'nexternal.inc'
@@ -65,6 +65,7 @@ cc
       integer ret_code_ml
       common /to_ret_code/ret_code_ml
       include 'FKSParams.inc'
+      include 'mint.inc'
       
 C-----
 C  BEGIN CODE
@@ -88,7 +89,9 @@ C-----
      
       call FKSParamReader('FKS_params.dat',.TRUE.,.FALSE.)
       tolerance_default = IRPoleCheckThreshold
-
+      iconfig=1
+      ichan=1
+      iconfigs(1)=iconfig
 c     Set the energy to be characteristic of the run
       totmass = 0.0d0
       do i=1,nexternal
@@ -124,9 +127,16 @@ c ie. which is a Born+g real-emission process
          call fks_inc_chooser()
          if (is_aorg(i_fks)) exit
       enddo
+      if (nFKSprocess.gt.fks_configs) then
+c If there is no fks_configuration that has a gluon or photon as i_fks
+c (this might happen in case of initial state leptons with
+c include_lepton_initiated_processes=False) the Born and virtuals do not
+c need to be included, and we can simply quit the process.
+         return
+      endif
       call fks_inc_chooser()
       call leshouche_inc_chooser()
-      call setfksfactor(1,.false.)
+      call setfksfactor(.false.)
       symfactvirt = 1d0
 
       nfail = 0
@@ -219,7 +229,7 @@ c initialization
 
 C         If MadLoop was still in initialization mode, then skip this
 C         point for the checks
-          if (accuracy.lt.0.0d0) goto 200
+          if (accuracy2.lt.0.0d0) goto 200
 C         Otherwise, perform the check
           npointsChecked = npointsChecked +1
 

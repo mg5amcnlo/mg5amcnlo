@@ -498,7 +498,7 @@ c The nbody contributions
       nbody=.true.
       calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
-      call update_fks_dir(nFKS_born,iconfig)
+      call update_fks_dir(nFKS_born)
       if (ini_fin_fks(ichan).eq.0) then
          jac=1d0
       else
@@ -541,7 +541,7 @@ c The n+1-body contributions (including counter terms)
          wgt_me_born=0d0
          wgt_me_real=0d0
          jac=MC_int_wgt
-         call update_fks_dir(iFKS,iconfig)
+         call update_fks_dir(iFKS)
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
@@ -603,16 +603,16 @@ c Finalize PS point
       return
       end
 
-      subroutine update_fks_dir(nFKS,iconfig)
+      subroutine update_fks_dir(nFKS)
       implicit none
-      integer nFKS,iconfig
+      integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       nFKSprocess=nFKS
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig,.false.)
+      call setfksfactor(.false.)
       return
       end
       

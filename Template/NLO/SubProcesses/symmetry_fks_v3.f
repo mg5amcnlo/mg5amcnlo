@@ -172,6 +172,12 @@ c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
          call fks_inc_chooser()
          if (is_aorg(i_fks)) exit
       enddo
+c If there is no fks configuration that has a gluon or photon as i_fks
+c (this might happen in case of initial state leptons with
+c include_lepton_initiated_processes=False) the Born and virtuals do not
+c need to be included, but we still need to set the symmetry
+c factors. Hence, simply use the first fks_configuration.
+      if (nFKSprocess.gt.fks_configs) nFKSprocess=1
       call leshouche_inc_chooser()
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
@@ -181,7 +187,8 @@ c Pick a process that is BORN+1GLUON (where the gluon is i_fks).
       iconfig=1
       ichan=1
       iconfigs(1)=iconfig
-      call setfksfactor(iconfig,.false.)
+      call setfksfactor(.false.)
+      
 c
       ndim = 55
       ncall = 10000
