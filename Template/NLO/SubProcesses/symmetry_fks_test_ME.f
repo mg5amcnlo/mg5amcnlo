@@ -284,7 +284,7 @@ c x_to_f_arg subroutine
          ichan=1
          iconfigs(1)=iconfig
       call setcuts
-      call setfksfactor(iconfig,.false.)
+      call setfksfactor(.false.)
       wgt=1d0
       ntry=1
 
