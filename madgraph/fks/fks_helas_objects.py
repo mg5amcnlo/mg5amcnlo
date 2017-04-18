@@ -26,6 +26,7 @@ import madgraph.fks.fks_base as fks_base
 import madgraph.fks.fks_common as fks_common
 import madgraph.loop.loop_helas_objects as loop_helas_objects
 import madgraph.loop.loop_diagram_generation as loop_diagram_generation
+from madgraph import InvalidCmd
 import copy
 import logging
 import array
@@ -134,10 +135,13 @@ def async_generate_born(args):
         ###myproc['orders'] = loop_orders
         myproc['perturbation_couplings'] = myproc['model']['coupling_orders']
         myproc['legs'] = fks_common.to_legs(copy.copy(myproc['legs']))
-        myamp = loop_diagram_generation.LoopAmplitude(myproc)
-        if myamp.get('diagrams'):
+
+        try:
+            myamp = loop_diagram_generation.LoopAmplitude(myproc)
             has_loops = True
             born.virt_amp = myamp
+        except InvalidCmd:
+            has_loops = False
 
     helasfull = FKSHelasProcess(born, helasreal_list,
                                 loop_optimized = loop_optimized,
