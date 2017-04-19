@@ -25,6 +25,9 @@ C
       integer ord_subtract
       data firsttime / .TRUE. /
       integer amp_orders(nsplitorders)
+       DOUBLE PRECISION TINY
+       PARAMETER (TINY = 1D-12)
+       DOUBLE PRECISION MAX_VAL
 C
 C     FUNCTIONS
 C
@@ -70,6 +73,8 @@ endif
 
 CALL SBORN_CNT%(proc_prefix)s_SPLITORDERS(P,ANS)
 
+MAX_VAL = 0D0
+ 
 C reset the amp_split array
 do i = 1, amp_split_size
   do j = 1, nsplitorders
@@ -78,14 +83,18 @@ do i = 1, amp_split_size
   enddo
 enddo
 
+DO I = 1, NSQAMPSO
+  MAX_VAL = MAX(MAX_VAL, ABS(ANS(1,I)))
+ENDDO
+ 
 C quantities for the counterterms
 do j = 1, nsplitorders
  ans_cnt(1,j) = dcmplx(0d0, 0d0)
  ans_cnt(2,j) = dcmplx(0d0, 0d0)
  do i = 1, nsqampso
   if (keep_order_cnt(j,i)) then 
-   ANS_CNT(1,j) = ANS_CNT(1,J) + ANS(1,I)
-   ANS_CNT(2,j) = ANS_CNT(2,J) + ANS(2,I)
+    IF(ABS(ANS(1,I)).GT.MAX_VAL*TINY) ANS_CNT(1,J) = ANS_CNT(1,J) + ANS(1,I)
+    IF(ABS(ANS(1,I)).GT.MAX_VAL*TINY) ANS_CNT(2,J) = ANS_CNT(2,J) + ANS(2,I)
 C   keep track of the separate pieces also for counterterms
    do k = 1, nsplitorders
       amp_orders(k) = GETORDPOWFROMINDEX_B_CNT%(proc_prefix)s(k, i)
@@ -93,10 +102,14 @@ C take into account the fact that the counterterm for a given split order
 C will be multiplied by the corresponding squared coupling
       if (k.eq.j) amp_orders(k) = amp_orders(k) + 2
    enddo
-   amp_split_cnt(orders_to_amp_split_pos(amp_orders),1,j) = ans(1,I)
-   amp_split_cnt(orders_to_amp_split_pos(amp_orders),2,j) = ans(2,I)
+C this is to avoid fake non-zero contributions
+   IF (ABS(ANS(1,I)).GT.MAX_VAL*TINY) AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),1,J) = ANS(1,I)
+   IF (ABS(ANS(2,I)).GT.MAX_VAL*TINY) AMP_SPLIT_CNT(ORDERS_TO_AMP_SPLIT_POS(AMP_ORDERS),2,J) = ANS(2,I)
   endif
  enddo
+C this is to avoid fake non-zero contributions 
+ IF (ABS(ANS_CNT(1,J)).LT.MAX_VAL*TINY) ANS_CNT(1,J)=(0D0,0D0)
+ IF (ABS(ANS_CNT(2,J)).LT.MAX_VAL*TINY) ANS_CNT(2,J)=(0D0,0D0)
 enddo
 
 return
