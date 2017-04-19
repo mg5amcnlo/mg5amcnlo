@@ -56,7 +56,6 @@ c
      &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
      &     xmaxup(maxpup),lprup(maxpup)
 c
-      include 'nexternal.inc'
       logical gridrun,gridpack
       integer          iseed
       common /to_seed/ iseed
@@ -65,13 +64,8 @@ c
       common /event_normalisation/event_norm
       integer iappl
       common /for_applgrid/ iappl
+      integer idum
 C      
-      integer    maxflow
-      parameter (maxflow=999)
-      integer idup(nexternal,maxproc)
-      integer mothup(2,nexternal,maxproc)
-      integer icolup(2,nexternal,maxflow)
-      include 'born_leshouche.inc'
 c
 c----------
 c     start
@@ -194,7 +188,10 @@ C       Fill common block for Les Houches init info
         elseif(lpp(i).eq.-3) then
           idbmup(i)=-11
         elseif(lpp(i).eq.0) then
-          idbmup(i)=idup(i,1)
+           open (unit=71,status='old',file='initial_states_map.dat')
+           read (71,*,err=100)idum,idum,idbmup(1),idbmup(2)
+           close (71)
+c          idbmup(i)=idup(i,1)
         else
           idbmup(i)=lpp(i)
         endif
@@ -208,7 +205,7 @@ c get from LHAPDF.
          call numberPDFm(1,nmemPDF(1))
          if (nmemPDF(1).eq.1) then
             nmemPDF(1)=0
-            lpdfvar(1)=0
+            lpdfvar(1)=.False.
          endif
       else
          nmemPDF(1)=0
@@ -217,6 +214,9 @@ c get from LHAPDF.
       return
  99   write(*,*) 'error in reading'
       return
+ 100  write(*,*) '"initial_states_map.dat" not found (or incorrect'/
+     $     /' format) by "Source/setrun"'
+      stop 1
       end
 
 C-------------------------------------------------
