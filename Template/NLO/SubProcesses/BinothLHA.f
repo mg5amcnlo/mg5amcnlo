@@ -101,7 +101,8 @@ c The helicity double check should have been performed during the
 c pole check, so we skip it here. It also makes sure that there is
 c no conflict on the write access to HelFilter.dat when running
 c locally in multicore without a cluster_tmp_path
-         if (.not. force_polecheck) call set_forbid_hel_doublecheck(.True.)
+         if (.not. force_polecheck)
+     &        call set_forbid_hel_doublecheck(.True.)
          call get_nsqso_loop(nsqso)
          call get_answer_dimension(MLResArrayDim)
          allocate(accuracies(0:nsqso))
@@ -148,10 +149,14 @@ C          different coupling combinations
              do j = 1, nsplitorders
               amp_orders(j) = getordpowfromindex_ML5(j, i)
              enddo
-             amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
-             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i)
-             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i)
-             prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
+             amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) =
+     $            virt_wgts(1,i)
+             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) =
+     $            virt_wgts(2,i)
+             amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) =
+     $            virt_wgts(3,i)
+             prec_found(orders_to_amp_split_pos(amp_orders))
+     $            =accuracies(i)
            endif
         enddo
       else
@@ -172,10 +177,14 @@ C          different coupling combinations
                 do j = 1, nsplitorders
                  amp_orders(j) = getordpowfromindex_ML5(j, i)
                 enddo
-                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts(1,i)
-                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts(2,i)
-                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts(3,i)
-                prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
+                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders))
+     $               = virt_wgts(1,i)
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders)
+     $               ,1) = virt_wgts(2,i)
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders)
+     $               ,2) = virt_wgts(3,i)
+                prec_found(orders_to_amp_split_pos(amp_orders))
+     $               =accuracies(i)
               endif
             enddo
          elseif (mc_hel.eq.1) then
@@ -202,7 +211,7 @@ c virtual as flat as possible
             hel_fact = dble(goodhel(ihel))/volh/4d0
             do i = 1, nsqso
               if (keep_order(i)) then
-                born_hel_from_virt= born_hel_from_virt + virt_wgts_hel(0,i)
+                born_hel_from_virt=born_hel_from_virt+virt_wgts_hel(0,i)
                 virt_wgt= virt_wgt + virt_wgts_hel(1,i) * hel_fact
                 single  = single + virt_wgts_hel(2,i) * hel_fact
                 double  = double + virt_wgts_hel(3,i) * hel_fact
@@ -211,15 +220,22 @@ C          different coupling combinations
                 do j = 1, nsplitorders
                  amp_orders(j) = getordpowfromindex_ML5(j, i)
                 enddo
-                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders)) = virt_wgts_hel(1,i) * hel_fact
-                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),1) = virt_wgts_hel(2,i) * hel_fact
-                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders),2) = virt_wgts_hel(3,i) * hel_fact
-                prec_found(orders_to_amp_split_pos(amp_orders))=accuracies(i)
+                amp_split_finite_ML(orders_to_amp_split_pos(amp_orders))
+     $               = virt_wgts_hel(1,i) * hel_fact
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders)
+     $               ,1) = virt_wgts_hel(2,i) * hel_fact
+                amp_split_poles_ML(orders_to_amp_split_pos(amp_orders)
+     $               ,2) = virt_wgts_hel(3,i) * hel_fact
+                prec_found(orders_to_amp_split_pos(amp_orders))
+     $               =accuracies(i)
               endif
             enddo
 
-            if (abs((wgt_hel(hel(ihel))-born_hel_from_virt/4d0)/wgt_hel(hel(ihel))).gt.1e-5) then
-                write(*,*) 'ERROR HEL', wgt_hel(hel(ihel)),born_hel_from_virt/4d0,wgt_hel(hel(ihel))/(born_hel_from_virt/4d0)
+            if (abs((wgt_hel(hel(ihel))-born_hel_from_virt/4d0)
+     $           /wgt_hel(hel(ihel))).gt.1e-5) then
+               write(*,*) 'ERROR HEL', wgt_hel(hel(ihel))
+     $              ,born_hel_from_virt/4d0,wgt_hel(hel(ihel))
+     $              /(born_hel_from_virt/4d0)
                 stop
             endif
 c Average over initial state helicities 
@@ -253,162 +269,165 @@ c MadLoop initialization PS points.
       if ((firsttime .or. mc_hel.eq.0) .and. mod(ret_code,100)/10.ne.3
      $     .and. mod(ret_code,100)/10.ne.4) then
          call getpoles(p,QES2,madfks_double,madfks_single,fksprefact)
+         polecheck_passed = .true.
          ! loop over the full result and each of the amp_split
          ! contribution
          do iamp=0,amp_split_size
           ! skip 0 contributions in the amp_split array
-          if (iamp.ne.0) then
-              if (amp_split_poles_FKS(iamp,1).eq.0d0.and.
-     $          amp_split_poles_FKS(iamp,1).eq.0d0) cycle
-          endif
-          if (iamp.eq.0) then
-            if (firsttime) then
-              write(*,*) ''
-              write(*,*) 'Sum of all split-orders'
+            if (iamp.ne.0) then
+               if (amp_split_poles_FKS(iamp,1).eq.0d0.and.
+     $              amp_split_poles_FKS(iamp,1).eq.0d0) cycle
             endif
-          else
-            if (firsttime) then
-              write(*,*) ''
-              write(*,*) 'Splitorders', iamp
-              call amp_split_pos_to_orders(iamp,split_amp_orders)
-              do i = 1, nsplitorders
-                write(*,*) '      ',ordernames(i), ':', split_amp_orders(i)
-              enddo
-            endif
-            single=amp_split_poles_ML(iamp,1)
-            double=amp_split_poles_ML(iamp,2)
-            madfks_single=amp_split_poles_FKS(iamp,1)
-            madfks_double=amp_split_poles_FKS(iamp,2)
-          endif
-          avgPoleRes(1)=(single+madfks_single)/2.0d0
-          avgPoleRes(2)=(double+madfks_double)/2.0d0
-          PoleDiff(1)=dabs(single - madfks_single)
-          PoleDiff(2)=dabs(double - madfks_double)
-          if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
-            cpol = .not.((((PoleDiff(1)+PoleDiff(2))/
-     $           (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
-     $           tolerance*10d0).or.(mod(ret_code,10).eq.7))
-          else
-            cpol = .not.((PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0).or.
-     $                   (mod(ret_code,10).eq.7))
-          endif
-          if (tolerance.lt.0.0d0) then
-            cpol = .false.
-          endif
-          if (.not. cpol .and. firsttime) then
-            write(*,*) "---- POLES CANCELLED ----"
-            write(*,*) " COEFFICIENT DOUBLE POLE:"
-            write(*,*) "       MadFKS: ", madfks_double,
-     &           "          OLP: ", double
-            write(*,*) " COEFFICIENT SINGLE POLE:"
-            write(*,*) "       MadFKS: ",madfks_single,
-     &           "          OLP: ",single
             if (iamp.eq.0) then
-                write(*,*) " FINITE:"
-                write(*,*) "          OLP: ",virt_wgt
-                write(*,*) "          BORN: ",born_wgt
-                write(*,*) " MOMENTA (Exyzm): "
-                do i = 1, nexternal-1
-                   write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
-                enddo
+               if (firsttime) then
+                  write(*,*) ''
+                  write(*,*) 'Sum of all split-orders'
+               endif
+            else
+               if (firsttime) then
+                  write(*,*) ''
+                  write(*,*) 'Splitorders', iamp
+                  call amp_split_pos_to_orders(iamp,split_amp_orders)
+                  do i = 1, nsplitorders
+                     write(*,*) '      ',ordernames(i), ':',
+     $                    split_amp_orders(i)
+                  enddo
+               endif
+               single=amp_split_poles_ML(iamp,1)
+               double=amp_split_poles_ML(iamp,2)
+               madfks_single=amp_split_poles_FKS(iamp,1)
+               madfks_double=amp_split_poles_FKS(iamp,2)
             endif
-            polecheck_passed = .true.
-            if (mc_hel.ne.0) then
-198            continue
+            avgPoleRes(1)=(single+madfks_single)/2.0d0
+            avgPoleRes(2)=(double+madfks_double)/2.0d0
+            PoleDiff(1)=dabs(single - madfks_single)
+            PoleDiff(2)=dabs(double - madfks_double)
+            if ((dabs(avgPoleRes(1))+dabs(avgPoleRes(2))).ne.0d0) then
+               cpol = .not.((((PoleDiff(1)+PoleDiff(2))/
+     $              (dabs(avgPoleRes(1))+dabs(avgPoleRes(2)))) .lt.
+     $              tolerance*10d0).or.(mod(ret_code,10).eq.7))
+            else
+               cpol = .not.((PoleDiff(1)+PoleDiff(2).lt.tolerance*10d0)
+     $              .or.(mod(ret_code,10).eq.7))
+            endif
+            if (tolerance.lt.0.0d0) then
+               cpol = .false.
+            endif
+            if (.not. cpol .and. firsttime) then
+               write(*,*) "---- POLES CANCELLED ----"
+               write(*,*) " COEFFICIENT DOUBLE POLE:"
+               write(*,*) "       MadFKS: ", madfks_double,
+     &              "          OLP: ", double
+               write(*,*) " COEFFICIENT SINGLE POLE:"
+               write(*,*) "       MadFKS: ",madfks_single,
+     &              "          OLP: ",single
+               if (iamp.eq.0) then
+                  write(*,*) " FINITE:"
+                  write(*,*) "          OLP: ",virt_wgt
+                  write(*,*) "          BORN: ",born_wgt
+                  write(*,*) " MOMENTA (Exyzm): "
+                  do i = 1, nexternal-1
+                     write(*,*) i,p(0,i),p(1,i),p(2,i),p(3,i),pmass(i)
+                  enddo
+               endif
+               if (mc_hel.ne.0) then
+ 198              continue
 c Set-up the MC over helicities. This assumes that the 'HelFilter.dat'
 c exists, which should be the case when firsttime is false.
-               if (NHelForMCoverHels.lt.0) then
-                   mc_hel=0
-                   goto 203
-               endif
-               open (unit=67,file='../MadLoop5_resources/HelFilter.dat',
-     $   status='old',action='read',iostat=IOErr, err=201)
-               hel(0)=0
-               j=0
-c optimized loop output
-               do i=1,max_bhel
-                  read(67,*,err=202) goodhel(i)
-                  if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0) then
-                     j=j+1
-                     goodhel(j)=goodhel(i)
-                     hel(0)=hel(0)+1
-                     hel(j)=i
-                 endif
-               enddo
-               goto 203
-201            continue
-               if (IOErr.eq.2.and.IOErrCounter.lt.10) then
-                 IOErrCounter = IOErrCounter+1
-                 write(*,*) "File HelFilter.dat busy, retrying for"//
-     &           " the ",IOErrCounter," time."
-                 call date_and_time(values=dt)
-                 call sleep(1+(dt(8)/200))
-                 goto 198
-               endif
-               write (*,*) 'Cannot do MC over hel:'/
-     &     /' "HelFilter.dat" does not exist'/
-     &     /' or does not have the correct format.'/
-     $     /' Change NHelForMCoverHels in FKS_params.dat '/
-     &     /'to explicitly summ over them instead.'
-               stop
-c               mc_hel=0
-c               goto 203
-202            continue
-c non optimized loop output
-               rewind(67)
-               read(67,*,err=201) (include_hel(i),i=1,max_bhel)
-               do i=1,max_bhel
-                  if (include_hel(i).eq.'T') then
-                     j=j+1
-                     goodhel(j)=1
-                     hel(0)=hel(0)+1
-                     hel(j)=i
+                  if (NHelForMCoverHels.lt.0) then
+                     mc_hel=0
+                     goto 203
                   endif
-               enddo
-203            continue
+                  open (unit=67,
+     $                 file='../MadLoop5_resources/HelFilter.dat',
+     $                 status='old',action='read',iostat=IOErr, err=201)
+                  hel(0)=0
+                  j=0
+c optimized loop output
+                  do i=1,max_bhel
+                     read(67,*,err=202) goodhel(i)
+                     if (goodhel(i).gt.-10000 .and. goodhel(i).ne.0)
+     $                    then
+                        j=j+1
+                        goodhel(j)=goodhel(i)
+                        hel(0)=hel(0)+1
+                        hel(j)=i
+                     endif
+                  enddo
+                  goto 203
+ 201              continue
+                  if (IOErr.eq.2.and.IOErrCounter.lt.10) then
+                     IOErrCounter = IOErrCounter+1
+                     write(*,*) "File HelFilter.dat busy, retrying for"
+     $                    //" the ",IOErrCounter," time."
+                     call date_and_time(values=dt)
+                     call sleep(1+(dt(8)/200))
+                     goto 198
+                  endif
+                  write (*,*) 'Cannot do MC over hel:'/
+     &                 /' "HelFilter.dat" does not exist'/
+     &                 /' or does not have the correct format.'/
+     $                 /' Change NHelForMCoverHels in FKS_params.dat '/
+     &                 /'to explicitly summ over them instead.'
+                  stop
+c                  mc_hel=0
+c                  goto 203
+ 202              continue
+c non optimized loop output
+                  rewind(67)
+                  read(67,*,err=201) (include_hel(i),i=1,max_bhel)
+                  do i=1,max_bhel
+                     if (include_hel(i).eq.'T') then
+                        j=j+1
+                        goodhel(j)=1
+                        hel(0)=hel(0)+1
+                        hel(j)=i
+                     endif
+                  enddo
+ 203              continue
 c Only do MC over helicities if there are NHelForMCoverHels
 c or more non-zero (independent) helicities
-               if (NHelForMCoverHels.eq.-1) then
-                  write (*,*) 'Not doing MC over helicities: '/
-     $                 /'HelForMCoverHels=-1'
-                  mc_hel=0
-               elseif (hel(0).lt.NHelForMCoverHels) then
-                  write (*,'(a,i3,a)') 'Only ',hel(0)
-     $                 ,' independent helicities:'/
-     $                 /' switching to explicitly summing over them'
-                  mc_hel=0
+                  if (NHelForMCoverHels.eq.-1) then
+                     write (*,*) 'Not doing MC over helicities: '/
+     $                    /'HelForMCoverHels=-1'
+                     mc_hel=0
+                  elseif (hel(0).lt.NHelForMCoverHels) then
+                     write (*,'(a,i3,a)') 'Only ',hel(0)
+     $                    ,' independent helicities:'/
+     $                    /' switching to explicitly summing over them'
+                     mc_hel=0
+                  endif
+                  close(67)
                endif
-               close(67)
+            elseif(cpol .and. firsttime) then
+               polecheck_passed = .false.
+               write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
+     &              tolerance*10d0
+               write(*,*) " COEFFICIENT DOUBLE POLE:"
+               write(*,*) "       MadFKS: ", madfks_double,
+     &              "          OLP: ", double
+               write(*,*) " COEFFICIENT SINGLE POLE:"
+               write(*,*) "       MadFKS: ",madfks_single,
+     &              "          OLP: ",single
+               if (iamp.eq.0) then
+                  write(*,*) " FINITE:"
+                  write(*,*) "          OLP: ",virt_wgt
+                  write(*,*) "          BORN: ",born_wgt
+                  write(*,*) " MOMENTA (Exyzm): "
+                  do i = 1, nexternal-1
+                     write(*,*) i,p(0,i),p(1,i),p(2,i),p(3,i),pmass(i)
+                  enddo
+               endif
+               write(*,*) 
+               write(*,*) " SCALE**2: ", QES2
+               if (nbad .lt. nbadmax) then
+                  nbad = nbad + 1
+                  write(*,*) " Trying another PS point"
+               elseif (.not.force_polecheck) then
+                  write(*,*) " TOO MANY FAILURES, QUITTING"
+                  stop
+               endif
             endif
-          elseif(cpol .and. firsttime) then
-            polecheck_passed = .false.
-            write(*,*) "POLES MISCANCELLATION, DIFFERENCE > ",
-     &           tolerance*10d0
-            write(*,*) " COEFFICIENT DOUBLE POLE:"
-            write(*,*) "       MadFKS: ", madfks_double,
-     &           "          OLP: ", double
-            write(*,*) " COEFFICIENT SINGLE POLE:"
-            write(*,*) "       MadFKS: ",madfks_single,
-     &           "          OLP: ",single
-            if (iamp.eq.0) then
-                write(*,*) " FINITE:"
-                write(*,*) "          OLP: ",virt_wgt
-                write(*,*) "          BORN: ",born_wgt
-                write(*,*) " MOMENTA (Exyzm): "
-                do i = 1, nexternal-1
-                   write(*,*) i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
-                enddo
-            endif
-            write(*,*) 
-            write(*,*) " SCALE**2: ", QES2
-            if (nbad .lt. nbadmax) then
-               nbad = nbad + 1
-               write(*,*) " Trying another PS point"
-            elseif (.not.force_polecheck) then
-               write(*,*) " TOO MANY FAILURES, QUITTING"
-               stop
-            endif
-          endif
          enddo
          firsttime = .false.
       endif
@@ -458,12 +477,18 @@ c check (only available when not doing MC over hels)
                if (mc_hel.ne.0) then
                   write (78,*)'helicity (MadLoop only)',hel(i),mc_hel
                endif
-               write(78,*) '1/eps**2 expected from MadFKS=',amp_split_poles_FKS(iamp,2)
-               write(78,*) '1/eps**2 obtained in MadLoop =',amp_split_poles_ML(iamp,2)
-               write(78,*) '1/eps    expected from MadFKS=',amp_split_poles_FKS(iamp,1)
-               write(78,*) '1/eps    obtained in MadLoop =',amp_split_poles_ML(iamp,1)
-               write(78,*) 'finite   obtained in MadLoop =',amp_split_finite_ML(iamp)
-               write(78,*) 'Accuracy estimated by MadLop =',prec_found(iamp)
+               write(78,*) '1/eps**2 expected from MadFKS='
+     $              ,amp_split_poles_FKS(iamp,2)
+               write(78,*) '1/eps**2 obtained in MadLoop ='
+     $              ,amp_split_poles_ML(iamp,2)
+               write(78,*) '1/eps    expected from MadFKS='
+     $              ,amp_split_poles_FKS(iamp,1)
+               write(78,*) '1/eps    obtained in MadLoop ='
+     $              ,amp_split_poles_ML(iamp,1)
+               write(78,*) 'finite   obtained in MadLoop ='
+     $              ,amp_split_finite_ML(iamp)
+               write(78,*) 'Accuracy estimated by MadLop ='
+     $              ,prec_found(iamp)
                do i = 1, nexternal-1
                   write(78,'(i2,1x,5e25.15)') 
      &                 i, p(0,i), p(1,i), p(2,i), p(3,i), pmass(i)
