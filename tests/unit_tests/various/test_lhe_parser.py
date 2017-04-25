@@ -158,14 +158,31 @@ class TESTLHEParser(unittest.TestCase):
 <pdfrwt beam=2>    2      1 -1  0.2 0.11e-02 0.59528052E+00 0.12500000E+03 </pdfrwt>
 <totfact> 115.001 </totfact>
 </mgrwt>
-</event>"""]
+</event>""",
+"""<event>
+ 4      0 +1.7208000e-01 1.00890300e+02 7.95774700e-02 1.27947900e-01
+       -1 -1    0    0    0  501 +0.0000000e+00 +0.0000000e+00 +1.1943355e+01 1.19433546e+01 0.00000000e+00 0.0000e+00 1.0000e+00
+        2 -1    0    0  501    0 +0.0000000e+00 +0.0000000e+00 -1.0679326e+03 1.06793262e+03 0.00000000e+00 0.0000e+00 -1.0000e+00
+       24  1    1    2    0    0 +6.0417155e+00 +4.2744556e+01 -7.9238049e+02 7.97619997e+02 8.04190073e+01 3.4933e-25 -1.0000e+00
+       23  1    1    2    0    0 -6.0417155e+00 -4.2744556e+01 -2.6360878e+02 2.82255979e+02 9.11880035e+01 1.8975e-26 1.0000e+00
+<mgrwt>
+<rscale>  2 0.26956472E+02</rscale>
+    <asrwt>  1 0.46373112E+02</asrwt>
+    <pdfrwt beam="1">  1       21 0.13689253E-01 0.52142986E+01</pdfrwt>
+    <pdfrwt beam="2">  1       21 0.29841683E-01 0.46373112E+02</pdfrwt>
+    <totfact> 0.15951072E+03</totfact>
+</mgrwt>
+</event>
+"""]
      
         solutions = [None, 
                   {'pdf_pdg_code1': [4], 'asrwt': [], 'pdf_pdg_code2': [-1], 'pdf_q1': [125.0], 'pdf_q2': [125.0], 'n_pdfrw1': 1, 'n_pdfrw2': 1, 'tot_fact': -0.0002735227, 'pdf_x2': [0.59528052], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'ren_scale': 125.0},
                   {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.0},
                   {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.001},
                   {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.001},
-                  {'pdf_pdg_code1': [4], 'asrwt': [0.11], 'pdf_pdg_code2': [1, -1], 'pdf_q1': [125.0], 'pdf_q2': [0.59528052, 125.0], 'ren_scale': 125.0, 'n_pdfrw1': 1, 'n_pdfrw2': 2, 'pdf_x2': [0.2, 0.0011], 'pdf_x1': [0.1131999], 'n_qcd': 2, 'tot_fact': 115.001}]
+                  {'pdf_pdg_code1': [21], 'asrwt': [46.373112], 'pdf_pdg_code2': [21], 'pdf_q1': [5.2142986], 'pdf_q2': [46.373112], 'ren_scale': 26.956472, 'n_pdfrw1': 1, 'n_pdfrw2': 1, 'pdf_x2': [0.029841683], 'pdf_x1': [0.013689253], 'n_qcd': 2, 'tot_fact': 159.51072},
+                  None]
+                  
      
         for i,evt in enumerate(events):
             evt1 = lhe_parser.Event(evt)

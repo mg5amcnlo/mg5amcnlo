@@ -731,7 +731,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         devnull = os.open(os.devnull, os.O_RDWR)
         try:
-            res = misc.call([self.options['lhapdf'], '--version'], \
+            res = misc.call([mg5options['lhapdf'], '--version'], \
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception:
             res = 1

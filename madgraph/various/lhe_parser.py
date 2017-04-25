@@ -1263,7 +1263,7 @@ class Event(list):
         
         if not hasattr(Event, 'loweight_pattern'):
             Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
-                                    <asrwt>\s*(?P<asrwt>[\s\d.+-]+)\s*</asrwt>\s*\n\s*
+                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
                                     <pdfrwt\s+beam=["']?1["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
                                     <pdfrwt\s+beam=["']?2["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
                                     <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
@@ -1275,6 +1275,8 @@ class Event(list):
             text = self.tag[start+8:stop]
             
             info = Event.loweight_pattern.search(text)
+            if not info:
+                raise Exception, '%s not parsed'% text
             self.loweight={}
             self.loweight['n_qcd'] = int(info.group('nqcd'))
             self.loweight['ren_scale'] = float(info.group('ren_scale'))
