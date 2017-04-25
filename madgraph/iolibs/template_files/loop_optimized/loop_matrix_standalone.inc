@@ -2149,6 +2149,15 @@ C       When using COLLIER with the internal stability test, the first evaluatio
 		  ENDDO
 		ENDIF
 
+c       If NaN are present in the evaluation, automatically set the accuracy to 1.0d99.
+        DO I=1,3
+          DO J=1,MAXSTABILITYLENGTH
+            IF (isnan(FULLLIST(I,K,J))) then
+              ACC(K) = 1.0d99
+            ENDIF
+          ENDDO
+        ENDDO
+
 	  enddo
 
       end
