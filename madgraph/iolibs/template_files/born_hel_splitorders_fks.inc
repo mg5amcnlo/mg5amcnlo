@@ -13,16 +13,13 @@ implicit none
 C  
 C ARGUMENTS 
 C 
-      REAL*8 P(0:3,NEXTERNAL), ANS_SUMMED
+      REAL*8 P(0:3,NEXTERNAL-1), ANS_SUMMED
 C
 C VARIABLES
 C
       INTEGER I, J
       include 'orders.inc'
       REAL*8 ANS(0:NSQAMPSO)
-      LOGICAL KEEP_ORDER(NSQAMPSO), FIRSTTIME
-      data keep_order / NSQAMPSO * .TRUE. /
-      data firsttime / .TRUE. /
       INCLUDE 'born_nhel.inc'
       DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
       COMMON/C_BORN_HEL_SPLIT/WGT_HEL
@@ -35,20 +32,9 @@ C
 C
 C BEGIN CODE
 C
-C look for orders which match the born order constraint 
+C Store all the orders that come from the diagrams, regardless
+C of the fact that they satisfy or not the squared-orders constraints
 
-if (firsttime) then
- do i = 1, nsqampso
-C this is for the orders of the born to integrate
-  do j = 1, nsplitorders
-   if(GETORDPOWFROMINDEX_B(j, i) .gt. born_orders(j)) then
-    keep_order(i) = .false.
-    EXIT 
-   endif
-  enddo
- enddo
- firsttime = .false.
-endif
 
 C look for orders which match the born order constraint 
 	  CALL SBORN_HEL_SPLITORDERS(P,ANS)
@@ -57,12 +43,10 @@ ans_summed = 0d0
     WGT_HEL_SUMMED(J) = 0d0
   ENDDO
   DO I = 1, NSQAMPSO
-    IF (KEEP_ORDER(I)) THEN
-        ANS_SUMMED = ANS_SUMMED + ANS(I)
-        DO J = 1, MAX_BHEL
-            WGT_HEL_SUMMED(J) = WGT_HEL_SUMMED(J) + WGT_HEL(I,J)
-        ENDDO
-    ENDIF
+    ANS_SUMMED = ANS_SUMMED + ANS(I)
+    DO J = 1, MAX_BHEL
+        WGT_HEL_SUMMED(J) = WGT_HEL_SUMMED(J) + WGT_HEL(I,J)
+    ENDDO
   ENDDO
 
 return
@@ -223,11 +207,85 @@ C ----------
           DO J = 1, NCOLOR
               ZTEMP = ZTEMP + CF(j,i)*JAMP(J,M)
           ENDDO
-	  DO N = 1, NAMPSO
-              ANS(SQSOINDEXB(M,N))=ANS(SQSOINDEXB(M,N))+ZTEMP*DCONJG(JAMP(I,N))/DENOM(I)
-          ENDDO
+          ANS(SQSOINDEXB(M,M))=ANS(SQSOINDEXB(M,M))+ZTEMP*DCONJG(JAMP(I,M))/DENOM(I)
       ENDDO
     ENDDO
     END
        
        
+
+
+subroutine PickHelicityMC(p,goodhel,hel,ihel_out,vol)
+implicit none
+include 'nexternal.inc'
+INCLUDE 'born_nhel.inc'
+double precision p(0:3, nexternal-1)
+integer goodhel(max_bhel),hel(0:max_bhel)
+integer ihel_out
+double precision vol
+
+INTEGER NSQAMPSO
+PARAMETER (NSQAMPSO=%(nSqAmpSplitOrders)d)
+DOUBLE PRECISION WGT_HEL(NSQAMPSO, MAX_BHEL)
+COMMON/C_BORN_HEL_SPLIT/WGT_HEL
+double precision sum_hel(nsqampso)
+integer i, ihel
+
+integer n_nonzero_ord
+double precision sum_all
+double precision accum, target 
+double precision born_wgt_recomp_direct
+
+double precision ran2
+
+call sborn_hel(p,born_wgt_recomp_direct)
+
+C Loop over the various orders of squared Feynman diagrams and compute for each order the sum
+n_nonzero_ord = 0
+sum_all = 0d0
+do i = 1, nsqampso
+sum_hel(i) = 0d0
+  do ihel = 1, hel(0)
+  if (wgt_hel(i, hel(ihel)).lt.0d0) then
+    write(*,*) 'Helicities from squared diagrams must be > 0!'
+    stop 1
+  endif
+    sum_hel(i)=sum_hel(i) + wgt_hel(i, hel(ihel))*dble(goodhel(ihel))
+  enddo
+  if (sum_hel(i).gt.0d0) then
+    n_nonzero_ord = n_nonzero_ord + 1
+    sum_all = sum_all + sum_hel(i)
+  endif
+enddo
+
+
+target=ran2()
+ihel=1
+accum=0d0
+
+do i = 1, nsqampso
+if (sum_hel(i).eq.0d0) cycle
+accum=accum+wgt_hel(i,hel(ihel))/sum_hel(i)*dble(goodhel(ihel))/n_nonzero_ord
+enddo
+
+do while (accum.lt.target) 
+ihel=ihel+1
+do i = 1, nsqampso
+if (sum_hel(i).eq.0d0) cycle
+accum=accum+wgt_hel(i,hel(ihel))/sum_hel(i)*dble(goodhel(ihel))/n_nonzero_ord
+enddo
+enddo
+
+vol=0d0
+do i = 1, nsqampso
+if (sum_hel(i).eq.0d0) cycle
+vol=vol+wgt_hel(i,hel(ihel))/sum_hel(i)*dble(goodhel(ihel))/n_nonzero_ord
+enddo
+
+
+ihel_out=ihel
+
+return
+end
+
+

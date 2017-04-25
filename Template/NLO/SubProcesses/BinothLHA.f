@@ -38,8 +38,8 @@ c general MadFKS parameters
       double precision target,ran2,accum
       external ran2
       double precision hel_fact
-      double precision wgt_hel(max_bhel)
-      common/c_born_hel/wgt_hel
+CCC      double precision wgt_hel(max_bhel)
+CCC      common/c_born_hel/wgt_hel
       integer nsqso, MLResArrayDim
 c statistics for MadLoop
       double precision avgPoleRes(2),PoleDiff(2)
@@ -190,21 +190,8 @@ C          different coupling combinations
          elseif (mc_hel.eq.1) then
 c Use the Born helicity amplitudes to sample the helicities of the
 c virtual as flat as possible
-            call sborn_hel(p,born_wgt_recomp_direct)
-            born_wgt_recomputed=0d0
-            do ihel=1,hel(0)
-               born_wgt_recomputed=born_wgt_recomputed
-     $              +abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
-            enddo
-            target=ran2()*born_wgt_recomputed
-            ihel=1
-            accum=abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
-            do while (accum.lt.target) 
-               ihel=ihel+1
-               accum=accum+abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
-            enddo
-            volh=abs(wgt_hel(hel(ihel))*dble(goodhel(ihel)))
-     $           /born_wgt_recomputed
+            call PickHelicityMC(p,goodhel,hel,ihel,volh)
+            !
             fillh=.false.
             call sloopmatrixhel_thres(p,hel(ihel),virt_wgts_hel
      $           ,tolerance,accuracies,ret_code)
@@ -231,13 +218,13 @@ C          different coupling combinations
               endif
             enddo
 
-            if (abs((wgt_hel(hel(ihel))-born_hel_from_virt/4d0)
-     $           /wgt_hel(hel(ihel))).gt.1e-5) then
-               write(*,*) 'ERROR HEL', wgt_hel(hel(ihel))
-     $              ,born_hel_from_virt/4d0,wgt_hel(hel(ihel))
-     $              /(born_hel_from_virt/4d0)
-                stop
-            endif
+CCC            if (abs((wgt_hel(hel(ihel))-born_hel_from_virt/4d0)
+CCC     $           /wgt_hel(hel(ihel))).gt.1e-5) then
+CCC               write(*,*) 'ERROR HEL', wgt_hel(hel(ihel))
+CCC     $              ,born_hel_from_virt/4d0,wgt_hel(hel(ihel))
+CCC     $              /(born_hel_from_virt/4d0)
+CCC                stop
+CCC            endif
 c Average over initial state helicities 
             if (nincoming.ne.2) then
                write (*,*)
@@ -523,6 +510,7 @@ c weight, screwing up the complete integration afterward.
       endif
       return
       end
+
 
       subroutine BinothLHAInit(filename)
       implicit none
