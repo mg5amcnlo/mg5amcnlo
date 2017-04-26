@@ -336,8 +336,9 @@ c x_to_f_arg subroutine
       do iconfig=bs_min,bs_max       ! Born configurations
          ichan=1
          iconfigs(1)=iconfig
-         
-      call set_mc_matrices
+
+      call setfksfactor(.true.)
+c      call set_mc_matrices
 
       wgt=1d0
       ntry=1
