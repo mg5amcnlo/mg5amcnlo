@@ -247,6 +247,7 @@ c
 c
       enddo
 c
+C     DOES NOT APPLY FOR EW CORRECTIONS
 CMZ      if( (notagluon.and.ntot.ne.max_bcol) .or.
 C     #    ( (.not.notagluon).and.
 C     #      ( (.not.isspecial).and.ntot.ne.(2*max_bcol) .or.
@@ -392,7 +393,6 @@ c Main routine for MC counterterms
       subroutine xmcsubt(pp,xi_i_fks,y_ij_fks,gfactsf,gfactcl,probne,
      &                   wgt,nofpartners,lzone,flagmc,z,xmcxsec)
       implicit none
-
       include "nexternal.inc"
       include "coupl.inc"
       include "born_nhel.inc"
@@ -402,7 +402,6 @@ c Main routine for MC counterterms
       include "../../Source/MODEL/input.inc"
       include 'nFKSconfigs.inc'
       include 'orders.inc'
-
       logical split_type(nsplitorders) 
       common /c_split_type/split_type
       integer fks_j_from_i(nexternal,0:nexternal)
@@ -958,6 +957,10 @@ c Dead zone
             amp_split_bornred(iamp,i)=0d0
             amp_split_bornredtilde(iamp,i)=0d0
           enddo
+        enddo
+        do i = 1,nsplitorders
+          born_red(i)=0d0
+          born_red_tilde(i)=0d0
         enddo
 
         do i=1,2
