@@ -4390,7 +4390,7 @@ class AskforEditCard(cmd.OneLinePathCompletion):
         
         arg = line[:begidx].split()
         if len(arg) <=1:
-            return self.list_completion(text, ['dependent', 'missing'], line)
+            return self.list_completion(text, ['dependent', 'missing', 'to_slha1', 'to_slha2'], line)
 
 
     def complete_set(self, text, line, begidx, endidx, formatting=True):
@@ -5250,7 +5250,9 @@ class AskforEditCard(cmd.OneLinePathCompletion):
     
     def do_update(self, line, timer=0):
         """ syntax: update dependent: Change the mass/width of particles which are not free parameter for the model.
-                    update missing:   add to the current param_card missing blocks/parameters."""
+                    update missing:   add to the current param_card missing blocks/parameters.
+                    update to_slha1: pass SLHA2 card to SLHA1 convention. (beta)
+                    update to_slha2: pass SLHA1 card to SLHA2 convention. (beta)"""
         
         args = self.split_arg(line)
         if len(args)==0:
@@ -5282,7 +5284,20 @@ class AskforEditCard(cmd.OneLinePathCompletion):
             self.update_missing()
             return
 
-            
+        elif args[0] == 'to_slha2':
+            try:
+                check_param_card.convert_to_mg5card(self.paths['param'])
+                logger.info('card updated')
+            except Exception, error:
+                logger.warning('failed to update to slha2 due to %s' % error)
+            self.param_card = check_param_card.ParamCard(self.paths['param'])
+        elif args[0] == 'to_slha1':
+            try:
+                check_param_card.convert_to_slha1(self.paths['param'])
+                logger.info('card updated')
+            except Exception, error:
+                logger.warning('failed to update to slha1 due to %s' % error)
+            self.param_card = check_param_card.ParamCard(self.paths['param'])            
             
     @staticmethod
     def update_dependent(mecmd, me_dir, param_card, path ,timer=0):

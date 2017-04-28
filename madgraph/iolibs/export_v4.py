@@ -6232,16 +6232,31 @@ class UFO_model_to_mg4(object):
           double complex function %(name)s(%(args)s)
           implicit none
           double complex %(args)s
+          %(definitions)s
           %(name)s = %(fct)s
 
           return
           end
           """
+                    str_fct = self.p_to_f.parse(fct.expr)
+                    if not self.p_to_f.to_define:
+                        definitions = []
+                    else:
+                        definitions=[]
+                        for d in self.p_to_f.to_define:
+                            if d == 'pi':
+                                definitions.append(' double precision pi')
+                                definitions.append(' data pi /3.1415926535897932d0/')
+                            else:
+                                definitions.append(' double complex %s' % d)
+                                
                     text = ufo_fct_template % {
                                 'name': fct.name,
                                 'args': ", ".join(fct.arguments),                
-                                'fct': self.p_to_f.parse(fct.expr)
+                                'fct': str_fct,
+                                'definitions': '\n'.join(definitions)
                                  }
+
                     fsock.writelines(text)
             if self.opt['mp']:
                 fsock.write_comment_line(' START UFO DEFINE FUNCTIONS FOR MP')
@@ -6253,15 +6268,29 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
           %(complex_mp_format)s mp__%(args)s
+          %(definitions)
           mp__%(name)s = %(fct)s
 
           return
           end
           """
+          
+                        str_fct = self.mp_p_to_f.parse(fct.expr)
+                        if not self.p_to_f.to_define:
+                            definitions = []
+                        else:
+                            definitions=[]
+                            for d in self.p_to_f.to_define:
+                                if d == 'mp_pi':
+                                    definitions.append(' %s mp_pi' % self.mp_real_format)
+                                    definitions.append(' data mp_pi /3.141592653589793238462643383279502884197e+00_16/')
+                                else:   
+                                    definitions.append(' %s %s' % (self.mp_complex_format,d))
                         text = ufo_fct_template % {
                                 'name': fct.name,
                                 'args': ", mp__".join(fct.arguments),                
-                                'fct': self.mp_p_to_f.parse(fct.expr),
+                                'fct': str_fct,
+                                'definitions': '\n'.join(definitions),
                                 'complex_mp_format': self.mp_complex_format
                                  }
                         fsock.writelines(text)

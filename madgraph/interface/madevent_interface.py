@@ -1066,7 +1066,7 @@ class CheckValidForCmd(object):
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         if not os.path.exists('%s.gz'%input_file):
             if os.path.exists(input_file):
-                misc.gzip(input_file, keep=True, stdout='%s.gz'%input_file)
+                misc.gzip(input_file, stdout='%s.gz'%input_file)
             else:
                 raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)

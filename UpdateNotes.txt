@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.5.5(xx/xx/xx)
+      OM: Supporting user function calling other non default function.
+      OM: adding the command "update to_slha1" and "update to_slha2" (still beta)
+
 2.5.4(28/03/17)
       OM: Add a warning in presense of small width
       OM: Fix a bug related to a missing library (introduced in 2.5.3)
