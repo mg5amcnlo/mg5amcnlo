@@ -645,10 +645,8 @@ param_card.inc: ../Cards/param_card.dat\n\t../bin/madevent treatcards param\n'''
         if writer:
             text = open(path).read() % replace_dict
             writer.write(text)
-        else:
-            return replace_dict
-         
-        return True
+            
+        return replace_dict
 
     #===========================================================================
     # write_nexternal_madspin
