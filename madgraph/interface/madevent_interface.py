@@ -3206,9 +3206,13 @@ Beware that this can be dangerous for local multicore runs.""")
                                      sum_axsec) 
                         partials +=1
             
+            if not hasattr(self,'proc_characteristic'):
+                self.proc_characteristic = self.get_characteristics()
+                
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
-                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'])
+                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                              proc_charac=self.proc_characteristic)
             
             if partials:
                 for i in range(partials):

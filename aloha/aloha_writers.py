@@ -1744,11 +1744,11 @@ class ALOHAWriterForCPP(WriteALOHA):
             
             writer_h = writers.CPPWriter(path + ".h")
             writer_h.write_comments(commentstring)
-            writer_h.writelines(h_text)
+            writer_h.writelines(h_text.getvalue())
             
             writer_cc = writers.CPPWriter(path + ".cc")
             writer_cc.write_comments(commentstring)
-            writer_cc.writelines(cc_text)
+            writer_cc.writelines(cc_text.getvalue())
         
         return h_text.getvalue(), cc_text.getvalue()
         
