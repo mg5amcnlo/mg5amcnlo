@@ -1225,7 +1225,12 @@ class LoopHelasMatrixElement(helas_objects.HelasMatrixElement):
                     # scan it
                     struct_infos, wfNumber = \
                       process_struct(sID, diag_wfs, wfNumber)
-                    if optimization:
+                    # Unfortunately we must turn off the recycling of the struct_infos
+                    # since it has issue with some fermion flow fixed loop where
+                    # the recycling of these structure when processing the counterterms
+                    # flips back the wfs conjugated when processing the loops.
+                    # An example of it is for u g > n1 ul [virt=QCD], diag #38 in the MSSM@NLOQCD UFO.
+                    if optimization and False:
                         # Only if there is optimization the dictionary is
                         # because otherwise we must always rescan the
                         # structures to correctly add all the necessary

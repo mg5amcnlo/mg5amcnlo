@@ -6268,7 +6268,7 @@ class UFO_model_to_mg4(object):
           %(complex_mp_format)s function mp__%(name)s(mp__%(args)s)
           implicit none
           %(complex_mp_format)s mp__%(args)s
-          %(definitions)
+          %(definitions)s
           mp__%(name)s = %(fct)s
 
           return
