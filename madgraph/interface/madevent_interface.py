@@ -17,29 +17,22 @@
 """
 from __future__ import division
 
-import atexit
 import collections
-import cmath
 import glob
 import logging
 import math
-import optparse
 import os
-import pydoc
 import random
 import re
-import signal
-import shutil
+
 import stat
 import subprocess
 import sys
-import traceback
 import time
 import tarfile
 import StringIO
 import shutil
 import copy
-import xml.dom.minidom as minidom
 
 try:
     import readline
@@ -59,8 +52,6 @@ logger_stderr = logging.getLogger('madevent.stderr') # ->stderr
  
 try:
     import madgraph
-
-    
 except ImportError: 
     # import from madevent directory
     MADEVENT = True
@@ -78,7 +69,7 @@ except ImportError:
     import internal.sum_html as sum_html
     import internal.combine_runs as combine_runs
     import internal.lhe_parser as lhe_parser
-    import internal.histograms as histograms
+#    import internal.histograms as histograms # imported later to not slow down the loading of the code
     from internal.files import ln
 else:
     # import from madgraph directory
@@ -95,12 +86,10 @@ else:
     import madgraph.various.misc as misc
     import madgraph.madevent.combine_runs as combine_runs
     import madgraph.various.lhe_parser as lhe_parser
-    import madgraph.various.histograms as histograms
-
+#    import madgraph.various.histograms as histograms  # imported later to not slow down the loading of the code
     import models.check_param_card as check_param_card
     from madgraph.iolibs.files import ln    
     from madgraph import InvalidCmd, MadGraph5Error, MG5DIR, ReadWrite
-
 
 
 
@@ -1082,7 +1071,7 @@ class CheckValidForCmd(object):
         input_file = pjoin(self.me_dir,'Events',self.run_name, 'unweighted_events.lhe')
         if not os.path.exists('%s.gz'%input_file):
             if os.path.exists(input_file):
-                misc.gzip(input_file, keep=True, stdout='%s.gz'%input_file)
+                misc.gzip(input_file, stdout='%s.gz'%input_file)
             else:
                 raise self.InvalidCmd('No event file corresponding to %s run. '
                                                                 % self.run_name)
@@ -1689,7 +1678,7 @@ class CompleteForCmd(CheckValidForCmd):
 #===============================================================================
 class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCmd):
 
-    """The command line processor of MadGraph"""    
+    """The command line processor of Mad Graph"""    
     
     # Truth values
     true = ['T','.true.',True,'true']
@@ -2090,7 +2079,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         args = self.split_arg(line)
         # Check argument's validity
         mode = self.check_generate_events(args)
-        self.ask_run_configuration(mode, args)
+        switch_mode = self.ask_run_configuration(mode, args)
         if not args:
             # No run name assigned -> assigned one automaticaly 
             self.set_run_name(self.find_available_run_name(self.me_dir), None, 'parton')
@@ -2186,6 +2175,11 @@ Beware that MG5aMC now changes your runtime options to a multi-core mode with on
                 self.exec_cmd('decay_events -from_cards', postcmd=False)
                 if self.run_card['time_of_flight']>=0:
                     self.exec_cmd("add_time_of_flight --threshold=%s" % self.run_card['time_of_flight'] ,postcmd=False)
+
+                if switch_mode['analysis'] == 'EXROOTANALYSIS':
+                    input = pjoin(self.me_dir, 'Events', self.run_name,'unweighted_events.lhe.gz')
+                    output = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.root')
+                    self.create_root_file(input , output)
 
                 self.exec_cmd('madanalysis5_parton --no_default', postcmd=False, printcmd=False)
                 # shower launches pgs/delphes if needed    
@@ -3269,12 +3263,15 @@ Beware that this can be dangerous for local multicore runs.""")
                                      sum_axsec) 
                         partials +=1
             
+            if not hasattr(self,'proc_characteristic'):
+                self.proc_characteristic = self.get_characteristics()
+                
             nb_event = AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "unweighted_events.lhe.gz"),
                               get_wgt, trunc_error=1e-2, event_target=self.run_card['nevents'],
-                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'])
+                              log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
+                              proc_charac=self.proc_characteristic)
             
             if partials:
-                misc.sprint("used partials")
                 for i in range(partials):
                     try:
                         os.remove(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % i))
@@ -3289,15 +3286,6 @@ Beware that this can be dangerous for local multicore runs.""")
         
         
         self.to_store.append('event')
-        eradir = self.options['exrootanalysis_path']
-        madir = self.options['madanalysis_path']
-        td = self.options['td_path']
-        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter'))  and\
-           os.path.exists(pjoin(self.me_dir, 'Events', 'unweighted_events.lhe')):
-                if not os.path.exists(pjoin(self.me_dir, 'Events', self.run_name)):
-                    os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
-                self.create_root_file(output='%s/unweighted_events.root' % \
-                                                                  self.run_name)
     
     ############################################################################ 
     def correct_bias(self):
@@ -3546,12 +3534,14 @@ Beware that this can be dangerous for local multicore runs.""")
             py8_path                  = pjoin(MG5DIR,py8_path)
 
         # Retrieve all the on-install and current versions  
-        MG5_version_on_install = open(pjoin(mg5amc_py8_interface_path,
-                           'MG5AMC_VERSION_ON_INSTALL')).read().replace('\n','')
+        fsock =  open(pjoin(mg5amc_py8_interface_path, 'MG5AMC_VERSION_ON_INSTALL'))
+        MG5_version_on_install = fsock.read().replace('\n','')
+        fsock.close()
         if MG5_version_on_install == 'UNSPECIFIED':
             MG5_version_on_install = None
-        PY8_version_on_install = open(pjoin(mg5amc_py8_interface_path,
-                              'PYTHIA8_VERSION_ON_INSTALL')).read().replace('\n','')
+        fsock = open(pjoin(mg5amc_py8_interface_path, 'PYTHIA8_VERSION_ON_INSTALL'))
+        PY8_version_on_install = fsock.read().replace('\n','')
+        fsock.close()
         MG5_curr_version =misc.get_pkg_info()['version']
         try:
             p = subprocess.Popen(['./get_pythia8_version.py',py8_path],
@@ -3601,7 +3591,7 @@ Beware that this can be dangerous for local multicore runs.""")
         if PY8_Card['HEPMCoutput:file']=='auto':
             HepMC_event_output = pjoin(self.me_dir,'Events', self.run_name,
                                                   '%s_pythia8_events.hepmc'%tag)
-            PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag)
+            PY8_Card.MadGraphSet('HEPMCoutput:file','%s_pythia8_events.hepmc'%tag, force=True)
         elif PY8_Card['HEPMCoutput:file'].startswith('fifo'):
             fifo_specs = PY8_Card['HEPMCoutput:file'].split('@')
             fifo_path  = None
@@ -3640,14 +3630,20 @@ already exists and is not a fifo file."""%fifo_path)
         # need to read parameters from the Banner.
         PY8_Card.MadGraphSet('JetMatching:setMad', False)
         if run_type=='MLM':
+            # When running MLM make sure that we do not write out the parameter
+            # Merging:xxx as this can interfere with the MLM merging in older
+            # versions of the driver.
+            PY8_Card.vetoParamWriteOut('Merging:TMS')
+            PY8_Card.vetoParamWriteOut('Merging:Process')
+            PY8_Card.vetoParamWriteOut('Merging:nJetMax')
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['JetMatching:qCut']==-1.0:
-                PY8_Card.MadGraphSet('JetMatching:qCut',1.5*self.run_card['xqcut'])
+                PY8_Card.MadGraphSet('JetMatching:qCut',1.5*self.run_card['xqcut'], force=True)
             
             if PY8_Card['JetMatching:qCut']<(1.5*self.run_card['xqcut']):
                 logger.error(
-    'The MLM merging qCut parameter you chose (%f) is less than'%PY8_Card['JetMatching:qCut']+
+    'The MLM merging qCut parameter you chose (%f) is less than '%PY8_Card['JetMatching:qCut']+
     '1.5*xqcut, with xqcut your run_card parameter (=%f).\n'%self.run_card['xqcut']+
     'It would be better/safer to use a larger qCut or a smaller xqcut.')
 
@@ -3657,7 +3653,7 @@ already exists and is not a fifo file."""%fifo_path)
 
             # Automatically set qWeed to xqcut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
-                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'])
+                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card['xqcut'], force=True)
 
             if PY8_Card['SysCalc:qCutList']=='auto':
                 if self.run_card['use_syst']:
@@ -3665,13 +3661,13 @@ already exists and is not a fifo file."""%fifo_path)
                         qcut = PY8_Card['JetMatching:qCut']
                         value = [factor*qcut for factor in [0.5,0.75,1.0,1.5,2.0] if\
                                  factor*qcut> 1.5*self.run_card['xqcut'] ]
-                        PY8_Card.MadGraphSet('SysCalc:qCutList', value)
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', value, force=True)
                     else:
                         qCutList = [float(qc) for qc in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['JetMatching:qCut'] not in qCutList:
                             qCutList.append(PY8_Card['JetMatching:qCut'])
-                        PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList)
-            
+                        PY8_Card.MadGraphSet('SysCalc:qCutList', qCutList, force=True)
+
             for scale in PY8_Card['SysCalc:qCutList']:
                 if scale<(1.5*self.run_card['xqcut']):
                     logger.error(
@@ -3685,8 +3681,9 @@ already exists and is not a fifo file."""%fifo_path)
             # PY8 should not implement the MLM veto since the driver should do it
             # if merging scale variation is turned on
             if self.run_card['use_syst']:
+                # We do no force it here, but it is clear that the user should know what
+                # he's doing if he were to force it to True.
                 PY8_Card.MadGraphSet('JetMatching:doVeto',False)
-
             PY8_Card.MadGraphSet('JetMatching:merge',True)
             PY8_Card.MadGraphSet('JetMatching:scheme',1)
             # Use the parameter maxjetflavor for JetMatching:nQmatch which specifies
@@ -3702,9 +3699,24 @@ already exists and is not a fifo file."""%fifo_path)
             if PY8_Card['JetMatching:nJetMax'.lower()] == -1:
                 logger.info("No user-defined value for Pythia8 parameter "+
             "'JetMatching:nJetMax'. Setting it automatically to %d."%nJetMax)
-                PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax)
+                PY8_Card.MadGraphSet('JetMatching:nJetMax',nJetMax, force=True)
         # We use the positivity of 'ktdurham' cut as a CKKWl marker.
         elif run_type=='CKKW':
+
+            # Make sure the user correctly filled in the lowest order process to be considered
+            if PY8_Card['Merging:Process']=='<set_by_user>':
+                raise self.InvalidCmd('When running CKKWl merging, the user must'+
+                    " specifiy the option 'Merging:Process' in pythia8_card.dat.\n"+
+                    "Read section 'Defining the hard process' of "+\
+                    "http://home.thep.lu.se/~torbjorn/pythia81html/CKKWLMerging.html for more information.")
+
+            # When running CKKWL make sure that we do not write out the parameter
+            # JetMatching:xxx as this can interfere with the MLM merging in older
+            # versions of the driver.
+            PY8_Card.vetoParamWriteOut('JetMatching:qCut')
+            PY8_Card.vetoParamWriteOut('JetMatching:doShowerKt')
+            PY8_Card.vetoParamWriteOut('JetMatching:nJetMax')
+
             CKKW_cut = None
             # Specific CKKW settings
             if self.run_card['ptlund']<=0.0 and self.run_card['ktdurham']>0.0:
@@ -3724,32 +3736,29 @@ already exists and is not a fifo file."""%fifo_path)
             
             # Automatically set qWeed to the CKKWL cut if not defined by the user.
             if PY8_Card['SysCalc:qWeed']==-1.0:
-                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card[CKKW_cut])
+                PY8_Card.MadGraphSet('SysCalc:qWeed',self.run_card[CKKW_cut], force=True)
             
             # MadGraphSet sets the corresponding value (in system mode)
             # only if it is not already user_set.
             if PY8_Card['Merging:TMS']==-1.0:
                 if self.run_card[CKKW_cut]>0.0:
-                    PY8_Card.MadGraphSet('Merging:TMS',self.run_card[CKKW_cut])
+                    PY8_Card.MadGraphSet('Merging:TMS',self.run_card[CKKW_cut], force=True)
                 else:
                     raise self.InvalidCmd('When running CKKWl merging, the user'+\
                  " select a '%s' cut larger than 0.0 in the run_card."%CKKW_cut)
             if PY8_Card['Merging:TMS']<self.run_card[CKKW_cut]:
                 logger.error(
-    'The CKKWl merging scale you chose (%f) is less than'%PY8_Card['Merging:TMS']+
+    'The CKKWl merging scale you chose (%f) is less than '%PY8_Card['Merging:TMS']+
     'the %s cut specified in the run_card parameter (=%f).\n'%(CKKW_cut,self.run_card[CKKW_cut])+
     'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
     
-            if PY8_Card['Merging:Process']=='<set_by_user>':
-                raise self.InvalidCmd('When running CKKWl merging, the user must'+
-                    " specifiy the option 'Merging:Process' in pythia8_card.dat.\n"+
-                    "Read section 'Defining the hard process' of "+\
-                    "http://home.thep.lu.se/~torbjorn/pythia81html/CKKWLMerging.html for more information.")
             PY8_Card.MadGraphSet('TimeShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:pTmaxMatch',1)
             PY8_Card.MadGraphSet('SpaceShower:rapidityOrder',False)
             # PY8 should not implement the CKKW veto since the driver should do it.
             if self.run_card['use_syst']:
+                # We do no force it here, but it is clear that the user should know what
+                # he's doing if he were to force it to True.
                 PY8_Card.MadGraphSet('Merging:applyVeto',False)
                 PY8_Card.MadGraphSet('Merging:includeWeightInXsection',False)
             # Use the parameter maxjetflavor for Merging:nQuarksMerge which specifies
@@ -3761,19 +3770,19 @@ already exists and is not a fifo file."""%fifo_path)
             if PY8_Card['Merging:nJetMax'.lower()] == -1:
                 logger.info("No user-defined value for Pythia8 parameter "+
                 "'Merging:nJetMax'. Setting it automatically to %d."%nJetMax)
-                PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax)
+                PY8_Card.MadGraphSet('Merging:nJetMax',nJetMax, force=True)
             if PY8_Card['SysCalc:tmsList']=='auto':
                 if self.run_card['use_syst']:
                     if self.run_card['sys_matchscale']=='auto':
                         tms = PY8_Card["Merging:TMS"]
                         value = [factor*tms for factor in [0.5,0.75,1.0,1.5,2.0]
                                  if factor*tms > self.run_card[CKKW_cut]]
-                        PY8_Card.MadGraphSet('SysCalc:tmsList', value)
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', value, force=True)
                     else:
                         tmsList = [float(tms) for tms in self.run_card['sys_matchscale'].split()]
                         if PY8_Card['Merging:TMS'] not in tmsList:
                             tmsList.append(PY8_Card['Merging:TMS'])
-                        PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList)
+                        PY8_Card.MadGraphSet('SysCalc:tmsList', tmsList, force=True)
             
             for scale in PY8_Card['SysCalc:tmsList']:
                 if scale<self.run_card[CKKW_cut]:
@@ -3784,15 +3793,28 @@ already exists and is not a fifo file."""%fifo_path)
         'the %s cut specified in the run_card parameter.\n'%CKKW_cut+
         'It is incorrect to use a smaller CKKWl scale than the generation-level %s cut!'%CKKW_cut)
         else:
-            # Here, the run is therefore not a merged-type of run. We must therefore make sure *not*
-            # to specify the "Merging:Process' as this makes older versions of the driver crash if 
-            # there is no merging in place
+            # When not performing any merging, make sure that we do not write out the parameter
+            # JetMatching:xxx or Merging:xxx as this can trigger undesired vetos in an unmerged
+            # simulation.
+            PY8_Card.vetoParamWriteOut('Merging:TMS')
             PY8_Card.vetoParamWriteOut('Merging:Process')
+            PY8_Card.vetoParamWriteOut('Merging:nJetMax')
+            PY8_Card.vetoParamWriteOut('JetMatching:qCut')
+            PY8_Card.vetoParamWriteOut('JetMatching:doShowerKt')
+            PY8_Card.vetoParamWriteOut('JetMatching:nJetMax')
 
         return HepMC_event_output
 
     def do_pythia8(self, line):
         """launch pythia8"""
+
+
+        try:
+            import madgraph
+        except ImportError:  
+            import internal.histograms as histograms
+        else:
+            import madgraph.various.histograms as histograms
 
         # Check argument's validity
         args = self.split_arg(line)
@@ -3897,9 +3919,9 @@ Please install this tool with the following MG5_aMC command:
 !    %s %s
 !
 """%(preamble+pythia_main,os.path.basename(pythia_cmd_card))+cmd_card.getvalue())
-        
+       
         # launch pythia8
-        pythia_log = pjoin(self.me_dir, 'Events', self.run_name ,
+        pythia_log = pjoin(self.me_dir , 'Events', self.run_name ,
                                                          '%s_pythia8.log' % tag)
 
         # Write a bash wrapper to run the shower with custom environment variables
@@ -3909,10 +3931,10 @@ Please install this tool with the following MG5_aMC command:
         shell_exe = None
         if os.path.exists('/usr/bin/env'):
             shell_exe = '/usr/bin/env %s'%shell
-        else:
+        else: 
             shell_exe = misc.which(shell)
             if not shell_exe:
-                self.InvalidCmd('No shell could be found in your environment.\n'+
+                self.InvalidCmd('No s hell could be found in your environment.\n'+
                   "Make sure that either '%s' is in your path or that the"%shell+\
                   " command '/usr/bin/env %s' exists and returns a valid path."%shell)
                 
@@ -3942,8 +3964,8 @@ Please install this tool with the following MG5_aMC command:
             logger.info(
 """Pythia8 is set to output HEPMC events to to a fifo file.
 You can follow PY8 run with the following command (in a separate terminal):
-    tail -f %s"""%pythia_log)
-            py8_log = open(pythia_log,'w')
+    tail -f %s"""%pythia_log )
+            py8_log = open( pythia_log,'w')
             py8_bkgrd_proc = misc.Popen([wrapper_path],
                     stdout=py8_log,stderr=py8_log,
                                   cwd=pjoin(self.me_dir,'Events',self.run_name))
@@ -3954,7 +3976,7 @@ You can follow PY8 run with the following command (in a separate terminal):
                                           %HepMC_event_output,'$MG:color:GREEN')
             return
         else:
-            if self.options['run_mode']!=0:
+            if self.options ['run_mode']!=0:
                 # Start a parallelization instance (stored in self.cluster)
                 self.configure_run_mode(self.options['run_mode'])
                 if self.options['run_mode']==1:
@@ -4031,10 +4053,10 @@ You can follow PY8 run with the following command (in a separate terminal):
                 wrapper = open(wrapper_path,'w')
                 if self.options['cluster_temp_path'] is None:
                     exe_cmd = \
-"""#!%s
+"""#!%s 
 ./%s PY8Card.dat >& PY8_log.txt
 """
-                else:
+                else: 
                     exe_cmd = \
 """#!%s
 ln -s ./events_$1.lhe.gz ./events.lhe.gz
@@ -4163,7 +4185,7 @@ tar -czf split_$1.tar.gz split_$1
                         if PY8_extracted_information['sigma_m'] is None:
                            PY8_extracted_information['sigma_m'] = sigma_m
                         else:
-                           PY8_extracted_information['sigma_m'] += sigma_m  
+                           PY8_extracted_information['sigma_m'] += sigma_m
                         if PY8_extracted_information['Nacc'] is None:
                            PY8_extracted_information['Nacc'] = Nacc
                         else:
@@ -4172,6 +4194,7 @@ tar -czf split_$1.tar.gz split_$1
                            PY8_extracted_information['Ntry'] = Ntry
                         else:
                            PY8_extracted_information['Ntry'] += Ntry
+
                 # Normalize the values added
                 if n_added>0:
                     PY8_extracted_information['sigma_m'] /= float(n_added)
@@ -4204,15 +4227,20 @@ tar -czf split_$1.tar.gz split_$1
                     else:
                         for i, hist in enumerate(djr_HwU):
                             djr_HwU[i] = hist + new_djr_HwU[i]
+
+
                 if not djr_HwU is None:
                     djr_HwU.output(pjoin(self.me_dir,'Events',self.run_name,'djrs'),format='HwU')
                     shutil.move(pjoin(self.me_dir,'Events',self.run_name,'djrs.HwU'),
                                 pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag))
+
                 if n_added>0:
                     for key in PY8_extracted_information['cross_sections']:
-                        PY8_extracted_information['cross_sections'][key][0] /= float(n_added)
+                        # The cross-sections in the DJR are normalized for the original number of events, so we should not
+                        # divide by n_added anymore for the cross-section value
+                        # PY8_extracted_information['cross_sections'][key][0] /= float(n_added)
                         PY8_extracted_information['cross_sections'][key][1] = \
-                         math.sqrt(PY8_extracted_information['cross_sections'][key][1])/float(n_added)
+                         math.sqrt(PY8_extracted_information['cross_sections'][key][1]) / float(n_added)
 
                 # pts plots
                 pts_HwU = None
@@ -4269,8 +4297,15 @@ tar -czf split_$1.tar.gz split_$1
                         ######################################################################
                         for hepmc_file in all_hepmc_files:
                             # Remove in an efficient way the starting and trailing HEPMC tags
-                            os.system(' '.join(['sed','-i',"''","'%s;$d'"%
-                                        (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))                            
+                            if sys.platform == 'darwin':
+                                # sed on MAC has slightly different synthax than on
+                                os.system(' '.join(['sed','-i',"''","'%s;$d'"%
+                                        (';'.join('%id'%(i+1) for i in range(n_head))),hepmc_file]))          
+                            else:
+                                # other UNIX systems 
+                                os.system(' '.join(['sed','-i']+["-e '%id'"%(i+1) for i in range(n_head)]+
+                                                                            ["-e '$d'",hepmc_file]))
+                            
                         os.system(' '.join(['cat',pjoin(tmp_dir,'header.hepmc')]+all_hepmc_files+
                                                     [pjoin(tmp_dir,'tail.hepmc'),'>',hepmc_output]))
 
@@ -4304,13 +4339,22 @@ tar -czf split_$1.tar.gz split_$1
         if run_type in merged_run_types:
             # From the log file
             if all(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
-                PY8_extracted_information['sigma_m'],PY8_extracted_information['Nacc'],\
-                    PY8_extracted_information['Ntry'] = self.parse_PY8_log_file(
-                      pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))
+                # When parallelization is enable we shouldn't have cannot look in the log in this way
+                if self.options ['run_mode']!=0:
+                    logger.warning('Pythia8 cross-section could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1.')
+                else:
+                    PY8_extracted_information['sigma_m'],PY8_extracted_information['Nacc'],\
+                        PY8_extracted_information['Ntry'] = self.parse_PY8_log_file(
+                        pjoin(self.me_dir,'Events', self.run_name,'%s_pythia8.log' % tag))
 
             if not any(PY8_extracted_information[_] is None for _ in ['sigma_m','Nacc','Ntry']):
                 self.results.add_detail('cross_pythia', PY8_extracted_information['sigma_m'])
                 self.results.add_detail('nb_event_pythia', PY8_extracted_information['Nacc'])
+                # Shorthands
+                Nacc = PY8_extracted_information['Nacc']
+                Ntry = PY8_extracted_information['Ntry']
+                sigma_m = PY8_extracted_information['sigma_m']
                 # Compute pythia error
                 error = self.results[self.run_name].return_tag(self.run_tag)['error'] 
                 try:                   
@@ -4328,8 +4372,14 @@ tar -czf split_$1.tar.gz split_$1
             # From the djr file generated
             djr_output = pjoin(self.me_dir,'Events',self.run_name,'%s_djrs.dat'%tag)
             if os.path.isfile(djr_output) and len(PY8_extracted_information['cross_sections'])==0:
-                PY8_extracted_information['cross_sections'] = self.extract_cross_sections_from_DJR(djr_output)
-            cross_sections = PY8_extracted_information['cross_sections']     
+                # When parallelization is enable we shouldn't have cannot look in the log in this way
+                if self.options ['run_mode']!=0:
+                    logger.warning('Pythia8 merged cross-sections could not be retreived.\n'+
+                       'Try turning parallelization off by setting the option nb_core to 1.')
+                    PY8_extracted_information['cross_sections'] = {} 
+                else:
+                    PY8_extracted_information['cross_sections'] = self.extract_cross_sections_from_DJR(djr_output)
+            cross_sections = PY8_extracted_information['cross_sections']
             if cross_sections:
                 # Filter the cross_sections specified an keep only the ones 
                 # with central parameters and a different merging scale
@@ -4364,7 +4414,7 @@ tar -czf split_$1.tar.gz split_$1
                 xsecs_file.write('Cross-sections could not be read from the'+\
                     "XML node 'xsection' of the .dat file produced by Pythia8.")
             xsecs_file.close()
-            
+        
         #Update the banner
         # We add directly the pythia command card because it has the full 
         # information
@@ -4387,26 +4437,42 @@ tar -czf split_$1.tar.gz split_$1
     def parse_PY8_log_file(self, log_file_path):
         """ Parse a log file to extract number of event and cross-section. """
         pythiare = re.compile("Les Houches User Process\(es\)\s*\d+\s*\|\s*(?P<tried>\d+)\s*(?P<selected>\d+)\s*(?P<generated>\d+)\s*\|\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
+        pythia_xsec_re = re.compile("Inclusive cross section\s*:\s*(?P<xsec>[\d\.e\-\+]+)\s*(?P<xsec_error>[\d\.e\-\+]+)")
+        sigma_m, Nacc, Ntry = None, None, None
         for line in misc.BackRead(log_file_path): 
             info = pythiare.search(line)
             if not info:
-                continue
-            try:
-                # Pythia cross section in mb, we want pb
-                sigma_m = float(info.group('xsec')) *1e9
-                Nacc = int(info.group('generated'))
-                Ntry = int(info.group('tried'))
-                if Nacc==0:
-                    raise self.InvalidCmd, 'Pythia8 shower failed since it'+\
-                     ' did not accept any event from the MG5aMC event file.'
-                return sigma_m, Nacc, Ntry
-            except ValueError:
-                return None,None,None
+                # Also try to obtain the cross-section and error from the final xsec line of pythia8 log
+                # which is more reliable, in general for example when there is merging and the last event
+                # is skipped.
+                final_PY8_xsec = pythia_xsec_re.search(line)
+                if not final_PY8_xsec:
+                    continue
+                else:
+                    sigma_m = float(final_PY8_xsec.group('xsec')) *1e9
+                    continue
+            else:
+                try:
+                    # Pythia cross section in mb, we want pb
+                    if sigma_m is None:
+                        sigma_m = float(info.group('xsec')) *1e9
+                    if Nacc is None:
+                        Nacc = int(info.group('generated'))
+                    if Ntry is None:
+                        Ntry = int(info.group('tried'))
+                    if Nacc==0:
+                        raise self.InvalidCmd, 'Pythia8 shower failed since it'+\
+                          ' did not accept any event from the MG5aMC event file.'
+                    return sigma_m, Nacc, Ntry
+                except ValueError:
+                    return None,None,None
+
         raise self.InvalidCmd, "Could not find cross-section and event number information "+\
                          "in Pythia8 log\n  '%s'."%log_file_path
     
     def extract_cross_sections_from_DJR(self,djr_output):
         """Extract cross-sections from a djr XML output."""
+        import xml.dom.minidom as minidom
         run_nodes = minidom.parse(djr_output).getElementsByTagName("run")
         all_nodes = dict((int(node.getAttribute('id')),node) for
                                                       node in run_nodes)
@@ -4415,10 +4481,10 @@ tar -czf split_$1.tar.gz split_$1
         except:
             return {}
         xsections = selected_run_node.getElementsByTagName("xsection")
-        # We need to translate PY8's output in mb into pb
+        # In the DJR, the conversion to pb is already performed
         return dict((xsec.getAttribute('name'),
-        [float(xsec.childNodes[0].data.split()[0])*1e9,
-         float(xsec.childNodes[0].data.split()[1])*1e9])
+            [float(xsec.childNodes[0].data.split()[0]),
+             float(xsec.childNodes[0].data.split()[1])])
                                               for xsec in xsections)
     
     def do_pythia(self, line):
@@ -4486,7 +4552,7 @@ tar -czf split_$1.tar.gz split_$1
         if self.run_card['use_syst']:
             output_files.append('syst.dat')
         if self.run_card['ickkw'] == 1: 
-            output_files.append(['beforeveto.tree', 'xsecs.tree', 'events.tree'])
+            output_files += ['beforeveto.tree', 'xsecs.tree', 'events.tree']
         
         os.environ['PDG_MASS_TBL'] = pjoin(pythia_src,'mass_width_2004.mc')
         self.cluster.launch_and_wait(pjoin(pythia_src, 'pythia'),
@@ -4948,7 +5014,7 @@ tar -czf split_$1.tar.gz split_$1
             exename = os.path.basename(exe)
             # For condor cluster, create the input/output files
             if 'ajob' in exename: 
-                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat','dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
                   'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
@@ -4992,7 +5058,7 @@ tar -czf split_$1.tar.gz split_$1
                              input_files=input_files, output_files=output_files,
                              required_output=required_output)
             elif 'survey' in exename:
-                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat',
+                input_files = ['madevent','input_app.txt','symfact.dat','iproc.dat', 'dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses', 
                   'MadLoop5_resources.tar.gz')) and cluster.need_transfer(self.options):
@@ -5044,7 +5110,7 @@ tar -czf split_$1.tar.gz split_$1
                              input_files=input_files, output_files=output_files,
                              required_output=required_output, **opt)
             elif "refine_splitted.sh" in exename:
-                input_files = ['madevent','symfact.dat','iproc.dat',
+                input_files = ['madevent','symfact.dat','iproc.dat', 'dname.mg',
                                pjoin(self.me_dir, 'SubProcesses','randinit')]                 
                 
                 if os.path.exists(pjoin(self.me_dir,'SubProcesses',
@@ -5186,6 +5252,7 @@ tar -czf split_$1.tar.gz split_$1
             # Reset seed in run_card to 0, to ensure that following runs
             # will be statistically independent
             self.run_card.write(pjoin(self.me_dir, 'Cards','run_card.dat'))
+            self.configured = time.time()
         elif os.path.exists(pjoin(self.me_dir,'SubProcesses','randinit')):
             for line in open(pjoin(self.me_dir,'SubProcesses','randinit')):
                 data = line.split('=')
@@ -5520,12 +5587,28 @@ tar -czf split_$1.tar.gz split_$1
         self.update_status('Creating root files', level='parton')
 
         eradir = self.options['exrootanalysis_path']
+        totar = False
+        if input.endswith('.gz'):
+            misc.gunzip(input, keep=True)
+            totar = True
+            input = input[:-3]
+            
         try:
             misc.call(['%s/ExRootLHEFConverter' % eradir, 
                              input, output],
                             cwd=pjoin(self.me_dir, 'Events'))
         except Exception:
             logger.warning('fail to produce Root output [problem with ExRootAnalysis]')
+    
+        if totar:
+            if os.path.exists('%s.gz' % input):
+                try:
+                    os.remove(input)
+                except:
+                    pass
+            else:
+                misc.gzip(input,keep=False)
+            
     
     def run_syscalc(self, mode='parton', event_path=None, output=None):
         """create the syscalc output""" 
@@ -5738,8 +5821,17 @@ tar -czf split_$1.tar.gz split_$1
             if hadron_card_present or parton_card_present:
                 switch['analysis'] = 'MADANALYSIS_5'
 
+        # ExRootanalysis
+        eradir = self.options['exrootanalysis_path']
+        if eradir and misc.is_executable(pjoin(eradir,'ExRootLHEFConverter')):
+            valid_options['analysis'].insert(0,'EXROOTANALYSIS')
+            if switch['analysis'] in ['OFF', void]:
+                switch['analysis'] = 'EXROOTANALYSIS'
+
+                 
+
         if len(valid_options['analysis'])>1:                
-            available_mode.append('5')
+            available_mode.append('3')
             if switch['analysis'] == void:
                 switch['analysis'] = 'OFF'
         else:
@@ -5753,28 +5845,28 @@ tar -czf split_$1.tar.gz split_$1
                 options += ['delphes',   'delphes=ON', 'delphes=OFF']             
                 if os.path.exists(pjoin(self.me_dir,'Cards','delphes_card.dat')):
                     switch['detector'] = 'DELPHES'
-                else:
+                elif switch['detector'] not in ['PGS']:
                     switch['detector'] = 'OFF'
             elif valid_options['detector'] == ['OFF']:
                 switch['detector'] = "Requires a shower"
                         
         # Check switch status for MS/reweight
         if not MADEVENT or ('mg5_path' in self.options and self.options['mg5_path']):
-            available_mode.append('3')
+            available_mode.append('4')
             valid_options['madspin'] = ['ON', 'OFF']
             if os.path.exists(pjoin(self.me_dir,'Cards','madspin_card.dat')):
                 switch['madspin'] = 'ON'
             else:
                 switch['madspin'] = 'OFF'
             if misc.has_f2py() or self.options['f2py_compiler']:
-                available_mode.append('4')
+                available_mode.append('5')
                 valid_options['reweight'] = ['ON', 'OFF']
                 if os.path.exists(pjoin(self.me_dir,'Cards','reweight_card.dat')):
                     switch['reweight'] = 'ON'
                 else:
                     switch['reweight'] = 'OFF'
             else: 
-                switch['reweight'] = 'Not available (requires NumPy)'
+                switch['reweight'] = 'Not available (requires NumPy/f2py)'
                        
         if '-R' in args or '--reweight' in args:
             if switch['reweight'] == 'OFF':
@@ -5791,6 +5883,8 @@ tar -czf split_$1.tar.gz split_$1
             if len(valid_options[key]) >1:
                 options += ['%s=%s' % (key, s) for s in valid_options[key]]
                 options.append(key)
+            else:
+                options.append('%s=OFF' % (key))
                 
         options += ['parton'] + sorted(list(set(available_mode)))
         options += options_legacy
@@ -5807,7 +5901,7 @@ tar -czf split_$1.tar.gz split_$1
                 return red%switch_value
             elif switch_value in ['ON','MADANALYSIS_4','MADANALYSIS_5',
                                   'PYTHIA8','PYTHIA6','PGS','DELPHES-ATLAS',
-                                  'DELPHES-CMS','DELPHES']:
+                                  'DELPHES-CMS','DELPHES', 'EXROOTANALYSIS']:
                 return green%switch_value
             else:
                 return bold%switch_value                
@@ -5960,13 +6054,13 @@ tar -czf split_$1.tar.gz split_$1
         
         if self.force:
             self.check_param_card(pjoin(self.me_dir,'Cards','param_card.dat' ))
-            return
+            return switch
 
         if answer == 'auto':
             self.ask_edit_cards(cards, plot=False, mode='auto')
         else:
             self.ask_edit_cards(cards, plot=False)
-        return
+        return switch
     
     ############################################################################
     def ask_pythia_run_configuration(self, mode=None, pythia_version=6):
@@ -6271,8 +6365,7 @@ class MadLoopInitializer(object):
         # Now run make
         devnull = open(os.devnull, 'w')
         start=time.time()
-        retcode = subprocess.call(['make','check'],
-                                   cwd=dir_name, stdout=devnull, stderr=devnull)
+        retcode = misc.compile(arg=['-j1','check'], cwd=dir_name, nb_core=1)
         compilation_time = time.time()-start
         if retcode != 0:
             logging.info("Error while executing make in %s" % dir_name)

@@ -592,12 +592,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'pythia_unlops.f',
                      'driver_mintMC.f',
                      'driver_mintFO.f',
-                     'driver_vegas.f',
                      'appl_interface.cc',
                      'appl_interface_dummy.f',
                      'appl_common.inc',
                      'reweight_appl.inc',
-                     'driver_reweight.f',
                      'fastjetfortran_madfks_core.cc',
                      'fastjetfortran_madfks_full.cc',
                      'fjcore.cc',
@@ -621,6 +619,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'HwU_dummy.f',
                      'madfks_plot.f',
                      'analysis_dummy.f',
+                     'analysis_lhe.f',
                      'mint-integrator2.f',
                      'MC_integer.f',
                      'mint.inc',
@@ -732,7 +731,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         devnull = os.open(os.devnull, os.O_RDWR)
         try:
-            res = misc.call([self.options['lhapdf'], '--version'], \
+            res = misc.call([mg5options['lhapdf'], '--version'], \
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception:
             res = 1
@@ -756,6 +755,8 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         
         
         self.proc_characteristic['grouped_matrix'] = False
+        self.proc_characteristic['complex_mass_scheme'] = mg5options['complex_mass_scheme']
+
         self.create_proc_charac()
 
         self.create_run_card(matrix_elements.get_processes(), history)
@@ -1642,14 +1643,14 @@ end
         # We also need to write the overall maximum quantities for this group
         # of processes in 'global_specs.inc'. In aMCatNLO, there is always
         # only one process, so this is trivial
-        self.write_global_specs(matrix_element)
+        self.write_global_specs(matrix_element, output_path=pjoin(dirpath,'global_specs.inc'))
         open('unique_id.inc','w').write(
 """      integer UNIQUE_ID
       parameter(UNIQUE_ID=1)""")
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopCommons.f','MadLoopParams.inc','global_specs.inc']
+                     'MadLoopCommons.f','MadLoopParams.inc']
 
         # We should move to MadLoop5_resources directory from the SubProcesses
         ln(pjoin(os.path.pardir,os.path.pardir,'MadLoopParams.dat'),
@@ -3385,14 +3386,15 @@ class ProcessOptimizedExporterFortranFKS(loop_exporters.LoopProcessOptimizedExpo
         # We also need to write the overall maximum quantities for this group
         # of processes in 'global_specs.inc'. In aMCatNLO, there is always
         # only one process, so this is trivial
-        self.write_global_specs(matrix_element)
+        self.write_global_specs(matrix_element, output_path=pjoin(dirpath,'global_specs.inc'))
+        
         open('unique_id.inc','w').write(
 """      integer UNIQUE_ID
       parameter(UNIQUE_ID=1)""")
 
         linkfiles = ['coupl.inc', 'mp_coupl.inc', 'mp_coupl_same_name.inc',
                      'cts_mprec.h', 'cts_mpc.h', 'MadLoopParamReader.f',
-                     'MadLoopParams.inc','MadLoopCommons.f','global_specs.inc']
+                     'MadLoopParams.inc','MadLoopCommons.f']
 
         for file in linkfiles:
             ln('../../%s' % file)

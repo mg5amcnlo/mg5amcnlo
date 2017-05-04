@@ -8,7 +8,8 @@
       subroutine HwU_add_points
       end
 
-      subroutine HwU_accum_iter(ldummy,idummy)
+      subroutine HwU_accum_iter(ldummy,idummy,dummy)
       logical ldummy
       integer idummy
+      double precision dummy(2)
       end

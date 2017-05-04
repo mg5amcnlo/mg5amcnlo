@@ -564,7 +564,7 @@ In the future, if you want to reactivate Ninja, you can do so by re-attempting
 its online installation with the command 'install %(p)s' or install it on your
 own and set the path to its library in the MG5aMC option '%(p)s'.""" % {'p': key})
                             self.exec_cmd("set %s ''" % key)
-                            self.exec_cmd('save options')
+                            self.exec_cmd('save options %s' % key)
             
             # ONLINE INSTALLATION
             elif value == 'install':

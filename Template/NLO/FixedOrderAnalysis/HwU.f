@@ -47,11 +47,12 @@ c        topdrawer default in MG5_aMC).
 c     input 2: Sum PS points for a given iteration and error estimate by
 c       square root of the sum of the squares. Perform a weighted average
 c       iteration-by-iteration
+c     input 3: Same as input 2, but weighted average is same as from MINT
       implicit none
       integer input
       integer error_estimation
       common /HwU_common2/ error_estimation
-      if (input.ge.0 .and. input.le.2) then
+      if (input.ge.0 .and. input.le.3) then
          error_estimation=input
       else
          write (*,*) 'unknown error estimation',input
@@ -68,7 +69,7 @@ c complete common block seems to be included in the size executable
 c (approx. 110 MB).
       integer error_estimation
       common /HwU_common2/ error_estimation
-      data error_estimation /1/
+      data error_estimation /3/
       end
       
 c Book the histograms at the start of the run. Give a 'label' (an
@@ -190,19 +191,20 @@ c iteration ('histy') to the accumulated results ('histy_acc'), with the
 c uncertainty estimate given in 'histy_err' and empties the arrays for
 c the current iteration so that they can be filled with the next
 c iteration.
-      subroutine HwU_accum_iter(inclde,nPSpoints)
+      subroutine HwU_accum_iter(inclde,nPSpoints,values)
       implicit none
       include "HwU.inc"
       logical inclde
       integer nPSpoints,label,i,j
       double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
+     $     ,values(2)
       data niter /0d0/
       nPSinv = 1d0/dble(nPSpoints)
       if (inclde) niter = niter+1d0
       do label=1,max_plots
          if (.not. booked(label)) cycle
          if (inclde) then
-            call accumulate_results(label,nPSinv,niter)
+            call accumulate_results(label,nPSinv,niter,values)
          endif
 c     Reset the histo of the current iteration to zero so that they are
 c     ready for the next iteration.
@@ -227,7 +229,7 @@ c HwU_output) to write intermediate plots to disk.
       implicit none
       include "HwU.inc"
       integer label,nPSpoints,i,j
-      double precision nPSinv,niter
+      double precision nPSinv,niter,dummy(2)
       nPSinv=1d0/dble(nPSpoints)
       niter=1d0
       do label=1,max_plots
@@ -239,7 +241,7 @@ c     Set all the bins to zero.
             enddo
             histy_err(label,i)=0d0
          enddo
-         call accumulate_results(label,nPSinv,niter)
+         call accumulate_results(label,nPSinv,niter,dummy)
       enddo
       return
       end
@@ -254,11 +256,12 @@ c error_estimation==0 it uses Poisson statistics to compute the
 c uncertainty. Note that this means that during the filling of the
 c histograms the central value should not be zero if any of the other
 c weights are non-zero.
-      subroutine accumulate_results(label,nPSinv,niter)
+      subroutine accumulate_results(label,nPSinv,niter,values)
       implicit none
       include "HwU.inc"
       integer label,i,j
       double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
+     $     ,values(2),a1,a2
       integer error_estimation
       common /HwU_common2/ error_estimation
       if (error_estimation.eq.2) then
@@ -281,7 +284,7 @@ c     still biased) estimator of the standard deviation.
                etot=etot* sqrt(dble(histi(label,i))
      &                    /(dble(histi(label,i))-1.5d0))
             else
-               etot=0.999d49
+               etot=abs(vtot(1))*10d0 ! multiply by 10 to make it large
             endif
 c     If the error estimation of the accumulated results is still zero
 c     (i.e. no points were added yet, e.g. because it is the first
@@ -303,6 +306,47 @@ c     Add the results of the current iteration to the accumulated results
      $              1d0/sqrt(1d0/histy_err(label,i)**2+1d0/etot**2)
             endif
          enddo
+      elseif (error_estimation.eq.3) then
+         do i=1,nbin(label)
+c     Skip bin if no entries
+            if (histi(label,i).eq.0) cycle
+c     Divide weights by the number of PS points. This means that this is
+c     now normalised to the total cross section in that bin
+            do j=1,nwgts
+               vtot(j)=histy(j,label,i)*nPSinv
+            enddo
+c     Error estimation of the current bin
+            etot=sqrt(abs(histy2(label,i)*nPSinv-vtot(1)**2)*nPSinv)
+c     Include "Bessel's correction" to have a corrected (even though
+c     still biased) estimator of the standard deviation.
+            if (histi(label,i).gt.1) then
+               etot=etot* sqrt(dble(histi(label,i))
+     &                    /(dble(histi(label,i))-1.5d0))
+            else
+               etot=abs(vtot(1))*10d0 ! multiply by 10 to make it large
+            endif
+c     If the error estimation of the accumulated results is still zero
+c     (i.e. no points were added yet, e.g. because it is the first
+c     iteration) simply copy the results of this iteration over the
+c     accumulated results.
+            if (histy_err(label,i).eq.0d0) then
+               do j=1,nwgts
+                  histy_acc(j,label,i)=vtot(j)
+               enddo
+               histy_err(label,i)=etot
+            else
+c     Add the results of the current iteration to the accumulated results
+               do j=1,nwgts
+                  histy_acc(j,label,i)=(histy_acc(j,label,i)
+     &                 /values(2)+vtot(j)/values(1))/(1d0
+     &                 /values(2) + 1d0/values(1))
+               enddo
+               a1=((1d0/values(1))/((1d0/values(1))+1d0/values(2)))**2
+               a2=((1d0/values(2))/((1d0/values(1))+1d0/values(2)))**2
+               histy_err(label,i)=sqrt(a2*histy_err(label,i)**2 +
+     &              a1*etot**2)
+            endif
+         enddo 
       elseif(error_estimation.eq.1) then
 c     simply sum the weights in the bins
          do i=1,nbin(label)

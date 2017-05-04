@@ -206,7 +206,8 @@ class TestMECmdShell(unittest.TestCase):
 
         #create the gridpack        
         self.do('launch -f')
-        
+        self.check_parton_output('run_01', 100)
+        self.check_parton_output('run_01_decayed_1', 100)
         #move the MS gridpack
         self.assertTrue(os.path.exists(pjoin(self.out_dir, 'MSDIR1')))
         files.mv(pjoin(self.out_dir, 'MSDIR1'), pjoin(self.out_dir, 'MSDIR2'))
@@ -222,6 +223,7 @@ class TestMECmdShell(unittest.TestCase):
         
         self.check_parton_output('run_02_decayed_1', 100)           
         
+        self.assertEqual(self.debugging, False)
         
     def test_width_computation(self):
         """test the param_card created is correct"""
@@ -619,6 +621,7 @@ class TestMEfromfile(unittest.TestCase):
                  parton
                  set nevents 100
                  set event_norm sum
+                 set systematics_program none
                  add_time_of_flight --threshold=4e-14
                  pythia
                  """ %self.run_dir

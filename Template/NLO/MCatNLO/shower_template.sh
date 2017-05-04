@@ -7,7 +7,7 @@ OUTPUT=$2
 RUN_NAME=$3
 NFILE=$4
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%(extralibs)s
+export %(ld_library_path)s=$%(ld_library_path)s:%(extralibs)s
 
 # this is for py8 runs
 export PYTHIA8DATA=`pwd`/xmldoc

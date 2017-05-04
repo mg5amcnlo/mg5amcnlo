@@ -14,6 +14,7 @@ c
       include 'fks_info.inc'
       include 'run.inc'
       include 'cuts.inc'
+      include 'mint.inc'
       
       double precision ZERO,one
       parameter       (ZERO = 0d0)
@@ -68,7 +69,7 @@ c
       double precision p(0:3,99), wgt, x(99), fx
       double complex wgt1(2)
       double precision p1(0:3,99),xx(maxinvar)
-      integer ninvar, ndim, iconfig, minconfig, maxconfig
+      integer ninvar, ndim,  minconfig, maxconfig
       common/tosigint/ndim
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer ic(nexternal,maxswitch), jc(12),nswitch
@@ -333,8 +334,11 @@ c x_to_f_arg subroutine
       endif
 
       do iconfig=bs_min,bs_max       ! Born configurations
+         ichan=1
+         iconfigs(1)=iconfig
 
-      call set_mc_matrices
+      call setfksfactor(.true.)
+c      call set_mc_matrices
 
       wgt=1d0
       ntry=1

@@ -50,9 +50,9 @@ if len(sys.argv) > 1:
         sys.exit()
     elif sys.argv[1] == 'dynamic':
         avh_pc.prnt(sys.argv[0]+': compiling source file...')
-        subprocess.call([fc,'-O','-fPIC','-c','avh_olo.f90','-o','avh_olo.o'])
+        subprocess.call([fc,'-O','-fPIC','-c','avh_olo_foriregi.f90','-o','avh_olo_foriregi.o'])
         avh_pc.prnt(sys.argv[0]+': building dynamic library...')
-        subprocess.call([fc,'-shared','-o','libavh_olo.so','avh_olo.o'])
+        subprocess.call([fc,'-shared','-o','libavh_olo.so','avh_olo_foriregi.o'])
         sys.exit()
     elif sys.argv[1] != 'static':
         avh_pc.prnt('ERROR in '+sys.argv[0]+': don\'t know how to create '+sys.argv[1])
