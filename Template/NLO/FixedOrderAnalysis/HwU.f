@@ -14,9 +14,7 @@ c The module contains effectively the common block with allocatable
 c variables
       module HwU_variables
       implicit none
-      integer :: max_plots,max_points
-      integer, parameter :: max_bins=100
-      integer, parameter :: max_wgts=1024
+      integer :: max_plots,max_points,max_bins
       logical, allocatable :: booked(:)
       integer nwgts,np
       integer, allocatable :: nbin(:),histi(:,:),p_bin(:),p_label(:)
@@ -89,14 +87,8 @@ c plot range (from 'xmin' to 'xmax') should be given.
       integer label,nbin_l,i,j
       character*(*) title_l
       double precision xmin,xmax
-c     Check that label and number of bins are reasonable
-      if (nbin_l.gt.max_bins) then
-         write (*,*) 'ERROR: increase max_bins in HwU histogramming'
-     $        ,max_bins,nbin_l
-         stop 1
-      endif
-c     Allocate space for new new histograms if needed      
-      call HwU_allocate_histo(label)
+c     Allocate space for new histograms if needed      
+      call HwU_allocate_histo(label,nbin_l)
 c     Setup the histogram
       booked(label)=.true.
       title(label)=title_l
@@ -500,14 +492,14 @@ c p_wgts
       return
       end
 
-      subroutine HwU_allocate_histo(label)
+      subroutine HwU_allocate_histo(label,nbin_l)
       use HwU_variables
       implicit none
       logical,allocatable :: ltemp(:)
       integer,allocatable :: itemp1(:),itemp2(:,:)
       character(len=50),allocatable :: ctemp(:)
       double precision, allocatable :: temp1(:),temp2(:,:),temp3(:,:,:)
-      integer label,i
+      integer label,i,nbin_l
       logical debug
       parameter (debug=.true.)
 c Check if variables are already allocated. If not, simply allocate a
@@ -517,20 +509,20 @@ c single histogram
          allocate(title(1))
          allocate(nbin(1))
          allocate(step(1))
-         allocate(histxl(1,max_bins))
-         allocate(histxm(1,max_bins))
-         allocate(histy(nwgts,1,max_bins))
-         allocate(histy_acc(nwgts,1,max_bins))
-         allocate(histi(1,max_bins))
-         allocate(histy2(1,max_bins))
-         allocate(histy_err(1,max_bins))
+         allocate(histxl(1,nbin_l))
+         allocate(histxm(1,nbin_l))
+         allocate(histy(nwgts,1,nbin_l))
+         allocate(histy_acc(nwgts,1,nbin_l))
+         allocate(histi(1,nbin_l))
+         allocate(histy2(1,nbin_l))
+         allocate(histy_err(1,nbin_l))
          max_plots=1
+         max_bins=nbin_l
       endif
 c If current label is greater than the plots already allocated, increase
 c the size of the allocated arrays. This is kind of slow, but shouldn't
 c really matter since it's only done at the start of a run.
-      if (label.gt.max_plots) then
-         if (debug) write (*,*) 'HwU: initialising new plot',label
+      if (label.gt.max_plots .or. nbin_l.gt.max_bins) then
 c booked
          allocate(ltemp(label))
          ltemp(1:max_plots)=booked
@@ -551,34 +543,36 @@ c step
          temp1(1:max_plots)=step
          call move_alloc(temp1,step)
 c histxl
-         allocate(temp2(label,max_bins))
-         temp2(1:max_plots,1:max_bins)=histxl
+         allocate(temp2(label,nbin_l))
+         temp2(1:max_plots,1:nbin_l)=histxl
          call move_alloc(temp2,histxl)
 c histxm
-         allocate(temp2(label,max_bins))
-         temp2(1:max_plots,1:max_bins)=histxm
+         allocate(temp2(label,nbin_l))
+         temp2(1:max_plots,1:nbin_l)=histxm
          call move_alloc(temp2,histxm)
 c histy
-         allocate(temp3(nwgts,label,max_bins))
-         temp3(1:nwgts,1:max_plots,1:max_bins)=histy
+         allocate(temp3(nwgts,label,nbin_l))
+         temp3(1:nwgts,1:max_plots,1:nbin_l)=histy
          call move_alloc(temp3,histy)
 c histy_acc
-         allocate(temp3(nwgts,label,max_bins))
-         temp3(1:nwgts,1:max_plots,1:max_bins)=histy_acc
+         allocate(temp3(nwgts,label,nbin_l))
+         temp3(1:nwgts,1:max_plots,1:nbin_l)=histy_acc
          call move_alloc(temp3,histy_acc)
 c histi
-         allocate(itemp2(label,max_bins))
-         itemp2(1:max_plots,1:max_bins)=histi
+         allocate(itemp2(label,nbin_l))
+         itemp2(1:max_plots,1:nbin_l)=histi
          call move_alloc(itemp2,histi)
 c histy2
-         allocate(temp2(label,max_bins))
-         temp2(1:max_plots,1:max_bins)=histy2
+         allocate(temp2(label,nbin_l))
+         temp2(1:max_plots,1:nbin_l)=histy2
          call move_alloc(temp2,histy2)
 c histy_err
-         allocate(temp2(label,max_bins))
-         temp2(1:max_plots,1:max_bins)=histy_err
+         allocate(temp2(label,nbin_l))
+         temp2(1:max_plots,1:nbin_l)=histy_err
          call move_alloc(temp2,histy_err)
+c Update maximums
          max_plots=label
+         max_bins=nbin_l
       elseif (booked(label)) then
             write (*,*) 'ERROR in HwU.f: histogram already booked',label
             stop
