@@ -499,7 +499,7 @@ c p_wgts
       integer,allocatable :: itemp1(:),itemp2(:,:)
       character(len=50),allocatable :: ctemp(:)
       double precision, allocatable :: temp1(:),temp2(:,:),temp3(:,:,:)
-      integer label,i,nbin_l
+      integer label,i,nbin_l,label_max,nbin_max
       logical debug
       parameter (debug=.true.)
 c Check if variables are already allocated. If not, simply allocate a
@@ -523,59 +523,61 @@ c If current label is greater than the plots already allocated, increase
 c the size of the allocated arrays. This is kind of slow, but shouldn't
 c really matter since it's only done at the start of a run.
       if (label.gt.max_plots .or. nbin_l.gt.max_bins) then
+         label_max=max(label,max_plots)
+         nbin_max=max(nbin_l,max_bins)
 c booked
-         allocate(ltemp(label))
+         allocate(ltemp(label_max))
          ltemp(1:max_plots)=booked
          call move_alloc(ltemp,booked)
-         do i=max_plots+1,label
+         do i=max_plots+1,label_max
             booked(i)=.false. ! histos have not yet been setup
          enddo
 c title
-         allocate(ctemp(label))
+         allocate(ctemp(label_max))
          ctemp(1:max_plots)=title
          call move_alloc(ctemp,title)
 c nbin
-         allocate(itemp1(label))
+         allocate(itemp1(label_max))
          itemp1(1:max_plots)=nbin
          call move_alloc(itemp1,nbin)
 c step
-         allocate(temp1(label))
+         allocate(temp1(label_max))
          temp1(1:max_plots)=step
          call move_alloc(temp1,step)
 c histxl
-         allocate(temp2(label,nbin_l))
+         allocate(temp2(label_max,nbin_max))
          temp2(1:max_plots,1:nbin_l)=histxl
          call move_alloc(temp2,histxl)
 c histxm
-         allocate(temp2(label,nbin_l))
-         temp2(1:max_plots,1:nbin_l)=histxm
+         allocate(temp2(label_max,nbin_max))
+         temp2(1:max_plots,1:max_bins)=histxm
          call move_alloc(temp2,histxm)
 c histy
-         allocate(temp3(nwgts,label,nbin_l))
-         temp3(1:nwgts,1:max_plots,1:nbin_l)=histy
+         allocate(temp3(nwgts,label_max,nbin_max))
+         temp3(1:nwgts,1:max_plots,1:max_bins)=histy
          call move_alloc(temp3,histy)
 c histy_acc
-         allocate(temp3(nwgts,label,nbin_l))
-         temp3(1:nwgts,1:max_plots,1:nbin_l)=histy_acc
+         allocate(temp3(nwgts,label_max,nbin_max))
+         temp3(1:nwgts,1:max_plots,1:max_bins)=histy_acc
          call move_alloc(temp3,histy_acc)
 c histi
-         allocate(itemp2(label,nbin_l))
-         itemp2(1:max_plots,1:nbin_l)=histi
+         allocate(itemp2(label_max,nbin_max))
+         itemp2(1:max_plots,1:max_bins)=histi
          call move_alloc(itemp2,histi)
 c histy2
-         allocate(temp2(label,nbin_l))
-         temp2(1:max_plots,1:nbin_l)=histy2
+         allocate(temp2(label_max,nbin_max))
+         temp2(1:max_plots,1:max_bins)=histy2
          call move_alloc(temp2,histy2)
 c histy_err
-         allocate(temp2(label,nbin_l))
-         temp2(1:max_plots,1:nbin_l)=histy_err
+         allocate(temp2(label_max,nbin_max))
+         temp2(1:max_plots,1:max_bins)=histy_err
          call move_alloc(temp2,histy_err)
 c Update maximums
-         max_plots=max(label,max_plots)
-         max_bins=max(max_bins,nbin_l)
+         max_plots=label_max
+         max_bins=nbin_max
       elseif (booked(label)) then
-            write (*,*) 'ERROR in HwU.f: histogram already booked',label
-            stop
+         write (*,*) 'ERROR in HwU.f: histogram already booked',label
+         stop
       endif
       return
       end
