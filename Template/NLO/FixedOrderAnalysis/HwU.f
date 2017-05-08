@@ -546,7 +546,7 @@ c step
          call move_alloc(temp1,step)
 c histxl
          allocate(temp2(label_max,nbin_max))
-         temp2(1:max_plots,1:nbin_l)=histxl
+         temp2(1:max_plots,1:max_bins)=histxl
          call move_alloc(temp2,histxl)
 c histxm
          allocate(temp2(label_max,nbin_max))
