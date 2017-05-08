@@ -23,6 +23,7 @@ c variables
       double precision, allocatable :: histy(:,:,:),histy_acc(:,:,:)
      $     ,histy2(:,:),histy_err(:,:),histxl(:,:),histxm(:,:),step(:)
      $     ,p_wgts(:,:)
+      save
       end module HwU_variables
 
       
