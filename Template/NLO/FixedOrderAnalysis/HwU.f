@@ -11,12 +11,12 @@ C                                                                          C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 c The module contains effectively the common block with allocatable
-c variables
+c variables (something not possible in old fortran version)
       module HwU_variables
       implicit none
-      integer :: max_plots,max_points,max_bins
+      integer :: max_plots,max_points,max_bins,nwgts,np
+      integer :: error_estimation=3
       logical, allocatable :: booked(:)
-      integer nwgts,np
       integer, allocatable :: nbin(:),histi(:,:),p_bin(:),p_label(:)
       character(len=50), allocatable :: title(:)
       character(len=50), allocatable :: wgts_info(:)
@@ -58,10 +58,9 @@ c     input 2: Sum PS points for a given iteration and error estimate by
 c       square root of the sum of the squares. Perform a weighted average
 c       iteration-by-iteration
 c     input 3: Same as input 2, but weighted average is same as from MINT
+      use HwU_variables
       implicit none
       integer input
-      integer error_estimation
-      common /HwU_common2/ error_estimation
       if (input.ge.0 .and. input.le.3) then
          error_estimation=input
       else
@@ -70,14 +69,7 @@ c     input 3: Same as input 2, but weighted average is same as from MINT
       endif
       return
       end
-      
-      block data HwU
-c set the default for the error estimation method. 
-      integer error_estimation
-      common /HwU_common2/ error_estimation
-      data error_estimation /3/
-      end
-      
+            
 c Book the histograms at the start of the run. Give a 'label' (an
 c integer) that identifies the plot when filling it and a title
 c ('title_l') for each plot. Also the number of bins ('nbin_l') and the
@@ -255,8 +247,6 @@ c weights are non-zero.
       integer label,i,j
       double precision nPSinv,etot,niter,y_squared
      $     ,values(2),a1,a2
-      integer error_estimation
-      common /HwU_common2/ error_estimation
       double precision,allocatable :: vtot(:)
       if (.not. allocated(vtot)) allocate(vtot(nwgts))
       if (error_estimation.eq.2) then
