@@ -1,7 +1,7 @@
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                          C
 C                  HwU: Histograms with Uncertainties                      C
-C                   By Rikkert Frederix, Dec. 2014                         C
+C                 By Rikkert Frederix, 12-2014--05-2017                    C
 C                                                                          C
 C     Book, fill and write out histograms. Particularly suited for NLO     C
 C     computations with correlations between points (ie. event and         C
@@ -13,17 +13,17 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 c The module contains effectively the common block with allocatable
 c variables (something not possible in old fortran version)
       module HwU_variables
-      implicit none
-      integer :: max_plots,max_points,max_bins,nwgts,np
-      integer :: error_estimation=3
-      logical, allocatable :: booked(:)
-      integer, allocatable :: nbin(:),histi(:,:),p_bin(:),p_label(:)
-      character(len=50), allocatable :: title(:)
-      character(len=50), allocatable :: wgts_info(:)
-      double precision, allocatable :: histy(:,:,:),histy_acc(:,:,:)
-     $     ,histy2(:,:),histy_err(:,:),histxl(:,:),histxm(:,:),step(:)
-     $     ,p_wgts(:,:)
-      save
+         implicit none
+         integer :: max_plots,max_points,max_bins,nwgts,np
+         integer :: error_estimation=3
+         logical, allocatable :: booked(:)
+         integer, allocatable :: nbin(:),histi(:,:),p_bin(:),p_label(:)
+         character(len=50), allocatable :: title(:)
+         character(len=50), allocatable :: wgts_info(:)
+         double precision, allocatable :: histy(:,:,:),histy_acc(:,:,:)
+     $        ,histy2(:,:),histy_err(:,:),histxl(:,:),histxm(:,:)
+     $        ,step(:),p_wgts(:,:)
+         save
       end module HwU_variables
 
       
