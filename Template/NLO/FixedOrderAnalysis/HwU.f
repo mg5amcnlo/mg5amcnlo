@@ -34,6 +34,11 @@ c and sets the number of weights that need to be included for each point.
       implicit none
       integer i,nweights
       character*(*) wgt_info(*)
+      call HwU_deallocate_all
+      max_plots=0
+      max_points=0
+      max_bins=0
+      np=0
 c     Number of weights associated to each point. Note that the first
 c     weight should always be the 'central value' and it should not be
 c     zero if any of the other weights are non-zero.
@@ -101,7 +106,6 @@ c     Set all the bins to zero.
          histy2(label,i)=0d0
          histy_err(label,i)=0d0
       enddo
-      np=0
       return
       end
       
@@ -435,21 +439,21 @@ c Clean all the allocatable variables:
       subroutine HwU_deallocate_all
       use HwU_variables
       implicit none
-      deallocate(wgts_info)
-      deallocate(booked)
-      deallocate(title)
-      deallocate(nbin)
-      deallocate(step)
-      deallocate(histxl)
-      deallocate(histxm)
-      deallocate(histy)
-      deallocate(histy_acc)
-      deallocate(histi)
-      deallocate(histy2)
-      deallocate(histy_err)
-      deallocate(p_bin)
-      deallocate(p_label)
-      deallocate(p_wgts)
+      if (allocated(wgts_info)) deallocate(wgts_info)
+      if (allocated(booked)) deallocate(booked)
+      if (allocated(title)) deallocate(title)
+      if (allocated(nbin)) deallocate(nbin)
+      if (allocated(step)) deallocate(step)
+      if (allocated(histxl)) deallocate(histxl)
+      if (allocated(histxm)) deallocate(histxm)
+      if (allocated(histy)) deallocate(histy)
+      if (allocated(histy_acc)) deallocate(histy_acc)
+      if (allocated(histi)) deallocate(histi)
+      if (allocated(histy2)) deallocate(histy2)
+      if (allocated(histy_err)) deallocate(histy_err)
+      if (allocated(p_bin)) deallocate(p_bin)
+      if (allocated(p_label)) deallocate(p_label)
+      if (allocated(p_wgts)) deallocate(p_wgts)
       return
       end
 
@@ -463,22 +467,24 @@ c Clean all the allocatable variables:
          allocate(p_bin(max_plots))
          allocate(p_label(max_plots))
          allocate(p_wgts(nwgts,max_plots))
-      endif
-      if (np.gt.max_points) then
+         max_points=max_plots
+      else
+         if (np.gt.max_points) then
 c p_bin
-         allocate(itemp1(np+max_plots))
-         itemp1(1:max_points)=p_bin
-         call move_alloc(itemp1,p_bin)
+            allocate(itemp1(np+max_plots))
+            itemp1(1:max_points)=p_bin
+            call move_alloc(itemp1,p_bin)
       
 c p_label
-         allocate(itemp1(np+max_plots))
-         itemp1(1:max_points)=p_label
-         call move_alloc(itemp1,p_label)
+            allocate(itemp1(np+max_plots))
+            itemp1(1:max_points)=p_label
+            call move_alloc(itemp1,p_label)
 c p_wgts
-         allocate(temp2(nwgts,np+max_plots))
-         temp2(1:nwgts,1:max_points)=p_wgts
-         call move_alloc(temp2,p_wgts)
-         max_points=np+max_plots
+            allocate(temp2(nwgts,np+max_plots))
+            temp2(1:nwgts,1:max_points)=p_wgts
+            call move_alloc(temp2,p_wgts)
+            max_points=np+max_plots
+         endif
       endif
       return
       end
