@@ -528,7 +528,7 @@ c booked
          ltemp(1:max_plots)=booked
          call move_alloc(ltemp,booked)
          do i=max_plots+1,label
-            booked(i)=.false.
+            booked(i)=.false. ! histos have not yet been setup
          enddo
 c title
          allocate(ctemp(label))
@@ -571,8 +571,8 @@ c histy_err
          temp2(1:max_plots,1:nbin_l)=histy_err
          call move_alloc(temp2,histy_err)
 c Update maximums
-         max_plots=label
-         max_bins=nbin_l
+         max_plots=max(label,max_plots)
+         max_bins=max(max_bins,nbin_l)
       elseif (booked(label)) then
             write (*,*) 'ERROR in HwU.f: histogram already booked',label
             stop
