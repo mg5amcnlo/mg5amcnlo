@@ -503,6 +503,7 @@ c Check if variables are already allocated. If not, simply allocate a
 c single histogram
       if (.not. allocated(booked)) then
          allocate(booked(1))
+         booked(1)=.false.
          allocate(title(1))
          allocate(nbin(1))
          allocate(step(1))
