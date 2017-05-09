@@ -517,6 +517,9 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               writers.FortranWriter(filename), 
                               nfksconfs,maxproc,maxflow,nexternal,
                               fortran_model)
+        filename = 'genps.inc'
+        maxamps = len(matrix_element.born_matrix_element.get('diagrams'))
+        self.write_genps(writers.FortranWriter(filename),maxproc,maxamps,maxflow,fortran_model)
 
         filename = 'configs_and_props_info.dat'
         nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
@@ -610,7 +613,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
                      'configs_and_props_inc_chooser.f',
-                     'genps.inc',
                      'genps_fks.f',
                      'boostwdir2.f',
                      'madfks_mcatnlo.inc',
@@ -1164,6 +1166,17 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         lines.append('integer icolup_d(%d,%d,%d,maxflow_used)' % (nfksconfs, 2, nexternal))
         lines.append('integer niprocs_d(%d)' % (nfksconfs))
 
+        writer.writelines(lines)
+
+
+    def write_genps(self, writer, maxproc, maxamps, maxflow, fortran_model):
+        """writes the genps.inc file
+        """
+        lines = []
+        lines.append("include 'maxparticles.inc'")
+        lines.append("include 'maxconfigs.inc'")
+        lines.append("integer maxproc,maxamps,maxflow")
+        lines.append("parameter (maxproc=%d,maxamps=%d,maxflow=%d)" % (maxproc,maxamps,maxflow))
         writer.writelines(lines)
 
 

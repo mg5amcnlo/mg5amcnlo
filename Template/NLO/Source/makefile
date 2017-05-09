@@ -13,7 +13,7 @@ PROCESS= matrix.o myamp.o
 GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o setrun.o	\
 	  run_printout.o dgauss.o ranmar.o getissud.o
 
-INCLUDEF = coupl.inc genps.inc pmass.inc nexternal.inc cluster.inc
+INCLUDEF = coupl.inc pmass.inc cluster.inc
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
@@ -47,9 +47,6 @@ $(LIBDIR)libcernlib.a: CERNLIB
 $(LIBDIR)libmodel.a: MODEL param_card.inc
 	rm -f $(LIBDIR)libmodel.a
 	cd MODEL; make	
-
-genps.inc: nexternal.inc
-	touch genps.inc
 
 run_card.inc: ../Cards/run_card.dat
 	../bin/aMCatNLO treatcards run
