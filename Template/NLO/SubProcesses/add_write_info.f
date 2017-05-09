@@ -39,7 +39,7 @@ c Random numbers
       external ran2
 
 c Jamp amplitudes of the Born (to be filled with a call the sborn())
-      double Precision amp2(ngraphs), jamp2(0:ncolor
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
 
 C iforest and other configuration info. Read once and saved.

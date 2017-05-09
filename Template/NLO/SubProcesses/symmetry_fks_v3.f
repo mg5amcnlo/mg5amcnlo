@@ -52,7 +52,7 @@ c
      &     ,nexternal-1),p_ev_red1(0:3,nexternal-1)
       integer ninvar, ndim, minconfig, maxconfig
       common/tosigint/ndim
-      integer ncall,itmax,nconfigs,ntry, ngraphs
+      integer ncall,itmax,nconfigs,ntry
       integer icb(nexternal-1,maxswitch),jc(12),nswitch
       double precision saveamp(ngraphs)
       integer nmatch, ibase

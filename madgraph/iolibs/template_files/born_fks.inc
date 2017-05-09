@@ -14,7 +14,6 @@ C CONSTANTS
 C  
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "genps.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
       INTEGER    THEL
@@ -145,7 +144,6 @@ C
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coupl.inc"
-      include "genps.inc"
 C  
 C ARGUMENTS 
 C  
