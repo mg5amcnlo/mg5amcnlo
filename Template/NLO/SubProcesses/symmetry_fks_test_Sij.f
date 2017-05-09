@@ -54,7 +54,7 @@ c
 c     Local for generating amps
 c
       double precision p(0:3,99), wgt, x(99), fx
-      double precision p1(0:3,99),xx(maxinvar)
+      double precision p1(0:3,99)
       integer ninvar, ndim, iconfig, minconfig, maxconfig
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer ic(nexternal,maxswitch), jc(12),nswitch

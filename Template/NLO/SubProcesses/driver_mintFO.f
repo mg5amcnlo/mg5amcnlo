@@ -22,20 +22,10 @@ C
 c
 c     Global
 c
-      integer                                      nsteps
-      character*40          result_file,where_file
-      common /sample_status/result_file,where_file,nsteps
-      integer ngroup
-      common/to_group/ngroup
-      data ngroup/0/
 cc
       include 'run.inc'
       include 'coupl.inc'
       
-      double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
 c Vegas stuff
       common/tosigint/ndim
 
@@ -136,18 +126,6 @@ c
         n1(i)=0
       enddo
       
-      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
-      read (lun+1,'(a130)',err=11,end=11) buf
-      l1=index(buf,'P')
-      l2=index(buf,'_')
-      if(l1.ne.0.and.l2.ne.0.and.l1.lt.l2-1)
-     $     read(buf(l1+1:l2-1),*,err=11) ngroup
- 11   print *,'Process in group number ',ngroup
-
-      lun = 27
-      twgt = -2d0            !determine wgt after first iteration
-      open(unit=lun,status='scratch')
-      nsteps=2
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses

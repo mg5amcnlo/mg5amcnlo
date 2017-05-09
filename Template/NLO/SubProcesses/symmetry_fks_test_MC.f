@@ -68,7 +68,7 @@ c     Local for generating amps
 c
       double precision p(0:3,99), wgt, x(99), fx
       double complex wgt1(2)
-      double precision p1(0:3,99),xx(maxinvar)
+      double precision p1(0:3,99)
       integer ninvar, ndim,  minconfig, maxconfig
       common/tosigint/ndim
       integer ncall,itmax,nconfigs,ntry, ngraphs

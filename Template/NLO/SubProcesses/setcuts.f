@@ -34,8 +34,6 @@ C
 c--masses and poles
       double precision pmass(nexternal)
       common/to_mass/  pmass
-      double precision      spole(maxinvar),swidth(maxinvar),bwjac
-      common/to_brietwigner/spole          ,swidth          ,bwjac
 c--cuts
       double precision etmin(nincoming+1:nexternal)
       double precision etamax(nincoming+1:nexternal)

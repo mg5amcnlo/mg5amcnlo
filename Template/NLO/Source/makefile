@@ -12,12 +12,13 @@ PROCESS= hfill.o matrix.o myamp.o
 
 HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
 
-GENERIC = $(alfas_functions).o invarients.o hfill.o pawgraphs.o ran1.o rw_events.o rw_routines.o kin_functions.o \
-	  open_file.o basecode.o setrun.o run_printout.o dgauss.o ranmar.o getissud.o
+GENERIC = $(alfas_functions).o hfill.o pawgraphs.o ran1.o rw_events.o	\
+	  rw_routines.o kin_functions.o open_file.o setrun.o		\
+	  run_printout.o dgauss.o ranmar.o getissud.o
 
-INCLUDEF= coupl.inc genps.inc hbook.inc psample.inc pmass.inc nexternal.inc cluster.inc
+INCLUDEF = coupl.inc genps.inc hbook.inc pmass.inc nexternal.inc cluster.inc
 
-BANNER  =  write_banner.o  rw_events.o ranmar.o  kin_functions.o open_file.o  rw_routines.o alfas_functions.o
+BANNER =  write_banner.o  rw_events.o ranmar.o  kin_functions.o open_file.o  rw_routines.o alfas_functions.o
 
 COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw_routines.o alfas_functions.o setrun.o
 
