@@ -70,8 +70,6 @@ c On Breit-Wigner
       logical OnBW(-nexternal:0)
 
 c LesHouches info
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
 c      include "leshouche.inc"
@@ -983,8 +981,6 @@ c
       implicit none
       include 'genps.inc'
       include 'nexternal.inc'
-      integer    maxflow
-      parameter (maxflow=999)
       integer i
       integer idup(nexternal,maxproc)
       integer mothup(2,nexternal,maxproc)

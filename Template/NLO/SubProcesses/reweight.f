@@ -1222,8 +1222,6 @@ c Common
      $     ,fks_configs,lmaxconfigs),jlast(2)
       real*8 q2bck(2)
       common /to_rw/jlast,njetstore,iqjetstore,q2bck
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs

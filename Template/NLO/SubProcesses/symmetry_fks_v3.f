@@ -370,8 +370,6 @@ c
 c
 c     Process info
 c
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
 c      include 'leshouche.inc'
@@ -449,60 +447,6 @@ c
       subroutine clear_events()
       end
 
-       subroutine write_input(nconfigs)
-c***************************************************************************
-c     Writes out input file for approximate calculation based on the
-c     number of active configurations
-c***************************************************************************
-      implicit none
-c
-c     Constants
-c
-      include 'genps.inc'
-      include '../../Source/run_config.inc'
-      integer    maxpara
-      parameter (maxpara=1000)
-c      integer   npoint_tot,         npoint_min
-c      parameter (npoint_tot=50000, npoint_min=1000)
-c
-c     Arguments
-c
-      integer nconfigs
-c
-c     local
-c
-      integer npoints
-      character*20 param(maxpara),value(maxpara)
-      integer npara, nreq
-      logical gridpack
-c-----
-c  Begin Code
-c-----
-      call load_para(npara,param,value)
-      gridpack=.false.
-
-      npoints = min_events_subprocess/nconfigs
-      npoints = max(npoints,min_events_channel)
-      open (unit=26, file = 'input_app.txt', status='unknown',
-     $     err=99)
-      if (gridpack) then
-         write(26,*) npoints_wu,itmax_wu,
-     &     '     !Number of events and iterations'      
-         write(26,'(f8.4,a)') acc_wu, '    !Accuracy'
-         write(26,*) ' 2       !Grid Adjustment 0=none'
-      else
-         write(26,*) npoints,iter_survey,
-     &     '     !Number of events and iterations'      
-         write(26,*) ' 0.0    !Accuracy'
-         write(26,*) ' 0       !Grid Adjustment 0=none'
-      endif
-      write(26,*) ' 1       !Suppress Amplitude 1=yes'
-      write(26,*) nhel_survey,'       !Helicity Sum/event 0=exact'
-      close(26)
-      return
- 99   close(26)
-      write(*,*) 'Error opening input_app.txt'
-      end
 
       subroutine write_bash(mapconfig, use_config, pwidth, jcomp
      &     ,iforest)

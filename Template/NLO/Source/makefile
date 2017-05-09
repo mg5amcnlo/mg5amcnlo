@@ -8,21 +8,12 @@ CUTTOOLSDIR= ./CutTools/
 IREGIDIR= ./IREGI/src/
 STDHEPDIR= ./StdHEP/
 
-PROCESS= hfill.o matrix.o myamp.o 
+PROCESS= matrix.o myamp.o 
 
-HBOOK = hfill.o hcurve.o hbook1.o hbook2.o
-
-GENERIC = $(alfas_functions).o hfill.o pawgraphs.o ran1.o rw_events.o	\
-	  rw_routines.o kin_functions.o open_file.o setrun.o		\
+GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o setrun.o	\
 	  run_printout.o dgauss.o ranmar.o getissud.o
 
-INCLUDEF = coupl.inc genps.inc hbook.inc pmass.inc nexternal.inc cluster.inc
-
-BANNER =  write_banner.o  rw_events.o ranmar.o  kin_functions.o open_file.o  rw_routines.o alfas_functions.o
-
-COMBINE = combine_events.o  rw_events.o ranmar.o  kin_functions.o open_file.o rw_routines.o alfas_functions.o setrun.o
-
-
+INCLUDEF = coupl.inc genps.inc pmass.inc nexternal.inc cluster.inc
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
@@ -30,8 +21,6 @@ all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libm
     param_card.inc
 	rm -f PDF/*.o
 
-scaled.dat:
-	combine_events
 
 $(BINDIR)sum_html: sum_html.o 
 	$(FC) $(FFLAGS) -o sum_html sum_html.o   
@@ -71,14 +60,6 @@ run_card.inc: ../Cards/run_card.dat
 
 param_card.inc: ../Cards/param_card.dat
 	../bin/aMCatNLO treatcards param
-
-$(BINDIR)gen_ximprove: gen_ximprove.o ranmar.o rw_routines.o open_file.o
-	$(FC) $(FFLAGS) -o gen_ximprove gen_ximprove.o ranmar.o rw_routines.o open_file.o
-	mv gen_ximprove $(BINDIR)
-
-$(BINDIR)combine_events: $(COMBINE)
-	$(FC) $(FFLAGS) -o combine_events $(COMBINE) $(LIBDIR)/libmodel.a $(LIBDIR)/libpdf.a 
-	mv combine_events $(BINDIR)
 
 CutTools: $(LIBDIR)libcts.a
 libcuttools: $(LIBDIR)libcts.a
@@ -129,4 +110,3 @@ clean:
 	if [ -d $(CUTTOOLSDIR) ]; then cd $(CUTTOOLSDIR); make clean; cd ..; fi
 	if [ -d $(IREGIDIR) ]; then cd $(IREGIDIR); make clean; cd ..; fi
 	if [ -d $(STDHEPDIR) ]; then cd $(STDHEPDIR); make clean; cd ..; fi
-	rm -f $(BINDIR)/combine_events $(BINDIR)/gen_ximprove

@@ -1175,8 +1175,6 @@ c "npNLO".
       common/event_attributes/nattr,npNLO,npLO
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      integer    maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs

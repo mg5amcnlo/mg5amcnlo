@@ -55,8 +55,6 @@ c--cuts
 c
 c     les houches accord stuff to identify neutrinos
 c
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
 c      include 'leshouche.inc'
@@ -188,8 +186,6 @@ c BW stuff
       save s_mass_FKS
       common/to_phase_space_s_channel/s_mass
 c Les Houches common block
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
