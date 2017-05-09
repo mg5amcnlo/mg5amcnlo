@@ -54,14 +54,14 @@ c
       common/tosigint/ndim
       integer ncall,itmax,nconfigs,ntry, ngraphs
       integer icb(nexternal-1,maxswitch),jc(12),nswitch
-      double precision saveamp(maxamps)
+      double precision saveamp(ngraphs)
       integer nmatch, ibase
       logical mtc, even
 
 c
 c     Global
 c
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
       include 'coupl.inc'
 

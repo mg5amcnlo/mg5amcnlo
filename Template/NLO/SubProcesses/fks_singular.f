@@ -649,7 +649,7 @@ c bpower.
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       integer            mapconfig(0:lmaxconfigs), iconfig
       common/to_mconfigs/mapconfig,                iconfig
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
@@ -797,7 +797,7 @@ c terms.
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       integer            mapconfig(0:lmaxconfigs), iconfig
       common/to_mconfigs/mapconfig,                iconfig
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor

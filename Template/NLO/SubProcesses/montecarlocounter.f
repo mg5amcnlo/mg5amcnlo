@@ -984,7 +984,7 @@ c the same method
       double precision p_born(0:3,nexternal-1)
       common/pborn/p_born
 
-      double Precision amp2(maxamps), jamp2(0:maxamps)
+      double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
 
       integer i_fks,j_fks

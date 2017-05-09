@@ -518,8 +518,10 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               nfksconfs,maxproc,maxflow,nexternal,
                               fortran_model)
         filename = 'genps.inc'
-        maxamps = len(matrix_element.born_matrix_element.get('diagrams'))
-        self.write_genps(writers.FortranWriter(filename),maxproc,maxamps,maxflow,fortran_model)
+        ngraphs = matrix_element.born_matrix_element.get_number_of_amplitudes()
+        ncolor = max(1,len(matrix_element.born_matrix_element.get('color_basis')))
+        self.write_genps(writers.FortranWriter(filename),maxproc,ngraphs,\
+                         ncolor,maxflow,fortran_model)
 
         filename = 'configs_and_props_info.dat'
         nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
@@ -644,7 +646,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'setscales.f',
                      'symmetry_fks_test_MC.f',
                      'symmetry_fks_test_ME.f',
-                     'symmetry_fks_test_Sij.f',
                      'symmetry_fks_v3.f',
                      'trapfpe.c',
                      'vegas2.for',
@@ -1169,14 +1170,15 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         writer.writelines(lines)
 
 
-    def write_genps(self, writer, maxproc, maxamps, maxflow, fortran_model):
+    def write_genps(self, writer, maxproc,ngraphs,ncolor,maxflow, fortran_model):
         """writes the genps.inc file
         """
         lines = []
         lines.append("include 'maxparticles.inc'")
         lines.append("include 'maxconfigs.inc'")
-        lines.append("integer maxproc,maxamps,maxflow")
-        lines.append("parameter (maxproc=%d,maxamps=%d,maxflow=%d)" % (maxproc,maxamps,maxflow))
+        lines.append("integer maxproc,ngraphs,ncolor,maxflow")
+        lines.append("parameter (maxproc=%d,ngraphs=%d,ncolor=%d,maxflow=%d)" % \
+                     (maxproc,ngraphs,ncolor,maxflow))
         writer.writelines(lines)
 
 
