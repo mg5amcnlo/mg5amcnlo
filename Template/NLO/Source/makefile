@@ -17,14 +17,10 @@ INCLUDEF = coupl.inc genps.inc pmass.inc nexternal.inc cluster.inc
 
 .f.o: ; $(FC) $(FFLAGS) -c $*.f
 
-all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a  $(LIBDIR)libmodel.a  $(LIBDIR)libcernlib.a \
-    param_card.inc
+all: $(LIBDIR)libdhelas.a $(LIBDIR)libgeneric.a $(LIBDIR)libpdf.a	\
+    $(LIBDIR)libmodel.a $(LIBDIR)libcernlib.a param_card.inc
 	rm -f PDF/*.o
 
-
-$(BINDIR)sum_html: sum_html.o 
-	$(FC) $(FFLAGS) -o sum_html sum_html.o   
-	mv sum_html $(BINDIR)
 
 $(LIBDIR)libdhelas.a: DHELAS
 	rm -f $(LIBDIR)libdhelas.a
