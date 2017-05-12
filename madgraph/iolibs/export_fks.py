@@ -960,9 +960,28 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
                              % (iFKS,len(links),real_configs))
 
+        # this is for 'LOonly' processes; in this case, a fake configuration 
+        # with all the born diagrams is written
+        if not matrix_element.get_fks_info_list():
+            # compute (again) the number of configurations at the born
+            base_diagrams = born_me.get('base_amplitude').get('diagrams')
+            minvert = min([max([len(vert.get('legs')) for vert in \
+                                    diag.get('vertices')]) for diag in base_diagrams])
+    
+            for idiag, diag in enumerate(base_diagrams):
+                if any([len(vert.get('legs')) > minvert for vert in
+                        diag.get('vertices')]):
+                # Only 3-vertices allowed in configs.inc
+                    continue
+                max_links = max_links + 1
+                
+            real_configs=', '.join(['%d' % i for i in range(1, max_links+1)])
+            lines.append("data (real_from_born_conf(irfbc,%d),irfbc=1,%d) /%s/" \
+                             % (1,max_links,real_configs))
+
         lines2.append("integer irfbc")
         lines2.append("integer real_from_born_conf(%d,%d)" \
-                         % (max_links,len(matrix_element.get_fks_info_list())))
+                         % (max_links, max(len(matrix_element.get_fks_info_list()),1)))
         # Write the file
         writer.writelines(lines2+lines)
 
