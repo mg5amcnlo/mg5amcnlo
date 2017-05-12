@@ -490,10 +490,10 @@ c     IS clustering
       if((ipart(1,ida1).ge.1.and.ipart(1,ida1).le.2).or.
      $   (ipart(1,ida2).ge.1.and.ipart(1,ida2).le.2))then
 c     Check if ida1 is outgoing parton or ida2 is outgoing parton
-         if(.not.islast.and.ipart(1,ida2).ge.1
-     $        .and.ipart(1,ida2).le.2.and.isparton(idda1).or.ipart(1
-     $        ,ida1).ge.1.and.ipart(1
-     $        ,ida1).le.2.and.isparton(idda2))then
+         if((.not.islast) .and. ((ipart(1,ida2).ge.1 .and. ipart(1
+     $        ,ida2).le.2 .and. isparton(idda1)) .or. (ipart(1
+     $        ,ida1).ge.1 .and. ipart(1,ida1).le.2 .and.
+     $        isparton(idda2))))then
            ispartonvx=.true.
         else
            ispartonvx=.false.
