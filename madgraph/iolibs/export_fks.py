@@ -1208,6 +1208,11 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
             maxproc = max(maxproc, nprocs)
             maxflow = max(maxflow, nflows)
 
+        # this is for LOonly
+        if not matrix_element.get_fks_info_list():
+            (newlines, nprocs, nflows) = self.get_leshouche_lines_dummy(matrix_element.born_matrix_element, 1)
+            lines.extend(newlines)
+
         # Write the file
         open(filename,'w').write('\n'.join(lines))
 
@@ -2217,8 +2222,8 @@ c     this subdir has no soft singularities
             charges = [0.] * len(colors) 
 
             fks_i = len(colors)
-            # use the first colored particle if it exists, or 
-            # just the first
+            # use the last colored particle if it exists, or 
+            # just the last
             fks_j=1
             for cpos, col in enumerate(colors[:-1]):
                 if col != 1:
@@ -2707,6 +2712,109 @@ C     charge is set 0. with QCD corrections, which is irrelevant
                                                                                    ninitial)
                     # And output them properly
                     for cf_i, color_flow_dict in enumerate(color_flow_list):
+                        for i in [0, 1]:
+                            lines.append("C   %4d   %4d   %4d      %s" % \
+                                 (ime, i + 1, cf_i + 1,
+                                  " ".join(["%3d" % color_flow_dict[l.get('number')][i] \
+                                            for l in legs])))
+
+                    nflow = len(color_flow_list)
+
+        nproc = len(matrix_element.get('processes'))
+    
+        return lines, nproc, nflow
+
+
+    def get_leshouche_lines_dummy(self, matrix_element, ime):
+        #test written
+        """As get_leshouche_lines, but for 'fake' real emission processes (LOonly
+        In this case, write born color structure times ij -> i,j splitting)
+        """
+
+        bornproc = matrix_element.get('processes')[0]
+        colors = [l.get('color') for l in bornproc.get('legs')] 
+
+        fks_i = len(colors)
+        # use the last colored particle if it exists, or 
+        # just the last
+        fks_j=1
+        for cpos, col in enumerate(colors):
+            if col != 1:
+                fks_j = cpos+1
+    
+        # Extract number of external particles
+        (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
+        nexternal+=1 # remember, in this case matrix_element is born
+    
+        lines = []
+        for iproc, proc in enumerate(matrix_element.get('processes')):
+            # add the fake extra leg
+            legs = proc.get_legs_with_decays() + \
+                   [fks_common.FKSLeg({'id': -21,
+                                       'number': nexternal,
+                                       'state': True,
+                                       'fks': 'i',
+                                       'color': 8,
+                                       'charge': 0.,
+                                       'massless': True,
+                                       'spin': 3,
+                                       'is_part': True,
+                                       'self_antipart': True})]
+                                        
+            lines.append("I   %4d   %4d       %s" % \
+                         (ime, iproc + 1,
+                          " ".join([str(l.get('id')) for l in legs])))
+            for i in [1, 2]:
+                lines.append("M   %4d   %4d   %4d      %s" % \
+                         (ime, i, iproc + 1,
+                          " ".join([ "%3d" % 0 ] * ninitial + \
+                                   [ "%3d" % i ] * (nexternal - ninitial))))
+    
+            # Here goes the color connections corresponding to the JAMPs
+            # Only one output, for the first subproc!
+            if iproc == 0:
+                # If no color basis, just output trivial color flow
+                if not matrix_element.get('color_basis'):
+                    for i in [1, 2]:
+                        lines.append("C   %4d   %4d   1      %s" % \
+                                 (ime, i, 
+                                  " ".join([ "%3d" % 0 ] * nexternal)))
+                    color_flow_list = []
+                    nflow = 1
+    
+                else:
+                    # in this case the last particle (-21) has two color indices
+                    # and it has to be emitted by j_fks
+                    # First build a color representation dictionnary
+                    repr_dict = {}
+                    for l in legs[:-1]:
+                        repr_dict[l.get('number')] = \
+                            proc.get('model').get_particle(l.get('id')).get_color()\
+                            * (-1)**(1+l.get('state'))
+                    # Get the list of color flows
+                    color_flow_list = \
+                        matrix_element.get('color_basis').color_flow_decomposition(repr_dict,
+                                                                                   ninitial)
+                    # And output them properly
+                    for cf_i, color_flow_dict in enumerate(color_flow_list):
+                        # we have to add the extra leg (-21), linked to the j_fks leg
+                        # first, find the maximum color label
+                        maxicol = max(sum(color_flow_dict.values(), []))
+                        #then, replace the color labels
+                        if color_flow_dict[fks_j][0] == 0:
+                            anti = True
+                            icol_j = color_flow_dict[fks_j][1]
+                        else:
+                            anti = False
+                            icol_j = color_flow_dict[fks_j][0]
+
+                        if anti:
+                            color_flow_dict[nexternal] = (maxicol + 1, color_flow_dict[fks_j][1])
+                            color_flow_dict[fks_j][1] = maxicol + 1
+                        else:
+                            color_flow_dict[nexternal] = (color_flow_dict[fks_j][0], maxicol + 1) 
+                            color_flow_dict[fks_j][0] = maxicol + 1
+
                         for i in [0, 1]:
                             lines.append("C   %4d   %4d   %4d      %s" % \
                                  (ime, i + 1, cf_i + 1,
