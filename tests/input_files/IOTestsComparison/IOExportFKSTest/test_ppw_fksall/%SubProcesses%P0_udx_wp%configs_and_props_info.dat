@@ -1,0 +1,108 @@
+# C -> MAPCONFIG_D
+# F/D -> IFOREST_D
+# S -> SPROP_D
+# T -> TPRID_D
+# M -> PMASS_D/PWIDTH_D
+# P -> POW_D
+# 
+# nFKSprocess 1
+# Diagram 1 for nFKSprocess 1
+C      1      1      1 
+F      1     -1      1      2
+D      1
+D      3
+T      1     -1      1            1
+F      1     -2      1      2
+D     -1
+D      4
+# Diagram 2 for nFKSprocess 1
+C      1      2      2 
+F      1     -1      2      2
+D      1
+D      4
+T      1     -1      2            2
+F      1     -2      2      2
+D     -1
+D      3
+# Number of configs for nFKSprocess 1
+C      1      0      2
+# 
+# nFKSprocess 2
+# Diagram 1 for nFKSprocess 2
+C      2      1      1 
+F      2     -1      1      2
+D      1
+D      3
+T      2     -1      1            1
+F      2     -2      1      2
+D     -1
+D      4
+# Diagram 2 for nFKSprocess 2
+C      2      2      2 
+F      2     -1      2      2
+D      1
+D      4
+T      2     -1      2            2
+F      2     -2      2      2
+D     -1
+D      3
+# Number of configs for nFKSprocess 2
+C      2      0      2
+# 
+# nFKSprocess 3
+# Diagram 1 for nFKSprocess 3
+C      3      1      1 
+F      3     -1      1      2
+D      4
+D      3
+S      3     -1      1           -1
+# Diagram 2 for nFKSprocess 3
+C      3      2      2 
+F      3     -1      2      2
+D      1
+D      4
+T      3     -1      2            2
+F      3     -2      2      2
+D     -1
+D      3
+# Number of configs for nFKSprocess 3
+C      3      0      2
+# 
+# nFKSprocess 4
+# Diagram 1 for nFKSprocess 4
+C      4      1      1 
+F      4     -1      1      2
+D      4
+D      3
+S      4     -1      1            2
+# Diagram 2 for nFKSprocess 4
+C      4      2      2 
+F      4     -1      2      2
+D      1
+D      3
+T      4     -1      2            1
+F      4     -2      2      2
+D     -1
+D      4
+# Number of configs for nFKSprocess 4
+C      4      0      2
+# 
+M      1     -1      1           -1 
+P      1     -1      1      1 
+M      1     -1      2           -2 
+P      1     -1      2      1 
+# 
+M      2     -1      1           -1 
+P      2     -1      1      1 
+M      2     -1      2           -2 
+P      2     -1      2      1 
+# 
+M      3     -1      1           -1 
+P      3     -1      1      1 
+M      3     -1      2           -2 
+P      3     -1      2      1 
+# 
+M      4     -1      1            2 
+P      4     -1      1      1 
+M      4     -1      2           -1 
+P      4     -1      2      1 
