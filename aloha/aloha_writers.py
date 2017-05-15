@@ -1340,7 +1340,7 @@ class ALOHAWriterForCPP(WriteALOHA):
                    'cmath.sqrt':'sqrt(%s)', 
                    'sqrt': 'sqrt(%s)',
                    'complexconjugate': 'conj(dcmplx(%s))',
-                   '/' : '{0}/%s'.format(one),
+                   '/' : '{0}/(%s)'.format(one),
                    'abs': 'std::abs(%s)'
                    }
             
