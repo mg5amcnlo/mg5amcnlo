@@ -1080,6 +1080,9 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         max_iconfig=0
         max_leg_number=0
 
+        ########################################################
+        # this is for standard processes with [(real=)XXX]
+        ########################################################
         for iFKS, conf in enumerate(matrix_element.get_fks_info_list()):
             iFKS=iFKS+1
             iconfig = 0
@@ -1164,6 +1167,136 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                                      (iFKS,leg.get('number'), iconf + 1, leg.get('id')))
                     lines2.append("P   %4d   %4d   %4d   %4d " % \
                                      (iFKS,leg.get('number'), iconf + 1, pow_part))
+
+        ########################################################
+        # this is for [LOonly=XXX]
+        ########################################################
+        if not matrix_element.get_fks_info_list():
+            born_me = matrix_element.born_matrix_element
+            # as usual, in this case we assume just one FKS configuration 
+            # exists with diagrams corresponding to born ones X the ij -> i,j
+            # splitting. Here j is chosen to be the last colored particle in
+            # the particle list
+            bornproc = born_me.get('processes')[0]
+            colors = [l.get('color') for l in bornproc.get('legs')] 
+
+            fks_i = len(colors)
+            # use the last colored particle if it exists, or 
+            # just the last
+            fks_j=1
+            for cpos, col in enumerate(colors):
+                if col != 1:
+                    fks_j = cpos+1
+                    fks_j_id = [l.get('id') for l in bornproc.get('legs')][cpos]
+
+            # for the moment, if j is initial-state, we do nothing
+            if fks_j > ninitial:
+                iFKS=1
+                iconfig = 0
+                s_and_t_channels = []
+                mapconfigs = []
+                base_diagrams = born_me.get('base_amplitude').get('diagrams')
+                model = born_me.get('base_amplitude').get('process').get('model')
+                minvert = min([max([len(vert.get('legs')) for vert in \
+                                        diag.get('vertices')]) for diag in base_diagrams])
+        
+                lines.append("# ")
+                lines.append("# nFKSprocess %d" % iFKS)
+                for idiag, diag in enumerate(base_diagrams):
+                    if any([len(vert.get('legs')) > minvert for vert in
+                            diag.get('vertices')]):
+                    # Only 3-vertices allowed in configs.inc
+                        continue
+                    iconfig = iconfig + 1
+                    helas_diag = born_me.get('diagrams')[idiag]
+                    mapconfigs.append(helas_diag.get('number'))
+                    lines.append("# Diagram %d for nFKSprocess %d" % \
+                                     (helas_diag.get('number'),iFKS))
+                    # Correspondance between the config and the amplitudes
+                    lines.append("C   %4d   %4d   %4d " % (iFKS,iconfig,
+                                                           helas_diag.get('number')))
+
+                    # Need to reorganize the topology so that we start with all
+                    # final state external particles and work our way inwards
+                    schannels, tchannels = helas_diag.get('amplitudes')[0].\
+                        get_s_and_t_channels(ninitial, model, 990)
+        
+                    s_and_t_channels.append([schannels, tchannels])
+
+                    #the first thing to write is the splitting ij -> i,j
+                    lines.append("F   %4d   %4d   %4d   %4d" % \
+                                     (iFKS,-1,iconfig,2))
+                                     #(iFKS,last_leg.get('number'), iconfig, len(daughters)))
+                    lines.append("D   %4d" % nexternal)
+                    lines.append("D   %4d" % fks_j)
+                    lines.append("S   %4d   %4d   %4d   %10d" % \
+                                         (iFKS,-1, iconfig,fks_j_id)) 
+                    # now we continue with all the other vertices of the diagrams;
+                    # we need to shift the 'last_leg' by 1 and replace leg fks_j with -1
+
+                    # Write out propagators for s-channel and t-channel vertices
+                    allchannels = schannels
+                    if len(tchannels) > 1:
+                        # Write out tchannels only if there are any non-trivial ones
+                        allchannels = schannels + tchannels
+
+                    for vert in allchannels:
+                        daughters = [leg.get('number') for leg in vert.get('legs')[:-1]]
+                        last_leg = vert.get('legs')[-1]
+                        lines.append("F   %4d   %4d   %4d   %4d" % \
+                                         (iFKS,last_leg.get('number')-1, iconfig, len(daughters)))
+
+                        # legs with negative number in daughters have to be shifted by -1
+                        for i_dau in range(len(daughters)):
+                            if daughters[i_dau] < 0:
+                                daughters[i_dau] += -1
+                        # finally relable fks with -1 if it appears in daughters
+                        if fks_j in daughters:
+                            daughters[daughters.index(fks_j)] = -1
+                        for d in daughters:
+                            lines.append("D   %4d" % d)
+                        if vert in schannels:
+                            lines.append("S   %4d   %4d   %4d   %10d" % \
+                                             (iFKS,last_leg.get('number')-1, iconfig,
+                                              last_leg.get('id')))
+                        elif vert in tchannels[:-1]:
+                            lines.append("T   %4d   %4d   %4d   %10d" % \
+                                             (iFKS,last_leg.get('number')-1, iconfig,
+                                              abs(last_leg.get('id'))))
+
+                        # update what the array sizes (mapconfig,iforest,etc) will be
+                        max_leg_number = min(max_leg_number,last_leg.get('number')-1)
+                    max_iconfig = max(max_iconfig,iconfig)
+        
+                # Write out number of configs
+                lines.append("# Number of configs for nFKSprocess %d" % iFKS)
+                lines.append("C   %4d   %4d   %4d" % (iFKS,0,iconfig))
+
+                # write the props.inc information
+                lines2.append("# ")
+                particle_dict = born_me.get('processes')[0].get('model').\
+                    get('particle_dict')
+        
+                for iconf, configs in enumerate(s_and_t_channels):
+                    lines2.append("M   %4d   %4d   %4d   %10d " % \
+                                    (iFKS,-1, iconf + 1, fks_j_id))
+                    pow_part = 1 + int(particle_dict[fks_j_id].is_boson())
+                    lines2.append("P   %4d   %4d   %4d   %4d " % \
+                                    (iFKS,-1, iconf + 1, pow_part))
+                    for vertex in configs[0] + configs[1][:-1]:
+                        leg = vertex.get('legs')[-1]
+                        if leg.get('id') not in particle_dict:
+                            # Fake propagator used in multiparticle vertices
+                            pow_part = 0
+                        else:
+                            particle = particle_dict[leg.get('id')]
+        
+                            pow_part = 1 + int(particle.is_boson())
+        
+                        lines2.append("M   %4d   %4d   %4d   %10d " % \
+                                         (iFKS,leg.get('number')-1, iconf + 1, leg.get('id')))
+                        lines2.append("P   %4d   %4d   %4d   %4d " % \
+                                         (iFKS,leg.get('number')-1, iconf + 1, pow_part))
     
         # Write the file
         open(filename,'w').write('\n'.join(lines+lines2))

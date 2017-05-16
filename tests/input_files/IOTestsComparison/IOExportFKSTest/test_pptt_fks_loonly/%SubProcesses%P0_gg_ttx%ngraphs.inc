@@ -1,2 +1,2 @@
       INTEGER    N_MAX_CG
-      PARAMETER (N_MAX_CG=0)
+      PARAMETER (N_MAX_CG=3)
