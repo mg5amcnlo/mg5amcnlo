@@ -48,7 +48,7 @@ c GeV
          stop
       endif
 
-      if (iipdg.eq.21) then
+      if (abs(iipdg).eq.21) then
 c Gluon sudakov         
 c     g->gg contribution
          gamma=CA*alphasq0*log(Q1/q0)/pi                     ! A1
@@ -211,7 +211,9 @@ c**************************************************
       integer ipdg, irfl
       integer get_color
 
-      isqcd=(iabs(get_color(ipdg)).gt.1)
+      irfl=ipdg
+      if (irfl.eq.-21)irfl=21
+      isqcd=(iabs(get_color(irfl)).gt.1)
 
       return
       end
@@ -276,6 +278,9 @@ c**************************************************
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
+      if (idmo.eq.-21) idmo=21
+      if (idda1.eq.-21) idda1=21
+      if (idda2.eq.-21) idda2=21
 
       if (btest(mlevel,4)) then
         write(*,*) ' updating ipart for: ',ida1,ida2,' -> ',imo
@@ -429,6 +434,7 @@ c***************************************************
       idmo=ipdg(imo)
       idda1=ipdg(ida1)
       idda2=ipdg(ida2)
+
 c     Check QCD vertex
       if(islast.or..not.isqcd(idmo).or..not.isqcd(idda1).or.
      &     .not.isqcd(idda2)) then
@@ -795,7 +801,7 @@ c     Consider t-channel jet radiations as jets only if FS line is a jet
 c     line
                   if(goodjet(ida(3-i))) then
                      if(partonline(j).or.
-     $                    ipdgcl(ida(3-i),igraphs(1),nFKSprocess).eq.21)then
+     $                    abs(ipdgcl(ida(3-i),igraphs(1),nFKSprocess)).eq.21)then
 c     Need to include gluon to avoid soft singularity
                         iqjets(ipart(1,ida(3-i)))=1 ! 1 means for sure jet
                      else
