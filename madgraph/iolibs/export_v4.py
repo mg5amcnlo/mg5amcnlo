@@ -2559,8 +2559,12 @@ class ProcessExporterFortranMW(ProcessExporterFortran):
                             self.dir_path+'/bin/internal/common_run_interface.py')
         cp(_file_path+'/various/misc.py', self.dir_path+'/bin/internal/misc.py')        
         cp(_file_path+'/iolibs/files.py', self.dir_path+'/bin/internal/files.py')
-        #cp(_file_path+'/iolibs/save_load_object.py', 
-        #                      self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/iolibs/save_load_object.py', 
+                              self.dir_path+'/bin/internal/save_load_object.py') 
+        cp(_file_path+'/madevent/gen_crossxhtml.py', 
+                              self.dir_path+'/bin/internal/gen_crossxhtml.py')
+        cp(_file_path+'/various/FO_analyse_card.py', 
+                              self.dir_path+'/bin/internal/FO_analyse_card.py')                 
         cp(_file_path+'/iolibs/file_writers.py', 
                               self.dir_path+'/bin/internal/file_writers.py')
         #model file                        

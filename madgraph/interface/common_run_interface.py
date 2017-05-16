@@ -3124,8 +3124,13 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             except Exception:
                 logger.warning('Missing mass in the lhef file (%s) . Please fix this (use the "update missing" command if needed)', param.lhacode[0])
                 continue
-            if width/mass < 1e-12:
+            if mass and width/mass < 1e-12:
                 logger.error('The width of particle %s is too small for an s-channel resonance (%s). If you have this particle in an s-channel, this is likely to create numerical instabilities .', param.lhacode[0], width)
+                if CommonRunCmd.sleep_for_error:
+                    time.sleep(5)
+                    CommonRunCmd.sleep_for_error = False
+            elif not mass and width:
+                logger.error('The width of particle %s is different of zero for a massless particle.', param.lhacode[0])
                 if CommonRunCmd.sleep_for_error:
                     time.sleep(5)
                     CommonRunCmd.sleep_for_error = False
