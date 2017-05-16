@@ -73,7 +73,7 @@ c Quark Sudakov
          if (iimode.eq.2) then
             gamma=gamma+CF*alphasq0**2*log(Q1/q0)*kappa/(2d0*pi**2) ! A2
          endif
-         if (iipdg.gt.NF) then ! include mass effects
+         if (abs(iipdg).gt.NF) then ! include mass effects
             qom=q0/mass(iipdg)
             gamma=gamma+CF*alphasq0/pi/2d0*( 0.5d0 - qom*atan(1d0/qom) -
      $           (1d0-0.5d0*qom**2)*log(1d0+1d0/qom**2) )
