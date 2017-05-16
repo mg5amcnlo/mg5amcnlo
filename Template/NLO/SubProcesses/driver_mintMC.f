@@ -724,16 +724,12 @@ c
          write(*,*) 'Not subdividing B.W.'
          lbw(0)=0
       else
-         lbw(0)=1
-         jconfig=dconfig*1000.1
-         write(*,*) 'Using dconfig=',jconfig
-         call DeCode(jconfig,lbw(1),3,nexternal)
-         write(*,*) 'BW Setting ', (lbw(j),j=1,nexternal-2)
+         write(*,*) 'Error BW setting: not supported at NLO'
+         stop 1
       endif
  10   format( a)
  12   format( a,i4)
       end
-c     $E$ get_user_params $E$ ! tag for MadWeight
 c     change this routine to read the input in a file
 c
 
@@ -1175,8 +1171,6 @@ c "npNLO".
       common/event_attributes/nattr,npNLO,npLO
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
-      integer    maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs

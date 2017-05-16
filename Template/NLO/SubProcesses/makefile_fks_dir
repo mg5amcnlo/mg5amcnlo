@@ -37,24 +37,17 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 MC_integer.o $(reweight_xsec_events_pdf_dummy)			\
 	 $(applgrid_interface)
 
-# Files needed for vegas, mint & mintMC
+# Files needed for mintFO & mintMC
 RUN= $(FO_ANALYSE) $(FILES) cuts.o pythia_unlops.o recluster.o 		\
 	fill_MC_mshell.o born_hel.o open_output_files.o			\
 	add_write_info.o BinothLHA.o madfks_plot.o
 
-# Files for vegas
-VEGAS= $(RUN) driver_vegas.o vegas2.o handling_lhe_events.o
-
-# Files for vegas
+# Files for mintFO
 MINTFO= $(RUN) driver_mintFO.o mint-integrator2.o handling_lhe_events.o
 
 # Files for mintMC
 MINTMC= $(RUN) mint-integrator2.o driver_mintMC.o write_event.o		\
 	handling_lhe_events.o
-
-# Files for Born reweighting
-BORN_REWEIGHT= $(RUN) driver_reweight.o handling_lhe_events.o		\
-	write_event.o
 
 # Files for check_poles
 POLES= $(FILES) cuts.o pythia_unlops.o recluster.o check_poles.o	\
@@ -96,10 +89,6 @@ gensym: $(SYM)
 	rm fks_singular.o
 	strip gensym
 
-test_Sij: symmetry_fks_test_Sij.o $(TEST)
-	$(FC) $(LDFLAGS) -o test_Sij symmetry_fks_test_Sij.o $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
-	strip test_Sij
-
 test_ME: symmetry_fks_test_ME.o $(TEST)
 	$(FC) $(LDFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
 	rm symmetry_fks_test_ME.o
@@ -114,11 +103,6 @@ check_poles: $(POLES) $(libmadloop)
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	strip check_poles
 
-madevent_vegas: $(VEGAS) $(libmadloop) makefile $(LIBS)
-	$(FC) -o madevent_vegas $(VEGAS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
-	rm handling_lhe_events.o
-	strip madevent_vegas
-
 madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
 	$(FC) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
@@ -128,10 +112,6 @@ madevent_mintFO: $(MINTFO) $(libmadloop) makefile $(LIBS)
 	$(FC) -o madevent_mintFO $(MINTFO) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
 	rm handling_lhe_events.o
 	strip madevent_mintFO
-
-madevent_reweight: $(BORN_REWEIGHT) $(libmadloop) makefile $(LIBS)
-	$(FC) -o madevent_reweight $(BORN_REWEIGHT) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
-	rm handling_lhe_events.o
 
 reweight_xsec_events: $(RWGFILES) makefile $(LIBS)
 	$(FC) -o reweight_xsec_events $(RWGFILES) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)

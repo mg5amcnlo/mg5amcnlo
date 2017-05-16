@@ -278,8 +278,6 @@ c Common
       integer tprid(-max_branch:-1,n_max_cg)
       integer mapconfig(0:n_max_cg)
       common/c_configs_inc/iforest,sprop,tprid,mapconfig
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
@@ -341,8 +339,6 @@ c**************************************************************************
       double precision prwidth(-max_branch:-1,n_max_cg)
       integer prow(-max_branch:-1,n_max_cg)
       common/c_props_inc/prmass,prwidth,prow
-      integer maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      &     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs

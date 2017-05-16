@@ -649,7 +649,7 @@ c bpower.
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       integer            mapconfig(0:lmaxconfigs), iconfig
       common/to_mconfigs/mapconfig,                iconfig
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
@@ -797,7 +797,7 @@ c terms.
      &                         fkssymmetryfactorDeg,ngluons,nquarks
       integer            mapconfig(0:lmaxconfigs), iconfig
       common/to_mconfigs/mapconfig,                iconfig
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,          jamp2
       double precision   diagramsymmetryfactor
       common /dsymfactor/diagramsymmetryfactor
@@ -1612,8 +1612,6 @@ c mother and the extra (n+1) parton is given the PDG code of the gluon.
       include 'fks_info.inc'
       include 'genps.inc'
       integer k,ict,iFKS
-      integer    maxflow
-      parameter (maxflow=999)
       integer idup(nexternal,maxproc),mothup(2,nexternal,maxproc),
      $     icolup(2,nexternal,maxflow),niprocs
       common /c_leshouche_inc/idup,mothup,icolup,niprocs
