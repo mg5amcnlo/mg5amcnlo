@@ -519,7 +519,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                               fortran_model)
 
         filename = 'configs_and_props_info.dat'
-        nconfigs,max_leg_number,nfksconfs=self.write_configs_and_props_info_file(
+        nconfigs,max_leg_number=self.write_configs_and_props_info_file(
                               filename, 
                               matrix_element)
 
@@ -1074,7 +1074,6 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         lines.append("# M -> PMASS_D/PWIDTH_D") 
         lines.append("# P -> POW_D") 
         lines2 = []
-        nconfs = len(matrix_element.get_fks_info_list())
         (nexternal, ninitial) = matrix_element.get_nexternal_ninitial()
 
         max_iconfig=0
@@ -1301,7 +1300,7 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         # Write the file
         open(filename,'w').write('\n'.join(lines+lines2))
 
-        return max_iconfig, max_leg_number, nconfs
+        return max_iconfig, max_leg_number
 
 
     def write_leshouche_info_declarations(self, writer, nfksconfs, 
