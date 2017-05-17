@@ -453,14 +453,16 @@ class FKSHelasMultiProcess(helas_objects.HelasMultiProcess):
 
     def get_max_configs(self):
         """Return max_configs"""
-
+            
         if self['max_configs'] < 0:
             try:
                 self['max_configs'] = max([me.get_num_configs() \
                                   for me in self['real_matrix_elements']])
             except ValueError:
-                self['max_configs'] = max([me.born_matrix_element.get_num_configs() \
-                                  for me in self['matrix_elements']])
+                pass
+            self['max_configs'] = max(self['max_configs'],\
+                                      max([me.born_matrix_element.get_num_configs() \
+                                           for me in self['matrix_elements']]))
 
         return self['max_configs']
 
