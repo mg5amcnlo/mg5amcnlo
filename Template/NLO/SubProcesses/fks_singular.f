@@ -54,6 +54,8 @@ c value to the list of weights using the add_wgt subroutine
       common /cxiScut_used/xiScut_used,xiBSVcut_used
       double precision fxfx_exp_rewgt
       common /c_fxfx_exp_regt/ fxfx_exp_rewgt
+      character*4      abrv
+      common /to_abrv/ abrv
       call cpu_time(tBefore)
       if (f_nb.eq.0d0) return
       if (xi_i_fks_ev .gt. xiBSVcut_used) return
@@ -62,7 +64,8 @@ c value to the list of weights using the add_wgt subroutine
       g22=g**(nint(2*wgtbpower+2))
       wgt1=wgtnstmp*f_nb/g22
       wgt4=wgtnstmp_avgvirt*f_nb/g22
-      if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0) then
+      if (ickkw.eq.3 .and. fxfx_exp_rewgt.ne.0d0 .and. abrv.ne.'born')
+     $     then
          wgt1=wgt1 - fxfx_exp_rewgt*born_wgt*f_nb/g2/(4d0*pi)
       elseif (ickkw.eq.-1) then
          if (wgtbpower.ne.0) then
