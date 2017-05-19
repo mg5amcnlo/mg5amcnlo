@@ -1205,6 +1205,14 @@ def get_routine_name(name=None, outgoing=None, tag=None, abstract=None):
 def combine_name(name, other_names, outgoing, tag=None, unknown_propa=False):
     """ build the name for combined aloha function """
 
+    if tag and any(t.startswith('P') for t in tag[:-1]):
+        # propagator need to be the last entry for the tag
+        for i,t  in enumerate(tag):
+            if t.startswith('P'):
+                tag.pop(i)
+                tag.append(t)
+                break
+
     # Two possible scheme FFV1C1_2_X or FFV1__FFV2C1_X
     # If they are all in FFVX scheme then use the first
     p=re.compile('^(?P<type>[RFSVT]{2,})(?P<id>\d+)$')

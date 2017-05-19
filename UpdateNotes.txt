@@ -1,6 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
 2.5.5(xx/xx/xx)
+      OM: Fixing bug in the creation of the LO gridpack introduced in 2.4.3. Since 2.4.3 the generated 
+          gridpack were lacking to include the generated grid for each channel. This does not lead to 
+          bias but to a significant slow down of the associated gridpack.
       OM: Supporting user function calling other non default function.
       OM: adding the command "update to_slha1" and "update to_slha2" (still beta)
       RF: some cleanup in the NLO/Template files. Many unused subroutines deleted.
