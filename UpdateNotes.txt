@@ -7,6 +7,10 @@ Update notes for MadGraph5_aMC@NLO (in reverse time order)
       OM: Supporting user function calling other non default function.
       OM: adding the command "update to_slha1" and "update to_slha2" (still beta)
       RF: some cleanup in the NLO/Template files. Many unused subroutines deleted.
+      OM: fixing some bug related to complex_mass_scheme
+      OM: fixing bug in ALOHA for C++ output (in presence of form-factor)
+      OM: fixing lhe event for 1 to N process such that the <init> block is consistently set for the shower
+      OM: ExRootAnalysis interface is modified (need to be requested as an analysis)
 
 2.5.4(28/03/17)
       OM: Add a warning in presense of small width
