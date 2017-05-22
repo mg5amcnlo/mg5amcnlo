@@ -1638,6 +1638,12 @@ class width_estimate(object):
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
         cmd.exec_cmd('import model %s' % model.get('modelpath+restriction'))
+
+        #pattern for checking complex mass scheme.
+        has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''', re.M)
+        force_CMS =  has_cms.search(self.banner['mg5proccard'])
+        if force_CMS:
+            cmd.exec_cmd('set complex_mass_scheme')
 #        cmd._curr_model = model
 #        cmd._curr_fortran_model = helas_call_writers.FortranUFOHelasCallWriter(model)
         cmd.exec_cmd(line)

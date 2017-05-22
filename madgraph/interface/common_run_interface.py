@@ -219,7 +219,7 @@ class CheckValidForCmd(object):
             raise self.ConfigurationError, '''Can\'t load MG5.
             The variable mg5_path should not be correctly configure.'''
         
-        
+
         ufo_path = pjoin(self.me_dir,'bin','internal', 'ufomodel')
         # Import model
         if not MADEVENT:
@@ -232,10 +232,7 @@ class CheckValidForCmd(object):
             model = import_ufo.import_model(modelname, decay=True, 
                                    restrict=True, complex_mass_scheme=force_CMS)
         else:
-            #pattern for checking complex mass scheme.
-            has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''')
-            force_CMS =  has_cms.search(open(pjoin(self.me_dir,'Cards',
-                                                   'proc_card_mg5.dat')).read())
+            force_CMS = self.proc_characteristics['complex_mass_scheme']
             model = import_ufo.import_model(pjoin(self.me_dir,'bin','internal',
                          'ufomodel'), decay=True, complex_mass_scheme=force_CMS)
             
@@ -2786,7 +2783,11 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
         cross = self.results[self.run_name].get_current_info()['cross']
 
         delphes_log = pjoin(self.me_dir, 'Events', self.run_name, "%s_delphes.log" % tag)
-        self.cluster.launch_and_wait(prog,
+        if not self.cluster:
+            clus = cluster.onecore
+        else:
+            clus = self.cluster
+        clus.launch_and_wait(prog,
                         argument= [delphes_dir, self.run_name, tag, str(cross), filepath],
                         stdout=delphes_log, stderr=subprocess.STDOUT,
                         cwd=pjoin(self.me_dir,'Events'))
@@ -3388,7 +3389,6 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             return
 
         # First need to load MadSpin
-
         # Check that MG5 directory is present .
         if MADEVENT and not self.options['mg5_path']:
             raise self.InvalidCmd, '''The module decay_events requires that MG5 is installed on the system.
