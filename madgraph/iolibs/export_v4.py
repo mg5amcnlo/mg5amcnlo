@@ -27,6 +27,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 
 import aloha
@@ -314,7 +315,7 @@ class ProcessExporterFortran(VirtualExporter):
         
         if len(levels)==0:
             return
-        
+        start = time.time()
         logger.info('Generating MadAnalysis5 default cards tailored to this process')
         try:
             MA5_interpreter = common_run_interface.CommonRunCmd.\
@@ -326,7 +327,6 @@ class ProcessExporterFortran(VirtualExporter):
             return
 
         MA5_main = MA5_interpreter.main
-       
         for lvl in ['parton','hadron']:
             if lvl in levels:
                 card_to_generate = pjoin(output_dir,'madanalysis5_%s_card_default.dat'%lvl)
@@ -345,6 +345,9 @@ class ProcessExporterFortran(VirtualExporter):
                     logger.debug('-'*60)
                 else:
                     open(card_to_generate,'w').write(text)
+        stop = time.time()
+        if stop-start >1:
+            logger.info('Cards created in %.2fs' % (stop-start))
 
     #===========================================================================
     # write a procdef_mg5 (an equivalent of the MG4 proc_card.dat)
