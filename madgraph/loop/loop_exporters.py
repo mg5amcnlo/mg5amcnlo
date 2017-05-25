@@ -346,7 +346,7 @@ CF2PY CHARACTER*20, intent(out) :: PREFIX(%(nb_me)i)
                     text.append( ' if(%s) then ! %i' % (condition, i))
                 else:
                     text.append( ' else if(%s) then ! %i' % (condition,i))
-                text.append(' call %sget_me(p, ALPHAS, SCALES2, NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
+                text.append(' call %sget_me(p, ALPHAS, dsqrt(SCALES2), NHEL, ANS, RETURNCODE)' % self.prefix_info[pdgs][0])
             text.append(' endif')
         #close the function
         if min_nexternal != max_nexternal:
