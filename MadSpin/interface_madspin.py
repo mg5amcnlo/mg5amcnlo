@@ -1412,6 +1412,8 @@ class MadSpinInterface(extended_cmd.Cmd):
             info = self.generate_all.all_me[tag]
         except:
             misc.sprint(self.generate_all.all_me)
+            misc.sprint(production)
+            misc.sprint(decays)
             raise
         import copy
         

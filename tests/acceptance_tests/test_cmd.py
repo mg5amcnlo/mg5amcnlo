@@ -186,6 +186,7 @@ class TestCmdShell1(unittest.TestCase):
                     'timeout': 60,
                     'ignore_six_quark_processes': False,
                     'OLP': 'MadLoop',
+                    'crash_on_error': False,
                     'auto_update': 7,
                     'cluster_nb_retry': 1,
                     'f2py_compiler':None,

@@ -1638,6 +1638,12 @@ class width_estimate(object):
                  ' '.join('--%s=%s' % (key,value) for (key,value) in opts.items()
                         if key not in ['model', 'force', 'particles'] and value))
         cmd.exec_cmd('import model %s' % model.get('modelpath+restriction'))
+
+        #pattern for checking complex mass scheme.
+        has_cms = re.compile(r'''set\s+complex_mass_scheme\s*(True|T|1|true|$|;)''', re.M)
+        force_CMS =  has_cms.search(self.banner['mg5proccard'])
+        if force_CMS:
+            cmd.exec_cmd('set complex_mass_scheme')
 #        cmd._curr_model = model
 #        cmd._curr_fortran_model = helas_call_writers.FortranUFOHelasCallWriter(model)
         cmd.exec_cmd(line)
@@ -3210,7 +3216,7 @@ class decay_all_events(object):
                     logger.warning( 'no events for %s' % decay_tag)
                     continue
                 weights.sort(reverse=True)
-                assert weights[0] >= weights[1]
+                assert len(weights) == 1 or weights[0] >= weights[1]
                 ave_weight, std_weight = decay_tools.get_mean_sd(weights)
                 base_max_weight = 1.05 * (ave_weight+self.options['nb_sigma']*std_weight)
 

@@ -2808,7 +2808,8 @@ class MadGraphCmd(HelpToCmd, CheckValidForCmd, CompleteForCmd, CmdExtended):
                        'cluster_nb_retry':1,
                        'cluster_retry_wait':300,
                        'cluster_size':100,
-                       'output_dependencies':'external'
+                       'output_dependencies':'external',
+                       'crash_on_error':False
                        }
 
     options_madgraph= {'group_subprocesses': 'Auto',
@@ -6111,13 +6112,13 @@ os.system('%s  -O -W ignore::DeprecationWarning %s %s --mode={0}' %(sys.executab
             opt = options_name[args[0]]
             if opt=='golem':
                 self.options[opt] = pjoin(MG5DIR,name,'lib')
-                self.exec_cmd('save options', printcmd=False)
+                self.exec_cmd('save options %s' % opt, printcmd=False)
             elif opt=='pjfry':
                 self.options[opt] = pjoin(MG5DIR,'PJFry','lib')
-                self.exec_cmd('save options', printcmd=False)            
+                self.exec_cmd('save options %s' % opt, printcmd=False)            
             elif self.options[opt] != self.options_configuration[opt]:
                 self.options[opt] = self.options_configuration[opt]
-                self.exec_cmd('save options',printcmd=False)
+                self.exec_cmd('save options %s' % opt, printcmd=False)
 
 
 
@@ -6887,6 +6888,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
     def do_save(self, line, check=True, to_keep={}, log=True):
         """Not in help: Save information to file"""
 
+        
         args = self.split_arg(line)
         # Check argument validity
         if check:
@@ -7234,6 +7236,10 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
                 self.allow_notification_center = self.options[args[0]]
             else:
                 raise self.InvalidCmd('expected bool for notification_center')
+        # True/False formatting
+        elif args[0] in ['crash_on_error']:
+            tmp = banner_module.ConfigFile.format_variable(args[1], bool, 'crash_on_error')
+            self.options[args[0]] = tmp        
         elif args[0] in ['cluster_queue']:
             self.options[args[0]] = args[1].strip()
         elif args[0] in self.options:
@@ -7253,7 +7259,7 @@ in the MG5aMC option 'samurai' (instead of leaving it to its default 'auto')."""
             return stop
 
         if args[0] in self.options_configuration and '--no_save' not in args:
-            self.exec_cmd('save options --auto', log=False)
+            self.exec_cmd('save options %s' % args[0] , log=False)
         elif args[0] in self.options_madevent:
             if not '--no_save' in line:
                 logger.info('This option will be the default in any output that you are going to create in this session.')

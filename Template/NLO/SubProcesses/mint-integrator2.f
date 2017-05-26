@@ -163,7 +163,9 @@ c Initialize grids
             do kchan=1,nchans
                do kint=0,nint_used
                   xgrid(kint,kdim,kchan)=dble(kint)/nint_used
-                  nhits(kint,kdim,kchan)=0
+                  if(kint.gt.0) then
+                     nhits(kint,kdim,kchan)=0
+                  endif
                enddo
                regridded(kchan)=.true.
             enddo

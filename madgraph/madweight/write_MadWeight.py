@@ -164,10 +164,12 @@ class MG_diagram(diagram_class.MG_diagram):
         data = []
         
         for part in self.prop_content:
-            if part.mass:
+            if part.mass and part.level > 0:
                 mass = self.dict_Fmass[abs(part.pid)]
                 width = self.dict_Fwidth[abs(part.pid)]
                 content = [p.MG for p in get_all_child(part)]
+                if 1 in content or 2 in content:
+                    continue
                 content.append(0)
                 initcontent = "\n".join("""          content(%i) = %i""" % (a+1, b) for a,b in enumerate(content))
                 if mass.lower() == 'zero' or width.lower() == 'zero':

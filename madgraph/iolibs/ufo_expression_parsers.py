@@ -58,6 +58,7 @@ class UFOExpressionParser(object):
         
     def parse(self, buf):
         """Parse the string buf"""
+        self.clean()
         self.y.parse(buf)
         return self.parsed_string
 
@@ -162,6 +163,12 @@ class UFOExpressionParser(object):
     def t_error(self, t):
         logger.error("Illegal character '%s'" % t.value[0])
         t.lexer.skip(1)
+
+    def clean(self):
+        """remove variable related to the latest parsing"""
+        #nothing to do here
+        return
+        
 
     # Build the lexer
     def build(self,**kwargs):
@@ -268,6 +275,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting
     Fortran-style code."""
 
+
+
     # The following parser expressions need to be defined for each
     # output language/framework
     
@@ -279,6 +288,19 @@ class UFOExpressionParserFortran(UFOExpressionParser):
                      '<':'.LT.',
                      'or':'.OR.',
                      'and':'.AND.'}
+
+    def __init__(self, *args, **opts):
+        """ """
+        out = super(UFOExpressionParserFortran,self).__init__(*args, **opts)
+        self.to_define = set()
+        
+    def clean(self):
+        """remove information about object parse for previous parsing
+        """
+        self.to_define = set()
+        
+        
+
 
     def p_expression_number(self, p):
         "expression : NUMBER"
@@ -307,19 +329,23 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     def p_expression_if(self,p):
         "expression :   expression IF boolexpression ELSE expression "
         p[0] = 'CONDIF(%s,DCMPLX(%s),DCMPLX(%s))' % (p[3], p[1], p[5])
+        self.to_define.add('condif')
             
     def p_expression_ifimplicit(self,p):
         "expression :   expression IF expression ELSE expression "
         p[0] = 'CONDIF(DCMPLX(%s).NE.(0d0,0d0),DCMPLX(%s),DCMPLX(%s))'\
                                                              %(p[3], p[1], p[5])
+        self.to_define.add('condif')
 
     def p_expression_cond(self, p):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'COND(DCMPLX('+p[3]+'),DCMPLX('+p[5]+'),DCMPLX('+p[7]+'))'
+        self.to_define.add('cond')
 
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
         p[0] = 'RECMS('+p[3]+',DCMPLX('+p[5]+'))'
+        self.to_define.add('recms')
 
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
@@ -356,6 +382,8 @@ class UFOExpressionParserFortran(UFOExpressionParser):
         elif p[1] == 'reglogp': p[0] = 'reglogp(DCMPLX' + p[2] + ')'
         elif p[1] == 'reglogm': p[0] = 'reglogm(DCMPLX' + p[2] + ')'
 
+        if p[1] in ['reglog', 'reglogp', 'reglogm']:
+            self.to_define.add(p[1])
 
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
@@ -374,6 +402,7 @@ class UFOExpressionParserFortran(UFOExpressionParser):
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = 'pi'
+        self.to_define.add('pi')
 
 class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     """A parser for UFO algebraic expressions, outputting
@@ -413,12 +442,14 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     def p_expression_if(self,p):
         "expression :   expression IF boolexpression ELSE expression "
         p[0] = 'MP_CONDIF(%s,CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))' % (p[3], p[1], p[5])
-            
+        self.to_define.add('mp_condif')
+        
     def p_expression_ifimplicit(self,p):
         "expression :   expression IF expression ELSE expression "
         p[0] = 'MP_CONDIF(CMPLX(%s,KIND=16).NE.(0.0e0_16,0.0e0_16),CMPLX(%s,KIND=16),CMPLX(%s,KIND=16))'\
                                                              %(p[3], p[1], p[5])
-
+        self.to_define.add('mp_condif')
+        
     def p_expression_complex(self, p):
         "expression : COMPLEX '(' expression ',' expression ')'"
         p[0] = 'CMPLX(' + p[3] + ',' + p[5] + ',KIND=16)'
@@ -427,10 +458,12 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         "expression :  COND '(' expression ',' expression ',' expression ')'"
         p[0] = 'MP_COND(CMPLX('+p[3]+',KIND=16),CMPLX('+p[5]+\
                                           ',KIND=16),CMPLX('+p[7]+',KIND=16))'
+        self.to_define.add('mp_cond')
 
     def p_expression_recms(self, p):
         "expression : RECMS '(' boolexpression ',' expression ')'"
         p[0] = 'MP_RECMS('+p[3]+',CMPLX('+p[5]+',KIND=16))'
+        self.to_define.add('mp_recms')
 
     def p_expression_func(self, p):
         '''expression : CSC group
@@ -463,6 +496,9 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
         elif p[1] == 'reglogp': p[0] = 'mp_reglogp(CMPLX(' + p[2] + ',KIND=16))'
         elif p[1] == 'reglogm': p[0] = 'mp_reglogm(CMPLX(' + p[2] + ',KIND=16))'
 
+        if p[1] in ['reglog', 'reglogp', 'reglogm']:
+            self.to_define.add(p[1])
+            
     def p_expression_real(self, p):
         ''' expression : expression RE2 '''
         
@@ -481,7 +517,8 @@ class UFOExpressionParserMPFortran(UFOExpressionParserFortran):
     def p_expression_pi(self, p):
         '''expression : PI'''
         p[0] = self.mp_prefix+'pi'
-
+        self.to_define.add(self.mp_prefix+'pi')
+        
 class UFOExpressionParserCPP(UFOExpressionParser):
     """A parser for UFO algebraic expressions, outputting
     C++-style code."""

@@ -14,7 +14,6 @@ C CONSTANTS
 C  
       include "nexternal.inc"
       include "born_nhel.inc"
-      include "genps.inc"
       INTEGER     NCOMB
       PARAMETER ( NCOMB=  %(ncomb)d )
       INTEGER    THEL
@@ -41,7 +40,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(%(ngraphs)d), jamp2(0:%(ncolor)d)
       common/to_amps/  amp2,       jamp2
       DATA jamp2(0) /   %(ncolor)d/          
       LOGICAL GOODHEL(NCOMB,%(nconfs)d)
@@ -145,7 +144,6 @@ C
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coupl.inc"
-      include "genps.inc"
 C  
 C ARGUMENTS 
 C  
@@ -164,7 +162,7 @@ C
 C  
 C GLOBAL VARIABLES
 C  
-      Double Precision amp2(maxamps), jamp2(0:maxamps)
+      Double Precision amp2(ngraphs), jamp2(0:ncolor)
       common/to_amps/  amp2,       jamp2
       double complex saveamp(ngraphs,max_bhel)
       common/to_saveamp/saveamp

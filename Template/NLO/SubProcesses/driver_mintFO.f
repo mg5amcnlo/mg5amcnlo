@@ -22,20 +22,10 @@ C
 c
 c     Global
 c
-      integer                                      nsteps
-      character*40          result_file,where_file
-      common /sample_status/result_file,where_file,nsteps
-      integer ngroup
-      common/to_group/ngroup
-      data ngroup/0/
 cc
       include 'run.inc'
       include 'coupl.inc'
       
-      double precision twgt, maxwgt,swgt(maxevents)
-      integer                             lun, nw
-      common/to_unwgt/twgt, maxwgt, swgt, lun, nw
-
 c Vegas stuff
       common/tosigint/ndim
 
@@ -136,18 +126,6 @@ c
         n1(i)=0
       enddo
       
-      open (unit=lun+1,file='../dname.mg',status='unknown',err=11)
-      read (lun+1,'(a130)',err=11,end=11) buf
-      l1=index(buf,'P')
-      l2=index(buf,'_')
-      if(l1.ne.0.and.l2.ne.0.and.l1.lt.l2-1)
-     $     read(buf(l1+1:l2-1),*,err=11) ngroup
- 11   print *,'Process in group number ',ngroup
-
-      lun = 27
-      twgt = -2d0            !determine wgt after first iteration
-      open(unit=lun,status='scratch')
-      nsteps=2
       call setrun                !Sets up run parameters
       call setpara('param_card.dat')   !Sets up couplings and masses
       call setcuts               !Sets up cuts and particle masses
@@ -430,7 +408,7 @@ c The nbody contributions
       nbody=.true.
       calculatedBorn=.false.
       call get_born_nFKSprocess(nFKS_picked,nFKS_born)
-      call update_fks_dir(nFKS_born,iconfig)
+      call update_fks_dir(nFKS_born)
       jac=1d0
       call generate_momenta(ndim,iconfig,jac,x,p)
       if (p_born(0,1).lt.0d0) goto 12
@@ -465,7 +443,7 @@ c The n+1-body contributions (including counter terms)
          wgt_me_born=0d0
          wgt_me_real=0d0
          jac=MC_int_wgt
-         call update_fks_dir(iFKS,iconfig)
+         call update_fks_dir(iFKS)
          call generate_momenta(ndim,iconfig,jac,x,p)
          if (p_born(0,1).lt.0d0) cycle
          call compute_prefactors_n1body(vegas_wgt,jac)
@@ -525,16 +503,16 @@ c Finalize PS point
       return
       end
 
-      subroutine update_fks_dir(nFKS,iconfig)
+      subroutine update_fks_dir(nFKS)
       implicit none
-      integer nFKS,iconfig
+      integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
       nFKSprocess=nFKS
       call fks_inc_chooser()
       call leshouche_inc_chooser()
       call setcuts
-      call setfksfactor(iconfig,.false.)
+      call setfksfactor(.false.)
       return
       end
       

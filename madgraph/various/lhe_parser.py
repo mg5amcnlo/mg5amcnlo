@@ -808,7 +808,7 @@ class MultiEventFile(EventFile):
             raise Exception
     
 
-    def define_init_banner(self, wgt, lha_strategy):
+    def define_init_banner(self, wgt, lha_strategy, proc_charac=None):
         """define the part of the init_banner"""
         
         if not self.banner:
@@ -855,18 +855,30 @@ class MultiEventFile(EventFile):
             run_card = self.banner.run_card
         except:
             run_card = self.banner.charge_card("run_card")
-        
+            
         init_information = run_card.get_banner_init_information()
-        if init_information["idbmup1"] == 0:
+        #correct for special case
+        if proc_charac and proc_charac['ninitial'] == 1:
+            #special case for 1>N
+            init_information = run_card.get_banner_init_information()
             event = self.next()
-            init_information["idbmup1"]= event[0].pdg
+            init_information["idbmup1"] = event[0].pdg
+            init_information["ebmup1"] = event[0].mass
+            init_information["idbmup2"] = 0 
+            init_information["ebmup2"] = 0
+            self.seek(0)
+        else:
+            # check special case without PDF for one (or both) beam
+            if init_information["idbmup1"] == 0:
+                event = self.next()
+                init_information["idbmup1"]= event[0].pdg
+                if init_information["idbmup2"] == 0:
+                    init_information["idbmup2"]= event[1].pdg
+                self.seek(0)
             if init_information["idbmup2"] == 0:
-                init_information["idbmup2"]= event[1].pdg
-            self.seek(0)
-        if init_information["idbmup2"] == 0:
-            event = self.next()
-            init_information["idbmup2"] = event[1].pdg
-            self.seek(0)
+                event = self.next()
+                init_information["idbmup2"] = event[1].pdg
+                self.seek(0)
         
         init_information["nprup"] = nb_group
         
@@ -992,7 +1004,15 @@ class MultiEventFile(EventFile):
             unwgt_name = get_wgt.func_name
             get_wgt_multi = lambda event: get_wgt(event) * event.sample_scale
         #define the weighting such that we have built-in the scaling
-        
+
+        if 'proc_charac' in opts:
+            if opts['proc_charac']:
+                proc_charac = opts['proc_charac']
+            else:
+                proc_charac=None
+            del opts['proc_charac']
+        else:
+            proc_charac = None
 
         if 'event_target' in opts and opts['event_target']:
             if 'normalization' in opts:
@@ -1008,10 +1028,10 @@ class MultiEventFile(EventFile):
             else:
                 strategy = 4
                 new_wgt = sum(self.across)
-            self.define_init_banner(new_wgt, strategy)
+            self.define_init_banner(new_wgt, strategy, proc_charac=proc_charac)
             self.written_weight = new_wgt
         elif 'write_init' in opts and opts['write_init']:
-            self.define_init_banner(0,0)
+            self.define_init_banner(0,0, proc_charac=proc_charac)
             del opts['write_init']
         return super(MultiEventFile, self).unweight(outputpath, get_wgt_multi, **opts)
 
@@ -1263,7 +1283,7 @@ class Event(list):
         
         if not hasattr(Event, 'loweight_pattern'):
             Event.loweight_pattern = re.compile('''<rscale>\s*(?P<nqcd>\d+)\s+(?P<ren_scale>[\d.e+-]+)\s*</rscale>\s*\n\s*
-                                    <asrwt>\s*(?P<asrwt>[\s\d.+-]+)\s*</asrwt>\s*\n\s*
+                                    <asrwt>\s*(?P<asrwt>[\s\d.+-e]+)\s*</asrwt>\s*\n\s*
                                     <pdfrwt\s+beam=["']?1["']?\>\s*(?P<beam1>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
                                     <pdfrwt\s+beam=["']?2["']?\>\s*(?P<beam2>[\s\d.e+-]*)\s*</pdfrwt>\s*\n\s*
                                     <totfact>\s*(?P<totfact>[\d.e+-]*)\s*</totfact>
@@ -1275,6 +1295,8 @@ class Event(list):
             text = self.tag[start+8:stop]
             
             info = Event.loweight_pattern.search(text)
+            if not info:
+                raise Exception, '%s not parsed'% text
             self.loweight={}
             self.loweight['n_qcd'] = int(info.group('nqcd'))
             self.loweight['ren_scale'] = float(info.group('ren_scale'))
@@ -2026,12 +2048,12 @@ class FourMomentum(object):
     @property
     def mass(self):
         """return the mass"""    
-        return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
+        return math.sqrt(max(self.E**2 - self.px**2 - self.py**2 - self.pz**2,0))
 
     @property
     def mass_sqr(self):
         """return the mass square"""    
-        return self.E**2 - self.px**2 - self.py**2 - self.pz**2
+        return max(self.E**2 - self.px**2 - self.py**2 - self.pz**2,0)
 
     @property
     def pt(self):

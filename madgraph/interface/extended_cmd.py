@@ -1279,6 +1279,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             except Exception:
                 pass
             
+
+        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
+                                                self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
+            sys.exit(str(error))
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True 
@@ -1299,6 +1304,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
         error_text += '%s : %s' % (error.__class__.__name__, 
                                                 str(error).replace('\n','\n\t'))
         logger_stderr.error(error_text)
+        
+        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
+                                                self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
+            sys.exit(str(error))
         #stop the execution if on a non interactive mode
         if self.use_rawinput == False:
             return True
@@ -1330,6 +1340,11 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
             self.do_display('options', debug_file)
         except Exception, error:
             debug_file.write('Fail to write options with error %s' % error)
+        if hasattr(self, 'options') and 'crash_on_error' in self.options and \
+                                                self.options['crash_on_error']:
+            logger.info('stop computation due to crash_on_error=True')
+            sys.exit(str(error))
+        
         #stop the execution if on a non interactive mode                                
         if self.use_rawinput == False:
             return True
@@ -1884,7 +1899,6 @@ class Cmd(CheckCmd, HelpCmd, CompleteCmd, BasicCmd):
                 if not os.path.isabs(value):
                     value = os.path.realpath(os.path.join(basedir, value))
             text += '%s = %s # %s \n' % (key, value, comment)
-            
         for key in to_write:
             if key in to_keep:
                 text += '%s = %s \n' % (key, to_keep[key])
