@@ -1,7 +1,7 @@
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                          C
 C                  HwU: Histograms with Uncertainties                      C
-C                   By Rikkert Frederix, Dec. 2014                         C
+C                 By Rikkert Frederix, 12-2014--05-2017                    C
 C                                                                          C
 C     Book, fill and write out histograms. Particularly suited for NLO     C
 C     computations with correlations between points (ie. event and         C
@@ -9,26 +9,41 @@ C     counter-event) and multiple weights for given points (e.g. scale     C
 C     and PDF uncertainties through reweighting).                          C
 C                                                                          C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+
+c The module contains effectively the common block with allocatable
+c variables (something not possible in old fortran version)
+      module HwU_variables
+         implicit none
+         integer :: max_plots,max_points,max_bins,nwgts,np
+         integer :: error_estimation=3
+         logical, allocatable :: booked(:)
+         integer, allocatable :: nbin(:),histi(:,:),p_bin(:),p_label(:)
+         character(len=50), allocatable :: title(:)
+         character(len=50), allocatable :: wgts_info(:)
+         double precision, allocatable :: histy(:,:,:),histy_acc(:,:,:)
+     $        ,histy2(:,:),histy_err(:,:),histxl(:,:),histxm(:,:)
+     $        ,step(:),p_wgts(:,:)
+         save
+      end module HwU_variables
+
       
 c To be called once at the start of each run. Initialises the packages
 c and sets the number of weights that need to be included for each point.
       subroutine HwU_inithist(nweights,wgt_info)
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       integer i,nweights
       character*(*) wgt_info(*)
-      do i=1,max_plots
-         booked(i)=.false.
-      enddo
+      call HwU_deallocate_all
+      max_plots=0
+      max_points=0
+      max_bins=0
+      np=0
 c     Number of weights associated to each point. Note that the first
 c     weight should always be the 'central value' and it should not be
 c     zero if any of the other weights are non-zero.
       nwgts=nweights
-      if (nwgts.gt.max_wgts) then
-         write (*,*) 'ERROR: increase max_wgts in HwU histogramming'
-     $        ,max_wgts,nwgts
-         stop 1
-      endif
+      allocate(wgts_info(nwgts))
       do i=1,nwgts
          wgts_info(i)=wgt_info(i)
       enddo
@@ -48,10 +63,9 @@ c     input 2: Sum PS points for a given iteration and error estimate by
 c       square root of the sum of the squares. Perform a weighted average
 c       iteration-by-iteration
 c     input 3: Same as input 2, but weighted average is same as from MINT
+      use HwU_variables
       implicit none
       integer input
-      integer error_estimation
-      common /HwU_common2/ error_estimation
       if (input.ge.0 .and. input.le.3) then
          error_estimation=input
       else
@@ -60,39 +74,20 @@ c     input 3: Same as input 2, but weighted average is same as from MINT
       endif
       return
       end
-      
-      block data HwU
-c set the default for the error estimation method. To reduce the size of
-c the executable, put the error_estimation variable in a separate common
-c block. If we would have included the 'HwU.inc' file here, that
-c complete common block seems to be included in the size executable
-c (approx. 110 MB).
-      integer error_estimation
-      common /HwU_common2/ error_estimation
-      data error_estimation /3/
-      end
-      
+            
 c Book the histograms at the start of the run. Give a 'label' (an
 c integer) that identifies the plot when filling it and a title
 c ('title_l') for each plot. Also the number of bins ('nbin_l') and the
 c plot range (from 'xmin' to 'xmax') should be given.
       subroutine HwU_book(label,title_l,nbin_l,xmin,xmax)
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       integer label,nbin_l,i,j
       character*(*) title_l
       double precision xmin,xmax
-c     Check that label and number of bins are reasonable
-      if (label.gt.max_plots) then
-         write (*,*) 'ERROR: increase max_plots in HwU histogramming'
-     $        ,max_plots, label
-         stop 1
-      endif
-      if (nbin_l.gt.max_bins) then
-         write (*,*) 'ERROR: increase max_bins in HwU histogramming'
-     $        ,max_bins,nbin_l
-         stop 1
-      endif
+c     Allocate space for new histograms if needed      
+      call HwU_allocate_histo(label,nbin_l)
+c     Setup the histogram
       booked(label)=.true.
       title(label)=title_l
       nbin(label)=nbin_l
@@ -111,7 +106,6 @@ c     Set all the bins to zero.
          histy2(label,i)=0d0
          histy_err(label,i)=0d0
       enddo
-      np=0
       return
       end
       
@@ -121,8 +115,8 @@ c always be as large as the number of weights ('nweights') specified in
 c the 'HwU_inithist' subroutine. That means that each point should have
 c the same number of weights.
       subroutine HwU_fill(label,x,wgts)
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       integer label,i,j,bin
       double precision x, wgts(*)
 c     If central weight is zero do not add this point.
@@ -147,11 +141,7 @@ c     so, add the current weight to that point.
       enddo
 c     If a new bin, add it to the list of points
       np=np+1
-      if (np.gt.max_points) then
-         write (*,*) 'ERROR: increase max_points in HwU histogramming'
-     $        ,max_points
-         stop 1
-      endif
+      call HwU_allocate_p
       p_label(np)=label
       p_bin(np)=bin
       do j=1,nwgts
@@ -159,7 +149,7 @@ c     If a new bin, add it to the list of points
       enddo
       return
       end
-
+      
 c Call after all correlated contributions for a give phase-space
 c point. I.e., every time you get a new set of random numbers from
 c MINT/VEGAS. It adds the current list of points to the histograms. Add
@@ -168,8 +158,8 @@ c second only for the weight corresponding to the 'central value'. In
 c this way, correlations between events and counter-events can be
 c correctly taken into account.
       subroutine HwU_add_points
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       integer i,j
       do i=1,np
          do j=1,nwgts
@@ -192,12 +182,11 @@ c uncertainty estimate given in 'histy_err' and empties the arrays for
 c the current iteration so that they can be filled with the next
 c iteration.
       subroutine HwU_accum_iter(inclde,nPSpoints,values)
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       logical inclde
       integer nPSpoints,label,i,j
-      double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
-     $     ,values(2)
+      double precision nPSinv,etot,niter,y_squared,values(2)
       data niter /0d0/
       nPSinv = 1d0/dble(nPSpoints)
       if (inclde) niter = niter+1d0
@@ -226,8 +215,8 @@ c 'histy_err'. This means that during the plotting of events, at
 c intermediate stages this function can be called (together with
 c HwU_output) to write intermediate plots to disk.
       subroutine finalize_histograms(nPSpoints)
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       integer label,nPSpoints,i,j
       double precision nPSinv,niter,dummy(2)
       nPSinv=1d0/dble(nPSpoints)
@@ -257,13 +246,13 @@ c uncertainty. Note that this means that during the filling of the
 c histograms the central value should not be zero if any of the other
 c weights are non-zero.
       subroutine accumulate_results(label,nPSinv,niter,values)
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       integer label,i,j
-      double precision nPSinv,etot,vtot(max_wgts),niter,y_squared
+      double precision nPSinv,etot,niter,y_squared
      $     ,values(2),a1,a2
-      integer error_estimation
-      common /HwU_common2/ error_estimation
+      double precision,allocatable :: vtot(:)
+      if (.not. allocated(vtot)) allocate(vtot(nwgts))
       if (error_estimation.eq.2) then
 c     Use the weighted average bin-by-bin. This is not really justified
 c     for fNLO computations, because for bins with low statistics, the
@@ -395,14 +384,15 @@ c     making sure we normalise with the number of iterations.
 c Write the histograms to disk at the end of the run, multiplying the
 c output by 'xnorm'
       subroutine HwU_output(unit,xnorm)
+      use HwU_variables
       implicit none
-      include "HwU.inc"
       integer unit,i,j,label
       integer max_length
-      parameter (max_length=(max_wgts+3)*17)
-      character*(max_length) buffer
+      character(len=:), allocatable :: buffer
       character*4 str_nbin
       double precision xnorm
+      if (.not. allocated(buffer))
+     &     allocate(character(len=(nwgts+3)*17) :: buffer)
 c     column info: x_min, x_max, y (central value), dy, {extra
 c     weights}.
       write (unit,'(a$)') '##& xmin'
@@ -440,9 +430,157 @@ c     2 empty lines after each plot
          write (unit,'(a)') ''
          write (unit,'(a)') ''         
       enddo
+      call HwU_deallocate_all
+      deallocate(buffer)
       return
       end
 
+c Clean all the allocatable variables:
+      subroutine HwU_deallocate_all
+      use HwU_variables
+      implicit none
+      if (allocated(wgts_info)) deallocate(wgts_info)
+      if (allocated(booked)) deallocate(booked)
+      if (allocated(title)) deallocate(title)
+      if (allocated(nbin)) deallocate(nbin)
+      if (allocated(step)) deallocate(step)
+      if (allocated(histxl)) deallocate(histxl)
+      if (allocated(histxm)) deallocate(histxm)
+      if (allocated(histy)) deallocate(histy)
+      if (allocated(histy_acc)) deallocate(histy_acc)
+      if (allocated(histi)) deallocate(histi)
+      if (allocated(histy2)) deallocate(histy2)
+      if (allocated(histy_err)) deallocate(histy_err)
+      if (allocated(p_bin)) deallocate(p_bin)
+      if (allocated(p_label)) deallocate(p_label)
+      if (allocated(p_wgts)) deallocate(p_wgts)
+      return
+      end
+
+
+      subroutine HwU_allocate_p
+      use HwU_variables
+      implicit none
+      integer,allocatable :: itemp1(:)
+      double precision, allocatable :: temp2(:,:)
+      if (.not. allocated(p_bin)) then
+         allocate(p_bin(max_plots))
+         allocate(p_label(max_plots))
+         allocate(p_wgts(nwgts,max_plots))
+         max_points=max_plots
+      else
+         if (np.gt.max_points) then
+c p_bin
+            allocate(itemp1(np+max_plots))
+            itemp1(1:max_points)=p_bin
+            call move_alloc(itemp1,p_bin)
+      
+c p_label
+            allocate(itemp1(np+max_plots))
+            itemp1(1:max_points)=p_label
+            call move_alloc(itemp1,p_label)
+c p_wgts
+            allocate(temp2(nwgts,np+max_plots))
+            temp2(1:nwgts,1:max_points)=p_wgts
+            call move_alloc(temp2,p_wgts)
+            max_points=np+max_plots
+         endif
+      endif
+      return
+      end
+
+      subroutine HwU_allocate_histo(label,nbin_l)
+      use HwU_variables
+      implicit none
+      logical,allocatable :: ltemp(:)
+      integer,allocatable :: itemp1(:),itemp2(:,:)
+      character(len=50),allocatable :: ctemp(:)
+      double precision, allocatable :: temp1(:),temp2(:,:),temp3(:,:,:)
+      integer label,i,nbin_l,label_max,nbin_max
+      logical debug
+      parameter (debug=.true.)
+c Check if variables are already allocated. If not, simply allocate a
+c single histogram
+      if (.not. allocated(booked)) then
+         allocate(booked(1))
+         booked(1)=.false.
+         allocate(title(1))
+         allocate(nbin(1))
+         allocate(step(1))
+         allocate(histxl(1,nbin_l))
+         allocate(histxm(1,nbin_l))
+         allocate(histy(nwgts,1,nbin_l))
+         allocate(histy_acc(nwgts,1,nbin_l))
+         allocate(histi(1,nbin_l))
+         allocate(histy2(1,nbin_l))
+         allocate(histy_err(1,nbin_l))
+         max_plots=1
+         max_bins=nbin_l
+      endif
+c If current label is greater than the plots already allocated, increase
+c the size of the allocated arrays. This is kind of slow, but shouldn't
+c really matter since it's only done at the start of a run.
+      if (label.gt.max_plots .or. nbin_l.gt.max_bins) then
+         label_max=max(label,max_plots)
+         nbin_max=max(nbin_l,max_bins)
+c booked
+         allocate(ltemp(label_max))
+         ltemp(1:max_plots)=booked
+         call move_alloc(ltemp,booked)
+         do i=max_plots+1,label_max
+            booked(i)=.false. ! histos have not yet been setup
+         enddo
+c title
+         allocate(ctemp(label_max))
+         ctemp(1:max_plots)=title
+         call move_alloc(ctemp,title)
+c nbin
+         allocate(itemp1(label_max))
+         itemp1(1:max_plots)=nbin
+         call move_alloc(itemp1,nbin)
+c step
+         allocate(temp1(label_max))
+         temp1(1:max_plots)=step
+         call move_alloc(temp1,step)
+c histxl
+         allocate(temp2(label_max,nbin_max))
+         temp2(1:max_plots,1:max_bins)=histxl
+         call move_alloc(temp2,histxl)
+c histxm
+         allocate(temp2(label_max,nbin_max))
+         temp2(1:max_plots,1:max_bins)=histxm
+         call move_alloc(temp2,histxm)
+c histy
+         allocate(temp3(nwgts,label_max,nbin_max))
+         temp3(1:nwgts,1:max_plots,1:max_bins)=histy
+         call move_alloc(temp3,histy)
+c histy_acc
+         allocate(temp3(nwgts,label_max,nbin_max))
+         temp3(1:nwgts,1:max_plots,1:max_bins)=histy_acc
+         call move_alloc(temp3,histy_acc)
+c histi
+         allocate(itemp2(label_max,nbin_max))
+         itemp2(1:max_plots,1:max_bins)=histi
+         call move_alloc(itemp2,histi)
+c histy2
+         allocate(temp2(label_max,nbin_max))
+         temp2(1:max_plots,1:max_bins)=histy2
+         call move_alloc(temp2,histy2)
+c histy_err
+         allocate(temp2(label_max,nbin_max))
+         temp2(1:max_plots,1:max_bins)=histy_err
+         call move_alloc(temp2,histy_err)
+c Update maximums
+         max_plots=label_max
+         max_bins=nbin_max
+      elseif (booked(label)) then
+         write (*,*) 'ERROR in HwU.f: histogram already booked',label
+         stop
+      endif
+      return
+      end
+      
+      
 c dummy subroutine
       subroutine accum(idummy)
       integer idummy
@@ -451,3 +589,6 @@ c dummy subroutine
       subroutine addfil(string)
       character*(*) string
       end
+
+
+

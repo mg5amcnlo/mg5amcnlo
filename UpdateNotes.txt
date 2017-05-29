@@ -1,5 +1,9 @@
 Update notes for MadGraph5_aMC@NLO (in reverse time order)
 
+2.5.6 (XX/XX/XX)
+      RF: Refactor of the HwU.f fortran code. Gives more flexibility and potentially lower
+          memory requirements.
+
 2.5.5(26/05/17)
       OM: Fixing bug in the creation of the LO gridpack introduced in 2.4.3. Since 2.4.3 the generated 
           gridpack were lacking to include the generated grid for each channel. This does not lead to 
