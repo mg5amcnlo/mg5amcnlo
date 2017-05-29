@@ -692,7 +692,6 @@ c respectively.
      &           ,ileg
             stop 1
          endif
-         g22=g**(nint(2*wgtbpower+2))
          do i=1,nofpartners
             if(lzone(i))then
               call get_mc_lum(j_fks,zhw(i),xi_i_fks_ev,xlum_mc_fact)

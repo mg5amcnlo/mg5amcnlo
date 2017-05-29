@@ -24,10 +24,23 @@ c is the number of color flows at Born level
       logical isspecial,isspecial0
       common/cisspecial/isspecial
       logical spec_case
+
+      include 'orders.inc'
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
+      double precision particle_charge(nexternal)
+      common /c_charges/particle_charge
+
       ipartners(0)=0
       do i=1,nexternal-1
          colorflow(i,0)=0
       enddo
+
+C What follows is true for QCD-type splittings.
+C For QED-type splittings, ipartner is simply all the charged particles
+C in the event except for FKSfather. In this case, all the born color
+C flows are allowed
+
 c ipartners(0): number of particles that can be colour or anticolour partner 
 c   of the father, the Born-level particle to which i_fks and j_fks are 
 c   attached. If one given particle is the colour/anticolour partner of
@@ -64,7 +77,9 @@ c and another gluon will be found which is connected to it by both
 c colour and anticolour
       isspecial=.false.
 c
-      do i=1,max_bcol
+      if (split_type(qcd_pos)) then
+        ! identify the color partners 
+        do i=1,max_bcol
 c Loop over Born-level colour flows
          isspecial0=.false.
 c nglu and nsngl are the number of gluons (except for the father) and of 
@@ -168,7 +183,13 @@ c by one unit, so decrease it
            stop
          endif
          isspecial=isspecial.or.isspecial0
-      enddo
+        enddo
+
+      else if (split_type(qed_pos)) then
+        ! do nothing, the partner will be assigned at run-time 
+        ! (it is kinematics-dependent)
+        continue
+      endif
       call check_mc_matrices
       return
       end
@@ -192,60 +213,72 @@ c      include "fks.inc"
       common/cnotagluon/notagluon
       logical isspecial
       common/cisspecial/isspecial
+
+      include 'orders.inc'
+      logical split_type(nsplitorders) 
+      common /c_split_type/split_type
 c
       if(ipartners(0).gt.nexternal-1)then
         write(*,*)'Error #1 in check_mc_matrices',ipartners(0)
         stop
       endif
 c
-      do i=1,ipartners(0)
-        ipart=ipartners(i)
-        if( ipart.eq.fksfather .or.
-     #      ipart.le.0 .or. ipart.gt.nexternal-1 .or.
-     #      ( abs(particle_type(ipart)).ne.3 .and.
-     #        particle_type(ipart).ne.8 ) )then
-          write(*,*)'Error #2 in check_mc_matrices',i,ipart,
-     #particle_type(ipart)
-          stop
-        endif
-      enddo
-c
-      do i=1,nexternal-1
-        ithere(i)=1
-      enddo
-      do i=1,ipartners(0)
-        ipart=ipartners(i)
-        ithere(ipart)=ithere(ipart)-1
-        if(ithere(ipart).lt.0)then
-          write(*,*)'Error #3 in check_mc_matrices',i,ipart
-          stop
-        endif
-      enddo
-c
-c ntot is the total number of colour plus anticolour partners of father
-      ntot=0
-      do i=1,ipartners(0)
-        ntot=ntot+colorflow(i,0)
-c
-        if( colorflow(i,0).le.0 .or.
-     #      colorflow(i,0).gt.max_bcol )then
-          write(*,*)'Error #4 in check_mc_matrices',i,colorflow(i,0)
-          stop
-        endif
-c
-        do j=1,max_bcol
-          ithere(j)=1
-        enddo
-        do j=1,colorflow(i,0)
-          iflow=colorflow(i,j)
-          ithere(iflow)=ithere(iflow)-1
-          if(ithere(iflow).lt.0)then
-            write(*,*)'Error #5 in check_mc_matrices',i,j,iflow
+      
+      if (split_type(QCD_pos)) then
+      ! these tests only apply for QCD-type splittings
+        do i=1,ipartners(0)
+          ipart=ipartners(i)
+          if( ipart.eq.fksfather .or.
+     #        ipart.le.0 .or. ipart.gt.nexternal-1 .or.
+     #        ( abs(particle_type(ipart)).ne.3 .and.
+     #          particle_type(ipart).ne.8 ) )then
+            write(*,*)'Error #2 in check_mc_matrices',i,ipart,
+     #  particle_type(ipart)
             stop
           endif
         enddo
 c
-      enddo
+        do i=1,nexternal-1
+          ithere(i)=1
+        enddo
+        do i=1,ipartners(0)
+          ipart=ipartners(i)
+          ithere(ipart)=ithere(ipart)-1
+          if(ithere(ipart).lt.0)then
+            write(*,*)'Error #3 in check_mc_matrices',i,ipart
+            stop
+          endif
+        enddo
+c
+c ntot is the total number of colour plus anticolour partners of father
+        ntot=0
+        do i=1,ipartners(0)
+          ntot=ntot+colorflow(i,0)
+c
+          if( colorflow(i,0).le.0 .or.
+     #        colorflow(i,0).gt.max_bcol )then
+            write(*,*)'Error #4 in check_mc_matrices',i,colorflow(i,0)
+            stop
+          endif
+c
+          do j=1,max_bcol
+            ithere(j)=1
+          enddo
+          do j=1,colorflow(i,0)
+            iflow=colorflow(i,j)
+            ithere(iflow)=ithere(iflow)-1
+            if(ithere(iflow).lt.0)then
+              write(*,*)'Error #5 in check_mc_matrices',i,j,iflow
+              stop
+            endif
+          enddo
+c
+        enddo
+
+      else if (split_type(QED_pos)) then
+        ! write here possible checks for QED-type splittings
+        continue
+      endif
 c
 C     DOES NOT APPLY FOR EW CORRECTIONS
 CMZ      if( (notagluon.and.ntot.ne.max_bcol) .or.
@@ -260,6 +293,131 @@ c
       return
       end
 
+
+      subroutine find_ipartner_QED(pp, nofpartners)
+      implicit none
+      include 'nexternal.inc'
+      double precision pp(0:3, nexternal)
+      integer nofpartners
+
+      integer fks_j_from_i(nexternal,0:nexternal)
+     &     ,particle_type(nexternal),pdg_type(nexternal)
+      common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      double precision particle_charge(nexternal)
+      common /c_charges/particle_charge
+
+      integer i_fks,j_fks,fksfather
+      common/fks_indices/i_fks,j_fks
+      double precision pmass(nexternal)
+      double precision zero
+      parameter (zero=0d0)
+
+
+      include 'genps.inc'
+      integer maxflow
+      parameter (maxflow=999)
+      integer idup(nexternal,maxproc)
+      integer mothup(2,nexternal,maxproc)
+      integer icolup(2,nexternal,maxflow)
+      include 'born_leshouche.inc'
+      include "born_nhel.inc"
+      integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
+      common /MC_info/ ipartners,colorflow
+c
+c     Shower MonteCarlo
+c     
+      character*10 shower_mc
+      common /cMonteCarloType/shower_mc
+
+      logical found
+      logical same_state
+      double precision ppmin, ppnow
+      integer partner
+      integer i,j
+      double precision chargeprod
+      double precision dot
+
+      include 'pmass.inc'
+      
+      found=.false.
+      ppmin=1d99
+      fksfather=min(i_fks,j_fks)
+
+      if (shower_mc.eq.'PYTHIA8') then
+        ! this should follow what is done in TimeShower::setupQEDdip
+        ! first, look for the lowest-mass same- (opposite-)flavour pair of
+        ! particles in the opposite (same) state of the system
+        do j=1,nexternal
+          if (j.ne.fksfather.and.j.ne.i_fks) then
+            same_state = (j.gt.nincoming.and.fksfather.gt.nincoming).or.
+     $                   (j.le.nincoming.and.fksfather.le.nincoming)
+
+            if ((pdg_type(j).eq.pdg_type(fksfather).and..not.same_state).or. 
+     $          (pdg_type(j).eq.-pdg_type(fksfather).and.same_state)) then
+
+              ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j)
+              if (ppnow.lt.ppmin) then
+                found=.true.
+                partner=j
+              endif
+            endif
+          endif
+        enddo
+        
+        ! if no partner has been found, then look for the
+        ! lowest-mass/chargeprod pair
+        if (.not.found) then
+          do j=1,nexternal
+            if (j.ne.fksfather.and.j.ne.i_fks) then
+              if (particle_charge(fksfather).ne.0d0.and.particle_charge(j).ne.0d0) then
+                ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j) / 
+     $            (particle_charge(fksfather) * particle_charge(j))
+                if (ppnow.lt.ppmin) then
+                  found=.true.
+                  partner=j
+                endif
+              endif
+            endif
+          enddo
+        endif
+
+        ! if no partner has been found, then look for the
+        ! lowest-mass pair
+        if (.not.found) then
+          do j=1,nexternal
+            if (j.ne.fksfather.and.j.ne.i_fks) then
+              ppnow=dot(pp(0,fksfather),pp(0,j)) - pmass(fksfather)*pmass(j) 
+              if (ppnow.lt.ppmin) then
+                found=.true.
+                partner=j
+              endif
+            endif
+          enddo
+        endif
+
+      else
+        ! other showers need to be implemented
+        write(*,*) 'ERROR in find_ipartner_QED, not implemented', shower_mc
+        stop 1
+      endif
+
+      if (.not.found) then
+        write(*,*) 'ERROR in find_ipartner_QED, no parthern found'
+        stop 1
+      endif
+
+      ! now, set ipartners
+      ipartners(0) = 1
+      nofpartners = ipartners(0)
+      ipartners(ipartners(0)) = partner
+      ! all color flows have to be included here
+      colorflow(ipartners(0),0)= max_bcol
+      do i = 1, max_bcol
+        colorflow(ipartners(0),i)=i
+      enddo
+
+      return
+      end
 
 
       subroutine xmcsubt_wrap(pp,xi_i_fks,y_ij_fks,wgt)
@@ -407,6 +565,8 @@ c Main routine for MC counterterms
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
+      double precision particle_charge(nexternal)
+      common /c_charges/particle_charge
 
       double precision pp(0:3,nexternal),gfactsf,gfactcl,probne,wgt
       double precision xi_i_fks,y_ij_fks,xm12,xm22
@@ -525,6 +685,12 @@ C stuff to keep track of the individual orders
       include "pmass.inc"
 
 c Initialise
+
+      if (split_type(QED_pos)) then
+        ! QED partners are dynamically found
+        call find_ipartner_QED(pp,nofpartners)
+      endif
+
       do i = 1,nexternal
         xmcxsec(i) = 0d0
         do iamp = 1, amp_split_size
@@ -944,14 +1110,19 @@ c
 
         else
 c Dead zone
-          xkern=0d0
-          xkernazi=0d0
-           if(dampMCsubt)then
+          do i = 1,2
+            xkern(i)=0d0
+            xkernazi(i)=0d0
+          enddo   
+          if(dampMCsubt)then
               emscav(npartner)=2d0*sqrt(ebeam(1)*ebeam(2))
               emscwgt(npartner)=0d0
-           endif
+          endif
         endif
 
+        !
+        ! remember, we are still in the npartner = 1, ipartners(0) loop
+        !
         do iamp = 1, amp_split_size
           do i = 1,nsplitorders
             amp_split_bornred(iamp,i)=0d0
