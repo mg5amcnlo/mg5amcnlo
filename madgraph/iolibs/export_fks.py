@@ -1009,6 +1009,13 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
                         (ifstring, part.get_pdg_code(), part.get_anti_pdg_code())
             iflines_width += 'get_width_from_id=abs(%s)\n' % part.get('width')
 
+        # Make sure it compiles with an if-statement if the above lists are empty
+        if len(mass_particles)==0:
+            iflines_mass = 'if (.True.) then\n'
+
+        if len(width_particles)==0:
+            iflines_width = 'if (.True.) then\n'
+
         replace_dict = {'iflines_mass' : iflines_mass,
                         'iflines_width' : iflines_width}
 
