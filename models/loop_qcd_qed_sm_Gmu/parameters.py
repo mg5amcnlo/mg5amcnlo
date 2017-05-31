@@ -334,7 +334,7 @@ sw2 = Parameter(name = 'sw2',
 aEW = Parameter(name = 'aEW',
                 nature = 'internal',
                 type = 'real',
-                value = 'cmath.sqrt(2.)*Gf*abs(MW**2)*abs(1-MW**2/MZ**2)/cmath.pi',
+                value = 'abs(cmath.sqrt(2.)*Gf*MW**2*(1-MW**2/MZ**2)/cmath.pi)',
                 texname = '\\alpha _{\\text{EW}}')
 
 aEWM1 = Parameter(name = 'aEWM1',

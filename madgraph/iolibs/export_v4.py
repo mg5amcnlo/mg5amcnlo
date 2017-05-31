@@ -5766,14 +5766,31 @@ class UFO_model_to_mg4(object):
                 pass
         # in Gmu scheme, aEWM1 is not external but Gf is an exteranl variable
         elif ('Gf',) in self.model['parameters']:
+            # Make sure to consider complex masses if the complex mass scheme is activated
+            if self.opt['complex_mass']:
+                mass_prefix = 'CMASS_MDL_'
+            else:
+                mass_prefix = 'MDL_'
+
             if dp:
-                fsock.writelines(""" gal(1) = 2.378414230005442133435d0*MDL_MW*DSQRT(1D0-MDL_MW**2/MDL_MZ**2)*DSQRT(MDL_Gf)
+                if self.opt['complex_mass']:
+                    fsock.writelines(""" gal(1) = ABS(2.378414230005442133435d0*%(mass_prefix)sMW*SQRT(DCMPLX(1.0D0,0.0d0)-%(mass_prefix)sMW**2/%(mass_prefix)sMZ**2)*DSQRT(MDL_Gf))
                                  gal(2) = 1d0
-                         """)
+                         """%{'mass_prefix':mass_prefix})
+                else:
+                    fsock.writelines(""" gal(1) = 2.378414230005442133435d0*%(mass_prefix)sMW*DSQRT(1D0-%(mass_prefix)sMW**2/%(mass_prefix)sMZ**2)*DSQRT(MDL_Gf)
+                                 gal(2) = 1d0
+                         """%{'mass_prefix':mass_prefix})
             elif mp:
-                fsock.writelines(""" %(mp_prefix)sgal(1) = 2*MP__MDL_MW*SQRT(1e0_16-MP__MDL_MW**2/MP__MDL_MZ**2)*SQRT(SQRT(2e0_16)*MP__MDL_Gf)
-                                 %(mp_prefix)sgal(2) = 1d0
-                                 """ %{'mp_prefix':self.mp_prefix})
+                if self.opt['complex_mass']:
+                    fsock.writelines(""" %(mp_prefix)sgal(1) = ABS(2*%(mp_prefix)s%(mass_prefix)sMW*SQRT(CMPLX(1e0_16,0.0e0_16,KIND=16)-%(mp_prefix)s%(mass_prefix)sMW**2/%(mp_prefix)s%(mass_prefix)sMZ**2)*SQRT(SQRT(2e0_16)*%(mp_prefix)sMDL_Gf))
+                                 %(mp_prefix)sgal(2) = 1e0_16
+                                 """ %{'mp_prefix':self.mp_prefix,'mass_prefix':mass_prefix})
+                else:
+                    fsock.writelines(""" %(mp_prefix)sgal(1) = 2*%(mp_prefix)s%(mass_prefix)sMW*SQRT(1e0_16-%(mp_prefix)s%(mass_prefix)sMW**2/%(mp_prefix)s%(mass_prefix)sMZ**2)*SQRT(SQRT(2e0_16)*%(mp_prefix)sMDL_Gf)
+                                 %(mp_prefix)sgal(2) = 1e0_16
+                                 """ %{'mp_prefix':self.mp_prefix,'mass_prefix':mass_prefix})
+
                 pass
         else:
             if dp:
