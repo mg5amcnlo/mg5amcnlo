@@ -4767,9 +4767,7 @@ RESTART = %(mint_mode)s
         """write the input files to run test_ME/MC or check_poles"""
         if test in ['test_ME', 'test_MC']:
             content = "-2 -2\n" #generate randomly energy/angle
-            misc.sprint("For debug, we have lowered the number of test PS point to 1")
-#CVAL#            content+= "100 100\n" #run 100 points for soft and collinear tests
-            content+= "1 1\n" #run 1 point only for soft and collinear tests            
+            content+= "100 100\n" #run 100 points for soft and collinear tests
             content+= "0\n" #sum over helicities
             content+= "0\n" #all FKS configs
             content+= '\n'.join(["-1"] * 50) #random diagram
@@ -4785,10 +4783,6 @@ RESTART = %(mint_mode)s
         else:
             file.write(content)
         file.close()
-        misc.sprint("For debug, we have copy the test inputs to user-specific location")        
-        shutil.copy(pjoin(self.me_dir, '%s_input.txt' % test),'/Users/valentin/TMP/SUPERTMP/%s_input.txt'%test)
-
-
 
     ############################################################################
     def find_model_name(self):

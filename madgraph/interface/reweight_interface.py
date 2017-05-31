@@ -990,7 +990,7 @@ class ReweightInterface(extended_cmd.Cmd):
             else:
                 ratio_V = "should not be used"
                 ratio_BV = "should not be used"
-                
+
             for c_wgt in cevent.wgts:
                 orig_wgt += c_wgt.ref_wgt
                 #add the information to the input

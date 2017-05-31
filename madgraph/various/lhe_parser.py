@@ -2019,7 +2019,7 @@ class FourMomentum(object):
 
     @property
     def mass(self):
-        """return the mass"""    
+        """return the mass"""
         return math.sqrt(self.E**2 - self.px**2 - self.py**2 - self.pz**2)
 
     @property
@@ -2029,7 +2029,7 @@ class FourMomentum(object):
 
     @property
     def pt(self):
-        return math.sqrt(max(0, self.pt2()))
+        return math.sqrt(max(0, self.pt2))
     
     @property
     def pseudorapidity(self):
@@ -2041,7 +2041,7 @@ class FourMomentum(object):
         return  0.5* math.log((self.E +self.pz) / (self.E - self.pz))
     
     
-    
+    @property
     def pt2(self):
         """ return the pt square """
         
@@ -2314,6 +2314,7 @@ class OneNLOWeight(object):
 class NLO_PARTIALWEIGHT(object):
 
     class BasicEvent(list):
+
         
         def __init__(self, momenta, wgts, event, real_type=(1,11)):
             list.__init__(self, momenta)
@@ -2338,20 +2339,24 @@ class NLO_PARTIALWEIGHT(object):
                 self.pop(ind2)
                 self.pdgs.pop(ind1) 
                 self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
-                self.pdgs.pop(ind2)                 
+                self.pdgs.pop(ind2)
+                #ensure the onshell of the particle
+                self.put_onshell(ind1, 0)
                 # DO NOT update the pdgs of the partial weight!
+
             elif any(w.type in self.real_type for w in wgts):
                 if any(w.type not in self.real_type for w in wgts):
                     raise Exception
                 # check if this is too soft/colinear if so use the born
                 ind1, ind2 = [ind-1 for ind in wgts[0].to_merge_pdg] 
+
                 if ind1> ind2: 
                     ind1, ind2 = ind2, ind1                
                 if ind1 >= sum(1 for p in event if p.status==-1):
                     new_p = self[ind1] + self[ind2]
                 else:
                     new_p = self[ind1] - self[ind2]
-
+           
                 if __debug__:
                     ptot = FourMomentum()
                     for i in xrange(len(self)):
@@ -2365,15 +2370,15 @@ class NLO_PARTIALWEIGHT(object):
                 inv_mass = new_p.mass_sqr
                 shat = (self[0]+self[1]).mass_sqr
                 if (abs(inv_mass)/shat < 1e-6):
-#                    misc.sprint(abs(inv_mass)/shat)
-                    self.pop(ind1) 
+                    self.pop(ind1)
                     self.insert(ind1, new_p)
                     self.pop(ind2)
                     self.pdgs.pop(ind1) 
                     self.pdgs.insert(ind1, wgts[0].merge_new_pdg )
                     self.pdgs.pop(ind2)                 
-                    # DO NOT update the pdgs of the partial weight!                    
-                
+                    # DO NOT update the pdgs of the partial weight!
+                    self.put_onshell(ind1, 0)
+                    
                 if __debug__:
                     ptot = FourMomentum()
                     for i in xrange(len(self)):
@@ -2383,13 +2388,106 @@ class NLO_PARTIALWEIGHT(object):
                             ptot -= self[i]
                     if ptot.mass_sqr > 1e-16:
                         misc.sprint(ptot, ptot.mass_sqr)
-#                            raise Exception
+                        raise Exception
             else:
                 raise Exception
  
         def get_pdg_code(self):
             return self.pdgs
-        
+
+        def put_onshell(self, ind, mass):
+	    """ check that particle mass of particle number 'ind' 
+                is onshell and if not use algorithm from VH thesis
+                to restore them."""
+            
+            if misc.equal(self[ind].mass_sqr, mass**2, 20):
+                return # nothing to do
+
+            if sum(1 for p in self.event if p.status==-1) == 1:
+                logger.debug('1 to N can not be put back onshell. Continue')
+                return # does not work for 1 to N: keep it offshell
+
+            assert self.pdgs[ind] in (range(-6,7)+[21,22]) ,"onshell routine works only for zero mass particle. PDG is not assume massless."
+            
+            if ind<2:
+                self.put_onshell_initial(ind, mass)
+#            else:
+#                self.put_onshell_final(ind, mass)
+            
+        def put_onshell_initial(self, ind, mass):
+            """ """
+
+            assert mass == 0
+
+            ptot = self[0] + self[1]
+                
+            # particle 2 should not have any pt. The one reshuffle has a pt
+            if ind == 0:
+                p1 = self[0] # the one we modify with pt
+                p2 = self[1] # original one no pt
+            else:
+                p1 = self[1] # the one we modify with pt
+                p2 = self[0] # original one no pt
+                
+            assert misc.equal(p2.px, 0 , 8)
+            assert misc.equal(p2.py, 0 , 8)
+
+            discr = -ptot.mass_sqr
+            
+            shifte1 = ( ptot.E*(ptot.pt2 -2*p1.E*ptot.E +ptot.E**2) +
+                        (2*p1.E-ptot.E)*ptot.pz**2 + ptot.pz*discr
+                      )/ (2*(ptot.E**2-ptot.pz**2))
+             
+            shifte2 = -( ptot.E*(ptot.pt2 + 2*p2.E*ptot.E - ptot.E**2) +
+                        (-2*p2.E + ptot.E)*ptot.pz**2 + ptot.pz*discr
+                      )/ (2*(ptot.E**2-ptot.pz**2))
+            
+            shiftz1 = ( -2*p1.pz*(ptot.E**2 - ptot.pz**2) 
+                        + ptot.pz*(ptot.pt2 + ptot.E**2 - ptot.pz**2)
+                        + ptot.E*discr
+                      )/ (2*(ptot.E**2 - ptot.pz**2))
+
+
+            shiftz2 = -( 2*p2.pz*(ptot.E**2 - ptot.pz**2) 
+                         + ptot.pz*(ptot.pt2 - ptot.E**2 + ptot.pz**2)
+                         + ptot.E*discr
+                       )/ (2*(ptot.E**2 - ptot.pz**2))
+
+     
+            p1 = FourMomentum(p1.E + shifte1,
+                                   p1.px,
+                                   p1.py,
+                                   p1.pz + shiftz1)
+                                
+            p2 = FourMomentum(p2.E + shifte2,
+                                   0.,
+                                   0.,
+                                   p2.pz + shiftz2)
+
+            if ind == 0:
+                self[0], self[1] = p1, p2
+            else:
+                self[0], self[1] = p2, p1
+                
+            assert misc.equal(self[0].mass_sqr, 0, 8)
+            assert misc.equal(self[1].mass_sqr, 0, 8)
+                 
+
+#        def put_onshell_final(self, ind, mass):
+#            """ """            
+#
+#            assert self[0].px==self[0].py==0==self[1].px==self[1].py
+#
+#            p0,p1, pf= self[0],selfself[ind]
+#            
+#            shiftf = (-1 if self[ind].pz<0 else 1) *\
+#                     math.sqrt(max(0, self[ind]
+#
+#            
+#            self[0] =
+#            self[1] =
+#            self[ind]=
+            
         def get_tag_and_order(self):
             """ return the tag and order for this basic event""" 
             (initial, _), _ = self.event.get_tag_and_order()
@@ -2403,7 +2501,7 @@ class NLO_PARTIALWEIGHT(object):
         
         def get_momenta(self, get_order, allow_reversed=True):
             """return the momenta vector in the order asked for"""
-        
+             
             #avoid to modify the input
             order = [list(get_order[0]), list(get_order[1])] 
             out = [''] *(len(order[0])+len(order[1]))
