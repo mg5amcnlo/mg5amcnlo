@@ -196,7 +196,7 @@ Parameters              alpha_s
         
         goal = \
             ["INTEGER IJ_VALUES(14)",
-             "DATA IJ_VALUES /1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 4/"]
+             "DATA IJ_VALUES /1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 0, 0/"]
         process_exporter = export_fks.ProcessExporterFortranFKS()
 
         self.assertEqual(goal,
