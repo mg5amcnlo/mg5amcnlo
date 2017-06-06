@@ -1207,6 +1207,7 @@ c     include all quarks (except top quark) and the gluon.
 
       subroutine update_fks_dir(nFKS)
       implicit none
+      include 'run.inc'
       integer nFKS
       integer              nFKSprocess
       common/c_nFKSprocess/nFKSprocess
@@ -1215,6 +1216,7 @@ c     include all quarks (except top quark) and the gluon.
       call leshouche_inc_chooser()
       call setcuts
       call setfksfactor(.true.)
+      if (ickkw.eq.3) call configs_and_props_inc_chooser()
       return
       end
 
