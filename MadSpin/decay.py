@@ -207,6 +207,7 @@ class Event:
         line+="\n"
         return line
 
+
     def reshuffle_resonances(self,mother):
         """ reset the momentum of each resonance in the production event
                 to the sum of momenta of the daughters
@@ -222,9 +223,9 @@ class Event:
                 if self.resonance[index]["mothup1"]==mother:
                     daughters.append(index)
 
-        if len(daughters)!=2:
-            logger.info("Got more than 2 (%s) daughters for one particles" % len(daughters))
-            logger.info("in one production event (before decay)")
+#        if len(daughters)!=2:
+#            logger.info("Got more than 2 (%s) daughters for one particles" % len(daughters))
+#            logger.info("in one production event (before decay)")
 
 
         if daughters[0]>0:
