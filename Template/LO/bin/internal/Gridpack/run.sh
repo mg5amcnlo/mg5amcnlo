@@ -14,9 +14,17 @@
 # USAGE : run [num_events] [iseed]                                         ##
 #############################################################################
 
-if [[ ! -d ./madevent ]]; then
-        echo "Error: no madevent directory found !"
-        exit
+if [[ -d ./madevent ]]; then
+    DIR='.'
+else
+    # find the path to the gridpack (https://stackoverflow.com/questions/59895/getting-the-source-directory-of-a-bash-script-from-within)
+    SOURCE="${BASH_SOURCE[0]}"
+    while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+	DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+	SOURCE="$(readlink "$SOURCE")"
+	[[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+    done
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 fi
 
 # For Linux
@@ -24,46 +32,27 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 # For Mac OS X
 export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 
-card=./madevent/Cards/grid_card.dat
-
+echo "Now generating $num_events events with random seed $seed and granularity $gran"
 
 if [[  ($1 != "") && ("$2" != "") && ("$3" == "") ]]; then
    num_events=$1
    seed=$2
-   echo "Updating grid_card.dat..."
-   sed -i.bak "s/\s*\d*.*gevents/  $num_events = gevents/g" $card
-   sed -i.bak "s/\s*\d*.*gseed/  $seed = gseed/g" $card
-   gran=`awk '/^[^#].*=.*ngran/{print $1}' $card`
+   gran=1
 elif [[  ($1 != "") && ("$2" != "") && ("$3" != "") ]]; then
    num_events=$1
    seed=$2
    gran=$3
-   echo "Updating grid_card.dat..."
-   sed -i.bak "s/\s*\d*.*gevents/  $num_events = gevents/g" $card
-   sed -i.bak "s/\s*\d*.*gseed/  $seed = gseed/g" $card
-   sed -i.bak "s/\s*\d*.*ngran/  $gran = ngran/g" $card
 else
-   echo "Warning: input is not correct, using values from the grid_card.dat."
-   if [[ ! -e $card ]]; then
-        echo "Error: $card not found !"
-        exit
-   fi
-   num_events=`awk '/^[^#].*=.*gevents/{print $1}' $card`
-   seed=`awk '/^[^#].*=.*gseed/{print $1}' $card`
-   gran=`awk '/^[^#].*=.*ngran/{print $1}' $card`
+   echo "Warning: input is not correct. script requires two arguments: NB_EVENT SEED"
 fi
 
 
-echo "Now generating $num_events events with random seed $seed and granularity $gran"
 
+############    RUN THE PYTHON CODE #####################
+${DIR}/madevent/bin/gridrun $num_events $seed $gran
+########################################################
 
-if [[ ! -x ./madevent/bin/gridrun ]]; then
-    echo "Error: gridrun script not found !"
-    exit
-else
-    cd ./madevent
-    ./bin/gridrun $num_events $seed
-fi
+###########    POSTPROCESSING      #####################
 
 if [[ -e ./Events/GridRun_${seed}/unweighted_events.lhe.gz ]]; then
 	gunzip ./Events/GridRun_${seed}/unweighted_events.lhe.gz

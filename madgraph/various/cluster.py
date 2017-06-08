@@ -140,6 +140,7 @@ class Cluster(object):
         
         if not hasattr(self, 'temp_dir') or not self.temp_dir or \
             (input_files == [] == output_files):
+
             return self.submit(prog, argument, cwd, stdout, stderr, log, 
                                required_output=required_output, nb_submit=nb_submit)
             
@@ -624,13 +625,23 @@ class MultiCore(Cluster):
                             opt['stdout'] = open(opt['stdout'],'w')
                         if opt['stderr'] == None:
                             opt['stderr'] = subprocess.STDOUT
-                        proc = misc.Popen([exe] + arg,  **opt)
+                        if arg:
+                            proc = misc.Popen([exe] + arg,  **opt)
+                        else:
+                            #print open(exe).read()
+                            #print opt, os.getcwd()
+                            os.system('ls -l %s' % exe)
+                            try:
+                                proc = misc.Popen(exe,  **opt)
+                            except Exception, error:
+                                print error
                         pid = proc.pid
                         self.pids.put(pid)
                         proc.wait()
                         if proc.returncode not in [0, 143, -15] and not self.stoprequest.isSet():
                             fail_msg = 'program %s launch ends with non zero status: %s. Stop all computation' % \
                             (' '.join([exe]+arg), proc.returncode)
+                            print fail_msg, proc.returncode
                             logger.warning(fail_msg)
                             self.stoprequest.set()
                             self.remove(fail_msg)

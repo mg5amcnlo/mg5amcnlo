@@ -1385,7 +1385,7 @@ class GridpackCard(ConfigFile):
             else:
                 template = pjoin(MEDIR, 'Cards', 'grid_card_default.dat')
 
-        
+                
         text = ""
         for line in file(template,'r'):                  
             nline = line.split('#')[0]
@@ -1400,7 +1400,11 @@ class GridpackCard(ConfigFile):
                 logger.info('Adding missing parameter %s to current run_card (with default value)' % nline[1].strip())
                 text += line 
         
-        fsock = open(output_file,'w')
+        if isinstance(output_file, str):
+            fsock =  open(output_file,'w')
+        else:
+            fsock = output_file
+            
         fsock.write(text)
         fsock.close()
         
