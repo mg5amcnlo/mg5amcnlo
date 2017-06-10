@@ -549,6 +549,7 @@ class ReweightInterface(extended_cmd.Cmd):
         #starts by computing the difference in the cards.
         s_orig = self.banner['slha']
         s_new = new_card
+        self.new_param_card = check_param_card.ParamCard(s_new.splitlines())
         
         #define tag for the run
         if self.options['rwgt_name']:
@@ -558,7 +559,7 @@ class ReweightInterface(extended_cmd.Cmd):
         
         if not self.second_model:
             old_param = check_param_card.ParamCard(s_orig.splitlines())
-            new_param =  check_param_card.ParamCard(s_new.splitlines())
+            new_param =  self.new_param_card
             card_diff = old_param.create_diff(new_param)
             if card_diff == '' and not self.second_process:
                 if not __debug__:
@@ -608,38 +609,47 @@ class ReweightInterface(extended_cmd.Cmd):
             cross[name], error[name] = 0.,0.
             ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
 
+        misc.sprint(self.output_type,tag)
         if self.output_type == "default":
             output = open( self.lhe_input.name +'rw', 'w')
             #write the banner to the output file
             self.banner.write(output, close_tag=False)
         else:
             output = {}
-            for name in type_rwgt:
-                output[name] = open( self.lhe_input.name +'rw'+name, 'w')
+            if tag.isdigit():
+                name_tag= 'rwgt_%s' % tag
+            else:
+                name_tag = tag
+            base = os.path.dirname(self.lhe_input.name)
+            for rwgttype in  type_rwgt:
+                output[(name_tag,rwgttype)] = lhe_parser.EventFile(pjoin(base,'rwgt_events%s_%s.lhe.gz' %(rwgttype,tag)), 'w')
                 #write the banner to the output file
-                self.banner.write(output[name], close_tag=False)
+                self.banner.write(output[(name_tag,rwgttype)], close_tag=False)
         
+        misc.sprint(output, [f.name for f in output.values()])
         logger.info('starts to compute weight for events with the following modification to the param_card:')
         logger.info(card_diff.replace('\n','\nKEEP:'))
+        self.run_card = banner.Banner(self.banner).charge_card('run_card')
         # prepare the output file for the weight plot
-        if self.mother:
-            out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
-            output2 = open(out_path, 'w')
-            lha_strategy = self.banner.get_lha_strategy() 
-            self.banner.set_lha_strategy(4*lha_strategy/abs(lha_strategy)) 
-            self.banner.write(output2, close_tag=False)
-            self.banner.set_lha_strategy(lha_strategy)
-            new_banner = banner.Banner(self.banner)
-            if not hasattr(self, 'run_card'):
-                self.run_card = new_banner.charge_card('run_card')
-            self.run_card['run_tag'] = 'reweight_%s' % rewgtid
-            new_banner['slha'] = s_new   
-            del new_banner['initrwgt']
-            assert 'initrwgt' in self.banner 
-            ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
-                          (self.mother.run_name, self.run_card['run_tag'])),'w') 
-            new_banner.write(ff)
-            ff.close()
+        #if self.mother:
+        #    out_path = pjoin(self.mother.me_dir, 'Events', 'reweight.lhe')
+        #    misc.sprint('also write ', out_path)
+        #    output2 = open(out_path, 'w')
+        #    lha_strategy = self.banner.get_lha_strategy() 
+        #    self.banner.set_lha_strategy(4*lha_strategy/abs(lha_strategy)) 
+        #    self.banner.write(output2, close_tag=False)
+        #    self.banner.set_lha_strategy(lha_strategy)
+        #    new_banner = banner.Banner(self.banner)
+        #    if not hasattr(self, 'run_card'):
+        #        self.run_card = new_banner.charge_card('run_card')
+        #    self.run_card['run_tag'] = 'reweight_%s' % rewgtid
+        #    new_banner['slha'] = s_new   
+        #    del new_banner['initrwgt']
+        #    assert 'initrwgt' in self.banner 
+        #    ff = open(pjoin(self.mother.me_dir,'Events',self.mother.run_name, '%s_%s_banner.txt' % \
+        #                  (self.mother.run_name, self.run_card['run_tag'])),'w') 
+        #    new_banner.write(ff)
+        #    ff.close()
         
         # Loop over all events
         if self.options['rwgt_name']:
@@ -699,21 +709,23 @@ class ReweightInterface(extended_cmd.Cmd):
                         event.reweight_data['%s%s' % (tag_name,name)] = weight[name]
                         #write this event with weight
                     output.write(str(event))
-                    if self.mother:
-                        event.wgt = weight[type_rwgt[0]]
-                        event.reweight_data = {}
-                        output2.write(str(event))
+                    #if self.mother:
+                    #    event.wgt = weight[type_rwgt[0]]
+                    #    event.reweight_data = {}
+                    #    output2.write(str(event))
                 else:
                     for i,name in enumerate(weight):
-                        event.wgt = weight[name]
-                        event.reweight_data = {}
-                        if self.mother and len(weight)==1:
-                            output2.write(str(event))
-                        elif self.mother and i == 0:
-                            output[name].write(str(event))
-                            output2.write(str(event))
-                        else:
-                            output[name].write(str(event))
+                        if 'orig' in name:
+                            continue 
+                        if weight[name] == 0:
+                            continue
+                        new_evt = lhe_parser.Event(str(event))
+                        new_evt.rescale_weights(weight[name]/event.wgt)
+                        for key in new_evt.reweight_data:
+                            if isinstance(key,str) and key.startswith(('reweight_','rwgt_')):
+                                del new_evt.reweight_data[key]
+                        
+                            output[(tag_name,name)].write(str(new_evt))
                 
         # check normalisation of the events:
         if 'event_norm' in self.run_card:
@@ -731,13 +743,14 @@ class ReweightInterface(extended_cmd.Cmd):
         else:
             for key in output:
                 output[key].write('</LesHouchesEvents>\n')
-                output.close()
+                misc.sprint(output[key].name)
+                output[key].close()
             
         os.environ['GFORTRAN_UNBUFFERED_ALL'] = 'n'
         
         if self.mother:
-            output2.write('</LesHouchesEvents>\n')
-            output2.close()        
+            #output2.write('</LesHouchesEvents>\n')
+            #output2.close()        
             # add output information
             if hasattr(self.mother, 'results'):
                 run_name = self.mother.run_name
@@ -753,18 +766,18 @@ class ReweightInterface(extended_cmd.Cmd):
                     error[name] = variance/math.sqrt(event_nb) * orig_cross + ratio[name]/event_nb * orig_error
                 results.add_detail('error', error[type_rwgt[0]])
                 import madgraph.interface.madevent_interface as ME_interface
-                if isinstance(self.mother, ME_interface.MadEventCmd):
-                    self.mother.create_plot(mode='reweight', event_path=output2.name,
-                                        tag=self.run_card['run_tag'])
+#                if isinstance(self.mother, ME_interface.MadEventCmd):
+#                    self.mother.create_plot(mode='reweight', event_path=output2.name,
+#                                        tag=self.run_card['run_tag'])
                 #modify the html output to add the original run
-                if 'plot' in results.current.reweight:
-                    html_dir = pjoin(self.mother.me_dir, 'HTML', run_name)
-                    td = pjoin(self.mother.options['td_path'], 'td') 
-                    MA = pjoin(self.mother.options['madanalysis_path'])
-                    path1 = pjoin(html_dir, 'plots_parton')
-                    path2 = pjoin(html_dir, 'plots_%s' % self.run_card['run_tag'])
-                    outputplot = path2
-                    combine_plots.merge_all_plots(path2, path1, outputplot, td, MA)
+#                if 'plot' in results.current.reweight:
+#                    html_dir = pjoin(self.mother.me_dir, 'HTML', run_name)
+#                    td = pjoin(self.mother.options['td_path'], 'td') 
+#                    MA = pjoin(self.mother.options['madanalysis_path'])
+#                    path1 = pjoin(html_dir, 'plots_parton')
+#                    path2 = pjoin(html_dir, 'plots_%s' % self.run_card['run_tag'])
+#                    outputplot = path2
+#                    combine_plots.merge_all_plots(path2, path1, outputplot, td, MA)
                 #results.update_status(level='reweight')
                 #results.update(status, level, makehtml=True, error=False)
                 
@@ -784,12 +797,11 @@ class ReweightInterface(extended_cmd.Cmd):
             target = pjoin(self.mother.me_dir, 'Events', run_name, 'events.lhe')
         else:
             target = self.lhe_input.name
-        
+        misc.sprint('target is', target)
         if self.output_type == "default":
             files.mv(output.name, target)
             logger.info('Event %s have now the additional weight' % self.lhe_input.name)
         elif self.output_type == "unweight":
-            output2.close()
             lhe = lhe_parser.EventFile(output2.name)
             nb_event = lhe.unweight(target)
             if self.mother and  hasattr(self.mother, 'results'):
@@ -798,11 +810,12 @@ class ReweightInterface(extended_cmd.Cmd):
                 results.current.parton.append('lhe')
             logger.info('Event %s is now unweighted under the new theory' % output2.name)                
         else:
-            files.mv(output2.name, self.lhe_input.name)     
+#            files.mv(output2.name, self.lhe_input.name)     
             if self.mother and  hasattr(self.mother, 'results'):
                 results = self.mother.results
-                results.current.parton.append('lhe')       
-            logger.info('Event %s is now created with new central weight' % output2.name)
+                results.current.parton.append('lhe')
+            for key,ff in output.items():       
+                logger.info('Event %s is now created with new central weight for %s' % (ff.name,key))
         
         if self.multicore != 'create':
             for name in cross:
@@ -825,6 +838,7 @@ class ReweightInterface(extended_cmd.Cmd):
                 if self.options['rwgt_name']:
                     self.options['rwgt_name'] = '%s_%s' % (self.options['rwgt_name'].rsplit('_',1)[0], i+1)
                 card.write(pjoin(rw_dir, 'Cards', 'param_card.dat'))
+                self.new_param_card = card
                 self.exec_cmd("launch --keep_card", printcmd=False, precmd=True)
         
         self.options['rwgt_name'] = None
@@ -891,10 +905,19 @@ class ReweightInterface(extended_cmd.Cmd):
         if not space: 
             space = self
         event.parse_reweight()                    
-           
+        orig_wgt = event.wgt
         # LO reweighting    
         w_orig = self.calculate_matrix_element(event, 0, space)
-        w_new =  self.calculate_matrix_element(event, 1, space)
+        # reshuffle event for mass effect # external mass only
+        jac = event.change_ext_mass(self.new_param_card)
+        if event is not event and self.options['output'] == 'default':
+            logger.critical('mass reweighting requires dedicated lhe output! Stop this generation and restart with appropriate mode.')
+            
+        
+        if event.wgt != 0: # impossible reshuffling
+            w_new =  self.calculate_matrix_element(event, 1, space)
+        else:
+            w_new = 0
         if w_orig == 0:
             tag, order = event.get_tag_and_order()
             orig_order, Pdir, hel_dict = self.id_to_path[tag]
@@ -911,7 +934,7 @@ class ReweightInterface(extended_cmd.Cmd):
             misc.sprint(nhel, Pdir, hel_dict)                        
             raise Exception, "Invalid matrix element for original computation (weight=0)"
 
-        return {'orig': event.wgt, '': w_new/w_orig*event.wgt}
+        return {'orig': orig_wgt, '': w_new/w_orig*orig_wgt*jac}
      
     def calculate_nlo_weight(self, event, space=None):
 

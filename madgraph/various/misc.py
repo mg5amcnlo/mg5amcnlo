@@ -1869,6 +1869,20 @@ def import_python_lhapdf(lhapdfconfig):
         python_lhapdf = None
     return python_lhapdf
 
+def newtonmethod(f, df, x0, error=1e-10,maxiter=10000):
+    """implement newton method for solving f(x)=0, df is the derivate"""
+    x = x0
+    iter=0
+    while abs(f(x)) > error:
+        iter+=1
+        x = x - f(x)/df(x)
+        if iter ==maxiter:
+            sprint('fail to solve equation')
+            raise Exception
+    return x
+
+
+
 ############################### TRACQER FOR OPEN FILE
 #openfiles = set()
 #oldfile = __builtin__.file

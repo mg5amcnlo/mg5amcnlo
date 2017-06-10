@@ -2,6 +2,7 @@ from __future__ import division
 import collections
 import random
 import re
+import operator
 import numbers
 import math
 import time
@@ -256,7 +257,10 @@ class EventFile(object):
                     text += line
 
             if self.parsing:
-                return Event(text)
+                out = Event(text)
+                if len(out) == 0:
+                    raise Exception
+                return out
             else:
                 return text
         else:
@@ -1634,6 +1638,99 @@ class Event(list):
         tag = (tuple(initial), tuple(final))
         return tag, order
     
+    @staticmethod
+    def mass_shuffle(momenta, sqrts, new_mass):
+        """use the RAMBO method to shuffle the PS. initial sqrts is preserved."""
+        
+        oldm = [p.mass_sqr for p in momenta]
+        newm = [m**2 for m in new_mass]
+        tot_mom = sum(momenta, FourMomentum())
+        if tot_mom.pt2 > 1e-5:
+            boost_back = FourMomentum(tot_mom.mass,0,0,0).boost_to_restframe(tot_mom)
+            for i,m in enumerate(momenta):
+                momenta[i] = m.boost_to_restframe(tot_mom)
+        
+        # this is the equation 4.3 of RAMBO paper        
+        f = lambda chi: sqrts - sum(math.sqrt(max(0, M + chi**2*(p.E**2-m))) 
+                                    for M,p,m in zip(newm, momenta,oldm))
+        # this is the derivation of the function
+        df = lambda chi: -1* sum(chi*(p.E**2-m)/math.sqrt(max(0,(p.E**2-m)*chi**2+M))
+            for M,p,m in zip(newm, momenta,oldm))
+        
+        if sum(new_mass) > sqrts:
+            return momenta, 0
+        try:
+            chi = misc.newtonmethod(f, df, 1.0, error=1e-7,maxiter=1000)
+        except:
+            return momenta, 0 
+        # create the new set of momenta # eq. (4.2)        
+        new_momenta = []
+        for i,p in enumerate(momenta):
+            new_momenta.append(
+                FourMomentum(math.sqrt(newm[i]+chi**2*(p.E**2-oldm[i])),
+                              chi*p.px, chi*p.py, chi*p.pz))
+        
+        #if __debug__:
+        #    for i,p in enumerate(new_momenta):
+        #        misc.sprint(p.mass_sqr, new_mass[i]**2, i,p, momenta[i])
+        #        assert p.mass_sqr == new_mass[i]**2
+                
+        # compute the jacobian factor (eq. 4.9)
+        jac = chi**(3*len(momenta)-3)
+        jac *= reduce(operator.mul,[p.E/k.E for p,k in zip(momenta, new_momenta)],1)
+        jac *= sum(p.norm_sq/p.E for p in momenta)
+        jac /= sum(k.norm_sq/k.E for k in new_momenta)
+        
+        # boost back the events in the lab-frame
+        if tot_mom.pt2 > 1e-5:
+            for i,m in enumerate(new_momenta):
+                new_momenta[i] = m.boost_to_restframe(boost_back)
+        return new_momenta, jac
+        
+        
+    
+    
+    def change_ext_mass(self, new_param_card):
+        """routine to rescale the mass via RAMBO method. no internal mass preserve.
+           sqrts is preserve (RAMBO algo)
+        """
+        
+        old_momenta = []
+        new_masses = []
+        change_mass = False # check if we need to change the mass
+        for part in self:
+            if part.status == 1:
+                old_momenta.append(FourMomentum(part))
+                new_masses.append(new_param_card.get_value('mass', abs(part.pid)))
+                if part.mass != new_masses[-1]:
+                    change_mass = True
+        
+        if not change_mass:
+            return 1
+        
+        sqrts = self.sqrts
+
+        # apply the RAMBO algo
+        new_mom, jac = self.mass_shuffle(old_momenta, sqrts, new_masses)
+        
+        #modify the momenta of the particles:
+        ind =0
+        for part in self:
+            if part.status==1:
+                part.E, part.px, part.py, part.pz, part.mass = \
+                new_mom[ind].E, new_mom[ind].px, new_mom[ind].py, new_mom[ind].pz,new_mom[ind].mass
+                ind+=1
+        return jac
+    
+    
+    def rescale_all_mas(self, new_param_card, old_param_card=None):
+        """routine to rescale the mass via RAMBO method. """
+        
+        
+        
+        
+        
+    
     def get_helicity(self, get_order, allow_reversed=True):
         """return a list with the helicities in the order asked for"""
         
@@ -1825,7 +1922,7 @@ class Event(list):
 
             reweight_str = '<rwgt>\n%s\n</rwgt>' % '\n'.join(
                         '<wgt id=\'%s\'> %+13.7e </wgt>' % (i, float(self.reweight_data[i]))
-                        for i in self.reweight_order)
+                        for i in self.reweight_order if i in self.reweight_data)
         else:
             reweight_str = '' 
             
@@ -1935,6 +2032,10 @@ class Event(list):
                 scale += p.E*pt/math.sqrt(pt**2+p.pz**2)
     
         return prefactor * scale    
+    
+    @property
+    def sqrts(self):
+        return self.get_sqrts_scale(1)
     
     def get_sqrts_scale(self, prefactor=1):
         
@@ -2075,6 +2176,17 @@ class FourMomentum(object):
         
         return  self.px**2 + self.py**2
     
+    @property
+    def norm(self):
+        """ return |\vec p| """
+        return math.sqrt(self.px**2 + self.py**2 + self.pz**2) 
+
+    @property
+    def norm_sq(self):
+        """ return |\vec p|^2 """
+        return self.px**2 + self.py**2 + self.pz**2
+    
+    
     def __add__(self, obj):
         
         assert isinstance(obj, FourMomentum)
@@ -2178,7 +2290,9 @@ class FourMomentum(object):
         zboost routine (see above)
         """
         
-
+        if pboost.px == 0 == pboost.py:
+            out = self.zboost(E=pboost.E,pz=pboost.pz)
+            return out
         
         
         # write pboost as (E, p cosT sinF, p sinT sinF, p cosF)
