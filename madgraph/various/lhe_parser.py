@@ -710,6 +710,69 @@ class EventFile(object):
             except StopIteration:
                 break
             
+    def get_alphas(self, scale, lhapdf_config='lhapdf-config'):
+        """return the alphas value associated to a given scale"""
+        
+        if hasattr(self, 'alpsrunner'):
+            return self.alpsrunner(scale)
+        
+        #
+        banner = banner_mod.Banner(self.banner)
+        run_card = banner.charge_card('run_card')
+        use_runner = False
+        if abs(run_card['lpp1']) != 1 and abs(run_card['lpp2']) != 1:
+            # no pdf use. -> use Runner
+            use_runner = True
+        else:
+            # try to use lhapdf
+            lhapdf = misc.import_python_lhapdf(lhapdf_config)
+            if not lhapdf:
+                logger.warning('fail to link to lhapdf for the alphas-running. Use Two loop computation')
+                use_runner = True
+            try:
+                self.pdf = lhapdf.mkPDF(int(self.banner.run_card.get_lhapdf_id()))
+            except Exception:
+                logger.warning('fail to link to lhapdf for the alphas-running. Use Two loop computation')
+                use_runner = True
+                
+        if not use_runner:
+            self.alpsrunner = lambda scale: self.pdf.alphasQ(scale)
+        else:
+            try:
+                from models.model_reader import Alphas_Runner
+            except ImportError:
+                root = os.path.dirname(__file__)
+                root_path = pjoin(root, os.pardir, os.pardir)
+                try:
+                    import internal.madevent_interface as me_int
+                    cmd = me_int.MadEventCmd(root_path,force_run=True)
+                except ImportError:
+                    import internal.amcnlo_run_interface as me_int
+                    cmd = me_int.Cmd(root_path,force_run=True)                
+                if 'mg5_path' in cmd.options and cmd.options['mg5_path']:
+                    sys.path.append(cmd.options['mg5_path'])
+                from models.model_reader import Alphas_Runner
+                
+            if not hasattr(banner, 'param_card'):
+                param_card = banner.charge_card('param_card')
+            else:
+                param_card = banner.param_card
+            
+            asmz = param_card.get_value('sminputs', 3, 0.13)
+            nloop =2
+            zmass = param_card.get_value('mass', 23, 91.188)
+            cmass = param_card.get_value('mass', 4, 1.4)
+            if cmass == 0:
+                cmass = 1.4
+            bmass = param_card.get_value('mass', 5, 4.7)
+            if bmass == 0:
+                bmass = 4.7
+            self.alpsrunner = Alphas_Runner(asmz, nloop, zmass, cmass, bmass)
+            
+            
+            
+        return self.alpsrunner(scale)
+            
             
             
         
@@ -2007,6 +2070,19 @@ class Event(list):
         return out
 
     
+    def get_scale(self,type):
+        
+        if type == 1:
+            return self.get_et_scale()
+        elif type == 2:
+            return self.get_ht_scale()
+        elif type == 3:
+            return self.get_ht_scale(prefactor=0.5)
+        elif type == 4:
+            return self.get_sqrts_scale()
+        elif type == -1:
+            return self.get_ht_scale(prefactor=0.5)
+        
     
     def get_ht_scale(self, prefactor=1):
         

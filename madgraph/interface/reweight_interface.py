@@ -58,7 +58,7 @@ dir_to_f2py_free_mod = {}
 nb_f2py_module = 0 # each time the process/model is changed this number is modified to 
                    # forced the python module to re-create an executable
 
-
+lhapdf = None
 
 
 class ReweightInterface(extended_cmd.Cmd):
@@ -609,7 +609,6 @@ class ReweightInterface(extended_cmd.Cmd):
             cross[name], error[name] = 0.,0.
             ratio[name],ratio_square[name] = 0., 0.# to compute the variance and associate error
 
-        misc.sprint(self.output_type,tag)
         if self.output_type == "default":
             output = open( self.lhe_input.name +'rw', 'w')
             #write the banner to the output file
@@ -899,6 +898,8 @@ class ReweightInterface(extended_cmd.Cmd):
     def calculate_weight(self, event, space=None):
         """space defines where to find the calculator (in multicore)"""
         
+        global lhapdf
+        
         if self.has_nlo and self.rwgt_mode != "LO":
             return self.calculate_nlo_weight(event, space)
         
@@ -910,9 +911,17 @@ class ReweightInterface(extended_cmd.Cmd):
         w_orig = self.calculate_matrix_element(event, 0, space)
         # reshuffle event for mass effect # external mass only
         jac = event.change_ext_mass(self.new_param_card)
-        if event is not event and self.options['output'] == 'default':
-            logger.critical('mass reweighting requires dedicated lhe output! Stop this generation and restart with appropriate mode.')
-            
+        if jac != 1:
+            if self.output_type == 'default':
+                logger.critical('mass reweighting requires dedicated lhe output!. Please include "change output 2.0" in your reweight_card')
+                raise Exception
+            mode = self.run_card['dynamical_scale_choice']
+            if mode == -1:
+                logger.warning('dynamical_scale is set to -1. New sample will be with HT/2 dynamical scale')
+            event.scale = event.get_scale(mode)
+            event.aqcd = self.lhe_input.get_alphas(event.scale, lhapdf_config=self.mother.options['lhapdf'])
+ 
+        
         
         if event.wgt != 0: # impossible reshuffling
             w_new =  self.calculate_matrix_element(event, 1, space)
