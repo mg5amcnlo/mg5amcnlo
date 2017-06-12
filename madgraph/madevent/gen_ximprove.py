@@ -1050,7 +1050,8 @@ class gen_ximprove_v4(gen_ximprove):
                         new_info['base_directory'] = info['directory']
                     jobs.append(new_info)
             
-        self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs)    
+        write_dir = '.' if self.readonly else None
+        self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs, write_dir)    
                 
 
     def create_ajob(self, template, jobs, write_dir=None):
@@ -1068,12 +1069,13 @@ class gen_ximprove_v4(gen_ximprove):
             P2job[j['P_dir']].append(j)
         if len(P2job) >1:
             for P in P2job.values():
-                self.create_ajob(template, P)
+                self.create_ajob(template, P, write_dir)
             return
         
         
         #Here we can assume that all job are for the same directory.
         path = pjoin(write_dir, jobs[0]['P_dir'])
+        
         
         template_text = open(template, 'r').read()
         # special treatment if needed to combine the script
@@ -1091,7 +1093,7 @@ class gen_ximprove_v4(gen_ximprove):
                 skip1 = self.combining_job - nb_job_in_last
                 if skip1 > nb_sub:
                     self.combining_job -=1
-                    return self.create_ajob(template, jobs)
+                    return self.create_ajob(template, jobs, write_dir)
             combining_job = self.combining_job
         else:
             #define the variable for combining jobs even in not combine mode
@@ -1661,13 +1663,15 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             if j['P_dir'] in done:
                 continue
 
-            exe = pjoin(self.me_dir, 'SubProcesses', j['P_dir'], 'ajob1')
+            # set the working directory path.
+            pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
+            exe = pjoin(pwd, 'ajob1')
             st = os.stat(exe)
-            os.chmod(exe, st.st_mode | stat.S_IEXEC)            
+            os.chmod(exe, st.st_mode | stat.S_IEXEC)
 
-            cluster.onecore.launch_and_wait(exe, 
-                         cwd=pjoin(self.me_dir, 'SubProcesses', j['P_dir']),
-                         packet_member=j['packet'])
+            # run the code
+            cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
+
         
         for i in range(len(jobs)):    
             self.check_events(goal_lum, to_refine[i-1], jobs[i-1], self.me_dir) 

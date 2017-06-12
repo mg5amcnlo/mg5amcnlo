@@ -24,7 +24,7 @@ else
 	SOURCE="$(readlink "$SOURCE")"
 	[[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
     done
-    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+    DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )/madevent"
 fi
 
 # For Linux
@@ -32,7 +32,6 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 # For Mac OS X
 export DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:${PWD}/madevent/lib:${PWD}/HELAS/lib
 
-echo "Now generating $num_events events with random seed $seed and granularity $gran"
 
 if [[  ($1 != "") && ("$2" != "") && ("$3" == "") ]]; then
    num_events=$1
@@ -46,7 +45,7 @@ else
    echo "Warning: input is not correct. script requires two arguments: NB_EVENT SEED"
 fi
 
-
+echo "Now generating $num_events events with random seed $seed and granularity $gran"
 
 ############    RUN THE PYTHON CODE #####################
 ${DIR}/bin/gridrun $num_events $seed $gran

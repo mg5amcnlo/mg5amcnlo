@@ -641,13 +641,8 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
                 %s and try again.''' % pjoin(me_dir,'RunWeb')
                 raise AlreadyRunning, message
             else:
-                pid = os.getpid()
-                fsock = open(pjoin(me_dir,'RunWeb'),'w')
-                fsock.write(`pid`)
-                fsock.close()
-    
-                misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
-                            cwd=me_dir)
+                self.write_RunWeb(me_dir)
+
 
         self.to_store = []
         self.run_name = None
@@ -669,6 +664,14 @@ class CommonRunCmd(HelpToCmd, CheckValidForCmd, cmd.Cmd):
             self.ninitial = self.proc_characteristics['ninitial']
 
 
+    def write_RunWeb(self, me_dir):
+        pid = os.getpid()
+        fsock = open(pjoin(me_dir,'RunWeb'),'w')
+        fsock.write(`pid`)
+        fsock.close()
+    
+        misc.Popen([os.path.relpath(pjoin(self.dirbin, 'gen_cardhtml-pl'), me_dir)],
+                            cwd=me_dir)
     ############################################################################
     def split_arg(self, line, error=False):
         """split argument and remove run_options"""

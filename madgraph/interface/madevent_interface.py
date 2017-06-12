@@ -6117,13 +6117,13 @@ class GridPackCmd(MadEventCmd):
         """Initialize the command and directly run"""
 
         # Initialize properly
-        
+        self.readonly = False
         MadEventCmd.__init__(self, me_dir, *completekey, **stdin)
         self.run_mode = 0
         self.random = seed
         self.random_orig = self.random
         self.granularity = gran
-        self.readonly = False
+        
         self.options['automatic_html_opening'] = False
         #write the grid_card.dat on disk
         self.nb_event = int(nb_event)
@@ -6137,20 +6137,37 @@ class GridPackCmd(MadEventCmd):
                   'Gridpack run failed: ' + str(me_dir) + str(nb_event) + \
                   str(seed)
 
+
+    def update_status(self, *args, **opts):
+        return
+
+    def save_random(self):
+        """save random number in appropirate file"""
+
+        if not self.readonly:
+            fsock = open(pjoin(self.me_dir, 'SubProcesses','randinit'),'w')
+        else:
+            fsock = open('randinit','w')
+        fsock.writelines('r=%s\n' % self.random)
+
+    def write_RunWeb(self, me_dir):
+        try:
+            super(GridPackCmd, self).write_RunWeb(me_dir)
+        except IOError:
+            self.readonly  =True
+
     def write_gridcard(self, nb_event, seed, gran):
         """write the grid_card.dat file at appropriate location"""
         
         # first try to write grid_card within the gridpack.
-        try:
-            fsock = open(pjoin(self.me_dir, 'Cards', 'grid_card.dat'),'w')
-        except Exception:
-            # since that fails, pass in READONLY mode for the gridpack -> write it
-            # in current directory
-            self.readonly = True
+        print "WRITE GRIDCARD", self.me_dir
+        if self.readonly:
             if not os.path.exists('Cards'):
                 os.mkdir('Cards')
             fsock = open('grid_card.dat','w')
-        
+        else:
+            fsock = open(pjoin(self.me_dir, 'Cards', 'grid_card.dat'),'w')
+                
         gridpackcard = banner_mod.GridpackCard()
         gridpackcard['GridRun'] = True
         gridpackcard['gevents'] = nb_event
