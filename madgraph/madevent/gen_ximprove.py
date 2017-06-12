@@ -1083,6 +1083,9 @@ class gen_ximprove_v4(gen_ximprove):
             n_channels = len(jobs)
             nb_sub = n_channels // self.combining_job
             nb_job_in_last = n_channels % self.combining_job
+            if nb_sub == 0:
+                nb_sub = 1
+                nb_job_in_last =0
             if nb_job_in_last:
                 nb_sub +=1
                 skip1 = self.combining_job - nb_job_in_last
@@ -1104,7 +1107,7 @@ class gen_ximprove_v4(gen_ximprove):
             if i < skip1:
                 nb_job = combining_job -1
             else:
-                nb_job = combining_job
+                nb_job = min(combining_job, len(jobs))
             fsock = open(pjoin(path, 'ajob%i' % script_number), 'w')
             for j in range(nb_use, nb_use + nb_job):
                 if j> len(jobs):
@@ -1546,6 +1549,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
     max_request_event = 1e12         # split jobs if a channel if it needs more than that 
     max_event_in_iter = 5000
     min_event_in_iter = 1000
+    combining_job = 10000000
 
     def __init__(self, *args, **opts):
         
@@ -1579,21 +1583,20 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                           
         to_refine = []
         for C in all_channels:
-            tag = (C.get('parent_name'), C.get('name'))
-            self.gscalefact[tag] = 1
+            tag = C.get('name')
+            self.gscalefact[tag] = 0
             R = random.random()
             if C.get('axsec') == 0:
                 continue
             if (goal_lum * C.get('axsec') < R*self.ngran ):
                 continue # no event to generate events
-            self.gscalefact[tag] = max(1, goal_lum * C.get('axsec')/ self.ngran)
+            self.gscalefact[tag] = max(1, 1/(goal_lum * C.get('axsec')/ self.ngran))
             #need to generate events
             logger.debug('request events for ', C.get('name'), 'cross=',
                   C.get('axsec'), 'needed events = ', goal_lum * C.get('axsec'))
-            to_refine.append(C)    
+            to_refine.append(C) 
          
         logger.info('need to improve %s channels' % len(to_refine))    
-        print 'PASS HERE', to_refine    
         return goal_lum, to_refine
 
     def get_job_for_event(self):
@@ -1603,12 +1606,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
         
         goal_lum, to_refine = self.find_job_for_event()
 
-
-        
         jobs = [] # list of the refine if some job are split is list of
                   # dict with the parameter of the run.
-
-                                                    
+                                                
         # loop over the channel to refine
         for C in to_refine:
             #1. Compute the number of points are needed to reach target
@@ -1656,15 +1656,20 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             
         self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs) 
         
-        for i in range(1, len(jobs)+1):
-            
-            exe = pjoin(self.me_dir, 'SubProcesses',C.parent_name, 'ajob%s' % i)
+        done = []
+        for j in jobs:
+            if j['P_dir'] in done:
+                continue
+
+            exe = pjoin(self.me_dir, 'SubProcesses', j['P_dir'], 'ajob1')
             st = os.stat(exe)
             os.chmod(exe, st.st_mode | stat.S_IEXEC)            
 
             cluster.onecore.launch_and_wait(exe, 
-                         cwd=pjoin(self.me_dir, 'SubProcesses', C.parent_name),
-                         packet_member=jobs[i-1]['packet'])
+                         cwd=pjoin(self.me_dir, 'SubProcesses', j['P_dir']),
+                         packet_member=j['packet'])
+        
+        for i in range(len(jobs)):    
             self.check_events(goal_lum, to_refine[i-1], jobs[i-1], self.me_dir) 
             #cluster.wait()
     
@@ -1677,7 +1682,6 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
         axsec = C.get('axsec')
         requested_events = job_info['precision']
         
-        print 'check events', P, G, goal_lum, axsec, requested_events
         if goal_lum*axsec < requested_events:
             # need to multiply the associated weight of each event by
             wgt_ratio = requested_events/(goal_lum*axsec)
@@ -1686,7 +1690,6 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
         new_results = sum_html.OneResult((P,G))
         new_results.read_results(pjoin(me_dir, 'SubProcesses',P, 'G%s'%G, 'results.dat'))
         print G, 'has', new_results.get('nunwgt'), 'requested', requested_events
-        print os.listdir(pjoin(me_dir, 'SubProcesses',P, 'G%s'%G))
                                  
         
         

@@ -15,7 +15,7 @@
 #############################################################################
 
 if [[ -d ./madevent ]]; then
-    DIR='.'
+    DIR='./madevent'
 else
     # find the path to the gridpack (https://stackoverflow.com/questions/59895/getting-the-source-directory-of-a-bash-script-from-within)
     SOURCE="${BASH_SOURCE[0]}"
@@ -49,25 +49,26 @@ fi
 
 
 ############    RUN THE PYTHON CODE #####################
-${DIR}/madevent/bin/gridrun $num_events $seed $gran
+${DIR}/bin/gridrun $num_events $seed $gran
 ########################################################
 
 ###########    POSTPROCESSING      #####################
 
-if [[ -e ./Events/GridRun_${seed}/unweighted_events.lhe.gz ]]; then
-	gunzip ./Events/GridRun_${seed}/unweighted_events.lhe.gz
+echo "search for ./Events/GridRun_${seed}/unweighted_events.lhe.gz"
+if [[ -e ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz ]]; then
+	gunzip ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz
 fi
 
-if [[ ! -e  ./Events/GridRun_${seed}/unweighted_events.lhe ]]; then
+if [[ ! -e  ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe ]]; then
     echo "Error: event file not found !"
     exit
 else
     echo "Moving events from  events.lhe"
-    mv ./Events/GridRun_${seed}/unweighted_events.lhe ../events.lhe
+    mv ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe ./events.lhe
     cd ..
 fi
 
-if [[ -e ./DECAY/decay ]]; then
+if [[ -e ${DIR}/DECAY/decay ]]; then
     cd DECAY
     echo -$seed > iseed.dat
     for ((i = 1 ;  i <= 20;  i++)) ; do
