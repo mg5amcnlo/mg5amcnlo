@@ -576,8 +576,8 @@ c compute the derivative numerically (to compute the Jacobian)
                y_ij_fks_ev_der_max=y_ij_fks_ev
             endif
             if (errder.gt.0.1d0) then
-               write (*,*) 'WARNING: error is large in the computation'/
-     $              /' of the derivative',errder,der
+               write (*,*) 'WARNING: uncertainty is large in the'/
+     $              /' computation of the derivative',errder,der
             endif
 c compute the event kinematics using xmbe2inv as mass for the
 c grandmother of the Born (this will give granny_m2_red_local(0) mass to
