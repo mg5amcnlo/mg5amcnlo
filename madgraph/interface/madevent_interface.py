@@ -1731,7 +1731,6 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
 
-        misc.sprint("loading results!!!")
         self.load_results_db()        
         self.results.def_web_mode(self.web)
         
@@ -3130,7 +3129,6 @@ Beware that this can be dangerous for local multicore runs.""")
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
         for Gdir in self.get_Gdir():
-            misc.sprint(Gdir)
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
@@ -5231,12 +5229,8 @@ tar -czf split_$1.tar.gz split_$1
                         return list(itertools.chain(*self.Gdirs[0].values())), self.Gdirs[1]
                 else:
                     if not symfact:
-                        misc.sprint(self.Gdirs[0][Pdir])
-                        misc.sprint(Pdir)
                         return self.Gdirs[0][Pdir]
                     else:
-                        misc.sprint(self.Gdirs[0][Pdir])
-                        misc.sprint(Pdir)
                         return self.Gdirs[0][Pdir], self.Gdirs[1]
 
 
@@ -5251,7 +5245,6 @@ tar -czf split_$1.tar.gz split_$1
                 if int(mfactor) > 0:
                     Gdirs[P].append( pjoin(P, "G%s" % tag) )
                     mfactors[pjoin(P, "G%s" % tag)] = mfactor
-        misc.sprint(Gdirs)
         self.Gdirs = (Gdirs, mfactors)
         return self.get_Gdir(Pdir, symfact=symfact)
                 
@@ -6228,10 +6221,10 @@ class GridPackCmd(MadEventCmd):
         # 1) Restore the default data
         logger.info('generate %s events' % nb_event)
         self.set_run_name('GridRun_%s' % seed)
-        self.update_status('restoring default data', level=None)
-        misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
-                         'default'],
-            cwd=self.me_dir)
+        if not self.readonly:
+            self.update_status('restoring default data', level=None)
+            misc.call([pjoin(self.me_dir,'bin','internal','restore_data'),
+                         'default'], cwd=self.me_dir)
 
         # 2) Run the refine for the grid
         self.update_status('Generating Events', level=None)
@@ -6246,7 +6239,6 @@ class GridPackCmd(MadEventCmd):
             self.exec_cmd('store_events')
             self.print_results_in_shell(self.results.current)
         else:
-            print "6211, no cleaning done in readonly gridpack. Should we do it?"
             self.exec_cmd('decay_events -from_cards', postcmd=False)
 
     def refine4grid(self, nb_event):
@@ -6275,7 +6267,6 @@ class GridPackCmd(MadEventCmd):
         self.gscalefact = x_improve.gscalefact #store jacobian associate to the gridpack 
         
         
-        print "6226 -> all requested job finished with expected accuracy. END REFINE4GRID"
         #bindir = pjoin(os.path.relpath(self.dirbin, pjoin(self.me_dir,'SubProcesses')))
         #print 'run combine!!!'
         #combine_runs.CombineRuns(self.me_dir)
@@ -6375,8 +6366,6 @@ class GridPackCmd(MadEventCmd):
         self.banner.change_seed(self.random_orig)
         
         
-        print(6319,"check for Events!", self.me_dir, gscalefact)
-
         if not os.path.exists(pjoin(outdir, self.run_name)):
                 os.mkdir(pjoin(outdir, self.run_name))
         self.banner.write(pjoin(outdir, self.run_name, 
@@ -6389,12 +6378,10 @@ class GridPackCmd(MadEventCmd):
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
         for Gdir in self.get_Gdir():
-            print "read event from", Gdir
             #mfactor already taken into accoun in auto_dsig.f
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
-                print 'has', result.get('nevents'),'nevents'
                 AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec')*gscalefact[Gdir],
                              result.get('xerru')*gscalefact[Gdir],
@@ -6424,7 +6411,6 @@ class GridPackCmd(MadEventCmd):
                           log_level=logging.DEBUG, normalization=self.run_card['event_norm'],
                           proc_charac=self.proc_characteristic)
         
-        print(nb_event,'events in ',pjoin(outdir, self.run_name, "unweighted_events.lhe.gz"))
         
         if partials:
             for i in range(partials):
@@ -6479,9 +6465,7 @@ class GridPackCmd(MadEventCmd):
             except AttributeError:
                 logger.warning('Fail to read the number of unweighted events in the combine.log file')
                 nb_event = 0
-        print "COMBINE EVENTS", output
         self.results.add_detail('nb_event', nb_event)
-        print "generated", nb_event
         
         # Define The Banner
         tag = self.run_card['run_tag']
@@ -6960,7 +6944,6 @@ if '__main__' == __name__:
             level = int(options.logging)
         else:
             level = eval('logging.' + options.logging)
-        print os.path.join(root_path, 'internal', 'me5_logging.conf')
         logging.config.fileConfig(os.path.join(root_path, 'internal', 'me5_logging.conf'))
         logging.root.setLevel(level)
         logging.getLogger('madgraph').setLevel(level)

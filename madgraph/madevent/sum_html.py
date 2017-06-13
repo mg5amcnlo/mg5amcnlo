@@ -696,7 +696,6 @@ def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
                 continue            
         else:
             G_dir, mfactors = cmd.get_Gdir(Pdir, symfact=True)
-            misc.sprint( G_dir)
             for G in G_dir:
                 if not folder_names:
                     if main_dir:

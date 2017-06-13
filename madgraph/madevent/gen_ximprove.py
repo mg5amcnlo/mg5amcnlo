@@ -743,18 +743,14 @@ class gen_ximprove(object):
 
     def __new__(cls, cmd, opt):
         """Choose in which type of refine we want to be"""
-        print "choose gen_ximprove", cmd.run_card['gridpack']
+
         if cmd.proc_characteristics['loop_induced']:
-            print "LI"
             return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
-            print "GP"
             return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack, cmd, opt)
         elif cmd.run_card["job_strategy"] == 2:
-            print "LI"
             return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         else:
-            print "V4"
             return super(gen_ximprove, cls).__new__(gen_ximprove_v4, cmd, opt)
             
             
@@ -1637,10 +1633,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             nevents = max(self.min_event_in_iter, min(self.max_event_in_iter, nevents))
             logger.debug("%s : need %s event. Need %s split job of %s points", C.name, needed_event, nb_split, nevents)
             
-            packet = cluster.Packet((C.parent_name, C.name),
-                            self.check_events,
-                            (C.parent_name,C.name, goal_lum, C.get('axsec'), needed_event))
-                                          
+
             #create the  info dict  assume no splitting for the default
             info = {'name': self.cmd.results.current['run_name'],
                     'script_name': 'unknown',
@@ -1648,7 +1641,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'P_dir': os.path.basename(C.parent_name), 
                     'offset': 1,            # need to be change for splitted job
                     'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
-                    'nevents': nevents,
+                    'nevents': nevents*self.gen_events_security,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,
                     'precision': needed_event,
@@ -1656,7 +1649,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'channel': C.name.replace('G',''),
                     'grid_refinment' : 0,    #no refinment of the grid
                     'base_directory': '',   #should be change in splitted job if want to keep the grid
-                    'packet': packet, 
+                    'packet': None, 
                     }
 
 
@@ -1664,7 +1657,6 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
           
 
         write_dir = '.' if self.readonly else None  
-        print {'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name), 'write_dir':write_dir}
         self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs, write_dir) 
         
         done = []
@@ -1682,28 +1674,54 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
 
         write_dir = '.' if self.readonly else pjoin(self.me_dir, 'SubProcesses')
-        for i in range(len(jobs)):    
-            self.check_events(goal_lum, to_refine[i-1], jobs[i-1], write_dir) 
-            #cluster.wait()
+        self.check_events(goal_lum, to_refine, jobs, write_dir)
+        
     
-    @staticmethod
-    def check_events(goal_lum, C, job_info, me_dir):
+    def check_events(self, goal_lum, to_refine, jobs, Sdir):
         """check that we get the number of requested events if not resubmit."""
         
-        P = job_info['P_dir'] 
-        G = job_info['channel']
-        axsec = C.get('axsec')
-        requested_events = job_info['precision']
+        new_jobs = []
         
-        if goal_lum*axsec < requested_events:
-            # need to multiply the associated weight of each event by
-            wgt_ratio = requested_events/(goal_lum*axsec)
-            print 'need ratio of', wgt_ratio
+        for C, job_info in zip(to_refine, jobs):
+            P = job_info['P_dir']   
+            G = job_info['channel']
+            axsec = C.get('axsec')
+            requested_events = job_info['precision']        
+    
+
+            new_results = sum_html.OneResult((P,G))
+            new_results.read_results(pjoin(Sdir,P, 'G%s'%G, 'results.dat'))
+    
+            # need to resubmit?
+            if new_results.get('nunwgt') < requested_events:
+                pwd = pjoin(os.getcwd(),job_info['P_dir']) if self.readonly else \
+                           pjoin(self.me_dir, 'SubProcesses', job_info['P_dir'])
+                job_info['precision'] -= new_results.get('nunwgt')
+                job_info['offset'] += 1
+                new_jobs.append(job_info)
+                files.mv(pjoin(pwd, 'events.lhe'), pjoin(pwd, 'events.lhe.previous'))
         
-        new_results = sum_html.OneResult((P,G))
-        print "checking events from ", pjoin(me_dir,P, 'G%s'%G, 'results.dat')
-        new_results.read_results(pjoin(me_dir,P, 'G%s'%G, 'results.dat'))
-        print G, 'has', new_results.get('nunwgt'), 'requested', requested_events
+        if new_jobs:
+            self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), new_jobs, Sdir) 
+            
+            done = []
+            for j in new_jobs:
+                if j['P_dir'] in done:
+                    continue
+
+                # set the working directory path.
+                pwd = pjoin(os.getcwd(),j['P_dir']) if self.readonly else pjoin(self.me_dir, 'SubProcesses', j['P_dir'])
+                exe = pjoin(pwd, 'ajob1')
+                st = os.stat(exe)
+                os.chmod(exe, st.st_mode | stat.S_IEXEC)
+
+                # run the code
+                cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
+
+                # concatanate with old events file
+                files.put_at_end(pjoin(pwd, 'events.lhe'),pjoin(pwd, 'events.lhe.previous'))
+
+            return self.check_events(goal_lum, to_refine, new_jobs, Sdir)
                                  
         
         
