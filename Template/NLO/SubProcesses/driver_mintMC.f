@@ -201,6 +201,7 @@ c
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2,nhits_in_grids)
+         call deallocate_weight_lines
          open(unit=58,file='res_0',status='unknown')
          write(58,*)'Final result [ABS]:',ans(1,1),' +/-',unc(1,1)
          write(58,*)'Final result:',ans(2,1),' +/-',unc(2,1)
@@ -257,6 +258,7 @@ c Prepare the MINT folding
          write (*,*) 'imode is ',imode
          call mint(sigintF,ndim,ncall,itmax,imode,xgrid,ymax,ymax_virt
      $        ,ans,unc,chi2,nhits_in_grids)
+         call deallocate_weight_lines
          
 c If integrating the virtuals alone, we include the virtuals in
 c ans(1). Therefore, no need to have them in ans(5) and we have to set
@@ -387,6 +389,7 @@ c Randomly pick the contribution that will be written in the event file
             call fill_rwgt_lines
             call finalize_event(x,weight,lunlhe,putonshell)
          enddo
+         call deallocate_weight_lines
          vn=-1
          call gen(sigintF,ndim,xgrid,ymax,ymax_virt,3,x,vn)
          write (*,*) 'Generation efficiencies:',x(1),x(4)
@@ -739,12 +742,11 @@ c
 
 
       function sigintF(xx,vegas_wgt,ifl,f)
-c From dsample_fks
+      use weight_lines
       implicit none
       include 'mint.inc'
       include 'nexternal.inc'
       include 'nFKSconfigs.inc'
-      include 'c_weight.inc'
       include 'run.inc'
       logical firsttime,passcuts,passcuts_nbody,passcuts_n1body
       integer i,ifl,proc_map(0:fks_configs,0:fks_configs)

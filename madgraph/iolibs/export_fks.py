@@ -611,7 +611,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'fks_singular.f',
                      'veto_xsec.f',
                      'veto_xsec.inc',
-                     'c_weight.inc',
+                     'weight_lines.f',
                      'fks_inc_chooser.f',
                      'leshouche_inc_chooser.f',
                      'configs_and_props_inc_chooser.f',

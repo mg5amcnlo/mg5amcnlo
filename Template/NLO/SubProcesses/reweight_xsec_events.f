@@ -278,6 +278,7 @@ c Write event to disk:
      &        IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
          
       enddo
+      call deallocate_weight_lines
 
       write(ofile,'(a)')'</LesHouchesEvents>'
       close(34)
@@ -381,13 +382,15 @@ c do the same as above for the counterevents
 
 
       subroutine fill_wgt_info_from_rwgt_lines
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'reweight0.inc'
-      integer i,idum,j,k,momenta_conf(2),ii
+      integer i,idum,j,k,momenta_conf(2),ii,n_proc
       icontr=n_ctr_found
       iwgt=1
+      n_proc=1
+      call weight_lines_allocated(nexternal,icontr,iwgt,n_proc)
       do i=1,icontr
          read(n_ctr_str(i),*)(wgt(j,i),j=1,3),(wgt_ME_tree(j,i),j=1,2)
      &        ,idum,(pdg(j,i),j=1,nexternal),QCDpower(i),(bjx(j,i),j=1
@@ -410,9 +413,9 @@ c do the same as above for the counterevents
       end
       
       subroutine reweight_scale_ext
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'run.inc'
       include 'reweight0.inc'
       integer i,pd,lp,iwgt_save,kr,kf,dd
@@ -454,11 +457,8 @@ c call the PDFs
                do kr=1,nint(scalevarR(0))
                   if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
                   iwgt=iwgt+1   ! increment the iwgt for the wgts() array
-                  if (iwgt.gt.max_wgt) then
-                     write (*,*) 'ERROR too many weights in '/
-     $                    /'reweight_scale',iwgt,max_wgt
-                     stop 1
-                  endif
+                  call weight_lines_allocated(nexternal,max_contr,iwgt
+     $                 ,max_iproc)
 c add the weights to the array
                   wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
      $                 *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
@@ -474,9 +474,9 @@ c add the weights to the array
 
       
       subroutine reweight_pdf_ext
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'run.inc'
       include 'reweight0.inc'
       integer i,pd,lp,iwgt_save,izero,n,nn,iset,imem
@@ -489,11 +489,8 @@ c add the weights to the array
          do n=0,nmemPDF(nn)
             if ((.not. lpdfvar(nn)) .and. n.ne.0) exit
             iwgt=iwgt+1
-            if (iwgt.gt.max_wgt) then
-               write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
-     &              ,max_wgt
-               stop 1
-            endif
+            call weight_lines_allocated(nexternal,max_contr,iwgt
+     $           ,max_iproc)
             call InitPDFm(nn,n)
             do i=1,icontr
                mu2_q=scales2(1,i)
@@ -528,9 +525,9 @@ c reset to the 0th member of the 1st set
       
 
       subroutine fill_rwgt_arrays
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'reweight0.inc'
       include 'run.inc'
       integer ii,jj,kk,nn,n,iw,i
@@ -590,9 +587,9 @@ c reset to the 0th member of the 1st set
 
       
       subroutine set_mu_central(ic,dd,c_mu2_r,c_mu2_f)
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'reweight0.inc'
       include 'run.inc'
       integer ic,dd,i,j

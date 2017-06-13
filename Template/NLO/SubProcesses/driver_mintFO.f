@@ -214,6 +214,7 @@ c Setup for parton-level NLO reweighting
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax
      $        ,ymax_virt,ans,unc,chi2,nhits_in_grids)
          call topout
+         call deallocate_weight_lines
          write(*,*)'Final result [ABS]:',ans(1,0),' +/-',unc(1,0)
          write(*,*)'Final result:',ans(2,0),' +/-',unc(2,0)
          write(*,*)'chi**2 per D.o.F.:',chi2(1,0)
@@ -345,11 +346,11 @@ c timing statistics
 
 
       double precision function sigint(xx,vegas_wgt,ifl,f)
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'mint.inc'
       include 'nFKSconfigs.inc'
-      include 'c_weight.inc'
       include 'reweight.inc'
       include 'run.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3

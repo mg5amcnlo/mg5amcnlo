@@ -940,7 +940,7 @@ c f_* multiplication factors for real-emission, soft counter, ... etc.
 
       
       subroutine add_wgt(type,wgt1,wgt2,wgt3)
-c Adds a contribution to the list in c_weight.inc. 'type' sets the type
+c Adds a contribution to the list in weight_lines. 'type' sets the type
 c of the contribution and wgt1..wgt3 are the coefficients multiplying
 c the logs. The arguments are:
 c     type=1 : real-emission
@@ -997,7 +997,7 @@ c     The weight of the born or real-emission matrix element
 c        corresponding to this contribution: wgt_ME_tree. This weight does
 c        include the 'ngluon' correction factor for the Born.
 c
-c Not set in this subroutine, but included in the c_weights common block
+c Not set in this subroutine, but included in the weight_lines module
 c are the
 c     wgts(iwgt,icontr) : weights including scale/PDFs/logs. These are
 c        normalised so that they can be used directly to compute cross
@@ -1016,14 +1016,14 @@ c     niproc(icontr) : number of combined subprocesses in parton_lum_*.f
 c     parton_iproc(iproc,icontr) : value of the PDF for the iproc
 c        contribution
 c     parton_pdg(nexternal,iproc,icontr) : value of the PDG codes for
-c        the iproc contribution
+c     the iproc contribution
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
       include 'coupl.inc'
       include 'fks_info.inc'
-      include 'c_weight.inc'
       include 'q_es.inc'
       include 'reweight0.inc'
       integer type,i,j
@@ -1054,11 +1054,7 @@ c Check for NaN's and INF's. Simply skip the contribution
       if (wgt2.ne.wgt2) return
       if (wgt3.ne.wgt3) return
       icontr=icontr+1
-      if (icontr.gt.max_contr) then
-         write (*,*) 'ERROR in add_wgt: too many contributions'
-     &        ,max_contr
-         stop 1
-      endif
+      call weight_lines_allocated(nexternal,icontr,max_wgt,max_iproc)
       itype(icontr)=type
       wgt(1,icontr)=wgt1
       wgt(2,icontr)=wgt2
@@ -1133,11 +1129,11 @@ c and MC subtraction terms.
       end
 
       subroutine include_veto_multiplier
+      use weight_lines
       implicit none
 c Multiply all the weights by the NNLL-NLO jet veto Sudakov factors,
 c i.e., the term on the 2nd line of Eq.(20) of arXiv:1412.8408.
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'reweight.inc'
       integer i,j
       if (H1_factor_virt.ne.0d0) then
@@ -1158,10 +1154,10 @@ c Multiply the saved wgt() info by the PDFs, alpha_S and the scale
 c dependence and saves the weights in the wgts() array. The weights in
 c this array are now correctly normalised to compute the cross section
 c or to fill histograms.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'c_weight.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
       include 'genps.inc'
@@ -1191,14 +1187,11 @@ c or to fill histograms.
          q2fact(2)=mu2_f
 c call the PDFs
          xlum = dlum()
-         if (iproc.gt.max_iproc) then
-            write (*,*) 'ERROR iproc too large',iproc,max_iproc
-            stop 1
-         endif
+         iwgt=1
+         call weight_lines_allocated(nexternal,max_contr,iwgt,iproc)
 c set_pdg_codes fills the niproc, parton_iproc, parton_pdg and parton_pdg_uborn
          call set_pdg_codes(iproc,pd,nFKSprocess,i)
 c iwgt=1 is the central value (i.e. no scale/PDF reweighting).
-         iwgt=1
          wgt_wo_pdf=(wgt(1,i) + wgt(2,i)*log(mu2_r/mu2_q) + wgt(3,i)
      &        *log(mu2_f/mu2_q))*g_strong(i)**QCDpower(i)
      &        *rwgt_muR_dep_fac(sqrt(mu2_r),sqrt(mu2_r))
@@ -1223,10 +1216,10 @@ c and not be part of the plots nor computation of the cross section.
 
 
       subroutine set_pdg_codes(iproc,pd,iFKS,ict)
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'c_weight.inc'
       include 'fks_info.inc'
       integer j,k,iproc,ict,iFKS
       double precision  pd(0:maxproc),conv
@@ -1274,12 +1267,12 @@ c           Keep GeV's for decay processes (no conv. factor needed)
       
       
       subroutine reweight_scale
-c Use the saved c_weight info to perform scale reweighting. Extends the
+c Use the saved weight_lines info to perform scale reweighting. Extends the
 c wgts() array to include the weights.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'c_weight.inc'
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
@@ -1298,7 +1291,7 @@ c wgts() array to include the weights.
       if (icontr.eq.0) return
 c currently we have 'iwgt' weights in the wgts() array.
       iwgt_save=iwgt
-c loop over all the contributions in the c_weights common block
+c loop over all the contributions in the weight lines module
       do i=1,icontr
          iwgt=iwgt_save
          nFKSprocess=nFKS(i)
@@ -1328,11 +1321,8 @@ c factorisation scale variation (require recomputation of the PDFs)
                do kr=1,nint(scalevarR(0))
                   if ((.not. lscalevar(dd)) .and. kr.ne.1) exit
                   iwgt=iwgt+1   ! increment the iwgt for the wgts() array
-                  if (iwgt.gt.max_wgt) then
-                     write (*,*) 'ERROR too many weights in '/
-     $                    /'reweight_scale',iwgt,max_wgt
-                     stop 1
-                  endif
+                  call weight_lines_allocated(nexternal,max_contr,iwgt
+     $                 ,max_iproc)
 c add the weights to the array
                   wgts(iwgt,i)=xlum(kf) * (wgt(1,i)+wgt(2,i)
      $                 *log(mu2_r(kr)/mu2_q)+wgt(3,i)*log(mu2_f(kf)
@@ -1349,13 +1339,13 @@ c add the weights to the array
       end
 
       subroutine reweight_scale_NNLL
-c Use the saved c_weight info to perform scale reweighting. Extends the
+c Use the saved weight lines info to perform scale reweighting. Extends the
 c wgts() array to include the weights. Special for the NNLL+NLO jet-veto
 c computations (ickkw.eq.-1).
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'c_weight.inc'
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
@@ -1394,7 +1384,7 @@ c compute the new veto multiplier factor
             endif
          enddo
       enddo
-c loop over all the contributions in the c_weights common block
+c loop over all the contributions in the weight lines module
       do i=1,icontr
          iwgt=iwgt_save
          nFKSprocess=nFKS(i)
@@ -1414,11 +1404,8 @@ c soft scale variation
                q2fact(2)=mu2_f(ks)
                xlum(ks) = dlum()
                iwgt=iwgt+1      ! increment the iwgt for the wgts() array
-               if (iwgt.gt.max_wgt) then
-                  write (*,*) 'ERROR too many weights in reweight_scale'
-     &                 ,iwgt,max_wgt
-                  stop 1
-               endif
+               call weight_lines_allocated(nexternal,max_contr,iwgt
+     $              ,max_iproc)
 c add the weights to the array
                if (itype(i).ne.7) then
                   wgts(iwgt,i)=xlum(ks) * (wgt(1,i)+wgt(2,i)
@@ -1445,12 +1432,12 @@ c special for the itype=7 (i.e, the veto-compensating factor)
       end
 
       subroutine reweight_pdf
-c Use the saved c_weight info to perform PDF reweighting. Extends the
+c Use the saved weight_lines info to perform PDF reweighting. Extends the
 c wgts() array to include the weights.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'c_weight.inc'
       include 'reweight.inc'
       include 'reweightNLO.inc'
       include 'timing_variables.inc'
@@ -1470,11 +1457,8 @@ c over the icontr. This reduces the number of calls to InitPDF and
 c allows for better caching of the PDFs
          do n=0,nmemPDF(nn)
             iwgt=iwgt+1
-            if (iwgt.gt.max_wgt) then
-               write (*,*) 'ERROR too many weights in reweight_pdf',iwgt
-     &              ,max_wgt
-               stop 1
-            endif
+            call weight_lines_allocated(nexternal,max_contr,iwgt
+     $           ,max_iproc)
             call InitPDFm(nn,n)
             do i=1,icontr
                nFKSprocess=nFKS(i)
@@ -1508,9 +1492,9 @@ c Fills the ApplGrid weights of appl_common.inc. This subroutine assumes
 c that there is an unique PS configuration: at most one Born, one real
 c and one set of counter terms. Among other things, this means that one
 c must do MC over FKS directories.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'appl_common.inc'
       include 'nFKSconfigs.inc'
       include 'genps.inc'
@@ -1606,9 +1590,9 @@ c fills the pdg and pdg_uborn variables. It uses only the 1st IPROC. For
 c the pdg_uborn (the PDG codes for the underlying Born process) the PDG
 c codes of i_fks and j_fks are combined to give the PDG code of the
 c mother and the extra (n+1) parton is given the PDG code of the gluon.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'fks_info.inc'
       include 'genps.inc'
       integer k,ict,iFKS
@@ -1651,9 +1635,9 @@ c initial state gluon splitting (gluon is j_fks):  g -> XX
       subroutine get_wgt_nbody(sig)
 c Sums all the central weights that contribution to the nbody cross
 c section
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       double precision sig
       integer i
       sig=0d0
@@ -1670,9 +1654,9 @@ c section
       subroutine get_wgt_no_nbody(sig)
 c Sums all the central weights that contribution to the cross section
 c excluding the nbody contributions.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       double precision sig
       integer i
       sig=0d0
@@ -1688,13 +1672,13 @@ c excluding the nbody contributions.
 
       subroutine fill_plots
 c Calls the analysis routine (which fill plots) for all the
-c contributions in the c_weight common block. Instead of really calling
+c contributions in the weight_lines module. Instead of really calling
 c it for all, it first checks if weights can be summed (i.e. they have
 c the same PDG codes and the same momenta) before calling the analysis
 c to greatly reduce the calls to the analysis routines.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'reweight0.inc'
       include 'timing_variables.inc'
       integer i,ii,j,max_weight
@@ -1758,9 +1742,9 @@ c call the analysis/histogramming routines
 
       subroutine fill_mint_function(f)
 c Fills the function that is returned to the MINT integrator
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'mint.inc'
       integer i
       double precision f(nintegrals),sigint
@@ -1786,10 +1770,10 @@ c Fills the function that is returned to the MINT integrator
 c Includes the shape function from the MC counter terms in the shower
 c starting scale. This function needs to be called (at least) once per
 c FKS configuration that is included in the current PS point.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'c_weight.inc'
       include 'nFKSconfigs.inc'
       integer i,iFKS,Hevents,izero,mohdr
       double precision ddum(6),p(0:3,nexternal)
@@ -1847,9 +1831,9 @@ c the ABS value. In particular this means adding the real emission with
 c the MC counter terms for the H-events FKS configuration by FKS
 c configuration, while for the S-events also contributions from the
 c various FKS configurations can be summed together.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
@@ -1953,9 +1937,9 @@ c need to update the shower starting scale (because it is not
 c necessarily the same for all of these summed FKS configurations). Take
 c the weighted average over the FKS configurations as the shower scale
 c for the summed contribution.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'nFKSconfigs.inc'
       integer i,j,ict
       double precision tmp_wgt(fks_configs),showerscale(fks_configs)
@@ -2009,9 +1993,9 @@ c Overwrite the shower scale for the S-events
       subroutine fill_mint_function_NLOPS(f,n1body_wgt)
 c Fills the function that is returned to the MINT integrator. Depending
 c on the imode we should or should not include the virtual corrections.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'mint.inc'
       integer i,j,ict
       double precision f(nintegrals),sigint,sigint1,sigint_ABS
@@ -2099,9 +2083,9 @@ c n1body_wgt is used for the importance sampling over FKS directories
       subroutine pick_unweight_contr(iFKS_picked)
 c Randomly pick (weighted by the ABS values) the contribution to a given
 c PS point that should be written in the event file.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
@@ -2182,9 +2166,9 @@ c information is available in each line to do the reweighting, apart
 c from the momenta: these are put in the momenta_str_l() array, and a
 c label in each of the n_ctr_str refers to a corresponding set of
 c momenta in the momenta_str_l() array.
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'reweight0.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
@@ -5415,6 +5399,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
 
 
       subroutine setfksfactor(match_to_shower)
+      use weight_lines
       implicit none
 
       include 'mint.inc'
@@ -5449,7 +5434,6 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       include 'nexternal.inc'
       include 'fks_powers.inc'
       include 'nFKSconfigs.inc'
-      include 'c_weight.inc'
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
@@ -5691,6 +5675,8 @@ c real-emission matrix elements.
 c Compute the identical particle symmetry factor that is in the
 c Born matrix elements.
          iden_born_FKS(nFKSprocess)=1
+         call weight_lines_allocated(nexternal,max_contr,max_wgt
+     $        ,max_iproc)
          call set_pdg(0,nFKSprocess)
          do i=1,nexternal
             iden(i)=1
@@ -6139,9 +6125,9 @@ c
 
 
       subroutine set_mu_central(ic,dd,c_mu2_r,c_mu2_f)
+      use weight_lines
       implicit none
       include 'nexternal.inc'
-      include 'c_weight.inc'
       include 'reweight0.inc'
       include 'run.inc'
       integer ic,dd,i,j
