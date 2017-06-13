@@ -5245,7 +5245,8 @@ tar -czf split_$1.tar.gz split_$1
         mfactors = {}     
         for P in Pdirs:
             Gdirs[P] = []
-            for line in open(pjoin(P, "symfact.dat")):
+            #for the next line do not use P, since in readonly mode it might not have symfact
+            for line in open(pjoin(self.me_dir, 'SubProcesses',os.path.basename(P), "symfact.dat")):
                 tag, mfactor = line.split()
                 if int(mfactor) > 0:
                     Gdirs[P].append( pjoin(P, "G%s" % tag) )
@@ -6152,6 +6153,13 @@ class GridPackCmd(MadEventCmd):
     def update_status(self, *args, **opts):
         return
 
+    def load_results_db(self):
+        """load the current results status"""
+        model = self.find_model_name()
+        process = self.process # define in find_model_name
+        self.results = gen_crossxhtml.AllResults(model, process, self.me_dir)
+        self.last_mode=''
+
     def save_random(self):
         """save random number in appropirate file"""
 
@@ -6200,7 +6208,8 @@ class GridPackCmd(MadEventCmd):
                      for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
         else:
             self.Pdirs = [l.strip() 
-                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]            
+                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))] 
+          
         return self.Pdirs
         
     def prepare_local_dir(self):
@@ -6380,10 +6389,12 @@ class GridPackCmd(MadEventCmd):
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
         for Gdir in self.get_Gdir():
+            print "read event from", Gdir
             #mfactor already taken into accoun in auto_dsig.f
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
+                print 'has', result.get('nevents'),'nevents'
                 AllEvent.add(pjoin(Gdir, 'events.lhe'), 
                              result.get('xsec')*gscalefact[Gdir],
                              result.get('xerru')*gscalefact[Gdir],

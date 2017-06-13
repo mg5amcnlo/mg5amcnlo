@@ -743,14 +743,18 @@ class gen_ximprove(object):
 
     def __new__(cls, cmd, opt):
         """Choose in which type of refine we want to be"""
-        
+        print "choose gen_ximprove", cmd.run_card['gridpack']
         if cmd.proc_characteristics['loop_induced']:
+            print "LI"
             return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         elif gen_ximprove.format_variable(cmd.run_card['gridpack'], bool):
+            print "GP"
             return super(gen_ximprove, cls).__new__(gen_ximprove_gridpack, cmd, opt)
         elif cmd.run_card["job_strategy"] == 2:
+            print "LI"
             return super(gen_ximprove, cls).__new__(gen_ximprove_share, cmd, opt)
         else:
+            print "V4"
             return super(gen_ximprove, cls).__new__(gen_ximprove_v4, cmd, opt)
             
             
@@ -805,9 +809,8 @@ class gen_ximprove(object):
         
         #start the run
         self.handle_seed()
-        
-        self.results = sum_html.collect_result(self.cmd, None)
-        
+        self.results = sum_html.collect_result(self.cmd, 
+                                main_dir=pjoin(self.cmd.me_dir,'SubProcesses'))  #main_dir is for gridpack readonly mode
         if self.gen_events:
             # We run to provide a given number of events
             self.get_job_for_event()
@@ -1057,6 +1060,7 @@ class gen_ximprove_v4(gen_ximprove):
     def create_ajob(self, template, jobs, write_dir=None):
         """create the ajob"""
         
+        print "AJOB created in ", write_dir, len(jobs)
         if not jobs:
             return
         
@@ -1075,6 +1079,7 @@ class gen_ximprove_v4(gen_ximprove):
         
         #Here we can assume that all job are for the same directory.
         path = pjoin(write_dir, jobs[0]['P_dir'])
+        print "write jog at path", path
         
         
         template_text = open(template, 'r').read()
@@ -1640,7 +1645,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             info = {'name': self.cmd.results.current['run_name'],
                     'script_name': 'unknown',
                     'directory': C.name,    # need to be change for splitted job
-                    'P_dir': C.parent_name, 
+                    'P_dir': os.path.basename(C.parent_name), 
                     'offset': 1,            # need to be change for splitted job
                     'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
                     'nevents': nevents,
@@ -1657,8 +1662,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
 
             jobs.append(info)
           
-        print {'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name)}
+
         write_dir = '.' if self.readonly else None  
+        print {'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name), 'write_dir':write_dir}
         self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs, write_dir) 
         
         done = []

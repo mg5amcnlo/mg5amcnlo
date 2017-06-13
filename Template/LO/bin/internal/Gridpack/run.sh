@@ -53,56 +53,11 @@ ${DIR}/bin/gridrun $num_events $seed $gran
 
 ###########    POSTPROCESSING      #####################
 
-echo "search for ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz"
 if [[ -e ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz ]]; then
-	gunzip ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz
-fi
-
-if [[ ! -e  ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe ]]; then
-    echo "Error: event file not found !"
-    exit
+    mv ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz events.lhe.gz
 else
-    echo "Moving events from  events.lhe"
-    mv ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe ./events.lhe
+    mv ./Events/GridRun_${seed}/unweighted_events.lhe.gz events.lhe.gz
+    rm -rf Events Cards P* *.dat randinit &> /dev/null
 fi
-
-if [[ -e ${DIR}/DECAY/decay ]]; then
-    cd DECAY
-    echo -$seed > iseed.dat
-    for ((i = 1 ;  i <= 20;  i++)) ; do
-	if [[ -e decay_$i\.in ]]; then
-	    echo "Decaying events..."
-	    mv ../events.lhe ../events_in.lhe
-	    ./decay < decay_$i\.in
-	fi
-    done
-    cd ..
-fi
-
-if [[ -e ./REPLACE/replace.pl ]]; then
-    for ((i = 1 ;  i <= 20;  i++)) ; do
-	if [[ -e ./REPLACE/replace_card$i\.dat ]];then
-	    echo "Adding flavors..."
-	    mv ./events.lhe ./events_in.lhe
-	    cd ./REPLACE
-	    ./replace.pl ../events_in.lhe ../events.lhe < replace_card$i\.dat
-	    cd ..
-	fi
-    done
-fi
-
-# part added by Stephen Mrenna to correct the kinematics of the replaced
-#  particles
-if [[ -e ./madevent/bin/internal/addmasses.py ]]; then
-  mv ./events.lhe ./events.lhe.0
-  python ./madevent/bin/internal/addmasses.py ./events.lhe.0 ./events.lhe
-  if [[ $? -eq 0 ]]; then
-     echo "Mass added"
-     rm -rf ./events.lhe.0 &> /dev/null
-  else
-     mv ./events.lhe.0 ./events.lhe
-  fi
-fi  
-
-gzip -f events.lhe
+echo "write ./events.lhe.gz"
 exit

@@ -663,7 +663,7 @@ function check_link(url,alt, id){
 </script>
 """ 
 
-def collect_result(cmd, folder_names=[], jobs=None):
+def collect_result(cmd, folder_names=[], jobs=None, main_dir=None):
     """ """ 
 
     run = cmd.results.current['run_name']
@@ -699,8 +699,11 @@ def collect_result(cmd, folder_names=[], jobs=None):
             misc.sprint( G_dir)
             for G in G_dir:
                 if not folder_names:
-                    misc.sprint(G)
-                    P_comb.add_results(os.path.basename(G), pjoin(G,'results.dat'), mfactors[G])
+                    if main_dir:
+                        path = pjoin(main_dir, os.path.basename(Pdir), os.path.basename(G),'results.dat')
+                    else:
+                        path = pjoin(G,'results.dat')
+                    P_comb.add_results(os.path.basename(G), path, mfactors[G])
                 
             
         
