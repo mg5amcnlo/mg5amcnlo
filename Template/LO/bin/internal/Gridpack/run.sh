@@ -53,7 +53,7 @@ ${DIR}/bin/gridrun $num_events $seed $gran
 
 ###########    POSTPROCESSING      #####################
 
-echo "search for ./Events/GridRun_${seed}/unweighted_events.lhe.gz"
+echo "search for ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz"
 if [[ -e ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz ]]; then
 	gunzip ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe.gz
 fi
@@ -64,7 +64,6 @@ if [[ ! -e  ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe ]]; then
 else
     echo "Moving events from  events.lhe"
     mv ${DIR}/Events/GridRun_${seed}/unweighted_events.lhe ./events.lhe
-    cd ..
 fi
 
 if [[ -e ${DIR}/DECAY/decay ]]; then

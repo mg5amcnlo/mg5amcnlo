@@ -1051,8 +1051,7 @@ class gen_ximprove_v4(gen_ximprove):
                         new_info['base_directory'] = info['directory']
                     jobs.append(new_info)
             
-        write_dir = '.' if self.readonly else None
-        self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs, write_dir)    
+        self.create_ajob(pjoin(self.me_dir, 'SubProcesses', 'refine.sh'), jobs)    
                 
 
     def create_ajob(self, template, jobs, write_dir=None):
@@ -1643,7 +1642,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'directory': C.name,    # need to be change for splitted job
                     'P_dir': C.parent_name, 
                     'offset': 1,            # need to be change for splitted job
-                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name,''),
+                    'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
                     'nevents': nevents,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,
@@ -1676,9 +1675,9 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             # run the code
             cluster.onecore.launch_and_wait(exe, cwd=pwd, packet_member=j['packet'])
 
-        
+        write_dir = '.' if self.readonly else pjoin(self.me_dir, 'SubProcesses')
         for i in range(len(jobs)):    
-            self.check_events(goal_lum, to_refine[i-1], jobs[i-1], self.me_dir) 
+            self.check_events(goal_lum, to_refine[i-1], jobs[i-1], write_dir) 
             #cluster.wait()
     
     @staticmethod
@@ -1696,7 +1695,8 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
             print 'need ratio of', wgt_ratio
         
         new_results = sum_html.OneResult((P,G))
-        new_results.read_results(pjoin(me_dir, 'SubProcesses',P, 'G%s'%G, 'results.dat'))
+        print "checking events from ", pjoin(me_dir,P, 'G%s'%G, 'results.dat')
+        new_results.read_results(pjoin(me_dir,P, 'G%s'%G, 'results.dat'))
         print G, 'has', new_results.get('nunwgt'), 'requested', requested_events
                                  
         

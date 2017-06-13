@@ -18,6 +18,7 @@
 from __future__ import division
 
 import collections
+import itertools
 import glob
 import logging
 import math
@@ -1730,6 +1731,7 @@ class MadEventCmd(CompleteForCmd, CmdExtended, HelpToCmd, common_run.CommonRunCm
         if self.web:
             os.system('touch %s' % pjoin(self.me_dir,'Online'))
 
+        misc.sprint("loading results!!!")
         self.load_results_db()        
         self.results.def_web_mode(self.web)
         
@@ -3127,7 +3129,8 @@ Beware that this can be dangerous for local multicore runs.""")
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
-        for Gdir,mfactor in self.get_Gdir():
+        for Gdir in self.get_Gdir():
+            misc.sprint(Gdir)
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
@@ -5213,35 +5216,43 @@ tar -czf split_$1.tar.gz split_$1
         else:
             return default
 
-    ############################################################################
-    def get_Pdir(self):
-        """get the list of Pdirectory if not yet saved."""
-        
-        if hasattr(self, "Pdirs"):
-            if self.me_dir in self.Pdirs[0]:
-                return self.Pdirs
-        self.Pdirs = [pjoin(self.me_dir, 'SubProcesses', l.strip()) 
-                     for l in open(pjoin(self.me_dir,'SubProcesses', 'subproc.mg'))]
-        return self.Pdirs
+
         
     ############################################################################
-    def get_Gdir(self):
+    def get_Gdir(self, Pdir=None, symfact=None):
         """get the list of Gdirectory if not yet saved."""
         
         if hasattr(self, "Gdirs"):
             if self.me_dir in self.Gdirs[0]:
-                return self.Gdirs
+                if Pdir is None:
+                    if not symfact:
+                        return list(itertools.chain(*self.Gdirs[0].values()))
+                    else:
+                        return list(itertools.chain(*self.Gdirs[0].values())), self.Gdirs[1]
+                else:
+                    if not symfact:
+                        misc.sprint(self.Gdirs[0][Pdir])
+                        misc.sprint(Pdir)
+                        return self.Gdirs[0][Pdir]
+                    else:
+                        misc.sprint(self.Gdirs[0][Pdir])
+                        misc.sprint(Pdir)
+                        return self.Gdirs[0][Pdir], self.Gdirs[1]
+
 
         Pdirs = self.get_Pdir()
-        Gdirs = []        
+        Gdirs = {self.me_dir:[]}   
+        mfactors = {}     
         for P in Pdirs:
+            Gdirs[P] = []
             for line in open(pjoin(P, "symfact.dat")):
                 tag, mfactor = line.split()
-                Gdirs.append( (pjoin(P, "G%s" % tag), int(mfactor)) )
-            
-        
-        self.Gdirs = Gdirs
-        return self.Gdirs
+                if int(mfactor) > 0:
+                    Gdirs[P].append( pjoin(P, "G%s" % tag) )
+                    mfactors[pjoin(P, "G%s" % tag)] = mfactor
+        misc.sprint(Gdirs)
+        self.Gdirs = (Gdirs, mfactors)
+        return self.get_Gdir(Pdir, symfact=symfact)
                 
     ############################################################################
     def set_run_name(self, name, tag=None, level='parton', reload_card=False,
@@ -6261,7 +6272,8 @@ class GridPackCmd(MadEventCmd):
         #combine_runs.CombineRuns(self.me_dir)
         
         #update html output
-        cross, error = sum_html.make_all_html_results(self)
+        Presults = sum_html.collect_result(self)
+        cross, error = Presults.xsec, Presults.xerru
         self.results.add_detail('cross', cross)
         self.results.add_detail('error', error)
         
@@ -6367,24 +6379,20 @@ class GridPackCmd(MadEventCmd):
         
         partials = 0 # if too many file make some partial unweighting
         sum_xsec, sum_xerru, sum_axsec = 0,[],0
-        for Gdir,mfactor in self.get_Gdir():
-            if mfactor <=0:
-                continue
+        for Gdir in self.get_Gdir():
             #mfactor already taken into accoun in auto_dsig.f
-            tag = pjoin(os.path.basename(os.path.dirname(Gdir)), os.path.basename(Gdir))
-            print(Gdir, mfactor,gscalefact[tag])
             if os.path.exists(pjoin(Gdir, 'events.lhe')):
                 result = sum_html.OneResult('')
                 result.read_results(pjoin(Gdir, 'results.dat'))
                 AllEvent.add(pjoin(Gdir, 'events.lhe'), 
-                             result.get('xsec')*gscalefact[tag],
-                             result.get('xerru')*gscalefact[tag],
-                             result.get('axsec')*gscalefact[tag]
+                             result.get('xsec')*gscalefact[Gdir],
+                             result.get('xerru')*gscalefact[Gdir],
+                             result.get('axsec')*gscalefact[Gdir]
                              )
 
-                sum_xsec += result.get('xsec')*gscalefact[tag]
-                sum_xerru.append(result.get('xerru')*gscalefact[tag])
-                sum_axsec += result.get('axsec')*gscalefact[tag]
+                sum_xsec += result.get('xsec')*gscalefact[Gdir]
+                sum_xerru.append(result.get('xerru')*gscalefact[Gdir])
+                sum_axsec += result.get('axsec')*gscalefact[Gdir]
                 
                 if len(AllEvent) >= 80: #perform a partial unweighting
                     AllEvent.unweight(pjoin(self.me_dir, "Events", self.run_name, "partials%s.lhe.gz" % partials),

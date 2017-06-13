@@ -663,44 +663,48 @@ function check_link(url,alt, id){
 </script>
 """ 
 
-def collect_result(cmd, folder_names, jobs=None):
+def collect_result(cmd, folder_names=[], jobs=None):
     """ """ 
 
     run = cmd.results.current['run_name']
     all = Combine_results(run)
     
-    for Pdir in open(pjoin(cmd.me_dir, 'SubProcesses','subproc.mg')):
-        Pdir = Pdir.strip()
+    for Pdir in cmd.get_Pdir():
         P_comb = Combine_results(Pdir)
         
-        P_path = pjoin(cmd.me_dir, 'SubProcesses', Pdir)
-        G_dir = [G for G in os.listdir(P_path) if G.startswith('G') and 
-                                                os.path.isdir(pjoin(P_path,G))]
-
-        try:
-            for line in open(pjoin(P_path, 'symfact.dat')):
-                name, mfactor = line.split()
-                if float(mfactor) < 0:
-                    continue
-                if os.path.exists(pjoin(P_path, 'ajob.no_ps.log')):
-                    continue
-                                      
-                if not folder_names and not jobs:
-                    name = 'G' + name
-                    P_comb.add_results(name, pjoin(P_path,name,'results.dat'), mfactor)
-                elif not jobs:
+        if jobs:
+            for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
+                    P_comb.add_results(os.path.basename(job['dirname']),\
+                                       pjoin(job['dirname'],'results.dat'))
+        elif folder_names:
+            try:
+                for line in open(pjoin(Pdir, 'symfact.dat')):
+                    name, mfactor = line.split()
+                    if float(mfactor) < 0:
+                        continue
+                    if os.path.exists(pjoin(Pdir, 'ajob.no_ps.log')):
+                        continue
+                    
                     for folder in folder_names:
                         if 'G' in folder:
                             dir = folder.replace('*', name)
                         else:
                             dir = folder.replace('*', '_G' + name)
-                        P_comb.add_results(dir, pjoin(P_path,dir,'results.dat'), mfactor)
-            if jobs:
-                for job in filter(lambda j: j['p_dir'] == Pdir, jobs):
-                    P_comb.add_results(os.path.basename(job['dirname']),\
-                                       pjoin(job['dirname'],'results.dat'))
-        except IOError:
-            continue
+                        P_comb.add_results(dir, pjoin(Pdir,dir,'results.dat'), mfactor)
+
+            except IOError:
+                continue            
+        else:
+            G_dir, mfactors = cmd.get_Gdir(Pdir, symfact=True)
+            misc.sprint( G_dir)
+            for G in G_dir:
+                if not folder_names:
+                    misc.sprint(G)
+                    P_comb.add_results(os.path.basename(G), pjoin(G,'results.dat'), mfactors[G])
+                
+            
+        
+
         P_comb.compute_values()
         all.append(P_comb)
     all.compute_values()
