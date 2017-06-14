@@ -1056,7 +1056,6 @@ class gen_ximprove_v4(gen_ximprove):
     def create_ajob(self, template, jobs, write_dir=None):
         """create the ajob"""
         
-        print "AJOB created in ", write_dir, len(jobs)
         if not jobs:
             return
         
@@ -1075,8 +1074,6 @@ class gen_ximprove_v4(gen_ximprove):
         
         #Here we can assume that all job are for the same directory.
         path = pjoin(write_dir, jobs[0]['P_dir'])
-        print "write jog at path", path
-        
         
         template_text = open(template, 'r').read()
         # special treatment if needed to combine the script
