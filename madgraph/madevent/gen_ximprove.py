@@ -1641,7 +1641,7 @@ class gen_ximprove_gridpack(gen_ximprove_v4):
                     'P_dir': os.path.basename(C.parent_name), 
                     'offset': 1,            # need to be change for splitted job
                     'Ppath': pjoin(self.cmd.me_dir, 'SubProcesses', C.parent_name),
-                    'nevents': nevents*self.gen_events_security,
+                    'nevents': int(nevents*self.gen_events_security)+1,
                     'maxiter': self.max_iter,
                     'miniter': self.min_iter,
                     'precision': needed_event,
