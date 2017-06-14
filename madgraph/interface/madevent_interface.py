@@ -3282,7 +3282,11 @@ Beware that this can be dangerous for local multicore runs.""")
         banner.write(bannerfile, close_tag=False)
         bannerfile.close()
         # replace the lhe file by the new one
-        os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        if lhe.name.endswith('.gz'):
+            os.system('cat %s %s > %s' %(bannerfile.name, output.name, lhe.name))
+        else:
+            os.system('cat %s %s > %s.gz' %(bannerfile.name, output.name, lhe.name))
+            os.remove(lhe.name)
         os.remove(bannerfile.name)
         os.remove(output.name)
         

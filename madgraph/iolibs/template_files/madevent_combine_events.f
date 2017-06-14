@@ -65,6 +65,9 @@ c
       data s_buff/7*''/
       data jseed/-1/
       data buffclus/max_particles*' '/
+      double precision bias_weight
+      logical impact_xsec
+      common/bias/bias_weight,impact_xsec
 c-----
 c  Begin Code
 c-----
@@ -118,7 +121,7 @@ c     Create scratch file to hold events
 c
       I4 = 4
       R8 = 8
-      record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+3*R8+
+      record_length = 4*I4+maxexternal*I4*7+maxexternal*5*R8+4*R8+
      &   1000+7*s_bufflen+max_particles*clus_bufflen
 C $B$ scratch_name $B$ !this is tag for automatic modification by MW
       filename='scratch'
@@ -164,7 +167,9 @@ C $E$ output_file1 $E$ !this is tag for automatic modification by MW
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles),
+     &           bias_weight
+            if(bias_weight.ne.1d0) impact_xsec=.false.
 c     Systematics info on/off
          if(s_buff(1)(1:7).eq.'<mgrwt>') then
             u_syst=.true.
@@ -205,7 +210,7 @@ c
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &        buff
+     &        buff       
             if (dabs(wgt) .gt. goal_wgt*xran1(jseed)) then
                keep(i) = .true.
                if (wgt.lt.0d0) has_negative = .true.
@@ -260,7 +265,8 @@ C $E$ output_file2 $E$ !this is tag for automatic modification by MW
             read(sfnum,rec=iarray(i)) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles),
+     &           bias_weight
             wgt=dsign(xsec/nreq,wgt)
 c     Systematics info on/off
             if(s_buff(1)(1:7).eq.'<mgrwt>') then
@@ -638,6 +644,10 @@ c
       character*(clus_bufflen) buffclus(max_particles)
       data buffclus/max_particles*' '/
 c
+      double precision bias_weight
+      logical impact_xsec
+      common/bias/bias_weight,impact_xsec
+c
 c     Les Houches init block (for the <init> info)
 c
       integer maxpup
@@ -696,7 +706,8 @@ c
                write(sfnum,rec=kevent) wgt,n,
      &           ((ic(m,j),j=1,maxexternal),m=1,7),ievent,
      &           ((p(m,j),m=0,4),j=1,maxexternal),sscale,aqcd,aqed,
-     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles)
+     &           buff,(s_buff(j),j=1,7),(buffclus(j),j=1,max_particles),
+     &           bias_weight
                sum=sum+dabs(wgt)
                found=.false.
                do i=1,nprup
