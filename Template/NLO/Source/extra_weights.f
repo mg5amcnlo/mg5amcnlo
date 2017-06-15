@@ -1,8 +1,8 @@
       module extra_weights
       
-         integer,parameter :: iwgtinfo=-5,maxparticles=20,maxscales=9
-     $     ,maxPDFs=200,maxPDFsets=25,maxdynscales=10,max_n_ctr=256
-     $     ,max_weight_shower=1024
+         integer,parameter :: iwgtinfo=-5,maxscales=9,maxPDFs=200
+     $     ,maxPDFsets=25,maxdynscales=10
+         integer :: max_mom_str=1,max_mext=1,max_n_ctr=1
          logical :: doreweight,lscalevar(maxdynscales)
      $        ,lpdfvar(maxPDFsets)
          integer :: iwgtnumpartn,jwgtinfo,mexternal
@@ -14,9 +14,10 @@
      $        ,wgtxsecmu(maxscales,maxscales,maxdynscales),
      $        wgtxsecPDF(0:maxPDFs,maxPDFsets),wgtbpower,wgtcpower
      $        ,veto_multiplier,H1_factor_virt,veto_compensating_factor
-     $        ,born_wgt_veto,momenta_str(0:3,maxparticles,max_n_ctr)
+     $        ,born_wgt_veto
+         double precision,allocatable :: momenta_str(:,:,:)
          character(len= 100) :: LHAPDFsetname(maxPDFsets) 
-         character(len=1024) :: n_ctr_str(max_n_ctr)
+         character(len=1024),allocatable :: n_ctr_str(:)
         
 c input of cpower (checked against calculated value)
          double precision,parameter :: cpowerinput=0d0

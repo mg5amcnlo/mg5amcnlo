@@ -866,11 +866,27 @@ c
          if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
             read(ifile,'(a)')string
             read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
+            if (.not.allocated(momenta_str)) allocate(momenta_str(0:3
+     $           ,max_mext,max_mom_str))
+            if (n_mom_conf.gt.max_mom_str .or. mexternal.gt.max_mext)
+     $           then
+               deallocate(momenta_str)
+               max_mom_str=max(n_mom_conf,max_mom_str)
+               max_mext=max(mexternal,max_mext)
+               allocate(momenta_str(0:3,max_mext,max_mom_str))
+            endif
             do i=1,n_mom_conf
                do j=1,mexternal
                   read (ifile,*) (momenta_str(ii,j,i),ii=0,3)
                enddo
             enddo
+            if (.not.allocated(n_ctr_str))
+     $           allocate(n_ctr_str(max_n_ctr))
+            if (n_ctr_found.gt.max_n_ctr) then
+               deallocate(n_ctr_str)
+               max_n_ctr=n_ctr_found
+               allocate(n_ctr_str(max_n_ctr))
+            endif
             do i=1,n_ctr_found
                read (ifile,'(a)') n_ctr_str(i)
             enddo
@@ -998,23 +1014,39 @@ c
       enddo
       read(ifile,'(a)')buff
       if(buff(1:1).eq.'#')then
-        read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
+         read(buff,*)ch1,iSorH_lhe,ifks_lhe,jfks_lhe,
      #                    fksfather_lhe,ipartner_lhe,
      #                    scale1_lhe,scale2_lhe,
      #                    jwgtinfo,mexternal,iwgtnumpartn,
      #         wgtcentral,wgtmumin,wgtmumax,wgtpdfmin,wgtpdfmax
-        if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
-           read(ifile,'(a)')string
-           read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
-           do i=1,n_mom_conf
-              do j=1,mexternal
-                 read (ifile,*) (momenta_str(ii,j,i),ii=0,3)
-              enddo
-           enddo
-           do i=1,n_ctr_found
-              read (ifile,'(a)') n_ctr_str(i)
-           enddo
-           read(ifile,'(a)')string
+         if(jwgtinfo.eq.-5 .or. jwgtinfo.eq.-9) then
+            read(ifile,'(a)')string
+            read(ifile,*) wgtref,n_ctr_found,n_mom_conf,wgtcpower
+            if (.not.allocated(momenta_str)) allocate(momenta_str(0:3
+     $           ,max_mext,max_mom_str))
+            if (n_mom_conf.gt.max_mom_str .or. mexternal.gt.max_mext)
+     $           then
+               deallocate(momenta_str)
+               max_mom_str=max(n_mom_conf,max_mom_str)
+               max_mext=max(mexternal,max_mext)
+               allocate(momenta_str(0:3,max_mext,max_mom_str))
+            endif
+            do i=1,n_mom_conf
+               do j=1,mexternal
+                  read (ifile,*) (momenta_str(ii,j,i),ii=0,3)
+               enddo
+            enddo
+            if (.not.allocated(n_ctr_str))
+     $           allocate(n_ctr_str(max_n_ctr))
+            if (n_ctr_found.gt.max_n_ctr) then
+               deallocate(n_ctr_str)
+               max_n_ctr=n_ctr_found
+               allocate(n_ctr_str(max_n_ctr))
+            endif
+            do i=1,n_ctr_found
+               read (ifile,'(a)') n_ctr_str(i)
+            enddo
+            read(ifile,'(a)')string
          endif
          if(jwgtinfo.eq.15) then
             read(ifile,'(a)') string

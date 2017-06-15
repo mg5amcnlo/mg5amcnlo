@@ -46,13 +46,12 @@ c event (event with lower weights will be un-weighted)
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      integer nwgt,max_weight
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
+      integer nwgt
 c      include 'genps.inc'
       integer istatus(nexternal)
       integer iPDG(nexternal)
       double precision p(0:4,nexternal)
-      double precision wgts(max_weight)
+      double precision wgts(*)
       integer ibody
       integer nwgts,nevents
       double precision sum_of_wgts

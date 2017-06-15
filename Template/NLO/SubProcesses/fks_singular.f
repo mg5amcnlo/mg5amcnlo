@@ -1681,8 +1681,8 @@ c to greatly reduce the calls to the analysis routines.
       integer i,ii,j,max_weight
       logical momenta_equal,pdg_equal
       external momenta_equal,pdg_equal
-      parameter (max_weight=maxscales*maxscales+maxpdfs+1)
-      double precision www(max_weight)
+      double precision,allocatable :: www(:)
+      save max_weight
       call cpu_time(tBefore)
       if (icontr.eq.0) return
 c fill the plots_wgts. Check if we can sum weights together before
@@ -1720,10 +1720,14 @@ c contribution makes sure that it is added as a new element.
       enddo
       do i=1,icontr
          if (plot_wgts(1,i).ne.0d0) then
-            if (iwgt.gt.max_weight) then
-               write (*,*) 'ERROR too many weights in fill_plots',iwgt
-     &              ,max_weight
-               stop 1
+            if (.not.allocated(www)) then
+               allocate(www(iwgt))
+               max_weight=iwgt
+            elseif(iwgt.ne.max_weight) then
+               write (*,*) 'Error in fill_plots (fks_singular.f): '/
+     $              /'number of weights should not vary between PS '/
+     $              /'points',iwgt,max_weight
+               stop
             endif
             do j=1,iwgt
                www(j)=plot_wgts(j,i)
@@ -2160,9 +2164,9 @@ c found the contribution that should be written:
 c Fills the lines, n_ctr_str, to be written in an event file with the
 c (internal) information to perform scale and/or PDF reweighting. All
 c information is available in each line to do the reweighting, apart
-c from the momenta: these are put in the momenta_str_l() array, and a
+c from the momenta: these are put in the momenta_str() array, and a
 c label in each of the n_ctr_str refers to a corresponding set of
-c momenta in the momenta_str_l() array.
+c momenta in the momenta_str() array.
       use weight_lines
       use extra_weights
       implicit none
@@ -2172,7 +2176,9 @@ c momenta in the momenta_str_l() array.
       include 'fks_info.inc'
       integer k,i,ii,j,jj,ict,ipr,momenta_conf(2)
       logical momenta_equal,found
-      double precision conv,momenta_str_l(0:3,nexternal,max_n_ctr)
+      double precision conv
+      double precision,allocatable :: temp3(:,:,:)
+      character(len=1024),allocatable :: ctemp(:)
       external momenta_equal
       character*512 procid,str_temp
       parameter (conv=389379660d0) ! conversion to picobarns
@@ -2181,6 +2187,8 @@ c momenta in the momenta_str_l() array.
       common/cproc_combination/iproc_save,eto,etoi,maxproc_found
       logical         Hevents
       common/SHevents/Hevents
+      if (.not.allocated(momenta_str)) allocate(momenta_str(0:3
+     $     ,max_mext,max_mom_str))
       wgtref=unwgt(iproc_picked,icontr_picked)
       n_ctr_found=0
       n_mom_conf=0
@@ -2189,7 +2197,7 @@ c is chosen in the pick_unweight_cont() subroutine)
       do i=1,icontr_sum(0,icontr_picked)
          ict=icontr_sum(i,icontr_picked)
 c Check if the current set of momenta are already available in the
-c momenta_str_l array. If not, add it.
+c momenta_str array. If not, add it.
          found=.false.
          do k=1,2
             do j=1,n_mom_conf
@@ -2197,7 +2205,7 @@ c momenta_str_l array. If not, add it.
                   momenta_conf(k)=0
                   cycle
                endif
-               if (momenta_equal(momenta_str_l(0,1,j),
+               if (momenta_equal(momenta_str(0,1,j),
      &                           momenta_m(0,1,k,ict))) then
                   momenta_conf(k)=j
                   found=.true.
@@ -2206,11 +2214,19 @@ c momenta_str_l array. If not, add it.
             enddo
             if (.not. found) then
                n_mom_conf=n_mom_conf+1
+               if (n_mom_conf.gt.max_mom_str .or. nexternal.gt.max_mext)
+     $              then
+                  allocate(temp3(0:3,max(nexternal,max_mext)
+     $                              ,max(n_mom_conf,max_mom_str)))
+                  temp3(0:3,1:min(nexternal,max_mext)
+     $                     ,1:min(max_mom_str,n_mom_conf))=momenta_str
+                  call move_alloc(temp3,momenta_str)
+                  max_mom_str=max(n_mom_conf,max_mom_str)
+                  max_mext=max(nexternal,max_mext)
+               endif
                do ii=1,nexternal
                   do jj=0,3
                      momenta_str(jj,ii,n_mom_conf)=
-     &                                      momenta_m(jj,ii,k,ict)
-                     momenta_str_l(jj,ii,n_mom_conf)=
      &                                      momenta_m(jj,ii,k,ict)
                   enddo
                enddo
@@ -2225,6 +2241,15 @@ c iproc_picked:
                if (eto(ii,nFKS(ict)).ne.ipr) cycle
                n_ctr_found=n_ctr_found+1
 
+               if (.not.allocated(n_ctr_str))
+     $              allocate(n_ctr_str(max_n_ctr))
+               if (n_ctr_found.gt.max_n_ctr) then
+                  allocate(ctemp(n_ctr_found))
+                  ctemp(1:max_n_ctr)=n_ctr_str
+                  call move_alloc(ctemp,n_ctr_str)
+                  max_n_ctr=n_ctr_found
+               endif
+               
                if (nincoming.eq.2) then
                   write (n_ctr_str(n_ctr_found),'(5(1x,d18.12),1x,i2)')
      &                 (wgt(j,ict)*conv,j=1,3),(wgt_me_tree(j,ict),j=1,2),
@@ -2267,6 +2292,15 @@ c H-event
             ipr=iproc_picked
             n_ctr_found=n_ctr_found+1
 
+            if (.not.allocated(n_ctr_str))
+     $           allocate(n_ctr_str(max_n_ctr))
+            if (n_ctr_found.gt.max_n_ctr) then
+               allocate(ctemp(n_ctr_found))
+               ctemp(1:max_n_ctr)=n_ctr_str
+               call move_alloc(ctemp,n_ctr_str)
+               max_n_ctr=n_ctr_found
+            endif
+
             if (nincoming.eq.2) then
                write (n_ctr_str(n_ctr_found),'(5(1x,d18.12),1x,i2)')
      &              (wgt(j,ict)*conv,j=1,3),(wgt_me_tree(j,ict),j=1,2),
@@ -2304,10 +2338,6 @@ c H-event
      &           //trim(adjustl(str_temp))
 
 
-         endif
-         if (n_ctr_found.ge.max_n_ctr) then
-            write (*,*) 'ERROR: too many contributions in <rwgt>'
-            stop1
          endif
       enddo
       end
