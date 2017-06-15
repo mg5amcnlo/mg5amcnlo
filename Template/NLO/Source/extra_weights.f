@@ -11,8 +11,8 @@
          double precision :: wgtdegrem_xi,wgtdegrem_lxi,wgtdegrem_muF
      $        ,wgtnstmp,wgtwnstmpmuf,wgtwnstmpmur,wgtnstmp_avgvirt
      $        ,wgtref,scalevarR(0:maxscales),scalevarF(0:maxscales)
-     $        ,wgtxsecmu(maxscales,maxscales,maxdynscales),
-     $        wgtxsecPDF(0:maxPDFs,maxPDFsets),wgtbpower,wgtcpower
+     $        ,wgtxsecmu(maxscales,maxscales,maxdynscales)
+     $        ,wgtxsecPDF(0:maxPDFs,maxPDFsets),wgtbpower,wgtcpower
      $        ,veto_multiplier,H1_factor_virt,veto_compensating_factor
      $        ,born_wgt_veto
          double precision,allocatable :: momenta_str(:,:,:)
