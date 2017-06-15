@@ -3279,6 +3279,7 @@ Beware that this can be dangerous for local multicore runs.""")
         bannerfile = lhe_parser.EventFile(pjoin(self.me_dir, 'Events', self.run_name, '.banner.tmp.gz'),'w')
         banner = banner_mod.Banner(lhe.banner)
         banner.modify_init_cross(cross)
+        banner.set_lha_strategy(-4)
         banner.write(bannerfile, close_tag=False)
         bannerfile.close()
         # replace the lhe file by the new one
