@@ -1,9 +1,9 @@
 c Wrapper routines for the fixed order analyses
       subroutine initplot
+      use extra_weights
       implicit none
       include 'run.inc'
       include "nexternal.inc"
-      include 'reweight0.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
       character*50 weights_info(max_weight)
@@ -76,7 +76,7 @@ c     to "setrun")
             endif
             if(nmemPDF(nn)+1.gt.maxPDFs)then
                write(*,*)'Too many PDFs: increase maxPDFs in '/
-     $              /'reweight0.inc to ',numPDFs+1
+     $              /'extra_weights.f to ',nmemPDF(nn)+1
                stop
             endif
 c set the weights_info string for PDF variation
@@ -135,9 +135,9 @@ c To keep track of the accumulated results:
 
 
       subroutine topout
+      use extra_weights
       implicit none
       include "nexternal.inc"
-      include 'reweight0.inc'
       include 'run.inc'
       integer ii,jj,n,kk,nn
       logical usexinteg,mint
@@ -220,12 +220,11 @@ C where ylab is the rapidity in the lab frame and ycm the rapidity
 C in the center-of-momentum frame.
 C
 C *WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING**WARNING*
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
-      include 'reweight.inc'
-      include 'reweightNLO.inc'
       double precision pp(0:3,nexternal),ybst_til_tolab
       integer itype
       double precision p(0:4,nexternal),pplab(0:3,nexternal),chybst

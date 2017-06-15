@@ -1,9 +1,9 @@
       subroutine compute_born
 c This subroutine computes the Born matrix elements and adds its value
 c to the list of weights using the add_wgt subroutine
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight0.inc'
       include 'coupl.inc'
       include 'timing_variables.inc'
       double complex wgt_c(2)
@@ -31,9 +31,9 @@ c to the list of weights using the add_wgt subroutine
       subroutine compute_nbody_noborn
 c This subroutine computes the soft-virtual matrix elements and adds its
 c value to the list of weights using the add_wgt subroutine
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight.inc'
       include 'coupl.inc'
       include 'run.inc'
       include 'timing_variables.inc'
@@ -94,10 +94,10 @@ c and not be part of the plots nor computation of the cross section.
       subroutine compute_real_emission(p,sudakov_damp)
 c This subroutine computes the real-emission matrix elements and adds
 c its value to the list of weights using the add_wgt subroutine
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
-      include 'reweight0.inc'
       include 'timing_variables.inc'
       double precision x,dot,f_damp,ffact,s_ev,fks_Sij,p(0:3,nexternal)
      $     ,wgt1,fx_ev,sudakov_damp
@@ -134,10 +134,10 @@ c its value to the list of weights using the add_wgt subroutine
       subroutine compute_soft_counter_term(replace_MC_subt)
 c This subroutine computes the soft counter term and adds its value to
 c the list of weights using the add_wgt subroutine
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
-      include 'reweight0.inc'
       include 'timing_variables.inc'
       double precision wgt1,s_s,fks_Sij,fx_s,zero,replace_MC_subt,g22
       parameter (zero=0d0)
@@ -185,11 +185,11 @@ c the list of weights using the add_wgt subroutine
       subroutine compute_collinear_counter_term(replace_MC_subt)
 c This subroutine computes the collinear counter term and adds its value
 c to the list of weights using the add_wgt subroutine
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
       include 'fks_powers.inc'
-      include 'reweight.inc'
       include 'timing_variables.inc'
       double precision zero,one,s_c,fks_Sij,fx_c,deg_xi_c,deg_lxi_c,wgt1
      &     ,wgt3,g22,replace_MC_subt
@@ -248,10 +248,10 @@ c to the list of weights using the add_wgt subroutine
       subroutine compute_soft_collinear_counter_term(replace_MC_subt)
 c This subroutine computes the soft-collinear counter term and adds its
 c value to the list of weights using the add_wgt subroutine
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'coupl.inc'
-      include 'reweight.inc'
       include 'fks_powers.inc'
       include 'timing_variables.inc'
       double precision zero,one,s_sc,fks_Sij,fx_sc,wgt1,wgt3,deg_xi_sc
@@ -314,6 +314,7 @@ c value to the list of weights using the add_wgt subroutine
       end
 
       subroutine compute_MC_subt_term(p,gfactsf,gfactcl,probne)
+      use extra_weights
       implicit none
 c This subroutine computes the MonteCarlo subtraction terms and adds
 c their values to the list of weights using the add_wgt subroutine. It
@@ -324,7 +325,6 @@ c respectively.
       include 'nexternal.inc'
       include 'madfks_mcatnlo.inc'
       include 'timing_variables.inc'
-      include 'reweight.inc'
       include 'coupl.inc'
       integer nofpartners,i
       double precision p(0:3,nexternal),gfactsf,gfactcl,probne,x,dot
@@ -613,11 +613,11 @@ c Restore scales for the n+1-body FxFx terms
 c Compute all the relevant prefactors for the Born and the soft-virtual,
 c i.e. all the nbody contributions. Also initialises the plots and
 c bpower.
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
-      include 'reweight0.inc'
       include 'timing_variables.inc'
       double precision pi,unwgtfun,vegas_wgt,enhance,xnoborn_cnt,xtot
      $     ,bpower,cpower,tiny
@@ -694,7 +694,7 @@ c Check that things are done consistently
          if(wgtcpower.ne.cpowerinput.and.dabs(cpower+1d0).gt.tiny)then
            write(*,*)'Inconsistency in the computation of cpower',
      #               wgtcpower,cpowerinput
-           write(*,*)'Check value in reweight0.inc'
+           write(*,*)'Check value in extra_weights.f'
            stop
          endif
          firsttime=.false.
@@ -1018,6 +1018,7 @@ c        contribution
 c     parton_pdg(nexternal,iproc,icontr) : value of the PDG codes for
 c     the iproc contribution
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
@@ -1025,7 +1026,6 @@ c     the iproc contribution
       include 'coupl.inc'
       include 'fks_info.inc'
       include 'q_es.inc'
-      include 'reweight0.inc'
       integer type,i,j
       double precision wgt1,wgt2,wgt3
       integer              nFKSprocess
@@ -1130,11 +1130,11 @@ c and MC subtraction terms.
 
       subroutine include_veto_multiplier
       use weight_lines
+      use extra_weights
       implicit none
 c Multiply all the weights by the NNLL-NLO jet veto Sudakov factors,
 c i.e., the term on the 2nd line of Eq.(20) of arXiv:1412.8408.
       include 'nexternal.inc'
-      include 'reweight.inc'
       integer i,j
       if (H1_factor_virt.ne.0d0) then
          call compute_veto_multiplier(H1_factor_virt,1d0,1d0
@@ -1270,11 +1270,10 @@ c           Keep GeV's for decay processes (no conv. factor needed)
 c Use the saved weight_lines info to perform scale reweighting. Extends the
 c wgts() array to include the weights.
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'reweight.inc'
-      include 'reweightNLO.inc'
       include 'timing_variables.inc'
       integer i,kr,kf,iwgt_save,dd
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales),c_mu2_r
@@ -1343,11 +1342,10 @@ c Use the saved weight lines info to perform scale reweighting. Extends the
 c wgts() array to include the weights. Special for the NNLL+NLO jet-veto
 c computations (ickkw.eq.-1).
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'reweight.inc'
-      include 'reweightNLO.inc'
       include 'timing_variables.inc'
       integer i,ks,kh,iwgt_save
       double precision xlum(maxscales),dlum,pi,mu2_r(maxscales)
@@ -1435,11 +1433,10 @@ c special for the itype=7 (i.e, the veto-compensating factor)
 c Use the saved weight_lines info to perform PDF reweighting. Extends the
 c wgts() array to include the weights.
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'reweight.inc'
-      include 'reweightNLO.inc'
       include 'timing_variables.inc'
       integer n,i,nn
       double precision xlum,dlum,pi,mu2_r,mu2_f,mu2_q,rwgt_muR_dep_fac,g
@@ -1677,9 +1674,9 @@ c it for all, it first checks if weights can be summed (i.e. they have
 c the same PDG codes and the same momenta) before calling the analysis
 c to greatly reduce the calls to the analysis routines.
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight0.inc'
       include 'timing_variables.inc'
       integer i,ii,j,max_weight
       logical momenta_equal,pdg_equal
@@ -2167,9 +2164,9 @@ c from the momenta: these are put in the momenta_str_l() array, and a
 c label in each of the n_ctr_str refers to a corresponding set of
 c momenta in the momenta_str_l() array.
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight0.inc'
       include 'genps.inc'
       include 'nFKSconfigs.inc'
       include 'fks_info.inc'
@@ -3492,13 +3489,13 @@ c Calculate the eikonal factor
 
       subroutine sreal_deg(p,xi_i_fks,y_ij_fks,
      #                     collrem_xi,collrem_lxi)
+      use extra_weights
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
       include "coupl.inc"
       include 'q_es.inc'
       include "run.inc"
-      include 'reweight.inc'
 
       double precision p(0:3,nexternal),collrem_xi,collrem_lxi
       double precision xi_i_fks,y_ij_fks
@@ -4374,6 +4371,7 @@ c
 
 
       subroutine bornsoftvirtual(p,bsv_wgt,virt_wgt,born_wgt)
+      use extra_weights
       implicit none
       include "genps.inc"
       include 'nexternal.inc'
@@ -4385,7 +4383,6 @@ c      include "fks.inc"
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
       include "run.inc"
       include "fks_powers.inc"
-      include 'reweight.inc'
       include "mint.inc"
       double precision p(0:3,nexternal),bsv_wgt,born_wgt,avv_wgt
       double precision pp(0:3,nexternal)
@@ -4809,16 +4806,16 @@ c nothing funny happens later on
 c       This function computes the power of a muR-dependent factor which
 c       is stored in cpower. You need to modify it when you try to 
 c       reweight your cross section with a muR-dependent factor
-c       (runfac=1 in reweight0.inc)
+c       (runfac=1 in extra_weights.f)
 c Note: The implementation below only works for the Bottom Yukawa in
 c       the SM where "GC_33" contains the Yukawa, for other models
 c       or general muR-dependent factors you need to change GC_33
 c       to the corresponding coupling.
       subroutine compute_cpower(p_born,cpower)
+      use extra_weights
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
-      include 'reweight.inc'
 
       double precision p_born(0:3,nexternal-1)
       double precision cpower,born_wgt
@@ -4884,7 +4881,7 @@ c$$$c set it to the integer exactly
 c$$$         cpower=dble(nint(cpower))
 c$$$         write(*,*)'cpower is', cpower
 c$$$c Check consistency with value used in reweighting
-c$$$c$$$         if( (doreweight.or.doNLOreweight) .and.
+c$$$c$$$         if( doreweight .and.
 c$$$c$$$     &        abs(cpower-wgtcpower).gt.tiny )then
 c$$$c$$$            write(*,*)'Error in compute_cpower'
 c$$$c$$$            write(*,*)'cpower(s) are:',cpower,wgtcpower
@@ -5400,6 +5397,7 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
 
       subroutine setfksfactor(match_to_shower)
       use weight_lines
+      use extra_weights
       implicit none
 
       include 'mint.inc'
@@ -5437,7 +5435,6 @@ c$$$      m1l_W_finite_CDR=m1l_W_finite_CDR*born
       integer fks_j_from_i(nexternal,0:nexternal)
      &     ,particle_type(nexternal),pdg_type(nexternal)
       common /c_fks_inc/fks_j_from_i,particle_type,pdg_type
-      include 'reweight0.inc'
       include 'run.inc'
       INTEGER NFKSPROCESS
       COMMON/C_NFKSPROCESS/NFKSPROCESS
@@ -6126,9 +6123,9 @@ c
 
       subroutine set_mu_central(ic,dd,c_mu2_r,c_mu2_f)
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight0.inc'
       include 'run.inc'
       integer ic,dd,i,j
       double precision c_mu2_r,c_mu2_f,muR,muF,pp(0:3,nexternal)

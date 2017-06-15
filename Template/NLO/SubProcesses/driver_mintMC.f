@@ -2,6 +2,7 @@
 c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
+      use extra_weights
       implicit none
 C
 C     CONSTANTS
@@ -10,7 +11,6 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -981,7 +981,6 @@ c summed explicitly and which by MC-ing.
       include 'nexternal.inc'
       include 'run.inc'
       include 'genps.inc'
-      include 'reweight_all.inc'
       include 'nFKSconfigs.inc'
       double precision lum,dlum
       external dlum
@@ -1005,19 +1004,12 @@ c summed explicitly and which by MC-ing.
          write (*,*)'Using ickkw=4, include only 1 FKS dir per'/
      $        /' Born PS point (sum=0)'
       endif
-      maxproc_save=0
       do nFKSprocess=1,fks_configs
          call fks_inc_chooser()
 c Set Bjorken x's to some random value before calling the dlum() function
          xbk(1)=0.5d0
          xbk(2)=0.5d0
          lum=dlum()  ! updates IPROC
-         maxproc_save=max(maxproc_save,IPROC)
-         if (doreweight) then
-            call reweight_settozero()
-            call reweight_settozero_all(nFKSprocess*2,.true.)
-            call reweight_settozero_all(nFKSprocess*2-1,.true.)
-         endif
       enddo
       write (*,*) 'Total number of FKS directories is', fks_configs
 c For sum over identical FKS pairs, need to find the identical structures

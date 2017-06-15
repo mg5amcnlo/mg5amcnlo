@@ -190,11 +190,11 @@ c get info on beam and PDFs
 
       subroutine write_events_lhe(p,wgt,ic,npart,lunlhe,shower_scale
      $     ,ickkw)
+      use extra_weights
       implicit none
       include "nexternal.inc"
       include "coupl.inc"
       include "madfks_mcatnlo.inc"
-      include 'reweight.inc'
       double precision p(0:4,2*nexternal-3),wgt
       integer ic(7,2*nexternal-3),npart,lunlhe,kwgtinfo,ickkw
       double precision pi,zero

@@ -5,16 +5,16 @@ c which does not contain the <rwgt> part, but retains only the
 c information on the maximum and minimum weights due to scale
 c and PDF variations
 c Compile with makefile_rwgt
+      use extra_weights
       implicit none
       include "run.inc"
-      include "reweight_all.inc"
-      integer i,ii,jj,kk,isave,idpdf(0:maxPDFs),itmp,lef,ifile,maxevt
-     $     ,iSorH_lhe,ifks_lhe,jfks_lhe,fksfather_lhe,ipartner_lhe
-     $     ,kwgtinfo,kexternal,jwgtnumpartn,ofile,kf,kr,n,nn
-      double precision yfactR(maxscales),yfactF(maxscales),value(20)
-     $     ,scale1_lhe,scale2_lhe,wgtcentral,wgtmumin,wgtmumax,wgtpdfmin
-     $     ,wgtpdfmax,saved_weight,xsecPDFr_acc(0:maxPDFs,maxPDFsets)
-     $     ,xsecScale_acc(maxscales,maxscales,maxdynscales)
+      integer i,ii,jj,kk,isave,lef,ifile,maxevt,iSorH_lhe,ifks_lhe
+     $     ,jfks_lhe,fksfather_lhe,ipartner_lhe,kwgtinfo,kexternal
+     $     ,jwgtnumpartn,ofile,kf,kr,n,nn
+      double precision scale1_lhe,scale2_lhe,wgtcentral,wgtmumin
+     $     ,wgtmumax,wgtpdfmin,wgtpdfmax,saved_weight
+     $     ,xsecPDFr_acc(0:maxPDFs,maxPDFsets),xsecScale_acc(maxscales
+     $     ,maxscales,maxdynscales)
       logical AddInfoLHE,unweighted
       character*9 ch1
       character*10 MonteCarlo
@@ -97,7 +97,7 @@ c to "setrun")
             endif
             if(nmemPDF(nn)+1.gt.maxPDFs)then
                write(*,*)'Too many PDFs: increase maxPDFs in '/
-     $              /'reweight0.inc to ',numPDFs+1
+     $              /'extra_weights.f to ',nmemPDF(nn)+1
                stop
             endif
          enddo
@@ -187,7 +187,6 @@ c To keep track of the accumulated results:
             xsecPDFr_acc(0,nn)=0d0
          endif
       enddo
-      nScontributions=1
 
 c Determine the flavor map between the NLO and Born
       call find_iproc_map()
@@ -383,9 +382,9 @@ c do the same as above for the counterevents
 
       subroutine fill_wgt_info_from_rwgt_lines
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight0.inc'
       integer i,idum,j,k,momenta_conf(2),ii,n_proc
       icontr=n_ctr_found
       iwgt=1
@@ -414,10 +413,10 @@ c do the same as above for the counterevents
       
       subroutine reweight_scale_ext
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'reweight0.inc'
       integer i,pd,lp,iwgt_save,kr,kf,dd
       double precision mu2_f(maxscales),mu2_r(maxscales),xlum(maxscales)
      $     ,pdg2pdf,mu2_q,rwgt_muR_dep_fac,g(maxscales),alphas,pi
@@ -475,10 +474,10 @@ c add the weights to the array
       
       subroutine reweight_pdf_ext
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'run.inc'
-      include 'reweight0.inc'
       integer i,pd,lp,iwgt_save,izero,n,nn,iset,imem
       parameter (izero=0)
       double precision mu2_f,mu2_r,pdg2pdf,mu2_q,rwgt_muR_dep_fac
@@ -526,9 +525,9 @@ c reset to the 0th member of the 1st set
 
       subroutine fill_rwgt_arrays
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight0.inc'
       include 'run.inc'
       integer ii,jj,kk,nn,n,iw,i
       do kk=1,dyn_scale(0)
@@ -588,9 +587,9 @@ c reset to the 0th member of the 1st set
       
       subroutine set_mu_central(ic,dd,c_mu2_r,c_mu2_f)
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight0.inc'
       include 'run.inc'
       integer ic,dd,i,j
       double precision c_mu2_r,c_mu2_f,muR,muF,pp(0:3,nexternal)

@@ -1,14 +1,4 @@
 c Utility routines for LHEF. Originally taken from collect_events.f
-c
-c Note: the routines read_lhef_event and write_lhef_event use the common
-c blocks in reweight0.inc, relevant to reweight information. This is
-c independent of the process, and in particular of process-related
-c parameters such as nexternal, which is replaced here by (its supposed)
-c upper bound maxparticles. The arrays which have one dimension defined
-c by maxparticles may have a correspondence with process-specific ones,
-c and the dimensions of the latter are typically defined by nexternal.
-c Hence, one may need an explicit copy of one onto the other
-c
 
       block data
       integer event_id
@@ -20,9 +10,9 @@ c
       end
 
       subroutine write_lhef_header(ifile,nevents,MonteCarlo)
+      use extra_weights
       implicit none 
       include 'run.inc'
-      include 'reweight0.inc'
       integer idwgt,kk,ii,jj,nn,n
       integer ifile,nevents
       character*10 MonteCarlo
@@ -114,6 +104,7 @@ c
 
 
       subroutine write_lhef_header_banner(ifile,nevents,MonteCarlo,path)
+      use extra_weights
       implicit none 
       integer ifile, i, idwgt, nevents,iseed,ii,jj,kk,nn,n
       double precision mcmass(-16:21)
@@ -135,7 +126,6 @@ c     other parameter
       character*150 buffer,buffer_lc,buffer2
       integer event_id
       common /c_event_id/ event_id
-      include 'reweight_all.inc'
 
 c     Set the event_id to 0. If 0 or positive, this value will be update
 c     in write_lhe_event. It is set to -99 through a block data
@@ -297,8 +287,8 @@ c Write here the reweight information if need be
 
 
       subroutine read_lhef_header(ifile,nevents,MonteCarlo)
+      use extra_weights
       implicit none 
-      include 'reweight0.inc'
       include './run.inc'
       logical already_found
       integer ifile,nevents,i,ii,ii2,iistr,itemp
@@ -435,8 +425,8 @@ c Same as read_lhef_header, except that more parameters are read.
 c Avoid overloading read_lhef_header, meant to be used in utilities
       subroutine read_lhef_header_full(ifile,nevents,itempsc,itempPDF,
      #                                 MonteCarlo)
+      use extra_weights
       implicit none
-      include 'reweight0.inc'
       include 'run.inc'
       logical already_found
       integer ifile,nevents,i,ii,ii2,iistr,ipart,itempsc,itempPDF
@@ -652,6 +642,7 @@ c
       subroutine write_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+      use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -669,7 +660,6 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
-      include 'reweight_all.inc'
       include './run.inc'
       include 'unlops.inc'
 c     if event_id is zero or positive (that means that there was a call
@@ -824,6 +814,7 @@ c
       subroutine read_lhef_event(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+      use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -842,7 +833,6 @@ c
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
-      include 'reweight_all.inc'
       include 'unlops.inc'
       include 'run.inc'
 c
@@ -955,6 +945,7 @@ c Same as read_lhef_event, except for the end-of-file catch
       subroutine read_lhef_event_catch(ifile,
      # NUP,IDPRUP,XWGTUP,SCALUP,AQEDUP,AQCDUP,
      # IDUP,ISTUP,MOTHUP,ICOLUP,PUP,VTIMUP,SPINUP,buff)
+      use extra_weights
       implicit none
       INTEGER NUP,IDPRUP,IDUP(*),ISTUP(*),MOTHUP(2,*),ICOLUP(2,*)
       DOUBLE PRECISION XWGTUP,SCALUP,AQEDUP,AQCDUP,
@@ -973,7 +964,6 @@ c Same as read_lhef_event, except for the end-of-file catch
       common/c_i_process/i_process
       integer nattr,npNLO,npLO
       common/event_attributes/nattr,npNLO,npLO
-      include 'reweight_all.inc'
       include 'unlops.inc'
       include 'run.inc'
 c

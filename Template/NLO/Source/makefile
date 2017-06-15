@@ -10,8 +10,8 @@ STDHEPDIR= ./StdHEP/
 
 PROCESS= matrix.o myamp.o 
 
-GENERIC = $(alfas_functions).o rw_routines.o kin_functions.o setrun.o	\
-	  run_printout.o dgauss.o ranmar.o getissud.o
+GENERIC = extra_weights.o $(alfas_functions).o rw_routines.o kin_functions.o	\
+	  run_printout.o dgauss.o ranmar.o getissud.o setrun.o
 
 INCLUDEF = coupl.inc pmass.inc cluster.inc
 
@@ -31,6 +31,7 @@ $(LIBDIR)libgeneric.a: $(GENERIC)
 	ar cru libgeneric.a $(GENERIC)
 	ranlib libgeneric.a
 	mv libgeneric.a $(LIBDIR)
+	cp -f extra_weights.mod $(LIBDIR)
 	rm -f $(alfas_functions).o 
 
 setrun.o: run_card.inc 

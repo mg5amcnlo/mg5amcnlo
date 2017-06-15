@@ -209,8 +209,9 @@ c
       end
 
 
-      subroutine collect_all_evfiles(ioutput,numoffiles,junit,
-     #                               imaxevt,evwgt)
+      subroutine collect_all_evfiles(ioutput,numoffiles,junit,imaxevt
+     $     ,evwgt)
+      use extra_weights
       implicit none
       integer i_orig
       common /c_i_orig/i_orig
@@ -249,7 +250,6 @@ c
       double precision xsecup_l(100),xerrup_l(100)
       integer lprup_l(100),nproc_l
       logical found_proc
-      include 'reweight_all.inc'
       include 'run.inc'
       integer proc_id_tot(0:100)
       double precision xsec(100),xsecABS,xerr(100)

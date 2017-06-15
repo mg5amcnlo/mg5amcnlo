@@ -7,7 +7,6 @@ c intermediate resonances. It also boosts the events to the lab frame
       include "nexternal.inc"
       include "born_nhel.inc"
       include "coloramps.inc"
-      include "reweight0.inc"
       include "nFKSconfigs.inc"
       include "leshouche_decl.inc"
       include "run.inc"

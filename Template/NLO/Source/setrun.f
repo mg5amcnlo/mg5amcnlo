@@ -6,6 +6,7 @@ c 1. PDF set
 c 2. Collider parameters
 c 3. cuts
 c---------------------------------------------------------------------- 
+      use extra_weights
       implicit none
 c
 c     parameters
@@ -24,7 +25,6 @@ c
       include 'run.inc'
       include 'alfas.inc'
       include 'MODEL/coupl.inc'
-      include '../SubProcesses/reweight0.inc'
 
       double precision D
       common/to_dj/D

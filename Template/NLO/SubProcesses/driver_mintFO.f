@@ -2,6 +2,7 @@
 c**************************************************************************
 c     This is the driver for the whole calculation
 c**************************************************************************
+      use extra_weights
       implicit none
 C
 C     CONSTANTS
@@ -10,7 +11,6 @@ C
       parameter       (ZERO = 0d0)
       include 'nexternal.inc'
       include 'genps.inc'
-      include 'reweight.inc'
       INTEGER    ITMAX,   NCALL
 
       common/citmax/itmax,ncall
@@ -210,7 +210,6 @@ c
          endif
 c
 c Setup for parton-level NLO reweighting
-         if(do_rwgt_scale.or.do_rwgt_pdf) call setup_fill_rwgt_NLOplot()
          call mint(sigint,ndim,ncall,itmax,imode,xgrid,ymax
      $        ,ymax_virt,ans,unc,chi2,nhits_in_grids)
          call topout
@@ -347,11 +346,11 @@ c timing statistics
 
       double precision function sigint(xx,vegas_wgt,ifl,f)
       use weight_lines
+      use extra_weights
       implicit none
       include 'nexternal.inc'
       include 'mint.inc'
       include 'nFKSconfigs.inc'
-      include 'reweight.inc'
       include 'run.inc'
       double precision xx(ndimmax),vegas_wgt,f(nintegrals),jac,p(0:3
      $     ,nexternal),rwgt,vol,sig,x(99),MC_int_wgt

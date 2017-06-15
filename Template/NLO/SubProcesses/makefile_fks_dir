@@ -27,7 +27,7 @@ $(LIBDIR)libpdf.a $(LIBDIR)libcernlib.a
 # Files for all executables
 FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 %.f,%.o,$(wildcard matrix_*.f)) real_me_chooser.o		\
-	 weight_lines.o fks_inc_chooser.o leshouche_inc_chooser.o	\
+	 weight_lines.o leshouche_inc_chooser.o fks_inc_chooser.o	\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
 	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
 	 $(fastjetfortran_madfks) fks_singular.o veto_xsec.o		\
@@ -69,7 +69,7 @@ RWGFILES=weight_lines.o reweight_xsec_events.o handling_lhe_events.o	\
 	reweight_xsec.o
 
 %.o: %.f
-	$(FC) $(FFLAGS) -c -I. $<
+	$(FC) $(FFLAGS) -c -I. -I$(LIBDIR) $<
 %.o: $(ANADIR)/%.f
 	$(FC) $(FFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $<
 %.o: %.for

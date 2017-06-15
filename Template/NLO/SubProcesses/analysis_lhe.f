@@ -42,9 +42,9 @@ c event (event with lower weights will be un-weighted)
       end
 
       subroutine analysis_fill(p,istatus,ipdg,wgts,ibody)
+      use extra_weights
       implicit none
       include 'nexternal.inc'
-      include 'reweight.inc'
       include 'run.inc'
       integer nwgt,max_weight
       parameter (max_weight=maxscales*maxscales+maxpdfs+1)
