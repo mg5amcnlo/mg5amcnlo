@@ -642,7 +642,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'symmetry_fks_test_MC.f',
                      'symmetry_fks_test_ME.f',
                      'symmetry_fks_v3.f',
-                     'trapfpe.c',
                      'vegas2.for',
                      'write_ajob.f',
                      'handling_lhe_events.f',
@@ -1217,10 +1216,8 @@ This typically happens when using the 'low_mem_multicore_nlo_generation' NLO gen
         file = \
 """double precision function dlum()
 implicit none
-include 'timing_variables.inc'
 integer nfksprocess
 common/c_nfksprocess/nfksprocess
-call cpu_time(tbefore)
 """
         if matrix_element.real_processes:
             for n, info in enumerate(matrix_element.get_fks_info_list()):
@@ -1233,16 +1230,12 @@ else""" % {'n': n + 1, 'n_me' : info['n_me']}
 write(*,*) 'ERROR: invalid n in dlum :', nfksprocess
 stop
 endif
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """
         else:
             file+= \
 """call dlum_0(dlum)
-call cpu_time(tAfter)
-tPDF = tPDF + (tAfter-tBefore)
 return
 end
 """

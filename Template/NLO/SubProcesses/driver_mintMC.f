@@ -485,10 +485,6 @@ c         write (*,*) 'Integral from virt points computed',x(5),x(6)
 c timing statistics
       include "timing_variables.inc"
       data tOLP/0.0/
-      data tFastJet/0.0/
-      data tPDF/0.0/
-      data tDSigI/0.0/
-      data tDSigR/0.0/
       data tGenPS/0.0/
       data tBorn/0.0/
       data tIS/0.0/

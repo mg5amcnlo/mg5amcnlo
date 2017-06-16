@@ -3690,8 +3690,6 @@ c do the same as above for the counterevents
       include "run.inc"
       include "nexternal.inc"
       integer j_fks
-      double precision dlum
-      external dlum
       double precision zhw_used,xi_i_fks,xlum_mc_fact
       double precision xbjrk_ev(2),xbjrk_cnt(2,-2:2)
       common/cbjorkenx/xbjrk_ev,xbjrk_cnt

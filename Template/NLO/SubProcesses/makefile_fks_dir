@@ -29,7 +29,7 @@ FILES= $(patsubst %.f,%.o,$(wildcard parton_lum_*.f)) $(patsubst	\
 	 %.f,%.o,$(wildcard matrix_*.f)) real_me_chooser.o		\
 	 weight_lines.o leshouche_inc_chooser.o fks_inc_chooser.o	\
 	 setcuts.o setscales.o born.o sborn_sf.o $(patsubst		\
-	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o trapfpe.o		\
+	 %.f,%.o,$(wildcard b_sf_???.f)) fks_Sij.o			\
 	 $(fastjetfortran_madfks) fks_singular.o veto_xsec.o		\
 	 montecarlocounter.o reweight_xsec.o boostwdir2.o       	\
 	 configs_and_props_inc_chooser.o initcluster.o cluster.o 	\
