@@ -675,12 +675,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         else:
             os.system("ln -s ../BinothLHA_user.f ./BinothLHA.f")
 
-
-        #import nexternal/leshouches in Source
-        ln('nexternal.inc', '../../Source', log=False)
-        ln('born_leshouche.inc', '../../Source', log=False)
-
-
         # Return to SubProcesses dir
         os.chdir(os.path.pardir)
         # Add subprocess to subproc.mg
@@ -688,7 +682,6 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
         files.append_to_file(filename,
                              self.write_subproc,
                              borndir)
-
             
         os.chdir(cwd)
         # Generate info page
