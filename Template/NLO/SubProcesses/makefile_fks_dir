@@ -54,7 +54,8 @@ POLES= $(FILES) cuts.o pythia_unlops.o recluster.o check_poles.o	\
        BinothLHA.o born_hel.o
 
 # Files for tests
-TEST= $(FILES) BinothLHADummy.o cuts.o pythia_unlops.o recluster.o
+TEST= $(FILES) test_soft_col_limits.o BinothLHADummy.o cuts.o		\
+      pythia_unlops.o recluster.o
 
 # Files for gensym
 SYM= $(FILES) BinothLHADummy.o symmetry_fks_v3.o write_ajob.o
@@ -90,15 +91,10 @@ gensym: $(SYM)
 	rm fks_singular.o
 	strip gensym
 
-test_ME: symmetry_fks_test_ME.o $(TEST)
-	$(FC) $(LDFLAGS) -o test_ME symmetry_fks_test_ME.o $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
-	rm symmetry_fks_test_ME.o
-	strip test_ME
-
-test_MC: symmetry_fks_test_MC.o $(TEST) 
-	$(FC) $(LDFLAGS) -o test_MC symmetry_fks_test_MC.o $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
-	rm symmetry_fks_test_MC.o
-	strip test_MC
+test_soft_col_limits: $(TEST)
+	$(FC) $(LDFLAGS) -o test_soft_col_limits $(TEST) $(APPLLIBS) $(LINKLIBS) $(FJLIBS)
+	rm test_soft_col_limits.o
+	strip test_soft_col_limits
 
 check_poles: $(POLES) $(libmadloop)
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
