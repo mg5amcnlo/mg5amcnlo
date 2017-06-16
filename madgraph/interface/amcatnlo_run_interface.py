@@ -134,9 +134,7 @@ def compile_dir(*arguments):
             
         if not options['reweightonly']:
             misc.compile(['gensym'], cwd=this_dir, job_specs = False)
-            open(pjoin(this_dir, 'gensym_input.txt'), 'w').write('%s\n' % run_mode)
             misc.call(['./gensym'],cwd= this_dir,
-                     stdin=open(pjoin(this_dir, 'gensym_input.txt')),
                      stdout=open(pjoin(this_dir, 'gensym.log'), 'w'),
                      close_fds=True) 
             #compile madevent_mintMC/mintFO
@@ -4768,9 +4766,8 @@ RESTART = %(mint_mode)s
         if test in ['test_ME', 'test_MC']:
             content = "-2 -2\n" #generate randomly energy/angle
             content+= "100 100\n" #run 100 points for soft and collinear tests
-            content+= "0\n" #sum over helicities
             content+= "0\n" #all FKS configs
-            content+= '\n'.join(["-1"] * 50) #random diagram
+            content+= '\n'.join(["-1"] * 50) #random diagram (=first diagram)
         elif test == 'check_poles':
             content = '20 \n -1\n'
         

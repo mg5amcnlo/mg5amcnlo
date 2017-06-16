@@ -17,7 +17,7 @@ C
 C
 C     LOCAL
 C
-      integer i,j,l,l1,l2,ndim
+      integer i,j,l,l1,l2
       character*130 buf
 c
 c     Global
@@ -26,7 +26,8 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       
-c Vegas stuff
+c     Vegas stuff
+      integer         ndim
       common/tosigint/ndim
 
       real*8 sigint
