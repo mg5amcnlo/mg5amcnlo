@@ -78,7 +78,7 @@ def find_ufo_path(model_name):
                     last_model_path = os.path.join(MG5DIR, p, model_name)
                 return os.path.join(MG5DIR, p, model_name)
     if os.path.isdir(model_name):
-        logger.warning('No model %s found in default path. Did you meant \'import model ./%s\'',
+        logger.warning('No model %s found in default path. Did you mean \'import model ./%s\'',
                        model_name, model_name)
         raise UFOImportError("Path %s is not a valid pathname" % model_name)    
     else:
