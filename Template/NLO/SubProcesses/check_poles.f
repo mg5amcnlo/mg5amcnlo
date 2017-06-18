@@ -216,13 +216,15 @@ c initialization
           ! (according to the return code)
           call BinothLHA(p_born, born, virt_wgt)
           if (npointsChecked.eq.0) then
-            do while (mod(ret_code_ml,100)/10.eq.3.or.mod(ret_code_ml,100)/10.eq.4)
+             if (mod(ret_code_ml,100)/10.eq.3 .or.
+     &            mod(ret_code_ml,100)/10.eq.4) then
               ! this is to skip initialisation points
-              write(*,*) 'INITIALIZATION POINT:'
-              call BinothLHA(p_born, born, virt_wgt)
-              write(*,*) 'RESULTS FROM INITIALIZATION POINTS WILL NOT '
-     1            //'BE USED FOR STATISTICS'
-            enddo
+                write(*,*) 'INITIALIZATION POINT.'
+                write(*,*)
+     $               'RESULTS FROM INITIALIZATION POINTS WILL NOT '/
+     $               /'BE USED FOR STATISTICS'
+                goto 200
+             endif
           endif
           write(*,*) 'MU_R    = ', ren_scale
           write(*,*) 'ALPHA_S = ', G**2/4d0/pi
