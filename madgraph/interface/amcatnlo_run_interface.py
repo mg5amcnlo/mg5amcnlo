@@ -1265,7 +1265,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
         if self.param_card_iterator:
             param_card_iterator = self.param_card_iterator
             self.param_card_iterator = [] #avoid to next generate go trough here
-            param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+            param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                            error=self.results.current['error'])
             orig_name = self.run_name
             #go trough the scal
             with misc.TMP_variable(self, 'allow_notification_center', False):
@@ -1282,7 +1283,8 @@ Please read http://amcatnlo.cern.ch/FxFx_merging.htm for more details.""")
                         argss[0] = mode
                     self.do_launch("", options=options, argss=argss, switch=switch)
                     #self.exec_cmd("launch -f ",precmd=True, postcmd=True,errorhandling=False)
-                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'])
+                    param_card_iterator.store_entry(self.run_name, self.results.current['cross'],
+                                                    error=self.results.current['error'])
             #restore original param_card
             param_card_iterator.write(pjoin(self.me_dir,'Cards','param_card.dat'))
             name = misc.get_scan_name(orig_name, self.run_name)
