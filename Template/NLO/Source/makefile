@@ -11,7 +11,7 @@ STDHEPDIR= ./StdHEP/
 PROCESS= matrix.o myamp.o 
 
 GENERIC = extra_weights.o $(alfas_functions).o rw_routines.o kin_functions.o	\
-	  run_printout.o dgauss.o ranmar.o getissud.o setrun.o
+	  run_printout.o dgauss.o ranmar.o setrun.o
 
 INCLUDEF = coupl.inc pmass.inc cluster.inc
 
