@@ -30,13 +30,15 @@ c event (event with lower weights will be un-weighted)
       integer                                   npoints
       double precision            cross_section
       common /for_FixedOrder_lhe/ cross_section,npoints
+      character*10 MonteCarlo
       inquire(41,OPENED=lopen)  ! safety
       if (lopen) then
          backspace(41)          ! overwrite the final </eventgroup> tag
          write (41,*) nevents,sum_of_wgts,cross_section
          close(41)
          open(41, file='header.txt')
-         call write_lhef_header(41, 0, 'FO')
+         MonteCarlo='FO'
+         call write_lhef_header(41, 0, MonteCarlo)
          close(41)
       endif
       end
