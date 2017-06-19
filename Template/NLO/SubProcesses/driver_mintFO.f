@@ -176,6 +176,8 @@ c     Fill the number of combined matrix elements for given initial state lumino
          if(imode.eq.0)then
 c Don't safe the reweight information when just setting up the grids.
             doreweight=.false.
+            do_rwgt_scale=.false.
+            do_rwgt_pdf=.false.
             do kchan=1,nchans
                do i=1,ndimmax
                   do j=0,nintervals

@@ -54,11 +54,6 @@ c
       double precision bwcutoff
       common/to_bwcutoff/ bwcutoff
 c
-c     Sudakov grid file name
-c
-      character*130 issgridfile
-      common/to_sgridfile/issgridfile
-c
 c     kT/pT scheme for xqcut, clustering according to channel
 c
       integer ktscheme

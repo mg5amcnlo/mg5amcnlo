@@ -142,6 +142,8 @@ c Only do the reweighting when actually generating the events
          doreweight=do_rwgt_scale.or.do_rwgt_pdf
       else
          doreweight=.false.
+         do_rwgt_scale=.false.
+         do_rwgt_pdf=.false.
       endif
       if (abrv(1:4).eq.'virt') then
          only_virt=.true.
