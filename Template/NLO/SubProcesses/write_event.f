@@ -6,6 +6,17 @@
       include "run.inc"
       include 'timing_variables.inc'
       include 'mint.inc'
+C     To access Pythia8 control variables
+      include 'pythia8_control.inc'
+C     To access event streams to communicate with PY8
+      include 'hep_event_streams.inc'
+C     To access mu_r
+      include 'coupl.inc'
+C     START local variable for the example only. Can be removed when removing
+C     example
+      double precision p_read(0:4,2*nexternal-3), wgt_read
+C     STOP local variables for the example.
+
       integer ndim
       common/tosigint/ndim
       integer itmax,ncall
@@ -92,6 +103,37 @@ c Put the Hevent info in a common block
       
       call add_write_info(p_born,p,ybst_til_tolab,iconfig,Hevents,
      &     putonshell,ndim,x,jpart,npart,pb,shower_scale)
+
+C     ---------------------------------------------------------------
+C     START of example of a dynamic call to PY8 using current event
+C     ---------------------------------------------------------------
+      if (is_pythia_active.eq.-1) then
+C       Pythia8 was not available when the process was compiled!
+        continue
+      else
+        call fill_HEPEUP_event(pb(0,1),evnt_wgt,jpart(1,1),npart,mu_r)
+C       Check if Pythia8 needs to be initialized
+        if (is_pythia_active.eq.0) then
+C         By default, we now use an empty command file
+          call pythia_init(pythia_cmd_file)
+        endif
+C       Send current event to Pythia8
+        call pythia_setevent()
+C       Ask Pythia8 to shower current event
+        call pythia_next()
+C       Ask Pythia8 to printout its internal record of the event
+        call pythia_stat()
+C       Read (i.e. simply access) the output HEPEUP event stream
+        call read_HEPEUP_event(p_read,wgt_read)
+C       And printout the corresponding event kinematics and weight
+        do j=1,2*nexternal-3
+          write(*,*) 'p_read(*,',j,')=',(p_read(i,j),i=0,4)
+        enddo
+        write(*,*) 'wgt_read=',wgt_read
+      endif
+C     ---------------------------------------------------------------
+C     END of example.
+C     ---------------------------------------------------------------
 
       call unweight_function(p_born,unwgtfun)
       if (unwgtfun.ne.0d0) then
@@ -323,4 +365,137 @@ c********************************************************************
       write (lunlhe,*) (x(i),i=1,ndim)
       write (lunlhe,'(a)')'  </event>'
       return
+      end
+
+C     ---------------------------------------------------------------
+C     Pythia8 accessibility subroutines
+C     ---------------------------------------------------------------
+
+      subroutine fill_HEPEUP_event(p,wgt,ic,npart,shower_scale)
+      implicit none
+      double precision pi
+      parameter (pi=3.1415926535897932385d0)
+      include "nexternal.inc"
+      include "coupl.inc"
+      include 'hep_event_streams.inc'
+      double precision shower_scale, aqcd, aqed
+
+      double precision p(0:4,2*nexternal-3),wgt
+      integer ic(7,2*nexternal-3),npart, i, proc_code
+      logical firsttime
+      data firsttime/.true./
+c
+      scalup_out = shower_scale
+      scalup_out = 1d9
+
+      aqcd=g**2/(4d0*pi)
+      aqed=gal(1)**2/(4d0*pi)
+c
+c 'fill_HEPrup_block' should be called after 'aqcd' has been set,
+c because it includes a call to 'setrun', which resets the value of
+c alpha_s to the one in the param_card.dat (without any running).
+      if (firsttime) then
+         call fill_HEPRUP_init()
+         firsttime=.false.
+      endif
+
+c
+
+c********************************************************************
+c     Fill in LesHouches event block according to conventions
+c     ic(1,*) = Particle ID
+c     ic(2.*) = Mothup(1)
+c     ic(3,*) = Mothup(2)
+c     ic(4,*) = ICOLUP(1)
+c     ic(5,*) = ICOLUP(2)
+c     ic(6,*) = ISTUP   -1=initial state +1=final  +2=decayed
+c     ic(7,*) = Helicity
+c********************************************************************
+      proc_code = 66
+      NUP_out=npart
+      IDPRUP_out=proc_code
+      XWGTUP_out=wgt
+      AQEDUP_out=aqed
+      AQCDUP_out=aqcd
+      do i=1,NUP_out
+        IDUP_out(i)=ic(1,i)
+        ISTUP_out(i)=ic(6,i)
+        MOTHUP_out(1,i)=ic(2,i)
+        MOTHUP_out(2,i)=ic(3,i)
+        ICOLUP_out(1,i)=ic(4,i)
+        ICOLUP_out(2,i)=ic(5,i)
+        PUP_out(1,i)=p(1,i)
+        PUP_out(2,i)=p(2,i)
+        PUP_out(3,i)=p(3,i)
+        PUP_out(4,i)=p(0,i)
+        PUP_out(5,i)=p(4,i)
+        VTIMUP_out(i)=0.d0
+        SPINUP_out(i)=dfloat(ic(7,i))
+      enddo
+
+      return
+      end
+
+      subroutine read_HEPEUP_event(p, wgt)
+         include 'hep_event_streams.inc'
+         include 'nexternal.inc'
+         double precision p(0:4,2*nexternal-3),wgt
+         integer i,j
+         do i=1,2*nexternal-3
+           p(1,i) = pup_in(1,i)
+           p(2,i) = pup_in(2,i)
+           p(3,i) = pup_in(3,i)
+           p(0,i) = pup_in(4,i)
+           p(4,i) = pup_in(5,i)
+         enddo
+         wgt = xwgtup_in
+
+      end
+
+      subroutine fill_HEPRUP_init()
+        implicit none
+C       This fills in the common block that has the necessary
+C       information to initialize the shower
+        include 'hep_event_streams.inc'
+
+C       Retrieve information set by setrun()
+        integer maxpup
+        parameter(maxpup=100)
+        integer idbmup,pdfgup,pdfsup,idwtup,nprup,lprup
+        double precision ebmup,xsecup,xerrup,xmaxup
+        common /heprup/ idbmup(2),ebmup(2),pdfgup(2),pdfsup(2),
+     &     idwtup,nprup,xsecup(maxpup),xerrup(maxpup),
+     &     xmaxup(maxpup),lprup(maxpup)
+
+        integer ifile, i
+c
+        integer ievents
+        double precision inter,absint,uncer
+        common /to_write_header_init/inter,absint,uncer,ifile,ievents
+
+        character*7 event_norm
+        common /event_normalisation/event_norm
+
+C       Retrieve information from the run parameters
+        call setrun() 
+        XSECUP_out(1)=inter
+        XERRUP_out(1)=uncer
+        XMAXUP_out(1)=absint/ievents
+        LPRUP_out(1)=66
+        if (event_norm(1:5).eq.'unity'.or.event_norm(1:3).eq.'sum') then
+          IDWTUP_out=-3
+        else
+          IDWTUP_out=-4
+        endif
+        NPRUP_out=1
+
+        do i=1,2
+          idbmup_out(i)=idbmup(i)
+          ebmup_out(i)=ebmup(i)
+          pdfgup_out(i)=pdfgup(i)
+          pdfsup_out(i)=pdfsup(i)
+        enddo
+      
+      return
+
       end

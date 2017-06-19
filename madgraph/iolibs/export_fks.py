@@ -662,7 +662,13 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
                      'randinit',
                      'sudakov.inc',
                      'maxconfigs.inc',
-                     'timing_variables.inc']
+                     'timing_variables.inc',
+                     'pythia8_fortran_dummy.cc',
+                     'pythia8_fortran.cc',
+                     'pythia8_control_setup.inc',
+                     'pythia8_control.inc',
+                     'LHAFortran_aMCatNLO.h',
+                     'hep_event_streams.inc']
 
         for file in linkfiles:
             ln('../' + file , '.')

@@ -31,7 +31,12 @@ cc
       include 'run.inc'
       include 'coupl.inc'
       include "mint.inc"
-      
+c
+c     Properly initialize PY8 controls
+c
+      include 'pythia8_control.inc'
+      include 'pythia8_control_setup.inc'
+
 c Vegas stuff
       common/tosigint/ndim
 

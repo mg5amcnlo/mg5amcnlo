@@ -1,6 +1,7 @@
 include ../proc_characteristics
 include ../../Source/make_opts
 include ../analyse_opts
+include ../pythia8_opts
 
 LIBDIR = ../../lib/
 ANADIR = ../../FixedOrderAnalysis/
@@ -79,6 +80,8 @@ RWGFILES=reweight_xsec_events.o handling_lhe_events.o reweight_xsec.o	\
 	$(CXX) $(CFLAGS) -c -I. $^
 %.o: $(ANADIR)/%.c
 	$(CXX) $(CFLAGS) -c -I. -I$(ANADIR) $(FO_INCLUDEPATHS) $^
+pythia8_fortran.o: pythia8_fortran.cc LHAFortran_aMCatNLO.h
+	$(CXX) $(CXXFLAGS) -c -I. -I$(PYTHIA8INCLUDE) $^
 %.o: %.cc
 	$(CXX) $(CXXFLAGS) -c -I. $^
 %.o: $(ANADIR)/%.cc
@@ -103,8 +106,8 @@ check_poles: $(POLES) $(libmadloop)
 	$(FC) -o check_poles $(POLES) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(LDFLAGS)
 	strip check_poles
 
-madevent_mintMC: $(MINTMC) $(libmadloop) makefile $(LIBS)
-	$(FC) -o madevent_mintMC $(MINTMC) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS)
+madevent_mintMC: $(MINTMC) $(PYTHIA8TARGETS) $(libmadloop) makefile $(LIBS)
+	$(FC) -o madevent_mintMC $(MINTMC) $(PYTHIA8TARGETS) $(NLOLIBS) $(APPLLIBS) $(LINKLIBS) $(FJLIBS) $(FO_EXTRAPATHS) $(FO_EXTRALIBS) $(LDFLAGS) $(PYTHIA8LINKLIBS)
 	rm handling_lhe_events.o
 	strip madevent_mintMC
 

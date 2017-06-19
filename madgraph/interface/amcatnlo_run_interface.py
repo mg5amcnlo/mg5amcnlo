@@ -4455,11 +4455,36 @@ RESTART = %(mint_mode)s
             input_files.append(pdfinput)            
         return input_files, output_files, required_output,  args
 
+    def activate_Pythia8_compilation(self, mode, options):
+        """ Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. """
+        # Also write dummies if we do fixed-order for now
+        if not self.options['pythia8_path'] or mode in ['NLO', 'LO']:
+            # Write dummy entries
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=.
+PYTHIA8TARGETS=pythia8_fortran_dummy.o pythia8_control_setup.inc
+PYTHIA8LINKLIBS=""")
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/-1/
+      data pythia_cmd_file/500*' '/""")
+        else:
+            # Write entries accoridng to the pythia8_path
+            # Probably need to do something a bit more careful to asses when '-lz' really is necessary
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
+"""PYTHIA8INCLUDE=%(pythia8_prefix)s/include
+PYTHIA8TARGETS=pythia8_fortran.o pythia8_control_setup.inc
+PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz"""%{'pythia8_prefix':self.options['pythia8_path']})
+            # Initialize Pythia8 flag to 'available but not yet initialised" (==0)
+            # For now, we don't use any pythia8.cmd card for initialization
+            open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
+"""      data is_pythia_active/0/
+      data pythia_cmd_file/500*' '/""")
 
     def compile(self, mode, options):
         """compiles aMC@NLO to compute either NLO or NLO matched to shower, as
         specified in mode"""
-
         os.mkdir(pjoin(self.me_dir, 'Events', self.run_name))
 
         self.banner.write(pjoin(self.me_dir, 'Events', self.run_name, 
@@ -4500,6 +4525,11 @@ RESTART = %(mint_mode)s
             # write an analyse_opts with a dummy analysis so that compilation goes through
             with open(pjoin(self.me_dir, 'SubProcesses', 'analyse_opts'),'w') as fsock:
                 fsock.write('FO_ANALYSE=analysis_dummy.o dbook.o open_output_files_dummy.o HwU_dummy.o\n')
+
+        # Overwrite the files 'pythia8_control_setup.inc' and 'pythia8_opts' 
+        # according to the interface options. If pythia_path is not specified, pythia8 will be considered
+        # as unavaialable and dummy entries will be filled in. Otherwise, these files will be set accordingly. 
+        self.activate_Pythia8_compilation(mode, options)
 
         #directory where to compile exe
         p_dirs = [d for d in \
