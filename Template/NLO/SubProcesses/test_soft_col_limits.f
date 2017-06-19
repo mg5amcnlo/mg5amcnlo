@@ -90,6 +90,11 @@ c-----
       write(*,*) '      2 to compute ME/ME(limit)'
       read (*,*) ilim
 
+      if (ilim.ne.0 .and. ilim.ne.1 .and. ilim.ne.2) then
+         write (*,*) 'ERROR: not a valid choice'
+         stop 1
+      endif
+
       if (ilim.eq.0 .or. ilim.eq.1) then
          write(*,*) 'Enter the Monte Carlo name: possible choices are'
          write(*,*) 'HERWIG6, HERWIGPP, PYTHIA6Q, PYTHIA6PT, PYTHIA8'

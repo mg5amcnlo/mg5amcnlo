@@ -3026,24 +3026,7 @@ c sreal return {\cal M} of FKS except for the partonic flux 1/(2*s).
 c Thus, an extra factor z (implicit in the flux of the reduced Born
 c in FKS) has to be inserted here
       t = z*shat/4d0
-      if(j_fks.eq.2 .and. nexternal-1.ne.3 .and. nincoming.eq.2)then
-c Rotation according to innerpin.m. Use rotate_invar() if a more 
-c general rotation is needed.
-c Exclude 2->1 (at the Born level) processes: matrix elements are
-c independent of the PS point, but non-zero helicity configurations
-c might flip when rotating the momenta.
-        do i=1,nexternal-1
-          p_born_rot(0,i)=p_born(0,i)
-          p_born_rot(1,i)=-p_born(1,i)
-          p_born_rot(2,i)=p_born(2,i)
-          p_born_rot(3,i)=-p_born(3,i)
-        enddo
-        CalculatedBorn=.false.
-        call sborn(p_born_rot,wgt1)
-        CalculatedBorn=.false.
-      else
-        call sborn(p_born,wgt1)
-      endif
+      call sborn(p_born,wgt1)
       call AP_reduced(m_type,i_type,t,z,ap)
       if (abs(m_type).eq.3) then
          Q=0d0
@@ -3057,14 +3040,6 @@ c Insert <ij>/[ij] which is not included by sborn()
                pi(i)=p_i_fks_ev(i)
                pj(i)=p(i,j_fks)
             enddo
-            if(j_fks.eq.2 .and. nincoming.eq.2)then
-c Rotation according to innerpin.m. Use rotate_invar() if a more 
-c general rotation is needed
-               pi(1)=-pi(1)
-               pi(3)=-pi(3)
-               pj(1)=-pj(1)
-               pj(3)=-pj(3)
-            endif
             CALL IXXXSO(pi ,ZERO ,+1,+1,W1)        
             CALL OXXXSO(pj ,ZERO ,-1,+1,W2)        
             CALL IXXXSO(pi ,ZERO ,-1,+1,W3)        
@@ -3078,13 +3053,8 @@ c general rotation is needed
             azifact=Wij_angle/Wij_recta
          endif
 c Insert the extra factor due to Madgraph convention for polarization vectors
-         if(j_fks.eq.2 .and. nincoming.eq.2)then
-           cphi_mother=-1.d0
-           sphi_mother=0.d0
-         else
-           cphi_mother=1.d0
-           sphi_mother=0.d0
-         endif
+         cphi_mother=1.d0
+         sphi_mother=0.d0
          wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
      #             wgt1(2) * dconjg(azifact)
          call Qterms_reduced_spacelike(m_type, i_type, t, z, Q)
