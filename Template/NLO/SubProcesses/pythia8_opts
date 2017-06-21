@@ -1,3 +1,3 @@
 PYTHIA8INCLUDE=.
-PYTHIA8TARGETS=pythia8_fortran_dummy.o pythia8_control_setup.inc
+PYTHIA8TARGETS=pythia8_fortran_dummy.o
 PYTHIA8LINKLIBS=

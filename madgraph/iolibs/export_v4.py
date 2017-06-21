@@ -3573,7 +3573,6 @@ class ProcessExporterFortranME(ProcessExporterFortran):
                                      self.dir_path + '/SubProcesses', log=False)
         ln(self.dir_path + '/Source/maxconfigs.inc',
                                      self.dir_path + '/SubProcesses', log=False)
-
         linkfiles = ['addmothers.f',
                      'cluster.f',
                      'cluster.inc',

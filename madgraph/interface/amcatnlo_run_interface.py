@@ -4464,7 +4464,7 @@ RESTART = %(mint_mode)s
             # Write dummy entries
             open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
 """PYTHIA8INCLUDE=.
-PYTHIA8TARGETS=pythia8_fortran_dummy.o pythia8_control_setup.inc
+PYTHIA8TARGETS=pythia8_fortran_dummy.o
 PYTHIA8LINKLIBS=""")
             open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_control_setup.inc'),'w').write(
 """      data is_pythia_active/-1/
@@ -4474,7 +4474,7 @@ PYTHIA8LINKLIBS=""")
             # Probably need to do something a bit more careful to asses when '-lz' really is necessary
             open(pjoin(self.me_dir, 'SubProcesses', 'pythia8_opts'),'w').write(
 """PYTHIA8INCLUDE=%(pythia8_prefix)s/include
-PYTHIA8TARGETS=pythia8_fortran.o pythia8_control_setup.inc
+PYTHIA8TARGETS=pythia8_fortran.o
 PYTHIA8LINKLIBS=-L%(pythia8_prefix)s/lib -lpythia8 -lz"""%{'pythia8_prefix':self.options['pythia8_path']})
             # Initialize Pythia8 flag to 'available but not yet initialised" (==0)
             # For now, we don't use any pythia8.cmd card for initialization

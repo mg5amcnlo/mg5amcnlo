@@ -340,7 +340,7 @@ class ProcessExporterFortranFKS(loop_exporters.LoopProcessExporterFortranSA):
     #===========================================================================
     def write_maxconfigs_file(self, writer, maxconfigs):
         """Write the maxconfigs.inc file for MadEvent"""
-
+        
         lines = "integer lmaxconfigs\n"
         lines += "parameter (lmaxconfigs=%d)" % maxconfigs
 
