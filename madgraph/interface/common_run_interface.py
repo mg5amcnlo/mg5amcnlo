@@ -110,13 +110,11 @@ class HelpToCmd(object):
         logger.info("      by condor cluster (since condor has it's own way to prevent it).")
 
     def help_plot(self):
-        logger.info("syntax: help [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
+        logger.info("syntax: plot [RUN] [%s] [-f]" % '|'.join(self._plot_mode))
         logger.info("-- create the plot for the RUN (current run by default)")
         logger.info("     at the different stage of the event generation")
         logger.info("     Note than more than one mode can be specified in the same command.")
-        logger.info("   This require to have MadAnalysis and td require. By default")
-        logger.info("     if those programs are installed correctly, the creation")
-        logger.info("     will be performed automaticaly during the event generation.")
+        logger.info("   This requires to have MadAnalysis and td installed.")
         logger.info("   -f options: answer all question by default.")
 
     def help_compute_widths(self):

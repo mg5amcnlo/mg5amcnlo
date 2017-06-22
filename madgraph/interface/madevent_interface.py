@@ -4777,7 +4777,7 @@ tar -czf split_$1.tar.gz split_$1
         self.check_plot(args)
         logger.info('plot for run %s' % self.run_name)
         if not self.force:
-            self.ask_edit_cards([], args, plot=True)
+            self.ask_edit_cards(['plot_card.dat'], args, plot=True)
                 
         if any([arg in ['all','parton'] for arg in args]):
             filename = pjoin(self.me_dir, 'Events', self.run_name, 'unweighted_events.lhe')
