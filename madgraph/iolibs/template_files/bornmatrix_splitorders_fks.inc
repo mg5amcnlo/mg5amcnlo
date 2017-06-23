@@ -112,13 +112,8 @@ ans_summed = 0d0
 max_val = 0d0
 
 C reset the amp_split array
-do i = 1, amp_split_size
-  amp_split(i) = 0d0
-  do j = 1, nsplitorders
-    amp_split_cnt(i,1,j) = 0d0
-    amp_split_cnt(i,2,j) = 0d0
-  enddo
-enddo
+amp_split(1:amp_split_size) = 0d0
+amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
 
 do i = 1, nsqampso
  max_val = max(max_val, abs(ans(1,I)))
@@ -139,9 +134,8 @@ if (abs(ans_summed).lt.max_val*tiny) ans_summed=0d0
 wgt_me_born=ans_summed
 
 C fill the amp2 and jamp2 arrays
-do i = 1, ngraphs
-amp2(i)=amp2b(i)! amp2 just needs to be copyed
-enddo
+amp2(1:ngraphs)=amp2b(1:ngraphs)! amp2 just needs to be copyed
+
 do i = 0, int(jamp2b(0,0))
 jamp2(i)=0d0
 do j = 1, nampso
@@ -153,8 +147,7 @@ enddo
 %(skip_amp_cnt)s
 C quantities for the counterterms
 do j = 1, nsplitorders
- ans_cnt(1,j) = (0d0, 0d0)
- ans_cnt(2,j) = (0d0, 0d0)
+ ans_cnt(1:2,j) = (0d0, 0d0)
  if (.not.split_type_used(j)) cycle
  do i = 1, nsqampso
   if (keep_order_cnt(j,i)) then 

@@ -120,11 +120,9 @@ c     wgt2 : coefficient of the weight multiplying the log[mu_R^2/Q^2]
 c     wgt3 : coefficient of the weight multiplying the log[mu_F^2/Q^2]
 
       ! set everything to 0
-      do iamp = 1, amp_split_size
-        amp_split_6to5f(iamp) = 0d0
-        amp_split_6to5f_muf(iamp) = 0d0
-        amp_split_6to5f_mur(iamp) = 0d0
-      enddo
+      amp_split_6to5f(1:amp_split_size) = 0d0
+      amp_split_6to5f_muf(1:amp_split_size) = 0d0
+      amp_split_6to5f_mur(1:amp_split_size) = 0d0
 
       ! skip if we don't want this piece or if the scale is
       ! below mt
@@ -3486,9 +3484,7 @@ c entering this function
             call sborncol_fsr(pp,xi_i_fks,y_ij_fks,wgt)
          else
             wgt=0d0
-            do i=1,amp_split_size
-              amp_split(i) = 0d0
-            enddo
+            amp_split(1:amp_split_size) = 0d0
          endif
       elseif (xi_i_fks.lt.tiny)then
          if (need_color_links.or.need_charge_links)then
@@ -3496,16 +3492,12 @@ c has soft singularities
             call sbornsoft(pp,xi_i_fks,y_ij_fks,wgt)
          else
             wgt=0d0
-            do i=1,amp_split_size
-              amp_split(i) = 0d0
-            enddo
+            amp_split(1:amp_split_size) = 0d0
          endif
       else
          call smatrix_real(pp,wgt)
          wgt=wgt*xi_i_fks**2*(1d0-y_ij_fks)
-         do i=1,amp_split_size
-           amp_split(i) = amp_split(i)*xi_i_fks**2*(1d0-y_ij_fks)
-         enddo
+         amp_split(1:amp_split_size) = amp_split(1:amp_split_size)*xi_i_fks**2*(1d0-y_ij_fks)
       endif
 
       return
@@ -3579,9 +3571,8 @@ c Particle types (=color/charges) of i_fks, j_fks and fks_mother
       double precision iden_comp
       common /c_iden_comp/iden_comp
 C  
-      do i = 1, amp_split_size
-        amp_split_local(i) = 0d0
-      enddo
+      amp_split_local(1:amp_split_size) = 0d0
+      
 C  
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -3686,35 +3677,27 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
      #                       cphi_mother,sphi_mother)
            wgt1(2) = -(cphi_mother-ximag*sphi_mother)**2 *
      #             wgt1(2) * azifact
-           do i = 1, amp_split_size
-              amp_split_cnt(i,2,iord) = -(cphi_mother-ximag*sphi_mother)**2 * 
-     #               amp_split_cnt(i,2,iord) * azifact
-           enddo
+           amp_split_cnt(1:amp_split_size,2,iord) = -(cphi_mother-ximag*sphi_mother)**2 * 
+     #               amp_split_cnt(1:amp_split_size,2,iord) * azifact
         else
            write(*,*) 'FATAL ERROR in sborncol_fsr',i_type,j_type,i_fks,j_fks
            stop
         endif
         if (iord.eq.qcd_pos) then
             wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
-            do i = 1, amp_split_size
-              amp_split_local(i) = amp_split_local(i) + 
-     #          dble(amp_split_cnt(i,1,iord)*AP(1)+
-     #               amp_split_cnt(i,2,iord)*Q(1))
-            enddo
+            amp_split_local(1:amp_split_size) = amp_split_local(1:amp_split_size) + 
+     #          dble(amp_split_cnt(1:amp_split_size,1,iord)*AP(1)+
+     #               amp_split_cnt(1:amp_split_size,2,iord)*Q(1))
         endif
         if (iord.eq.qed_pos) then
             wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
-            do i = 1, amp_split_size
-              amp_split_local(i) = amp_split_local(i) + 
-     #          dble(amp_split_cnt(i,1,iord)*AP(2)+
-     #               amp_split_cnt(i,2,iord)*Q(2))
-            enddo
+            amp_split_local(1:amp_split_size) = amp_split_local(1:amp_split_size) + 
+     #          dble(amp_split_cnt(1:amp_split_size,1,iord)*AP(2)+
+     #               amp_split_cnt(1:amp_split_size,2,iord)*Q(2))
         endif
       enddo
       wgt=wgt*iden_comp
-      do i = 1, amp_split_size
-        amp_split(i) = amp_split_local(i)*iden_comp
-      enddo
+      amp_split(1:amp_split_size) = amp_split_local(1:amp_split_size)*iden_comp
       return
       end
 
@@ -3782,9 +3765,7 @@ C ap and Q contain the QCD(1) and QED(2) Altarelli-Parisi kernel
       double precision iden_comp
       common /c_iden_comp/iden_comp
 C  
-      do i = 1, amp_split_size
-        amp_split_local(i) = 0d0
-      enddo
+      amp_split_local(1:amp_split_size) = 0d0
 
       if(p_born(0,1).le.0.d0)then
 c Unphysical kinematics: set matrix elements equal to zero
@@ -3832,13 +3813,11 @@ C check if any extra_cnt is needed
                call sborn(p_born_rot,wgt_born)
                if (reset_calculated_born) calculatedborn=.false.
             ! this is the contribution from the born ME
-               wgt1(1) = ans_cnt(1,iord)
-               wgt1(2) = ans_cnt(2,iord)
+               wgt1(1:2) = ans_cnt(1:2,iord)
             else if (iord.eq.isplitorder_cnt) then
             ! this is the contribution from the extra cnt
                call extra_cnt(p_born_rot, iextra_cnt, ans_extra_cnt)
-               wgt1(1) = ans_extra_cnt(1,iord)
-               wgt1(2) = ans_extra_cnt(2,iord)
+               wgt1(1:2) = ans_extra_cnt(1:2,iord)
             else
                write(*,*) 'ERROR in sborncol_isr', iord
                stop
@@ -3847,20 +3826,15 @@ C check if any extra_cnt is needed
            if (reset_calculated_born) calculatedborn=.false.
            call sborn(p_born_rot,wgt_born)
            if (reset_calculated_born) calculatedborn=.false.
-           wgt1(1) = ans_cnt(1,iord)
-           wgt1(2) = ans_cnt(2,iord)
+           wgt1(1:2) = ans_cnt(1:2,iord)
         endif
-        do iamp=1,amp_split_size
-          amp_split_cnt_local(iamp,1,iord)=amp_split_cnt(iamp,1,iord)
-          amp_split_cnt_local(iamp,2,iord)=amp_split_cnt(iamp,2,iord)
-        enddo
+        amp_split_cnt_local(1:amp_split_size,1,iord)=amp_split_cnt(1:amp_split_size,1,iord)
+        amp_split_cnt_local(1:amp_split_size,2,iord)=amp_split_cnt(1:amp_split_size,2,iord)
         if (abs(m_type).eq.3.or.ch_m.ne.0d0) then
            Q(1)=0d0
            Q(2)=0d0
            wgt1(2)=dcmplx(0d0,0d0)
-           do iamp=1,amp_split_size
-             amp_split_cnt_local(iamp,2,iord)=dcmplx(0d0,0d0)
-           enddo
+           amp_split_cnt_local(1:amp_split_size,2,iord)=dcmplx(0d0,0d0)
         else
 c Insert <ij>/[ij] which is not included by sborn()
            if (1d0-y_ij_fks.lt.vtiny)then
@@ -3900,32 +3874,24 @@ c Insert the extra factor due to Madgraph convention for polarization vectors
            endif
            wgt1(2) = -(cphi_mother+ximag*sphi_mother)**2 *
      #             wgt1(2) * dconjg(azifact)
-           do i = 1, amp_split_size
-              amp_split_cnt_local(i,2,iord) = -(cphi_mother+ximag*sphi_mother)**2 * 
-     #               amp_split_cnt_local(i,2,iord) * dconjg(azifact)
-           enddo
+           amp_split_cnt_local(1:amp_split_size,2,iord) = -(cphi_mother+ximag*sphi_mother)**2 * 
+     #               amp_split_cnt_local(1:amp_split_size,2,iord) * dconjg(azifact)
         endif
         if (iord.eq.qcd_pos) then
             wgt=wgt+dble(wgt1(1)*ap(1)+wgt1(2)*Q(1))
-            do i = 1, amp_split_size
-              amp_split_local(i) = amp_split_local(i) + 
-     #          dble(amp_split_cnt_local(i,1,iord)*AP(1)+
-     #               amp_split_cnt_local(i,2,iord)*Q(1))
-            enddo
+            amp_split_local(1:amp_split_size) = amp_split_local(1:amp_split_size) + 
+     #          dble(amp_split_cnt_local(1:amp_split_size,1,iord)*AP(1)+
+     #               amp_split_cnt_local(1:amp_split_size,2,iord)*Q(1))
         endif
         if (iord.eq.qed_pos) then
             wgt=wgt+dble(wgt1(1)*ap(2)+wgt1(2)*Q(2))
-            do i = 1, amp_split_size
-              amp_split_local(i) = amp_split_local(i) + 
-     #          dble(amp_split_cnt_local(i,1,iord)*AP(2)+
-     #               amp_split_cnt_local(i,2,iord)*Q(2))
-            enddo
+            amp_split_local(1:amp_split_size) = amp_split_local(1:amp_split_size) + 
+     #          dble(amp_split_cnt_local(1:amp_split_size,1,iord)*AP(2)+
+     #               amp_split_cnt_local(1:amp_split_size,2,iord)*Q(2))
         endif
       enddo
       wgt=wgt*iden_comp
-      do i = 1, amp_split_size
-        amp_split(i) = amp_split_local(i)*iden_comp
-      enddo
+      amp_split(1:amp_split_size) = amp_split_local(1:amp_split_size)*iden_comp
       return
       end
 
@@ -4411,9 +4377,7 @@ c
       call sborn(p_born(0,1),wgt1)
 c
 C Reset the amp_split array
-      do i = 1, amp_split_size
-        amp_split(i) = 0d0
-      enddo
+      amp_split(1:amp_split_size) = 0d0
 
       softcontr=0d0
       do i=1,fks_j_from_i(i_fks,0)
@@ -4431,10 +4395,8 @@ C wgt includes the gs/w^2
                   ! update the amp_split array
                   if (need_color_links) ipos_ord = qcd_pos
                   if (need_charge_links) ipos_ord = qed_pos
-                  do k=1,amp_split_size
-                    amp_split(k) = 
-     $                   amp_split(k) - 2d0 * eik * amp_split_soft(k)*iden_comp
-                  enddo
+                  amp_split(1:amp_split_size) = amp_split(1:amp_split_size)
+     $                - 2d0 * eik * amp_split_soft(1:amp_split_size)*iden_comp
                endif
             endif
          enddo
@@ -4604,16 +4566,14 @@ C keep track of each split orders
       character*2 PDFscheme
       data PDFscheme /'MS'/ ! DI-> dis, MS-> msbar
 
-      do iamp = 1, amp_split_size
-        amp_split_collrem_xi(iamp) = 0d0
-        amp_split_collrem_lxi(iamp) = 0d0
-        amp_split_wgtdegrem_xi(iamp) = 0d0
-        amp_split_wgtdegrem_lxi(iamp) = 0d0
-        amp_split_wgtdegrem_muF(iamp) = 0d0
-        amp_split_wgtdis_p(iamp) = 0d0
-        amp_split_wgtdis_l(iamp) = 0d0
-        amp_split_wgtdis_d(iamp) = 0d0
-      enddo
+      amp_split_collrem_xi(1:amp_split_size) = 0d0
+      amp_split_collrem_lxi(1:amp_split_size) = 0d0
+      amp_split_wgtdegrem_xi(1:amp_split_size) = 0d0
+      amp_split_wgtdegrem_lxi(1:amp_split_size) = 0d0
+      amp_split_wgtdegrem_muF(1:amp_split_size) = 0d0
+      amp_split_wgtdis_p(1:amp_split_size) = 0d0
+      amp_split_wgtdis_l(1:amp_split_size) = 0d0
+      amp_split_wgtdis_d(1:amp_split_size) = 0d0
 
 
       if(j_fks.gt.nincoming)then
@@ -4714,29 +4674,27 @@ c has to be inserted here
         collrem_lxi=collrem_lxi + oo2pi*dble(wgt1(1))*collrem_lxi_tmp*
      &       xnorm
 
-        do iamp = 1, amp_split_size
-          amp_split_collrem_xi(iamp) = amp_split_collrem_xi(iamp)+ 
-     &     dble(amp_split_cnt(iamp,1,iord))*oo2pi*collrem_xi_tmp*xnorm
-          amp_split_collrem_lxi(iamp) = amp_split_collrem_lxi(iamp)+
-     &     dble(amp_split_cnt(iamp,1,iord))*oo2pi*collrem_lxi_tmp*xnorm
+        amp_split_collrem_xi(1:amp_split_size) = amp_split_collrem_xi(1:amp_split_size)+ 
+     &   dble(amp_split_cnt(1:amp_split_size,1,iord))*oo2pi*collrem_xi_tmp*xnorm
+        amp_split_collrem_lxi(1:amp_split_size) = amp_split_collrem_lxi(1:amp_split_size)+
+     &   dble(amp_split_cnt(1:amp_split_size,1,iord))*oo2pi*collrem_lxi_tmp*xnorm
 
-          prefact_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
+        prefact_xi=ap(iap)*log(shat*delta_used/(2*QES2)) -
      &               apprime(iap)
-          amp_split_wgtdegrem_xi(iamp) = amp_split_wgtdegrem_xi(iamp)+
-     &     oo2pi*dble(amp_split_cnt(iamp,1,iord))*prefact_xi*xnorm
-          amp_split_wgtdegrem_lxi(iamp) = amp_split_collrem_lxi(iamp)
-          amp_split_wgtdegrem_muF(iamp) = amp_split_wgtdegrem_muF(iamp)-
-     &     oo2pi*dble(amp_split_cnt(iamp,1,iord))*ap(iap)*xnorm
-          ! amp split for the DIS scheme
-          if (PDFscheme.eq.'DI') then
-            amp_split_wgtdis_p(iamp) = amp_split_wgtdis_p(iamp) - 
-     $       dble(amp_split_cnt(iamp,1,iord))*xkkernp(iap)*oo2pi*xnorm
-            amp_split_wgtdis_l(iamp) = amp_split_wgtdis_l(iamp) - 
-     $       dble(amp_split_cnt(iamp,1,iord))*xkkernl(iap)*oo2pi*xnorm
-            amp_split_wgtdis_d(iamp) = amp_split_wgtdis_d(iamp) - 
-     $       dble(amp_split_cnt(iamp,1,iord))*xkkernd(iap)*oo2pi*xnorm
-          endif
-        enddo
+        amp_split_wgtdegrem_xi(1:amp_split_size) = amp_split_wgtdegrem_xi(1:amp_split_size)+
+     &   oo2pi*dble(amp_split_cnt(1:amp_split_size,1,iord))*prefact_xi*xnorm
+        amp_split_wgtdegrem_lxi(1:amp_split_size) = amp_split_collrem_lxi(1:amp_split_size)
+        amp_split_wgtdegrem_muF(1:amp_split_size) = amp_split_wgtdegrem_muF(1:amp_split_size)-
+     &   oo2pi*dble(amp_split_cnt(1:amp_split_size,1,iord))*ap(iap)*xnorm
+        ! amp split for the DIS scheme
+        if (PDFscheme.eq.'DI') then
+          amp_split_wgtdis_p(1:amp_split_size) = amp_split_wgtdis_p(1:amp_split_size) - 
+     $     dble(amp_split_cnt(1:amp_split_size,1,iord))*xkkernp(iap)*oo2pi*xnorm
+          amp_split_wgtdis_l(1:amp_split_size) = amp_split_wgtdis_l(1:amp_split_size) - 
+     $     dble(amp_split_cnt(1:amp_split_size,1,iord))*xkkernl(iap)*oo2pi*xnorm
+          amp_split_wgtdis_d(1:amp_split_size) = amp_split_wgtdis_d(1:amp_split_size) - 
+     $     dble(amp_split_cnt(1:amp_split_size,1,iord))*xkkernd(iap)*oo2pi*xnorm
+        endif
 
       enddo
       calculatedborn=.false.
@@ -5827,11 +5785,9 @@ C links
       aso2pi=g**2/(8*pi**2)
       aeo2pi=dble(gal(1))**2/(8*pi**2)
 
-      do iamp=1,amp_split_size
-        amp_split_bsv(iamp)=0d0
-        amp_split_virt(iamp)=0d0
-        amp_split_avv(iamp)=0d0
-      enddo
+      amp_split_bsv(1:amp_split_size)=0d0
+      amp_split_virt(1:amp_split_size)=0d0
+      amp_split_avv(1:amp_split_size)=0d0
 
       if (.not.(need_color_links_used.or.need_charge_links_used)) then
 C just return 0
@@ -5861,10 +5817,8 @@ c Born contribution:
       born_wgt=wgt1
       virt_wgt=0d0
       avv_wgt=0d0 
-      do iamp=1,amp_split_size
-        amp_split_born(iamp)=amp_split(iamp)
-        amp_split_bsv(iamp)=amp_split_bsv(iamp)+amp_split(iamp)
-      enddo
+      amp_split_born(1:amp_split_size)=amp_split(1:amp_split_size)
+      amp_split_bsv(1:amp_split_size)=amp_split(1:amp_split_size)
 
       if (abrv.eq.'born') goto 549
       if (abrv.eq.'virt') goto 547
@@ -5944,17 +5898,13 @@ c 1+2+3+4
 C end of the external particle loop
          if (ipos_ord.eq.qcd_pos) then 
            bsv_wgt = bsv_wgt+aso2pi*Q*dble(ans_cnt(1,qcd_pos))
-           do iamp=1,amp_split_size
-             amp_split_bsv(iamp)=amp_split_bsv(iamp)+aso2pi*Q*
-     $          dble(amp_split_cnt(iamp,1,qcd_pos))
-           enddo
+           amp_split_bsv(1:amp_split_size)=amp_split_bsv(1:amp_split_size)+
+     $        aso2pi*Q*dble(amp_split_cnt(1:amp_split_size,1,qcd_pos))
          endif
          if (ipos_ord.eq.qed_pos) then
            bsv_wgt = bsv_wgt+aeo2pi*Q*dble(ans_cnt(1,qed_pos))
-           do iamp=1,amp_split_size
-             amp_split_bsv(iamp)=amp_split_bsv(iamp)+aeo2pi*Q*
-     $          dble(amp_split_cnt(iamp,1,qed_pos))
-           enddo
+           amp_split_bsv(1:amp_split_size)=amp_split_bsv(1:amp_split_size)+
+     $        aeo2pi*Q*dble(amp_split_cnt(1:amp_split_size,1,qed_pos))
          endif
       enddo
 
@@ -6071,15 +6021,11 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
                enddo
             endif
             virt_wgt_save=virt_wgt
-              do iamp=1,amp_split_size
-                amp_split_virt_save(iamp)=amp_split_virt(iamp)
-            enddo
+            amp_split_virt_save(1:amp_split_size)=amp_split_virt(1:amp_split_size)
          endif
       elseif(fold.eq.1) then
          virt_wgt=virt_wgt_save
-         do iamp=1,amp_split_size
-            amp_split_virt(iamp)=amp_split_virt_save(iamp)
-         enddo
+         amp_split_virt(1:amp_split_size)=amp_split_virt_save(1:amp_split_size)
       endif
       if (abrv(1:4).ne.'virt' .and. ickkw.ne.-1) then
          avv_wgt=average_virtual(0,ichan)*born_wgt
@@ -6129,11 +6075,10 @@ c  eq.(MadFKS.C.14)
       wgtwnstmpmuf=0.d0
       wgtnstmp=0d0
       wgtwnstmpmur=0.d0
-      do iamp = 1,amp_split_size
-        amp_split_wgtnstmp(iamp)=0d0
-        amp_split_wgtwnstmpmuf(iamp)=0d0
-        amp_split_wgtwnstmpmur(iamp)=0d0
-      enddo
+      amp_split_wgtnstmp(1:amp_split_size)=0d0
+      amp_split_wgtwnstmpmuf(1:amp_split_size)=0d0
+      amp_split_wgtwnstmpmur(1:amp_split_size)=0d0
+
       if(abrv.ne.'born' .and. abrv.ne.'grid')then
         call sborn(p_born,wgt1)
         if(abrv(1:2).eq.'vi')then
@@ -6198,17 +6143,13 @@ C               set charge factors
         endif
 c bsv_wgt here always contains the Born; must subtract it, since 
 c we need the pure NLO terms only
-        do iamp=1,amp_split_size
-           amp_split_wgtnstmp(iamp)=amp_split_bsv(iamp)-
-     #                              amp_split_born(iamp)-
-     #          log(q2fact(1)/QES2)*amp_split_wgtwnstmpmuf(iamp)-
-     #          log(scale**2/QES2)*amp_split_wgtwnstmpmur(iamp)
-        enddo
+        amp_split_wgtnstmp(1:amp_split_size)=amp_split_bsv(1:amp_split_size)-
+     #                              amp_split_born(1:amp_split_size)-
+     #          log(q2fact(1)/QES2)*amp_split_wgtwnstmpmuf(1:amp_split_size)-
+     #          log(scale**2/QES2)*amp_split_wgtwnstmpmur(1:amp_split_size)
       endif
 
-      do iamp=1,amp_split_size
-        amp_split(iamp)=amp_split_bsv(iamp)
-      enddo
+      amp_split(1:amp_split_size)=amp_split_bsv(1:amp_split_size)
 
       if (abrv(1:2).eq.'vi') then
         bsv_wgt=bsv_wgt-born_wgt

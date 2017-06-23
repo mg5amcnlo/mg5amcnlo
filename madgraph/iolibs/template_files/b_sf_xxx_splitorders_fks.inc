@@ -42,12 +42,7 @@ C color-linked borns are called for QCD-type emissions
       ans_summed = 0d0
 
 C reset the amp_split_cnt array
-      do i = 1, amp_split_size
-       do j = 1, nsplitorders
-        amp_split_cnt(i,1,j) = 0d0
-        amp_split_cnt(i,2,j) = 0d0
-       enddo
-      enddo
+amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
 
       do i = 1, nsqampso
         if (keep_order_cnt(qcd_pos, i)) then

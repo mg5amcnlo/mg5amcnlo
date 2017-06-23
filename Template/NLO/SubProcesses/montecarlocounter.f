@@ -312,7 +312,6 @@ c
       double precision zero
       parameter (zero=0d0)
 
-
       include 'genps.inc'
       integer maxflow
       parameter (maxflow=999)
@@ -321,6 +320,7 @@ c
       integer icolup(2,nexternal,maxflow)
       include 'born_leshouche.inc'
       include "born_nhel.inc"
+      include 'coupl.inc'
       integer ipartners(0:nexternal-1),colorflow(nexternal-1,0:max_bcol)
       common /MC_info/ ipartners,colorflow
 c

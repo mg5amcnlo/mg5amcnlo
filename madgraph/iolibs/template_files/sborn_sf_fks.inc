@@ -37,9 +37,7 @@ C check if need color or charge links, and include the gs/w**2 term here
 %(iflines_col)s
       wgt = wgt_col * g**2
 C update the amp_split_soft, which is summed in sbornsoft
-      do i = 1, amp_split_size
-        amp_split_soft(i) = dble(amp_split_cnt(i,1,qcd_pos)) * g**2
-      enddo
+      amp_split_soft(1:amp_split_size) = dble(amp_split_cnt(1:amp_split_size,1,qcd_pos)) * g**2
 
       else if (need_charge_links) then
       chargeprod = charges_born(m) * charges_born(n)
@@ -48,9 +46,7 @@ C add a factor 1/2 for the self-eikonal soft link
       if (m.eq.n) chargeprod = chargeprod / 2d0
       wgt = dble(ans_cnt(1, qed_pos)) * chargeprod * dble(gal(1))**2
 C update the amp_split_soft, which is summed in sbornsoft
-      do i = 1, amp_split_size
-        amp_split_soft(i) = dble(amp_split_cnt(i,1,qed_pos)) * chargeprod * dble(gal(1))**2
-      enddo
+      amp_split_soft(1:amp_split_size) = dble(amp_split_cnt(1:amp_split_size,1,qed_pos)) * chargeprod * dble(gal(1))**2
       endif
 
       return 

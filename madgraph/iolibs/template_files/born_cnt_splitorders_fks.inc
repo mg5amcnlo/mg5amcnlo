@@ -76,12 +76,7 @@ CALL SBORN_CNT%(proc_prefix)s_SPLITORDERS(P,ANS)
 MAX_VAL = 0D0
  
 C reset the amp_split array
-do i = 1, amp_split_size
-  do j = 1, nsplitorders
-    amp_split_cnt(i,1,j) = dcmplx(0d0,0d0)
-    amp_split_cnt(i,2,j) = dcmplx(0d0,0d0)
-  enddo
-enddo
+amp_split_cnt(1:amp_split_size,1:2,1:nsplitorders) = dcmplx(0d0,0d0)
 
 DO I = 1, NSQAMPSO
   MAX_VAL = MAX(MAX_VAL, ABS(ANS(1,I)))
@@ -89,8 +84,7 @@ ENDDO
  
 C quantities for the counterterms
 do j = 1, nsplitorders
- ans_cnt(1,j) = dcmplx(0d0, 0d0)
- ans_cnt(2,j) = dcmplx(0d0, 0d0)
+ ans_cnt(1:2,j) = dcmplx(0d0, 0d0)
  do i = 1, nsqampso
   if (keep_order_cnt(j,i)) then 
     IF(ABS(ANS(1,I)).GT.MAX_VAL*TINY) ANS_CNT(1,J) = ANS_CNT(1,J) + ANS(1,I)

@@ -67,9 +67,7 @@ ans_summed = 0d0
 ans_max = 0d0
 
 C reset the amp_split array
-do i = 1, amp_split_size
- amp_split(i) = 0d0
-enddo
+amp_split(1:amp_split_size) = 0d0
 
 do i = 1, nsqampso
  ans_max = max(dabs(ans(i)),ans_max)

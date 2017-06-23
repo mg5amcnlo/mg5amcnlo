@@ -88,13 +88,11 @@ c Ellis-Sexton scale)
       double  = 0d0
       born_hel_from_virt = 0d0
 C     reset the amp_split array
-      do i = 1, amp_split_size
-        amp_split(i) = 0d0
-        amp_split_finite_ML(i) = 0d0
-        amp_split_poles_ML(i,1) = 0d0
-        amp_split_poles_ML(i,2) = 0d0
-        prec_found(i) = 0d0
-      enddo
+      amp_split(1:amp_split_size) = 0d0
+      amp_split_finite_ML(1:amp_split_size) = 0d0
+      amp_split_poles_ML(1:amp_split_size,1) = 0d0
+      amp_split_poles_ML(1:amp_split_size,2) = 0d0
+      prec_found(1:amp_split_size) = 0d0
 c This is no longer needed, because now the Born has the correct symmetry factor:
       if (firsttime_run) then
 c The helicity double check should have been performed during the
